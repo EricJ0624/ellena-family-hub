@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.7);
+}
+
+body {
+  margin: 0;
+  background-color: #f1f5f9;
+  font-family: 'Pretendard', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* 스크롤바 숨김 */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* 모바일/데스크탑 반응형 레이아웃 */
+@media (min-width: 768px) {
+  body {
+    background: radial-gradient(circle at top left, #e2e8f0, #94a3b8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+}
+
+/* 유틸리티 클래스 */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 2rem;
+}
+
+.btn-touch:active {
+  transform: scale(0.96);
+  transition: 0.1s;
+}
+
+.chat-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
