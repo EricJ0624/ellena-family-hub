@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -17,6 +17,17 @@ const CryptoService = {
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   }
+};
+
+// --- [SECURITY] 입력 검증 함수 (XSS 방지) ---
+const sanitizeInput = (input: string | null | undefined, maxLength: number = 200): string => {
+  if (!input) return '';
+  return input
+    .trim()
+    .replace(/[<>]/g, '') // HTML 태그 제거
+    .replace(/javascript:/gi, '') // javascript: 제거
+    .replace(/on\w+=/gi, '') // 이벤트 핸들러 제거 (onclick= 등)
+    .substring(0, maxLength); // 길이 제한
 };
 
 // --- [TYPES] 타입 안정성 추가 ---
@@ -177,7 +188,10 @@ export default function FamilyHub() {
 
   const handleRename = () => {
     const n = prompt("가족 이름:", state.familyName);
-    if (n?.trim()) updateState('RENAME', n.trim());
+    if (n?.trim()) {
+      const sanitized = sanitizeInput(n, 50);
+      if (sanitized) updateState('RENAME', sanitized);
+    }
   };
 
   // Todo Handlers
@@ -186,10 +200,16 @@ export default function FamilyHub() {
     const who = todoWhoRef.current?.value;
     if (!text?.trim()) return alert("할 일을 입력해주세요.");
     
+    // 보안: 입력 검증
+    const sanitizedText = sanitizeInput(text, 100);
+    const sanitizedWho = sanitizeInput(who, 20);
+    
+    if (!sanitizedText) return alert("유효하지 않은 입력입니다.");
+    
     updateState('ADD_TODO', { 
       id: Date.now(), 
-      text: text.trim(), 
-      assignee: who?.trim() || "누구나", 
+      text: sanitizedText, 
+      assignee: sanitizedWho || "누구나", 
       done: false 
     });
     
@@ -208,12 +228,20 @@ export default function FamilyHub() {
     const [m, d] = dateStr.split(' ');
     const desc = prompt("설명:");
     
+    // 보안: 입력 검증
+    const sanitizedTitle = sanitizeInput(title, 100);
+    const sanitizedMonth = sanitizeInput(m, 10);
+    const sanitizedDay = sanitizeInput(d, 10);
+    const sanitizedDesc = sanitizeInput(desc, 200);
+    
+    if (!sanitizedTitle) return alert("유효하지 않은 제목입니다.");
+    
     updateState('ADD_EVENT', { 
       id: Date.now(), 
-      month: (m || "EVENT").toUpperCase(), 
-      day: d || "!", 
-      title, 
-      desc: desc || "" 
+      month: (sanitizedMonth || "EVENT").toUpperCase(), 
+      day: sanitizedDay || "!", 
+      title: sanitizedTitle, 
+      desc: sanitizedDesc 
     });
   };
 
@@ -222,12 +250,16 @@ export default function FamilyHub() {
     const input = chatInputRef.current;
     if (!input || !input.value.trim()) return;
     
+    // 보안: 입력 검증
+    const sanitizedText = sanitizeInput(input.value, 500);
+    if (!sanitizedText) return;
+    
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
     
     updateState('ADD_MESSAGE', { 
       user: "나", 
-      text: input.value.trim(), 
+      text: sanitizedText, 
       time: timeStr 
     });
     input.value = "";
@@ -237,7 +269,30 @@ export default function FamilyHub() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1.5 * 1024 * 1024) return alert("용량이 너무 큽니다. (1.5MB 이하만 가능)");
+    
+    // 보안: 파일 타입 검증
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF만 가능)');
+      e.target.value = "";
+      return;
+    }
+    
+    // 보안: 파일 크기 제한 (1.5MB)
+    const MAX_SIZE = 1.5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      alert("용량이 너무 큽니다. (1.5MB 이하만 가능)");
+      e.target.value = "";
+      return;
+    }
+    
+    // 보안: 파일 이름 검증 (악성 파일명 방지)
+    const fileName = file.name;
+    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+      alert('유효하지 않은 파일명입니다.');
+      e.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -317,8 +372,14 @@ export default function FamilyHub() {
           <h1 
             onClick={handleRename}
             className="text-4xl font-black tracking-tight leading-[1.1] cursor-pointer hover:opacity-70 transition-opacity"
-            dangerouslySetInnerHTML={{ __html: state.familyName.replace(' ', '<br>') }}
-          />
+          >
+            {state.familyName.split(' ').map((word, idx, arr) => (
+              <React.Fragment key={idx}>
+                {word}
+                {idx < arr.length - 1 && <br />}
+              </React.Fragment>
+            ))}
+          </h1>
           <div className="flex items-center gap-2 mt-4">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -337,12 +398,14 @@ export default function FamilyHub() {
           <div className="text-slate-800">
             {state.todos.length > 0 ? state.todos.map(t => (
               <div key={t.id} className="flex items-center justify-between py-2 group">
-                <div onClick={() => updateState('TOGGLE_TODO', t.id)} className="btn-touch flex items-center gap-4 cursor-pointer">
-                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${t.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-200 bg-white'}`}>
-                    {t.done && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="4"><path d="M5 13l4 4L19 7"></path></svg>}
+                <div onClick={() => updateState('TOGGLE_TODO', t.id)} className="btn-touch flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${t.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                    {t.done && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path d="M5 13l4 4L19 7"></path></svg>}
                   </div>
-                  <span className={`text-base font-bold ${t.done ? 'text-slate-300 line-through' : 'text-slate-700'}`}>{t.text}</span>
-                  {t.assignee && <span className="text-xs font-black text-indigo-400">👤 {t.assignee}</span>}
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className={`text-sm font-bold ${t.done ? 'text-slate-300 line-through' : 'text-slate-700'}`}>{t.text}</span>
+                    {t.assignee && <span className="text-xs font-bold text-slate-400 whitespace-nowrap">{t.assignee}</span>}
+                  </div>
                 </div>
                 <button onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} className="text-slate-300 hover:text-red-400 p-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>

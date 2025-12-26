@@ -27,7 +27,10 @@ export default function LoginPage() {
         
         // 세션 확인
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('Login successful, session:', !!session);
+        // 보안: 프로덕션 환경에서는 콘솔 로그 제거
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Login successful, session:', !!session);
+        }
         
         if (session) {
           router.push('/dashboard');
@@ -36,7 +39,10 @@ export default function LoginPage() {
         }
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Login error:', error);
+      }
       setErrorMsg('로그인 실패: 정보를 확인해주세요.');
     } finally {
       setLoading(false);
