@@ -254,6 +254,11 @@ export default function FamilyHub() {
   
   if (!isMounted) return null; // Hydration mismatch 방지
 
+  // Supabase 세션이 없으면 로그인 페이지로 리다이렉트 (렌더링 전 처리)
+  if (!isAuthenticated && isMounted) {
+    return null; // useEffect에서 리다이렉트 처리 중
+  }
+
   return (
     <div id="app" className={`
       w-full h-[100vh] bg-slate-50 relative flex flex-col overflow-y-auto overflow-x-hidden
@@ -305,7 +310,6 @@ export default function FamilyHub() {
       </div>
 
       {/* Main Content */}
-      {isAuthenticated && (
       <div className="transition-opacity duration-1000 opacity-100">
         
         {/* Header */}
@@ -449,7 +453,6 @@ export default function FamilyHub() {
         </section>
         
       </div>
-      )}
     </div>
   );
 }
