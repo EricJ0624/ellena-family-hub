@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -42,6 +44,7 @@ const INITIAL_STATE: AppState = {
 };
 
 export default function FamilyHub() {
+  const router = useRouter();
   // --- [STATE] ---
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -56,6 +59,22 @@ export default function FamilyHub() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
+  // --- [HANDLERS] App 객체 메서드 이식 ---
+  
+  const loadData = useCallback((key: string) => {
+    const saved = localStorage.getItem(CONFIG.STORAGE);
+    if (saved) {
+      const decrypted = CryptoService.decrypt(saved, key);
+      if (!decrypted) {
+        alert("보안 키가 일치하지 않습니다.");
+        return;
+      }
+      setState(decrypted);
+    }
+    sessionStorage.setItem(CONFIG.AUTH, key);
+    setIsAuthenticated(true);
+  }, []);
+
   // --- [EFFECTS] ---
   
   // 1. Mount Check (Next.js Hydration Error 방지)
@@ -66,12 +85,33 @@ export default function FamilyHub() {
   // 2. Auth Check on Load
   useEffect(() => {
     if (!isMounted) return;
-    const key = sessionStorage.getItem(CONFIG.AUTH);
-    if (key) {
-      setMasterKey(key);
-      loadData(key);
-    }
-  }, [isMounted]);
+    
+    // Supabase 인증 확인
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          router.push('/');
+          return;
+        }
+        
+        // Supabase 세션이 있으면 바로 대시보드 표시
+        setIsAuthenticated(true);
+        
+        // 기존 마스터 키가 있으면 데이터 로드
+        const key = sessionStorage.getItem(CONFIG.AUTH);
+        if (key) {
+          setMasterKey(key);
+          loadData(key);
+        }
+      } catch (err) {
+        router.push('/');
+      }
+    };
+    
+    checkAuth();
+  }, [isMounted, router, loadData]);
 
   // 3. Scroll Chat to Bottom
   useEffect(() => {
@@ -134,28 +174,6 @@ export default function FamilyHub() {
     });
   };
 
-  // --- [HANDLERS] App 객체 메서드 이식 ---
-
-  const loadData = (key: string) => {
-    const saved = localStorage.getItem(CONFIG.STORAGE);
-    if (saved) {
-      const decrypted = CryptoService.decrypt(saved, key);
-      if (!decrypted) {
-        alert("보안 키가 일치하지 않습니다.");
-        return;
-      }
-      setState(decrypted);
-    }
-    sessionStorage.setItem(CONFIG.AUTH, key);
-    setIsAuthenticated(true);
-  };
-
-  const handleAuthSubmit = () => {
-    const inputKey = (document.getElementById('master-key-input') as HTMLInputElement)?.value;
-    if (!inputKey) return alert("보안 키를 입력하세요.");
-    setMasterKey(inputKey);
-    loadData(inputKey);
-  };
 
   const handleRename = () => {
     const n = prompt("가족 이름:", state.familyName);
@@ -249,31 +267,6 @@ export default function FamilyHub() {
         onChange={handleFileSelect} 
       />
 
-      {/* Auth Overlay */}
-      <div className={`
-        absolute inset-0 z-50 bg-slate-50/95 backdrop-blur-xl flex flex-col items-center justify-center
-        transition-all duration-500 ease-in-out
-        ${isAuthenticated ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100'}
-      `}>
-        <div className="w-[85%] max-w-[320px] text-center">
-          <div className="text-6xl mb-8 drop-shadow-lg">🏠</div>
-          <h2 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">Family Hub</h2>
-          <p className="text-slate-400 text-sm mb-10 font-medium">우리 가족만의 안전한 공간입니다.</p>
-          <input 
-            type="password" 
-            id="master-key-input"
-            className="w-full bg-white border-2 border-slate-100 rounded-2xl px-4 py-5 text-center text-2xl focus:outline-none focus:border-indigo-500 transition-all shadow-sm mb-4"
-            placeholder="••••••••"
-            onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()}
-          />
-          <button 
-            onClick={handleAuthSubmit}
-            className="btn-touch w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-slate-200"
-          >
-            접속하기
-          </button>
-        </div>
-      </div>
 
       {/* Todo Modal */}
       <div className={`
@@ -312,7 +305,8 @@ export default function FamilyHub() {
       </div>
 
       {/* Main Content */}
-      <div className={`transition-opacity duration-1000 ${isAuthenticated ? 'opacity-100' : 'opacity-0'}`}>
+      {isAuthenticated && (
+      <div className="transition-opacity duration-1000 opacity-100">
         
         {/* Header */}
         <header className="p-[8%] pt-[14%]">
@@ -455,6 +449,7 @@ export default function FamilyHub() {
         </section>
         
       </div>
+      )}
     </div>
   );
 }

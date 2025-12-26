@@ -10,4 +10,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // 이 supabase 객체를 통해 DB에 접근합니다.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 브라우저에서 세션을 유지하기 위해 auth 옵션 명시
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  },
+});

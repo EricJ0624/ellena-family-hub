@@ -20,8 +20,23 @@ export default function LoginPage() {
     try {
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      if (data.user) router.push('/dashboard'); 
+      
+      if (data.user) {
+        // 세션이 저장되도록 약간의 지연 후 리다이렉트
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 세션 확인
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Login successful, session:', !!session);
+        
+        if (session) {
+          router.push('/dashboard');
+        } else {
+          setErrorMsg('세션 저장에 실패했습니다. 다시 시도해주세요.');
+        }
+      }
     } catch (error: any) {
+      console.error('Login error:', error);
       setErrorMsg('로그인 실패: 정보를 확인해주세요.');
     } finally {
       setLoading(false);
