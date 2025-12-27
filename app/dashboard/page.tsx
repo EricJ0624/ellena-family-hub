@@ -62,6 +62,9 @@ export default function FamilyHub() {
   const [masterKey, setMasterKey] = useState('');
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
+  const nicknameInputRef = useRef<HTMLInputElement>(null);
 
   // Inputs Ref (Uncontrolled inputs for cleaner handlers similar to original)
   const todoTextRef = useRef<HTMLInputElement>(null);
@@ -109,6 +112,16 @@ export default function FamilyHub() {
         
         // Supabase 세션이 있으면 바로 대시보드 표시
         setIsAuthenticated(true);
+        
+        // 사용자 이름 가져오기 (닉네임 우선)
+        if (session.user) {
+          const name = session.user.user_metadata?.nickname
+            || session.user.user_metadata?.full_name 
+            || session.user.user_metadata?.name 
+            || session.user.email?.split('@')[0] 
+            || '사용자';
+          setUserName(name);
+        }
         
         // 기존 마스터 키가 있으면 데이터 로드
         const key = sessionStorage.getItem(CONFIG.AUTH);
@@ -191,6 +204,46 @@ export default function FamilyHub() {
     if (n?.trim()) {
       const sanitized = sanitizeInput(n, 50);
       if (sanitized) updateState('RENAME', sanitized);
+    }
+  };
+
+  // Nickname Handler
+  const handleUpdateNickname = async () => {
+    const nickname = nicknameInputRef.current?.value;
+    if (!nickname?.trim()) {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+
+    // 보안: 입력 검증
+    const sanitizedNickname = sanitizeInput(nickname, 20);
+    if (!sanitizedNickname || sanitizedNickname.length < 2) {
+      alert("닉네임은 2자 이상 20자 이하로 입력해주세요.");
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+        return;
+      }
+
+      // Supabase user_metadata 업데이트
+      const { error } = await supabase.auth.updateUser({
+        data: { nickname: sanitizedNickname }
+      });
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      setUserName(sanitizedNickname);
+      setIsNicknameModalOpen(false);
+      if (nicknameInputRef.current) {
+        nicknameInputRef.current.value = "";
+      }
+    } catch (error: any) {
+      alert("닉네임 업데이트 실패: " + (error.message || "알 수 없는 오류"));
     }
   };
 
@@ -370,6 +423,45 @@ export default function FamilyHub() {
         </div>
       )}
 
+      {/* Nickname Modal */}
+      {isNicknameModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsNicknameModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">
+              <span className="modal-icon">✏️</span>
+              닉네임 설정
+            </h3>
+            <div className="modal-form">
+              <div className="form-field">
+                <label className="form-label">닉네임 (2-20자)</label>
+                <input 
+                  ref={nicknameInputRef}
+                  type="text" 
+                  className="form-input" 
+                  placeholder="닉네임을 입력하세요"
+                  maxLength={20}
+                  defaultValue={userName}
+                />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button 
+                onClick={() => setIsNicknameModalOpen(false)} 
+                className="btn-secondary"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleUpdateNickname} 
+                className="btn-primary"
+              >
+                저장하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="main-content">
         {/* Header */}
@@ -390,12 +482,49 @@ export default function FamilyHub() {
               <span className="status-dot-ping"></span>
               <span className="status-dot-core"></span>
             </span>
-            <p className="status-text">Family Sync Active</p>
+            <div className="user-info" onClick={() => setIsNicknameModalOpen(true)} style={{ cursor: 'pointer' }}>
+              <span className="user-icon">👤</span>
+              <p className="user-name">{userName || '로딩 중...'}</p>
+            </div>
           </div>
         </header>
 
         {/* Content Sections Container */}
         <div className="sections-container">
+          {/* Family Memories Section */}
+          <section className="content-section memory-vault">
+            <div className="section-header">
+              <h2 className="section-title-large">Family Memories</h2>
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="btn-upload"
+              >
+                Upload
+              </button>
+            </div>
+            <div className="photo-grid">
+              {state.album && state.album.length > 0 ? (
+                state.album.map(p => (
+                  <div key={p.id} className="photo-item">
+                    <img src={p.data} className="photo-image" alt="memory" />
+                    <button 
+                      onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
+                      className="btn-delete-photo"
+                    >
+                      <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="photo-empty">
+                  사진을 업로드해보세요.
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Family Tasks Section */}
           <section className="content-section">
             <div className="section-header">
@@ -536,40 +665,6 @@ export default function FamilyHub() {
             </div>
             <div className="section-body">
               <p className="location-text">{state.location.address}</p>
-            </div>
-          </section>
-
-          {/* Memory Vault Section */}
-          <section className="content-section memory-vault">
-            <div className="section-header">
-              <h2 className="section-title-large">Memory Vault</h2>
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                className="btn-upload"
-              >
-                Upload
-              </button>
-            </div>
-            <div className="photo-grid">
-              {state.album && state.album.length > 0 ? (
-                state.album.map(p => (
-                  <div key={p.id} className="photo-item">
-                    <img src={p.data} className="photo-image" alt="memory" />
-                    <button 
-                      onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
-                      className="btn-delete-photo"
-                    >
-                      <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="photo-empty">
-                  사진을 업로드해보세요.
-                </div>
-              )}
             </div>
           </section>
         </div>
