@@ -96,3 +96,5 @@ CREATE POLICY "위치 읽기 전체 공개" ON public.user_locations
 CREATE POLICY "위치 수정 본인만" ON public.user_locations 
   FOR ALL USING (id = auth.uid());
 
+
+

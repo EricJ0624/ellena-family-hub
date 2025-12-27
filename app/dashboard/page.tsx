@@ -34,7 +34,14 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 type Todo = { id: number; text: string; assignee: string; done: boolean };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string };
 type Message = { user: string; text: string; time: string };
-type Photo = { id: number; data: string };
+type Photo = { 
+  id: number; 
+  data: string; // 리사이징된 이미지 (표시용)
+  originalData?: string; // 원본 이미지 (S3 업로드용, 선택적)
+  originalSize?: number; // 원본 파일 크기 (bytes)
+  originalFilename?: string; // 원본 파일명
+  mimeType?: string; // MIME 타입
+};
 
 interface AppState {
   familyName: string;
@@ -146,16 +153,94 @@ export default function FamilyHub() {
 
   // --- [LOGIC] 원본 Store.dispatch 로직 이식 ---
 
+  // localStorage 크기 체크 및 자동 정리
+  const checkAndCleanStorage = (newState: AppState): AppState => {
+    // localStorage 크기 추정 (대략적으로)
+    const estimateSize = (state: AppState): number => {
+      const json = JSON.stringify(state);
+      return new Blob([json]).size;
+    };
+
+    let cleanedState = { ...newState };
+    const maxSize = 4 * 1024 * 1024; // 4MB (localStorage 안전 제한)
+    let currentSize = estimateSize(cleanedState);
+
+    // 크기가 초과하면 오래된 사진부터 삭제
+    if (currentSize > maxSize && cleanedState.album && cleanedState.album.length > 0) {
+      // ID 기준으로 정렬 (오래된 것부터)
+      const sortedAlbum = [...cleanedState.album].sort((a, b) => a.id - b.id);
+      
+      // 오래된 사진부터 삭제하면서 크기 체크
+      for (let i = 0; i < sortedAlbum.length && currentSize > maxSize; i++) {
+        cleanedState.album = cleanedState.album.filter(p => p.id !== sortedAlbum[i].id);
+        currentSize = estimateSize(cleanedState);
+      }
+
+      if (cleanedState.album.length < newState.album.length) {
+        console.warn(`localStorage 공간 부족으로 ${newState.album.length - cleanedState.album.length}개의 오래된 사진이 자동 삭제되었습니다.`);
+      }
+    }
+
+    return cleanedState;
+  };
+
   const persist = (newState: AppState, key: string) => {
     try {
-      localStorage.setItem(CONFIG.STORAGE, CryptoService.encrypt(newState, key));
-    } catch (e) {
-      alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 삭제해 주세요.");
+      // originalData 제거 (localStorage 공간 절약)
+      const stateForStorage: AppState = {
+        ...newState,
+        album: newState.album.map(photo => {
+          const { originalData, ...photoWithoutOriginal } = photo;
+          return photoWithoutOriginal;
+        })
+      };
+
+      // 크기 체크 및 자동 정리
+      const cleanedState = checkAndCleanStorage(stateForStorage);
+      
+      localStorage.setItem(CONFIG.STORAGE, CryptoService.encrypt(cleanedState, key));
+    } catch (e: any) {
+      // QuotaExceededError 처리
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        // 오래된 사진 자동 삭제 시도
+        const cleanedState = checkAndCleanStorage(newState);
+        try {
+          const stateForStorage: AppState = {
+            ...cleanedState,
+            album: cleanedState.album.map(photo => {
+              const { originalData, ...photoWithoutOriginal } = photo;
+              return photoWithoutOriginal;
+            })
+          };
+          localStorage.setItem(CONFIG.STORAGE, CryptoService.encrypt(stateForStorage, key));
+          alert("저장 공간이 부족하여 오래된 사진이 자동으로 삭제되었습니다.");
+        } catch (retryError) {
+          alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 수동으로 삭제해 주세요.");
+        }
+      } else {
+        alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 삭제해 주세요.");
+      }
     }
   };
 
   const updateState = (action: string, payload?: any) => {
-    if (!masterKey) return;
+    // masterKey가 없으면 자동 생성 또는 불러오기
+    let currentKey = masterKey;
+    
+    if (!currentKey) {
+      // sessionStorage에서 기존 키 확인
+      const savedKey = sessionStorage.getItem(CONFIG.AUTH);
+      if (savedKey) {
+        currentKey = savedKey;
+        setMasterKey(savedKey);
+      } else {
+        // 새로운 마스터 키 생성
+        const newKey = `key_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        currentKey = newKey;
+        setMasterKey(newKey);
+        sessionStorage.setItem(CONFIG.AUTH, newKey);
+      }
+    }
 
     setState(prev => {
       let newState = { ...prev };
@@ -193,7 +278,7 @@ export default function FamilyHub() {
           break;
       }
 
-      persist(newState, masterKey);
+      persist(newState, currentKey);
       return newState;
     });
   };
@@ -319,7 +404,102 @@ export default function FamilyHub() {
   };
 
   // Photo Handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 이미지 리사이징 및 압축 함수
+  const resizeImage = (file: File, maxWidth: number = 1920, maxHeight: number = 1920, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('이미지 로드 완료:', { 
+              originalWidth: img.width, 
+              originalHeight: img.height,
+              maxWidth,
+              maxHeight
+            });
+          }
+
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const originalWidth = width;
+          const originalHeight = height;
+
+          // 비율 유지하면서 리사이징
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            } else {
+              width = (width * maxHeight) / height;
+              height = maxHeight;
+            }
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('리사이징 적용:', { 
+                from: `${originalWidth}x${originalHeight}`,
+                to: `${Math.round(width)}x${Math.round(height)}`
+              });
+            }
+          } else {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('리사이징 불필요 (이미 작음)');
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Canvas context를 가져올 수 없습니다.'));
+            return;
+          }
+
+          // 고품질 리사이징
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // JPEG로 압축 (PNG는 투명도가 있을 때만)
+          const outputFormat = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('이미지 압축에 실패했습니다.'));
+                return;
+              }
+              
+              if (process.env.NODE_ENV === 'development') {
+                console.log('압축 완료:', { 
+                  blobSize: Math.round(blob.size / 1024) + 'KB',
+                  quality: Math.round(quality * 100) + '%',
+                  format: outputFormat
+                });
+              }
+              
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => reject(new Error('압축된 이미지 읽기에 실패했습니다.'));
+              reader.readAsDataURL(blob);
+            },
+            outputFormat,
+            quality
+          );
+        };
+        img.onerror = (error) => {
+          console.error('이미지 로드 오류:', error);
+          reject(new Error('이미지 로드에 실패했습니다.'));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('파일 읽기에 실패했습니다.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -327,14 +507,6 @@ export default function FamilyHub() {
     const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
     if (!ALLOWED_TYPES.includes(file.type)) {
       alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF만 가능)');
-      e.target.value = "";
-      return;
-    }
-    
-    // 보안: 파일 크기 제한 (1.5MB)
-    const MAX_SIZE = 1.5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      alert("용량이 너무 큽니다. (1.5MB 이하만 가능)");
       e.target.value = "";
       return;
     }
@@ -347,15 +519,298 @@ export default function FamilyHub() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        updateState('ADD_PHOTO', { id: Date.now(), data: event.target.result as string });
+    // 보안: 원본 파일 크기 제한 (50MB - 리사이징 후 크기로 최종 체크)
+    // Presigned URL 방식으로 큰 파일도 처리 가능하므로 제한 완화
+    const MAX_ORIGINAL_SIZE = 50 * 1024 * 1024; // 50MB
+    if (file.size > MAX_ORIGINAL_SIZE) {
+      alert("파일이 너무 큽니다. (50MB 이하만 가능)");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      // 원본 파일 정보 저장 (S3 업로드용)
+      const originalReader = new FileReader();
+      const originalData = await new Promise<string>((resolve, reject) => {
+        originalReader.onload = (event) => {
+          if (event.target?.result) {
+            resolve(event.target.result as string);
+          } else {
+            reject(new Error('원본 파일 읽기 실패'));
+          }
+        };
+        originalReader.onerror = () => reject(new Error('원본 파일 읽기 오류'));
+        originalReader.readAsDataURL(file);
+      });
+
+      let imageData: string; // 표시용 리사이징된 이미지
+
+      // 파일이 500KB 이상이면 리사이징 및 압축
+      const RESIZE_THRESHOLD = 500 * 1024; // 500KB
+      if (file.size > RESIZE_THRESHOLD) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('리사이징 시작:', { 
+            originalSize: file.size, 
+            fileName: file.name,
+            fileType: file.type 
+          });
+        }
+        
+        // 리사이징 및 압축 (최대 1920x1920, 품질 80%)
+        imageData = await resizeImage(file, 1920, 1920, 0.8);
+        
+        if (process.env.NODE_ENV === 'development') {
+          const resizedSize = (imageData.length * 3) / 4;
+          console.log('1차 리사이징 완료:', { 
+            resizedSize: Math.round(resizedSize / 1024) + 'KB',
+            compression: Math.round((1 - resizedSize / file.size) * 100) + '%'
+          });
+        }
+        
+        // 리사이징 후에도 2MB를 초과하면 추가 압축 (표시용이므로 적당한 크기 유지)
+        const MAX_FINAL_SIZE = 2 * 1024 * 1024; // 2MB (표시용이므로 여유있게)
+        const base64Size = (imageData.length * 3) / 4; // Base64 크기 추정
+        
+        if (base64Size > MAX_FINAL_SIZE) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('추가 압축 필요:', { 
+              currentSize: Math.round(base64Size / 1024) + 'KB',
+              targetSize: '2MB 이하'
+            });
+          }
+          
+          // 더 강한 압축 시도 (품질 60%, 크기 1280x1280)
+          imageData = await resizeImage(file, 1280, 1280, 0.6);
+          
+          if (process.env.NODE_ENV === 'development') {
+            const finalSize = (imageData.length * 3) / 4;
+            console.log('2차 압축 완료:', { 
+              finalSize: Math.round(finalSize / 1024) + 'KB',
+              totalCompression: Math.round((1 - finalSize / file.size) * 100) + '%'
+            });
+          }
+          
+          // 최종 체크: 리사이징 후에도 너무 크면 에러
+          const finalBase64Size = (imageData.length * 3) / 4;
+          if (finalBase64Size > MAX_FINAL_SIZE) {
+            // 3차 압축: 최대한 압축 (품질 50%, 크기 1024x1024)
+            imageData = await resizeImage(file, 1024, 1024, 0.5);
+            
+            if (process.env.NODE_ENV === 'development') {
+              const ultimateSize = (imageData.length * 3) / 4;
+              console.log('3차 압축 완료:', { 
+                ultimateSize: Math.round(ultimateSize / 1024) + 'KB',
+                totalCompression: Math.round((1 - ultimateSize / file.size) * 100) + '%'
+              });
+            }
+          }
+        }
+      } else {
+        // 작은 파일은 리사이징 없이 원본 사용 (표시용도 원본)
+        imageData = originalData;
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('리사이징 생략 (작은 파일):', { 
+            size: Math.round(file.size / 1024) + 'KB',
+            threshold: '500KB 미만'
+          });
+        }
       }
-    };
-    reader.readAsDataURL(file);
+
+      // 사진 추가 (리사이징된 이미지는 표시용)
+      // originalData는 localStorage에 저장하지 않음 (공간 절약)
+      // 업로드 시에만 사용하기 위해 별도 변수로 보관
+      const photoId = Date.now();
+      const originalDataForUpload = originalData; // 업로드용 원본 데이터 보관
+      
+      updateState('ADD_PHOTO', { 
+        id: photoId, 
+        data: imageData, // 표시용 리사이징된 이미지 (localStorage에 저장)
+        // originalData는 localStorage에 저장하지 않음 (공간 절약)
+        originalSize: file.size, // 원본 파일 크기
+        originalFilename: file.name, // 원본 파일명
+        mimeType: file.type // MIME 타입
+      });
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('사진 추가 완료 (localStorage):', {
+          displaySize: Math.round((imageData.length * 3) / 4 / 1024) + 'KB',
+          originalSize: Math.round(file.size / 1024) + 'KB',
+          saved: '표시용 리사이징만 저장 (원본은 업로드 후 제거)'
+        });
+      }
+
+      // Cloudinary와 AWS S3 업로드 (비동기, 백그라운드 처리)
+      // 하이브리드 방식: 작은 파일은 서버 경유, 큰 파일은 Presigned URL 방식
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.warn('세션이 없어 Cloudinary/S3 업로드를 건너뜁니다.');
+          return;
+        }
+
+        // 파일 크기 기준으로 업로드 방식 결정 (5MB)
+        const PRESIGNED_URL_THRESHOLD = 5 * 1024 * 1024; // 5MB
+        const usePresignedUrl = file.size >= PRESIGNED_URL_THRESHOLD;
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Cloudinary & S3 업로드 시작...', {
+            method: usePresignedUrl ? 'Presigned URL (직접 업로드)' : '서버 경유',
+            fileSize: Math.round(file.size / 1024) + 'KB',
+          });
+        }
+
+        if (usePresignedUrl) {
+          // Presigned URL 방식 (큰 파일)
+          // 1. Presigned URL 요청
+          const urlResponse = await fetch('/api/get-upload-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              mimeType: file.type,
+              fileSize: file.size,
+            }),
+          });
+
+          const urlResult = await urlResponse.json();
+
+          if (!urlResponse.ok) {
+            throw new Error(urlResult.error || 'Presigned URL 생성 실패');
+          }
+
+          const { presignedUrl, s3Key, s3Url } = urlResult;
+
+          // 2. 클라이언트에서 직접 S3에 원본 파일 업로드
+          const s3UploadResponse = await fetch(presignedUrl, {
+            method: 'PUT',
+            body: file, // 원본 파일 그대로 (Base64 변환 불필요)
+            headers: {
+              'Content-Type': file.type,
+            },
+          });
+
+          if (!s3UploadResponse.ok) {
+            throw new Error('S3 업로드 실패');
+          }
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('S3 직접 업로드 완료:', { s3Key, s3Url });
+          }
+
+          // 3. 업로드 완료 처리 (Cloudinary 업로드 + Supabase 저장)
+          const completeResponse = await fetch('/api/complete-upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              s3Key,
+              s3Url,
+              fileName: file.name,
+              mimeType: file.type,
+              originalSize: file.size,
+              resizedData: imageData !== originalData ? imageData : null, // 리사이징된 이미지 (Cloudinary용)
+            }),
+          });
+
+          const completeResult = await completeResponse.json();
+
+          if (!completeResponse.ok) {
+            throw new Error(completeResult.error || '업로드 완료 처리 실패');
+          }
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Presigned URL 업로드 완료:', {
+              cloudinaryUrl: completeResult.cloudinaryUrl,
+              s3Url: completeResult.s3Url,
+              memoryId: completeResult.id,
+            });
+          }
+        } else {
+          // 기존 방식 (작은 파일, 서버 경유)
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              originalData: originalDataForUpload, // 원본 (S3용, 별도 보관된 데이터)
+              resizedData: imageData !== originalDataForUpload ? imageData : null, // 리사이징된 이미지 (Cloudinary용, 원본과 다를 때만)
+              fileName: file.name,
+              mimeType: file.type,
+              originalSize: file.size,
+            }),
+          });
+
+          const uploadResult = await uploadResponse.json();
+
+          if (!uploadResponse.ok) {
+            throw new Error(uploadResult.error || '업로드 실패');
+          }
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('서버 경유 업로드 완료:', {
+              cloudinaryUrl: uploadResult.cloudinaryUrl,
+              s3Url: uploadResult.s3Url,
+              memoryId: uploadResult.id,
+            });
+          }
+        }
+
+        // 업로드 성공 시 Photo 객체에 URL 정보 추가 (선택적)
+        // localStorage의 데이터는 그대로 유지하고, 필요시 Supabase에서 최신 데이터를 가져올 수 있음
+        
+      } catch (uploadError: any) {
+        // 업로드 실패해도 localStorage 저장은 유지 (오프라인 지원)
+        console.error('Cloudinary/S3 업로드 오류 (localStorage는 저장됨):', uploadError);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('업로드 실패했지만 로컬 저장은 완료되었습니다.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Image processing error:', error);
+      alert('이미지 처리 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+    }
+    
     // Reset file input
     e.target.value = "";
+  };
+
+  // Upload 버튼 클릭 핸들러
+  const handleUploadClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Upload button clicked');
+    console.log('fileInputRef.current:', fileInputRef.current);
+    
+    // fileInputRef가 준비될 때까지 대기
+    const triggerFileInput = () => {
+      if (fileInputRef.current) {
+        console.log('Triggering file input click');
+        fileInputRef.current.click();
+      } else {
+        console.warn('fileInputRef is null, retrying...');
+        // ref가 아직 준비되지 않았으면 잠시 후 재시도
+        setTimeout(() => {
+          if (fileInputRef.current) {
+            console.log('Retry: Triggering file input click');
+            fileInputRef.current.click();
+          } else {
+            console.error('fileInputRef is still null after retry');
+            alert('파일 입력을 초기화할 수 없습니다. 페이지를 새로고침해주세요.');
+          }
+        }, 100);
+      }
+    };
+    
+    triggerFileInput();
   };
 
   // --- [RENDER] ---
@@ -369,13 +824,6 @@ export default function FamilyHub() {
 
   return (
     <div className="app-container">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        accept="image/*" 
-        className="hidden" 
-        onChange={handleFileSelect} 
-      />
 
       {/* Todo Modal */}
       {isTodoModalOpen && (
@@ -495,12 +943,17 @@ export default function FamilyHub() {
           <section className="content-section memory-vault">
             <div className="section-header">
               <h2 className="section-title-large">Family Memories</h2>
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                className="btn-upload"
-              >
+              <label htmlFor="file-upload-input" className="btn-upload" style={{ cursor: 'pointer', display: 'inline-block' }}>
                 Upload
-              </button>
+              </label>
+              <input 
+                id="file-upload-input"
+                type="file" 
+                ref={fileInputRef} 
+                accept="image/*" 
+                style={{ display: 'none' }}
+                onChange={handleFileSelect} 
+              />
             </div>
             <div className="photo-grid">
               {state.album && state.album.length > 0 ? (

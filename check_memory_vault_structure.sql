@@ -12,3 +12,5 @@ WHERE table_schema = 'public'
   AND table_name = 'memory_vault'
 ORDER BY ordinal_position;
 
+
+
