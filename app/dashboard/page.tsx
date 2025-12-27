@@ -462,8 +462,11 @@ export default function FamilyHub() {
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
 
-          // JPEG로 압축 (PNG는 투명도가 있을 때만)
-          const outputFormat = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          // JPEG로 압축 (PNG는 투명도가 있을 때만, HEIC/HEIF도 JPEG로 변환)
+          // HEIC/HEIF는 브라우저에서 자동으로 변환되므로 JPEG로 처리
+          const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+          const isPNG = file.type === 'image/png' || fileExt === 'png';
+          const outputFormat = isPNG ? 'image/png' : 'image/jpeg';
           canvas.toBlob(
             (blob) => {
               if (!blob) {
@@ -503,10 +506,27 @@ export default function FamilyHub() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // 보안: 파일 타입 검증
-    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF만 가능)');
+    // 보안: 파일 타입 검증 (아이폰 HEIC/HEIF 지원 포함)
+    const ALLOWED_TYPES = [
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'image/webp', 
+      'image/gif',
+      'image/heic',  // 아이폰 HEIC 형식
+      'image/heif',  // HEIF 형식
+    ];
+    
+    // 파일 확장자 기반 검증 (MIME 타입이 없는 경우 대비)
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'];
+    
+    // MIME 타입 또는 확장자로 검증
+    const isValidType = ALLOWED_TYPES.includes(file.type) || 
+                        (file.type === '' && allowedExtensions.includes(fileExtension));
+    
+    if (!isValidType) {
+      alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF, HEIC/HEIF만 가능)');
       e.target.value = "";
       return;
     }
@@ -950,7 +970,7 @@ export default function FamilyHub() {
                 id="file-upload-input"
                 type="file" 
                 ref={fileInputRef} 
-                accept="image/*" 
+                accept="image/*,.heic,.heif" 
                 style={{ display: 'none' }}
                 onChange={handleFileSelect} 
               />
