@@ -66,9 +66,9 @@ export async function POST(request: NextRequest) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const fileType = mimeType.startsWith('image/') ? 'photos' : 'videos';
-    const fileExtension = fileName.split('.').pop() || 'jpg';
+    // fileExtension은 이미 49번 라인에서 선언되었으므로 재사용
     const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-    const s3Key = `originals/${fileType}/${year}/${month}/${user.id}/${uniqueId}.${fileExtension}`;
+    const s3Key = `originals/${fileType}/${year}/${month}/${user.id}/${uniqueId}.${fileExtension || 'jpg'}`;
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) {

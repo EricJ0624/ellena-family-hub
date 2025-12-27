@@ -8,14 +8,44 @@ import { useRouter } from 'next/navigation';
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
 
+// 사용자별 저장소 키 생성 함수 (기존 구조 유지, 사용자별 분리만 추가)
+const getStorageKey = (userId: string) => `${CONFIG.STORAGE}_${userId}`;
+const getAuthKey = (userId: string) => `${CONFIG.AUTH}_${userId}`;
+
 const CryptoService = {
   encrypt: (data: any, key: string) => CryptoJS.AES.encrypt(JSON.stringify(data), key).toString(),
   decrypt: (cipher: string, key: string) => {
     try {
+      if (!cipher || !key) return null;
+      
+      // 암호화된 문자열인지 확인 (Base64 형식)
+      if (!cipher.startsWith('U2FsdGVkX1')) {
+        // 암호화되지 않은 텍스트일 수 있음
+        return cipher;
+      }
+      
       const bytes = CryptoJS.AES.decrypt(cipher, key);
       const raw = bytes.toString(CryptoJS.enc.Utf8);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+      
+      if (!raw || raw.length === 0) {
+        // 복호화 실패 - 키가 일치하지 않거나 데이터 손상
+        return null;
+      }
+      
+      try {
+        const parsed = JSON.parse(raw);
+        // 문자열이면 문자열로 반환, 객체면 그대로 반환
+        return typeof parsed === 'string' ? parsed : parsed;
+      } catch (parseError) {
+        // JSON 파싱 실패 - 원본 raw 문자열 반환
+        return raw;
+      }
+    } catch (e: any) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('복호화 실패:', e.message || e);
+      }
+      return null;
+    }
   }
 };
 
@@ -67,6 +97,7 @@ export default function FamilyHub() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [masterKey, setMasterKey] = useState('');
+  const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [userName, setUserName] = useState<string>('');
@@ -82,8 +113,9 @@ export default function FamilyHub() {
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
-  const loadData = useCallback((key: string) => {
-    const saved = localStorage.getItem(CONFIG.STORAGE);
+  const loadData = useCallback((key: string, userId: string) => {
+    const storageKey = getStorageKey(userId);
+    const saved = localStorage.getItem(storageKey);
     if (saved) {
       const decrypted = CryptoService.decrypt(saved, key);
       if (!decrypted) {
@@ -92,7 +124,8 @@ export default function FamilyHub() {
       }
       setState(decrypted);
     }
-    sessionStorage.setItem(CONFIG.AUTH, key);
+    const authKey = getAuthKey(userId);
+    sessionStorage.setItem(authKey, key);
     setIsAuthenticated(true);
   }, []);
 
@@ -120,6 +153,10 @@ export default function FamilyHub() {
         // Supabase 세션이 있으면 바로 대시보드 표시
         setIsAuthenticated(true);
         
+        // 사용자 ID 저장
+        const currentUserId = session.user.id;
+        setUserId(currentUserId);
+        
         // 사용자 이름 가져오기 (닉네임 우선)
         if (session.user) {
           const name = session.user.user_metadata?.nickname
@@ -130,12 +167,23 @@ export default function FamilyHub() {
           setUserName(name);
         }
         
-        // 기존 마스터 키가 있으면 데이터 로드
-        const key = sessionStorage.getItem(CONFIG.AUTH);
-        if (key) {
+        // 사용자별 마스터 키 확인 및 데이터 로드
+        const authKey = getAuthKey(currentUserId);
+        let key = sessionStorage.getItem(authKey);
+        if (!key) {
+          // 마스터 키가 없으면 사용자 ID 기반으로 고정된 키 생성
+          // 고정된 키를 사용하여 로그인할 때마다 동일한 키로 복호화 가능
+          // 사용자 ID를 해시화하여 고정된 키 생성
+          const userIdHash = CryptoJS.SHA256(currentUserId).toString().substring(0, 32);
+          key = `key_${currentUserId}_${userIdHash}`;
           setMasterKey(key);
-          loadData(key);
+          sessionStorage.setItem(authKey, key);
+        } else {
+          // 기존 키가 있으면 사용
+          setMasterKey(key);
         }
+        // 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
+        loadData(key, currentUserId);
       } catch (err) {
         router.push('/');
       }
@@ -150,6 +198,776 @@ export default function FamilyHub() {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [state.messages, isAuthenticated]);
+
+  // 4. Supabase 데이터 로드 및 Realtime 구독
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+
+    let messagesSubscription: any = null;
+    let tasksSubscription: any = null;
+    let eventsSubscription: any = null;
+    let photosSubscription: any = null;
+
+    // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
+    // localStorage 데이터를 덮어쓰지 않고, Supabase 데이터가 있을 때만 업데이트
+    // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
+    const loadSupabaseData = async () => {
+      try {
+        // masterKey를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
+        const authKey = getAuthKey(userId);
+        const currentKey = masterKey || sessionStorage.getItem(authKey) || '';
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('loadSupabaseData - userId:', userId);
+          console.log('loadSupabaseData - masterKey from state:', masterKey);
+          console.log('loadSupabaseData - currentKey from sessionStorage:', sessionStorage.getItem(authKey));
+          console.log('loadSupabaseData - final currentKey:', currentKey ? '있음' : '없음');
+        }
+        
+        if (!currentKey) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('masterKey가 없어 복호화 불가 - 원본 텍스트 사용');
+          }
+        }
+        
+        // localStorage 데이터가 먼저 로드되었는지 확인
+        // state가 초기 상태가 아니면 localStorage 데이터가 로드된 것으로 간주
+        const hasLocalStorageData = state.messages.length > 0 || 
+                                    state.todos.length > 0 || 
+                                    state.events.length > 0 || 
+                                    state.album.length > 0;
+
+        // 메시지 로드
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('family_messages')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .limit(50);
+
+        if (!messagesError && messagesData) {
+          const formattedMessages: Message[] = messagesData.map((msg: any) => {
+            const createdAt = new Date(msg.created_at);
+            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
+            // 암호화된 메시지 복호화
+            let decryptedText = msg.message_text || '';
+            if (currentKey && msg.message_text) {
+              try {
+                const decrypted = CryptoService.decrypt(msg.message_text, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedText = decrypted;
+                } else {
+                  // 복호화 실패 또는 잘못된 형식 - 원본 텍스트 사용 (암호화된 상태일 수 있음)
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('메시지 복호화 실패 또는 빈 결과:', msg.message_text.substring(0, 30));
+                  }
+                  decryptedText = msg.message_text;
+                }
+              } catch (e: any) {
+                // 복호화 오류 (Malformed UTF-8 data 등) - 원본 텍스트 사용
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('메시지 복호화 오류:', e.message || e, {
+                    original: msg.message_text.substring(0, 30),
+                    keyLength: currentKey.length,
+                    errorType: e.name || 'Unknown'
+                  });
+                }
+                decryptedText = msg.message_text;
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              if (process.env.NODE_ENV === 'development' && !currentKey) {
+                console.warn('masterKey가 없어 메시지 복호화 불가');
+              }
+              decryptedText = msg.message_text;
+            }
+            return {
+              user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
+              text: decryptedText,
+              time: timeStr
+            };
+          });
+          
+          // Supabase 메시지가 있으면 사용
+          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
+          if (formattedMessages.length > 0) {
+            setState(prev => ({
+              ...prev,
+              messages: formattedMessages
+            }));
+          }
+          // Supabase에 메시지가 없고 localStorage 데이터도 없으면 초기 상태 유지
+        }
+
+        // 할일 로드
+        const { data: tasksData, error: tasksError } = await supabase
+          .from('family_tasks')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!tasksError && tasksData) {
+          const formattedTodos: Todo[] = tasksData.map((task: any) => {
+            // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
+            const taskText = task.title || task.task_text || '';
+            let decryptedText = taskText;
+            if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
+              try {
+                const decrypted = CryptoService.decrypt(taskText, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedText = decrypted;
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('할일 복호화 성공:', decrypted.substring(0, 20));
+                  }
+                } else {
+                  // 복호화 실패 또는 잘못된 형식
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('할일 복호화 실패:', {
+                      original: taskText.substring(0, 30),
+                      decrypted: decrypted,
+                      keyLength: currentKey.length
+                    });
+                  }
+                  decryptedText = taskText;
+                }
+              } catch (e: any) {
+                // 복호화 오류
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('할일 복호화 오류:', e.message || e, {
+                    original: taskText.substring(0, 30),
+                    keyLength: currentKey.length
+                  });
+                }
+                decryptedText = taskText;
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              if (process.env.NODE_ENV === 'development' && !currentKey) {
+                console.warn('masterKey가 없어 할일 복호화 불가');
+              }
+              decryptedText = taskText;
+            }
+            return {
+              id: task.id,
+              text: decryptedText,
+              assignee: task.assigned_to || '누구나',
+              done: task.is_completed || false // is_completed 컬럼 사용
+            };
+          });
+          
+          // Supabase 할일이 있으면 사용
+          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
+          if (formattedTodos.length > 0) {
+            setState(prev => ({
+              ...prev,
+              todos: formattedTodos
+            }));
+          }
+          // Supabase에 할일이 없고 localStorage 데이터도 없으면 초기 상태 유지
+        }
+
+        // 일정 로드
+        const { data: eventsData, error: eventsError } = await supabase
+          .from('family_events')
+          .select('*')
+          .order('event_date', { ascending: true }); // event_date 컬럼명 사용
+
+        if (!eventsError && eventsData) {
+          const formattedEvents: EventItem[] = eventsData.map((event: any) => {
+            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
+            const eventDateValue = event.event_date || event.date || event.event_date_time || new Date().toISOString();
+            const eventDate = new Date(eventDateValue);
+            const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+            const day = eventDate.getDate().toString();
+            // 암호화된 제목 및 설명 복호화
+            // event_title 대신 title 사용 (실제 테이블 구조에 맞게)
+            const eventTitleField = event.title || event.event_title || '';
+            const eventDescField = event.description || '';
+            let decryptedTitle = eventTitleField;
+            let decryptedDesc = eventDescField;
+            if (currentKey && currentKey.length > 0) {
+              // 제목 복호화
+              if (eventTitleField && eventTitleField.length > 0) {
+                try {
+                  const decryptedTitleData = CryptoService.decrypt(eventTitleField, currentKey);
+                  if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
+                    decryptedTitle = decryptedTitleData;
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('일정 제목 복호화 성공:', decryptedTitle.substring(0, 20));
+                    }
+                  } else {
+                    // 복호화 실패 - 원본 텍스트 사용
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn('일정 제목 복호화 실패:', {
+                        original: eventTitleField.substring(0, 30),
+                        decrypted: decryptedTitleData,
+                        keyLength: currentKey.length
+                      });
+                    }
+                    decryptedTitle = eventTitleField;
+                  }
+                } catch (e: any) {
+                  // 복호화 오류 (Malformed UTF-8 data 등) - 원본 텍스트 사용
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('일정 제목 복호화 오류:', e.message || e, {
+                      original: eventTitleField.substring(0, 30),
+                      keyLength: currentKey.length,
+                      errorType: e.name || 'Unknown'
+                    });
+                  }
+                  decryptedTitle = eventTitleField;
+                }
+              }
+              // 설명 복호화
+              if (eventDescField && eventDescField.length > 0) {
+                try {
+                  const decryptedDescData = CryptoService.decrypt(eventDescField, currentKey);
+                  if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
+                    decryptedDesc = decryptedDescData;
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('일정 설명 복호화 성공:', decryptedDesc.substring(0, 20));
+                    }
+                  } else {
+                    // 복호화 실패 - 원본 텍스트 사용
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn('일정 설명 복호화 실패:', {
+                        original: eventDescField.substring(0, 30),
+                        decrypted: decryptedDescData,
+                        keyLength: currentKey.length
+                      });
+                    }
+                    decryptedDesc = eventDescField;
+                  }
+                } catch (e: any) {
+                  // 복호화 오류 (Malformed UTF-8 data 등) - 원본 텍스트 사용
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('일정 설명 복호화 오류:', e.message || e, {
+                      original: eventDescField.substring(0, 30),
+                      keyLength: currentKey.length,
+                      errorType: e.name || 'Unknown'
+                    });
+                  }
+                  decryptedDesc = eventDescField;
+                }
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('일정 복호화 불가 - 키 없음:', {
+                  hasKey: !!currentKey,
+                  keyLength: currentKey?.length || 0
+                });
+              }
+              decryptedTitle = eventTitleField;
+              decryptedDesc = eventDescField;
+            }
+            return {
+              id: event.id,
+              month: month,
+              day: day,
+              title: decryptedTitle,
+              desc: decryptedDesc
+            };
+          });
+          
+          // Supabase 일정이 있으면 사용
+          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
+          if (formattedEvents.length > 0) {
+            setState(prev => ({
+              ...prev,
+              events: formattedEvents
+            }));
+          }
+          // Supabase에 일정이 없고 localStorage 데이터도 없으면 초기 상태 유지
+        }
+
+        // 사진 로드 (memory_vault에서 최근 50개)
+        const { data: photosData, error: photosError } = await supabase
+          .from('memory_vault')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (!photosError && photosData) {
+          // Cloudinary URL 또는 image_url이 있는 사진만 표시
+          const formattedPhotos: Photo[] = photosData
+            .filter((photo: any) => photo.cloudinary_url || photo.image_url)
+            .map((photo: any) => ({
+              id: photo.id,
+              data: photo.cloudinary_url || photo.image_url || '', // Cloudinary URL 우선, 없으면 image_url 사용
+              originalSize: photo.original_file_size,
+              originalFilename: photo.original_filename,
+              mimeType: photo.mime_type
+            }));
+          
+          // Supabase 사진이 있으면 사용
+          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
+          if (formattedPhotos.length > 0) {
+            setState(prev => ({
+              ...prev,
+              album: formattedPhotos
+            }));
+          }
+          // Supabase에 사진이 없고 localStorage 데이터도 없으면 초기 상태 유지
+        }
+      } catch (error) {
+        console.error('Supabase 데이터 로드 오류:', error);
+      }
+    };
+
+    // Realtime 구독 설정 (암호화된 데이터 복호화)
+    // masterKey가 없어도 구독은 설정 (복호화 실패 시 원본 텍스트 사용)
+    const setupRealtimeSubscriptions = () => {
+      const authKey = getAuthKey(userId);
+      const currentKey = masterKey || sessionStorage.getItem(authKey) || '';
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('setupRealtimeSubscriptions - userId:', userId);
+        console.log('setupRealtimeSubscriptions - masterKey from state:', masterKey);
+        console.log('setupRealtimeSubscriptions - currentKey from sessionStorage:', sessionStorage.getItem(authKey));
+        console.log('setupRealtimeSubscriptions - final currentKey:', currentKey ? '있음' : '없음');
+      }
+      
+      // 메시지 구독
+      messagesSubscription = supabase
+        .channel('family_messages_changes')
+        .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'family_messages' },
+          (payload: any) => {
+            const newMessage = payload.new;
+            const createdAt = new Date(newMessage.created_at);
+            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
+            
+            // 암호화된 메시지 복호화
+            let decryptedText = newMessage.message_text || '';
+            if (currentKey && newMessage.message_text) {
+              try {
+                const decrypted = CryptoService.decrypt(newMessage.message_text, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedText = decrypted;
+                } else {
+                  // 복호화 실패 또는 잘못된 형식
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('Realtime 메시지 복호화 실패:', newMessage.message_text.substring(0, 30));
+                  }
+                  decryptedText = newMessage.message_text;
+                }
+              } catch (e: any) {
+                // 복호화 오류 (Malformed UTF-8 data 등)
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Realtime 메시지 복호화 오류:', e.message || e, {
+                    original: newMessage.message_text.substring(0, 30),
+                    keyLength: currentKey.length,
+                    errorType: e.name || 'Unknown'
+                  });
+                }
+                decryptedText = newMessage.message_text;
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              decryptedText = newMessage.message_text;
+            }
+            
+            setState(prev => ({
+              ...prev,
+              messages: [...(prev.messages || []), {
+                user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
+                text: decryptedText,
+                time: timeStr
+              }].slice(-50)
+            }));
+          }
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'family_messages' },
+          (payload: any) => {
+            // 삭제된 메시지는 ID로 매칭이 어려우므로 전체 새로고침은 하지 않음
+            // 필요시 수동 새로고침
+          }
+        )
+        .subscribe();
+
+      // 할일 구독
+      tasksSubscription = supabase
+        .channel('family_tasks_changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'family_tasks' },
+          (payload: any) => {
+            const newTask = payload.new;
+            // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
+            const taskText = newTask.title || newTask.task_text || '';
+            let decryptedText = taskText;
+            if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
+              try {
+                const decrypted = CryptoService.decrypt(taskText, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedText = decrypted;
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('Realtime 할일 복호화 성공:', decrypted.substring(0, 20));
+                  }
+                } else {
+                  // 복호화 실패 또는 잘못된 형식
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('Realtime 할일 복호화 실패:', {
+                      original: taskText.substring(0, 30),
+                      decrypted: decrypted,
+                      keyLength: currentKey.length
+                    });
+                  }
+                  decryptedText = taskText;
+                }
+              } catch (e: any) {
+                // 복호화 오류
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Realtime 할일 복호화 오류:', e.message || e, {
+                    original: taskText.substring(0, 30),
+                    keyLength: currentKey.length
+                  });
+                }
+                decryptedText = taskText;
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              decryptedText = taskText;
+            }
+            
+            setState(prev => ({
+              ...prev,
+              todos: [{
+                id: newTask.id,
+                text: decryptedText,
+                assignee: newTask.assigned_to || '누구나',
+                done: newTask.is_completed || false // is_completed 컬럼 사용
+              }, ...prev.todos]
+            }));
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'family_tasks' },
+          (payload: any) => {
+            const updatedTask = payload.new;
+            // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
+            const taskText = updatedTask.title || updatedTask.task_text || '';
+            let decryptedText = taskText;
+            if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
+              try {
+                const decrypted = CryptoService.decrypt(taskText, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedText = decrypted;
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('Realtime 할일 업데이트 복호화 성공:', decrypted.substring(0, 20));
+                  }
+                } else {
+                  // 복호화 실패 또는 잘못된 형식
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('Realtime 할일 업데이트 복호화 실패:', {
+                      original: taskText.substring(0, 30),
+                      decrypted: decrypted,
+                      keyLength: currentKey.length
+                    });
+                  }
+                  decryptedText = taskText;
+                }
+              } catch (e: any) {
+                // 복호화 오류
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Realtime 할일 업데이트 복호화 오류:', e.message || e, {
+                    original: taskText.substring(0, 30),
+                    keyLength: currentKey.length
+                  });
+                }
+                decryptedText = taskText;
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              decryptedText = taskText;
+            }
+            
+            setState(prev => ({
+              ...prev,
+              todos: prev.todos.map(t => 
+                t.id === updatedTask.id 
+                    ? {
+                        id: updatedTask.id,
+                        text: decryptedText,
+                        assignee: updatedTask.assigned_to || t.assignee,
+                        done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done // is_completed 컬럼 사용
+                      }
+                  : t
+              )
+            }));
+          }
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'family_tasks' },
+          (payload: any) => {
+            setState(prev => ({
+              ...prev,
+              todos: prev.todos.filter(t => t.id !== payload.old.id)
+            }));
+          }
+        )
+        .subscribe();
+
+      // 일정 구독
+      eventsSubscription = supabase
+        .channel('family_events_changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'family_events' },
+          (payload: any) => {
+            const newEvent = payload.new;
+            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
+            const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
+            const eventDate = new Date(eventDateValue);
+            const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+            const day = eventDate.getDate().toString();
+            
+            // 암호화된 제목 및 설명 복호화
+            // event_title 대신 title 사용 (실제 테이블 구조에 맞게)
+            const newEventTitleField = newEvent.title || newEvent.event_title || '';
+            const newEventDescField = newEvent.description || '';
+            let decryptedTitle = newEventTitleField;
+            let decryptedDesc = newEventDescField;
+            if (currentKey && currentKey.length > 0) {
+              // 제목 복호화
+              if (newEventTitleField && newEventTitleField.length > 0) {
+                try {
+                  const decryptedTitleData = CryptoService.decrypt(newEventTitleField, currentKey);
+                  if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
+                    decryptedTitle = decryptedTitleData;
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('Realtime 일정 제목 복호화 성공:', decryptedTitle.substring(0, 20));
+                    }
+                  } else {
+                    // 복호화 실패
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn('Realtime 일정 제목 복호화 실패:', {
+                        original: newEventTitleField.substring(0, 30),
+                        decrypted: decryptedTitleData,
+                        keyLength: currentKey.length
+                      });
+                    }
+                    decryptedTitle = newEventTitleField;
+                  }
+                } catch (e: any) {
+                  // 복호화 오류 (Malformed UTF-8 data 등)
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('Realtime 일정 제목 복호화 오류:', e.message || e, {
+                      original: newEventTitleField.substring(0, 30),
+                      keyLength: currentKey.length,
+                      errorType: e.name || 'Unknown'
+                    });
+                  }
+                  decryptedTitle = newEventTitleField;
+                }
+              }
+              // 설명 복호화
+              if (newEventDescField && newEventDescField.length > 0) {
+                try {
+                  const decryptedDescData = CryptoService.decrypt(newEventDescField, currentKey);
+                  if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
+                    decryptedDesc = decryptedDescData;
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('Realtime 일정 설명 복호화 성공:', decryptedDesc.substring(0, 20));
+                    }
+                  } else {
+                    // 복호화 실패
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn('Realtime 일정 설명 복호화 실패:', {
+                        original: newEventDescField.substring(0, 30),
+                        decrypted: decryptedDescData,
+                        keyLength: currentKey.length
+                      });
+                    }
+                    decryptedDesc = newEventDescField;
+                  }
+    } catch (e) {
+                  // 복호화 오류
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('Realtime 일정 설명 복호화 오류:', e, {
+                      original: newEventDescField.substring(0, 30),
+                      keyLength: currentKey.length
+                    });
+                  }
+                  decryptedDesc = newEventDescField;
+                }
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Realtime 일정 복호화 불가 - 키 없음:', {
+                  hasKey: !!currentKey,
+                  keyLength: currentKey?.length || 0
+                });
+              }
+              decryptedTitle = newEventTitleField;
+              decryptedDesc = newEventDescField;
+            }
+            
+            setState(prev => ({
+              ...prev,
+              events: [{
+                id: newEvent.id,
+                month: month,
+                day: day,
+                title: decryptedTitle,
+                desc: decryptedDesc
+              }, ...prev.events]
+            }));
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'family_events' },
+          (payload: any) => {
+            const updatedEvent = payload.new;
+            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
+            const eventDateValue = updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
+            const eventDate = new Date(eventDateValue);
+            const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+            const day = eventDate.getDate().toString();
+            
+            // 암호화된 제목 및 설명 복호화
+            // event_title 대신 title 사용 (실제 테이블 구조에 맞게)
+            const updatedEventTitleField = updatedEvent.title || updatedEvent.event_title || '';
+            const updatedEventDescField = updatedEvent.description || '';
+            let decryptedTitle = updatedEventTitleField;
+            let decryptedDesc = updatedEventDescField;
+            if (currentKey) {
+              // 제목 복호화
+              if (updatedEventTitleField) {
+                try {
+                  const decryptedTitleData = CryptoService.decrypt(updatedEventTitleField, currentKey);
+                  if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
+                    decryptedTitle = decryptedTitleData;
+                  } else {
+                    // 복호화 실패
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn('Realtime 일정 업데이트 제목 복호화 실패:', updatedEventTitleField.substring(0, 30));
+                    }
+                    decryptedTitle = updatedEventTitleField;
+                  }
+                } catch (e: any) {
+                  // 복호화 오류 (Malformed UTF-8 data 등)
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('Realtime 일정 업데이트 제목 복호화 오류:', e.message || e, {
+                      original: updatedEventTitleField.substring(0, 30),
+                      keyLength: currentKey.length,
+                      errorType: e.name || 'Unknown'
+                    });
+                  }
+                  decryptedTitle = updatedEventTitleField;
+                }
+              }
+              // 설명 복호화
+              if (updatedEventDescField) {
+                try {
+                  const decryptedDescData = CryptoService.decrypt(updatedEventDescField, currentKey);
+                  if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
+                    decryptedDesc = decryptedDescData;
+                  } else {
+                    // 복호화 실패
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn('Realtime 일정 업데이트 설명 복호화 실패:', updatedEventDescField.substring(0, 30));
+                    }
+                    decryptedDesc = updatedEventDescField;
+                  }
+                } catch (e) {
+                  // 복호화 오류
+                  if (process.env.NODE_ENV === 'development') {
+                    console.error('Realtime 일정 업데이트 설명 복호화 오류:', e);
+                  }
+                  decryptedDesc = updatedEventDescField;
+                }
+              }
+            } else {
+              // masterKey가 없으면 원본 텍스트 사용
+              decryptedTitle = updatedEventTitleField;
+              decryptedDesc = updatedEventDescField;
+            }
+            
+            setState(prev => ({
+              ...prev,
+              events: prev.events.map(e =>
+                e.id === updatedEvent.id
+                  ? {
+                      id: updatedEvent.id,
+                      month: month,
+                      day: day,
+                      title: decryptedTitle,
+                      desc: decryptedDesc
+                    }
+                  : e
+              )
+            }));
+          }
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'family_events' },
+          (payload: any) => {
+            setState(prev => ({
+              ...prev,
+              events: prev.events.filter(e => e.id !== payload.old.id)
+            }));
+          }
+        )
+        .subscribe();
+
+      // 사진 구독 (memory_vault)
+      photosSubscription = supabase
+        .channel('memory_vault_changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'memory_vault' },
+          (payload: any) => {
+            const newPhoto = payload.new;
+            if (newPhoto.cloudinary_url || newPhoto.image_url) {
+              setState(prev => ({
+                ...prev,
+                album: [{
+                  id: newPhoto.id,
+                  data: newPhoto.cloudinary_url || newPhoto.image_url || '',
+                  originalSize: newPhoto.original_file_size,
+                  originalFilename: newPhoto.original_filename,
+                  mimeType: newPhoto.mime_type
+                }, ...prev.album]
+              }));
+            }
+          }
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'memory_vault' },
+          (payload: any) => {
+            setState(prev => ({
+              ...prev,
+              album: prev.album.filter(p => p.id !== payload.old.id)
+            }));
+          }
+        )
+        .subscribe();
+    };
+
+    // localStorage 데이터 로드 후 Supabase 데이터 로드 (약간의 지연)
+    // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
+    // localStorage 데이터가 있으면 먼저 로드되고, Supabase 데이터는 보완/동기화 역할
+    const timer = setTimeout(() => {
+      loadSupabaseData();
+      setupRealtimeSubscriptions();
+    }, 500); // localStorage 데이터 로드 후 500ms 지연 (localStorage가 비어있어도 실행)
+    
+    // 정리 함수
+    return () => {
+      clearTimeout(timer);
+      if (messagesSubscription) {
+        supabase.removeChannel(messagesSubscription);
+      }
+      if (tasksSubscription) {
+        supabase.removeChannel(tasksSubscription);
+      }
+      if (eventsSubscription) {
+        supabase.removeChannel(eventsSubscription);
+      }
+      if (photosSubscription) {
+        supabase.removeChannel(photosSubscription);
+      }
+    };
+  }, [isAuthenticated, userId, masterKey, userName]);
 
   // --- [LOGIC] 원본 Store.dispatch 로직 이식 ---
 
@@ -184,8 +1002,14 @@ export default function FamilyHub() {
     return cleanedState;
   };
 
-  const persist = (newState: AppState, key: string) => {
+  const persist = (newState: AppState, key: string, userId: string) => {
+    if (!userId) {
+      console.warn('userId가 없어 데이터를 저장할 수 없습니다.');
+      return;
+    }
+    
     try {
+      const storageKey = getStorageKey(userId);
       // originalData 제거 (localStorage 공간 절약)
       const stateForStorage: AppState = {
         ...newState,
@@ -198,13 +1022,14 @@ export default function FamilyHub() {
       // 크기 체크 및 자동 정리
       const cleanedState = checkAndCleanStorage(stateForStorage);
       
-      localStorage.setItem(CONFIG.STORAGE, CryptoService.encrypt(cleanedState, key));
+      localStorage.setItem(storageKey, CryptoService.encrypt(cleanedState, key));
     } catch (e: any) {
       // QuotaExceededError 처리
       if (e.name === 'QuotaExceededError' || e.code === 22) {
         // 오래된 사진 자동 삭제 시도
         const cleanedState = checkAndCleanStorage(newState);
         try {
+          const storageKey = getStorageKey(userId);
           const stateForStorage: AppState = {
             ...cleanedState,
             album: cleanedState.album.map(photo => {
@@ -212,33 +1037,189 @@ export default function FamilyHub() {
               return photoWithoutOriginal;
             })
           };
-          localStorage.setItem(CONFIG.STORAGE, CryptoService.encrypt(stateForStorage, key));
+          localStorage.setItem(storageKey, CryptoService.encrypt(stateForStorage, key));
           alert("저장 공간이 부족하여 오래된 사진이 자동으로 삭제되었습니다.");
         } catch (retryError) {
           alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 수동으로 삭제해 주세요.");
         }
       } else {
-        alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 삭제해 주세요.");
+      alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 삭제해 주세요.");
       }
     }
   };
 
+  // Supabase에 데이터 저장 함수 (암호화 유지)
+  const saveToSupabase = async (action: string, payload: any, userId: string, encryptionKey?: string) => {
+    if (!userId) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // 암호화 키 가져오기
+      const currentKey = encryptionKey || masterKey || sessionStorage.getItem(getAuthKey(userId)) || '';
+      if (!currentKey) {
+        console.warn('암호화 키가 없어 Supabase 저장을 건너뜁니다.');
+        return;
+      }
+
+      switch (action) {
+        case 'ADD_MESSAGE': {
+          // 메시지 암호화
+          const encryptedText = CryptoService.encrypt(payload.text, currentKey);
+          
+          const { error } = await supabase
+            .from('family_messages')
+            .insert({
+              sender_id: userId,
+              message_text: encryptedText // 암호화된 메시지 저장
+              // sender_name 컬럼이 없을 수 있으므로 제거
+              // created_at은 자동 생성되므로 제거
+            });
+          
+          if (error) {
+            console.error('메시지 저장 오류:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('에러 상세:', JSON.stringify(error, null, 2));
+            }
+          }
+          break;
+        }
+        case 'ADD_TODO': {
+          // 할일 텍스트 암호화
+          const encryptedText = CryptoService.encrypt(payload.text, currentKey);
+          
+          // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
+          // assigned_to는 UUID 타입이므로 문자열이 아닌 null 또는 UUID를 사용
+          const taskData: any = {
+            created_by: userId,
+            title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
+            // assigned_to는 UUID 타입이므로 null로 설정 (문자열 "누구나" 등은 사용 불가)
+            assigned_to: null, // UUID 타입이므로 null 사용
+            is_completed: payload.done || false // is_completed 컬럼 사용
+          };
+          
+          const { error } = await supabase
+            .from('family_tasks')
+            .insert(taskData);
+          
+          if (error) {
+            console.error('할일 저장 오류:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('에러 상세:', JSON.stringify(error, null, 2));
+            }
+          }
+          break;
+        }
+        case 'TOGGLE_TODO': {
+          // is_completed 컬럼 사용 (실제 테이블 구조에 맞게)
+          const updateData: any = {};
+          updateData.is_completed = payload.done; // is_completed 컬럼 사용
+          
+          const { error } = await supabase
+            .from('family_tasks')
+            .update(updateData)
+            .eq('id', payload.id);
+          
+          if (error) {
+            console.error('할일 업데이트 오류:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('에러 상세:', JSON.stringify(error, null, 2));
+            }
+          }
+          break;
+        }
+        case 'DELETE_TODO': {
+          const { error } = await supabase
+            .from('family_tasks')
+            .delete()
+            .eq('id', payload);
+          
+          if (error) {
+            console.error('할일 삭제 오류:', error);
+          }
+          break;
+        }
+        case 'ADD_EVENT': {
+          // 일정 제목 및 설명 암호화
+          const encryptedTitle = CryptoService.encrypt(payload.title, currentKey);
+          const encryptedDesc = CryptoService.encrypt(payload.desc || '', currentKey);
+          
+          // 날짜 파싱 (예: "DEC 25" -> 실제 날짜)
+          const monthMap: { [key: string]: number } = {
+            'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+            'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+          };
+          const currentYear = new Date().getFullYear();
+          const month = monthMap[payload.month.toUpperCase()] ?? 11;
+          const day = parseInt(payload.day) || 1;
+          const eventDate = new Date(currentYear, month, day);
+          
+          // event_date 컬럼이 없을 수 있으므로 선택적으로 처리
+          const eventData: any = {
+            created_by: userId,
+            title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
+            description: encryptedDesc, // 암호화된 설명 저장
+            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
+            event_date: eventDate.toISOString()
+            // created_at은 자동 생성되므로 제거
+          };
+          
+          const { error } = await supabase
+            .from('family_events')
+            .insert(eventData);
+          
+          if (error) {
+            console.error('일정 저장 오류:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('에러 상세:', JSON.stringify(error, null, 2));
+            }
+          }
+          break;
+        }
+        case 'DELETE_EVENT': {
+          const { error } = await supabase
+            .from('family_events')
+            .delete()
+            .eq('id', payload);
+          
+          if (error) {
+            console.error('일정 삭제 오류:', error);
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('Supabase 저장 오류:', error);
+    }
+  };
+
   const updateState = (action: string, payload?: any) => {
+    // userId가 없으면 저장하지 않음
+    if (!userId) {
+      console.warn('userId가 없어 데이터를 저장할 수 없습니다.');
+      return;
+    }
+    
     // masterKey가 없으면 자동 생성 또는 불러오기
     let currentKey = masterKey;
     
     if (!currentKey) {
-      // sessionStorage에서 기존 키 확인
-      const savedKey = sessionStorage.getItem(CONFIG.AUTH);
+      // sessionStorage에서 사용자별 기존 키 확인
+      const authKey = getAuthKey(userId);
+      const savedKey = sessionStorage.getItem(authKey);
       if (savedKey) {
         currentKey = savedKey;
         setMasterKey(savedKey);
       } else {
-        // 새로운 마스터 키 생성
-        const newKey = `key_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        // 마스터 키가 없으면 사용자 ID 기반으로 고정된 키 생성
+        // 고정된 키를 사용하여 로그인할 때마다 동일한 키로 복호화 가능
+        // 사용자 ID를 해시화하여 고정된 키 생성
+        const userIdHash = CryptoJS.SHA256(userId).toString().substring(0, 32);
+        const newKey = `key_${userId}_${userIdHash}`;
         currentKey = newKey;
         setMasterKey(newKey);
-        sessionStorage.setItem(CONFIG.AUTH, newKey);
+        sessionStorage.setItem(authKey, newKey);
       }
     }
 
@@ -252,33 +1233,63 @@ export default function FamilyHub() {
         case 'RENAME':
           newState.familyName = payload;
           break;
-        case 'TOGGLE_TODO':
+        case 'TOGGLE_TODO': {
+          const todo = prev.todos.find(t => t.id === payload);
+          if (todo) {
           newState.todos = prev.todos.map(t => t.id === payload ? { ...t, done: !t.done } : t);
+            // Supabase에 저장
+            saveToSupabase('TOGGLE_TODO', { id: payload, done: !todo.done }, userId, currentKey);
+          }
           break;
+        }
         case 'ADD_TODO':
           newState.todos = [payload, ...prev.todos];
+          // Supabase에 저장
+          saveToSupabase('ADD_TODO', payload, userId, currentKey);
           break;
         case 'DELETE_TODO':
           newState.todos = prev.todos.filter(t => t.id !== payload);
+          // Supabase에 저장
+          saveToSupabase('DELETE_TODO', payload, userId, currentKey);
           break;
         case 'ADD_PHOTO':
           newState.album = [payload, ...prev.album];
           break;
         case 'DELETE_PHOTO':
           newState.album = prev.album.filter(p => p.id !== payload);
+          // Supabase에서도 삭제
+          (async () => {
+            try {
+              const { error } = await supabase
+                .from('memory_vault')
+                .delete()
+                .eq('id', payload);
+              if (error) {
+                console.error('사진 삭제 오류:', error);
+              }
+            } catch (error) {
+              console.error('사진 삭제 오류:', error);
+            }
+          })();
           break;
         case 'ADD_EVENT':
           newState.events = [payload, ...prev.events];
+          // Supabase에 저장
+          saveToSupabase('ADD_EVENT', payload, userId, currentKey);
           break;
         case 'DELETE_EVENT':
           newState.events = prev.events.filter(e => e.id !== payload);
+          // Supabase에 저장
+          saveToSupabase('DELETE_EVENT', payload, userId, currentKey);
           break;
         case 'ADD_MESSAGE':
           newState.messages = [...(prev.messages || []), payload].slice(-50);
+          // Supabase에 저장
+          saveToSupabase('ADD_MESSAGE', payload, userId, currentKey);
           break;
       }
 
-      persist(newState, currentKey);
+      persist(newState, currentKey, userId);
       return newState;
     });
   };
@@ -454,9 +1465,9 @@ export default function FamilyHub() {
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             reject(new Error('Canvas context를 가져올 수 없습니다.'));
-            return;
-          }
-
+      return;
+    }
+    
           // 고품질 리사이징
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
@@ -569,7 +1580,7 @@ export default function FamilyHub() {
       const originalReader = new FileReader();
       const originalData = await new Promise<string>((resolve, reject) => {
         originalReader.onload = (event) => {
-          if (event.target?.result) {
+      if (event.target?.result) {
             resolve(event.target.result as string);
           } else {
             reject(new Error('원본 파일 읽기 실패'));
@@ -887,27 +1898,27 @@ export default function FamilyHub() {
             <h3 className="modal-title">
               <span className="modal-icon">📝</span>
               새 할 일 등록
-            </h3>
+          </h3>
             <div className="modal-form">
               <div className="form-field">
                 <label className="form-label">무엇을 할까요?</label>
-                <input 
-                  ref={todoTextRef}
-                  type="text" 
+              <input 
+                ref={todoTextRef}
+                type="text" 
                   className="form-input" 
-                  placeholder="할 일 내용 입력"
-                />
-              </div>
+                placeholder="할 일 내용 입력"
+              />
+            </div>
               <div className="form-field">
                 <label className="form-label">누가 할까요?</label>
-                <input 
-                  ref={todoWhoRef}
-                  type="text" 
+              <input 
+                ref={todoWhoRef}
+                type="text" 
                   className="form-input" 
-                  placeholder="이름 입력 (비워두면 누구나)"
-                />
-              </div>
+                placeholder="이름 입력 (비워두면 누구나)"
+              />
             </div>
+          </div>
             <div className="modal-actions">
               <button 
                 onClick={() => setIsTodoModalOpen(false)} 
@@ -915,15 +1926,15 @@ export default function FamilyHub() {
               >
                 취소
               </button>
-              <button 
-                onClick={submitNewTodo} 
+            <button 
+              onClick={submitNewTodo} 
                 className="btn-primary"
-              >
-                등록하기
-              </button>
-            </div>
+            >
+              등록하기
+            </button>
           </div>
         </div>
+      </div>
       )}
 
       {/* Nickname Modal */}
@@ -1037,13 +2048,13 @@ export default function FamilyHub() {
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">Family Tasks</h3>
-              <button 
-                onClick={() => setIsTodoModalOpen(true)} 
+            <button 
+              onClick={() => setIsTodoModalOpen(true)} 
                 className="btn-add"
-              >
-                + ADD
-              </button>
-            </div>
+            >
+              + ADD
+            </button>
+          </div>
             <div className="section-body">
               {state.todos.length > 0 ? (
                 <div className="todo-list">
@@ -1059,7 +2070,7 @@ export default function FamilyHub() {
                               <path d="M5 13l4 4L19 7"></path>
                             </svg>
                           )}
-                        </div>
+                  </div>
                         <div className="todo-text-wrapper">
                           <span className={`todo-text ${t.done ? 'todo-text-done' : ''}`}>
                             {t.text}
@@ -1067,8 +2078,8 @@ export default function FamilyHub() {
                           {t.assignee && (
                             <span className="todo-assignee">{t.assignee}</span>
                           )}
-                        </div>
-                      </div>
+                  </div>
+                </div>
                       <button 
                         onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
                         className="btn-delete"
@@ -1076,21 +2087,21 @@ export default function FamilyHub() {
                         <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
-                      </button>
-                    </div>
+                </button>
+              </div>
                   ))}
                 </div>
               ) : (
                 <p className="empty-state">할 일을 모두 완료했습니다!</p>
-              )}
-            </div>
+            )}
+          </div>
           </section>
 
           {/* Family Calendar Section */}
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">Family Calendar</h3>
-            </div>
+          </div>
             <div className="section-body">
               <div className="calendar-events">
                 {state.events.length > 0 ? (
@@ -1100,11 +2111,11 @@ export default function FamilyHub() {
                         <div className="event-date">
                           <span className="event-month">{e.month}</span>
                           <span className="event-day">{e.day}</span>
-                        </div>
+                  </div>
                         <div className="event-details">
                           <h4 className="event-title">{e.title}</h4>
                           <p className="event-desc">{e.desc}</p>
-                        </div>
+                  </div>
                         <button 
                           onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} 
                           className="btn-delete-event"
@@ -1112,69 +2123,69 @@ export default function FamilyHub() {
                           <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
-                        </button>
-                      </div>
+                  </button>
+                </div>
                     ))}
                   </div>
                 ) : (
                   <p className="empty-state">등록된 일정이 없습니다.</p>
-                )}
-              </div>
-              <button 
-                onClick={addNewEvent} 
-                className="btn-calendar-add"
-              >
-                + 일정 추가하기
-              </button>
+              )}
             </div>
+            <button 
+              onClick={addNewEvent} 
+                className="btn-calendar-add"
+            >
+              + 일정 추가하기
+            </button>
+          </div>
           </section>
 
           {/* Family Chat Section */}
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">Family Chat</h3>
-            </div>
+          </div>
             <div className="section-body">
               <div ref={chatBoxRef} className="chat-messages">
-                {(state.messages || []).map((m, idx) => (
+              {(state.messages || []).map((m, idx) => (
                   <div key={idx} className="message-item">
                     <div className="message-header">
                       <span className="message-user">{m.user}</span>
                       <span className="message-time">{m.time}</span>
-                    </div>
+                  </div>
                     <div className="message-bubble">
                       <p className="message-text">{m.text}</p>
-                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="chat-input-wrapper">
-                <input 
-                  ref={chatInputRef}
-                  type="text" 
-                  onKeyPress={(e) => e.key === 'Enter' && sendChat()}
-                  className="chat-input" 
-                  placeholder="메시지 입력..."
-                />
-                <button 
-                  onClick={sendChat}
-                  className="btn-send"
-                >
-                  전송
-                </button>
-              </div>
+                </div>
+              ))}
             </div>
+              <div className="chat-input-wrapper">
+              <input 
+                ref={chatInputRef}
+                type="text" 
+                onKeyPress={(e) => e.key === 'Enter' && sendChat()}
+                  className="chat-input" 
+                placeholder="메시지 입력..."
+              />
+              <button 
+                onClick={sendChat}
+                  className="btn-send"
+              >
+                전송
+              </button>
+            </div>
+          </div>
           </section>
 
           {/* Location Section */}
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">Real-time Location</h3>
-            </div>
+          </div>
             <div className="section-body">
               <p className="location-text">{state.location.address}</p>
-            </div>
-          </section>
+          </div>
+        </section>
         </div>
       </div>
     </div>
