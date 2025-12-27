@@ -24,17 +24,17 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
   if (!input) return '';
   return input
     .trim()
-    .replace(/[<>]/g, '') // HTML 태그 제거
-    .replace(/javascript:/gi, '') // javascript: 제거
-    .replace(/on\w+=/gi, '') // 이벤트 핸들러 제거 (onclick= 등)
-    .substring(0, maxLength); // 길이 제한
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .substring(0, maxLength);
 };
 
 // --- [TYPES] 타입 안정성 추가 ---
 type Todo = { id: number; text: string; assignee: string; done: boolean };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string };
 type Message = { user: string; text: string; time: string };
-type Photo = { id: number; data: string }; // Base64 string
+type Photo = { id: number; data: string };
 
 interface AppState {
   familyName: string;
@@ -315,10 +315,7 @@ export default function FamilyHub() {
   }
 
   return (
-    <div id="app" className={`
-      w-full h-[100vh] bg-slate-50 relative flex flex-col overflow-y-auto overflow-x-hidden
-      md:w-[430px] md:h-[850px] md:rounded-[3.5rem] md:border-[12px] md:border-slate-800 md:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)]
-    `}>
+    <div className="app-container">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -327,51 +324,59 @@ export default function FamilyHub() {
         onChange={handleFileSelect} 
       />
 
-
       {/* Todo Modal */}
-      <div className={`
-        absolute inset-0 z-60 bg-slate-900/30 backdrop-blur-md flex items-center justify-center p-5
-        ${isTodoModalOpen ? 'flex' : 'hidden'}
-      `}>
-        <div className="glass w-full max-w-[350px] p-8 shadow-2xl border-white bg-white/90">
-          <h3 className="text-xl font-black mb-6 text-slate-800 flex items-center gap-2">
-            <span className="text-2xl">📝</span> 새 할 일 등록
-          </h3>
-          <div className="space-y-5">
-            <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">무엇을 할까요?</label>
-              <input 
-                ref={todoTextRef}
-                type="text" 
-                className="w-full p-4 rounded-xl border-2 border-slate-50 focus:border-indigo-500 outline-none font-bold text-slate-700 bg-slate-50/50" 
-                placeholder="할 일 내용 입력"
-              />
+      {isTodoModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">
+              <span className="modal-icon">📝</span>
+              새 할 일 등록
+            </h3>
+            <div className="modal-form">
+              <div className="form-field">
+                <label className="form-label">무엇을 할까요?</label>
+                <input 
+                  ref={todoTextRef}
+                  type="text" 
+                  className="form-input" 
+                  placeholder="할 일 내용 입력"
+                />
+              </div>
+              <div className="form-field">
+                <label className="form-label">누가 할까요?</label>
+                <input 
+                  ref={todoWhoRef}
+                  type="text" 
+                  className="form-input" 
+                  placeholder="이름 입력 (비워두면 누구나)"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">누가 할까요?</label>
-              <input 
-                ref={todoWhoRef}
-                type="text" 
-                className="w-full p-4 rounded-xl border-2 border-slate-50 focus:border-indigo-500 outline-none font-bold text-slate-700 bg-slate-50/50" 
-                placeholder="이름 입력 (비워두면 누구나)"
-              />
+            <div className="modal-actions">
+              <button 
+                onClick={() => setIsTodoModalOpen(false)} 
+                className="btn-secondary"
+              >
+                취소
+              </button>
+              <button 
+                onClick={submitNewTodo} 
+                className="btn-primary"
+              >
+                등록하기
+              </button>
             </div>
-          </div>
-          <div className="flex gap-3 mt-8">
-            <button onClick={() => setIsTodoModalOpen(false)} className="flex-1 py-4 font-bold text-slate-400 hover:text-slate-600 transition-colors">취소</button>
-            <button onClick={submitNewTodo} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100 btn-touch">등록하기</button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
-      <div className="transition-opacity duration-1000 opacity-100">
-        
+      <div className="main-content">
         {/* Header */}
-        <header className="p-[8%] pt-[14%]">
+        <header className="app-header">
           <h1 
             onClick={handleRename}
-            className="text-4xl font-black tracking-tight leading-[1.1] cursor-pointer hover:opacity-70 transition-opacity"
+            className="app-title"
           >
             {state.familyName.split(' ').map((word, idx, arr) => (
               <React.Fragment key={idx}>
@@ -380,141 +385,194 @@ export default function FamilyHub() {
               </React.Fragment>
             ))}
           </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          <div className="status-indicator">
+            <span className="status-dot">
+              <span className="status-dot-ping"></span>
+              <span className="status-dot-core"></span>
             </span>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Family Sync Active</p>
+            <p className="status-text">Family Sync Active</p>
           </div>
         </header>
 
-        {/* Family Tasks */}
-        <div className="glass mx-5 my-3 p-6 shadow-xl shadow-slate-200/50 border-white/60 fade-in">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Family Tasks</h3>
-            <button onClick={() => setIsTodoModalOpen(true)} className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg tracking-tighter">+ ADD</button>
-          </div>
-          <div className="text-slate-800">
-            {state.todos.length > 0 ? state.todos.map(t => (
-              <div key={t.id} className="flex items-center justify-between py-2 group">
-                <div onClick={() => updateState('TOGGLE_TODO', t.id)} className="btn-touch flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${t.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
-                    {t.done && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path d="M5 13l4 4L19 7"></path></svg>}
-                  </div>
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className={`text-sm font-bold ${t.done ? 'text-slate-300 line-through' : 'text-slate-700'}`}>{t.text}</span>
-                    {t.assignee && <span className="text-xs font-bold text-slate-400 whitespace-nowrap">{t.assignee}</span>}
-                  </div>
-                </div>
-                <button onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} className="text-slate-300 hover:text-red-400 p-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-              </div>
-            )) : (
-              <p className="py-2 text-slate-400 font-bold text-sm">할 일을 모두 완료했습니다!</p>
-            )}
-          </div>
-        </div>
-
-        {/* Family Calendar */}
-        <div className="glass mx-5 my-3 p-6 shadow-xl shadow-slate-200/50 border-white/60 fade-in">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Family Calendar</h3>
-          </div>
-          <div className="text-slate-800">
-            <div className="mb-6 max-h-[250px] overflow-y-auto pr-2 chat-scroll">
-              {state.events.length > 0 ? state.events.map(e => (
-                <div key={e.id} className="flex gap-4 mb-4 items-start relative group">
-                  <div className="flex flex-col items-center bg-white rounded-xl px-3 py-2 shadow-sm min-w-[55px] border border-slate-100">
-                    <span className="text-[10px] font-black text-indigo-500 uppercase">{e.month}</span>
-                    <span className="text-xl font-black text-slate-800">{e.day}</span>
-                  </div>
-                  <div className="flex-1 pt-1 pr-8">
-                    <h4 className="text-base font-black text-slate-800 leading-tight">{e.title}</h4>
-                    <p className="text-xs font-bold text-slate-400 mt-1">{e.desc}</p>
-                  </div>
-                  <button onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} className="absolute right-0 top-1 text-slate-300 hover:text-red-500 transition-colors p-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                </div>
-              )) : (
-                <p className="text-center py-4 text-slate-400 font-bold text-sm">등록된 일정이 없습니다.</p>
-              )}
-            </div>
-            <button onClick={addNewEvent} className="btn-touch w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm">
-              + 일정 추가하기
-            </button>
-          </div>
-        </div>
-
-        {/* Family Chat */}
-        <div className="glass mx-5 my-3 p-6 shadow-xl shadow-slate-200/50 border-white/60 fade-in">
-           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Family Chat</h3>
-          </div>
-          <div className="text-slate-800">
-            <div ref={chatBoxRef} className="chat-scroll max-h-[180px] overflow-y-auto mb-4 pr-2">
-              {(state.messages || []).map((m, idx) => (
-                <div key={idx} className="mb-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-black text-indigo-500">{m.user}</span>
-                    <span className="text-[10px] text-slate-300">{m.time}</span>
-                  </div>
-                  <div className="bg-white/50 inline-block px-4 py-2 rounded-2xl rounded-tl-none border border-white/40 shadow-sm max-w-[90%]">
-                    <p className="text-sm font-bold text-slate-700 break-all">{m.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 w-full flex-nowrap">
-              <input 
-                ref={chatInputRef}
-                type="text" 
-                onKeyPress={(e) => e.key === 'Enter' && sendChat()}
-                className="flex-1 min-w-0 bg-white/50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-indigo-500" 
-                placeholder="메시지 입력..."
-              />
+        {/* Content Sections Container */}
+        <div className="sections-container">
+          {/* Family Tasks Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">Family Tasks</h3>
               <button 
-                onClick={sendChat}
-                className="btn-touch bg-slate-900 text-white px-4 py-3 rounded-xl font-black text-xs whitespace-nowrap flex-shrink-0"
+                onClick={() => setIsTodoModalOpen(true)} 
+                className="btn-add"
               >
-                전송
+                + ADD
               </button>
             </div>
-          </div>
-        </div>
+            <div className="section-body">
+              {state.todos.length > 0 ? (
+                <div className="todo-list">
+                  {state.todos.map(t => (
+                    <div key={t.id} className="todo-item">
+                      <div 
+                        onClick={() => updateState('TOGGLE_TODO', t.id)} 
+                        className="todo-content"
+                      >
+                        <div className={`todo-checkbox ${t.done ? 'todo-checkbox-checked' : ''}`}>
+                          {t.done && (
+                            <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                              <path d="M5 13l4 4L19 7"></path>
+                            </svg>
+                          )}
+                        </div>
+                        <div className="todo-text-wrapper">
+                          <span className={`todo-text ${t.done ? 'todo-text-done' : ''}`}>
+                            {t.text}
+                          </span>
+                          {t.assignee && (
+                            <span className="todo-assignee">{t.assignee}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
+                        className="btn-delete"
+                      >
+                        <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">할 일을 모두 완료했습니다!</p>
+              )}
+            </div>
+          </section>
 
-        {/* Location */}
-        <div className="glass mx-5 my-3 p-6 shadow-xl shadow-slate-200/50 border-white/60 fade-in">
-           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Real-time Location</h3>
-          </div>
-          <p className="text-lg font-black text-indigo-900">{state.location.address}</p>
-        </div>
+          {/* Family Calendar Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">Family Calendar</h3>
+            </div>
+            <div className="section-body">
+              <div className="calendar-events">
+                {state.events.length > 0 ? (
+                  <div className="event-list">
+                    {state.events.map(e => (
+                      <div key={e.id} className="event-item">
+                        <div className="event-date">
+                          <span className="event-month">{e.month}</span>
+                          <span className="event-day">{e.day}</span>
+                        </div>
+                        <div className="event-details">
+                          <h4 className="event-title">{e.title}</h4>
+                          <p className="event-desc">{e.desc}</p>
+                        </div>
+                        <button 
+                          onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} 
+                          className="btn-delete-event"
+                        >
+                          <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty-state">등록된 일정이 없습니다.</p>
+                )}
+              </div>
+              <button 
+                onClick={addNewEvent} 
+                className="btn-calendar-add"
+              >
+                + 일정 추가하기
+              </button>
+            </div>
+          </section>
 
-        {/* Memory Vault */}
-        <section className="glass m-5 p-8 mb-16 shadow-2xl shadow-slate-200/60 text-center">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-xl font-black text-slate-800 text-left">Memory Vault</h2>
-            <button onClick={() => fileInputRef.current?.click()} className="btn-touch px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg">Upload</button>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            {state.album && state.album.length > 0 ? state.album.map(p => (
-              <div key={p.id} className="relative group aspect-square bg-white/40 rounded-2xl border border-white shadow-sm overflow-hidden">
-                <img src={p.data} className="w-full h-full object-cover" alt="memory" />
-                <button onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} className="absolute top-1 right-1 bg-red-500/80 text-white rounded-full p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+          {/* Family Chat Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">Family Chat</h3>
+            </div>
+            <div className="section-body">
+              <div ref={chatBoxRef} className="chat-messages">
+                {(state.messages || []).map((m, idx) => (
+                  <div key={idx} className="message-item">
+                    <div className="message-header">
+                      <span className="message-user">{m.user}</span>
+                      <span className="message-time">{m.time}</span>
+                    </div>
+                    <div className="message-bubble">
+                      <p className="message-text">{m.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="chat-input-wrapper">
+                <input 
+                  ref={chatInputRef}
+                  type="text" 
+                  onKeyPress={(e) => e.key === 'Enter' && sendChat()}
+                  className="chat-input" 
+                  placeholder="메시지 입력..."
+                />
+                <button 
+                  onClick={sendChat}
+                  className="btn-send"
+                >
+                  전송
                 </button>
               </div>
-            )) : (
-              <div className="col-span-3 py-10 text-slate-300 font-bold border-2 border-dashed border-slate-100 rounded-3xl">
-                사진을 업로드해보세요.
-              </div>
-            )}
-          </div>
-        </section>
-        
+            </div>
+          </section>
+
+          {/* Location Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">Real-time Location</h3>
+            </div>
+            <div className="section-body">
+              <p className="location-text">{state.location.address}</p>
+            </div>
+          </section>
+
+          {/* Memory Vault Section */}
+          <section className="content-section memory-vault">
+            <div className="section-header">
+              <h2 className="section-title-large">Memory Vault</h2>
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="btn-upload"
+              >
+                Upload
+              </button>
+            </div>
+            <div className="photo-grid">
+              {state.album && state.album.length > 0 ? (
+                state.album.map(p => (
+                  <div key={p.id} className="photo-item">
+                    <img src={p.data} className="photo-image" alt="memory" />
+                    <button 
+                      onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
+                      className="btn-delete-photo"
+                    >
+                      <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="photo-empty">
+                  사진을 업로드해보세요.
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
