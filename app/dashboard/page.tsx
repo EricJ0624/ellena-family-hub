@@ -506,7 +506,7 @@ export default function FamilyHub() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // 보안: 파일 타입 검증 (아이폰 HEIC/HEIF 지원 포함)
+    // 보안: 파일 타입 검증 (아이폰 HEIC/HEIF 및 RAW 형식 지원 포함)
     const ALLOWED_TYPES = [
       'image/jpeg', 
       'image/jpg', 
@@ -515,18 +515,31 @@ export default function FamilyHub() {
       'image/gif',
       'image/heic',  // 아이폰 HEIC 형식
       'image/heif',  // HEIF 형식
+      'image/x-canon-cr2',  // Canon RAW
+      'image/x-nikon-nef',  // Nikon RAW
+      'image/x-sony-arw',   // Sony RAW
+      'image/x-adobe-dng',  // Adobe DNG
     ];
     
     // 파일 확장자 기반 검증 (MIME 타입이 없는 경우 대비)
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'];
+    const allowedExtensions = [
+      'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif',
+      // RAW 형식 확장자
+      'raw', 'cr2', 'nef', 'arw', 'orf', 'rw2', 'dng', 'raf', 'srw', '3fr', 'ari', 'bay', 'crw', 'cap', 'data', 'dcs', 'dcr', 'drf', 'eip', 'erf', 'fff', 'iiq', 'k25', 'kdc', 'mef', 'mos', 'mrw', 'nrw', 'obm', 'pef', 'ptx', 'pxn', 'r3d', 'raf', 'raw', 'rwl', 'rw2', 'rwz', 'sr2', 'srf', 'srw', 'tif', 'x3f'
+    ];
+    
+    // RAW 파일 여부 확인
+    const isRawFile = [
+      'raw', 'cr2', 'nef', 'arw', 'orf', 'rw2', 'dng', 'raf', 'srw', '3fr', 'ari', 'bay', 'crw', 'cap', 'data', 'dcs', 'dcr', 'drf', 'eip', 'erf', 'fff', 'iiq', 'k25', 'kdc', 'mef', 'mos', 'mrw', 'nrw', 'obm', 'pef', 'ptx', 'pxn', 'r3d', 'raf', 'raw', 'rwl', 'rw2', 'rwz', 'sr2', 'srf', 'srw', 'tif', 'x3f'
+    ].includes(fileExtension);
     
     // MIME 타입 또는 확장자로 검증
     const isValidType = ALLOWED_TYPES.includes(file.type) || 
                         (file.type === '' && allowedExtensions.includes(fileExtension));
     
     if (!isValidType) {
-      alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF, HEIC/HEIF만 가능)');
+      alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF, HEIC/HEIF, RAW 형식만 가능)');
       e.target.value = "";
       return;
     }
@@ -539,11 +552,14 @@ export default function FamilyHub() {
       return;
     }
 
-    // 보안: 원본 파일 크기 제한 (50MB - 리사이징 후 크기로 최종 체크)
+    // 보안: 원본 파일 크기 제한
+    // RAW 파일은 리사이징 불가능하므로 크기 제한을 더 크게 설정
     // Presigned URL 방식으로 큰 파일도 처리 가능하므로 제한 완화
-    const MAX_ORIGINAL_SIZE = 50 * 1024 * 1024; // 50MB
+    const MAX_ORIGINAL_SIZE = isRawFile 
+      ? 100 * 1024 * 1024  // RAW 파일: 100MB (리사이징 불가능하므로 여유있게)
+      : 50 * 1024 * 1024;  // 일반 파일: 50MB
     if (file.size > MAX_ORIGINAL_SIZE) {
-      alert("파일이 너무 큽니다. (50MB 이하만 가능)");
+      alert(`파일이 너무 큽니다. (${isRawFile ? 'RAW 파일' : '일반 파일'} 최대 ${MAX_ORIGINAL_SIZE / 1024 / 1024}MB)`);
       e.target.value = "";
       return;
     }
@@ -564,10 +580,28 @@ export default function FamilyHub() {
       });
 
       let imageData: string; // 표시용 리사이징된 이미지
-
-      // 파일이 500KB 이상이면 리사이징 및 압축
       const RESIZE_THRESHOLD = 500 * 1024; // 500KB
-      if (file.size > RESIZE_THRESHOLD) {
+
+      // RAW 파일은 브라우저에서 리사이징 불가능하므로 원본 그대로 사용
+      if (isRawFile) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('RAW 파일 감지 - 리사이징 건너뜀:', {
+            fileName: file.name,
+            fileSize: Math.round(file.size / 1024) + 'KB',
+            extension: fileExtension
+          });
+        }
+        
+        // RAW 파일은 표시용 이미지를 생성할 수 없으므로 원본 데이터 사용
+        // (실제로는 표시되지 않지만, 구조상 유지)
+        imageData = originalData;
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('RAW 파일 처리 완료 - 원본 그대로 업로드');
+        }
+      }
+      // 일반 이미지 파일: 파일이 500KB 이상이면 리사이징 및 압축
+      else if (file.size > RESIZE_THRESHOLD) {
         if (process.env.NODE_ENV === 'development') {
           console.log('리사이징 시작:', { 
             originalSize: file.size, 
@@ -670,8 +704,9 @@ export default function FamilyHub() {
         }
 
         // 파일 크기 기준으로 업로드 방식 결정 (5MB)
+        // RAW 파일은 리사이징 불가능하므로 무조건 Presigned URL 방식 사용
         const PRESIGNED_URL_THRESHOLD = 5 * 1024 * 1024; // 5MB
-        const usePresignedUrl = file.size >= PRESIGNED_URL_THRESHOLD;
+        const usePresignedUrl = isRawFile || file.size >= PRESIGNED_URL_THRESHOLD;
 
         if (process.env.NODE_ENV === 'development') {
           console.log('Cloudinary & S3 업로드 시작...', {
@@ -970,7 +1005,7 @@ export default function FamilyHub() {
                 id="file-upload-input"
                 type="file" 
                 ref={fileInputRef} 
-                accept="image/*,.heic,.heif" 
+                accept="image/*,.heic,.heif,.raw,.cr2,.nef,.arw,.orf,.rw2,.dng,.raf,.srw" 
                 style={{ display: 'none' }}
                 onChange={handleFileSelect} 
               />

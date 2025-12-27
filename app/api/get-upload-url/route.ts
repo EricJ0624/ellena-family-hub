@@ -44,11 +44,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 파일 크기 제한 체크 (50MB)
-    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    // RAW 파일 확장자 목록
+    const rawExtensions = ['raw', 'cr2', 'nef', 'arw', 'orf', 'rw2', 'dng', 'raf', 'srw', '3fr', 'ari', 'bay', 'crw', 'cap', 'data', 'dcs', 'dcr', 'drf', 'eip', 'erf', 'fff', 'iiq', 'k25', 'kdc', 'mef', 'mos', 'mrw', 'nrw', 'obm', 'pef', 'ptx', 'pxn', 'r3d', 'rwl', 'rwz', 'sr2', 'srf', 'tif', 'x3f'];
+    const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+    const isRawFile = rawExtensions.includes(fileExtension);
+
+    // 파일 크기 제한 체크
+    // RAW 파일은 리사이징 불가능하므로 크기 제한을 더 크게 설정
+    const MAX_FILE_SIZE = isRawFile 
+      ? 100 * 1024 * 1024  // RAW 파일: 100MB (리사이징 불가능하므로 여유있게)
+      : 50 * 1024 * 1024;  // 일반 파일: 50MB
     if (fileSize && fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `파일이 너무 큽니다. (최대 ${MAX_FILE_SIZE / 1024 / 1024}MB)` },
+        { error: `파일이 너무 큽니다. (${isRawFile ? 'RAW 파일' : '일반 파일'} 최대 ${MAX_FILE_SIZE / 1024 / 1024}MB)` },
         { status: 413 }
       );
     }
