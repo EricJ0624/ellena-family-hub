@@ -33,14 +33,19 @@ function initializeCloudinary() {
 function normalizeAwsRegion(region?: string): string {
   if (!region) return 'us-east-1';
   
+  // 공백 제거 및 소문자 변환
+  const cleaned = region.trim().toLowerCase();
+  
   // "Asia Pacific (Sydney) ap-southeast-2" 형식에서 "ap-southeast-2"만 추출
-  const regionMatch = region.match(/([a-z]+-[a-z]+-\d+)/i);
+  // AWS 리전 형식: {prefix}-{direction}-{number} (예: ap-southeast-2, us-east-1)
+  const regionMatch = cleaned.match(/([a-z]+-[a-z]+-\d+)/);
   if (regionMatch) {
-    return regionMatch[1].toLowerCase();
+    return regionMatch[1];
   }
   
-  // 이미 올바른 형식이면 그대로 사용
-  return region.toLowerCase();
+  // 이미 올바른 형식이면 그대로 사용 (공백 제거 후)
+  // 예: "ap-southeast-2 " -> "ap-southeast-2"
+  return cleaned.replace(/\s+/g, '');
 }
 
 // --- [SINGLETON PATTERN] S3 클라이언트 설정 (한 번만 초기화) ---
