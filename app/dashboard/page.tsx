@@ -487,12 +487,12 @@ export default function FamilyHub() {
           .limit(50);
 
         if (!photosError && photosData) {
-          // Cloudinary URL 또는 image_url이 있는 사진만 표시
+          // Cloudinary URL, image_url, 또는 S3 URL이 있는 사진만 표시
           const formattedPhotos: Photo[] = photosData
-            .filter((photo: any) => photo.cloudinary_url || photo.image_url)
+            .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
             .map((photo: any) => ({
               id: photo.id,
-              data: photo.cloudinary_url || photo.image_url || '', // Cloudinary URL 우선, 없으면 image_url 사용
+              data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '', // Cloudinary URL 우선, 없으면 image_url, 마지막으로 S3 URL 사용
               originalSize: photo.original_file_size,
               originalFilename: photo.original_filename,
               mimeType: photo.mime_type
@@ -917,12 +917,12 @@ export default function FamilyHub() {
           { event: 'INSERT', schema: 'public', table: 'memory_vault' },
           (payload: any) => {
             const newPhoto = payload.new;
-            if (newPhoto.cloudinary_url || newPhoto.image_url) {
+            if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
               setState(prev => ({
                 ...prev,
                 album: [{
                   id: newPhoto.id,
-                  data: newPhoto.cloudinary_url || newPhoto.image_url || '',
+                  data: newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '',
                   originalSize: newPhoto.original_file_size,
                   originalFilename: newPhoto.original_filename,
                   mimeType: newPhoto.mime_type
