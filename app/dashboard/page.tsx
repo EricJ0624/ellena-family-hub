@@ -1207,20 +1207,14 @@ export default function FamilyHub() {
           }
         )
         .subscribe((status, err) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime 메시지 subscription 상태:', status);
-            if (err) {
-              console.error('Realtime 메시지 subscription 오류:', err);
-            }
+          console.log('📸 Realtime 사진 subscription 상태:', status);
+          if (err) {
+            console.error('❌ Realtime 사진 subscription 오류:', err);
           }
           if (status === 'SUBSCRIBED') {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('✅ Realtime 메시지 subscription 연결 성공');
-            }
+            console.log('✅ Realtime 사진 subscription 연결 성공');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            if (process.env.NODE_ENV === 'development') {
-              console.error('❌ Realtime 메시지 subscription 연결 실패:', status);
-            }
+            console.error('❌ Realtime 사진 subscription 연결 실패:', status);
           }
         });
       
