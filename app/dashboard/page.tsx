@@ -2146,61 +2146,140 @@ export default function FamilyHub() {
 
         if (usePresignedUrl) {
           // Presigned URL 방식 (큰 파일)
-          // 1. Presigned URL 요청
-          const urlResponse = await fetch('/api/get-upload-url', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              fileName: file.name,
-              mimeType: file.type,
-              fileSize: file.size,
-            }),
-          });
-
-          const urlResult = await urlResponse.json();
-
-          if (!urlResponse.ok) {
-            throw new Error(urlResult.error || 'Presigned URL 생성 실패');
-          }
-
-          const { presignedUrl, s3Key, s3Url } = urlResult;
-
-          // 2. 클라이언트에서 직접 S3에 원본 파일 업로드
-          // 타임아웃 설정 (30초)
-          const uploadController = new AbortController();
-          const uploadTimeout = setTimeout(() => uploadController.abort(), 30000);
-          
           try {
-            const s3UploadResponse = await fetch(presignedUrl, {
-              method: 'PUT',
-              body: file, // 원본 파일 그대로 (Base64 변환 불필요)
+            // 1. Presigned URL 요청
+            const urlResponse = await fetch('/api/get-upload-url', {
+              method: 'POST',
               headers: {
-                'Content-Type': file.type,
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
               },
-              signal: uploadController.signal,
+              body: JSON.stringify({
+                fileName: file.name,
+                mimeType: file.type,
+                fileSize: file.size,
+              }),
             });
 
-            clearTimeout(uploadTimeout);
+            const urlResult = await urlResponse.json();
 
-            if (!s3UploadResponse.ok) {
-              const errorText = await s3UploadResponse.text();
-              console.error('S3 업로드 실패:', {
-                status: s3UploadResponse.status,
-                statusText: s3UploadResponse.statusText,
-                error: errorText
+            if (!urlResponse.ok) {
+              console.error('Presigned URL 생성 실패:', {
+                status: urlResponse.status,
+                error: urlResult.error
               });
-              throw new Error(`S3 업로드 실패: ${s3UploadResponse.status} ${s3UploadResponse.statusText}`);
+              throw new Error(urlResult.error || 'Presigned URL 생성 실패');
             }
-          } catch (uploadError: any) {
-            clearTimeout(uploadTimeout);
-            if (uploadError.name === 'AbortError') {
-              throw new Error('S3 업로드 타임아웃 (30초 초과)');
+
+            if (!urlResult.presignedUrl) {
+              console.error('Presigned URL이 응답에 없음:', urlResult);
+              throw new Error('Presigned URL이 응답에 포함되지 않았습니다.');
             }
-            throw uploadError;
-          }
+
+            const { presignedUrl, s3Key, s3Url } = urlResult;
+
+            // 2. 클라이언트에서 직접 S3에 원본 파일 업로드
+            // 타임아웃 설정 (30초)
+            const uploadController = new AbortController();
+            const uploadTimeout = setTimeout(() => uploadController.abort(), 30000);
+            
+            try {
+              const s3UploadResponse = await fetch(presignedUrl, {
+                method: 'PUT',
+                body: file, // 원본 파일 그대로 (Base64 변환 불필요)
+                headers: {
+                  'Content-Type': file.type,
+                },
+                signal: uploadController.signal,
+              });
+
+              clearTimeout(uploadTimeout);
+
+              if (!s3UploadResponse.ok) {
+                const errorText = await s3UploadResponse.text();
+                console.error('S3 업로드 실패:', {
+                  status: s3UploadResponse.status,
+                  statusText: s3UploadResponse.statusText,
+                  error: errorText.substring(0, 200)
+                });
+                
+                // CORS 오류 확인
+                if (s3UploadResponse.status === 0 || errorText.includes('CORS')) {
+                  console.error('CORS 오류로 의심됨');
+                  throw new Error('CORS 오류: S3 버킷 CORS 설정이 필요합니다.');
+                }
+                
+                throw new Error(`S3 업로드 실패: ${s3UploadResponse.status} ${s3UploadResponse.statusText}`);
+              }
+            } catch (uploadError: any) {
+              clearTimeout(uploadTimeout);
+              
+              // CORS 오류 감지
+              const isCorsError = 
+                uploadError.message?.includes('CORS') ||
+                uploadError.message?.includes('Failed to fetch') ||
+                uploadError.name === 'TypeError' ||
+                uploadError.message?.includes('NetworkError') ||
+                uploadError.message?.includes('blocked by CORS policy');
+              
+              if (uploadError.name === 'AbortError') {
+                throw new Error('S3 업로드 타임아웃 (30초 초과)');
+              }
+              
+              // CORS 오류 발생 시 서버 경유 방식으로 자동 폴백
+              if (isCorsError) {
+                console.warn('CORS 오류 감지, 서버 경유 방식으로 자동 재시도:', uploadError.message);
+                
+                try {
+                  const fallbackController = new AbortController();
+                  const fallbackTimeout = setTimeout(() => fallbackController.abort(), 60000);
+                  
+                  const fallbackResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      originalData: originalDataForUpload,
+                      resizedData: imageData !== originalDataForUpload ? imageData : null,
+                      fileName: file.name,
+                      mimeType: file.type,
+                      originalSize: file.size,
+                    }),
+                    signal: fallbackController.signal,
+                  });
+
+                  clearTimeout(fallbackTimeout);
+
+                  const fallbackResult = await fallbackResponse.json();
+
+                  if (!fallbackResponse.ok) {
+                    throw new Error(fallbackResult.error || '서버 경유 업로드 실패');
+                  }
+
+                  // 서버 경유 업로드 성공
+                  if (fallbackResult.id && (fallbackResult.cloudinaryUrl || fallbackResult.s3Url)) {
+                    updateState('UPDATE_PHOTO_ID', {
+                      oldId: photoId,
+                      newId: fallbackResult.id,
+                      cloudinaryUrl: fallbackResult.cloudinaryUrl,
+                      s3Url: fallbackResult.s3Url
+                    });
+                    
+                    // 성공 알림
+                    alert('업로드 완료: CORS 오류로 인해 서버 경유 방식으로 업로드되었습니다.');
+                  }
+                  
+                  return; // 성공적으로 폴백 완료
+                } catch (fallbackError: any) {
+                  // 폴백도 실패한 경우 원래 에러를 throw하여 최종 catch 블록에서 처리
+                  throw new Error(`CORS 오류 후 서버 경유 재시도 실패: ${fallbackError.message || '알 수 없는 오류'}`);
+                }
+              }
+              
+              throw uploadError;
+            }
 
           if (process.env.NODE_ENV === 'development') {
             console.log('S3 직접 업로드 완료:', { s3Key, s3Url });
@@ -2268,6 +2347,57 @@ export default function FamilyHub() {
               throw new Error('업로드 완료 처리 타임아웃 (60초 초과)');
             }
             throw completeError;
+          }
+          } catch (presignedError: any) {
+            // Presigned URL 생성 실패 시에도 서버 경유 방식으로 폴백
+            console.warn('Presigned URL 생성 실패, 서버 경유 방식으로 재시도:', presignedError.message);
+            
+            try {
+              const fallbackController = new AbortController();
+              const fallbackTimeout = setTimeout(() => fallbackController.abort(), 60000);
+              
+              const fallbackResponse = await fetch('/api/upload', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                  originalData: originalDataForUpload,
+                  resizedData: imageData !== originalDataForUpload ? imageData : null,
+                  fileName: file.name,
+                  mimeType: file.type,
+                  originalSize: file.size,
+                }),
+                signal: fallbackController.signal,
+              });
+
+              clearTimeout(fallbackTimeout);
+
+              const fallbackResult = await fallbackResponse.json();
+
+              if (!fallbackResponse.ok) {
+                throw new Error(fallbackResult.error || '서버 경유 업로드 실패');
+              }
+
+              // 서버 경유 업로드 성공
+              if (fallbackResult.id && (fallbackResult.cloudinaryUrl || fallbackResult.s3Url)) {
+                updateState('UPDATE_PHOTO_ID', {
+                  oldId: photoId,
+                  newId: fallbackResult.id,
+                  cloudinaryUrl: fallbackResult.cloudinaryUrl,
+                  s3Url: fallbackResult.s3Url
+                });
+                
+                // 성공 알림
+                alert('업로드 완료: Presigned URL 생성 실패로 서버 경유 방식으로 업로드되었습니다.');
+              }
+              
+              return; // 성공적으로 폴백 완료
+            } catch (fallbackError: any) {
+              // 폴백도 실패한 경우 원래 에러를 throw하여 최종 catch 블록에서 처리
+              throw new Error(`Presigned URL 생성 실패 후 서버 경유 재시도도 실패: ${fallbackError.message || '알 수 없는 오류'}`);
+            }
           }
         } else {
           // 기존 방식 (작은 파일, 서버 경유)
