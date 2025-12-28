@@ -2125,10 +2125,19 @@ export default function FamilyHub() {
 
       // Cloudinary와 AWS S3 업로드 (비동기, 백그라운드 처리)
       // 하이브리드 방식: 작은 파일은 서버 경유, 큰 파일은 Presigned URL 방식
+      let uploadCompleted = false;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           console.warn('세션이 없어 Cloudinary/S3 업로드를 건너뜁니다.');
+          // 세션이 없어도 isUploading 플래그는 해제
+          updateState('UPDATE_PHOTO_ID', {
+            oldId: photoId,
+            newId: photoId,
+            cloudinaryUrl: null,
+            s3Url: null,
+            uploadFailed: true
+          });
           return;
         }
 
@@ -2267,6 +2276,7 @@ export default function FamilyHub() {
                       s3Url: fallbackResult.s3Url
                     });
                     
+                    uploadCompleted = true;
                     // 성공 알림
                     alert('업로드 완료: CORS 오류로 인해 서버 경유 방식으로 업로드되었습니다.');
                   }
@@ -2334,6 +2344,7 @@ export default function FamilyHub() {
                 s3Url: completeResult.s3Url
               });
               
+              uploadCompleted = true;
               // 업로드 완료 알림 (3초 후 자동 사라짐)
               setTimeout(() => {
                 if (process.env.NODE_ENV === 'development') {
@@ -2389,6 +2400,7 @@ export default function FamilyHub() {
                   s3Url: fallbackResult.s3Url
                 });
                 
+                uploadCompleted = true;
                 // 성공 알림
                 alert('업로드 완료: Presigned URL 생성 실패로 서버 경유 방식으로 업로드되었습니다.');
               }
@@ -2448,6 +2460,7 @@ export default function FamilyHub() {
                 s3Url: uploadResult.s3Url
               });
               
+              uploadCompleted = true;
               // 업로드 완료 알림 (3초 후 자동 사라짐)
               setTimeout(() => {
                 if (process.env.NODE_ENV === 'development') {
@@ -2492,9 +2505,37 @@ export default function FamilyHub() {
         } else {
           alert(`업로드 실패: ${errorMessage}\n\n로컬 저장은 완료되었습니다.`);
         }
+      } finally {
+        // 업로드가 완료되지 않았고 플래그가 아직 true인 경우 강제로 해제
+        if (!uploadCompleted) {
+          // 이미 catch 블록에서 처리했지만, 혹시 모를 경우를 대비해 한 번 더 확인
+          // setTimeout을 사용하여 state 업데이트가 완료된 후 확인
+          setTimeout(() => {
+            const storedPhotos = JSON.parse(localStorage.getItem('family_album') || '[]');
+            const currentPhoto = storedPhotos.find((p: any) => p.id === photoId);
+            if (currentPhoto?.isUploading) {
+              console.warn('업로드 플래그가 여전히 true입니다. 강제로 해제합니다.');
+              updateState('UPDATE_PHOTO_ID', {
+                oldId: photoId,
+                newId: photoId,
+                cloudinaryUrl: null,
+                s3Url: null,
+                uploadFailed: true
+              });
+            }
+          }, 100);
+        }
       }
     } catch (error: any) {
       console.error('Image processing error:', error);
+      // 이미지 처리 에러에서도 isUploading 플래그 해제
+      updateState('UPDATE_PHOTO_ID', {
+        oldId: photoId,
+        newId: photoId,
+        cloudinaryUrl: null,
+        s3Url: null,
+        uploadFailed: true
+      });
       alert('이미지 처리 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
     }
     

@@ -45,7 +45,13 @@ export async function POST(request: NextRequest) {
         cloudinaryBlob = base64ToBlob(resizedData, mimeType);
       } else {
         // 리사이징된 이미지가 없으면 S3에서 원본 다운로드
-        cloudinaryBlob = await downloadFromS3(s3Key);
+        try {
+          cloudinaryBlob = await downloadFromS3(s3Key);
+        } catch (s3DownloadError: any) {
+          console.error('S3에서 파일 다운로드 실패:', s3DownloadError);
+          // S3 다운로드 실패 시 Cloudinary 업로드를 건너뛰고 Supabase 저장만 진행
+          throw new Error('S3에서 파일을 다운로드할 수 없습니다. Cloudinary 업로드를 건너뜁니다.');
+        }
       }
 
       const cloudinaryResult = await uploadToCloudinary(
@@ -59,6 +65,10 @@ export async function POST(request: NextRequest) {
     } catch (cloudinaryError: any) {
       console.error('Cloudinary 업로드 오류:', cloudinaryError);
       // Cloudinary 업로드 실패해도 Supabase 저장은 계속 진행
+      // 에러 메시지에 따라 다르게 처리
+      if (cloudinaryError.message?.includes('S3에서 파일을 다운로드할 수 없습니다')) {
+        console.warn('S3 다운로드 실패로 Cloudinary 업로드를 건너뜁니다.');
+      }
     }
 
     // 2. Supabase memory_vault 테이블에 저장

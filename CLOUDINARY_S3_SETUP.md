@@ -68,3 +68,9 @@ AWS_S3_BUCKET_NAME=your_s3_bucket_name
 - 프로덕션 환경에서는 Vercel 등의 플랫폼에서 환경 변수를 설정하세요
 
 
+
+
+
+
+
+
