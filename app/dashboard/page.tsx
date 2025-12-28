@@ -515,7 +515,9 @@ export default function FamilyHub() {
               data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '', // Cloudinary URL 우선, 없으면 image_url, 마지막으로 S3 URL 사용
               originalSize: photo.original_file_size,
               originalFilename: photo.original_filename,
-              mimeType: photo.mime_type
+              mimeType: photo.mime_type,
+              supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
+              isUploaded: true // Supabase에서 로드한 사진은 업로드 완료된 사진
             }));
           
           // Supabase 사진과 localStorage 사진 병합
@@ -529,10 +531,17 @@ export default function FamilyHub() {
             const localStorageOnlyPhotos = existingAlbum.filter(p => {
               const photoId = String(p.id);
               const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
-              // Supabase ID가 있으면 이미 업로드 완료된 사진이므로 제외
+              
+              // Supabase ID가 있고 Supabase에 이미 있는 사진이면 제외 (업로드 완료된 사진)
               if (supabaseId && supabasePhotoIds.has(supabaseId)) {
                 return false; // 이미 Supabase에 있으므로 제외
               }
+              
+              // isUploaded가 true이고 URL을 가진 사진이면 제외 (업로드 완료된 사진, Supabase에서 로드해야 함)
+              if (p.isUploaded && p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))) {
+                return false; // 업로드 완료된 사진은 Supabase에서 로드해야 함
+              }
+              
               // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지 (업로드 미완료)
               return !supabasePhotoIds.has(photoId) && p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:'));
             });
