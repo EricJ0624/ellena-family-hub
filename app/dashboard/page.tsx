@@ -498,15 +498,28 @@ export default function FamilyHub() {
               mimeType: photo.mime_type
             }));
           
-          // Supabase 사진이 있으면 사용
-          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
-          if (formattedPhotos.length > 0) {
-            setState(prev => ({
+          // Supabase 사진과 localStorage 사진 병합
+          // Supabase 데이터를 우선하되, localStorage에만 있는 사진(Base64 데이터, 업로드 중인 사진)도 유지
+          setState(prev => {
+            const existingAlbum = prev.album || [];
+            // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
+            const supabasePhotoIds = new Set(formattedPhotos.map(p => String(p.id)));
+            // localStorage에만 있는 사진 (Base64 데이터, Supabase에 아직 저장되지 않은 사진)
+            const localStorageOnlyPhotos = existingAlbum.filter(p => {
+              const photoId = String(p.id);
+              // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지
+              return !supabasePhotoIds.has(photoId) && p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:'));
+            });
+            // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
+            const mergedAlbum = [...formattedPhotos, ...localStorageOnlyPhotos];
+            return {
               ...prev,
-              album: formattedPhotos
-            }));
-          }
-          // Supabase에 사진이 없고 localStorage 데이터도 없으면 초기 상태 유지
+              album: mergedAlbum
+            };
+          });
+        } else {
+          // Supabase 로드 실패 시 localStorage 데이터 유지 (setState로 덮어쓰지 않음)
+          // 기존 상태 유지
         }
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
@@ -1303,6 +1316,38 @@ export default function FamilyHub() {
     }
   };
 
+  // Logout Handler
+  const handleLogout = async () => {
+    if (confirm('로그아웃 하시겠습니까?')) {
+      try {
+        // Supabase 세션 종료
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('Logout error:', error);
+        }
+        
+        // 사용자별 localStorage 및 sessionStorage 데이터 정리
+        if (userId) {
+          const storageKey = getStorageKey(userId);
+          const authKey = getAuthKey(userId);
+          localStorage.removeItem(storageKey);
+          sessionStorage.removeItem(authKey);
+        }
+        
+        // 모든 Supabase 관련 세션 데이터 정리
+        localStorage.removeItem('sb-auth-token');
+        sessionStorage.clear();
+        
+        // 로그인 페이지로 리다이렉트
+        router.push('/');
+      } catch (error) {
+        console.error('Logout error:', error);
+        // 에러가 발생해도 로그인 페이지로 이동
+        router.push('/');
+      }
+    }
+  };
+
   // Nickname Handler
   const handleUpdateNickname = async () => {
     const nickname = nicknameInputRef.current?.value;
@@ -2000,6 +2045,32 @@ export default function FamilyHub() {
               <span className="user-icon">👤</span>
               <p className="user-name">{userName || '로딩 중...'}</p>
             </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                marginLeft: '12px',
+                padding: '8px 16px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+              }}
+            >
+              로그아웃
+            </button>
           </div>
         </header>
 

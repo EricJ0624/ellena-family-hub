@@ -4,18 +4,25 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase'; 
 import { useRouter } from 'next/navigation';
 
+type Mode = 'login' | 'signup' | 'forgot';
+
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
@@ -47,6 +54,155 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    // 비밀번호 확인
+    if (password !== confirmPassword) {
+      setErrorMsg('비밀번호가 일치하지 않습니다.');
+      setLoading(false);
+      return;
+    }
+
+    // 비밀번호 강도 검증 (최소 8자)
+    if (password.length < 8) {
+      setErrorMsg('비밀번호는 최소 8자 이상이어야 합니다.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nickname: nickname || email.split('@')[0],
+            full_name: nickname || email.split('@')[0]
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        setSuccessMsg('가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)');
+        // 3초 후 로그인 모드로 전환
+        setTimeout(() => {
+          setMode('login');
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          setNickname('');
+          setSuccessMsg('');
+        }, 3000);
+      }
+    } catch (error: any) {
+      // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Signup error:', error);
+      }
+      if (error.message?.includes('already registered')) {
+        setErrorMsg('이미 등록된 이메일입니다.');
+      } else {
+        setErrorMsg('가입 실패: 정보를 확인해주세요.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+
+      if (error) throw error;
+
+      setSuccessMsg('비밀번호 재설정 링크를 이메일로 발송했습니다. 이메일을 확인해주세요.');
+      // 3초 후 로그인 모드로 전환
+      setTimeout(() => {
+        setMode('login');
+        setEmail('');
+        setSuccessMsg('');
+      }, 3000);
+    } catch (error: any) {
+      // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Forgot password error:', error);
+      }
+      setErrorMsg('이메일 발송 실패: 이메일을 확인해주세요.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    if (mode === 'login') {
+      handleLogin(e);
+    } else if (mode === 'signup') {
+      handleSignup(e);
+    } else if (mode === 'forgot') {
+      handleForgotPassword(e);
+    }
+  };
+
+  const switchMode = (newMode: Mode) => {
+    setMode(newMode);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setPassword('');
+    setConfirmPassword('');
+    setNickname('');
+  };
+
+  const inputStyle = {
+    width: '100%',
+    height: '60px',
+    backgroundColor: '#ffffff',
+    border: '2px solid #e2e8f0',
+    borderRadius: '16px',
+    padding: '0 20px',
+    fontSize: '16px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    outline: 'none',
+    color: '#1a202c',
+    transition: 'all 0.3s ease',
+    boxSizing: 'border-box' as const
+  };
+
+  const buttonStyle = {
+    width: '100%',
+    height: '60px',
+    background: loading 
+      ? 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)'
+      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '16px',
+    fontSize: '18px',
+    fontWeight: '700',
+    marginTop: '8px',
+    boxShadow: loading
+      ? '0 4px 12px rgba(0,0,0,0.1)'
+      : '0 8px 24px rgba(102, 126, 234, 0.4)',
+    cursor: loading ? 'not-allowed' as const : 'pointer' as const,
+    transition: 'all 0.3s ease',
+    position: 'relative' as const,
+    overflow: 'hidden' as const
   };
 
   return (
@@ -129,9 +285,84 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* 모드 전환 탭 */}
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '24px',
+          justifyContent: 'center'
+        }}>
+          <button
+            type="button"
+            onClick={() => switchMode('login')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              background: mode === 'login' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : '#ffffff',
+              color: mode === 'login' ? '#ffffff' : '#64748b',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: mode === 'login' 
+                ? '0 4px 12px rgba(102, 126, 234, 0.3)'
+                : '0 2px 8px rgba(0,0,0,0.08)'
+            }}
+          >
+            로그인
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('signup')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              background: mode === 'signup' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : '#ffffff',
+              color: mode === 'signup' ? '#ffffff' : '#64748b',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: mode === 'signup' 
+                ? '0 4px 12px rgba(102, 126, 234, 0.3)'
+                : '0 2px 8px rgba(0,0,0,0.08)'
+            }}
+          >
+            가입하기
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('forgot')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '12px',
+              border: 'none',
+              background: mode === 'forgot' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : '#ffffff',
+              color: mode === 'forgot' ? '#ffffff' : '#64748b',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: mode === 'forgot' 
+                ? '0 4px 12px rgba(102, 126, 234, 0.3)'
+                : '0 2px 8px rgba(0,0,0,0.08)'
+            }}
+          >
+            비밀번호 찾기
+          </button>
+        </div>
+
         {/* 입력 폼 영역 */}
         <form 
-          onSubmit={handleLogin} 
+          onSubmit={handleSubmit} 
           className="fade-in"
           style={{ 
             display: 'flex', 
@@ -140,6 +371,27 @@ export default function LoginPage() {
             animation: 'fadeInUp 0.6s ease-out 0.2s both'
           }}
         >
+          {/* 닉네임 입력 (가입 모드에서만) */}
+          {mode === 'signup' && (
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="닉네임 (선택사항)"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                style={inputStyle}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#667eea';
+                  e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                }}
+              />
+            </div>
+          )}
+
           {/* 이메일 입력 */}
           <div style={{ position: 'relative' }}>
             <input
@@ -148,20 +400,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{
-                width: '100%',
-                height: '60px',
-                backgroundColor: '#ffffff',
-                border: '2px solid #e2e8f0',
-                borderRadius: '16px',
-                padding: '0 20px',
-                fontSize: '16px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                outline: 'none',
-                color: '#1a202c',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box'
-              }}
+              style={inputStyle}
               onFocus={(e) => {
                 e.target.style.borderColor = '#667eea';
                 e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
@@ -173,39 +412,71 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* 비밀번호 입력 */}
-          <div style={{ position: 'relative' }}>
-            <input
-              type="password"
-              placeholder="비밀번호"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                height: '60px',
-                backgroundColor: '#ffffff',
-                border: '2px solid #e2e8f0',
-                borderRadius: '16px',
-                padding: '0 20px',
-                fontSize: '16px',
-                letterSpacing: '2px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                outline: 'none',
-                color: '#1a202c',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e2e8f0';
-                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-              }}
-            />
-          </div>
+          {/* 비밀번호 입력 (로그인/가입 모드에서만) */}
+          {(mode === 'login' || mode === 'signup') && (
+            <div style={{ position: 'relative' }}>
+              <input
+                type="password"
+                placeholder="비밀번호"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{
+                  ...inputStyle,
+                  letterSpacing: '2px'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#667eea';
+                  e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                }}
+              />
+            </div>
+          )}
+
+          {/* 비밀번호 확인 입력 (가입 모드에서만) */}
+          {mode === 'signup' && (
+            <div style={{ position: 'relative' }}>
+              <input
+                type="password"
+                placeholder="비밀번호 확인"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                style={{
+                  ...inputStyle,
+                  letterSpacing: '2px'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#667eea';
+                  e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                }}
+              />
+            </div>
+          )}
+
+          {/* 성공 메시지 */}
+          {successMsg && (
+            <div style={{ 
+              color: '#10b981', 
+              fontSize: '14px', 
+              marginTop: '-8px',
+              padding: '12px 16px',
+              backgroundColor: '#f0fdf4',
+              borderRadius: '12px',
+              border: '1px solid #86efac',
+              animation: 'fadeIn 0.5s ease-in-out'
+            }}>
+              {successMsg}
+            </div>
+          )}
 
           {/* 에러 메시지 */}
           {errorMsg && (
@@ -223,30 +494,11 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* 로그인 버튼 */}
+          {/* 제출 버튼 */}
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              height: '60px',
-              background: loading 
-                ? 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)'
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '16px',
-              fontSize: '18px',
-              fontWeight: '700',
-              marginTop: '8px',
-              boxShadow: loading
-                ? '0 4px 12px rgba(0,0,0,0.1)'
-                : '0 8px 24px rgba(102, 126, 234, 0.4)',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s ease',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
+            style={buttonStyle}
             onMouseDown={(e) => {
               if (!loading) {
                 e.currentTarget.style.transform = 'scale(0.98)';
@@ -264,7 +516,7 @@ export default function LoginPage() {
           >
             {loading ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>접속 중</span>
+                <span>{mode === 'login' ? '접속 중' : mode === 'signup' ? '가입 중' : '발송 중'}</span>
                 <span style={{
                   width: '16px',
                   height: '16px',
@@ -276,7 +528,7 @@ export default function LoginPage() {
                 }} />
               </span>
             ) : (
-              '접속하기'
+              mode === 'login' ? '접속하기' : mode === 'signup' ? '가입하기' : '재설정 링크 발송'
             )}
           </button>
         </form>
