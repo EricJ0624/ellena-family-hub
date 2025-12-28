@@ -1989,18 +1989,8 @@ export default function FamilyHub() {
       return;
     }
 
-    // 보안: 원본 파일 크기 제한
-    // localStorage 용량 제한을 고려하여 파일 크기 제한
-    // Base64 변환 시 약 33% 증가하므로, localStorage 안전 제한(4MB)을 고려하여 원본 파일 크기 제한
-    // RAW 파일은 리사이징 불가능하므로 더 엄격한 제한 적용
-    const MAX_ORIGINAL_SIZE = isRawFile 
-      ? 2 * 1024 * 1024  // RAW 파일: 2MB (Base64 변환 시 약 2.7MB, localStorage 제한 고려)
-      : 3 * 1024 * 1024;  // 일반 파일: 3MB (리사이징 가능하므로 약간 여유있게, Base64 변환 시 약 4MB)
-    if (file.size > MAX_ORIGINAL_SIZE) {
-      alert(`파일이 너무 큽니다. (${isRawFile ? 'RAW 파일' : '일반 파일'} 최대 ${Math.round(MAX_ORIGINAL_SIZE / 1024 / 1024)}MB)\n\n용량이 큰 파일은 브라우저 저장 공간 제한으로 인해 업로드할 수 없습니다.`);
-      e.target.value = "";
-      return;
-    }
+    // 용량 제한 제거: 모든 파일 크기 허용 (RAW 파일 포함)
+    // localStorage에는 표시용 리사이징된 이미지만 저장하고, 원본은 S3에 직접 업로드하므로 용량 제한 불필요
 
     try {
       // 원본 파일 정보 저장 (S3 업로드용)

@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+
+// 서버 사이드용 Supabase 클라이언트 (인증용)
+function getSupabaseServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase 설정이 누락되었습니다.');
+  }
+  
+  return createClient(supabaseUrl, supabaseAnonKey);
+}
 
 // --- [SINGLETON PATTERN] Cloudinary 설정 (한 번만 초기화) ---
 let cloudinaryInitialized = false;
@@ -44,16 +56,39 @@ export async function authenticateUser(request: NextRequest): Promise<{ user: an
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   
-  if (authError || !user) {
+  // 서버 사이드에서 토큰 검증
+  try {
+    // 서버 사이드용 Supabase 클라이언트 생성
+    const supabaseServer = getSupabaseServerClient();
+    
+    // 토큰으로 사용자 정보 가져오기
+    const { data: { user }, error: authError } = await supabaseServer.auth.getUser(token);
+    
+    if (authError) {
+      console.error('인증 오류:', authError);
+      return NextResponse.json(
+        { error: '인증에 실패했습니다.', details: authError.message },
+        { status: 401 }
+      );
+    }
+    
+    if (!user) {
+      console.error('사용자를 찾을 수 없습니다.');
+      return NextResponse.json(
+        { error: '인증에 실패했습니다.' },
+        { status: 401 }
+      );
+    }
+
+    return { user };
+  } catch (error: any) {
+    console.error('인증 처리 오류:', error);
     return NextResponse.json(
-      { error: '인증에 실패했습니다.' },
+      { error: '인증 처리 중 오류가 발생했습니다.', details: error.message },
       { status: 401 }
     );
   }
-
-  return { user };
 }
 
 // --- [UTILITY] Base64를 Blob으로 변환 (중복 제거) ---
