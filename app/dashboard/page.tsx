@@ -506,65 +506,67 @@ export default function FamilyHub() {
           .order('created_at', { ascending: false })
           .limit(50);
 
-        if (!photosError && photosData) {
-          // Cloudinary URL, image_url, 또는 S3 URL이 있는 사진만 표시
-          const formattedPhotos: Photo[] = photosData
-            .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
-            .map((photo: any) => ({
-              id: photo.id,
-              data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '', // Cloudinary URL 우선, 없으면 image_url, 마지막으로 S3 URL 사용
-              originalSize: photo.original_file_size,
-              originalFilename: photo.original_filename,
-              mimeType: photo.mime_type,
-              supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
-              isUploaded: true // Supabase에서 로드한 사진은 업로드 완료된 사진
-            }));
+        // Supabase 사진 로드 (성공/실패 관계없이 처리)
+        const formattedPhotos: Photo[] = (!photosError && photosData) 
+          ? photosData
+              .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
+              .map((photo: any) => ({
+                id: photo.id,
+                data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '', // Cloudinary URL 우선, 없으면 image_url, 마지막으로 S3 URL 사용
+                originalSize: photo.original_file_size,
+                originalFilename: photo.original_filename,
+                mimeType: photo.mime_type,
+                supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
+                isUploaded: true // Supabase에서 로드한 사진은 업로드 완료된 사진
+              }))
+          : []; // Supabase 로드 실패 시 빈 배열
+        
+        // Supabase 사진과 localStorage 사진 병합
+        // Supabase 데이터를 우선하되, localStorage에만 있는 사진(Base64 데이터, 업로드 중인 사진)도 유지
+        setState(prev => {
+          // localStorage에서 직접 로드한 사진 사용 (state 업데이트 지연 문제 해결)
+          const existingAlbum = localStoragePhotos.length > 0 ? localStoragePhotos : (prev.album || []);
+          // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
+          const supabasePhotoIds = new Set(formattedPhotos.map(p => String(p.id)));
           
-          // Supabase 사진과 localStorage 사진 병합
-          // Supabase 데이터를 우선하되, localStorage에만 있는 사진(Base64 데이터, 업로드 중인 사진)도 유지
-          setState(prev => {
-            // localStorage에서 직접 로드한 사진 사용 (state 업데이트 지연 문제 해결)
-            const existingAlbum = localStoragePhotos.length > 0 ? localStoragePhotos : (prev.album || []);
-            // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
-            const supabasePhotoIds = new Set(formattedPhotos.map(p => String(p.id)));
-            // localStorage에만 있는 사진 (Base64 데이터, Supabase에 아직 저장되지 않은 사진)
-            const localStorageOnlyPhotos = existingAlbum.filter(p => {
-              const photoId = String(p.id);
-              const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
-              
-              // Supabase ID가 있고 Supabase에 이미 있는 사진이면 제외 (업로드 완료된 사진)
-              if (supabaseId && supabasePhotoIds.has(supabaseId)) {
-                return false; // 이미 Supabase에 있으므로 제외
-              }
-              
-              // isUploaded가 true이고 URL을 가진 사진이면 제외 (업로드 완료된 사진, Supabase에서 로드해야 함)
-              if (p.isUploaded && p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))) {
-                return false; // 업로드 완료된 사진은 Supabase에서 로드해야 함
-              }
-              
-              // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지 (업로드 미완료)
-              return !supabasePhotoIds.has(photoId) && p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:'));
-            });
-            // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
-            const mergedAlbum = [...formattedPhotos, ...localStorageOnlyPhotos];
+          // localStorage에만 있는 사진 (Base64 데이터, 업로드 중인 사진)
+          const localStorageOnlyPhotos = existingAlbum.filter(p => {
+            const photoId = String(p.id);
+            const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
+            
+            // Supabase ID가 있고 Supabase에 이미 있는 사진이면 제외 (업로드 완료된 사진)
+            if (supabaseId && supabasePhotoIds.has(supabaseId)) {
+              return false; // 이미 Supabase에 있으므로 제외
+            }
+            
+            // Supabase에서 사진이 로드되었고, 업로드 완료된 사진(URL)이면 제외
+            // 단, Supabase 로드 실패 시에는 localStorage의 URL 사진도 표시 (오프라인 지원)
+            if (formattedPhotos.length > 0 && p.isUploaded && p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))) {
+              return false; // 업로드 완료된 사진은 Supabase에서 로드해야 함
+            }
+            
+            // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지 (업로드 미완료)
+            // 또는 Supabase 로드 실패 시 모든 localStorage 사진 유지
+            return !supabasePhotoIds.has(photoId) && p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:') || (formattedPhotos.length === 0 && p.data.startsWith('http')));
+          });
+          
+          // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
+          const mergedAlbum = [...formattedPhotos, ...localStorageOnlyPhotos];
+          
+          // Supabase 로드 실패 시 localStorage 사진도 포함 (오프라인 지원)
+          if (formattedPhotos.length === 0 && localStoragePhotos.length > 0) {
+            // Supabase 로드 실패 시 localStorage의 모든 사진 표시
             return {
               ...prev,
-              album: mergedAlbum
-            };
-          });
-        } else {
-          // Supabase 로드 실패 또는 데이터가 없을 때도 localStorage 데이터 유지
-          // localStorage에서 직접 로드한 사진 사용 (state 업데이트 지연 문제 해결)
-          if (localStoragePhotos.length > 0) {
-            setState(prev => ({
-              ...prev,
               album: localStoragePhotos
-            }));
-          } else {
-            // localStorage에도 사진이 없으면 기존 상태 유지 (초기 상태)
-            // setState로 덮어쓰지 않음
+            };
           }
-        }
+          
+          return {
+            ...prev,
+            album: mergedAlbum
+          };
+        });
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
       }
