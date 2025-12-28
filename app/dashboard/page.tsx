@@ -172,18 +172,12 @@ export default function FamilyHub() {
         
         // 가족 공유 마스터 키 확인 및 데이터 로드
         // 모든 가족 구성원이 동일한 키를 사용하여 데이터 공유 가능
+        // 재로그인 시에도 항상 가족 공유 키 사용 (기존 sessionStorage 키 무시)
         const authKey = getAuthKey(currentUserId);
-        let key = sessionStorage.getItem(authKey);
-        if (!key) {
-          // 가족 공유 키 생성 (모든 사용자가 동일한 키 사용)
-          // 환경 변수가 있으면 사용, 없으면 기본 가족 키 사용
-          key = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-          setMasterKey(key);
-          sessionStorage.setItem(authKey, key);
-        } else {
-          // 기존 키가 있으면 사용
-          setMasterKey(key);
-        }
+        // 항상 가족 공유 키 사용 (기존 sessionStorage 키는 무시하여 모든 사용자가 동일한 키 사용)
+        const key = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+        setMasterKey(key);
+        sessionStorage.setItem(authKey, key); // 가족 공유 키로 덮어쓰기
         // 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
         loadData(key, currentUserId);
       } catch (err) {
@@ -714,6 +708,43 @@ export default function FamilyHub() {
           }
         )
         .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'family_messages' },
+          (payload: any) => {
+            const updatedMessage = payload.new;
+            const createdAt = new Date(updatedMessage.created_at);
+            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
+            
+            // 암호화된 메시지 복호화
+            let decryptedText = updatedMessage.message_text || '';
+            if (currentKey && updatedMessage.message_text) {
+              try {
+                const decrypted = CryptoService.decrypt(updatedMessage.message_text, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedText = decrypted;
+                } else {
+                  decryptedText = updatedMessage.message_text;
+                }
+              } catch (e: any) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Realtime 메시지 업데이트 복호화 오류:', e.message || e);
+                }
+                decryptedText = updatedMessage.message_text;
+              }
+            }
+            
+            setState(prev => ({
+              ...prev,
+              messages: prev.messages.map(m => 
+                // 메시지 ID로 매칭 (created_at 기반으로도 시도)
+                m.time === timeStr && m.text === decryptedText ? {
+                  ...m,
+                  text: decryptedText
+                } : m
+              )
+            }));
+          }
+        )
+        .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_messages' },
           (payload: any) => {
             // 삭제된 메시지는 ID로 매칭이 어려우므로 전체 새로고침은 하지 않음
@@ -1055,15 +1086,49 @@ export default function FamilyHub() {
           (payload: any) => {
             const newPhoto = payload.new;
             if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
+              setState(prev => {
+                // 이미 같은 ID의 사진이 있는지 확인 (중복 방지)
+                const existingPhoto = prev.album.find(p => p.id === newPhoto.id || p.supabaseId === newPhoto.id);
+                if (existingPhoto) {
+                  return prev; // 이미 있으면 업데이트하지 않음
+                }
+                return {
+                  ...prev,
+                  album: [{
+                    id: newPhoto.id,
+                    data: newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '',
+                    originalSize: newPhoto.original_file_size,
+                    originalFilename: newPhoto.original_filename,
+                    mimeType: newPhoto.mime_type,
+                    supabaseId: newPhoto.id,
+                    isUploaded: true
+                  }, ...prev.album]
+                };
+              });
+            }
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'memory_vault' },
+          (payload: any) => {
+            const updatedPhoto = payload.new;
+            if (updatedPhoto.cloudinary_url || updatedPhoto.image_url || updatedPhoto.s3_original_url) {
               setState(prev => ({
                 ...prev,
-                album: [{
-                  id: newPhoto.id,
-                  data: newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '',
-                  originalSize: newPhoto.original_file_size,
-                  originalFilename: newPhoto.original_filename,
-                  mimeType: newPhoto.mime_type
-                }, ...prev.album]
+                album: prev.album.map(p => 
+                  (p.id === updatedPhoto.id || p.supabaseId === updatedPhoto.id)
+                    ? {
+                        ...p,
+                        id: updatedPhoto.id,
+                        data: updatedPhoto.cloudinary_url || updatedPhoto.image_url || updatedPhoto.s3_original_url || '',
+                        originalSize: updatedPhoto.original_file_size,
+                        originalFilename: updatedPhoto.original_filename,
+                        mimeType: updatedPhoto.mime_type,
+                        supabaseId: updatedPhoto.id,
+                        isUploaded: true
+                      }
+                    : p
+                )
               }));
             }
           }
@@ -1073,7 +1138,7 @@ export default function FamilyHub() {
           (payload: any) => {
             setState(prev => ({
               ...prev,
-              album: prev.album.filter(p => p.id !== payload.old.id)
+              album: prev.album.filter(p => p.id !== payload.old.id && p.supabaseId !== payload.old.id)
             }));
           }
         )
@@ -1339,24 +1404,16 @@ export default function FamilyHub() {
       return;
     }
     
-    // masterKey가 없으면 자동 생성 또는 불러오기
+    // 가족 공유 키 사용 (항상 동일한 키 사용)
     let currentKey = masterKey;
     
     if (!currentKey) {
-      // sessionStorage에서 사용자별 기존 키 확인
+      // 항상 가족 공유 키 사용 (기존 sessionStorage 키는 무시)
       const authKey = getAuthKey(userId);
-      const savedKey = sessionStorage.getItem(authKey);
-      if (savedKey) {
-        currentKey = savedKey;
-        setMasterKey(savedKey);
-      } else {
-        // 가족 공유 키 생성 (모든 사용자가 동일한 키 사용)
-        // 환경 변수가 있으면 사용, 없으면 기본 가족 키 사용
-        const newKey = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-        currentKey = newKey;
-        setMasterKey(newKey);
-        sessionStorage.setItem(authKey, newKey);
-      }
+      const newKey = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+      currentKey = newKey;
+      setMasterKey(newKey);
+      sessionStorage.setItem(authKey, newKey); // 가족 공유 키로 덮어쓰기
     }
 
     setState(prev => {
