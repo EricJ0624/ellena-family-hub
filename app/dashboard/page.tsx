@@ -607,11 +607,32 @@ export default function FamilyHub() {
             });
           }
           
+          // 중복 제거: 같은 ID를 가진 사진 제거
+          const uniqueAlbum = mergedAlbum.reduce((acc, photo) => {
+            const photoId = String(photo.id);
+            const supabaseId = photo.supabaseId ? String(photo.supabaseId) : null;
+            
+            // 이미 같은 ID의 사진이 있는지 확인
+            const exists = acc.some(p => {
+              const pId = String(p.id);
+              const pSupabaseId = p.supabaseId ? String(p.supabaseId) : null;
+              return pId === photoId || pSupabaseId === photoId || 
+                     (supabaseId && pSupabaseId === supabaseId) ||
+                     (photoId === pSupabaseId) || (pId === supabaseId);
+            });
+            
+            if (!exists) {
+              acc.push(photo);
+            }
+            
+            return acc;
+          }, [] as Photo[]);
+          
           // Supabase 사진이 있으면 우선 사용
           if (formattedPhotos.length > 0) {
             return {
               ...prev,
-              album: mergedAlbum
+              album: uniqueAlbum
             };
           }
           
@@ -724,14 +745,28 @@ export default function FamilyHub() {
               decryptedText = newMessage.message_text;
             }
             
-            setState(prev => ({
-              ...prev,
-              messages: [...(prev.messages || []), {
-                user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
-                text: decryptedText,
-                time: timeStr
-              }].slice(-50)
-            }));
+            setState(prev => {
+              // 중복 체크: 같은 시간과 텍스트를 가진 메시지가 이미 있는지 확인
+              const existingMessage = prev.messages?.find(m => 
+                m.time === timeStr && m.text === decryptedText
+              );
+              
+              if (existingMessage) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('중복 메시지 감지, 추가하지 않음:', { time: timeStr, text: decryptedText.substring(0, 20) });
+                }
+                return prev; // 중복이면 상태 변경하지 않음
+              }
+              
+              return {
+                ...prev,
+                messages: [...(prev.messages || []), {
+                  user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
+                  text: decryptedText,
+                  time: timeStr
+                }].slice(-50)
+              };
+            });
           }
         )
         .on('postgres_changes',
@@ -836,15 +871,27 @@ export default function FamilyHub() {
               decryptedText = taskText;
             }
             
-            setState(prev => ({
-              ...prev,
-              todos: [{
-                id: newTask.id,
-                text: decryptedText,
-                assignee: newTask.assigned_to || '누구나',
-                done: newTask.is_completed || false // is_completed 컬럼 사용
-              }, ...prev.todos]
-            }));
+            setState(prev => {
+              // 중복 체크: 같은 ID를 가진 할일이 이미 있는지 확인
+              const existingTask = prev.todos?.find(t => t.id === newTask.id);
+              
+              if (existingTask) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('중복 할일 감지, 추가하지 않음:', { id: newTask.id, text: decryptedText.substring(0, 20) });
+                }
+                return prev; // 중복이면 상태 변경하지 않음
+              }
+              
+              return {
+                ...prev,
+                todos: [{
+                  id: newTask.id,
+                  text: decryptedText,
+                  assignee: newTask.assigned_to || '누구나',
+                  done: newTask.is_completed || false // is_completed 컬럼 사용
+                }, ...prev.todos]
+              };
+            });
           }
         )
         .on('postgres_changes',
@@ -1021,16 +1068,28 @@ export default function FamilyHub() {
               decryptedDesc = newEventDescField;
             }
             
-            setState(prev => ({
-              ...prev,
-              events: [{
-                id: newEvent.id,
-                month: month,
-                day: day,
-                title: decryptedTitle,
-                desc: decryptedDesc
-              }, ...prev.events]
-            }));
+            setState(prev => {
+              // 중복 체크: 같은 ID를 가진 일정이 이미 있는지 확인
+              const existingEvent = prev.events?.find(e => e.id === newEvent.id);
+              
+              if (existingEvent) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('중복 일정 감지, 추가하지 않음:', { id: newEvent.id, title: decryptedTitle.substring(0, 20) });
+                }
+                return prev; // 중복이면 상태 변경하지 않음
+              }
+              
+              return {
+                ...prev,
+                events: [{
+                  id: newEvent.id,
+                  month: month,
+                  day: day,
+                  title: decryptedTitle,
+                  desc: decryptedDesc
+                }, ...prev.events]
+              };
+            });
           }
         )
         .on('postgres_changes',
