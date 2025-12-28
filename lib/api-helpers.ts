@@ -29,13 +29,28 @@ function initializeCloudinary() {
   }
 }
 
+// --- [UTILITY] AWS 리전 정리 함수 (환경 변수에서 리전 코드만 추출) ---
+function normalizeAwsRegion(region?: string): string {
+  if (!region) return 'us-east-1';
+  
+  // "Asia Pacific (Sydney) ap-southeast-2" 형식에서 "ap-southeast-2"만 추출
+  const regionMatch = region.match(/([a-z]+-[a-z]+-\d+)/i);
+  if (regionMatch) {
+    return regionMatch[1].toLowerCase();
+  }
+  
+  // 이미 올바른 형식이면 그대로 사용
+  return region.toLowerCase();
+}
+
 // --- [SINGLETON PATTERN] S3 클라이언트 설정 (한 번만 초기화) ---
 let s3ClientInstance: S3Client | null = null;
 
 function getS3Client(): S3Client {
   if (!s3ClientInstance) {
+    const normalizedRegion = normalizeAwsRegion(process.env.AWS_REGION);
     s3ClientInstance = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: normalizedRegion,
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -179,7 +194,8 @@ export function generateS3Url(s3Key: string): string {
   if (!bucketName) {
     throw new Error('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
   }
-  return `https://${bucketName}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+  const normalizedRegion = normalizeAwsRegion(process.env.AWS_REGION);
+  return `https://${bucketName}.s3.${normalizedRegion}.amazonaws.com/${s3Key}`;
 }
 
 // --- [S3] S3에서 파일 다운로드 (Cloudinary 업로드용) ---
