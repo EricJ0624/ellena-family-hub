@@ -506,6 +506,19 @@ export default function FamilyHub() {
           .order('created_at', { ascending: false })
           .limit(50);
 
+        // Supabase 로드 에러 로깅
+        if (photosError) {
+          console.error('Supabase 사진 로드 오류:', photosError);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('에러 상세:', {
+              message: photosError.message,
+              details: photosError.details,
+              hint: photosError.hint,
+              code: photosError.code
+            });
+          }
+        }
+
         // Supabase 사진 로드 (성공/실패 관계없이 처리)
         const formattedPhotos: Photo[] = (!photosError && photosData) 
           ? photosData
@@ -520,6 +533,16 @@ export default function FamilyHub() {
                 isUploaded: true // Supabase에서 로드한 사진은 업로드 완료된 사진
               }))
           : []; // Supabase 로드 실패 시 빈 배열
+        
+        // 디버깅 정보 추가
+        if (process.env.NODE_ENV === 'development') {
+          console.log('사진 로드 결과:', {
+            photosError: photosError ? photosError.message : null,
+            photosDataCount: photosData?.length || 0,
+            formattedPhotosCount: formattedPhotos.length,
+            localStoragePhotosCount: localStoragePhotos.length
+          });
+        }
         
         // Supabase 사진과 localStorage 사진 병합
         // Supabase 데이터를 우선하되, localStorage에만 있는 사진(Base64 데이터, 업로드 중인 사진)도 유지
