@@ -499,10 +499,11 @@ export default function FamilyHub() {
           // Supabase에 일정이 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 사진 로드 (memory_vault에서 최근 50개)
+        // 사진 로드 (memory_vault에서 현재 사용자의 최근 50개)
         const { data: photosData, error: photosError } = await supabase
           .from('memory_vault')
           .select('*')
+          .eq('user_id', userId) // 현재 사용자의 사진만 가져오기
           .order('created_at', { ascending: false })
           .limit(50);
 

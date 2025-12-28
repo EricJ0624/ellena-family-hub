@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase'; 
 import { useRouter } from 'next/navigation';
 
 type Mode = 'login' | 'signup' | 'forgot';
+
+const LAST_EMAIL_KEY = 'SFH_LAST_EMAIL';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +18,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // 이전 이메일 불러오기
+  useEffect(() => {
+    if (typeof window !== 'undefined' && mode === 'login') {
+      const lastEmail = localStorage.getItem(LAST_EMAIL_KEY);
+      if (lastEmail) {
+        setEmail(lastEmail);
+      }
+    }
+  }, [mode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +41,11 @@ export default function LoginPage() {
       if (error) throw error;
       
       if (data.user) {
+        // 이메일 저장 (다음 로그인 시 자동완성용)
+        if (email && typeof window !== 'undefined') {
+          localStorage.setItem(LAST_EMAIL_KEY, email);
+        }
+        
         // 세션이 저장되도록 약간의 지연 후 리다이렉트
         await new Promise(resolve => setTimeout(resolve, 100));
         
@@ -404,12 +421,33 @@ export default function LoginPage() {
               onFocus={(e) => {
                 e.target.style.borderColor = '#667eea';
                 e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
+                if (!email && mode === 'login' && typeof window !== 'undefined') {
+                  const lastEmail = localStorage.getItem(LAST_EMAIL_KEY);
+                  if (lastEmail) {
+                    setEmail(lastEmail);
+                  }
+                }
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = '#e2e8f0';
                 e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
               }}
             />
+            {/* 이전 이메일 투명 오버레이 (입력 필드가 비어있을 때만) */}
+            {mode === 'login' && !email && typeof window !== 'undefined' && localStorage.getItem(LAST_EMAIL_KEY) && (
+              <div style={{
+                position: 'absolute',
+                left: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                color: 'rgba(100, 116, 139, 0.4)',
+                fontSize: '15px',
+                fontWeight: '400'
+              }}>
+                {localStorage.getItem(LAST_EMAIL_KEY)}
+              </div>
+            )}
           </div>
 
           {/* 비밀번호 입력 (로그인/가입 모드에서만) */}
