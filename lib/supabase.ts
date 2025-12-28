@@ -21,4 +21,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined, // localStorage 사용
     storageKey: 'sb-auth-token', // 세션 저장 키
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // Realtime 이벤트 처리 속도 제한
+    },
+  },
 });
