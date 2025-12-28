@@ -170,15 +170,14 @@ export default function FamilyHub() {
           setUserName(name);
         }
         
-        // 사용자별 마스터 키 확인 및 데이터 로드
+        // 가족 공유 마스터 키 확인 및 데이터 로드
+        // 모든 가족 구성원이 동일한 키를 사용하여 데이터 공유 가능
         const authKey = getAuthKey(currentUserId);
         let key = sessionStorage.getItem(authKey);
         if (!key) {
-          // 마스터 키가 없으면 사용자 ID 기반으로 고정된 키 생성
-          // 고정된 키를 사용하여 로그인할 때마다 동일한 키로 복호화 가능
-          // 사용자 ID를 해시화하여 고정된 키 생성
-          const userIdHash = CryptoJS.SHA256(currentUserId).toString().substring(0, 32);
-          key = `key_${currentUserId}_${userIdHash}`;
+          // 가족 공유 키 생성 (모든 사용자가 동일한 키 사용)
+          // 환경 변수가 있으면 사용, 없으면 기본 가족 키 사용
+          key = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
           setMasterKey(key);
           sessionStorage.setItem(authKey, key);
         } else {
@@ -216,9 +215,10 @@ export default function FamilyHub() {
     // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
     const loadSupabaseData = async () => {
       try {
-        // masterKey를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
+        // 가족 공유 키를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
         const authKey = getAuthKey(userId);
-        const currentKey = masterKey || sessionStorage.getItem(authKey) || '';
+        const currentKey = masterKey || sessionStorage.getItem(authKey) || 
+          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
         
         if (process.env.NODE_ENV === 'development') {
           console.log('loadSupabaseData - userId:', userId);
@@ -619,7 +619,8 @@ export default function FamilyHub() {
         // 에러 발생 시에도 localStorage 사진 유지
         try {
           const authKey = getAuthKey(userId);
-          const errorCurrentKey = masterKey || sessionStorage.getItem(authKey) || '';
+          const errorCurrentKey = masterKey || sessionStorage.getItem(authKey) || 
+            process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
           const storageKey = getStorageKey(userId);
           const saved = localStorage.getItem(storageKey);
           let errorLocalStoragePhotos: Photo[] = [];
@@ -649,10 +650,11 @@ export default function FamilyHub() {
     };
 
     // Realtime 구독 설정 (암호화된 데이터 복호화)
-    // masterKey가 없어도 구독은 설정 (복호화 실패 시 원본 텍스트 사용)
+    // 가족 공유 키를 사용하여 모든 사용자의 데이터 복호화 가능
     const setupRealtimeSubscriptions = () => {
       const authKey = getAuthKey(userId);
-      const currentKey = masterKey || sessionStorage.getItem(authKey) || '';
+      const currentKey = masterKey || sessionStorage.getItem(authKey) || 
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
       
       if (process.env.NODE_ENV === 'development') {
         console.log('setupRealtimeSubscriptions - userId:', userId);
@@ -1191,8 +1193,9 @@ export default function FamilyHub() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // 암호화 키 가져오기
-      const currentKey = encryptionKey || masterKey || sessionStorage.getItem(getAuthKey(userId)) || '';
+      // 가족 공유 암호화 키 가져오기
+      const currentKey = encryptionKey || masterKey || sessionStorage.getItem(getAuthKey(userId)) || 
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
       if (!currentKey) {
         console.warn('암호화 키가 없어 Supabase 저장을 건너뜁니다.');
         return;
@@ -1347,11 +1350,9 @@ export default function FamilyHub() {
         currentKey = savedKey;
         setMasterKey(savedKey);
       } else {
-        // 마스터 키가 없으면 사용자 ID 기반으로 고정된 키 생성
-        // 고정된 키를 사용하여 로그인할 때마다 동일한 키로 복호화 가능
-        // 사용자 ID를 해시화하여 고정된 키 생성
-        const userIdHash = CryptoJS.SHA256(userId).toString().substring(0, 32);
-        const newKey = `key_${userId}_${userIdHash}`;
+        // 가족 공유 키 생성 (모든 사용자가 동일한 키 사용)
+        // 환경 변수가 있으면 사용, 없으면 기본 가족 키 사용
+        const newKey = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
         currentKey = newKey;
         setMasterKey(newKey);
         sessionStorage.setItem(authKey, newKey);
