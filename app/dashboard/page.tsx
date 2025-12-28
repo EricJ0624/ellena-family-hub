@@ -66,11 +66,13 @@ type EventItem = { id: number; month: string; day: string; title: string; desc: 
 type Message = { user: string; text: string; time: string };
 type Photo = { 
   id: number; 
-  data: string; // 리사이징된 이미지 (표시용)
+  data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시)
   originalData?: string; // 원본 이미지 (S3 업로드용, 선택적)
   originalSize?: number; // 원본 파일 크기 (bytes)
   originalFilename?: string; // 원본 파일명
   mimeType?: string; // MIME 타입
+  supabaseId?: string | number; // Supabase memory_vault ID (업로드 완료 시)
+  isUploaded?: boolean; // 업로드 완료 여부
 };
 
 interface AppState {
@@ -525,7 +527,12 @@ export default function FamilyHub() {
             // localStorage에만 있는 사진 (Base64 데이터, Supabase에 아직 저장되지 않은 사진)
             const localStorageOnlyPhotos = existingAlbum.filter(p => {
               const photoId = String(p.id);
-              // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지
+              const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
+              // Supabase ID가 있으면 이미 업로드 완료된 사진이므로 제외
+              if (supabaseId && supabasePhotoIds.has(supabaseId)) {
+                return false; // 이미 Supabase에 있으므로 제외
+              }
+              // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지 (업로드 미완료)
               return !supabasePhotoIds.has(photoId) && p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:'));
             });
             // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
@@ -1327,6 +1334,21 @@ export default function FamilyHub() {
           // Supabase에 저장
           saveToSupabase('ADD_MESSAGE', payload, userId, currentKey);
           break;
+        case 'UPDATE_PHOTO_ID':
+          // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
+          newState.album = prev.album.map(photo => {
+            if (photo.id === payload.oldId) {
+              return {
+                ...photo,
+                id: payload.newId, // Supabase ID로 업데이트
+                data: payload.cloudinaryUrl || payload.s3Url || photo.data, // URL로 업데이트 (Base64 대신)
+                supabaseId: payload.newId,
+                isUploaded: true
+              };
+            }
+            return photo;
+          });
+          break;
       }
 
       persist(newState, currentKey, userId);
@@ -1869,6 +1891,16 @@ export default function FamilyHub() {
               memoryId: completeResult.id,
             });
           }
+
+          // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
+          if (completeResult.id && (completeResult.cloudinaryUrl || completeResult.s3Url)) {
+            updateState('UPDATE_PHOTO_ID', {
+              oldId: photoId, // localStorage의 타임스탬프 ID
+              newId: completeResult.id, // Supabase ID
+              cloudinaryUrl: completeResult.cloudinaryUrl,
+              s3Url: completeResult.s3Url
+            });
+          }
         } else {
           // 기존 방식 (작은 파일, 서버 경유)
           const uploadResponse = await fetch('/api/upload', {
@@ -1897,6 +1929,16 @@ export default function FamilyHub() {
               cloudinaryUrl: uploadResult.cloudinaryUrl,
               s3Url: uploadResult.s3Url,
               memoryId: uploadResult.id,
+            });
+          }
+
+          // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
+          if (uploadResult.id && (uploadResult.cloudinaryUrl || uploadResult.s3Url)) {
+            updateState('UPDATE_PHOTO_ID', {
+              oldId: photoId, // localStorage의 타임스탬프 ID
+              newId: uploadResult.id, // Supabase ID
+              cloudinaryUrl: uploadResult.cloudinaryUrl,
+              s3Url: uploadResult.s3Url
             });
           }
         }
