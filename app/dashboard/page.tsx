@@ -66,13 +66,14 @@ type EventItem = { id: number; month: string; day: string; title: string; desc: 
 type Message = { user: string; text: string; time: string };
 type Photo = { 
   id: number; 
-  data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시)
+  data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시) 또는 플레이스홀더 (큰 파일)
   originalData?: string; // 원본 이미지 (S3 업로드용, 선택적)
   originalSize?: number; // 원본 파일 크기 (bytes)
   originalFilename?: string; // 원본 파일명
   mimeType?: string; // MIME 타입
   supabaseId?: string | number; // Supabase memory_vault ID (업로드 완료 시)
   isUploaded?: boolean; // 업로드 완료 여부
+  isUploading?: boolean; // 업로드 진행 중 여부
 };
 
 interface AppState {
@@ -1658,13 +1659,14 @@ export default function FamilyHub() {
     }
 
     // 보안: 원본 파일 크기 제한
-    // RAW 파일은 리사이징 불가능하므로 크기 제한을 더 크게 설정
-    // Presigned URL 방식으로 큰 파일도 처리 가능하므로 제한 완화
+    // localStorage 용량 제한을 고려하여 파일 크기 제한
+    // Base64 변환 시 약 33% 증가하므로, localStorage 안전 제한(4MB)을 고려하여 원본 파일 크기 제한
+    // RAW 파일은 리사이징 불가능하므로 더 엄격한 제한 적용
     const MAX_ORIGINAL_SIZE = isRawFile 
-      ? 100 * 1024 * 1024  // RAW 파일: 100MB (리사이징 불가능하므로 여유있게)
-      : 50 * 1024 * 1024;  // 일반 파일: 50MB
+      ? 2 * 1024 * 1024  // RAW 파일: 2MB (Base64 변환 시 약 2.7MB, localStorage 제한 고려)
+      : 3 * 1024 * 1024;  // 일반 파일: 3MB (리사이징 가능하므로 약간 여유있게, Base64 변환 시 약 4MB)
     if (file.size > MAX_ORIGINAL_SIZE) {
-      alert(`파일이 너무 큽니다. (${isRawFile ? 'RAW 파일' : '일반 파일'} 최대 ${MAX_ORIGINAL_SIZE / 1024 / 1024}MB)`);
+      alert(`파일이 너무 큽니다. (${isRawFile ? 'RAW 파일' : '일반 파일'} 최대 ${Math.round(MAX_ORIGINAL_SIZE / 1024 / 1024)}MB)\n\n용량이 큰 파일은 브라우저 저장 공간 제한으로 인해 업로드할 수 없습니다.`);
       e.target.value = "";
       return;
     }
