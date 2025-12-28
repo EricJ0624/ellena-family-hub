@@ -2169,16 +2169,37 @@ export default function FamilyHub() {
           const { presignedUrl, s3Key, s3Url } = urlResult;
 
           // 2. 클라이언트에서 직접 S3에 원본 파일 업로드
-          const s3UploadResponse = await fetch(presignedUrl, {
-            method: 'PUT',
-            body: file, // 원본 파일 그대로 (Base64 변환 불필요)
-            headers: {
-              'Content-Type': file.type,
-            },
-          });
+          // 타임아웃 설정 (30초)
+          const uploadController = new AbortController();
+          const uploadTimeout = setTimeout(() => uploadController.abort(), 30000);
+          
+          try {
+            const s3UploadResponse = await fetch(presignedUrl, {
+              method: 'PUT',
+              body: file, // 원본 파일 그대로 (Base64 변환 불필요)
+              headers: {
+                'Content-Type': file.type,
+              },
+              signal: uploadController.signal,
+            });
 
-          if (!s3UploadResponse.ok) {
-            throw new Error('S3 업로드 실패');
+            clearTimeout(uploadTimeout);
+
+            if (!s3UploadResponse.ok) {
+              const errorText = await s3UploadResponse.text();
+              console.error('S3 업로드 실패:', {
+                status: s3UploadResponse.status,
+                statusText: s3UploadResponse.statusText,
+                error: errorText
+              });
+              throw new Error(`S3 업로드 실패: ${s3UploadResponse.status} ${s3UploadResponse.statusText}`);
+            }
+          } catch (uploadError: any) {
+            clearTimeout(uploadTimeout);
+            if (uploadError.name === 'AbortError') {
+              throw new Error('S3 업로드 타임아웃 (30초 초과)');
+            }
+            throw uploadError;
           }
 
           if (process.env.NODE_ENV === 'development') {
@@ -2186,98 +2207,130 @@ export default function FamilyHub() {
           }
 
           // 3. 업로드 완료 처리 (Cloudinary 업로드 + Supabase 저장)
-          const completeResponse = await fetch('/api/complete-upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              s3Key,
-              s3Url,
-              fileName: file.name,
-              mimeType: file.type,
-              originalSize: file.size,
-              resizedData: imageData !== originalData ? imageData : null, // 리사이징된 이미지 (Cloudinary용)
-            }),
-          });
-
-          const completeResult = await completeResponse.json();
-
-          if (!completeResponse.ok) {
-            throw new Error(completeResult.error || '업로드 완료 처리 실패');
-          }
-
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Presigned URL 업로드 완료:', {
-              cloudinaryUrl: completeResult.cloudinaryUrl,
-              s3Url: completeResult.s3Url,
-              memoryId: completeResult.id,
+          // 타임아웃 설정 (60초)
+          const completeController = new AbortController();
+          const completeTimeout = setTimeout(() => completeController.abort(), 60000);
+          
+          try {
+            const completeResponse = await fetch('/api/complete-upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                s3Key,
+                s3Url,
+                fileName: file.name,
+                mimeType: file.type,
+                originalSize: file.size,
+                resizedData: imageData !== originalData ? imageData : null, // 리사이징된 이미지 (Cloudinary용)
+              }),
+              signal: completeController.signal,
             });
-          }
 
-          // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
-          if (completeResult.id && (completeResult.cloudinaryUrl || completeResult.s3Url)) {
-            updateState('UPDATE_PHOTO_ID', {
-              oldId: photoId, // localStorage의 타임스탬프 ID
-              newId: completeResult.id, // Supabase ID
-              cloudinaryUrl: completeResult.cloudinaryUrl,
-              s3Url: completeResult.s3Url
-            });
-            
-            // 업로드 완료 알림 (3초 후 자동 사라짐)
-            setTimeout(() => {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('업로드 완료:', completeResult.id);
-              }
-            }, 100);
+            clearTimeout(completeTimeout);
+
+            if (!completeResponse.ok) {
+              const completeResult = await completeResponse.json().catch(() => ({ error: '업로드 완료 처리 실패' }));
+              throw new Error(completeResult.error || `업로드 완료 처리 실패: ${completeResponse.status}`);
+            }
+
+            const completeResult = await completeResponse.json();
+
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Presigned URL 업로드 완료:', {
+                cloudinaryUrl: completeResult.cloudinaryUrl,
+                s3Url: completeResult.s3Url,
+                memoryId: completeResult.id,
+              });
+            }
+
+            // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
+            if (completeResult.id && (completeResult.cloudinaryUrl || completeResult.s3Url)) {
+              updateState('UPDATE_PHOTO_ID', {
+                oldId: photoId, // localStorage의 타임스탬프 ID
+                newId: completeResult.id, // Supabase ID
+                cloudinaryUrl: completeResult.cloudinaryUrl,
+                s3Url: completeResult.s3Url
+              });
+              
+              // 업로드 완료 알림 (3초 후 자동 사라짐)
+              setTimeout(() => {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('업로드 완료:', completeResult.id);
+                }
+              }, 100);
+            }
+          } catch (completeError: any) {
+            clearTimeout(completeTimeout);
+            if (completeError.name === 'AbortError') {
+              throw new Error('업로드 완료 처리 타임아웃 (60초 초과)');
+            }
+            throw completeError;
           }
         } else {
           // 기존 방식 (작은 파일, 서버 경유)
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              originalData: originalDataForUpload, // 원본 (S3용, 별도 보관된 데이터)
-              resizedData: imageData !== originalDataForUpload ? imageData : null, // 리사이징된 이미지 (Cloudinary용, 원본과 다를 때만)
-              fileName: file.name,
-              mimeType: file.type,
-              originalSize: file.size,
-            }),
-          });
-
-          const uploadResult = await uploadResponse.json();
-
-          if (!uploadResponse.ok) {
-            throw new Error(uploadResult.error || '업로드 실패');
-          }
-
-          if (process.env.NODE_ENV === 'development') {
-            console.log('서버 경유 업로드 완료:', {
-              cloudinaryUrl: uploadResult.cloudinaryUrl,
-              s3Url: uploadResult.s3Url,
-              memoryId: uploadResult.id,
+          // 타임아웃 설정 (60초)
+          const uploadController = new AbortController();
+          const uploadTimeout = setTimeout(() => uploadController.abort(), 60000);
+          
+          try {
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                originalData: originalDataForUpload, // 원본 (S3용, 별도 보관된 데이터)
+                resizedData: imageData !== originalDataForUpload ? imageData : null, // 리사이징된 이미지 (Cloudinary용, 원본과 다를 때만)
+                fileName: file.name,
+                mimeType: file.type,
+                originalSize: file.size,
+              }),
+              signal: uploadController.signal,
             });
-          }
 
-          // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
-          if (uploadResult.id && (uploadResult.cloudinaryUrl || uploadResult.s3Url)) {
-            updateState('UPDATE_PHOTO_ID', {
-              oldId: photoId, // localStorage의 타임스탬프 ID
-              newId: uploadResult.id, // Supabase ID
-              cloudinaryUrl: uploadResult.cloudinaryUrl,
-              s3Url: uploadResult.s3Url
-            });
-            
-            // 업로드 완료 알림 (3초 후 자동 사라짐)
-            setTimeout(() => {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('업로드 완료:', uploadResult.id);
-              }
-            }, 100);
+            clearTimeout(uploadTimeout);
+
+            if (!uploadResponse.ok) {
+              const uploadResult = await uploadResponse.json().catch(() => ({ error: '업로드 실패' }));
+              throw new Error(uploadResult.error || `업로드 실패: ${uploadResponse.status}`);
+            }
+
+            const uploadResult = await uploadResponse.json();
+
+            if (process.env.NODE_ENV === 'development') {
+              console.log('서버 경유 업로드 완료:', {
+                cloudinaryUrl: uploadResult.cloudinaryUrl,
+                s3Url: uploadResult.s3Url,
+                memoryId: uploadResult.id,
+              });
+            }
+
+            // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
+            if (uploadResult.id && (uploadResult.cloudinaryUrl || uploadResult.s3Url)) {
+              updateState('UPDATE_PHOTO_ID', {
+                oldId: photoId, // localStorage의 타임스탬프 ID
+                newId: uploadResult.id, // Supabase ID
+                cloudinaryUrl: uploadResult.cloudinaryUrl,
+                s3Url: uploadResult.s3Url
+              });
+              
+              // 업로드 완료 알림 (3초 후 자동 사라짐)
+              setTimeout(() => {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('업로드 완료:', uploadResult.id);
+                }
+              }, 100);
+            }
+          } catch (fetchError: any) {
+            clearTimeout(uploadTimeout);
+            if (fetchError.name === 'AbortError') {
+              throw new Error('업로드 타임아웃 (60초 초과)');
+            }
+            throw fetchError;
           }
         }
 
@@ -2299,6 +2352,16 @@ export default function FamilyHub() {
           s3Url: null,
           uploadFailed: true // 실패 플래그
         });
+        
+        // 사용자에게 에러 알림
+        const errorMessage = uploadError.message || '업로드 중 오류가 발생했습니다.';
+        if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
+          alert('업로드 실패: S3 버킷 CORS 설정이 필요합니다. 관리자에게 문의하세요.\n\n로컬 저장은 완료되었습니다.');
+        } else if (errorMessage.includes('타임아웃')) {
+          alert('업로드 타임아웃: 파일이 너무 크거나 네트워크 연결이 불안정합니다.\n\n로컬 저장은 완료되었습니다.');
+        } else {
+          alert(`업로드 실패: ${errorMessage}\n\n로컬 저장은 완료되었습니다.`);
+        }
       }
     } catch (error: any) {
       console.error('Image processing error:', error);
