@@ -211,7 +211,12 @@ export default function FamilyHub() {
 
   // 4. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
-    if (!isAuthenticated || !userId) return;
+    if (!isAuthenticated || !userId) {
+      console.log('Realtime 구독 스킵 - 인증되지 않음:', { isAuthenticated, userId });
+      return;
+    }
+    
+    console.log('✅ Realtime 구독 시작 - userId:', userId);
 
     let messagesSubscription: any = null;
     let tasksSubscription: any = null;
@@ -783,7 +788,8 @@ export default function FamilyHub() {
             }
           }
         });
-
+      
+      console.log('📋 할일 subscription 설정 중...');
       // 할일 구독
       tasksSubscription = supabase
         .channel('family_tasks_changes')
@@ -908,16 +914,16 @@ export default function FamilyHub() {
           }
         )
         .subscribe((status, err) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime 할일 subscription 상태:', status);
-            if (err) console.error('Realtime 할일 subscription 오류:', err);
-            if (status === 'SUBSCRIBED') console.log('✅ Realtime 할일 subscription 연결 성공');
-            else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.error('❌ Realtime 할일 subscription 연결 실패:', status);
-            }
+          console.log('📋 Realtime 할일 subscription 상태:', status);
+          if (err) console.error('❌ Realtime 할일 subscription 오류:', err);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime 할일 subscription 연결 성공');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.error('❌ Realtime 할일 subscription 연결 실패:', status);
           }
         });
-
+      
+      console.log('📅 일정 subscription 설정 중...');
       // 일정 구독
       eventsSubscription = supabase
         .channel('family_events_changes')
@@ -1123,16 +1129,16 @@ export default function FamilyHub() {
           }
         )
         .subscribe((status, err) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime 일정 subscription 상태:', status);
-            if (err) console.error('Realtime 일정 subscription 오류:', err);
-            if (status === 'SUBSCRIBED') console.log('✅ Realtime 일정 subscription 연결 성공');
-            else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.error('❌ Realtime 일정 subscription 연결 실패:', status);
-            }
+          console.log('📅 Realtime 일정 subscription 상태:', status);
+          if (err) console.error('❌ Realtime 일정 subscription 오류:', err);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime 일정 subscription 연결 성공');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.error('❌ Realtime 일정 subscription 연결 실패:', status);
           }
         });
-
+      
+      console.log('📸 사진 subscription 설정 중...');
       // 사진 구독 (memory_vault)
       photosSubscription = supabase
         .channel('memory_vault_changes')
@@ -1217,16 +1223,19 @@ export default function FamilyHub() {
             }
           }
         });
+      
+      console.log('✅ 모든 Realtime subscription 설정 완료');
     };
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
+    console.log('🔄 Supabase 데이터 로드 시작...');
     // 재로그인 시에도 항상 Supabase에서 데이터 로드
     const timer = setTimeout(() => {
       loadSupabaseData().then(() => {
-        // 데이터 로드 완료 후 Realtime 구독 설정
+        console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
         setupRealtimeSubscriptions();
       }).catch((error) => {
-        console.error('Supabase 데이터 로드 실패:', error);
+        console.error('❌ Supabase 데이터 로드 실패:', error);
         // 데이터 로드 실패해도 Realtime 구독은 설정
         setupRealtimeSubscriptions();
       });
@@ -1234,6 +1243,7 @@ export default function FamilyHub() {
     
     // 정리 함수
     return () => {
+      console.log('🧹 Realtime subscription 정리 중...');
       clearTimeout(timer);
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
