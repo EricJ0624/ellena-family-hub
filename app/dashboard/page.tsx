@@ -511,11 +511,20 @@ export default function FamilyHub() {
         }
 
         // 사진 로드 (memory_vault에서 가족 전체의 최근 50개 - 가족 공유)
+        // user_id 필터 없이 모든 가족 구성원의 사진 로드
         const { data: photosData, error: photosError } = await supabase
           .from('memory_vault')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(50);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('사진 로드 시도:', {
+            userId: userId,
+            photosDataCount: photosData?.length || 0,
+            photosError: photosError ? photosError.message : null
+          });
+        }
 
         // Supabase 로드 에러 로깅
         if (photosError) {
@@ -764,9 +773,14 @@ export default function FamilyHub() {
             // 필요시 수동 새로고침
           }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime subscription 상태:', status);
+            console.log('Realtime 메시지 subscription 상태:', status);
+            if (err) console.error('Realtime 메시지 subscription 오류:', err);
+            if (status === 'SUBSCRIBED') console.log('✅ Realtime 메시지 subscription 연결 성공');
+            else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.error('❌ Realtime 메시지 subscription 연결 실패:', status);
+            }
           }
         });
 
@@ -893,9 +907,14 @@ export default function FamilyHub() {
             }));
           }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime subscription 상태:', status);
+            console.log('Realtime 할일 subscription 상태:', status);
+            if (err) console.error('Realtime 할일 subscription 오류:', err);
+            if (status === 'SUBSCRIBED') console.log('✅ Realtime 할일 subscription 연결 성공');
+            else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.error('❌ Realtime 할일 subscription 연결 실패:', status);
+            }
           }
         });
 
@@ -1103,9 +1122,14 @@ export default function FamilyHub() {
             }));
           }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime subscription 상태:', status);
+            console.log('Realtime 일정 subscription 상태:', status);
+            if (err) console.error('Realtime 일정 subscription 오류:', err);
+            if (status === 'SUBSCRIBED') console.log('✅ Realtime 일정 subscription 연결 성공');
+            else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.error('❌ Realtime 일정 subscription 연결 실패:', status);
+            }
           }
         });
 
@@ -1176,20 +1200,37 @@ export default function FamilyHub() {
             }));
           }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           if (process.env.NODE_ENV === 'development') {
-            console.log('Realtime subscription 상태:', status);
+            console.log('Realtime 메시지 subscription 상태:', status);
+            if (err) {
+              console.error('Realtime 메시지 subscription 오류:', err);
+            }
+          }
+          if (status === 'SUBSCRIBED') {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ Realtime 메시지 subscription 연결 성공');
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('❌ Realtime 메시지 subscription 연결 실패:', status);
+            }
           }
         });
     };
 
-    // localStorage 데이터 로드 후 Supabase 데이터 로드 (약간의 지연)
-    // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
-    // localStorage 데이터가 있으면 먼저 로드되고, Supabase 데이터는 보완/동기화 역할
+    // Supabase 데이터 로드 및 Realtime 구독 설정
+    // 재로그인 시에도 항상 Supabase에서 데이터 로드
     const timer = setTimeout(() => {
-      loadSupabaseData();
-      setupRealtimeSubscriptions();
-    }, 500); // localStorage 데이터 로드 후 500ms 지연 (localStorage가 비어있어도 실행)
+      loadSupabaseData().then(() => {
+        // 데이터 로드 완료 후 Realtime 구독 설정
+        setupRealtimeSubscriptions();
+      }).catch((error) => {
+        console.error('Supabase 데이터 로드 실패:', error);
+        // 데이터 로드 실패해도 Realtime 구독은 설정
+        setupRealtimeSubscriptions();
+      });
+    }, 100); // 짧은 지연으로 빠른 로드
     
     // 정리 함수
     return () => {
