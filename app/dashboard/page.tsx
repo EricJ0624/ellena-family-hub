@@ -112,6 +112,7 @@ export default function FamilyHub() {
   const [userName, setUserName] = useState<string>('');
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
+  const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
   
   // Realtime subscription 참조 (로그아웃 시 정리용)
   const subscriptionsRef = useRef<{
@@ -570,6 +571,80 @@ export default function FamilyHub() {
         }
         
         // Supabase 사진과 localStorage 사진 병합
+        // 최근 활동한 사용자 목록 가져오기 (최근 24시간 내 활동)
+        const twentyFourHoursAgo = new Date();
+        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+        
+        // 메시지, 할일, 일정에서 최근 활동한 사용자 ID 수집
+        const { data: recentMessages } = await supabase
+          .from('family_messages')
+          .select('sender_id, created_at')
+          .gte('created_at', twentyFourHoursAgo.toISOString());
+        
+        const { data: recentTasks } = await supabase
+          .from('family_tasks')
+          .select('created_by, created_at')
+          .gte('created_at', twentyFourHoursAgo.toISOString());
+        
+        const { data: recentEvents } = await supabase
+          .from('family_events')
+          .select('created_by, created_at')
+          .gte('created_at', twentyFourHoursAgo.toISOString());
+        
+        // 모든 활동한 사용자 ID 수집
+        const activeUserIds = new Set<string>();
+        if (recentMessages) {
+          recentMessages.forEach((msg: any) => {
+            if (msg.sender_id) activeUserIds.add(msg.sender_id);
+          });
+        }
+        if (recentTasks) {
+          recentTasks.forEach((task: any) => {
+            if (task.created_by) activeUserIds.add(task.created_by);
+          });
+        }
+        if (recentEvents) {
+          recentEvents.forEach((event: any) => {
+            if (event.created_by) activeUserIds.add(event.created_by);
+          });
+        }
+        
+        // 현재 사용자도 포함
+        if (userId) {
+          activeUserIds.add(userId);
+        }
+        
+        // 각 사용자 정보 가져오기
+        // 클라이언트에서는 admin API를 사용할 수 없으므로, 최근 활동한 사용자 ID를 기반으로 표시
+        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+        
+        // 현재 사용자 정보는 이미 있음
+        if (userId) {
+          usersList.push({
+            id: userId,
+            name: userName || '나',
+            isCurrentUser: true
+          });
+        }
+        
+        // 다른 사용자들의 정보 가져오기
+        // 각 사용자 ID에 대해 기본 이름 생성
+        for (const uid of Array.from(activeUserIds)) {
+          if (uid === userId) continue; // 현재 사용자는 이미 추가됨
+          
+          // 사용자 ID를 기반으로 이름 생성
+          // 실제로는 별도의 user_profiles 테이블이나 다른 방법으로 사용자 이름을 가져와야 함
+          const displayName = `사용자 ${uid.substring(0, 8)}`;
+          
+          usersList.push({
+            id: uid,
+            name: displayName,
+            isCurrentUser: false
+          });
+        }
+        
+        setOnlineUsers(usersList);
+        
         // 재로그인 시 Supabase 데이터를 우선하고, localStorage는 업로드 중인 사진만 유지
         setState(prev => {
           // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
@@ -2691,9 +2766,34 @@ export default function FamilyHub() {
               <span className="status-dot-ping"></span>
               <span className="status-dot-core"></span>
             </span>
-            <div className="user-info" onClick={() => setIsNicknameModalOpen(true)} style={{ cursor: 'pointer' }}>
-              <span className="user-icon">👤</span>
-              <p className="user-name">{userName || '로딩 중...'}</p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {onlineUsers.map((user) => (
+                <div 
+                  key={user.id}
+                  className="user-info" 
+                  onClick={user.isCurrentUser ? () => setIsNicknameModalOpen(true) : undefined}
+                  style={{ 
+                    cursor: user.isCurrentUser ? 'pointer' : 'default',
+                    opacity: user.isCurrentUser ? 1 : 0.7,
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    backgroundColor: user.isCurrentUser ? 'rgba(99, 102, 241, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    border: user.isCurrentUser ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(0, 0, 0, 0.1)'
+                  }}
+                >
+                  <span className="user-icon">👤</span>
+                  <p className="user-name" style={{ margin: 0, fontSize: '14px', fontWeight: user.isCurrentUser ? '600' : '400' }}>
+                    {user.name}
+                    {user.isCurrentUser && ' (나)'}
+                  </p>
+                </div>
+              ))}
+              {onlineUsers.length === 0 && (
+                <div className="user-info" onClick={() => setIsNicknameModalOpen(true)} style={{ cursor: 'pointer' }}>
+                  <span className="user-icon">👤</span>
+                  <p className="user-name">{userName || '로딩 중...'}</p>
+                </div>
+              )}
             </div>
             <button
               onClick={handleLogout}
