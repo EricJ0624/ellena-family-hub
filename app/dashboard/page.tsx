@@ -236,6 +236,23 @@ export default function FamilyHub() {
                                     state.todos.length > 0 || 
                                     state.events.length > 0 || 
                                     state.album.length > 0;
+        
+        // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
+        const storageKey = getStorageKey(userId);
+        const saved = localStorage.getItem(storageKey);
+        let localStoragePhotos: Photo[] = [];
+        if (saved && currentKey) {
+          try {
+            const decrypted = CryptoService.decrypt(saved, currentKey);
+            if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
+              localStoragePhotos = decrypted.album;
+            }
+          } catch (e) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('localStorage 사진 로드 실패:', e);
+            }
+          }
+        }
 
         // 메시지 로드
         const { data: messagesData, error: messagesError } = await supabase
@@ -501,7 +518,8 @@ export default function FamilyHub() {
           // Supabase 사진과 localStorage 사진 병합
           // Supabase 데이터를 우선하되, localStorage에만 있는 사진(Base64 데이터, 업로드 중인 사진)도 유지
           setState(prev => {
-            const existingAlbum = prev.album || [];
+            // localStorage에서 직접 로드한 사진 사용 (state 업데이트 지연 문제 해결)
+            const existingAlbum = localStoragePhotos.length > 0 ? localStoragePhotos : (prev.album || []);
             // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
             const supabasePhotoIds = new Set(formattedPhotos.map(p => String(p.id)));
             // localStorage에만 있는 사진 (Base64 데이터, Supabase에 아직 저장되지 않은 사진)
@@ -519,16 +537,16 @@ export default function FamilyHub() {
           });
         } else {
           // Supabase 로드 실패 또는 데이터가 없을 때도 localStorage 데이터 유지
-          // 기존 상태 유지 (setState로 덮어쓰지 않음)
-          // 단, localStorage에 데이터가 없고 Supabase에도 데이터가 없으면 초기 상태 유지
-          setState(prev => {
-            // localStorage에 사진이 있으면 유지, 없으면 초기 상태 유지
-            if (prev.album && prev.album.length > 0) {
-              return prev; // localStorage 데이터 유지
-            }
-            // 둘 다 없으면 초기 상태 유지 (변경 없음)
-            return prev;
-          });
+          // localStorage에서 직접 로드한 사진 사용 (state 업데이트 지연 문제 해결)
+          if (localStoragePhotos.length > 0) {
+            setState(prev => ({
+              ...prev,
+              album: localStoragePhotos
+            }));
+          } else {
+            // localStorage에도 사진이 없으면 기존 상태 유지 (초기 상태)
+            // setState로 덮어쓰지 않음
+          }
         }
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
