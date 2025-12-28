@@ -1210,10 +1210,24 @@ export default function FamilyHub() {
             if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
               setState(prev => {
                 // 이미 같은 ID의 사진이 있는지 확인 (중복 방지)
-                const existingPhoto = prev.album.find(p => p.id === newPhoto.id || p.supabaseId === newPhoto.id);
+                const existingPhoto = prev.album.find(p => {
+                  const photoId = String(p.id);
+                  const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
+                  const newPhotoId = String(newPhoto.id);
+                  return photoId === newPhotoId || supabaseId === newPhotoId;
+                });
+                
                 if (existingPhoto) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('중복 사진 감지, 추가하지 않음:', { id: newPhoto.id, supabaseId: newPhoto.id });
+                  }
                   return prev; // 이미 있으면 업데이트하지 않음
                 }
+                
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('새 사진 추가:', { id: newPhoto.id, url: (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '').substring(0, 50) });
+                }
+                
                 return {
                   ...prev,
                   album: [{
