@@ -518,8 +518,17 @@ export default function FamilyHub() {
             };
           });
         } else {
-          // Supabase 로드 실패 시 localStorage 데이터 유지 (setState로 덮어쓰지 않음)
-          // 기존 상태 유지
+          // Supabase 로드 실패 또는 데이터가 없을 때도 localStorage 데이터 유지
+          // 기존 상태 유지 (setState로 덮어쓰지 않음)
+          // 단, localStorage에 데이터가 없고 Supabase에도 데이터가 없으면 초기 상태 유지
+          setState(prev => {
+            // localStorage에 사진이 있으면 유지, 없으면 초기 상태 유지
+            if (prev.album && prev.album.length > 0) {
+              return prev; // localStorage 데이터 유지
+            }
+            // 둘 다 없으면 초기 상태 유지 (변경 없음)
+            return prev;
+          });
         }
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
