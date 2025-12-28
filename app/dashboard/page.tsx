@@ -94,6 +94,12 @@ const INITIAL_STATE: AppState = {
   messages: [{ user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }]
 };
 
+// Realtime subscription 변수를 컴포넌트 외부로 이동하여 handleLogout에서 접근 가능하도록
+let messagesSubscription: any = null;
+let tasksSubscription: any = null;
+let eventsSubscription: any = null;
+let photosSubscription: any = null;
+
 export default function FamilyHub() {
   const router = useRouter();
   // --- [STATE] ---
@@ -106,6 +112,14 @@ export default function FamilyHub() {
   const [userName, setUserName] = useState<string>('');
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
+  
+  // Realtime subscription 참조 (로그아웃 시 정리용)
+  const subscriptionsRef = useRef<{
+    messages: any;
+    tasks: any;
+    events: any;
+    photos: any;
+  }>({ messages: null, tasks: null, events: null, photos: null });
 
   // Inputs Ref (Uncontrolled inputs for cleaner handlers similar to original)
   const todoTextRef = useRef<HTMLInputElement>(null);
@@ -542,32 +556,28 @@ export default function FamilyHub() {
         }
         
         // Supabase 사진과 localStorage 사진 병합
-        // Supabase 데이터를 우선하되, localStorage에만 있는 사진(Base64 데이터, 업로드 중인 사진)도 유지
+        // 재로그인 시 Supabase 데이터를 우선하고, localStorage는 업로드 중인 사진만 유지
         setState(prev => {
-          // localStorage에서 직접 로드한 사진 사용 (state 업데이트 지연 문제 해결)
-          const existingAlbum = localStoragePhotos.length > 0 ? localStoragePhotos : (prev.album || []);
           // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
           const supabasePhotoIds = new Set(formattedPhotos.map(p => String(p.id)));
           
-          // localStorage에만 있는 사진 (Base64 데이터, 업로드 중인 사진)
-          const localStorageOnlyPhotos = existingAlbum.filter(p => {
+          // localStorage에만 있는 사진 (Base64 데이터, 업로드 중인 사진만)
+          const localStorageOnlyPhotos = localStoragePhotos.filter(p => {
             const photoId = String(p.id);
             const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
             
-            // Supabase ID가 있고 Supabase에 이미 있는 사진이면 제외 (업로드 완료된 사진)
+            // Supabase ID가 있고 Supabase에 이미 있는 사진이면 제외
             if (supabaseId && supabasePhotoIds.has(supabaseId)) {
-              return false; // 이미 Supabase에 있으므로 제외
+              return false;
             }
             
-            // Supabase에서 사진이 로드되었고, 업로드 완료된 사진(URL)이면 제외
-            // 단, Supabase 로드 실패 시에는 localStorage의 URL 사진도 표시 (오프라인 지원)
-            if (formattedPhotos.length > 0 && p.isUploaded && p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))) {
-              return false; // 업로드 완료된 사진은 Supabase에서 로드해야 함
+            // 업로드 완료된 사진(URL)은 제외 (Supabase에서 로드해야 함)
+            if (p.isUploaded && p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))) {
+              return false;
             }
             
-            // Supabase에 없는 사진이고, Base64 데이터를 가진 사진만 유지 (업로드 미완료)
-            // 또는 Supabase 로드 실패 시 모든 localStorage 사진 유지
-            return !supabasePhotoIds.has(photoId) && p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:') || (formattedPhotos.length === 0 && p.data.startsWith('http')));
+            // 업로드 중이거나 Base64/Blob 데이터만 유지
+            return p.isUploading || (p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:')));
           });
           
           // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
@@ -578,13 +588,21 @@ export default function FamilyHub() {
             console.log('사진 병합 결과:', {
               formattedPhotosCount: formattedPhotos.length,
               localStorageOnlyPhotosCount: localStorageOnlyPhotos.length,
-              mergedAlbumCount: mergedAlbum.length
+              mergedAlbumCount: mergedAlbum.length,
+              supabasePhotoIds: Array.from(supabasePhotoIds)
             });
           }
           
+          // Supabase 사진이 있으면 우선 사용
+          if (formattedPhotos.length > 0) {
+            return {
+              ...prev,
+              album: mergedAlbum
+            };
+          }
+          
           // Supabase 로드 실패 시 localStorage 사진도 포함 (오프라인 지원)
-          if (formattedPhotos.length === 0 && localStoragePhotos.length > 0) {
-            // Supabase 로드 실패 시 localStorage의 모든 사진 표시
+          if (localStoragePhotos.length > 0) {
             if (process.env.NODE_ENV === 'development') {
               console.log('Supabase 로드 실패, localStorage 사진 표시:', localStoragePhotos.length);
             }
@@ -594,18 +612,10 @@ export default function FamilyHub() {
             };
           }
           
-          // 병합된 사진이 있으면 사용, 없으면 기존 상태 유지
-          if (mergedAlbum.length > 0) {
-            return {
-              ...prev,
-              album: mergedAlbum
-            };
-          }
-          
-          // 병합된 사진이 없고 기존 사진도 없으면 빈 배열 반환
+          // 사진이 없으면 빈 배열 반환
           return {
             ...prev,
-            album: prev.album || []
+            album: []
           };
         });
       } catch (error) {
@@ -663,6 +673,9 @@ export default function FamilyHub() {
         .on('postgres_changes', 
           { event: 'INSERT', schema: 'public', table: 'family_messages' },
           (payload: any) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Realtime 메시지 INSERT 이벤트 수신:', payload);
+            }
             const newMessage = payload.new;
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
@@ -751,7 +764,11 @@ export default function FamilyHub() {
             // 필요시 수동 새로고침
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Realtime subscription 상태:', status);
+          }
+        });
 
       // 할일 구독
       tasksSubscription = supabase
@@ -759,6 +776,9 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Realtime 할일 INSERT 이벤트 수신:', payload);
+            }
             const newTask = payload.new;
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = newTask.title || newTask.task_text || '';
@@ -873,7 +893,11 @@ export default function FamilyHub() {
             }));
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Realtime subscription 상태:', status);
+          }
+        });
 
       // 일정 구독
       eventsSubscription = supabase
@@ -881,6 +905,9 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'family_events' },
           (payload: any) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Realtime 일정 INSERT 이벤트 수신:', payload);
+            }
             const newEvent = payload.new;
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
@@ -1076,7 +1103,11 @@ export default function FamilyHub() {
             }));
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Realtime subscription 상태:', status);
+          }
+        });
 
       // 사진 구독 (memory_vault)
       photosSubscription = supabase
@@ -1084,6 +1115,9 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'memory_vault' },
           (payload: any) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Realtime 사진 INSERT 이벤트 수신:', payload);
+            }
             const newPhoto = payload.new;
             if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
               setState(prev => {
@@ -1142,7 +1176,11 @@ export default function FamilyHub() {
             }));
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Realtime subscription 상태:', status);
+          }
+        });
     };
 
     // localStorage 데이터 로드 후 Supabase 데이터 로드 (약간의 지연)
@@ -1158,15 +1196,19 @@ export default function FamilyHub() {
       clearTimeout(timer);
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
+        subscriptionsRef.current.messages = null;
       }
       if (tasksSubscription) {
         supabase.removeChannel(tasksSubscription);
+        subscriptionsRef.current.tasks = null;
       }
       if (eventsSubscription) {
         supabase.removeChannel(eventsSubscription);
+        subscriptionsRef.current.events = null;
       }
       if (photosSubscription) {
         supabase.removeChannel(photosSubscription);
+        subscriptionsRef.current.photos = null;
       }
     };
   }, [isAuthenticated, userId, masterKey, userName]);
@@ -1524,6 +1566,24 @@ export default function FamilyHub() {
   const handleLogout = async () => {
     if (confirm('로그아웃 하시겠습니까?')) {
       try {
+        // Realtime subscription 정리 (컴포넌트 외부 변수 사용)
+        if (messagesSubscription) {
+          await supabase.removeChannel(messagesSubscription);
+          messagesSubscription = null;
+        }
+        if (tasksSubscription) {
+          await supabase.removeChannel(tasksSubscription);
+          tasksSubscription = null;
+        }
+        if (eventsSubscription) {
+          await supabase.removeChannel(eventsSubscription);
+          eventsSubscription = null;
+        }
+        if (photosSubscription) {
+          await supabase.removeChannel(photosSubscription);
+          photosSubscription = null;
+        }
+        
         // Supabase 세션 종료
         const { error } = await supabase.auth.signOut();
         if (error) {
