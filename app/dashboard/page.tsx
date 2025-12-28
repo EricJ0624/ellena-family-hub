@@ -1348,12 +1348,21 @@ export default function FamilyHub() {
           // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
           newState.album = prev.album.map(photo => {
             if (photo.id === payload.oldId) {
+              // 업로드 실패인 경우
+              if (payload.uploadFailed) {
+                return {
+                  ...photo,
+                  isUploading: false // 업로드 중지
+                };
+              }
+              // 업로드 완료인 경우
               return {
                 ...photo,
                 id: payload.newId, // Supabase ID로 업데이트
                 data: payload.cloudinaryUrl || payload.s3Url || photo.data, // URL로 업데이트 (Base64 대신)
                 supabaseId: payload.newId,
-                isUploaded: true
+                isUploaded: true,
+                isUploading: false // 업로드 완료
               };
             }
             return photo;
@@ -1799,7 +1808,8 @@ export default function FamilyHub() {
         // originalData는 localStorage에 저장하지 않음 (공간 절약)
         originalSize: file.size, // 원본 파일 크기
         originalFilename: file.name, // 원본 파일명
-        mimeType: file.type // MIME 타입
+        mimeType: file.type, // MIME 타입
+        isUploading: true // 업로드 시작
       });
       
       if (process.env.NODE_ENV === 'development') {
@@ -1911,6 +1921,13 @@ export default function FamilyHub() {
               cloudinaryUrl: completeResult.cloudinaryUrl,
               s3Url: completeResult.s3Url
             });
+            
+            // 업로드 완료 알림 (3초 후 자동 사라짐)
+            setTimeout(() => {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('업로드 완료:', completeResult.id);
+              }
+            }, 100);
           }
         } else {
           // 기존 방식 (작은 파일, 서버 경유)
@@ -1951,6 +1968,13 @@ export default function FamilyHub() {
               cloudinaryUrl: uploadResult.cloudinaryUrl,
               s3Url: uploadResult.s3Url
             });
+            
+            // 업로드 완료 알림 (3초 후 자동 사라짐)
+            setTimeout(() => {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('업로드 완료:', uploadResult.id);
+              }
+            }, 100);
           }
         }
 
@@ -1963,6 +1987,15 @@ export default function FamilyHub() {
         if (process.env.NODE_ENV === 'development') {
           console.warn('업로드 실패했지만 로컬 저장은 완료되었습니다.');
         }
+        
+        // 업로드 실패 시 isUploading 플래그 해제 (재시도 가능하도록)
+        updateState('UPDATE_PHOTO_ID', {
+          oldId: photoId,
+          newId: photoId, // ID는 변경하지 않음
+          cloudinaryUrl: null,
+          s3Url: null,
+          uploadFailed: true // 실패 플래그
+        });
       }
     } catch (error: any) {
       console.error('Image processing error:', error);
@@ -2175,8 +2208,62 @@ export default function FamilyHub() {
             <div className="photo-grid">
               {state.album && state.album.length > 0 ? (
                 state.album.map(p => (
-                  <div key={p.id} className="photo-item">
+                  <div key={p.id} className="photo-item" style={{ position: 'relative' }}>
                     <img src={p.data} className="photo-image" alt="memory" />
+                    {/* 업로드 상태 표시 */}
+                    {p.isUploading && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                        zIndex: 1
+                      }}>
+                        <div style={{
+                          color: 'white',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            border: '3px solid rgba(255, 255, 255, 0.3)',
+                            borderTop: '3px solid white',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                            margin: '0 auto 8px'
+                          }}></div>
+                          업로드 중...
+                        </div>
+                      </div>
+                    )}
+                    {p.isUploaded && !p.isUploading && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        backgroundColor: 'rgba(34, 197, 94, 0.9)',
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2,
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                      }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6L9 17l-5-5"></path>
+                        </svg>
+                      </div>
+                    )}
                     <button 
                       onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
                       className="btn-delete-photo"
@@ -2339,6 +2426,14 @@ export default function FamilyHub() {
         </section>
         </div>
       </div>
+      
+      {/* 업로드 상태 애니메이션 스타일 */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
