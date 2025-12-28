@@ -1,38 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { supabase } from '@/lib/supabase';
-
-// AWS S3 클라이언트 설정
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
+import { 
+  authenticateUser, 
+  getS3ClientInstance, 
+  generateS3Key, 
+  generateS3Url 
+} from '@/lib/api-helpers';
 
 export async function POST(request: NextRequest) {
   try {
     // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: '인증이 필요합니다.' },
-        { status: 401 }
-      );
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
-
-    // Supabase 세션 확인
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: '인증에 실패했습니다.' },
-        { status: 401 }
-      );
-    }
+    const { user } = authResult;
 
     const body = await request.json();
     const { fileName, mimeType, fileSize } = body;
@@ -62,13 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // S3 Key 생성
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const fileType = mimeType.startsWith('image/') ? 'photos' : 'videos';
-    // fileExtension은 이미 49번 라인에서 선언되었으므로 재사용
-    const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-    const s3Key = `originals/${fileType}/${year}/${month}/${user.id}/${uniqueId}.${fileExtension || 'jpg'}`;
+    const s3Key = generateS3Key(fileName, mimeType, user.id);
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) {
@@ -79,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Presigned URL 생성 (15분 유효)
+    const s3Client = getS3ClientInstance();
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
@@ -91,7 +69,7 @@ export async function POST(request: NextRequest) {
     });
 
     // S3 URL 생성 (업로드 후 접근용)
-    const s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+    const s3Url = generateS3Url(s3Key);
 
     return NextResponse.json({
       success: true,

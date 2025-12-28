@@ -1,41 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
-import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { supabase } from '@/lib/supabase';
+import { 
+  authenticateUser, 
+  base64ToBlob, 
+  uploadToCloudinary, 
+  getS3ClientInstance, 
+  generateS3Key, 
+  generateS3Url 
+} from '@/lib/api-helpers';
 
 // Next.js App Router: 큰 파일 업로드를 위한 설정
 // Vercel에서는 최대 4.5MB 제한이 있으므로, 
 // 프로덕션에서는 chunked 업로드나 presigned URL 방식을 고려해야 할 수 있습니다.
 export const maxDuration = 60; // 60초 타임아웃
-
-// Cloudinary 설정
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// AWS S3 클라이언트 설정
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
-
-// Base64를 Blob으로 변환
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const base64Data = base64.split(',')[1] || base64;
-  const byteCharacters = atob(base64Data);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: mimeType });
-}
 
 // S3에 파일 업로드
 async function uploadToS3(
@@ -44,19 +22,13 @@ async function uploadToS3(
   mimeType: string,
   userId: string
 ): Promise<{ url: string; key: string }> {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const fileType = mimeType.startsWith('image/') ? 'photos' : 'videos';
-  const fileExtension = fileName.split('.').pop() || 'jpg';
-  const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-  const s3Key = `originals/${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
-
+  const s3Key = generateS3Key(fileName, mimeType, userId);
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
   if (!bucketName) {
     throw new Error('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
   }
 
+  const s3Client = getS3ClientInstance();
   const upload = new Upload({
     client: s3Client,
     params: {
@@ -71,80 +43,19 @@ async function uploadToS3(
   await upload.done();
 
   // S3 URL 생성
-  const s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+  const s3Url = generateS3Url(s3Key);
 
   return { url: s3Url, key: s3Key };
-}
-
-// Cloudinary에 파일 업로드
-async function uploadToCloudinary(
-  file: Blob,
-  fileName: string,
-  mimeType: string,
-  userId: string
-): Promise<{ url: string; publicId: string }> {
-  const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
-  const folder = `family-memories/${userId}`;
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: fileType === 'image' ? 'image' : 'video',
-        transformation: fileType === 'image' 
-          ? [
-              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
-              { fetch_format: 'auto' }
-            ]
-          : [
-              { quality: 'auto', fetch_format: 'auto' }
-            ],
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else if (result) {
-          resolve({
-            url: result.secure_url,
-            publicId: result.public_id,
-          });
-        } else {
-          reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
-        }
-      }
-    );
-
-    // Blob을 Buffer로 변환하여 업로드
-    file.arrayBuffer()
-      .then(buffer => {
-        const nodeBuffer = Buffer.from(buffer);
-        uploadStream.end(nodeBuffer);
-      })
-      .catch(reject);
-  });
 }
 
 export async function POST(request: NextRequest) {
   try {
     // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: '인증이 필요합니다.' },
-        { status: 401 }
-      );
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
-
-    // Supabase 세션 확인
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: '인증에 실패했습니다.' },
-        { status: 401 }
-      );
-    }
+    const { user } = authResult;
 
     // Body 크기 체크 (Base64 인코딩 고려하여 약 20MB 제한)
     const MAX_BODY_SIZE = 20 * 1024 * 1024; // 20MB
