@@ -257,6 +257,9 @@ export default function FamilyHub() {
           }
         }
 
+        // localStoragePhotos를 상위 스코프에 저장 (에러 처리에서 사용)
+        const savedLocalStoragePhotos = localStoragePhotos;
+
         // 메시지 로드
         const { data: messagesData, error: messagesError } = await supabase
           .from('family_messages')
@@ -576,22 +579,72 @@ export default function FamilyHub() {
           // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
           const mergedAlbum = [...formattedPhotos, ...localStorageOnlyPhotos];
           
+          // 디버깅: 병합 결과 확인
+          if (process.env.NODE_ENV === 'development') {
+            console.log('사진 병합 결과:', {
+              formattedPhotosCount: formattedPhotos.length,
+              localStorageOnlyPhotosCount: localStorageOnlyPhotos.length,
+              mergedAlbumCount: mergedAlbum.length
+            });
+          }
+          
           // Supabase 로드 실패 시 localStorage 사진도 포함 (오프라인 지원)
           if (formattedPhotos.length === 0 && localStoragePhotos.length > 0) {
             // Supabase 로드 실패 시 localStorage의 모든 사진 표시
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Supabase 로드 실패, localStorage 사진 표시:', localStoragePhotos.length);
+            }
             return {
               ...prev,
               album: localStoragePhotos
             };
           }
           
+          // 병합된 사진이 있으면 사용, 없으면 기존 상태 유지
+          if (mergedAlbum.length > 0) {
+            return {
+              ...prev,
+              album: mergedAlbum
+            };
+          }
+          
+          // 병합된 사진이 없고 기존 사진도 없으면 빈 배열 반환
           return {
             ...prev,
-            album: mergedAlbum
+            album: prev.album || []
           };
         });
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
+        // 에러 발생 시에도 localStorage 사진 유지
+        try {
+          const authKey = getAuthKey(userId);
+          const errorCurrentKey = masterKey || sessionStorage.getItem(authKey) || '';
+          const storageKey = getStorageKey(userId);
+          const saved = localStorage.getItem(storageKey);
+          let errorLocalStoragePhotos: Photo[] = [];
+          if (saved && errorCurrentKey) {
+            try {
+              const decrypted = CryptoService.decrypt(saved, errorCurrentKey);
+              if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
+                errorLocalStoragePhotos = decrypted.album;
+              }
+            } catch (e) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('에러 처리 중 localStorage 사진 로드 실패:', e);
+              }
+            }
+          }
+          
+          if (errorLocalStoragePhotos.length > 0) {
+            setState(prev => ({
+              ...prev,
+              album: errorLocalStoragePhotos
+            }));
+          }
+        } catch (fallbackError) {
+          console.error('에러 처리 중 오류:', fallbackError);
+        }
       }
     };
 
