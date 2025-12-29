@@ -2188,6 +2188,9 @@ export default function FamilyHub() {
     // 용량 제한 제거: 모든 파일 크기 허용 (RAW 파일 포함)
     // localStorage에는 표시용 리사이징된 이미지만 저장하고, 원본은 S3에 직접 업로드하므로 용량 제한 불필요
 
+    // photoId를 함수 스코프에서 선언 (catch 블록에서 접근 가능하도록)
+    let photoId: number | null = null;
+
     try {
       // 원본 파일 정보 저장 (S3 업로드용)
       const originalReader = new FileReader();
@@ -2298,7 +2301,7 @@ export default function FamilyHub() {
       // 사진 추가 (리사이징된 이미지는 표시용)
       // originalData는 localStorage에 저장하지 않음 (공간 절약)
       // 업로드 시에만 사용하기 위해 별도 변수로 보관
-      const photoId = Date.now();
+      photoId = Date.now();
       const originalDataForUpload = originalData; // 업로드용 원본 데이터 보관
       
       updateState('ADD_PHOTO', { 
@@ -2724,14 +2727,16 @@ export default function FamilyHub() {
       }
     } catch (error: any) {
       console.error('Image processing error:', error);
-      // 이미지 처리 에러에서도 isUploading 플래그 해제
-      updateState('UPDATE_PHOTO_ID', {
-        oldId: photoId,
-        newId: photoId,
-        cloudinaryUrl: null,
-        s3Url: null,
-        uploadFailed: true
-      });
+      // 이미지 처리 에러에서도 isUploading 플래그 해제 (photoId가 정의된 경우에만)
+      if (photoId !== null) {
+        updateState('UPDATE_PHOTO_ID', {
+          oldId: photoId,
+          newId: photoId,
+          cloudinaryUrl: null,
+          s3Url: null,
+          uploadFailed: true
+        });
+      }
       alert('이미지 처리 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
     }
     
