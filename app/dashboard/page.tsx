@@ -1069,28 +1069,15 @@ export default function FamilyHub() {
             }
             
             setState(prev => {
-              console.log('Realtime 할일 INSERT 이벤트 처리:', { 
-                taskId: newTask.id, 
-                createdBy: newTask.created_by, 
-                currentUserId: userId,
-                isOwnTask: newTask.created_by === userId,
-                text: decryptedText.substring(0, 20)
-              });
-              
-              // 중복 체크 1: 같은 ID를 가진 할일이 이미 있는지 확인
+              // 기준 1: 같은 ID를 가진 할일이 이미 있으면 추가하지 않음 (모든 사용자 동일)
               const existingTaskById = prev.todos?.find(t => String(t.id) === String(newTask.id));
               if (existingTaskById) {
-                console.log('중복 할일 감지 (ID 기반), 추가하지 않음:', { id: newTask.id, text: decryptedText.substring(0, 20) });
-                return prev; // 중복이면 상태 변경하지 않음
+                return prev;
               }
               
-              // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체
+              // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
               if (newTask.created_by === userId) {
-                console.log('자신이 입력한 할일 - 임시 ID 교체 시도');
-                // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.todos?.find(t => {
-                  // 임시 ID (숫자)를 가진 항목만 체크
                   const isTempId = typeof t.id === 'number';
                   return isTempId && 
                          t.text === decryptedText && 
@@ -1098,12 +1085,6 @@ export default function FamilyHub() {
                 });
                 
                 if (recentDuplicate) {
-                  console.log('중복 할일 감지 (자신이 입력한 항목), 임시 항목을 Supabase ID로 교체:', { 
-                    tempId: recentDuplicate.id, 
-                    newId: newTask.id, 
-                    text: decryptedText.substring(0, 20) 
-                  });
-                  
                   // 임시 항목을 Supabase ID로 교체
                   return {
                     ...prev,
@@ -1119,56 +1100,16 @@ export default function FamilyHub() {
                     )
                   };
                 }
-                
-                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로
-                // 최근 5초 이내에 추가된 임시 항목이 있는지 확인 (타이밍 이슈 대비)
-                const fiveSecondsAgo = Date.now() - 5000;
-                const recentTask = prev.todos?.find(t => {
-                  const isTempId = typeof t.id === 'number';
-                  const isRecent = isTempId && (t.id as number) > fiveSecondsAgo;
-                  return isRecent && 
-                         t.text === decryptedText && 
-                         t.assignee === decryptedAssignee;
-                });
-                
-                if (recentTask) {
-                  console.log('중복 할일 감지 (최근 추가된 임시 항목), 교체:', { 
-                    existingId: recentTask.id,
-                    newId: newTask.id, 
-                    text: decryptedText.substring(0, 20) 
-                  });
-                  // 임시 항목을 Supabase ID로 교체
-                  return {
-                    ...prev,
-                    todos: prev.todos.map(t => 
-                      t.id === recentTask.id 
-                        ? {
-                            id: newTask.id,
-                            text: decryptedText,
-                            assignee: decryptedAssignee,
-                            done: newTask.is_completed || false
-                          }
-                        : t
-                    )
-                  };
-                }
               }
               
-              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없는 경우 추가
-              console.log('할일 추가:', { 
-                taskId: newTask.id, 
-                createdBy: newTask.created_by, 
-                currentUserId: userId,
-                isOtherUser: newTask.created_by !== userId,
-                text: decryptedText.substring(0, 20)
-              });
+              // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
               return {
                 ...prev,
                 todos: [{
                   id: newTask.id,
                   text: decryptedText,
                   assignee: decryptedAssignee,
-                  done: newTask.is_completed || false // is_completed 컬럼 사용
+                  done: newTask.is_completed || false
                 }, ...prev.todos]
               };
             });
@@ -1249,25 +1190,15 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
-            console.log('Realtime 할일 DELETE 이벤트 수신:', payload);
+            // 기준: 모든 사용자에게 동일하게 삭제 반영
             const deletedId = payload.old?.id;
             if (!deletedId) {
-              console.warn('DELETE 이벤트에 ID가 없음:', payload);
               return;
             }
-            setState(prev => {
-              const beforeCount = prev.todos.length;
-              const filtered = prev.todos.filter(t => String(t.id) !== String(deletedId));
-              const afterCount = filtered.length;
-              console.log(`할일 삭제: ${beforeCount}개 → ${afterCount}개, 삭제할 ID: ${deletedId}`);
-              if (beforeCount === afterCount) {
-                console.warn('삭제할 항목을 찾지 못함. 현재 todos ID 목록:', prev.todos.map(t => ({ id: t.id, type: typeof t.id })));
-              }
-              return {
-                ...prev,
-                todos: filtered
-              };
-            });
+            setState(prev => ({
+              ...prev,
+              todos: prev.todos.filter(t => String(t.id) !== String(deletedId))
+            }));
           }
         )
         .subscribe((status, err) => {
@@ -1380,28 +1311,15 @@ export default function FamilyHub() {
             }
             
             setState(prev => {
-              console.log('Realtime 일정 INSERT 이벤트 처리:', { 
-                eventId: newEvent.id, 
-                createdBy: newEvent.created_by, 
-                currentUserId: userId,
-                isOwnEvent: newEvent.created_by === userId,
-                title: decryptedTitle.substring(0, 20)
-              });
-              
-              // 중복 체크 1: 같은 ID를 가진 일정이 이미 있는지 확인
+              // 기준 1: 같은 ID를 가진 일정이 이미 있으면 추가하지 않음 (모든 사용자 동일)
               const existingEventById = prev.events?.find(e => String(e.id) === String(newEvent.id));
               if (existingEventById) {
-                console.log('중복 일정 감지 (ID 기반), 추가하지 않음:', { id: newEvent.id, title: decryptedTitle.substring(0, 20) });
-                return prev; // 중복이면 상태 변경하지 않음
+                return prev;
               }
               
-              // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체
+              // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
               if (newEvent.created_by === userId) {
-                console.log('자신이 입력한 일정 - 임시 ID 교체 시도');
-                // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.events?.find(e => {
-                  // 임시 ID (숫자)를 가진 항목만 체크
                   const isTempId = typeof e.id === 'number';
                   return isTempId && 
                          e.title === decryptedTitle && 
@@ -1410,14 +1328,6 @@ export default function FamilyHub() {
                 });
                 
                 if (recentDuplicate) {
-                  console.log('중복 일정 감지 (자신이 입력한 항목), 임시 항목을 Supabase ID로 교체:', { 
-                    tempId: recentDuplicate.id, 
-                    newId: newEvent.id, 
-                    title: decryptedTitle.substring(0, 20),
-                    month,
-                    day
-                  });
-                  
                   // 임시 항목을 Supabase ID로 교체
                   return {
                     ...prev,
@@ -1434,53 +1344,9 @@ export default function FamilyHub() {
                     )
                   };
                 }
-                
-                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로
-                // 최근 5초 이내에 추가된 임시 항목이 있는지 확인 (타이밍 이슈 대비)
-                const fiveSecondsAgo = Date.now() - 5000;
-                const recentEvent = prev.events?.find(e => {
-                  const isTempId = typeof e.id === 'number';
-                  const isRecent = isTempId && (e.id as number) > fiveSecondsAgo;
-                  return isRecent && 
-                         e.title === decryptedTitle && 
-                         e.month === month && 
-                         e.day === day;
-                });
-                
-                if (recentEvent) {
-                  console.log('중복 일정 감지 (최근 추가된 임시 항목), 교체:', { 
-                    existingId: recentEvent.id,
-                    newId: newEvent.id, 
-                    title: decryptedTitle.substring(0, 20),
-                    month,
-                    day
-                  });
-                  // 임시 항목을 Supabase ID로 교체
-                  return {
-                    ...prev,
-                    events: prev.events.map(e => 
-                      e.id === recentEvent.id 
-                        ? {
-                            id: newEvent.id,
-                            month: month,
-                            day: day,
-                            title: decryptedTitle,
-                            desc: decryptedDesc
-                          }
-                        : e
-                    )
-                  };
-                }
               }
               
-              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없는 경우 추가
-              console.log('일정 추가:', { 
-                eventId: newEvent.id, 
-                createdBy: newEvent.created_by, 
-                currentUserId: userId,
-                isOtherUser: newEvent.created_by !== userId,
-                title: decryptedTitle.substring(0, 20)
-              });
+              // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
               return {
                 ...prev,
                 events: [{
@@ -1582,25 +1448,15 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_events' },
           (payload: any) => {
-            console.log('Realtime 일정 DELETE 이벤트 수신:', payload);
+            // 기준: 모든 사용자에게 동일하게 삭제 반영
             const deletedId = payload.old?.id;
             if (!deletedId) {
-              console.warn('DELETE 이벤트에 ID가 없음:', payload);
               return;
             }
-            setState(prev => {
-              const beforeCount = prev.events.length;
-              const filtered = prev.events.filter(e => String(e.id) !== String(deletedId));
-              const afterCount = filtered.length;
-              console.log(`일정 삭제: ${beforeCount}개 → ${afterCount}개, 삭제할 ID: ${deletedId}`);
-              if (beforeCount === afterCount) {
-                console.warn('삭제할 항목을 찾지 못함. 현재 events ID 목록:', prev.events.map(e => ({ id: e.id, type: typeof e.id })));
-              }
-              return {
-                ...prev,
-                events: filtered
-              };
-            });
+            setState(prev => ({
+              ...prev,
+              events: prev.events.filter(e => String(e.id) !== String(deletedId))
+            }));
           }
         )
         .subscribe((status, err) => {
