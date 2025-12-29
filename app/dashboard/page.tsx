@@ -1195,9 +1195,13 @@ export default function FamilyHub() {
             if (!deletedId) {
               return;
             }
+            const deletedIdStr = String(deletedId).trim();
             setState(prev => ({
               ...prev,
-              todos: prev.todos.filter(t => String(t.id) !== String(deletedId))
+              todos: prev.todos.filter(t => {
+                const tIdStr = String(t.id).trim();
+                return tIdStr !== deletedIdStr;
+              })
             }));
           }
         )
@@ -1453,9 +1457,13 @@ export default function FamilyHub() {
             if (!deletedId) {
               return;
             }
+            const deletedIdStr = String(deletedId).trim();
             setState(prev => ({
               ...prev,
-              events: prev.events.filter(e => String(e.id) !== String(deletedId))
+              events: prev.events.filter(e => {
+                const eIdStr = String(e.id).trim();
+                return eIdStr !== deletedIdStr;
+              })
             }));
           }
         )
