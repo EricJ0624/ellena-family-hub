@@ -1085,9 +1085,12 @@ export default function FamilyHub() {
               
               // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
               if (newTask.created_by === userId) {
+                // 임시 ID 항목을 찾기: 같은 텍스트와 담당자를 가진 임시 ID 항목
                 const recentDuplicate = prev.todos?.find(t => {
                   const isTempId = typeof t.id === 'number';
-                  return isTempId && 
+                  // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
+                  const isRecent = isTempId && (t.id as number) > (Date.now() - 30000);
+                  return isRecent && 
                          t.text === decryptedText && 
                          t.assignee === decryptedAssignee;
                 });
@@ -1107,6 +1110,16 @@ export default function FamilyHub() {
                         : t
                     )
                   };
+                }
+                
+                // 임시 항목을 찾지 못했지만, 같은 텍스트와 담당자를 가진 항목이 있으면 추가하지 않음 (중복 방지)
+                const duplicateByContent = prev.todos?.find(t => 
+                  t.text === decryptedText && 
+                  t.assignee === decryptedAssignee &&
+                  String(t.id) !== String(newTask.id) // 같은 ID가 아닌 경우만
+                );
+                if (duplicateByContent) {
+                  return prev; // 중복이면 추가하지 않음
                 }
               }
               
@@ -1337,9 +1350,12 @@ export default function FamilyHub() {
               
               // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
               if (newEvent.created_by === userId) {
+                // 임시 ID 항목을 찾기: 같은 제목, 월, 일을 가진 임시 ID 항목
                 const recentDuplicate = prev.events?.find(e => {
                   const isTempId = typeof e.id === 'number';
-                  return isTempId && 
+                  // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
+                  const isRecent = isTempId && (e.id as number) > (Date.now() - 30000);
+                  return isRecent && 
                          e.title === decryptedTitle && 
                          e.month === month && 
                          e.day === day;
@@ -1361,6 +1377,17 @@ export default function FamilyHub() {
                         : e
                     )
                   };
+                }
+                
+                // 임시 항목을 찾지 못했지만, 같은 제목, 월, 일을 가진 항목이 있으면 추가하지 않음 (중복 방지)
+                const duplicateByContent = prev.events?.find(e => 
+                  e.title === decryptedTitle && 
+                  e.month === month && 
+                  e.day === day &&
+                  String(e.id) !== String(newEvent.id) // 같은 ID가 아닌 경우만
+                );
+                if (duplicateByContent) {
+                  return prev; // 중복이면 추가하지 않음
                 }
               }
               
@@ -1951,13 +1978,13 @@ export default function FamilyHub() {
         case 'ADD_TODO': {
           // 중복 체크: 같은 텍스트와 담당자를 가진 할일이 이미 있는지 확인
           // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
-          // 5초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주
-          const fiveSecondsAgo = Date.now() - 5000;
+          // 30초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주 (Realtime 지연 고려)
+          const thirtySecondsAgo = Date.now() - 30000;
           const duplicate = prev.todos?.find(t => {
             // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
             const isTempId = typeof t.id === 'number';
-            // 임시 ID이고 5초 이내에 추가된 항목인지 확인
-            const isRecent = isTempId && (t.id as number) > fiveSecondsAgo;
+            // 임시 ID이고 30초 이내에 추가된 항목인지 확인
+            const isRecent = isTempId && (t.id as number) > thirtySecondsAgo;
             return isRecent && 
                    t.text === payload.text && 
                    t.assignee === payload.assignee;
@@ -1968,6 +1995,7 @@ export default function FamilyHub() {
             return prev; // 중복이면 상태 변경하지 않음
           }
           
+          // Supabase UUID가 아닌 임시 ID로 추가 (Realtime 이벤트에서 Supabase ID로 교체됨)
           newState.todos = [payload, ...prev.todos];
           // Supabase에 저장
           saveToSupabase('ADD_TODO', payload, userId, currentKey);
@@ -2001,13 +2029,13 @@ export default function FamilyHub() {
         case 'ADD_EVENT': {
           // 중복 체크: 같은 제목과 날짜를 가진 일정이 이미 있는지 확인
           // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
-          // 5초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주
-          const fiveSecondsAgo = Date.now() - 5000;
+          // 30초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주 (Realtime 지연 고려)
+          const thirtySecondsAgo = Date.now() - 30000;
           const duplicate = prev.events?.find(e => {
             // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
             const isTempId = typeof e.id === 'number';
-            // 임시 ID이고 5초 이내에 추가된 항목인지 확인
-            const isRecent = isTempId && (e.id as number) > fiveSecondsAgo;
+            // 임시 ID이고 30초 이내에 추가된 항목인지 확인
+            const isRecent = isTempId && (e.id as number) > thirtySecondsAgo;
             return isRecent && 
                    e.title === payload.title && 
                    e.month === payload.month && 
