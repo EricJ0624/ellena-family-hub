@@ -141,16 +141,15 @@ export default function FamilyHub() {
     try {
       console.log('updateOnlineUsers: 시작 - userId:', userId);
       
-      // 최근 7일 내 활동한 사용자 ID 수집 (24시간에서 7일로 확장하여 더 많은 사용자 감지)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      // 현재 로그인 중인 사용자만 표시 (최근 5분 내 활동한 사용자)
+      const fiveMinutesAgo = new Date();
+      fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
       
       const { data: recentMessages, error: messagesError } = await supabase
         .from('family_messages')
         .select('sender_id, created_at')
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .gte('created_at', fiveMinutesAgo.toISOString())
+        .order('created_at', { ascending: false });
       
       if (messagesError) {
         console.error('메시지 조회 오류:', messagesError);
@@ -159,9 +158,8 @@ export default function FamilyHub() {
       const { data: recentTasks, error: tasksError } = await supabase
         .from('family_tasks')
         .select('created_by, created_at')
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .gte('created_at', fiveMinutesAgo.toISOString())
+        .order('created_at', { ascending: false });
       
       if (tasksError) {
         console.error('할일 조회 오류:', tasksError);
@@ -170,27 +168,25 @@ export default function FamilyHub() {
       const { data: recentEvents, error: eventsError } = await supabase
         .from('family_events')
         .select('created_by, created_at')
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .gte('created_at', fiveMinutesAgo.toISOString())
+        .order('created_at', { ascending: false });
       
       if (eventsError) {
         console.error('일정 조회 오류:', eventsError);
       }
       
-      console.log('활동 데이터:', {
+      console.log('최근 5분 내 활동 데이터:', {
         messages: recentMessages?.length || 0,
         tasks: recentTasks?.length || 0,
         events: recentEvents?.length || 0
       });
       
-      // 모든 활동한 사용자 ID 수집
+      // 최근 5분 내 활동한 사용자 ID 수집 (현재 로그인 중인 사용자)
       const activeUserIds = new Set<string>();
       if (recentMessages) {
         recentMessages.forEach((msg: any) => {
           if (msg.sender_id) {
             activeUserIds.add(msg.sender_id);
-            console.log('메시지 사용자 추가:', msg.sender_id);
           }
         });
       }
@@ -198,7 +194,6 @@ export default function FamilyHub() {
         recentTasks.forEach((task: any) => {
           if (task.created_by) {
             activeUserIds.add(task.created_by);
-            console.log('할일 사용자 추가:', task.created_by);
           }
         });
       }
@@ -206,15 +201,14 @@ export default function FamilyHub() {
         recentEvents.forEach((event: any) => {
           if (event.created_by) {
             activeUserIds.add(event.created_by);
-            console.log('일정 사용자 추가:', event.created_by);
           }
         });
       }
       
-      // 현재 사용자도 포함
+      // 현재 사용자도 포함 (항상 표시)
       activeUserIds.add(userId);
       
-      console.log('활동한 사용자 ID 목록:', Array.from(activeUserIds));
+      console.log('현재 로그인 중인 사용자 ID 목록:', Array.from(activeUserIds));
       
       // 각 사용자 정보 가져오기
       const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
