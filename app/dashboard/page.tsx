@@ -141,14 +141,16 @@ export default function FamilyHub() {
     try {
       console.log('updateOnlineUsers: 시작 - userId:', userId);
       
-      // 최근 24시간 내 활동한 사용자 ID 수집
-      const twentyFourHoursAgo = new Date();
-      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+      // 최근 7일 내 활동한 사용자 ID 수집 (24시간에서 7일로 확장하여 더 많은 사용자 감지)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
       const { data: recentMessages, error: messagesError } = await supabase
         .from('family_messages')
         .select('sender_id, created_at')
-        .gte('created_at', twentyFourHoursAgo.toISOString());
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(100);
       
       if (messagesError) {
         console.error('메시지 조회 오류:', messagesError);
@@ -157,7 +159,9 @@ export default function FamilyHub() {
       const { data: recentTasks, error: tasksError } = await supabase
         .from('family_tasks')
         .select('created_by, created_at')
-        .gte('created_at', twentyFourHoursAgo.toISOString());
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(100);
       
       if (tasksError) {
         console.error('할일 조회 오류:', tasksError);
@@ -166,7 +170,9 @@ export default function FamilyHub() {
       const { data: recentEvents, error: eventsError } = await supabase
         .from('family_events')
         .select('created_by, created_at')
-        .gte('created_at', twentyFourHoursAgo.toISOString());
+        .gte('created_at', sevenDaysAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(100);
       
       if (eventsError) {
         console.error('일정 조회 오류:', eventsError);
@@ -1001,7 +1007,7 @@ export default function FamilyHub() {
               }
               
               // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체하거나, 이미 같은 ID가 있으면 추가하지 않음
+              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체하거나, 무조건 추가하지 않음
               if (newTask.created_by === userId) {
                 // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.todos?.find(t => {
@@ -1045,6 +1051,26 @@ export default function FamilyHub() {
                 if (sameContentTask) {
                   console.log('중복 할일 감지 (같은 내용), 추가하지 않음:', { 
                     existingId: sameContentTask.id,
+                    newId: newTask.id, 
+                    text: decryptedText.substring(0, 20) 
+                  });
+                  return prev; // 중복이면 상태 변경하지 않음
+                }
+                
+                // 임시 항목도 없고 같은 내용도 없지만, 자신이 입력한 항목이므로
+                // 최근 5초 이내에 추가된 항목이 있는지 확인 (타이밍 이슈 대비)
+                const fiveSecondsAgo = Date.now() - 5000;
+                const recentTask = prev.todos?.find(t => {
+                  const isTempId = typeof t.id === 'number';
+                  const isRecent = isTempId && (t.id as number) > fiveSecondsAgo;
+                  return isRecent && 
+                         t.text === decryptedText && 
+                         t.assignee === (newTask.assigned_to || '누구나');
+                });
+                
+                if (recentTask) {
+                  console.log('중복 할일 감지 (최근 추가된 항목), 추가하지 않음:', { 
+                    existingId: recentTask.id,
                     newId: newTask.id, 
                     text: decryptedText.substring(0, 20) 
                   });
@@ -2653,8 +2679,17 @@ export default function FamilyHub() {
             clearTimeout(completeTimeout);
 
             if (!completeResponse.ok) {
+              // complete-upload 실패해도 S3 업로드는 성공했으므로 S3 URL로 저장
               const completeResult = await completeResponse.json().catch(() => ({ error: '업로드 완료 처리 실패' }));
-              throw new Error(completeResult.error || `업로드 완료 처리 실패: ${completeResponse.status}`);
+              console.warn('complete-upload 실패, S3 URL로 저장:', completeResult.error);
+              updateState('UPDATE_PHOTO_ID', {
+                oldId: photoId,
+                newId: photoId, // 임시 ID 유지 (나중에 Supabase에서 로드)
+                cloudinaryUrl: null,
+                s3Url: s3Url // S3 URL은 있음
+              });
+              uploadCompleted = true;
+              return; // S3 업로드는 성공했으므로 종료
             }
 
             const completeResult = await completeResponse.json();
@@ -2683,13 +2718,28 @@ export default function FamilyHub() {
                   console.log('업로드 완료:', completeResult.id);
                 }
               }, 100);
+            } else {
+              // ID가 없어도 S3 업로드는 성공했으므로 완료 처리
+              console.warn('complete-upload 응답에 ID가 없음, S3 URL로 저장');
+              updateState('UPDATE_PHOTO_ID', {
+                oldId: photoId,
+                newId: photoId,
+                cloudinaryUrl: null,
+                s3Url: s3Url
+              });
+              uploadCompleted = true;
             }
           } catch (completeError: any) {
             clearTimeout(completeTimeout);
-            if (completeError.name === 'AbortError') {
-              throw new Error('업로드 완료 처리 타임아웃 (60초 초과)');
-            }
-            throw completeError;
+            // complete-upload 실패해도 S3 업로드는 성공했으므로 완료 처리
+            console.warn('complete-upload 오류, S3 URL로 저장:', completeError.message);
+            updateState('UPDATE_PHOTO_ID', {
+              oldId: photoId,
+              newId: photoId,
+              cloudinaryUrl: null,
+              s3Url: s3Url // S3 URL은 있음
+            });
+            uploadCompleted = true;
           }
           } catch (presignedError: any) {
             // Presigned URL 생성 실패 시에도 서버 경유 방식으로 폴백
