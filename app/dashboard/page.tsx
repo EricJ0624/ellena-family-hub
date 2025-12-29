@@ -131,6 +131,88 @@ export default function FamilyHub() {
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
+  // 온라인 사용자 목록 업데이트 함수 (컴포넌트 레벨로 이동)
+  const updateOnlineUsers = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      // 최근 24시간 내 활동한 사용자 ID 수집
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+      
+      const { data: recentMessages } = await supabase
+        .from('family_messages')
+        .select('sender_id, created_at')
+        .gte('created_at', twentyFourHoursAgo.toISOString());
+      
+      const { data: recentTasks } = await supabase
+        .from('family_tasks')
+        .select('created_by, created_at')
+        .gte('created_at', twentyFourHoursAgo.toISOString());
+      
+      const { data: recentEvents } = await supabase
+        .from('family_events')
+        .select('created_by, created_at')
+        .gte('created_at', twentyFourHoursAgo.toISOString());
+      
+      // 모든 활동한 사용자 ID 수집
+      const activeUserIds = new Set<string>();
+      if (recentMessages) {
+        recentMessages.forEach((msg: any) => {
+          if (msg.sender_id) activeUserIds.add(msg.sender_id);
+        });
+      }
+      if (recentTasks) {
+        recentTasks.forEach((task: any) => {
+          if (task.created_by) activeUserIds.add(task.created_by);
+        });
+      }
+      if (recentEvents) {
+        recentEvents.forEach((event: any) => {
+          if (event.created_by) activeUserIds.add(event.created_by);
+        });
+      }
+      
+      // 현재 사용자도 포함
+      activeUserIds.add(userId);
+      
+      // 각 사용자 정보 가져오기
+      const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+      
+      // 현재 사용자 정보는 이미 있음
+      if (userId) {
+        usersList.push({
+          id: userId,
+          name: userName || '나',
+          isCurrentUser: true
+        });
+      }
+      
+      // 다른 사용자들의 정보 가져오기
+      // 사용자 ID를 기반으로 더 읽기 쉬운 이름 생성
+      const userIdArray = Array.from(activeUserIds).filter(uid => uid !== userId);
+      userIdArray.forEach((uid, index) => {
+        // UUID의 마지막 8자리를 사용하여 더 읽기 쉽게 표시
+        const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+        const displayName = `사용자 ${shortId}`;
+        
+        usersList.push({
+          id: uid,
+          name: displayName,
+          isCurrentUser: false
+        });
+      });
+      
+      setOnlineUsers(usersList);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('온라인 사용자 목록 업데이트:', usersList);
+      }
+      } catch (error) {
+        console.error('온라인 사용자 목록 업데이트 오류:', error);
+      }
+    }, [userId, userName]);
+  
   const loadData = useCallback((key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
     const saved = localStorage.getItem(storageKey);
@@ -227,88 +309,6 @@ export default function FamilyHub() {
     // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
     // localStorage 데이터를 덮어쓰지 않고, Supabase 데이터가 있을 때만 업데이트
     // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
-    // 온라인 사용자 목록 업데이트 함수
-    const updateOnlineUsers = async () => {
-      if (!userId) return;
-      
-      try {
-        // 최근 24시간 내 활동한 사용자 ID 수집
-        const twentyFourHoursAgo = new Date();
-        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-        
-        const { data: recentMessages } = await supabase
-          .from('family_messages')
-          .select('sender_id, created_at')
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-        
-        const { data: recentTasks } = await supabase
-          .from('family_tasks')
-          .select('created_by, created_at')
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-        
-        const { data: recentEvents } = await supabase
-          .from('family_events')
-          .select('created_by, created_at')
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-        
-        // 모든 활동한 사용자 ID 수집
-        const activeUserIds = new Set<string>();
-        if (recentMessages) {
-          recentMessages.forEach((msg: any) => {
-            if (msg.sender_id) activeUserIds.add(msg.sender_id);
-          });
-        }
-        if (recentTasks) {
-          recentTasks.forEach((task: any) => {
-            if (task.created_by) activeUserIds.add(task.created_by);
-          });
-        }
-        if (recentEvents) {
-          recentEvents.forEach((event: any) => {
-            if (event.created_by) activeUserIds.add(event.created_by);
-          });
-        }
-        
-        // 현재 사용자도 포함
-        activeUserIds.add(userId);
-        
-        // 각 사용자 정보 가져오기
-        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        
-        // 현재 사용자 정보는 이미 있음
-        if (userId) {
-          usersList.push({
-            id: userId,
-            name: userName || '나',
-            isCurrentUser: true
-          });
-        }
-        
-        // 다른 사용자들의 정보 가져오기
-        // 사용자 ID를 기반으로 더 읽기 쉬운 이름 생성
-        const userIdArray = Array.from(activeUserIds).filter(uid => uid !== userId);
-        userIdArray.forEach((uid, index) => {
-          // UUID의 마지막 8자리를 사용하여 더 읽기 쉽게 표시
-          const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
-          const displayName = `사용자 ${shortId}`;
-          
-          usersList.push({
-            id: uid,
-            name: displayName,
-            isCurrentUser: false
-          });
-        });
-        
-        setOnlineUsers(usersList);
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('온라인 사용자 목록 업데이트:', usersList);
-        }
-      } catch (error) {
-        console.error('온라인 사용자 목록 업데이트 오류:', error);
-      }
-    };
-
     const loadSupabaseData = async () => {
       try {
         // 가족 공유 키를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
@@ -962,15 +962,16 @@ export default function FamilyHub() {
             
             setState(prev => {
               // 중복 체크 1: 같은 ID를 가진 할일이 이미 있는지 확인
-              const existingTaskById = prev.todos?.find(t => t.id === newTask.id);
+              const existingTaskById = prev.todos?.find(t => String(t.id) === String(newTask.id));
               if (existingTaskById) {
                 console.log('중복 할일 감지 (ID 기반), 추가하지 않음:', { id: newTask.id, text: decryptedText.substring(0, 20) });
                 return prev; // 중복이면 상태 변경하지 않음
               }
               
               // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이고, 같은 텍스트와 담당자를 가진 임시 ID 항목이 있으면 중복으로 처리
+              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체하거나, 이미 같은 ID가 있으면 추가하지 않음
               if (newTask.created_by === userId) {
+                // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.todos?.find(t => {
                   // 임시 ID (숫자)를 가진 항목만 체크
                   const isTempId = typeof t.id === 'number';
@@ -1001,8 +1002,25 @@ export default function FamilyHub() {
                     )
                   };
                 }
+                
+                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로 이미 로컬에 추가되어 있을 가능성이 높음
+                // 같은 텍스트와 담당자를 가진 항목이 있으면 추가하지 않음 (중복 방지)
+                const sameContentTask = prev.todos?.find(t => 
+                  t.text === decryptedText && 
+                  t.assignee === (newTask.assigned_to || '누구나')
+                );
+                
+                if (sameContentTask) {
+                  console.log('중복 할일 감지 (같은 내용), 추가하지 않음:', { 
+                    existingId: sameContentTask.id,
+                    newId: newTask.id, 
+                    text: decryptedText.substring(0, 20) 
+                  });
+                  return prev; // 중복이면 상태 변경하지 않음
+                }
               }
               
+              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 중복이 아닌 경우에만 추가
               return {
                 ...prev,
                 todos: [{
@@ -1194,15 +1212,16 @@ export default function FamilyHub() {
             
             setState(prev => {
               // 중복 체크 1: 같은 ID를 가진 일정이 이미 있는지 확인
-              const existingEventById = prev.events?.find(e => e.id === newEvent.id);
+              const existingEventById = prev.events?.find(e => String(e.id) === String(newEvent.id));
               if (existingEventById) {
                 console.log('중복 일정 감지 (ID 기반), 추가하지 않음:', { id: newEvent.id, title: decryptedTitle.substring(0, 20) });
                 return prev; // 중복이면 상태 변경하지 않음
               }
               
               // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이고, 같은 제목과 날짜를 가진 임시 ID 항목이 있으면 중복으로 처리
+              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체하거나, 이미 같은 내용이 있으면 추가하지 않음
               if (newEvent.created_by === userId) {
+                // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.events?.find(e => {
                   // 임시 ID (숫자)를 가진 항목만 체크
                   const isTempId = typeof e.id === 'number';
@@ -1237,8 +1256,28 @@ export default function FamilyHub() {
                     )
                   };
                 }
+                
+                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로 이미 로컬에 추가되어 있을 가능성이 높음
+                // 같은 제목과 날짜를 가진 항목이 있으면 추가하지 않음 (중복 방지)
+                const sameContentEvent = prev.events?.find(e => 
+                  e.title === decryptedTitle && 
+                  e.month === month && 
+                  e.day === day
+                );
+                
+                if (sameContentEvent) {
+                  console.log('중복 일정 감지 (같은 내용), 추가하지 않음:', { 
+                    existingId: sameContentEvent.id,
+                    newId: newEvent.id, 
+                    title: decryptedTitle.substring(0, 20),
+                    month,
+                    day
+                  });
+                  return prev; // 중복이면 상태 변경하지 않음
+                }
               }
               
+              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 중복이 아닌 경우에만 추가
               return {
                 ...prev,
                 events: [{
@@ -1760,10 +1799,14 @@ export default function FamilyHub() {
         case 'ADD_TODO': {
           // 중복 체크: 같은 텍스트와 담당자를 가진 할일이 이미 있는지 확인
           // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
+          // 5초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주
+          const fiveSecondsAgo = Date.now() - 5000;
           const duplicate = prev.todos?.find(t => {
             // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
             const isTempId = typeof t.id === 'number';
-            return isTempId && 
+            // 임시 ID이고 5초 이내에 추가된 항목인지 확인
+            const isRecent = isTempId && (t.id as number) > fiveSecondsAgo;
+            return isRecent && 
                    t.text === payload.text && 
                    t.assignee === payload.assignee;
           });
@@ -1806,10 +1849,14 @@ export default function FamilyHub() {
         case 'ADD_EVENT': {
           // 중복 체크: 같은 제목과 날짜를 가진 일정이 이미 있는지 확인
           // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
+          // 5초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주
+          const fiveSecondsAgo = Date.now() - 5000;
           const duplicate = prev.events?.find(e => {
             // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
             const isTempId = typeof e.id === 'number';
-            return isTempId && 
+            // 임시 ID이고 5초 이내에 추가된 항목인지 확인
+            const isRecent = isTempId && (e.id as number) > fiveSecondsAgo;
+            return isRecent && 
                    e.title === payload.title && 
                    e.month === payload.month && 
                    e.day === payload.day;
