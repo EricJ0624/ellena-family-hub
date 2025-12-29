@@ -1233,9 +1233,13 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
+            const deletedId = payload.old?.id;
+            if (!deletedId) {
+              return;
+            }
             setState(prev => ({
               ...prev,
-              todos: prev.todos.filter(t => t.id !== payload.old.id)
+              todos: prev.todos.filter(t => String(t.id) !== String(deletedId))
             }));
           }
         )
@@ -1535,9 +1539,13 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_events' },
           (payload: any) => {
+            const deletedId = payload.old?.id;
+            if (!deletedId) {
+              return;
+            }
             setState(prev => ({
               ...prev,
-              events: prev.events.filter(e => e.id !== payload.old.id)
+              events: prev.events.filter(e => String(e.id) !== String(deletedId))
             }));
           }
         )
@@ -1627,9 +1635,16 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'memory_vault' },
           (payload: any) => {
+            const deletedId = payload.old?.id;
+            if (!deletedId) {
+              return;
+            }
             setState(prev => ({
               ...prev,
-              album: prev.album.filter(p => p.id !== payload.old.id && p.supabaseId !== payload.old.id)
+              album: prev.album.filter(p => 
+                String(p.id) !== String(deletedId) && 
+                (p.supabaseId ? String(p.supabaseId) !== String(deletedId) : true)
+              )
             }));
           }
         )
