@@ -63,7 +63,7 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 // --- [TYPES] 타입 안정성 추가 ---
 type Todo = { id: number; text: string; assignee: string; done: boolean };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string };
-type Message = { user: string; text: string; time: string };
+type Message = { id: string | number; user: string; text: string; time: string };
 type Photo = { 
   id: number; 
   data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시) 또는 플레이스홀더 (큰 파일)
@@ -91,7 +91,7 @@ const INITIAL_STATE: AppState = {
   todos: [{ id: 1, text: "시스템 보안 체크", assignee: "관리자", done: false }],
   album: [],
   events: [{ id: 1, month: "DEC", day: "24", title: "크리스마스 파티 🎄", desc: "오후 7시 거실에서 선물 교환" }],
-  messages: [{ user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }]
+  messages: [{ id: 0, user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }]
 };
 
 // Realtime subscription 변수를 컴포넌트 외부로 이동하여 handleLogout에서 접근 가능하도록
@@ -437,6 +437,7 @@ export default function FamilyHub() {
               decryptedText = msg.message_text;
             }
             return {
+              id: msg.id, // 메시지 ID 저장 (DELETE를 위해 필요)
               user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
               text: decryptedText,
               time: timeStr
@@ -883,14 +884,11 @@ export default function FamilyHub() {
             }
             
             setState(prev => {
-              // 중복 체크: 같은 시간과 텍스트를 가진 메시지가 이미 있는지 확인
-              const existingMessage = prev.messages?.find(m => 
-                m.time === timeStr && m.text === decryptedText
-              );
-              
-              if (existingMessage) {
+              // 중복 체크 1: 같은 ID를 가진 메시지가 이미 있는지 확인
+              const existingMessageById = prev.messages?.find(m => String(m.id) === String(newMessage.id));
+              if (existingMessageById) {
                 if (process.env.NODE_ENV === 'development') {
-                  console.log('중복 메시지 감지, 추가하지 않음:', { time: timeStr, text: decryptedText.substring(0, 20) });
+                  console.log('중복 메시지 감지 (ID 기반), 추가하지 않음:', { id: newMessage.id, text: decryptedText.substring(0, 20) });
                 }
                 return prev; // 중복이면 상태 변경하지 않음
               }
@@ -898,6 +896,7 @@ export default function FamilyHub() {
               return {
                 ...prev,
                 messages: [...(prev.messages || []), {
+                  id: newMessage.id, // 메시지 ID 저장 (DELETE를 위해 필요)
                   user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
                   text: decryptedText,
                   time: timeStr
@@ -946,8 +945,10 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_messages' },
           (payload: any) => {
-            // 삭제된 메시지는 ID로 매칭이 어려우므로 전체 새로고침은 하지 않음
-            // 필요시 수동 새로고침
+            setState(prev => ({
+              ...prev,
+              messages: prev.messages.filter(m => m.id !== payload.old.id)
+            }));
           }
         )
         .subscribe((status, err) => {
