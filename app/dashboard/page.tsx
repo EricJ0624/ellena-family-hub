@@ -227,6 +227,88 @@ export default function FamilyHub() {
     // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
     // localStorage 데이터를 덮어쓰지 않고, Supabase 데이터가 있을 때만 업데이트
     // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
+    // 온라인 사용자 목록 업데이트 함수
+    const updateOnlineUsers = async () => {
+      if (!userId) return;
+      
+      try {
+        // 최근 24시간 내 활동한 사용자 ID 수집
+        const twentyFourHoursAgo = new Date();
+        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+        
+        const { data: recentMessages } = await supabase
+          .from('family_messages')
+          .select('sender_id, created_at')
+          .gte('created_at', twentyFourHoursAgo.toISOString());
+        
+        const { data: recentTasks } = await supabase
+          .from('family_tasks')
+          .select('created_by, created_at')
+          .gte('created_at', twentyFourHoursAgo.toISOString());
+        
+        const { data: recentEvents } = await supabase
+          .from('family_events')
+          .select('created_by, created_at')
+          .gte('created_at', twentyFourHoursAgo.toISOString());
+        
+        // 모든 활동한 사용자 ID 수집
+        const activeUserIds = new Set<string>();
+        if (recentMessages) {
+          recentMessages.forEach((msg: any) => {
+            if (msg.sender_id) activeUserIds.add(msg.sender_id);
+          });
+        }
+        if (recentTasks) {
+          recentTasks.forEach((task: any) => {
+            if (task.created_by) activeUserIds.add(task.created_by);
+          });
+        }
+        if (recentEvents) {
+          recentEvents.forEach((event: any) => {
+            if (event.created_by) activeUserIds.add(event.created_by);
+          });
+        }
+        
+        // 현재 사용자도 포함
+        activeUserIds.add(userId);
+        
+        // 각 사용자 정보 가져오기
+        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+        
+        // 현재 사용자 정보는 이미 있음
+        if (userId) {
+          usersList.push({
+            id: userId,
+            name: userName || '나',
+            isCurrentUser: true
+          });
+        }
+        
+        // 다른 사용자들의 정보 가져오기
+        // 사용자 ID를 기반으로 더 읽기 쉬운 이름 생성
+        const userIdArray = Array.from(activeUserIds).filter(uid => uid !== userId);
+        userIdArray.forEach((uid, index) => {
+          // UUID의 마지막 8자리를 사용하여 더 읽기 쉽게 표시
+          const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+          const displayName = `사용자 ${shortId}`;
+          
+          usersList.push({
+            id: uid,
+            name: displayName,
+            isCurrentUser: false
+          });
+        });
+        
+        setOnlineUsers(usersList);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('온라인 사용자 목록 업데이트:', usersList);
+        }
+      } catch (error) {
+        console.error('온라인 사용자 목록 업데이트 오류:', error);
+      }
+    };
+
     const loadSupabaseData = async () => {
       try {
         // 가족 공유 키를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
@@ -264,7 +346,7 @@ export default function FamilyHub() {
             if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
               localStoragePhotos = decrypted.album;
             }
-          } catch (e) {
+    } catch (e) {
             if (process.env.NODE_ENV === 'development') {
               console.warn('localStorage 사진 로드 실패:', e);
             }
@@ -571,79 +653,8 @@ export default function FamilyHub() {
         }
         
         // Supabase 사진과 localStorage 사진 병합
-        // 최근 활동한 사용자 목록 가져오기 (최근 24시간 내 활동)
-        const twentyFourHoursAgo = new Date();
-        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-        
-        // 메시지, 할일, 일정에서 최근 활동한 사용자 ID 수집
-        const { data: recentMessages } = await supabase
-          .from('family_messages')
-          .select('sender_id, created_at')
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-        
-        const { data: recentTasks } = await supabase
-          .from('family_tasks')
-          .select('created_by, created_at')
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-        
-        const { data: recentEvents } = await supabase
-          .from('family_events')
-          .select('created_by, created_at')
-          .gte('created_at', twentyFourHoursAgo.toISOString());
-        
-        // 모든 활동한 사용자 ID 수집
-        const activeUserIds = new Set<string>();
-        if (recentMessages) {
-          recentMessages.forEach((msg: any) => {
-            if (msg.sender_id) activeUserIds.add(msg.sender_id);
-          });
-        }
-        if (recentTasks) {
-          recentTasks.forEach((task: any) => {
-            if (task.created_by) activeUserIds.add(task.created_by);
-          });
-        }
-        if (recentEvents) {
-          recentEvents.forEach((event: any) => {
-            if (event.created_by) activeUserIds.add(event.created_by);
-          });
-        }
-        
-        // 현재 사용자도 포함
-        if (userId) {
-          activeUserIds.add(userId);
-        }
-        
-        // 각 사용자 정보 가져오기
-        // 클라이언트에서는 admin API를 사용할 수 없으므로, 최근 활동한 사용자 ID를 기반으로 표시
-        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        
-        // 현재 사용자 정보는 이미 있음
-        if (userId) {
-          usersList.push({
-            id: userId,
-            name: userName || '나',
-            isCurrentUser: true
-          });
-        }
-        
-        // 다른 사용자들의 정보 가져오기
-        // 각 사용자 ID에 대해 기본 이름 생성
-        for (const uid of Array.from(activeUserIds)) {
-          if (uid === userId) continue; // 현재 사용자는 이미 추가됨
-          
-          // 사용자 ID를 기반으로 이름 생성
-          // 실제로는 별도의 user_profiles 테이블이나 다른 방법으로 사용자 이름을 가져와야 함
-          const displayName = `사용자 ${uid.substring(0, 8)}`;
-          
-          usersList.push({
-            id: uid,
-            name: displayName,
-            isCurrentUser: false
-          });
-        }
-        
-        setOnlineUsers(usersList);
+        // 온라인 사용자 목록 업데이트
+        await updateOnlineUsers();
         
         // 재로그인 시 Supabase 데이터를 우선하고, localStorage는 업로드 중인 사진만 유지
         setState(prev => {
@@ -842,6 +853,9 @@ export default function FamilyHub() {
                 }].slice(-50)
               };
             });
+            
+            // 온라인 사용자 목록 업데이트
+            updateOnlineUsers();
           }
         )
         .on('postgres_changes',
@@ -999,6 +1013,9 @@ export default function FamilyHub() {
                 }, ...prev.todos]
               };
             });
+            
+            // 온라인 사용자 목록 업데이트
+            updateOnlineUsers();
           }
         )
         .on('postgres_changes',
@@ -1233,6 +1250,9 @@ export default function FamilyHub() {
                 }, ...prev.events]
               };
             });
+            
+            // 온라인 사용자 목록 업데이트
+            updateOnlineUsers();
           }
         )
         .on('postgres_changes',
@@ -3160,10 +3180,10 @@ export default function FamilyHub() {
           </div>
             <div className="section-body">
               <p className="location-text">{state.location.address}</p>
-          </div>
-        </section>
         </div>
-      </div>
+        </section>
+          </div>
+              </div>
       
       {/* 업로드 상태 애니메이션 스타일 */}
       <style jsx>{`
