@@ -133,48 +133,82 @@ export default function FamilyHub() {
   
   // 온라인 사용자 목록 업데이트 함수 (컴포넌트 레벨로 이동)
   const updateOnlineUsers = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('updateOnlineUsers: userId가 없어 스킵');
+      return;
+    }
     
     try {
+      console.log('updateOnlineUsers: 시작 - userId:', userId);
+      
       // 최근 24시간 내 활동한 사용자 ID 수집
       const twentyFourHoursAgo = new Date();
       twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
       
-      const { data: recentMessages } = await supabase
+      const { data: recentMessages, error: messagesError } = await supabase
         .from('family_messages')
         .select('sender_id, created_at')
         .gte('created_at', twentyFourHoursAgo.toISOString());
       
-      const { data: recentTasks } = await supabase
+      if (messagesError) {
+        console.error('메시지 조회 오류:', messagesError);
+      }
+      
+      const { data: recentTasks, error: tasksError } = await supabase
         .from('family_tasks')
         .select('created_by, created_at')
         .gte('created_at', twentyFourHoursAgo.toISOString());
       
-      const { data: recentEvents } = await supabase
+      if (tasksError) {
+        console.error('할일 조회 오류:', tasksError);
+      }
+      
+      const { data: recentEvents, error: eventsError } = await supabase
         .from('family_events')
         .select('created_by, created_at')
         .gte('created_at', twentyFourHoursAgo.toISOString());
+      
+      if (eventsError) {
+        console.error('일정 조회 오류:', eventsError);
+      }
+      
+      console.log('활동 데이터:', {
+        messages: recentMessages?.length || 0,
+        tasks: recentTasks?.length || 0,
+        events: recentEvents?.length || 0
+      });
       
       // 모든 활동한 사용자 ID 수집
       const activeUserIds = new Set<string>();
       if (recentMessages) {
         recentMessages.forEach((msg: any) => {
-          if (msg.sender_id) activeUserIds.add(msg.sender_id);
+          if (msg.sender_id) {
+            activeUserIds.add(msg.sender_id);
+            console.log('메시지 사용자 추가:', msg.sender_id);
+          }
         });
       }
       if (recentTasks) {
         recentTasks.forEach((task: any) => {
-          if (task.created_by) activeUserIds.add(task.created_by);
+          if (task.created_by) {
+            activeUserIds.add(task.created_by);
+            console.log('할일 사용자 추가:', task.created_by);
+          }
         });
       }
       if (recentEvents) {
         recentEvents.forEach((event: any) => {
-          if (event.created_by) activeUserIds.add(event.created_by);
+          if (event.created_by) {
+            activeUserIds.add(event.created_by);
+            console.log('일정 사용자 추가:', event.created_by);
+          }
         });
       }
       
       // 현재 사용자도 포함
       activeUserIds.add(userId);
+      
+      console.log('활동한 사용자 ID 목록:', Array.from(activeUserIds));
       
       // 각 사용자 정보 가져오기
       const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
@@ -203,15 +237,13 @@ export default function FamilyHub() {
         });
       });
       
+      console.log('최종 사용자 목록:', usersList);
       setOnlineUsers(usersList);
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('온라인 사용자 목록 업데이트:', usersList);
-      }
-      } catch (error) {
-        console.error('온라인 사용자 목록 업데이트 오류:', error);
-      }
-    }, [userId, userName]);
+    } catch (error) {
+      console.error('온라인 사용자 목록 업데이트 오류:', error);
+    }
+  }, [userId, userName]);
   
   const loadData = useCallback((key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
@@ -1709,14 +1741,30 @@ export default function FamilyHub() {
           const encryptedTitle = CryptoService.encrypt(payload.title, currentKey);
           const encryptedDesc = CryptoService.encrypt(payload.desc || '', currentKey);
           
-          // 날짜 파싱 (예: "DEC 25" -> 실제 날짜)
+          // 날짜 파싱 (예: "JAN 1" 또는 "1 JAN" -> 실제 날짜)
           const monthMap: { [key: string]: number } = {
             'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
             'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
           };
+          
+          const monthStr = payload.month.toUpperCase();
+          const month = monthMap[monthStr];
+          
+          // month가 유효한지 확인
+          if (month === undefined) {
+            console.error('유효하지 않은 월:', payload.month);
+            alert('유효하지 않은 월 형식입니다. JAN, FEB, MAR 등을 사용해주세요.');
+            return;
+          }
+          
+          const day = parseInt(payload.day);
+          if (isNaN(day) || day < 1 || day > 31) {
+            console.error('유효하지 않은 일:', payload.day);
+            alert('일(day)은 1-31 사이의 숫자여야 합니다.');
+            return;
+          }
+          
           const currentYear = new Date().getFullYear();
-          const month = monthMap[payload.month.toUpperCase()] ?? 11;
-          const day = parseInt(payload.day) || 1;
           const eventDate = new Date(currentYear, month, day);
           
           // event_date 컬럼이 없을 수 있으므로 선택적으로 처리
@@ -2041,23 +2089,61 @@ export default function FamilyHub() {
   const addNewEvent = () => {
     const title = prompt("일정 제목:");
     if (!title) return;
-    const dateStr = prompt("날짜 (예: DEC 25):");
+    const dateStr = prompt("날짜 (예: JAN 1 또는 1 JAN):");
     if (!dateStr) return;
-    const [m, d] = dateStr.split(' ');
+    
+    // 날짜 파싱 개선: "JAN 1" 또는 "1 JAN" 형식 모두 지원
+    const parts = dateStr.trim().split(/\s+/);
+    if (parts.length !== 2) {
+      alert("날짜 형식이 올바르지 않습니다. 예: JAN 1 또는 1 JAN");
+      return;
+    }
+    
+    const monthMap: { [key: string]: string } = {
+      'JAN': 'JAN', 'FEB': 'FEB', 'MAR': 'MAR', 'APR': 'APR', 'MAY': 'MAY', 'JUN': 'JUN',
+      'JUL': 'JUL', 'AUG': 'AUG', 'SEP': 'SEP', 'OCT': 'OCT', 'NOV': 'NOV', 'DEC': 'DEC'
+    };
+    
+    let month: string = '';
+    let day: string = '';
+    
+    // 첫 번째가 월인지 확인
+    if (monthMap[parts[0].toUpperCase()]) {
+      month = parts[0].toUpperCase();
+      day = parts[1];
+    } 
+    // 두 번째가 월인지 확인
+    else if (monthMap[parts[1].toUpperCase()]) {
+      day = parts[0];
+      month = parts[1].toUpperCase();
+    } 
+    // 둘 다 월이 아니면 오류
+    else {
+      alert("월 형식이 올바르지 않습니다. 예: JAN, FEB, MAR 등");
+      return;
+    }
+    
+    // day가 숫자인지 확인
+    const dayNum = parseInt(day);
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+      alert("일(day)은 1-31 사이의 숫자여야 합니다.");
+      return;
+    }
+    
     const desc = prompt("설명:");
     
     // 보안: 입력 검증
     const sanitizedTitle = sanitizeInput(title, 100);
-    const sanitizedMonth = sanitizeInput(m, 10);
-    const sanitizedDay = sanitizeInput(d, 10);
+    const sanitizedMonth = sanitizeInput(month, 10);
+    const sanitizedDay = dayNum.toString();
     const sanitizedDesc = sanitizeInput(desc, 200);
     
     if (!sanitizedTitle) return alert("유효하지 않은 제목입니다.");
     
     updateState('ADD_EVENT', { 
       id: Date.now(), 
-      month: (sanitizedMonth || "EVENT").toUpperCase(), 
-      day: sanitizedDay || "!", 
+      month: sanitizedMonth, 
+      day: sanitizedDay, 
       title: sanitizedTitle, 
       desc: sanitizedDesc 
     });
