@@ -1190,40 +1190,15 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
-            // 기준: 모든 사용자에게 동일하게 삭제 반영
-            console.log('Realtime 할일 DELETE 이벤트 수신:', payload);
+            // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
             const deletedId = payload.old?.id;
-            console.log('삭제할 할일 ID:', deletedId, '타입:', typeof deletedId);
-            
             if (!deletedId) {
-              console.warn('DELETE 이벤트에 ID가 없음:', payload);
               return;
             }
-            
-            setState(prev => {
-              console.log('삭제 전 할일 개수:', prev.todos.length);
-              console.log('현재 할일 ID 목록:', prev.todos.map(t => ({ id: t.id, type: typeof t.id })));
-              
-              const filtered = prev.todos.filter(t => {
-                const tId = String(t.id);
-                const dId = String(deletedId);
-                const shouldKeep = tId !== dId;
-                if (!shouldKeep) {
-                  console.log('삭제할 항목 발견:', { tId, dId, t });
-                }
-                return shouldKeep;
-              });
-              
-              console.log('삭제 후 할일 개수:', filtered.length);
-              if (prev.todos.length === filtered.length) {
-                console.error('삭제 실패: 항목을 찾지 못함. 삭제할 ID:', deletedId);
-              }
-              
-              return {
-                ...prev,
-                todos: filtered
-              };
-            });
+            setState(prev => ({
+              ...prev,
+              todos: prev.todos.filter(t => String(t.id) !== String(deletedId))
+            }));
           }
         )
         .subscribe((status, err) => {
@@ -1473,40 +1448,15 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_events' },
           (payload: any) => {
-            // 기준: 모든 사용자에게 동일하게 삭제 반영
-            console.log('Realtime 일정 DELETE 이벤트 수신:', payload);
+            // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
             const deletedId = payload.old?.id;
-            console.log('삭제할 일정 ID:', deletedId, '타입:', typeof deletedId);
-            
             if (!deletedId) {
-              console.warn('DELETE 이벤트에 ID가 없음:', payload);
               return;
             }
-            
-            setState(prev => {
-              console.log('삭제 전 일정 개수:', prev.events.length);
-              console.log('현재 일정 ID 목록:', prev.events.map(e => ({ id: e.id, type: typeof e.id })));
-              
-              const filtered = prev.events.filter(e => {
-                const eId = String(e.id);
-                const dId = String(deletedId);
-                const shouldKeep = eId !== dId;
-                if (!shouldKeep) {
-                  console.log('삭제할 항목 발견:', { eId, dId, e });
-                }
-                return shouldKeep;
-              });
-              
-              console.log('삭제 후 일정 개수:', filtered.length);
-              if (prev.events.length === filtered.length) {
-                console.error('삭제 실패: 항목을 찾지 못함. 삭제할 ID:', deletedId);
-              }
-              
-              return {
-                ...prev,
-                events: filtered
-              };
-            });
+            setState(prev => ({
+              ...prev,
+              events: prev.events.filter(e => String(e.id) !== String(deletedId))
+            }));
           }
         )
         .subscribe((status, err) => {
