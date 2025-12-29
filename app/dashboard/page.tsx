@@ -251,10 +251,11 @@ export default function FamilyHub() {
             const userPresence = presence[0];
             const uid = userPresence.userId;
             if (uid && uid !== userId) {
-              const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+              // Presence에서 userName을 가져오거나, 없으면 기본값 사용
+              const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
               usersList.push({
                 id: uid,
-                name: `사용자 ${shortId}`,
+                name: displayName,
                 isCurrentUser: false
               });
             }
@@ -283,10 +284,11 @@ export default function FamilyHub() {
             const userPresence = presence[0];
             const uid = userPresence.userId;
             if (uid && uid !== userId) {
-              const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+              // Presence에서 userName을 가져오거나, 없으면 기본값 사용
+              const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
               usersList.push({
                 id: uid,
-                name: `사용자 ${shortId}`,
+                name: displayName,
                 isCurrentUser: false
               });
             }
@@ -314,10 +316,11 @@ export default function FamilyHub() {
             const userPresence = presence[0];
             const uid = userPresence.userId;
             if (uid && uid !== userId) {
-              const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+              // Presence에서 userName을 가져오거나, 없으면 기본값 사용
+              const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
               usersList.push({
                 id: uid,
-                name: `사용자 ${shortId}`,
+                name: displayName,
                 isCurrentUser: false
               });
             }
