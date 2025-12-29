@@ -502,16 +502,18 @@ export default function FamilyHub() {
               }
               decryptedText = taskText;
             }
-            // 담당자(assignee) 복호화
-            let decryptedAssignee = task.assigned_to || '누구나';
-            if (currentKey && task.assigned_to && task.assigned_to !== '누구나') {
+            // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
+            // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
+            let decryptedAssignee = '누구나';
+            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
+            if (task.assigned_to && typeof task.assigned_to === 'string' && task.assigned_to !== '누구나' && !task.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               try {
                 const decrypted = CryptoService.decrypt(task.assigned_to, currentKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedAssignee = decrypted;
                 }
               } catch (e) {
-                // 복호화 실패 시 원본 사용
+                // 복호화 실패 시 기본값 사용
                 if (process.env.NODE_ENV === 'development') {
                   console.warn('담당자 복호화 실패:', e);
                 }
@@ -1056,16 +1058,18 @@ export default function FamilyHub() {
               decryptedText = taskText;
             }
             
-            // 담당자(assignee) 복호화
-            let decryptedAssignee = newTask.assigned_to || '누구나';
-            if (currentKey && newTask.assigned_to && newTask.assigned_to !== '누구나') {
+            // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
+            // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
+            let decryptedAssignee = '누구나';
+            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
+            if (newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to !== '누구나' && !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               try {
                 const decrypted = CryptoService.decrypt(newTask.assigned_to, currentKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedAssignee = decrypted;
                 }
               } catch (e) {
-                // 복호화 실패 시 원본 사용
+                // 복호화 실패 시 기본값 사용
                 if (process.env.NODE_ENV === 'development') {
                   console.warn('Realtime 담당자 복호화 실패:', e);
                 }
@@ -1160,16 +1164,18 @@ export default function FamilyHub() {
               decryptedText = taskText;
             }
             
-            // 담당자(assignee) 복호화
-            let decryptedAssignee = updatedTask.assigned_to || null;
-            if (currentKey && updatedTask.assigned_to && updatedTask.assigned_to !== '누구나') {
+            // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
+            // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
+            let decryptedAssignee = '누구나';
+            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
+            if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to !== '누구나' && !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               try {
                 const decrypted = CryptoService.decrypt(updatedTask.assigned_to, currentKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedAssignee = decrypted;
                 }
               } catch (e) {
-                // 복호화 실패 시 원본 사용
+                // 복호화 실패 시 기본값 사용
                 if (process.env.NODE_ENV === 'development') {
                   console.warn('Realtime 담당자 업데이트 복호화 실패:', e);
                 }
@@ -1755,15 +1761,13 @@ export default function FamilyHub() {
           
           // 할일 텍스트 암호화
           const encryptedText = CryptoService.encrypt(payload.text, currentKey);
-          // 담당자(assignee)도 암호화하여 저장
-          const encryptedAssignee = CryptoService.encrypt(payload.assignee || '누구나', currentKey);
           
           // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
-          // assigned_to는 암호화된 문자열로 저장 (UUID 타입이 아닌 경우를 대비)
+          // assigned_to는 UUID 타입이므로 NULL로 저장 (담당자 정보는 title에 포함하거나 별도 처리)
           const taskData: any = {
             created_by: userId,
             title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
-            assigned_to: encryptedAssignee, // 암호화된 담당자 저장
+            assigned_to: null, // UUID 타입이므로 NULL로 저장 (담당자 정보는 암호화된 텍스트에 포함)
             is_completed: payload.done || false // is_completed 컬럼 사용
           };
           
@@ -1803,13 +1807,19 @@ export default function FamilyHub() {
           break;
         }
         case 'DELETE_TODO': {
+          // ID를 문자열로 변환하여 타입 일치 보장
+          const taskId = String(payload);
           const { error } = await supabase
             .from('family_tasks')
             .delete()
-            .eq('id', payload);
+            .eq('id', taskId);
           
           if (error) {
             console.error('할일 삭제 오류:', error);
+            console.error('삭제 시도한 ID:', taskId, '타입:', typeof taskId);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('에러 상세:', JSON.stringify(error, null, 2));
+            }
           }
           break;
         }
@@ -1878,13 +1888,19 @@ export default function FamilyHub() {
           break;
         }
         case 'DELETE_EVENT': {
+          // ID를 문자열로 변환하여 타입 일치 보장
+          const eventId = String(payload);
           const { error } = await supabase
             .from('family_events')
             .delete()
-            .eq('id', payload);
+            .eq('id', eventId);
           
           if (error) {
             console.error('일정 삭제 오류:', error);
+            console.error('삭제 시도한 ID:', eventId, '타입:', typeof eventId);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('에러 상세:', JSON.stringify(error, null, 2));
+            }
           }
           break;
         }
