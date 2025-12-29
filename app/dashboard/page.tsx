@@ -954,20 +954,39 @@ export default function FamilyHub() {
                 return prev; // 중복이면 상태 변경하지 않음
               }
               
-              // 중복 체크 2: 같은 텍스트와 담당자를 가진 할일이 최근 5초 내에 추가되었는지 확인
-              // (자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지)
-              const now = Date.now();
-              const recentDuplicate = prev.todos?.find(t => {
-                const taskId = typeof t.id === 'number' ? t.id : 0;
-                const timeDiff = Math.abs(taskId - now);
-                return t.text === decryptedText && 
-                       t.assignee === (newTask.assigned_to || '누구나') &&
-                       timeDiff < 5000; // 5초 내 중복 체크
-              });
-              
-              if (recentDuplicate) {
-                console.log('중복 할일 감지 (텍스트 기반), 추가하지 않음:', { text: decryptedText.substring(0, 20), created_by: newTask.created_by });
-                return prev; // 중복이면 상태 변경하지 않음
+              // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
+              // created_by가 현재 사용자이고, 같은 텍스트와 담당자를 가진 임시 ID 항목이 있으면 중복으로 처리
+              if (newTask.created_by === userId) {
+                const recentDuplicate = prev.todos?.find(t => {
+                  // 임시 ID (숫자)를 가진 항목만 체크
+                  const isTempId = typeof t.id === 'number';
+                  return isTempId && 
+                         t.text === decryptedText && 
+                         t.assignee === (newTask.assigned_to || '누구나');
+                });
+                
+                if (recentDuplicate) {
+                  console.log('중복 할일 감지 (자신이 입력한 항목), 임시 항목을 Supabase ID로 교체:', { 
+                    tempId: recentDuplicate.id, 
+                    newId: newTask.id, 
+                    text: decryptedText.substring(0, 20) 
+                  });
+                  
+                  // 임시 항목을 Supabase ID로 교체
+                  return {
+                    ...prev,
+                    todos: prev.todos.map(t => 
+                      t.id === recentDuplicate.id 
+                        ? {
+                            id: newTask.id,
+                            text: decryptedText,
+                            assignee: newTask.assigned_to || '누구나',
+                            done: newTask.is_completed || false
+                          }
+                        : t
+                    )
+                  };
+                }
               }
               
               return {
@@ -1164,21 +1183,43 @@ export default function FamilyHub() {
                 return prev; // 중복이면 상태 변경하지 않음
               }
               
-              // 중복 체크 2: 같은 제목과 날짜를 가진 일정이 최근 5초 내에 추가되었는지 확인
-              // (자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지)
-              const now = Date.now();
-              const recentDuplicate = prev.events?.find(e => {
-                const eventId = typeof e.id === 'number' ? e.id : 0;
-                const timeDiff = Math.abs(eventId - now);
-                return e.title === decryptedTitle && 
-                       e.month === month && 
-                       e.day === day &&
-                       timeDiff < 5000; // 5초 내 중복 체크
-              });
-              
-              if (recentDuplicate) {
-                console.log('중복 일정 감지 (텍스트/날짜 기반), 추가하지 않음:', { title: decryptedTitle.substring(0, 20), month, day, created_by: newEvent.created_by });
-                return prev; // 중복이면 상태 변경하지 않음
+              // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
+              // created_by가 현재 사용자이고, 같은 제목과 날짜를 가진 임시 ID 항목이 있으면 중복으로 처리
+              if (newEvent.created_by === userId) {
+                const recentDuplicate = prev.events?.find(e => {
+                  // 임시 ID (숫자)를 가진 항목만 체크
+                  const isTempId = typeof e.id === 'number';
+                  return isTempId && 
+                         e.title === decryptedTitle && 
+                         e.month === month && 
+                         e.day === day;
+                });
+                
+                if (recentDuplicate) {
+                  console.log('중복 일정 감지 (자신이 입력한 항목), 임시 항목을 Supabase ID로 교체:', { 
+                    tempId: recentDuplicate.id, 
+                    newId: newEvent.id, 
+                    title: decryptedTitle.substring(0, 20),
+                    month,
+                    day
+                  });
+                  
+                  // 임시 항목을 Supabase ID로 교체
+                  return {
+                    ...prev,
+                    events: prev.events.map(e => 
+                      e.id === recentDuplicate.id 
+                        ? {
+                            id: newEvent.id,
+                            month: month,
+                            day: day,
+                            title: decryptedTitle,
+                            desc: decryptedDesc
+                          }
+                        : e
+                    )
+                  };
+                }
               }
               
               return {
@@ -1697,16 +1738,17 @@ export default function FamilyHub() {
           break;
         }
         case 'ADD_TODO': {
-          // 중복 체크: 같은 텍스트와 담당자를 가진 할일이 이미 있는지 확인 (최근 5초 내)
-          const now = Date.now();
-          const recentDuplicate = prev.todos?.find(t => {
-            const timeDiff = Math.abs((typeof t.id === 'number' ? t.id : now) - now);
-            return t.text === payload.text && 
-                   t.assignee === payload.assignee && 
-                   timeDiff < 5000; // 5초 내 중복 체크
+          // 중복 체크: 같은 텍스트와 담당자를 가진 할일이 이미 있는지 확인
+          // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
+          const duplicate = prev.todos?.find(t => {
+            // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
+            const isTempId = typeof t.id === 'number';
+            return isTempId && 
+                   t.text === payload.text && 
+                   t.assignee === payload.assignee;
           });
           
-          if (recentDuplicate) {
+          if (duplicate) {
             console.log('중복 할일 감지 (updateState), 추가하지 않음:', { text: payload.text.substring(0, 20) });
             return prev; // 중복이면 상태 변경하지 않음
           }
@@ -1742,17 +1784,18 @@ export default function FamilyHub() {
           })();
           break;
         case 'ADD_EVENT': {
-          // 중복 체크: 같은 제목과 날짜를 가진 일정이 이미 있는지 확인 (최근 5초 내)
-          const now = Date.now();
-          const recentDuplicate = prev.events?.find(e => {
-            const timeDiff = Math.abs((typeof e.id === 'number' ? e.id : now) - now);
-            return e.title === payload.title && 
+          // 중복 체크: 같은 제목과 날짜를 가진 일정이 이미 있는지 확인
+          // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
+          const duplicate = prev.events?.find(e => {
+            // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
+            const isTempId = typeof e.id === 'number';
+            return isTempId && 
+                   e.title === payload.title && 
                    e.month === payload.month && 
-                   e.day === payload.day &&
-                   timeDiff < 5000; // 5초 내 중복 체크
+                   e.day === payload.day;
           });
           
-          if (recentDuplicate) {
+          if (duplicate) {
             console.log('중복 일정 감지 (updateState), 추가하지 않음:', { title: payload.title.substring(0, 20) });
             return prev; // 중복이면 상태 변경하지 않음
           }
