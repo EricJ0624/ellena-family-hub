@@ -3127,15 +3127,14 @@ export default function FamilyHub() {
                   onClick={user.isCurrentUser ? () => setIsNicknameModalOpen(true) : undefined}
                   style={{ 
                     cursor: user.isCurrentUser ? 'pointer' : 'default',
-                    opacity: user.isCurrentUser ? 1 : 0.7,
-                    padding: '4px 8px',
-                    borderRadius: '8px',
-                    backgroundColor: user.isCurrentUser ? 'rgba(99, 102, 241, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-                    border: user.isCurrentUser ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(0, 0, 0, 0.1)'
+                    padding: '3px 6px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)'
                   }}
                 >
-                  <span className="user-icon">👤</span>
-                  <p className="user-name" style={{ margin: 0, fontSize: '14px', fontWeight: user.isCurrentUser ? '600' : '400' }}>
+                  <span className="user-icon" style={{ fontSize: '12px' }}>👤</span>
+                  <p className="user-name" style={{ margin: 0, fontSize: '12px', fontWeight: user.isCurrentUser ? '600' : '500' }}>
                     {user.name}
                     {user.isCurrentUser && ' (나)'}
                   </p>
