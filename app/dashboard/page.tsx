@@ -2558,19 +2558,33 @@ export default function FamilyHub() {
         if (usePresignedUrl) {
           // Presigned URL 방식 (큰 파일)
           try {
-            // 1. Presigned URL 요청
-            const urlResponse = await fetch('/api/get-upload-url', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({
-                fileName: file.name,
-                mimeType: file.type,
-                fileSize: file.size,
-              }),
-            });
+            // 1. Presigned URL 요청 (타임아웃: 10초)
+            const urlController = new AbortController();
+            const urlTimeout = setTimeout(() => urlController.abort(), 10000);
+            
+            let urlResponse;
+            try {
+              urlResponse = await fetch('/api/get-upload-url', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                  fileName: file.name,
+                  mimeType: file.type,
+                  fileSize: file.size,
+                }),
+                signal: urlController.signal,
+              });
+              clearTimeout(urlTimeout);
+            } catch (urlError: any) {
+              clearTimeout(urlTimeout);
+              if (urlError.name === 'AbortError') {
+                throw new Error('Presigned URL 요청 타임아웃 (10초 초과)');
+              }
+              throw urlError;
+            }
 
             const urlResult = await urlResponse.json();
 
@@ -2643,7 +2657,7 @@ export default function FamilyHub() {
                 
                 try {
                   const fallbackController = new AbortController();
-                  const fallbackTimeout = setTimeout(() => fallbackController.abort(), 60000);
+                  const fallbackTimeout = setTimeout(() => fallbackController.abort(), 120000); // 2분으로 증가
                   
                   const fallbackResponse = await fetch('/api/upload', {
                     method: 'POST',
@@ -2933,23 +2947,16 @@ export default function FamilyHub() {
         }
       } finally {
         // 업로드가 완료되지 않았고 플래그가 아직 true인 경우 강제로 해제
-        if (!uploadCompleted) {
-          // 이미 catch 블록에서 처리했지만, 혹시 모를 경우를 대비해 한 번 더 확인
-          // setTimeout을 사용하여 state 업데이트가 완료된 후 확인
-          setTimeout(() => {
-            const storedPhotos = JSON.parse(localStorage.getItem('family_album') || '[]');
-            const currentPhoto = storedPhotos.find((p: any) => p.id === photoId);
-            if (currentPhoto?.isUploading) {
-              console.warn('업로드 플래그가 여전히 true입니다. 강제로 해제합니다.');
-              updateState('UPDATE_PHOTO_ID', {
-                oldId: photoId,
-                newId: photoId,
-                cloudinaryUrl: null,
-                s3Url: null,
-                uploadFailed: true
-              });
-            }
-          }, 100);
+        if (!uploadCompleted && photoId !== null) {
+          // catch 블록에서 이미 처리했지만, 혹시 모를 경우를 대비해 즉시 해제
+          console.warn('업로드가 완료되지 않았습니다. isUploading 플래그를 해제합니다.');
+          updateState('UPDATE_PHOTO_ID', {
+            oldId: photoId,
+            newId: photoId,
+            cloudinaryUrl: null,
+            s3Url: null,
+            uploadFailed: true
+          });
         }
       }
     } catch (error: any) {
