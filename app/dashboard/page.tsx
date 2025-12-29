@@ -107,6 +107,8 @@ export default function FamilyHub() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [masterKey, setMasterKey] = useState('');
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [eventForm, setEventForm] = useState({ title: '', month: '', day: '', desc: '' });
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -2222,59 +2224,44 @@ export default function FamilyHub() {
   };
 
   // Event Handlers
-  const addNewEvent = () => {
-    const title = prompt("일정 제목:");
-    if (!title) return;
-    const dateStr = prompt("날짜 (예: JAN 1 또는 1 JAN):");
-    if (!dateStr) return;
-    
-    // 날짜 파싱 개선: "JAN 1" 또는 "1 JAN" 형식 모두 지원
-    const parts = dateStr.trim().split(/\s+/);
-    if (parts.length !== 2) {
-      alert("날짜 형식이 올바르지 않습니다. 예: JAN 1 또는 1 JAN");
+  const openEventModal = () => {
+    setEventForm({ title: '', month: '', day: '', desc: '' });
+    setShowEventModal(true);
+  };
+
+  const closeEventModal = () => {
+    setShowEventModal(false);
+    setEventForm({ title: '', month: '', day: '', desc: '' });
+  };
+
+  const handleEventSubmit = () => {
+    if (!eventForm.title.trim()) {
+      alert("일정 제목을 입력해주세요.");
       return;
     }
     
-    const monthMap: { [key: string]: string } = {
-      'JAN': 'JAN', 'FEB': 'FEB', 'MAR': 'MAR', 'APR': 'APR', 'MAY': 'MAY', 'JUN': 'JUN',
-      'JUL': 'JUL', 'AUG': 'AUG', 'SEP': 'SEP', 'OCT': 'OCT', 'NOV': 'NOV', 'DEC': 'DEC'
-    };
-    
-    let month: string = '';
-    let day: string = '';
-    
-    // 첫 번째가 월인지 확인
-    if (monthMap[parts[0].toUpperCase()]) {
-      month = parts[0].toUpperCase();
-      day = parts[1];
-    } 
-    // 두 번째가 월인지 확인
-    else if (monthMap[parts[1].toUpperCase()]) {
-      day = parts[0];
-      month = parts[1].toUpperCase();
-    } 
-    // 둘 다 월이 아니면 오류
-    else {
-      alert("월 형식이 올바르지 않습니다. 예: JAN, FEB, MAR 등");
+    if (!eventForm.month || !eventForm.day) {
+      alert("날짜를 선택해주세요.");
       return;
     }
     
     // day가 숫자인지 확인
-    const dayNum = parseInt(day);
+    const dayNum = parseInt(eventForm.day);
     if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
       alert("일(day)은 1-31 사이의 숫자여야 합니다.");
       return;
     }
     
-    const desc = prompt("설명:");
-    
     // 보안: 입력 검증
-    const sanitizedTitle = sanitizeInput(title, 100);
-    const sanitizedMonth = sanitizeInput(month, 10);
+    const sanitizedTitle = sanitizeInput(eventForm.title, 100);
+    const sanitizedMonth = sanitizeInput(eventForm.month, 10);
     const sanitizedDay = dayNum.toString();
-    const sanitizedDesc = sanitizeInput(desc, 200);
+    const sanitizedDesc = sanitizeInput(eventForm.desc, 200);
     
-    if (!sanitizedTitle) return alert("유효하지 않은 제목입니다.");
+    if (!sanitizedTitle) {
+      alert("유효하지 않은 제목입니다.");
+      return;
+    }
     
     updateState('ADD_EVENT', { 
       id: Date.now(), 
@@ -2283,6 +2270,8 @@ export default function FamilyHub() {
       title: sanitizedTitle, 
       desc: sanitizedDesc 
     });
+    
+    closeEventModal();
   };
 
   // Chat Handlers
@@ -3434,13 +3423,179 @@ export default function FamilyHub() {
               )}
             </div>
             <button 
-              onClick={addNewEvent} 
+              onClick={openEventModal} 
                 className="btn-calendar-add"
             >
               + 일정 추가하기
             </button>
           </div>
           </section>
+
+          {/* 일정 추가 모달 */}
+          {showEventModal && (
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+              }}
+              onClick={closeEventModal}
+            >
+              <div 
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  width: '90%',
+                  maxWidth: '500px',
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '20px', fontWeight: '600' }}>
+                  일정 추가
+                </h3>
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                    제목 *
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                    placeholder="일정 제목을 입력하세요"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                      월 *
+                    </label>
+                    <select
+                      value={eventForm.month}
+                      onChange={(e) => setEventForm({ ...eventForm, month: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '15px',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <option value="">선택</option>
+                      <option value="JAN">JAN</option>
+                      <option value="FEB">FEB</option>
+                      <option value="MAR">MAR</option>
+                      <option value="APR">APR</option>
+                      <option value="MAY">MAY</option>
+                      <option value="JUN">JUN</option>
+                      <option value="JUL">JUL</option>
+                      <option value="AUG">AUG</option>
+                      <option value="SEP">SEP</option>
+                      <option value="OCT">OCT</option>
+                      <option value="NOV">NOV</option>
+                      <option value="DEC">DEC</option>
+                    </select>
+                  </div>
+                  
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                      일 *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={eventForm.day}
+                      onChange={(e) => setEventForm({ ...eventForm, day: e.target.value })}
+                      placeholder="일"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '15px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                    설명 (선택)
+                  </label>
+                  <textarea
+                    value={eventForm.desc}
+                    onChange={(e) => setEventForm({ ...eventForm, desc: e.target.value })}
+                    placeholder="일정 설명을 입력하세요"
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={closeEventModal}
+                    style={{
+                      padding: '10px 20px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      backgroundColor: 'white',
+                      color: '#64748b',
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleEventSubmit}
+                    style={{
+                      padding: '10px 20px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: '#667eea',
+                      color: 'white',
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Family Chat Section */}
           <section className="content-section">

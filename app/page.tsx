@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
   // 이전 이메일 불러오기
   useEffect(() => {
@@ -37,13 +38,37 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+      // 로그인 유지 옵션에 따라 세션 지속 시간 설정
+      const authOptions: any = {};
+      if (rememberMe) {
+        // 로그인 유지 선택 시 세션을 30일간 유지
+        authOptions.persistSession = true;
+      }
+      
+      const { error, data } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      }, {
+        ...authOptions
+      });
       if (error) throw error;
       
       if (data.user) {
         // 이메일 저장 (다음 로그인 시 자동완성용)
         if (email && typeof window !== 'undefined') {
           localStorage.setItem(LAST_EMAIL_KEY, email);
+        }
+        
+        // 로그인 유지 선택 시 세션 정보 저장
+        if (rememberMe && typeof window !== 'undefined') {
+          localStorage.setItem('SFH_REMEMBER_ME', 'true');
+          // 세션을 30일간 유지하도록 설정
+          const sessionExpiry = new Date();
+          sessionExpiry.setDate(sessionExpiry.getDate() + 30);
+          localStorage.setItem('SFH_SESSION_EXPIRY', sessionExpiry.toISOString());
+        } else {
+          localStorage.removeItem('SFH_REMEMBER_ME');
+          localStorage.removeItem('SFH_SESSION_EXPIRY');
         }
         
         // 세션이 저장되도록 약간의 지연 후 리다이렉트
@@ -497,6 +522,74 @@ export default function LoginPage() {
                   e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
                 }}
               />
+            </div>
+          )}
+
+          {/* 로그인 유지 체크박스 (로그인 모드에서만) */}
+          {mode === 'login' && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginTop: '8px',
+              marginBottom: '8px'
+            }}>
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  marginRight: '8px',
+                  cursor: 'pointer'
+                }}
+              />
+              <label 
+                htmlFor="rememberMe"
+                style={{
+                  fontSize: '14px',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                로그인 유지 (30일)
+              </label>
+            </div>
+          )}
+
+          {/* 로그인 유지 체크박스 (로그인 모드에서만) */}
+          {mode === 'login' && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginTop: '8px',
+              marginBottom: '8px'
+            }}>
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  marginRight: '8px',
+                  cursor: 'pointer'
+                }}
+              />
+              <label 
+                htmlFor="rememberMe"
+                style={{
+                  fontSize: '14px',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                로그인 유지 (30일)
+              </label>
             </div>
           )}
 
