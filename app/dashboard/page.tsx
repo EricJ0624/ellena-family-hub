@@ -99,6 +99,7 @@ let messagesSubscription: any = null;
 let tasksSubscription: any = null;
 let eventsSubscription: any = null;
 let photosSubscription: any = null;
+let presenceSubscription: any = null;
 
 export default function FamilyHub() {
   const router = useRouter();
@@ -131,119 +132,7 @@ export default function FamilyHub() {
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
-  // 온라인 사용자 목록 업데이트 함수 (컴포넌트 레벨로 이동)
-  const updateOnlineUsers = useCallback(async () => {
-    if (!userId) {
-      console.log('updateOnlineUsers: userId가 없어 스킵');
-      return;
-    }
-    
-    try {
-      console.log('updateOnlineUsers: 시작 - userId:', userId);
-      
-      // 현재 로그인 중인 사용자만 표시 (최근 5분 내 활동한 사용자)
-      const fiveMinutesAgo = new Date();
-      fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-      
-      const { data: recentMessages, error: messagesError } = await supabase
-        .from('family_messages')
-        .select('sender_id, created_at')
-        .gte('created_at', fiveMinutesAgo.toISOString())
-        .order('created_at', { ascending: false });
-      
-      if (messagesError) {
-        console.error('메시지 조회 오류:', messagesError);
-      }
-      
-      const { data: recentTasks, error: tasksError } = await supabase
-        .from('family_tasks')
-        .select('created_by, created_at')
-        .gte('created_at', fiveMinutesAgo.toISOString())
-        .order('created_at', { ascending: false });
-      
-      if (tasksError) {
-        console.error('할일 조회 오류:', tasksError);
-      }
-      
-      const { data: recentEvents, error: eventsError } = await supabase
-        .from('family_events')
-        .select('created_by, created_at')
-        .gte('created_at', fiveMinutesAgo.toISOString())
-        .order('created_at', { ascending: false });
-      
-      if (eventsError) {
-        console.error('일정 조회 오류:', eventsError);
-      }
-      
-      console.log('최근 5분 내 활동 데이터:', {
-        messages: recentMessages?.length || 0,
-        tasks: recentTasks?.length || 0,
-        events: recentEvents?.length || 0
-      });
-      
-      // 최근 5분 내 활동한 사용자 ID 수집 (현재 로그인 중인 사용자)
-      const activeUserIds = new Set<string>();
-      if (recentMessages) {
-        recentMessages.forEach((msg: any) => {
-          if (msg.sender_id) {
-            activeUserIds.add(msg.sender_id);
-          }
-        });
-      }
-      if (recentTasks) {
-        recentTasks.forEach((task: any) => {
-          if (task.created_by) {
-            activeUserIds.add(task.created_by);
-          }
-        });
-      }
-      if (recentEvents) {
-        recentEvents.forEach((event: any) => {
-          if (event.created_by) {
-            activeUserIds.add(event.created_by);
-          }
-        });
-      }
-      
-      // 현재 사용자도 포함 (항상 표시)
-      activeUserIds.add(userId);
-      
-      console.log('현재 로그인 중인 사용자 ID 목록:', Array.from(activeUserIds));
-      
-      // 각 사용자 정보 가져오기
-      const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-      
-      // 현재 사용자 정보는 이미 있음
-      if (userId) {
-        usersList.push({
-          id: userId,
-          name: userName || '나',
-          isCurrentUser: true
-        });
-      }
-      
-      // 다른 사용자들의 정보 가져오기
-      // 사용자 ID를 기반으로 더 읽기 쉬운 이름 생성
-      const userIdArray = Array.from(activeUserIds).filter(uid => uid !== userId);
-      userIdArray.forEach((uid, index) => {
-        // UUID의 마지막 8자리를 사용하여 더 읽기 쉽게 표시
-        const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
-        const displayName = `사용자 ${shortId}`;
-        
-        usersList.push({
-          id: uid,
-          name: displayName,
-          isCurrentUser: false
-        });
-      });
-      
-      console.log('최종 사용자 목록:', usersList);
-      setOnlineUsers(usersList);
-      
-    } catch (error) {
-      console.error('온라인 사용자 목록 업데이트 오류:', error);
-    }
-  }, [userId, userName]);
+  // 온라인 사용자 목록은 Realtime presence로 관리 (별도 함수 불필요)
   
   const loadData = useCallback((key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
@@ -337,6 +226,119 @@ export default function FamilyHub() {
     let tasksSubscription: any = null;
     let eventsSubscription: any = null;
     let photosSubscription: any = null;
+    let presenceSubscription: any = null;
+
+    // Supabase Realtime Presence로 현재 로그인 중인 사용자 추적
+    presenceSubscription = supabase
+      .channel('online_users')
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceSubscription.presenceState();
+        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+        
+        // 현재 사용자 정보 추가
+        if (userId) {
+          usersList.push({
+            id: userId,
+            name: userName || '나',
+            isCurrentUser: true
+          });
+        }
+        
+        // 다른 사용자들의 정보 추가
+        Object.keys(state).forEach((presenceId) => {
+          const presence = state[presenceId];
+          if (Array.isArray(presence) && presence.length > 0) {
+            const userPresence = presence[0];
+            const uid = userPresence.userId;
+            if (uid && uid !== userId) {
+              const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+              usersList.push({
+                id: uid,
+                name: `사용자 ${shortId}`,
+                isCurrentUser: false
+              });
+            }
+          }
+        });
+        
+        console.log('현재 로그인 중인 사용자 목록 (Presence):', usersList);
+        setOnlineUsers(usersList);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('사용자 접속:', key, newPresences);
+        const state = presenceSubscription.presenceState();
+        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+        
+        if (userId) {
+          usersList.push({
+            id: userId,
+            name: userName || '나',
+            isCurrentUser: true
+          });
+        }
+        
+        Object.keys(state).forEach((presenceId) => {
+          const presence = state[presenceId];
+          if (Array.isArray(presence) && presence.length > 0) {
+            const userPresence = presence[0];
+            const uid = userPresence.userId;
+            if (uid && uid !== userId) {
+              const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+              usersList.push({
+                id: uid,
+                name: `사용자 ${shortId}`,
+                isCurrentUser: false
+              });
+            }
+          }
+        });
+        
+        setOnlineUsers(usersList);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('사용자 접속 해제:', key, leftPresences);
+        const state = presenceSubscription.presenceState();
+        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+        
+        if (userId) {
+          usersList.push({
+            id: userId,
+            name: userName || '나',
+            isCurrentUser: true
+          });
+        }
+        
+        Object.keys(state).forEach((presenceId) => {
+          const presence = state[presenceId];
+          if (Array.isArray(presence) && presence.length > 0) {
+            const userPresence = presence[0];
+            const uid = userPresence.userId;
+            if (uid && uid !== userId) {
+              const shortId = uid.length > 8 ? uid.substring(uid.length - 8) : uid;
+              usersList.push({
+                id: uid,
+                name: `사용자 ${shortId}`,
+                isCurrentUser: false
+              });
+            }
+          }
+        });
+        
+        setOnlineUsers(usersList);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Presence subscription 연결 성공');
+          // 현재 사용자의 presence 전송
+          await presenceSubscription.track({
+            userId: userId,
+            userName: userName || '나',
+            onlineAt: new Date().toISOString()
+          });
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('❌ Presence subscription 연결 실패:', status);
+        }
+      });
 
     // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
     // localStorage 데이터를 덮어쓰지 않고, Supabase 데이터가 있을 때만 업데이트
@@ -701,8 +703,6 @@ export default function FamilyHub() {
         }
         
         // Supabase 사진과 localStorage 사진 병합
-        // 온라인 사용자 목록 업데이트
-        await updateOnlineUsers();
         
         // 재로그인 시 Supabase 데이터를 우선하고, localStorage는 업로드 중인 사진만 유지
         setState(prev => {
@@ -901,9 +901,6 @@ export default function FamilyHub() {
                 }].slice(-50)
               };
             });
-            
-            // 온라인 사용자 목록 업데이트
-            updateOnlineUsers();
           }
         )
         .on('postgres_changes',
@@ -1115,9 +1112,6 @@ export default function FamilyHub() {
                 }, ...prev.todos]
               };
             });
-            
-            // 온라인 사용자 목록 업데이트
-            updateOnlineUsers();
           }
         )
         .on('postgres_changes',
@@ -1389,9 +1383,6 @@ export default function FamilyHub() {
                 }, ...prev.events]
               };
             });
-            
-            // 온라인 사용자 목록 업데이트
-            updateOnlineUsers();
           }
         )
         .on('postgres_changes',
@@ -1628,6 +1619,9 @@ export default function FamilyHub() {
       if (photosSubscription) {
         supabase.removeChannel(photosSubscription);
         subscriptionsRef.current.photos = null;
+      }
+      if (presenceSubscription) {
+        supabase.removeChannel(presenceSubscription);
       }
     };
   }, [isAuthenticated, userId, masterKey, userName]);
@@ -2059,6 +2053,10 @@ export default function FamilyHub() {
         if (photosSubscription) {
           await supabase.removeChannel(photosSubscription);
           photosSubscription = null;
+        }
+        if (presenceSubscription) {
+          await supabase.removeChannel(presenceSubscription);
+          presenceSubscription = null;
         }
         
         // Supabase 세션 종료
