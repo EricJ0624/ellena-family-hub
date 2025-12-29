@@ -1189,9 +1189,17 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Realtime 할일 DELETE 이벤트 수신:', payload);
+            }
+            const deletedId = payload.old?.id;
+            if (!deletedId) {
+              console.warn('DELETE 이벤트에 ID가 없음:', payload);
+              return;
+            }
             setState(prev => ({
               ...prev,
-              todos: prev.todos.filter(t => t.id !== payload.old.id)
+              todos: prev.todos.filter(t => String(t.id) !== String(deletedId))
             }));
           }
         )
@@ -1491,9 +1499,17 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_events' },
           (payload: any) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Realtime 일정 DELETE 이벤트 수신:', payload);
+            }
+            const deletedId = payload.old?.id;
+            if (!deletedId) {
+              console.warn('DELETE 이벤트에 ID가 없음:', payload);
+              return;
+            }
             setState(prev => ({
               ...prev,
-              events: prev.events.filter(e => e.id !== payload.old.id)
+              events: prev.events.filter(e => String(e.id) !== String(deletedId))
             }));
           }
         )
