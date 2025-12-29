@@ -1011,10 +1011,14 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Realtime 할일 INSERT 이벤트 수신:', payload);
-            }
+            console.log('Realtime 할일 INSERT 이벤트 수신 (family_tasks 테이블):', payload);
             const newTask = payload.new;
+            
+            // 검증: 올바른 테이블에서 온 데이터인지 확인
+            if (!newTask || !newTask.id) {
+              console.error('Realtime 할일: 잘못된 payload:', payload);
+              return;
+            }
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = newTask.title || newTask.task_text || '';
             let decryptedText = taskText;
@@ -1222,10 +1226,14 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'family_events' },
           (payload: any) => {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Realtime 일정 INSERT 이벤트 수신:', payload);
-            }
+            console.log('Realtime 일정 INSERT 이벤트 수신 (family_events 테이블):', payload);
             const newEvent = payload.new;
+            
+            // 검증: 올바른 테이블에서 온 데이터인지 확인
+            if (!newEvent || !newEvent.id) {
+              console.error('Realtime 일정: 잘못된 payload:', payload);
+              return;
+            }
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
             const eventDate = new Date(eventDateValue);
@@ -1739,6 +1747,12 @@ export default function FamilyHub() {
           break;
         }
         case 'ADD_TODO': {
+          // 검증: payload가 올바른지 확인
+          if (!payload || !payload.text) {
+            console.error('ADD_TODO: 잘못된 payload:', payload);
+            return;
+          }
+          
           // 할일 텍스트 암호화
           const encryptedText = CryptoService.encrypt(payload.text, currentKey);
           // 담당자(assignee)도 암호화하여 저장
@@ -1753,15 +1767,20 @@ export default function FamilyHub() {
             is_completed: payload.done || false // is_completed 컬럼 사용
           };
           
-          const { error } = await supabase
+          console.log('ADD_TODO: family_tasks 테이블에 저장:', { text: payload.text.substring(0, 20), assignee: payload.assignee });
+          
+          const { error, data } = await supabase
             .from('family_tasks')
-            .insert(taskData);
+            .insert(taskData)
+            .select();
           
           if (error) {
             console.error('할일 저장 오류:', error);
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
+          } else {
+            console.log('ADD_TODO: family_tasks 테이블 저장 성공:', data);
           }
           break;
         }
@@ -1795,6 +1814,12 @@ export default function FamilyHub() {
           break;
         }
         case 'ADD_EVENT': {
+          // 검증: payload가 올바른지 확인
+          if (!payload || !payload.title || !payload.month || !payload.day) {
+            console.error('ADD_EVENT: 잘못된 payload:', payload);
+            return;
+          }
+          
           // 일정 제목 및 설명 암호화
           const encryptedTitle = CryptoService.encrypt(payload.title, currentKey);
           const encryptedDesc = CryptoService.encrypt(payload.desc || '', currentKey);
@@ -1835,15 +1860,20 @@ export default function FamilyHub() {
             // created_at은 자동 생성되므로 제거
           };
           
-          const { error } = await supabase
+          console.log('ADD_EVENT: family_events 테이블에 저장:', { title: payload.title.substring(0, 20), month: payload.month, day: payload.day });
+          
+          const { error, data } = await supabase
             .from('family_events')
-            .insert(eventData);
+            .insert(eventData)
+            .select();
           
           if (error) {
             console.error('일정 저장 오류:', error);
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
+          } else {
+            console.log('ADD_EVENT: family_events 테이블 저장 성공:', data);
           }
           break;
         }
