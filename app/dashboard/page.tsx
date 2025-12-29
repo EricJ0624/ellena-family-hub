@@ -1033,7 +1033,7 @@ export default function FamilyHub() {
               }
               
               // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체하거나, 무조건 추가하지 않음
+              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체
               if (newTask.created_by === userId) {
                 // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.todos?.find(t => {
@@ -1067,24 +1067,8 @@ export default function FamilyHub() {
                   };
                 }
                 
-                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로 이미 로컬에 추가되어 있을 가능성이 높음
-                // 같은 텍스트와 담당자를 가진 항목이 있으면 추가하지 않음 (중복 방지)
-                const sameContentTask = prev.todos?.find(t => 
-                  t.text === decryptedText && 
-                  t.assignee === decryptedAssignee
-                );
-                
-                if (sameContentTask) {
-                  console.log('중복 할일 감지 (같은 내용), 추가하지 않음:', { 
-                    existingId: sameContentTask.id,
-                    newId: newTask.id, 
-                    text: decryptedText.substring(0, 20) 
-                  });
-                  return prev; // 중복이면 상태 변경하지 않음
-                }
-                
-                // 임시 항목도 없고 같은 내용도 없지만, 자신이 입력한 항목이므로
-                // 최근 5초 이내에 추가된 항목이 있는지 확인 (타이밍 이슈 대비)
+                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로
+                // 최근 5초 이내에 추가된 임시 항목이 있는지 확인 (타이밍 이슈 대비)
                 const fiveSecondsAgo = Date.now() - 5000;
                 const recentTask = prev.todos?.find(t => {
                   const isTempId = typeof t.id === 'number';
@@ -1095,16 +1079,29 @@ export default function FamilyHub() {
                 });
                 
                 if (recentTask) {
-                  console.log('중복 할일 감지 (최근 추가된 항목), 추가하지 않음:', { 
+                  console.log('중복 할일 감지 (최근 추가된 임시 항목), 교체:', { 
                     existingId: recentTask.id,
                     newId: newTask.id, 
                     text: decryptedText.substring(0, 20) 
                   });
-                  return prev; // 중복이면 상태 변경하지 않음
+                  // 임시 항목을 Supabase ID로 교체
+                  return {
+                    ...prev,
+                    todos: prev.todos.map(t => 
+                      t.id === recentTask.id 
+                        ? {
+                            id: newTask.id,
+                            text: decryptedText,
+                            assignee: decryptedAssignee,
+                            done: newTask.is_completed || false
+                          }
+                        : t
+                    )
+                  };
                 }
               }
               
-              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 중복이 아닌 경우에만 추가
+              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없는 경우 추가
               return {
                 ...prev,
                 todos: [{
@@ -1316,7 +1313,7 @@ export default function FamilyHub() {
               }
               
               // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체하거나, 이미 같은 내용이 있으면 추가하지 않음
+              // created_by가 현재 사용자이면, 임시 ID 항목을 찾아서 교체
               if (newEvent.created_by === userId) {
                 // 먼저 임시 ID 항목을 찾아서 교체 시도
                 const recentDuplicate = prev.events?.find(e => {
@@ -1354,27 +1351,45 @@ export default function FamilyHub() {
                   };
                 }
                 
-                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로 이미 로컬에 추가되어 있을 가능성이 높음
-                // 같은 제목과 날짜를 가진 항목이 있으면 추가하지 않음 (중복 방지)
-                const sameContentEvent = prev.events?.find(e => 
-                  e.title === decryptedTitle && 
-                  e.month === month && 
-                  e.day === day
-                );
+                // 임시 항목을 찾지 못했지만, 자신이 입력한 항목이므로
+                // 최근 5초 이내에 추가된 임시 항목이 있는지 확인 (타이밍 이슈 대비)
+                const fiveSecondsAgo = Date.now() - 5000;
+                const recentEvent = prev.events?.find(e => {
+                  const isTempId = typeof e.id === 'number';
+                  const isRecent = isTempId && (e.id as number) > fiveSecondsAgo;
+                  return isRecent && 
+                         e.title === decryptedTitle && 
+                         e.month === month && 
+                         e.day === day;
+                });
                 
-                if (sameContentEvent) {
-                  console.log('중복 일정 감지 (같은 내용), 추가하지 않음:', { 
-                    existingId: sameContentEvent.id,
+                if (recentEvent) {
+                  console.log('중복 일정 감지 (최근 추가된 임시 항목), 교체:', { 
+                    existingId: recentEvent.id,
                     newId: newEvent.id, 
                     title: decryptedTitle.substring(0, 20),
                     month,
                     day
                   });
-                  return prev; // 중복이면 상태 변경하지 않음
+                  // 임시 항목을 Supabase ID로 교체
+                  return {
+                    ...prev,
+                    events: prev.events.map(e => 
+                      e.id === recentEvent.id 
+                        ? {
+                            id: newEvent.id,
+                            month: month,
+                            day: day,
+                            title: decryptedTitle,
+                            desc: decryptedDesc
+                          }
+                        : e
+                    )
+                  };
                 }
               }
               
-              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 중복이 아닌 경우에만 추가
+              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없는 경우 추가
               return {
                 ...prev,
                 events: [{
