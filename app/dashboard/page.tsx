@@ -502,10 +502,26 @@ export default function FamilyHub() {
               }
               decryptedText = taskText;
             }
+            // 담당자(assignee) 복호화
+            let decryptedAssignee = task.assigned_to || '누구나';
+            if (currentKey && task.assigned_to && task.assigned_to !== '누구나') {
+              try {
+                const decrypted = CryptoService.decrypt(task.assigned_to, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedAssignee = decrypted;
+                }
+              } catch (e) {
+                // 복호화 실패 시 원본 사용
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('담당자 복호화 실패:', e);
+                }
+              }
+            }
+            
             return {
               id: task.id,
               text: decryptedText,
-              assignee: task.assigned_to || '누구나',
+              assignee: decryptedAssignee,
               done: task.is_completed || false // is_completed 컬럼 사용
             };
           });
@@ -998,6 +1014,22 @@ export default function FamilyHub() {
               decryptedText = taskText;
             }
             
+            // 담당자(assignee) 복호화
+            let decryptedAssignee = newTask.assigned_to || '누구나';
+            if (currentKey && newTask.assigned_to && newTask.assigned_to !== '누구나') {
+              try {
+                const decrypted = CryptoService.decrypt(newTask.assigned_to, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedAssignee = decrypted;
+                }
+              } catch (e) {
+                // 복호화 실패 시 원본 사용
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Realtime 담당자 복호화 실패:', e);
+                }
+              }
+            }
+            
             setState(prev => {
               // 중복 체크 1: 같은 ID를 가진 할일이 이미 있는지 확인
               const existingTaskById = prev.todos?.find(t => String(t.id) === String(newTask.id));
@@ -1015,7 +1047,7 @@ export default function FamilyHub() {
                   const isTempId = typeof t.id === 'number';
                   return isTempId && 
                          t.text === decryptedText && 
-                         t.assignee === (newTask.assigned_to || '누구나');
+                         t.assignee === decryptedAssignee;
                 });
                 
                 if (recentDuplicate) {
@@ -1033,7 +1065,7 @@ export default function FamilyHub() {
                         ? {
                             id: newTask.id,
                             text: decryptedText,
-                            assignee: newTask.assigned_to || '누구나',
+                            assignee: decryptedAssignee,
                             done: newTask.is_completed || false
                           }
                         : t
@@ -1045,7 +1077,7 @@ export default function FamilyHub() {
                 // 같은 텍스트와 담당자를 가진 항목이 있으면 추가하지 않음 (중복 방지)
                 const sameContentTask = prev.todos?.find(t => 
                   t.text === decryptedText && 
-                  t.assignee === (newTask.assigned_to || '누구나')
+                  t.assignee === decryptedAssignee
                 );
                 
                 if (sameContentTask) {
@@ -1065,7 +1097,7 @@ export default function FamilyHub() {
                   const isRecent = isTempId && (t.id as number) > fiveSecondsAgo;
                   return isRecent && 
                          t.text === decryptedText && 
-                         t.assignee === (newTask.assigned_to || '누구나');
+                         t.assignee === decryptedAssignee;
                 });
                 
                 if (recentTask) {
@@ -1084,7 +1116,7 @@ export default function FamilyHub() {
                 todos: [{
                   id: newTask.id,
                   text: decryptedText,
-                  assignee: newTask.assigned_to || '누구나',
+                  assignee: decryptedAssignee,
                   done: newTask.is_completed || false // is_completed 컬럼 사용
                 }, ...prev.todos]
               };
@@ -1135,6 +1167,22 @@ export default function FamilyHub() {
               decryptedText = taskText;
             }
             
+            // 담당자(assignee) 복호화
+            let decryptedAssignee = updatedTask.assigned_to || null;
+            if (currentKey && updatedTask.assigned_to && updatedTask.assigned_to !== '누구나') {
+              try {
+                const decrypted = CryptoService.decrypt(updatedTask.assigned_to, currentKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  decryptedAssignee = decrypted;
+                }
+              } catch (e) {
+                // 복호화 실패 시 원본 사용
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('Realtime 담당자 업데이트 복호화 실패:', e);
+                }
+              }
+            }
+            
             setState(prev => ({
               ...prev,
               todos: prev.todos.map(t => 
@@ -1142,7 +1190,7 @@ export default function FamilyHub() {
                     ? {
                         id: updatedTask.id,
                         text: decryptedText,
-                        assignee: updatedTask.assigned_to || t.assignee,
+                        assignee: decryptedAssignee || t.assignee,
                         done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done // is_completed 컬럼 사용
                       }
                   : t
@@ -1710,14 +1758,15 @@ export default function FamilyHub() {
         case 'ADD_TODO': {
           // 할일 텍스트 암호화
           const encryptedText = CryptoService.encrypt(payload.text, currentKey);
+          // 담당자(assignee)도 암호화하여 저장
+          const encryptedAssignee = CryptoService.encrypt(payload.assignee || '누구나', currentKey);
           
           // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
-          // assigned_to는 UUID 타입이므로 문자열이 아닌 null 또는 UUID를 사용
+          // assigned_to는 암호화된 문자열로 저장 (UUID 타입이 아닌 경우를 대비)
           const taskData: any = {
             created_by: userId,
             title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
-            // assigned_to는 UUID 타입이므로 null로 설정 (문자열 "누구나" 등은 사용 불가)
-            assigned_to: null, // UUID 타입이므로 null 사용
+            assigned_to: encryptedAssignee, // 암호화된 담당자 저장
             is_completed: payload.done || false // is_completed 컬럼 사용
           };
           
