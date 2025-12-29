@@ -893,6 +893,45 @@ export default function FamilyHub() {
                 return prev; // 중복이면 상태 변경하지 않음
               }
               
+              // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
+              // sender_id가 현재 사용자이면, 임시 ID 항목을 찾아서 교체
+              if (newMessage.sender_id === userId) {
+                // 먼저 임시 ID 항목을 찾아서 교체 시도
+                const recentDuplicate = prev.messages?.find(m => {
+                  // 임시 ID (숫자)를 가진 항목만 체크
+                  const isTempId = typeof m.id === 'number';
+                  return isTempId && 
+                         m.text === decryptedText && 
+                         m.time === timeStr;
+                });
+                
+                if (recentDuplicate) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('중복 메시지 감지 (자신이 입력한 항목), 임시 항목을 Supabase ID로 교체:', { 
+                      tempId: recentDuplicate.id, 
+                      newId: newMessage.id, 
+                      text: decryptedText.substring(0, 20) 
+                    });
+                  }
+                  
+                  // 임시 항목을 Supabase ID로 교체
+                  return {
+                    ...prev,
+                    messages: prev.messages.map(m => 
+                      m.id === recentDuplicate.id 
+                        ? {
+                            id: newMessage.id,
+                            user: m.user, // 기존 user 유지
+                            text: decryptedText,
+                            time: timeStr
+                          }
+                        : m
+                    )
+                  };
+                }
+              }
+              
+              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없는 경우 추가
               return {
                 ...prev,
                 messages: [...(prev.messages || []), {
@@ -945,9 +984,13 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_messages' },
           (payload: any) => {
+            const deletedId = payload.old?.id;
+            if (!deletedId) {
+              return;
+            }
             setState(prev => ({
               ...prev,
-              messages: prev.messages.filter(m => m.id !== payload.old.id)
+              messages: prev.messages.filter(m => String(m.id) !== String(deletedId))
             }));
           }
         )
@@ -2247,7 +2290,9 @@ export default function FamilyHub() {
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
     
+    // 임시 ID로 메시지 추가 (Realtime으로 Supabase ID가 들어오면 교체됨)
     updateState('ADD_MESSAGE', { 
+      id: Date.now(), // 임시 ID (Realtime으로 Supabase ID가 들어오면 교체)
       user: "나", 
       text: sanitizedText, 
       time: timeStr 
