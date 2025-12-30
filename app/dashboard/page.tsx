@@ -839,9 +839,15 @@ export default function FamilyHub() {
     // Realtime 구독 설정 (암호화된 데이터 복호화)
     // 가족 공유 키를 사용하여 모든 사용자의 데이터 복호화 가능
     const setupRealtimeSubscriptions = () => {
+      // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
+      const getCurrentKey = () => {
+        const authKey = getAuthKey(userId);
+        return masterKey || sessionStorage.getItem(authKey) || 
+          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+      };
+      
       const authKey = getAuthKey(userId);
-      const currentKey = masterKey || sessionStorage.getItem(authKey) || 
-        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+      const currentKey = getCurrentKey();
       
       if (process.env.NODE_ENV === 'development') {
         console.log('setupRealtimeSubscriptions - userId:', userId);
@@ -865,9 +871,10 @@ export default function FamilyHub() {
             
             // 암호화된 메시지 복호화
             let decryptedText = newMessage.message_text || '';
-            if (currentKey && newMessage.message_text) {
+            const messageKey = getCurrentKey();
+            if (messageKey && newMessage.message_text) {
               try {
-                const decrypted = CryptoService.decrypt(newMessage.message_text, currentKey);
+                const decrypted = CryptoService.decrypt(newMessage.message_text, messageKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedText = decrypted;
                 } else {
@@ -1032,9 +1039,10 @@ export default function FamilyHub() {
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = newTask.title || newTask.task_text || '';
             let decryptedText = taskText;
-            if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
+            const taskKey = getCurrentKey();
+            if (taskKey && taskKey.length > 0 && taskText && taskText.length > 0) {
               try {
-                const decrypted = CryptoService.decrypt(taskText, currentKey);
+                const decrypted = CryptoService.decrypt(taskText, taskKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedText = decrypted;
                   if (process.env.NODE_ENV === 'development') {
@@ -1086,7 +1094,7 @@ export default function FamilyHub() {
             // 하지만 텍스트에서 추출한 assignee가 우선
             if (decryptedAssignee === '누구나' && newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to !== '누구나' && !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               try {
-                const decrypted = CryptoService.decrypt(newTask.assigned_to, currentKey);
+                const decrypted = CryptoService.decrypt(newTask.assigned_to, taskKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedAssignee = decrypted;
                 }
@@ -1163,9 +1171,10 @@ export default function FamilyHub() {
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = updatedTask.title || updatedTask.task_text || '';
             let decryptedText = taskText;
-            if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
+            const updateTaskKey = getCurrentKey();
+            if (updateTaskKey && updateTaskKey.length > 0 && taskText && taskText.length > 0) {
               try {
-                const decrypted = CryptoService.decrypt(taskText, currentKey);
+                const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedText = decrypted;
                   if (process.env.NODE_ENV === 'development') {
@@ -1203,7 +1212,7 @@ export default function FamilyHub() {
             // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
             if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to !== '누구나' && !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               try {
-                const decrypted = CryptoService.decrypt(updatedTask.assigned_to, currentKey);
+                const decrypted = CryptoService.decrypt(updatedTask.assigned_to, updateTaskKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedAssignee = decrypted;
                 }
@@ -1307,11 +1316,12 @@ export default function FamilyHub() {
             const newEventDescField = newEvent.description || '';
             let decryptedTitle = newEventTitleField;
             let decryptedDesc = newEventDescField;
-            if (currentKey && currentKey.length > 0) {
+            const eventKey = getCurrentKey();
+            if (eventKey && eventKey.length > 0) {
               // 제목 복호화
               if (newEventTitleField && newEventTitleField.length > 0) {
                 try {
-                  const decryptedTitleData = CryptoService.decrypt(newEventTitleField, currentKey);
+                  const decryptedTitleData = CryptoService.decrypt(newEventTitleField, eventKey);
                   if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
                     decryptedTitle = decryptedTitleData;
                     if (process.env.NODE_ENV === 'development') {
@@ -1343,7 +1353,7 @@ export default function FamilyHub() {
               // 설명 복호화
               if (newEventDescField && newEventDescField.length > 0) {
                 try {
-                  const decryptedDescData = CryptoService.decrypt(newEventDescField, currentKey);
+                  const decryptedDescData = CryptoService.decrypt(newEventDescField, eventKey);
                   if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
                     decryptedDesc = decryptedDescData;
                     if (process.env.NODE_ENV === 'development') {
@@ -1463,11 +1473,12 @@ export default function FamilyHub() {
             const updatedEventDescField = updatedEvent.description || '';
             let decryptedTitle = updatedEventTitleField;
             let decryptedDesc = updatedEventDescField;
-            if (currentKey) {
+            const updateEventKey = getCurrentKey();
+            if (updateEventKey) {
               // 제목 복호화
               if (updatedEventTitleField) {
                 try {
-                  const decryptedTitleData = CryptoService.decrypt(updatedEventTitleField, currentKey);
+                  const decryptedTitleData = CryptoService.decrypt(updatedEventTitleField, updateEventKey);
                   if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
                     decryptedTitle = decryptedTitleData;
                   } else {
@@ -1492,7 +1503,7 @@ export default function FamilyHub() {
               // 설명 복호화
               if (updatedEventDescField) {
                 try {
-                  const decryptedDescData = CryptoService.decrypt(updatedEventDescField, currentKey);
+                  const decryptedDescData = CryptoService.decrypt(updatedEventDescField, updateEventKey);
                   if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
                     decryptedDesc = decryptedDescData;
                   } else {
