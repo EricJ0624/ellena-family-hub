@@ -1061,10 +1061,24 @@ export default function FamilyHub() {
             }
             
             // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
-            // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
+            // 담당자 정보는 복호화된 텍스트에서 추출 (예: "텍스트 - Daddy" 형식)
             let decryptedAssignee = '누구나';
+            
+            // 복호화된 텍스트에서 assignee 추출 (예: "이것도 될까? - Daddy" -> "Daddy")
+            if (decryptedText && decryptedText.includes(' - ')) {
+              const parts = decryptedText.split(' - ');
+              if (parts.length >= 2) {
+                // 마지막 부분을 assignee로 사용
+                const extractedAssignee = parts[parts.length - 1].trim();
+                if (extractedAssignee && extractedAssignee.length > 0) {
+                  decryptedAssignee = extractedAssignee;
+                }
+              }
+            }
+            
             // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
-            if (newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to !== '누구나' && !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            // 하지만 텍스트에서 추출한 assignee가 우선
+            if (decryptedAssignee === '누구나' && newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to !== '누구나' && !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               try {
                 const decrypted = CryptoService.decrypt(newTask.assigned_to, currentKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
@@ -1087,14 +1101,13 @@ export default function FamilyHub() {
               
               // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
               if (newTask.created_by === userId) {
-                // 임시 ID 항목을 찾기: 같은 텍스트와 담당자를 가진 임시 ID 항목
+                // 임시 ID 항목을 찾기: 같은 텍스트를 가진 임시 ID 항목 (assignee 포함 여부와 관계없이)
                 const recentDuplicate = prev.todos?.find(t => {
                   const isTempId = typeof t.id === 'number';
                   // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
                   const isRecent = isTempId && (t.id as number) > (Date.now() - 30000);
-                  return isRecent && 
-                         t.text === decryptedText && 
-                         t.assignee === decryptedAssignee;
+                  // 텍스트가 정확히 일치하는지 확인 (assignee 포함 여부와 관계없이)
+                  return isRecent && t.text === decryptedText;
                 });
                 
                 if (recentDuplicate) {
@@ -1114,10 +1127,9 @@ export default function FamilyHub() {
                   };
                 }
                 
-                // 임시 항목을 찾지 못했지만, 같은 텍스트와 담당자를 가진 항목이 있으면 추가하지 않음 (중복 방지)
+                // 임시 항목을 찾지 못했지만, 같은 텍스트를 가진 항목이 있으면 추가하지 않음 (중복 방지)
                 const duplicateByContent = prev.todos?.find(t => 
-                  t.text === decryptedText && 
-                  t.assignee === decryptedAssignee &&
+                  t.text === decryptedText &&
                   String(t.id) !== String(newTask.id) // 같은 ID가 아닌 경우만
                 );
                 if (duplicateByContent) {
@@ -1978,7 +1990,7 @@ export default function FamilyHub() {
           break;
         }
         case 'ADD_TODO': {
-          // 중복 체크: 같은 텍스트와 담당자를 가진 할일이 이미 있는지 확인
+          // 중복 체크: 같은 텍스트를 가진 할일이 이미 있는지 확인
           // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
           // 30초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주 (Realtime 지연 고려)
           const thirtySecondsAgo = Date.now() - 30000;
@@ -1987,9 +1999,8 @@ export default function FamilyHub() {
             const isTempId = typeof t.id === 'number';
             // 임시 ID이고 30초 이내에 추가된 항목인지 확인
             const isRecent = isTempId && (t.id as number) > thirtySecondsAgo;
-            return isRecent && 
-                   t.text === payload.text && 
-                   t.assignee === payload.assignee;
+            // 텍스트가 정확히 일치하는지 확인 (assignee 포함 여부와 관계없이)
+            return isRecent && t.text === payload.text;
           });
           
           if (duplicate) {
@@ -2210,9 +2221,14 @@ export default function FamilyHub() {
     
     if (!sanitizedText) return alert("유효하지 않은 입력입니다.");
     
+    // assignee를 텍스트에 포함시켜서 저장 (Realtime 핸들러에서 추출)
+    const textWithAssignee = sanitizedWho && sanitizedWho !== "누구나" 
+      ? `${sanitizedText} - ${sanitizedWho}`
+      : sanitizedText;
+    
     updateState('ADD_TODO', { 
       id: Date.now(), 
-      text: sanitizedText, 
+      text: textWithAssignee, 
       assignee: sanitizedWho || "누구나", 
       done: false 
     });
@@ -3481,7 +3497,7 @@ export default function FamilyHub() {
                       boxSizing: 'border-box'
                     }}
                   />
-                </div>
+        </div>
 
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '12px' }}>
                   <div style={{ flex: 1 }}>
@@ -3514,7 +3530,7 @@ export default function FamilyHub() {
                       <option value="NOV">NOV</option>
                       <option value="DEC">DEC</option>
                     </select>
-                  </div>
+          </div>
                   
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
