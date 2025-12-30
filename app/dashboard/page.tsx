@@ -116,6 +116,9 @@ export default function FamilyHub() {
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
   const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   
   // Realtime subscription 참조 (로그아웃 시 정리용)
   const subscriptionsRef = useRef<{
@@ -2015,7 +2018,9 @@ export default function FamilyHub() {
           break;
         }
         case 'DELETE_TODO':
-          newState.todos = prev.todos.filter(t => t.id !== payload);
+          // ID 비교를 안전하게 처리 (number와 string 모두 지원)
+          const deleteTodoId = String(payload).trim();
+          newState.todos = prev.todos.filter(t => String(t.id).trim() !== deleteTodoId);
           // Supabase에 저장
           saveToSupabase('DELETE_TODO', payload, userId, currentKey);
           break;
@@ -2066,7 +2071,9 @@ export default function FamilyHub() {
           break;
         }
         case 'DELETE_EVENT':
-          newState.events = prev.events.filter(e => e.id !== payload);
+          // ID 비교를 안전하게 처리 (number와 string 모두 지원)
+          const deleteEventId = String(payload).trim();
+          newState.events = prev.events.filter(e => String(e.id).trim() !== deleteEventId);
           // Supabase에 저장
           saveToSupabase('DELETE_EVENT', payload, userId, currentKey);
           break;
@@ -3276,8 +3283,13 @@ export default function FamilyHub() {
             </div>
             <div className="photo-grid">
               {state.album && state.album.length > 0 ? (
-                state.album.map(p => (
-                  <div key={p.id} className="photo-item" style={{ position: 'relative' }}>
+                state.album.map((p, index) => (
+                  <div 
+                    key={p.id} 
+                    className="photo-item" 
+                    style={{ position: 'relative' }}
+                    onClick={() => setSelectedPhotoIndex(index)}
+                  >
                     <img src={p.data} className="photo-image" alt="memory" />
                     {/* 업로드 상태 표시 */}
                     {p.isUploading && (
@@ -3349,6 +3361,171 @@ export default function FamilyHub() {
                 </div>
               )}
             </div>
+            
+            {/* Photo Swipe Modal */}
+            {selectedPhotoIndex !== null && state.album && state.album.length > 0 && (
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                  zIndex: 10000,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  touchAction: 'pan-y'
+                }}
+                onClick={() => setSelectedPhotoIndex(null)}
+                onTouchStart={(e) => setTouchStart(e.touches[0].clientX)}
+                onTouchMove={(e) => setTouchEnd(e.touches[0].clientX)}
+                onTouchEnd={() => {
+                  if (!touchStart || !touchEnd) return;
+                  const distance = touchStart - touchEnd;
+                  const isLeftSwipe = distance > 50;
+                  const isRightSwipe = distance < -50;
+                  
+                  if (isLeftSwipe && selectedPhotoIndex < state.album.length - 1) {
+                    setSelectedPhotoIndex(selectedPhotoIndex + 1);
+                  }
+                  if (isRightSwipe && selectedPhotoIndex > 0) {
+                    setSelectedPhotoIndex(selectedPhotoIndex - 1);
+                  }
+                  
+                  setTouchStart(null);
+                  setTouchEnd(null);
+                }}
+              >
+                <div 
+                  style={{
+                    position: 'relative',
+                    width: '90%',
+                    maxWidth: '800px',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <img 
+                    src={state.album[selectedPhotoIndex].data} 
+                    alt="memory" 
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '90vh',
+                      objectFit: 'contain',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  
+                  {/* Navigation Arrows */}
+                  {selectedPhotoIndex > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPhotoIndex(selectedPhotoIndex - 1);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        left: '20px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'rgba(255, 255, 255, 0.3)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '50px',
+                        height: '50px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '24px',
+                        color: 'white',
+                        zIndex: 10001
+                      }}
+                    >
+                      ←
+                    </button>
+                  )}
+                  
+                  {selectedPhotoIndex < state.album.length - 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPhotoIndex(selectedPhotoIndex + 1);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '20px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'rgba(255, 255, 255, 0.3)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '50px',
+                        height: '50px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '24px',
+                        color: 'white',
+                        zIndex: 10001
+                      }}
+                    >
+                      →
+                    </button>
+                  )}
+                  
+                  {/* Close Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPhotoIndex(null);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '20px',
+                      right: '20px',
+                      background: 'rgba(255, 255, 255, 0.3)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '20px',
+                      color: 'white',
+                      zIndex: 10001
+                    }}
+                  >
+                    ✕
+                  </button>
+                  
+                  {/* Photo Counter */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '20px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      color: 'white',
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {selectedPhotoIndex + 1} / {state.album.length}
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Family Tasks Section */}
