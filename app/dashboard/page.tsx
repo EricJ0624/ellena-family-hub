@@ -106,9 +106,9 @@ const INITIAL_STATE: AppState = {
   familyName: "Ellena Family Hub",
   location: { address: "서울특별시 서초구 반포대로 222" },
   familyLocations: [],
-  todos: [{ id: 1, text: "시스템 보안 체크", assignee: "관리자", done: false }],
+  todos: [],
   album: [],
-  events: [{ id: 1, month: "DEC", day: "24", title: "크리스마스 파티 🎄", desc: "오후 7시 거실에서 선물 교환" }],
+  events: [],
   messages: [{ id: 0, user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }]
 };
 
