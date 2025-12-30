@@ -38,18 +38,11 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-      // 로그인 유지 옵션에 따라 세션 지속 시간 설정
-      const authOptions: any = {};
-      if (rememberMe) {
-        // 로그인 유지 선택 시 세션을 30일간 유지
-        authOptions.persistSession = true;
-      }
-      
+      // signInWithPassword는 단일 인자만 받습니다
+      // 세션 지속은 lib/supabase.ts에서 이미 persistSession: true로 설정되어 있습니다
       const { error, data } = await supabase.auth.signInWithPassword({ 
         email, 
         password 
-      }, {
-        ...authOptions
       });
       if (error) throw error;
       
