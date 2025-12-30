@@ -4293,15 +4293,30 @@ export default function FamilyHub() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor: '#f8fafc',
-                      color: '#64748b'
+                      color: '#64748b',
+                      padding: '20px'
                     }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <p>지도를 표시하려면 Google Maps API 키가 필요합니다.</p>
-                        <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                          환경 변수에 NEXT_PUBLIC_GOOGLE_MAP_API_KEY를 설정하세요.
+                      <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+                        <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1e293b' }}>
+                          📍 Google Maps API 키가 필요합니다
                         </p>
-                        <p style={{ fontSize: '12px', marginTop: '4px' }}>
-                          또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google 지도에서 보기</a>
+                        <div style={{ fontSize: '13px', textAlign: 'left', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                          <p style={{ marginBottom: '8px', fontWeight: '600' }}>설정 방법:</p>
+                          <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                            <li>프로젝트 루트에 <code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>.env.local</code> 파일 생성</li>
+                            <li>다음 내용 추가:<br />
+                              <code style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', display: 'inline-block', marginTop: '4px' }}>
+                                NEXT_PUBLIC_GOOGLE_MAP_API_KEY=여기에_API_키_입력
+                              </code>
+                            </li>
+                            <li>개발 서버 재시작 (<code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>npm run dev</code>)</li>
+                          </ol>
+                          <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
+                            💡 API 키 발급: <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google Cloud Console</a> → Maps JavaScript API 활성화
+                          </p>
+                        </div>
+                        <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                          또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Google 지도에서 보기</a>
                         </p>
         </div>
           </div>
