@@ -1241,15 +1241,28 @@ export default function FamilyHub() {
               return;
             }
             const deletedIdStr = String(deletedId).trim();
-            console.log('Realtime 할일 DELETE 처리:', { deletedId, deletedIdStr });
+            console.log('Realtime 할일 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
             setState(prev => {
               const beforeCount = prev.todos.length;
               const filtered = prev.todos.filter(t => {
-                const tIdStr = String(t.id).trim();
-                return tIdStr !== deletedIdStr;
+                // ID 비교: 여러 형식 지원 (숫자, 문자열, UUID)
+                const tId = t.id;
+                const tIdStr = String(tId).trim();
+                const tSupabaseId = t.supabaseId ? String(t.supabaseId).trim() : null;
+                
+                // 직접 ID 비교 또는 supabaseId 비교
+                const isMatch = tIdStr === deletedIdStr || (tSupabaseId && tSupabaseId === deletedIdStr);
+                return !isMatch;
               });
               const afterCount = filtered.length;
-              console.log('Realtime 할일 DELETE 결과:', { beforeCount, afterCount, deleted: beforeCount - afterCount });
+              const deletedCount = beforeCount - afterCount;
+              console.log('Realtime 할일 DELETE 결과:', { beforeCount, afterCount, deleted: deletedCount, deletedId: deletedIdStr });
+              if (deletedCount === 0 && beforeCount > 0) {
+                console.warn('⚠️ Realtime 할일 DELETE - 삭제된 항목이 없음. ID 불일치 가능성:', {
+                  deletedId: deletedIdStr,
+                  existingIds: prev.todos.slice(0, 3).map(t => ({ id: t.id, idType: typeof t.id, supabaseId: t.supabaseId }))
+                });
+              }
               return {
                 ...prev,
                 todos: filtered
@@ -1530,15 +1543,28 @@ export default function FamilyHub() {
               return;
             }
             const deletedIdStr = String(deletedId).trim();
-            console.log('Realtime 일정 DELETE 처리:', { deletedId, deletedIdStr });
+            console.log('Realtime 일정 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
             setState(prev => {
               const beforeCount = prev.events.length;
               const filtered = prev.events.filter(e => {
-                const eIdStr = String(e.id).trim();
-                return eIdStr !== deletedIdStr;
+                // ID 비교: 여러 형식 지원 (숫자, 문자열, UUID)
+                const eId = e.id;
+                const eIdStr = String(eId).trim();
+                const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim() : null;
+                
+                // 직접 ID 비교 또는 supabaseId 비교
+                const isMatch = eIdStr === deletedIdStr || (eSupabaseId && eSupabaseId === deletedIdStr);
+                return !isMatch;
               });
               const afterCount = filtered.length;
-              console.log('Realtime 일정 DELETE 결과:', { beforeCount, afterCount, deleted: beforeCount - afterCount });
+              const deletedCount = beforeCount - afterCount;
+              console.log('Realtime 일정 DELETE 결과:', { beforeCount, afterCount, deleted: deletedCount, deletedId: deletedIdStr });
+              if (deletedCount === 0 && beforeCount > 0) {
+                console.warn('⚠️ Realtime 일정 DELETE - 삭제된 항목이 없음. ID 불일치 가능성:', {
+                  deletedId: deletedIdStr,
+                  existingIds: prev.events.slice(0, 3).map(e => ({ id: e.id, idType: typeof e.id, supabaseId: e.supabaseId }))
+                });
+              }
               return {
                 ...prev,
                 events: filtered
@@ -1898,10 +1924,11 @@ export default function FamilyHub() {
           }
           
           console.log('Supabase 삭제 시도:', taskId);
-          const { error } = await supabase
+          const { error, data } = await supabase
             .from('family_tasks')
             .delete()
-            .eq('id', taskId);
+            .eq('id', taskId)
+            .select();
           
           if (error) {
             console.error('할일 삭제 오류:', error);
@@ -1910,7 +1937,11 @@ export default function FamilyHub() {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
           } else {
-            console.log('할일 삭제 성공:', taskId);
+            const deletedCount = data?.length || 0;
+            console.log('할일 삭제 성공:', taskId, '삭제된 행 수:', deletedCount);
+            if (deletedCount === 0) {
+              console.warn('⚠️ 할일 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', taskId);
+            }
           }
           break;
         }
@@ -1992,10 +2023,11 @@ export default function FamilyHub() {
           }
           
           console.log('Supabase 삭제 시도:', eventId);
-          const { error } = await supabase
+          const { error, data } = await supabase
             .from('family_events')
             .delete()
-            .eq('id', eventId);
+            .eq('id', eventId)
+            .select();
           
           if (error) {
             console.error('일정 삭제 오류:', error);
@@ -2004,7 +2036,11 @@ export default function FamilyHub() {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
           } else {
-            console.log('일정 삭제 성공:', eventId);
+            const deletedCount = data?.length || 0;
+            console.log('일정 삭제 성공:', eventId, '삭제된 행 수:', deletedCount);
+            if (deletedCount === 0) {
+              console.warn('⚠️ 일정 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', eventId);
+            }
           }
           break;
         }
