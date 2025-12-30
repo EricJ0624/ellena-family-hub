@@ -1838,6 +1838,17 @@ export default function FamilyHub() {
           break;
         }
         case 'TOGGLE_TODO': {
+          // 숫자 ID는 로컬 데이터이므로 Supabase 업데이트 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
+          const taskId = String(payload.id);
+          const isNumericId = typeof payload.id === 'number' || /^\d+$/.test(taskId);
+          
+          if (isNumericId) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('로컬 데이터 업데이트 (Supabase 업데이트 건너뜀):', taskId);
+            }
+            break; // 로컬 데이터는 Supabase 업데이트 시도하지 않음
+          }
+          
           // is_completed 컬럼 사용 (실제 테이블 구조에 맞게)
           const updateData: any = {};
           updateData.is_completed = payload.done; // is_completed 컬럼 사용
@@ -1858,6 +1869,16 @@ export default function FamilyHub() {
         case 'DELETE_TODO': {
           // ID를 문자열로 변환하여 타입 일치 보장
           const taskId = String(payload);
+          // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
+          const isNumericId = typeof payload === 'number' || /^\d+$/.test(taskId);
+          
+          if (isNumericId) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', taskId);
+            }
+            break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
+          }
+          
           const { error } = await supabase
             .from('family_tasks')
             .delete()
@@ -1939,6 +1960,16 @@ export default function FamilyHub() {
         case 'DELETE_EVENT': {
           // ID를 문자열로 변환하여 타입 일치 보장
           const eventId = String(payload);
+          // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
+          const isNumericId = typeof payload === 'number' || /^\d+$/.test(eventId);
+          
+          if (isNumericId) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', eventId);
+            }
+            break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
+          }
+          
           const { error } = await supabase
             .from('family_events')
             .delete()
@@ -3579,11 +3610,11 @@ export default function FamilyHub() {
                           <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
-                        </button>
-                      )}
-              </div>
+                </button>
+            )}
+          </div>
                   ))}
-                </div>
+        </div>
               ) : (
                 <p className="empty-state">할 일을 모두 완료했습니다!</p>
             )}
@@ -3617,7 +3648,7 @@ export default function FamilyHub() {
                             <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                          </button>
+                  </button>
                         )}
                 </div>
                     ))}
