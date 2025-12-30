@@ -61,8 +61,8 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 };
 
 // --- [TYPES] 타입 안정성 추가 ---
-type Todo = { id: number; text: string; assignee: string; done: boolean };
-type EventItem = { id: number; month: string; day: string; title: string; desc: string };
+type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string };
+type EventItem = { id: number; month: string; day: string; title: string; desc: string; created_by?: string };
 type Message = { id: string | number; user: string; text: string; time: string };
 type Photo = { 
   id: number; 
@@ -74,6 +74,7 @@ type Photo = {
   supabaseId?: string | number; // Supabase memory_vault ID (업로드 완료 시)
   isUploaded?: boolean; // 업로드 완료 여부
   isUploading?: boolean; // 업로드 진행 중 여부
+  created_by?: string; // 생성자 ID
 };
 
 interface AppState {
@@ -529,7 +530,8 @@ export default function FamilyHub() {
               id: task.id,
               text: decryptedText,
               assignee: decryptedAssignee,
-              done: task.is_completed || false // is_completed 컬럼 사용
+              done: task.is_completed || false, // is_completed 컬럼 사용
+              created_by: task.created_by || undefined // 생성자 ID 저장
             };
           });
           
@@ -699,7 +701,8 @@ export default function FamilyHub() {
                 originalFilename: photo.original_filename,
                 mimeType: photo.mime_type,
                 supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
-                isUploaded: true // Supabase에서 로드한 사진은 업로드 완료된 사진
+                isUploaded: true, // Supabase에서 로드한 사진은 업로드 완료된 사진
+                created_by: photo.user_id || photo.created_by || undefined // 생성자 ID 저장
               }))
           : []; // Supabase 로드 실패 시 빈 배열
         
@@ -1576,7 +1579,8 @@ export default function FamilyHub() {
                     originalFilename: newPhoto.original_filename,
                     mimeType: newPhoto.mime_type,
                     supabaseId: newPhoto.id,
-                    isUploaded: true
+                    isUploaded: true,
+                    created_by: newPhoto.user_id || newPhoto.created_by || undefined
                   }, ...prev.album]
                 };
               });
@@ -1600,7 +1604,8 @@ export default function FamilyHub() {
                         originalFilename: updatedPhoto.original_filename,
                         mimeType: updatedPhoto.mime_type,
                         supabaseId: updatedPhoto.id,
-                        isUploaded: true
+                        isUploaded: true,
+                        created_by: updatedPhoto.user_id || updatedPhoto.created_by || p.created_by
                       }
                     : p
                 )
@@ -3345,14 +3350,16 @@ export default function FamilyHub() {
                         </svg>
                       </div>
                     )}
-                    <button 
-                      onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
-                      className="btn-delete-photo"
-                    >
-                      <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
-                    </button>
+                    {p.created_by === userId && (
+                      <button 
+                        onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
+                        className="btn-delete-photo"
+                      >
+                        <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 ))
               ) : (
@@ -3564,14 +3571,16 @@ export default function FamilyHub() {
                           )}
                   </div>
                 </div>
-                      <button 
-                        onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
-                        className="btn-delete"
-                      >
-                        <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                </button>
+                      {t.created_by === userId && (
+                        <button 
+                          onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
+                          className="btn-delete"
+                        >
+                          <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      )}
               </div>
                   ))}
                 </div>
@@ -3600,14 +3609,16 @@ export default function FamilyHub() {
                           <h4 className="event-title">{e.title}</h4>
                           <p className="event-desc">{e.desc}</p>
                   </div>
-                        <button 
-                          onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} 
-                          className="btn-delete-event"
-                        >
-                          <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
-                          </svg>
-                  </button>
+                        {e.created_by === userId && (
+                          <button 
+                            onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} 
+                            className="btn-delete-event"
+                          >
+                            <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                          </button>
+                        )}
                 </div>
                     ))}
                   </div>
