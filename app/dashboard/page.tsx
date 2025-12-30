@@ -77,9 +77,25 @@ type Photo = {
   created_by?: string; // 생성자 ID
 };
 
+interface LocationData {
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  userId?: string;
+  updatedAt?: string;
+}
+
 interface AppState {
   familyName: string;
-  location: { address: string };
+  location: LocationData;
+  familyLocations: Array<{
+    userId: string;
+    userName: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    updatedAt: string;
+  }>;
   todos: Todo[];
   album: Photo[];
   events: EventItem[];
@@ -89,6 +105,7 @@ interface AppState {
 const INITIAL_STATE: AppState = {
   familyName: "Ellena Family Hub",
   location: { address: "서울특별시 서초구 반포대로 222" },
+  familyLocations: [],
   todos: [{ id: 1, text: "시스템 보안 체크", assignee: "관리자", done: false }],
   album: [],
   events: [{ id: 1, month: "DEC", day: "24", title: "크리스마스 파티 🎄", desc: "오후 7시 거실에서 선물 교환" }],
@@ -120,6 +137,8 @@ export default function FamilyHub() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isLocationSharing, setIsLocationSharing] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
   
   // Realtime subscription 참조 (로그아웃 시 정리용)
   const subscriptionsRef = useRef<{
@@ -219,7 +238,74 @@ export default function FamilyHub() {
     }
   }, [state.messages, isAuthenticated]);
 
-  // 4. Supabase 데이터 로드 및 Realtime 구독
+  // 4. Google Maps 지도 초기화 (선택적 - API 키가 있을 때만)
+  useEffect(() => {
+    const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+    if (!googleMapApiKey || !state.location.latitude || !state.location.longitude || mapLoaded) return;
+
+    // Google Maps API 스크립트 로드
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (typeof window !== 'undefined' && (window as any).google) {
+        try {
+          const mapElement = document.getElementById('map');
+          if (!mapElement) return;
+
+          const map = new (window as any).google.maps.Map(mapElement, {
+            center: { lat: state.location.latitude, lng: state.location.longitude },
+            zoom: 15,
+            mapTypeControl: true,
+            streetViewControl: true,
+            fullscreenControl: true
+          });
+          
+          // 현재 위치 마커
+          new (window as any).google.maps.Marker({
+            position: { lat: state.location.latitude, lng: state.location.longitude },
+            map: map,
+            title: '내 위치',
+            icon: {
+              url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            }
+          });
+
+          // 가족 구성원 위치 마커
+          state.familyLocations.forEach((loc) => {
+            if (loc.latitude && loc.longitude && loc.userId !== userId) {
+              new (window as any).google.maps.Marker({
+                position: { lat: loc.latitude, lng: loc.longitude },
+                map: map,
+                title: loc.userName,
+                icon: {
+                  url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                }
+              });
+            }
+          });
+
+          setMapLoaded(true);
+        } catch (error) {
+          console.error('지도 초기화 오류:', error);
+        }
+      }
+    };
+    script.onerror = () => {
+      console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // 정리
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, [state.location.latitude, state.location.longitude, state.familyLocations, mapLoaded, userId]);
+
+  // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
     if (!isAuthenticated || !userId) {
       console.log('Realtime 구독 스킵 - 인증되지 않음:', { isAuthenticated, userId });
@@ -1696,6 +1782,34 @@ export default function FamilyHub() {
           }
         });
       
+      console.log('📍 위치 subscription 설정 중...');
+      // 위치 구독 (family_locations)
+      const locationsSubscription = supabase
+        .channel('family_locations_changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'family_locations' },
+          (payload: any) => {
+            console.log('Realtime 위치 INSERT 이벤트 수신:', payload);
+            const newLocation = payload.new;
+            loadFamilyLocations(); // 위치 목록 다시 로드
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'family_locations' },
+          (payload: any) => {
+            console.log('Realtime 위치 UPDATE 이벤트 수신:', payload);
+            const updatedLocation = payload.new;
+            loadFamilyLocations(); // 위치 목록 다시 로드
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('📍 Realtime 위치 subscription 상태:', status);
+          if (err) console.error('❌ Realtime 위치 subscription 오류:', err);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime 위치 subscription 연결 성공');
+          }
+        });
+      
       console.log('✅ 모든 Realtime subscription 설정 완료');
     };
 
@@ -1706,10 +1820,14 @@ export default function FamilyHub() {
       loadSupabaseData().then(() => {
         console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
         setupRealtimeSubscriptions();
+        // 위치 데이터 로드
+        loadFamilyLocations();
       }).catch((error) => {
         console.error('❌ Supabase 데이터 로드 실패:', error);
         // 데이터 로드 실패해도 Realtime 구독은 설정
         setupRealtimeSubscriptions();
+        // 위치 데이터 로드 시도
+        loadFamilyLocations();
       });
     }, 100); // 짧은 지연으로 빠른 로드
     
@@ -2274,6 +2392,140 @@ export default function FamilyHub() {
     if (n?.trim()) {
       const sanitized = sanitizeInput(n, 50);
       if (sanitized) updateState('RENAME', sanitized);
+    }
+  };
+
+  // 위치 공유 기능
+  const updateLocation = async () => {
+    if (!userId || !isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+      return;
+    }
+
+    setIsLocationSharing(true);
+
+    try {
+      // Geolocation API로 현재 위치 가져오기
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // 좌표를 주소로 변환 (Reverse Geocoding)
+      // Naver Maps API를 사용하거나, 간단하게 좌표만 저장
+      // 여기서는 좌표만 저장하고, 지도에서 표시
+      const address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+      // 현재 위치 업데이트
+      setState(prev => ({
+        ...prev,
+        location: {
+          address: address,
+          latitude: latitude,
+          longitude: longitude,
+          userId: userId,
+          updatedAt: new Date().toISOString()
+        }
+      }));
+
+      // Supabase에 위치 저장 (테이블이 없어도 에러 없이 처리)
+      try {
+        const { error } = await supabase
+          .from('family_locations')
+          .upsert({
+            user_id: userId,
+            latitude: latitude,
+            longitude: longitude,
+            address: address,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (error) {
+          console.warn('위치 저장 오류 (테이블이 없을 수 있음):', error);
+          // Supabase 테이블이 없을 수 있으므로 에러는 무시하고 로컬에만 저장
+        } else {
+          console.log('위치 저장 성공');
+        }
+      } catch (dbError: any) {
+        console.warn('위치 저장 시도 중 오류 (테이블이 없을 수 있음):', dbError);
+        // 테이블이 없어도 앱은 정상 작동
+      }
+
+      // 가족 구성원 위치 목록 업데이트
+      await loadFamilyLocations();
+
+    } catch (error: any) {
+      console.error('위치 가져오기 오류:', error);
+      if (error.code === 1) {
+        alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+      } else if (error.code === 2) {
+        alert('위치를 가져올 수 없습니다. 네트워크 연결을 확인해주세요.');
+      } else if (error.code === 3) {
+        alert('위치 요청 시간이 초과되었습니다.');
+      } else {
+        alert('위치를 가져오는 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsLocationSharing(false);
+    }
+  };
+
+  // 가족 구성원 위치 로드 (테이블이 없어도 에러 없이 처리)
+  const loadFamilyLocations = async () => {
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('family_locations')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        // 테이블이 없을 수 있으므로 에러는 무시
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('위치 로드 오류 (테이블이 없을 수 있음):', error);
+        }
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // 사용자 이름은 onlineUsers에서 가져오거나 기본값 사용
+        const locations = data.map((loc: any) => {
+          const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
+          const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
+          
+          return {
+            userId: loc.user_id,
+            userName: userName,
+            address: loc.address || `${loc.latitude}, ${loc.longitude}`,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            updatedAt: loc.updated_at
+          };
+        });
+
+        setState(prev => ({
+          ...prev,
+          familyLocations: locations
+        }));
+      }
+    } catch (error) {
+      // 테이블이 없을 수 있으므로 에러는 무시
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('위치 로드 시도 중 오류 (테이블이 없을 수 있음):', error);
+      }
     }
   };
 
@@ -3991,13 +4243,109 @@ export default function FamilyHub() {
           {/* Location Section */}
           <section className="content-section">
             <div className="section-header">
-              <h3 className="section-title">Real-time Location</h3>
+              <h3 className="section-title">실시간 위치 공유</h3>
+              <button
+                onClick={updateLocation}
+                disabled={isLocationSharing}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: isLocationSharing ? '#cbd5e1' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: isLocationSharing ? 'not-allowed' : 'pointer',
+                  opacity: isLocationSharing ? 0.6 : 1
+                }}
+              >
+                {isLocationSharing ? '위치 가져오는 중...' : '📍 위치 공유하기'}
+              </button>
           </div>
             <div className="section-body">
-              <p className="location-text">{state.location.address}</p>
+              {state.location.latitude && state.location.longitude ? (
+                <div>
+                  <p className="location-text" style={{ marginBottom: '12px' }}>
+                    내 위치: {state.location.address}
+                  </p>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
+                    좌표: {state.location.latitude.toFixed(6)}, {state.location.longitude.toFixed(6)}
+                  </p>
+                  {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
+                    <div 
+                      id="map" 
+                      style={{ 
+                        width: '100%', 
+                        height: '400px', 
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        marginTop: '12px'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%',
+                      height: '400px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      marginTop: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f8fafc',
+                      color: '#64748b'
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <p>지도를 표시하려면 Google Maps API 키가 필요합니다.</p>
+                        <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                          환경 변수에 NEXT_PUBLIC_GOOGLE_MAP_API_KEY를 설정하세요.
+                        </p>
+                        <p style={{ fontSize: '12px', marginTop: '4px' }}>
+                          또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google 지도에서 보기</a>
+                        </p>
         </div>
-        </section>
           </div>
+                  )}
+                </div>
+              ) : (
+                <p className="location-text" style={{ color: '#64748b' }}>
+                  위치를 공유하려면 위 버튼을 클릭하세요.
+                </p>
+              )}
+              
+              {state.familyLocations.length > 0 && (
+                <div style={{ marginTop: '20px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
+                    가족 구성원 위치
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {state.familyLocations.map((loc) => (
+                      <div 
+                        key={loc.userId}
+                        style={{
+                          padding: '12px',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0'
+                        }}
+                      >
+                        <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                          {loc.userName}
+              </div>
+                        <div style={{ fontSize: '14px', color: '#64748b' }}>
+                          {loc.address}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                          {new Date(loc.updatedAt).toLocaleString('ko-KR')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
               </div>
       
       {/* 업로드 상태 애니메이션 스타일 */}
