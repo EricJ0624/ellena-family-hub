@@ -1702,10 +1702,56 @@ export default function FamilyHub() {
       });
     }, 100); // 짧은 지연으로 빠른 로드
     
+    // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('📱 앱이 포그라운드로 복귀, Realtime 연결 상태 확인...');
+        // Realtime subscription 상태 확인 및 필요시 재연결
+        const checkAndReconnect = () => {
+          // subscription이 존재하는지 확인 (null이면 연결이 끊어진 것으로 간주)
+          const hasSubscriptions = 
+            subscriptionsRef.current.messages !== null &&
+            subscriptionsRef.current.tasks !== null &&
+            subscriptionsRef.current.events !== null &&
+            subscriptionsRef.current.photos !== null;
+          
+          if (!hasSubscriptions && isAuthenticated && userId) {
+            console.log('🔄 Realtime 연결 끊김 감지, 재연결 시도...');
+            setupRealtimeSubscriptions();
+          } else if (hasSubscriptions) {
+            console.log('✅ Realtime 연결 상태 정상');
+          }
+        };
+        
+        // 짧은 지연 후 확인 (연결 상태 업데이트 시간 고려)
+        setTimeout(checkAndReconnect, 1000);
+      }
+    };
+    
+    // 네트워크 재연결 시 Realtime 재연결
+    const handleOnline = () => {
+      console.log('🌐 네트워크 연결 복구, Realtime 재연결 확인...');
+      if (isAuthenticated && userId) {
+        setTimeout(() => {
+          setupRealtimeSubscriptions();
+        }, 1000);
+      }
+    };
+    
+    // 이벤트 리스너 등록
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('online', handleOnline);
+    }
+    
     // 정리 함수
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
       clearTimeout(timer);
+      if (typeof window !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('online', handleOnline);
+      }
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
         subscriptionsRef.current.messages = null;
