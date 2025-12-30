@@ -3602,7 +3602,7 @@ export default function FamilyHub() {
                           )}
                   </div>
                 </div>
-                      {t.created_by === userId && (
+                      {(t.created_by === userId || !t.created_by) && (
                         <button 
                           onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
                           className="btn-delete"
@@ -3610,8 +3610,8 @@ export default function FamilyHub() {
                           <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
-                </button>
-            )}
+                        </button>
+                      )}
           </div>
                   ))}
         </div>
@@ -3640,7 +3640,7 @@ export default function FamilyHub() {
                           <h4 className="event-title">{e.title}</h4>
                           <p className="event-desc">{e.desc}</p>
                   </div>
-                        {e.created_by === userId && (
+                        {(e.created_by === userId || !e.created_by) && (
                           <button 
                             onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} 
                             className="btn-delete-event"
@@ -3648,7 +3648,7 @@ export default function FamilyHub() {
                             <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                  </button>
+                          </button>
                         )}
                 </div>
                     ))}
