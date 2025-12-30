@@ -61,8 +61,8 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 };
 
 // --- [TYPES] 타입 안정성 추가 ---
-type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string };
-type EventItem = { id: number; month: string; day: string; title: string; desc: string; created_by?: string };
+type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; supabaseId?: string | number };
+type EventItem = { id: number; month: string; day: string; title: string; desc: string; created_by?: string; supabaseId?: string | number };
 type Message = { id: string | number; user: string; text: string; time: string };
 type Photo = { 
   id: number; 
