@@ -1872,13 +1872,14 @@ export default function FamilyHub() {
           // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
           const isNumericId = typeof payload === 'number' || /^\d+$/.test(taskId);
           
+          console.log('saveToSupabase DELETE_TODO:', { taskId, isNumericId, payloadType: typeof payload });
+          
           if (isNumericId) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', taskId);
-            }
+            console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', taskId);
             break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
           }
           
+          console.log('Supabase 삭제 시도:', taskId);
           const { error } = await supabase
             .from('family_tasks')
             .delete()
@@ -1890,6 +1891,8 @@ export default function FamilyHub() {
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
+          } else {
+            console.log('할일 삭제 성공:', taskId);
           }
           break;
         }
@@ -1963,13 +1966,14 @@ export default function FamilyHub() {
           // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
           const isNumericId = typeof payload === 'number' || /^\d+$/.test(eventId);
           
+          console.log('saveToSupabase DELETE_EVENT:', { eventId, isNumericId, payloadType: typeof payload });
+          
           if (isNumericId) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', eventId);
-            }
+            console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', eventId);
             break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
           }
           
+          console.log('Supabase 삭제 시도:', eventId);
           const { error } = await supabase
             .from('family_events')
             .delete()
@@ -1981,6 +1985,8 @@ export default function FamilyHub() {
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
+          } else {
+            console.log('일정 삭제 성공:', eventId);
           }
           break;
         }
@@ -2056,6 +2062,7 @@ export default function FamilyHub() {
         case 'DELETE_TODO':
           // ID 비교를 안전하게 처리 (number와 string 모두 지원)
           const deleteTodoId = String(payload).trim();
+          console.log('updateState DELETE_TODO 호출:', { payload, deleteTodoId, payloadType: typeof payload });
           newState.todos = prev.todos.filter(t => String(t.id).trim() !== deleteTodoId);
           // Supabase에 저장
           saveToSupabase('DELETE_TODO', payload, userId, currentKey);
@@ -2109,6 +2116,7 @@ export default function FamilyHub() {
         case 'DELETE_EVENT':
           // ID 비교를 안전하게 처리 (number와 string 모두 지원)
           const deleteEventId = String(payload).trim();
+          console.log('updateState DELETE_EVENT 호출:', { payload, deleteEventId, payloadType: typeof payload });
           newState.events = prev.events.filter(e => String(e.id).trim() !== deleteEventId);
           // Supabase에 저장
           saveToSupabase('DELETE_EVENT', payload, userId, currentKey);
@@ -3610,8 +3618,8 @@ export default function FamilyHub() {
                           <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
-                        </button>
-                      )}
+                </button>
+            )}
           </div>
                   ))}
         </div>
@@ -3648,7 +3656,7 @@ export default function FamilyHub() {
                             <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
-                          </button>
+                  </button>
                         )}
                 </div>
                     ))}
