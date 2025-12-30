@@ -1233,19 +1233,28 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
+            console.log('Realtime 할일 DELETE 이벤트 수신 (family_tasks 테이블):', payload);
             // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
             const deletedId = payload.old?.id;
             if (!deletedId) {
+              console.warn('Realtime 할일 DELETE: deletedId가 없음:', payload);
               return;
             }
             const deletedIdStr = String(deletedId).trim();
-            setState(prev => ({
-              ...prev,
-              todos: prev.todos.filter(t => {
+            console.log('Realtime 할일 DELETE 처리:', { deletedId, deletedIdStr });
+            setState(prev => {
+              const beforeCount = prev.todos.length;
+              const filtered = prev.todos.filter(t => {
                 const tIdStr = String(t.id).trim();
                 return tIdStr !== deletedIdStr;
-              })
-            }));
+              });
+              const afterCount = filtered.length;
+              console.log('Realtime 할일 DELETE 결과:', { beforeCount, afterCount, deleted: beforeCount - afterCount });
+              return {
+                ...prev,
+                todos: filtered
+              };
+            });
           }
         )
         .subscribe((status, err) => {
@@ -1513,19 +1522,28 @@ export default function FamilyHub() {
         .on('postgres_changes',
           { event: 'DELETE', schema: 'public', table: 'family_events' },
           (payload: any) => {
+            console.log('Realtime 일정 DELETE 이벤트 수신 (family_events 테이블):', payload);
             // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
             const deletedId = payload.old?.id;
             if (!deletedId) {
+              console.warn('Realtime 일정 DELETE: deletedId가 없음:', payload);
               return;
             }
             const deletedIdStr = String(deletedId).trim();
-            setState(prev => ({
-              ...prev,
-              events: prev.events.filter(e => {
+            console.log('Realtime 일정 DELETE 처리:', { deletedId, deletedIdStr });
+            setState(prev => {
+              const beforeCount = prev.events.length;
+              const filtered = prev.events.filter(e => {
                 const eIdStr = String(e.id).trim();
                 return eIdStr !== deletedIdStr;
-              })
-            }));
+              });
+              const afterCount = filtered.length;
+              console.log('Realtime 일정 DELETE 결과:', { beforeCount, afterCount, deleted: beforeCount - afterCount });
+              return {
+                ...prev,
+                events: filtered
+              };
+            });
           }
         )
         .subscribe((status, err) => {
