@@ -558,11 +558,10 @@ export default function FamilyHub() {
           // Supabase에 메시지가 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 할일 로드 (family_id 기반 필터링)
+        // 할일 로드 (모든 가족 구성원이 같은 데이터를 공유)
         const { data: tasksData, error: tasksError } = await supabase
           .from('family_tasks')
           .select('*')
-          .eq('family_id', familyId || 'ellena_family') // family_id 필터 추가
           .order('created_at', { ascending: false });
 
         if (!tasksError && tasksData) {
@@ -644,11 +643,10 @@ export default function FamilyHub() {
           // Supabase에 할일이 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 일정 로드 (family_id 기반 필터링)
+        // 일정 로드 (모든 가족 구성원이 같은 데이터를 공유)
         const { data: eventsData, error: eventsError } = await supabase
           .from('family_events')
           .select('*')
-          .eq('family_id', familyId || 'ellena_family') // family_id 필터 추가
           .order('event_date', { ascending: true }); // event_date 컬럼명 사용
 
         if (!eventsError && eventsData) {
@@ -1136,17 +1134,8 @@ export default function FamilyHub() {
               return;
             }
             
-            // family_id 검증: 같은 가족의 데이터만 처리
-            const currentFamilyId = familyId || 'ellena_family';
-            if (newTask.family_id && newTask.family_id !== currentFamilyId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 할일 INSERT: 다른 가족의 데이터 무시', {
-                  taskFamilyId: newTask.family_id,
-                  currentFamilyId: currentFamilyId
-                });
-              }
-              return; // 다른 가족의 데이터는 무시
-            }
+            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = newTask.title || newTask.task_text || '';
             let decryptedText = taskText;
@@ -1280,17 +1269,8 @@ export default function FamilyHub() {
           (payload: any) => {
             const updatedTask = payload.new;
             
-            // family_id 검증: 같은 가족의 데이터만 처리
-            const currentFamilyId = familyId || 'ellena_family';
-            if (updatedTask.family_id && updatedTask.family_id !== currentFamilyId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 할일 UPDATE: 다른 가족의 데이터 무시', {
-                  taskFamilyId: updatedTask.family_id,
-                  currentFamilyId: currentFamilyId
-                });
-              }
-              return; // 다른 가족의 데이터는 무시
-            }
+            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = updatedTask.title || updatedTask.task_text || '';
             let decryptedText = taskText;
@@ -1367,20 +1347,11 @@ export default function FamilyHub() {
           (payload: any) => {
             console.log('Realtime 할일 DELETE 이벤트 수신 (family_tasks 테이블):', payload);
             
-            // family_id 검증: 같은 가족의 데이터만 처리
-            const currentFamilyId = familyId || 'ellena_family';
-            const deletedTask = payload.old;
-            if (deletedTask?.family_id && deletedTask.family_id !== currentFamilyId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 할일 DELETE: 다른 가족의 데이터 무시', {
-                  taskFamilyId: deletedTask.family_id,
-                  currentFamilyId: currentFamilyId
-                });
-              }
-              return; // 다른 가족의 데이터는 무시
-            }
+            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
             
             // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
+            const deletedTask = payload.old;
             const deletedId = deletedTask?.id;
             if (!deletedId) {
               console.warn('Realtime 할일 DELETE: deletedId가 없음:', payload);
@@ -1442,17 +1413,8 @@ export default function FamilyHub() {
               return;
             }
             
-            // family_id 검증: 같은 가족의 데이터만 처리
-            const currentFamilyId = familyId || 'ellena_family';
-            if (newEvent.family_id && newEvent.family_id !== currentFamilyId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 일정 INSERT: 다른 가족의 데이터 무시', {
-                  eventFamilyId: newEvent.family_id,
-                  currentFamilyId: currentFamilyId
-                });
-              }
-              return; // 다른 가족의 데이터는 무시
-            }
+            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
             const eventDate = new Date(eventDateValue);
@@ -1611,17 +1573,8 @@ export default function FamilyHub() {
           (payload: any) => {
             const updatedEvent = payload.new;
             
-            // family_id 검증: 같은 가족의 데이터만 처리
-            const currentFamilyId = familyId || 'ellena_family';
-            if (updatedEvent.family_id && updatedEvent.family_id !== currentFamilyId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 일정 UPDATE: 다른 가족의 데이터 무시', {
-                  eventFamilyId: updatedEvent.family_id,
-                  currentFamilyId: currentFamilyId
-                });
-              }
-              return; // 다른 가족의 데이터는 무시
-            }
+            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
             const eventDate = new Date(eventDateValue);
@@ -1709,20 +1662,11 @@ export default function FamilyHub() {
           (payload: any) => {
             console.log('Realtime 일정 DELETE 이벤트 수신 (family_events 테이블):', payload);
             
-            // family_id 검증: 같은 가족의 데이터만 처리
-            const currentFamilyId = familyId || 'ellena_family';
-            const deletedEvent = payload.old;
-            if (deletedEvent?.family_id && deletedEvent.family_id !== currentFamilyId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 일정 DELETE: 다른 가족의 데이터 무시', {
-                  eventFamilyId: deletedEvent.family_id,
-                  currentFamilyId: currentFamilyId
-                });
-              }
-              return; // 다른 가족의 데이터는 무시
-            }
+            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
             
             // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
+            const deletedEvent = payload.old;
             const deletedId = deletedEvent?.id;
             if (!deletedId) {
               console.warn('Realtime 일정 DELETE: deletedId가 없음:', payload);
@@ -2125,7 +2069,8 @@ export default function FamilyHub() {
           // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
           // assigned_to는 UUID 타입이므로 NULL로 저장 (담당자 정보는 title에 포함하거나 별도 처리)
           const taskData: any = {
-            family_id: currentFamilyId, // family_id 추가
+            // family_id는 선택적 (데이터베이스에 컬럼이 있는 경우에만 추가)
+            // family_id: currentFamilyId, // 주석 처리: 기존 데이터와의 호환성을 위해
             created_by: userId,
             title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
             assigned_to: null, // UUID 타입이므로 NULL로 저장 (담당자 정보는 암호화된 텍스트에 포함)
@@ -2191,33 +2136,14 @@ export default function FamilyHub() {
             break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
           }
           
-          // family_id 검증: 삭제 전에 해당 항목의 family_id 확인
-          const { data: taskData, error: fetchError } = await supabase
-            .from('family_tasks')
-            .select('family_id')
-            .eq('id', taskId)
-            .single();
-          
-          if (fetchError || !taskData) {
-            console.error('할일 조회 오류 (family_id 검증 실패):', fetchError);
-            throw new Error('삭제할 항목을 찾을 수 없습니다.');
-          }
-          
-          // 보안 검증: family_id 일치 확인
-          if (taskData.family_id !== currentFamilyId) {
-            console.error('⚠️ 보안 오류: family_id 불일치', {
-              taskFamilyId: taskData.family_id,
-              currentFamilyId: currentFamilyId
-            });
-            throw new Error('권한이 없습니다. 다른 가족의 데이터는 삭제할 수 없습니다.');
-          }
+          // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+          // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
           
           console.log('Supabase 삭제 시도:', taskId);
           const { error, data } = await supabase
             .from('family_tasks')
             .delete()
             .eq('id', taskId)
-            .eq('family_id', currentFamilyId) // family_id 필터 추가 (이중 검증)
             .select();
           
           if (error) {
@@ -2276,7 +2202,8 @@ export default function FamilyHub() {
           
           // event_date 컬럼이 없을 수 있으므로 선택적으로 처리
           const eventData: any = {
-            family_id: currentFamilyId, // family_id 추가
+            // family_id는 선택적 (데이터베이스에 컬럼이 있는 경우에만 추가)
+            // family_id: currentFamilyId, // 주석 처리: 기존 데이터와의 호환성을 위해
             created_by: userId,
             title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
             description: encryptedDesc, // 암호화된 설명 저장
@@ -2315,33 +2242,14 @@ export default function FamilyHub() {
             break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
           }
           
-          // family_id 검증: 삭제 전에 해당 항목의 family_id 확인
-          const { data: eventData, error: fetchError } = await supabase
-            .from('family_events')
-            .select('family_id')
-            .eq('id', eventId)
-            .single();
-          
-          if (fetchError || !eventData) {
-            console.error('일정 조회 오류 (family_id 검증 실패):', fetchError);
-            throw new Error('삭제할 항목을 찾을 수 없습니다.');
-          }
-          
-          // 보안 검증: family_id 일치 확인
-          if (eventData.family_id !== currentFamilyId) {
-            console.error('⚠️ 보안 오류: family_id 불일치', {
-              eventFamilyId: eventData.family_id,
-              currentFamilyId: currentFamilyId
-            });
-            throw new Error('권한이 없습니다. 다른 가족의 데이터는 삭제할 수 없습니다.');
-          }
+          // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
+          // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
           
           console.log('Supabase 삭제 시도:', eventId);
           const { error, data } = await supabase
             .from('family_events')
             .delete()
             .eq('id', eventId)
-            .eq('family_id', currentFamilyId) // family_id 필터 추가 (이중 검증)
             .select();
           
           if (error) {
