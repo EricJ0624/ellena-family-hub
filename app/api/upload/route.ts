@@ -128,10 +128,14 @@ export async function POST(request: NextRequest) {
     // 3. Supabase memory_vault 테이블에 저장
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';
     
+    // image_url은 필수 컬럼이므로 cloudinary_url 우선, 없으면 s3_original_url 사용
+    const imageUrl = cloudinaryUrl || s3Result.url;
+    
     const { data: memoryData, error: dbError } = await supabase
       .from('memory_vault')
       .insert({
         uploader_id: user.id,
+        image_url: imageUrl, // 필수 컬럼: cloudinary_url 우선, 없으면 s3_original_url
         cloudinary_url: cloudinaryUrl || null,
         s3_original_url: s3Result.url,
         file_type: fileType,
