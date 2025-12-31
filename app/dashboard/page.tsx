@@ -128,6 +128,7 @@ export default function FamilyHub() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [eventForm, setEventForm] = useState({ title: '', month: '', day: '', desc: '' });
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
+  const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [userName, setUserName] = useState<string>('');
@@ -202,6 +203,13 @@ export default function FamilyHub() {
         // 사용자 ID 저장
         const currentUserId = session.user.id;
         setUserId(currentUserId);
+        
+        // family_id 가져오기 (user_metadata에서 가져오거나 기본값 사용)
+        // 모든 가족 구성원이 동일한 family_id를 공유하도록 설정
+        const userFamilyId = session.user.user_metadata?.family_id 
+          || process.env.NEXT_PUBLIC_FAMILY_ID 
+          || 'ellena_family'; // 기본 family_id
+        setFamilyId(userFamilyId);
         
         // 사용자 이름 가져오기 (닉네임 우선)
         if (session.user) {
@@ -440,6 +448,9 @@ export default function FamilyHub() {
     // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
     const loadSupabaseData = async () => {
       try {
+        // family_id 확인 (없으면 기본값 사용)
+        const currentFamilyId = familyId || 'ellena_family';
+        
         // 가족 공유 키를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
         const authKey = getAuthKey(userId);
         const currentKey = masterKey || sessionStorage.getItem(authKey) || 
@@ -547,10 +558,11 @@ export default function FamilyHub() {
           // Supabase에 메시지가 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 할일 로드
+        // 할일 로드 (family_id 기반 필터링)
         const { data: tasksData, error: tasksError } = await supabase
           .from('family_tasks')
           .select('*')
+          .eq('family_id', familyId || 'ellena_family') // family_id 필터 추가
           .order('created_at', { ascending: false });
 
         if (!tasksError && tasksData) {
@@ -632,10 +644,11 @@ export default function FamilyHub() {
           // Supabase에 할일이 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 일정 로드
+        // 일정 로드 (family_id 기반 필터링)
         const { data: eventsData, error: eventsError } = await supabase
           .from('family_events')
           .select('*')
+          .eq('family_id', familyId || 'ellena_family') // family_id 필터 추가
           .order('event_date', { ascending: true }); // event_date 컬럼명 사용
 
         if (!eventsError && eventsData) {
@@ -1122,6 +1135,18 @@ export default function FamilyHub() {
               console.error('Realtime 할일: 잘못된 payload:', payload);
               return;
             }
+            
+            // family_id 검증: 같은 가족의 데이터만 처리
+            const currentFamilyId = familyId || 'ellena_family';
+            if (newTask.family_id && newTask.family_id !== currentFamilyId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 할일 INSERT: 다른 가족의 데이터 무시', {
+                  taskFamilyId: newTask.family_id,
+                  currentFamilyId: currentFamilyId
+                });
+              }
+              return; // 다른 가족의 데이터는 무시
+            }
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = newTask.title || newTask.task_text || '';
             let decryptedText = taskText;
@@ -1254,6 +1279,18 @@ export default function FamilyHub() {
           { event: 'UPDATE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
             const updatedTask = payload.new;
+            
+            // family_id 검증: 같은 가족의 데이터만 처리
+            const currentFamilyId = familyId || 'ellena_family';
+            if (updatedTask.family_id && updatedTask.family_id !== currentFamilyId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 할일 UPDATE: 다른 가족의 데이터 무시', {
+                  taskFamilyId: updatedTask.family_id,
+                  currentFamilyId: currentFamilyId
+                });
+              }
+              return; // 다른 가족의 데이터는 무시
+            }
             // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
             const taskText = updatedTask.title || updatedTask.task_text || '';
             let decryptedText = taskText;
@@ -1329,8 +1366,22 @@ export default function FamilyHub() {
           { event: 'DELETE', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
             console.log('Realtime 할일 DELETE 이벤트 수신 (family_tasks 테이블):', payload);
+            
+            // family_id 검증: 같은 가족의 데이터만 처리
+            const currentFamilyId = familyId || 'ellena_family';
+            const deletedTask = payload.old;
+            if (deletedTask?.family_id && deletedTask.family_id !== currentFamilyId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 할일 DELETE: 다른 가족의 데이터 무시', {
+                  taskFamilyId: deletedTask.family_id,
+                  currentFamilyId: currentFamilyId
+                });
+              }
+              return; // 다른 가족의 데이터는 무시
+            }
+            
             // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
-            const deletedId = payload.old?.id;
+            const deletedId = deletedTask?.id;
             if (!deletedId) {
               console.warn('Realtime 할일 DELETE: deletedId가 없음:', payload);
               return;
@@ -1389,6 +1440,18 @@ export default function FamilyHub() {
             if (!newEvent || !newEvent.id) {
               console.error('Realtime 일정: 잘못된 payload:', payload);
               return;
+            }
+            
+            // family_id 검증: 같은 가족의 데이터만 처리
+            const currentFamilyId = familyId || 'ellena_family';
+            if (newEvent.family_id && newEvent.family_id !== currentFamilyId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 일정 INSERT: 다른 가족의 데이터 무시', {
+                  eventFamilyId: newEvent.family_id,
+                  currentFamilyId: currentFamilyId
+                });
+              }
+              return; // 다른 가족의 데이터는 무시
             }
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
@@ -1547,6 +1610,18 @@ export default function FamilyHub() {
           { event: 'UPDATE', schema: 'public', table: 'family_events' },
           (payload: any) => {
             const updatedEvent = payload.new;
+            
+            // family_id 검증: 같은 가족의 데이터만 처리
+            const currentFamilyId = familyId || 'ellena_family';
+            if (updatedEvent.family_id && updatedEvent.family_id !== currentFamilyId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 일정 UPDATE: 다른 가족의 데이터 무시', {
+                  eventFamilyId: updatedEvent.family_id,
+                  currentFamilyId: currentFamilyId
+                });
+              }
+              return; // 다른 가족의 데이터는 무시
+            }
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
             const eventDate = new Date(eventDateValue);
@@ -1633,8 +1708,22 @@ export default function FamilyHub() {
           { event: 'DELETE', schema: 'public', table: 'family_events' },
           (payload: any) => {
             console.log('Realtime 일정 DELETE 이벤트 수신 (family_events 테이블):', payload);
+            
+            // family_id 검증: 같은 가족의 데이터만 처리
+            const currentFamilyId = familyId || 'ellena_family';
+            const deletedEvent = payload.old;
+            if (deletedEvent?.family_id && deletedEvent.family_id !== currentFamilyId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 일정 DELETE: 다른 가족의 데이터 무시', {
+                  eventFamilyId: deletedEvent.family_id,
+                  currentFamilyId: currentFamilyId
+                });
+              }
+              return; // 다른 가족의 데이터는 무시
+            }
+            
             // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
-            const deletedId = payload.old?.id;
+            const deletedId = deletedEvent?.id;
             if (!deletedId) {
               console.warn('Realtime 일정 DELETE: deletedId가 없음:', payload);
               return;
@@ -1901,7 +1990,7 @@ export default function FamilyHub() {
         supabase.removeChannel(presenceSubscription);
       }
     };
-  }, [isAuthenticated, userId, masterKey, userName]);
+  }, [isAuthenticated, userId, masterKey, userName, familyId]); // familyId 변경 시 데이터 재로드
 
   // --- [LOGIC] 원본 Store.dispatch 로직 이식 ---
 
@@ -1990,6 +2079,9 @@ export default function FamilyHub() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // family_id 확인 (없으면 기본값 사용)
+      const currentFamilyId = familyId || 'ellena_family';
+
       // 가족 공유 암호화 키 가져오기
       const currentKey = encryptionKey || masterKey || sessionStorage.getItem(getAuthKey(userId)) || 
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
@@ -2033,6 +2125,7 @@ export default function FamilyHub() {
           // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
           // assigned_to는 UUID 타입이므로 NULL로 저장 (담당자 정보는 title에 포함하거나 별도 처리)
           const taskData: any = {
+            family_id: currentFamilyId, // family_id 추가
             created_by: userId,
             title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
             assigned_to: null, // UUID 타입이므로 NULL로 저장 (담당자 정보는 암호화된 텍스트에 포함)
@@ -2091,11 +2184,32 @@ export default function FamilyHub() {
           // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
           const isNumericId = typeof payload === 'number' || /^\d+$/.test(taskId);
           
-          console.log('saveToSupabase DELETE_TODO:', { taskId, isNumericId, payloadType: typeof payload });
+          console.log('saveToSupabase DELETE_TODO:', { taskId, isNumericId, payloadType: typeof payload, familyId: currentFamilyId });
           
           if (isNumericId) {
             console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', taskId);
             break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
+          }
+          
+          // family_id 검증: 삭제 전에 해당 항목의 family_id 확인
+          const { data: taskData, error: fetchError } = await supabase
+            .from('family_tasks')
+            .select('family_id')
+            .eq('id', taskId)
+            .single();
+          
+          if (fetchError || !taskData) {
+            console.error('할일 조회 오류 (family_id 검증 실패):', fetchError);
+            throw new Error('삭제할 항목을 찾을 수 없습니다.');
+          }
+          
+          // 보안 검증: family_id 일치 확인
+          if (taskData.family_id !== currentFamilyId) {
+            console.error('⚠️ 보안 오류: family_id 불일치', {
+              taskFamilyId: taskData.family_id,
+              currentFamilyId: currentFamilyId
+            });
+            throw new Error('권한이 없습니다. 다른 가족의 데이터는 삭제할 수 없습니다.');
           }
           
           console.log('Supabase 삭제 시도:', taskId);
@@ -2103,6 +2217,7 @@ export default function FamilyHub() {
             .from('family_tasks')
             .delete()
             .eq('id', taskId)
+            .eq('family_id', currentFamilyId) // family_id 필터 추가 (이중 검증)
             .select();
           
           if (error) {
@@ -2111,11 +2226,13 @@ export default function FamilyHub() {
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
+            throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
           } else {
             const deletedCount = data?.length || 0;
             console.log('할일 삭제 성공:', taskId, '삭제된 행 수:', deletedCount);
             if (deletedCount === 0) {
               console.warn('⚠️ 할일 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', taskId);
+              throw new Error('삭제할 항목을 찾을 수 없습니다.');
             }
           }
           break;
@@ -2159,6 +2276,7 @@ export default function FamilyHub() {
           
           // event_date 컬럼이 없을 수 있으므로 선택적으로 처리
           const eventData: any = {
+            family_id: currentFamilyId, // family_id 추가
             created_by: userId,
             title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
             description: encryptedDesc, // 암호화된 설명 저장
@@ -2190,11 +2308,32 @@ export default function FamilyHub() {
           // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
           const isNumericId = typeof payload === 'number' || /^\d+$/.test(eventId);
           
-          console.log('saveToSupabase DELETE_EVENT:', { eventId, isNumericId, payloadType: typeof payload });
+          console.log('saveToSupabase DELETE_EVENT:', { eventId, isNumericId, payloadType: typeof payload, familyId: currentFamilyId });
           
           if (isNumericId) {
             console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', eventId);
             break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
+          }
+          
+          // family_id 검증: 삭제 전에 해당 항목의 family_id 확인
+          const { data: eventData, error: fetchError } = await supabase
+            .from('family_events')
+            .select('family_id')
+            .eq('id', eventId)
+            .single();
+          
+          if (fetchError || !eventData) {
+            console.error('일정 조회 오류 (family_id 검증 실패):', fetchError);
+            throw new Error('삭제할 항목을 찾을 수 없습니다.');
+          }
+          
+          // 보안 검증: family_id 일치 확인
+          if (eventData.family_id !== currentFamilyId) {
+            console.error('⚠️ 보안 오류: family_id 불일치', {
+              eventFamilyId: eventData.family_id,
+              currentFamilyId: currentFamilyId
+            });
+            throw new Error('권한이 없습니다. 다른 가족의 데이터는 삭제할 수 없습니다.');
           }
           
           console.log('Supabase 삭제 시도:', eventId);
@@ -2202,6 +2341,7 @@ export default function FamilyHub() {
             .from('family_events')
             .delete()
             .eq('id', eventId)
+            .eq('family_id', currentFamilyId) // family_id 필터 추가 (이중 검증)
             .select();
           
           if (error) {
@@ -2210,11 +2350,13 @@ export default function FamilyHub() {
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
+            throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
           } else {
             const deletedCount = data?.length || 0;
             console.log('일정 삭제 성공:', eventId, '삭제된 행 수:', deletedCount);
             if (deletedCount === 0) {
               console.warn('⚠️ 일정 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', eventId);
+              throw new Error('삭제할 항목을 찾을 수 없습니다.');
             }
           }
           break;
@@ -2288,14 +2430,38 @@ export default function FamilyHub() {
           saveToSupabase('ADD_TODO', payload, userId, currentKey);
           break;
         }
-        case 'DELETE_TODO':
+        case 'DELETE_TODO': {
           // ID 비교를 안전하게 처리 (number와 string 모두 지원)
           const deleteTodoId = String(payload).trim();
           console.log('updateState DELETE_TODO 호출:', { payload, deleteTodoId, payloadType: typeof payload });
+          
+          // 낙관적 업데이트: 먼저 화면에서 제거
+          const deletedTodo = prev.todos.find(t => String(t.id).trim() === deleteTodoId);
           newState.todos = prev.todos.filter(t => String(t.id).trim() !== deleteTodoId);
-          // Supabase에 저장
-          saveToSupabase('DELETE_TODO', payload, userId, currentKey);
+          
+          // Supabase에 저장 (비동기, 에러 발생 시 복구)
+          saveToSupabase('DELETE_TODO', payload, userId, currentKey)
+            .catch((error) => {
+              console.error('할일 삭제 실패, 복구 중:', error);
+              // 에러 발생 시 복구: 삭제된 항목을 다시 추가
+              if (deletedTodo) {
+                setState(prevState => ({
+                  ...prevState,
+                  todos: [...prevState.todos, deletedTodo].sort((a, b) => {
+                    // ID 기준 정렬 (숫자 ID는 뒤로, UUID는 앞으로)
+                    const aIsNum = typeof a.id === 'number';
+                    const bIsNum = typeof b.id === 'number';
+                    if (aIsNum && !bIsNum) return 1;
+                    if (!aIsNum && bIsNum) return -1;
+                    return 0;
+                  })
+                }));
+              }
+              // 사용자에게 알림
+              alert('삭제에 실패했습니다. 다시 시도해주세요.');
+            });
           break;
+        }
         case 'ADD_PHOTO':
           newState.album = [payload, ...prev.album];
           break;
@@ -2342,14 +2508,40 @@ export default function FamilyHub() {
           saveToSupabase('ADD_EVENT', payload, userId, currentKey);
           break;
         }
-        case 'DELETE_EVENT':
+        case 'DELETE_EVENT': {
           // ID 비교를 안전하게 처리 (number와 string 모두 지원)
           const deleteEventId = String(payload).trim();
           console.log('updateState DELETE_EVENT 호출:', { payload, deleteEventId, payloadType: typeof payload });
+          
+          // 낙관적 업데이트: 먼저 화면에서 제거
+          const deletedEvent = prev.events.find(e => String(e.id).trim() === deleteEventId);
           newState.events = prev.events.filter(e => String(e.id).trim() !== deleteEventId);
-          // Supabase에 저장
-          saveToSupabase('DELETE_EVENT', payload, userId, currentKey);
+          
+          // Supabase에 저장 (비동기, 에러 발생 시 복구)
+          saveToSupabase('DELETE_EVENT', payload, userId, currentKey)
+            .catch((error) => {
+              console.error('일정 삭제 실패, 복구 중:', error);
+              // 에러 발생 시 복구: 삭제된 항목을 다시 추가
+              if (deletedEvent) {
+                setState(prevState => ({
+                  ...prevState,
+                  events: [...prevState.events, deletedEvent].sort((a, b) => {
+                    // 날짜 기준 정렬
+                    const monthOrder: { [key: string]: number } = {
+                      'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
+                      'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
+                    };
+                    const monthDiff = (monthOrder[a.month] || 0) - (monthOrder[b.month] || 0);
+                    if (monthDiff !== 0) return monthDiff;
+                    return parseInt(a.day) - parseInt(b.day);
+                  })
+                }));
+              }
+              // 사용자에게 알림
+              alert('삭제에 실패했습니다. 다시 시도해주세요.');
+            });
           break;
+        }
         case 'ADD_MESSAGE':
           newState.messages = [...(prev.messages || []), payload].slice(-50);
           // Supabase에 저장
@@ -4314,11 +4506,11 @@ export default function FamilyHub() {
                           <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
                             💡 API 키 발급: <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google Cloud Console</a> → Maps JavaScript API 활성화
                           </p>
-                        </div>
+        </div>
                         <p style={{ fontSize: '12px', marginTop: '8px' }}>
                           또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Google 지도에서 보기</a>
                         </p>
-        </div>
+          </div>
           </div>
                   )}
                 </div>

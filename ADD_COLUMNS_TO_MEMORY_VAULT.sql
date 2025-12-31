@@ -41,3 +41,12 @@ WHERE table_name = 'memory_vault'
   AND table_schema = 'public'
 ORDER BY ordinal_position;
 
+
+
+
+
+
+
+
+
+
