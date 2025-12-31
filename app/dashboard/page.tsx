@@ -2177,7 +2177,23 @@ export default function FamilyHub() {
           // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
           // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
           
-          console.log('Supabase 삭제 시도:', taskId);
+          console.log('Supabase 삭제 시도:', { taskId, userId });
+          
+          // 삭제 전에 해당 할일이 존재하는지 확인
+          const { data: existingTask } = await supabase
+            .from('family_tasks')
+            .select('id, created_by, title')
+            .eq('id', taskId)
+            .single();
+          
+          if (existingTask) {
+            console.log('삭제할 할일 확인:', {
+              id: existingTask.id,
+              created_by: existingTask.created_by,
+              title: existingTask.title?.substring(0, 30)
+            });
+          }
+          
           const { error, data } = await supabase
             .from('family_tasks')
             .delete()
@@ -2186,17 +2202,27 @@ export default function FamilyHub() {
           
           if (error) {
             console.error('할일 삭제 오류:', error);
-            console.error('삭제 시도한 ID:', taskId, '타입:', typeof taskId);
+            console.error('삭제 시도한 ID:', taskId, '타입:', typeof taskId, 'userId:', userId);
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
             throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
           } else {
             const deletedCount = data?.length || 0;
-            console.log('할일 삭제 성공:', taskId, '삭제된 행 수:', deletedCount);
-            if (deletedCount === 0) {
+            console.log('할일 삭제 결과:', { taskId, deletedCount, deletedData: data, userId });
+            
+            // 삭제된 행이 없고, 할일이 존재한다면 RLS 정책 문제일 가능성이 높음
+            if (deletedCount === 0 && existingTask) {
+              console.error('⚠️ 할일 삭제 실패: 할일은 존재하지만 삭제 권한이 없습니다.', {
+                taskId,
+                existingTaskCreatedBy: existingTask.created_by,
+                currentUserId: userId,
+                isOwner: existingTask.created_by === userId
+              });
+              throw new Error('삭제 권한이 없습니다. 이 할일을 삭제할 수 없습니다.');
+            } else if (deletedCount === 0) {
               console.warn('⚠️ 할일 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', taskId);
-              throw new Error('삭제할 항목을 찾을 수 없습니다.');
+              // 할일이 존재하지 않으면 이미 삭제된 것으로 간주하고 에러를 throw하지 않음
             }
           }
           break;
@@ -2310,18 +2336,27 @@ export default function FamilyHub() {
           
           if (error) {
             console.error('일정 삭제 오류:', error);
-            console.error('삭제 시도한 ID:', eventId, '타입:', typeof eventId);
+            console.error('삭제 시도한 ID:', eventId, '타입:', typeof eventId, 'userId:', userId);
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
             throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
           } else {
             const deletedCount = data?.length || 0;
-            console.log('일정 삭제 성공:', { eventId, deletedCount, deletedData: data });
-            if (deletedCount === 0) {
+            console.log('일정 삭제 결과:', { eventId, deletedCount, deletedData: data, userId });
+            
+            // 삭제된 행이 없고, 이벤트가 존재한다면 RLS 정책 문제일 가능성이 높음
+            if (deletedCount === 0 && existingEvent) {
+              console.error('⚠️ 일정 삭제 실패: 이벤트는 존재하지만 삭제 권한이 없습니다.', {
+                eventId,
+                existingEventCreatedBy: existingEvent.created_by,
+                currentUserId: userId,
+                isOwner: existingEvent.created_by === userId
+              });
+              throw new Error('삭제 권한이 없습니다. 이 이벤트를 삭제할 수 없습니다.');
+            } else if (deletedCount === 0) {
               console.warn('⚠️ 일정 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', eventId);
-              // 삭제된 행이 없어도 에러를 throw하지 않음 (이미 삭제되었을 수 있음)
-              // throw new Error('삭제할 항목을 찾을 수 없습니다.');
+              // 이벤트가 존재하지 않으면 이미 삭제된 것으로 간주하고 에러를 throw하지 않음
             }
           }
           break;
