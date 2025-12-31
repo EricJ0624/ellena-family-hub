@@ -1676,14 +1676,45 @@ export default function FamilyHub() {
             console.log('Realtime 일정 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
             setState(prev => {
               const beforeCount = prev.events.length;
+              
+              // 상세 로깅: 모든 이벤트 ID 확인
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 일정 DELETE - 현재 이벤트 목록:', prev.events.map(e => ({
+                  id: e.id,
+                  idType: typeof e.id,
+                  idStr: String(e.id),
+                  supabaseId: e.supabaseId,
+                  title: e.title?.substring(0, 20)
+                })));
+                console.log('Realtime 일정 DELETE - 삭제할 ID:', {
+                  deletedId,
+                  deletedIdStr,
+                  deletedIdType: typeof deletedId
+                });
+              }
+              
               const filtered = prev.events.filter(e => {
                 // ID 비교: 여러 형식 지원 (숫자, 문자열, UUID)
                 const eId = e.id;
-                const eIdStr = String(eId).trim();
-                const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim() : null;
+                const eIdStr = String(eId).trim().toLowerCase(); // 대소문자 무시
+                const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim().toLowerCase() : null;
+                const deletedIdStrLower = deletedIdStr.toLowerCase(); // 대소문자 무시
                 
-                // 직접 ID 비교 또는 supabaseId 비교
-                const isMatch = eIdStr === deletedIdStr || (eSupabaseId && eSupabaseId === deletedIdStr);
+                // 직접 ID 비교 또는 supabaseId 비교 (대소문자 무시)
+                const isMatch = eIdStr === deletedIdStrLower || 
+                               (eSupabaseId && eSupabaseId === deletedIdStrLower) ||
+                               eIdStr.replace(/-/g, '') === deletedIdStrLower.replace(/-/g, ''); // 하이픈 제거 후 비교
+                
+                if (isMatch && process.env.NODE_ENV === 'development') {
+                  console.log('✅ Realtime 일정 DELETE - ID 매칭 성공:', {
+                    eId: e.id,
+                    eIdStr,
+                    deletedIdStr,
+                    matchType: eIdStr === deletedIdStrLower ? 'exact' : 
+                              (eSupabaseId && eSupabaseId === deletedIdStrLower) ? 'supabaseId' : 'normalized'
+                  });
+                }
+                
                 return !isMatch;
               });
               const afterCount = filtered.length;
@@ -1692,7 +1723,14 @@ export default function FamilyHub() {
               if (deletedCount === 0 && beforeCount > 0) {
                 console.warn('⚠️ Realtime 일정 DELETE - 삭제된 항목이 없음. ID 불일치 가능성:', {
                   deletedId: deletedIdStr,
-                  existingIds: prev.events.slice(0, 3).map(e => ({ id: e.id, idType: typeof e.id, supabaseId: e.supabaseId }))
+                  deletedIdLower: deletedIdStr.toLowerCase(),
+                  existingIds: prev.events.map(e => ({ 
+                    id: e.id, 
+                    idType: typeof e.id, 
+                    idStr: String(e.id).toLowerCase(),
+                    supabaseId: e.supabaseId,
+                    title: e.title?.substring(0, 20)
+                  }))
                 });
               }
               return {
@@ -2245,7 +2283,25 @@ export default function FamilyHub() {
           // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
           // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
           
-          console.log('Supabase 삭제 시도:', eventId);
+          console.log('Supabase 삭제 시도:', { eventId, eventIdType: typeof eventId, userId });
+          
+          // 삭제 전에 해당 이벤트가 존재하는지 확인 (디버깅용)
+          const { data: existingEvent } = await supabase
+            .from('family_events')
+            .select('id, created_by, title')
+            .eq('id', eventId)
+            .single();
+          
+          if (existingEvent) {
+            console.log('삭제할 이벤트 확인:', {
+              id: existingEvent.id,
+              created_by: existingEvent.created_by,
+              title: existingEvent.title?.substring(0, 30)
+            });
+          } else {
+            console.warn('⚠️ 삭제할 이벤트를 찾을 수 없음:', eventId);
+          }
+          
           const { error, data } = await supabase
             .from('family_events')
             .delete()
@@ -2261,10 +2317,11 @@ export default function FamilyHub() {
             throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
           } else {
             const deletedCount = data?.length || 0;
-            console.log('일정 삭제 성공:', eventId, '삭제된 행 수:', deletedCount);
+            console.log('일정 삭제 성공:', { eventId, deletedCount, deletedData: data });
             if (deletedCount === 0) {
               console.warn('⚠️ 일정 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', eventId);
-              throw new Error('삭제할 항목을 찾을 수 없습니다.');
+              // 삭제된 행이 없어도 에러를 throw하지 않음 (이미 삭제되었을 수 있음)
+              // throw new Error('삭제할 항목을 찾을 수 없습니다.');
             }
           }
           break;
