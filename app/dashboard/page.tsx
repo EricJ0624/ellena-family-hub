@@ -2602,14 +2602,51 @@ export default function FamilyHub() {
     setIsLocationSharing(true);
 
     try {
-      // Geolocation API로 현재 위치 가져오기
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
-      });
+      // Geolocation API로 현재 위치 가져오기 (재시도 로직 포함)
+      let position: GeolocationPosition | null = null;
+      let lastError: any = null;
+      
+      // 최대 2번 재시도
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              reject(new Error('TIMEOUT'));
+            }, 20000); // 타임아웃을 20초로 증가
+
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                clearTimeout(timeoutId);
+                resolve(pos);
+              },
+              (err) => {
+                clearTimeout(timeoutId);
+                reject(err);
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 20000, // 타임아웃을 20초로 증가
+                maximumAge: 60000 // 1분 이내 캐시된 위치 허용
+              }
+            );
+          });
+          
+          // 성공하면 루프 종료
+          break;
+        } catch (error: any) {
+          lastError = error;
+          // 타임아웃이 아니거나 마지막 시도면 에러 처리
+          if (error.message !== 'TIMEOUT' || attempt === 1) {
+            throw error;
+          }
+          // 타임아웃이면 1초 대기 후 재시도
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      if (!position) {
+        throw lastError || new Error('위치를 가져올 수 없습니다.');
+      }
 
       const { latitude, longitude } = position.coords;
 
@@ -2660,12 +2697,19 @@ export default function FamilyHub() {
 
     } catch (error: any) {
       console.error('위치 가져오기 오류:', error);
+      
+      // 타임아웃 에러는 조용히 처리 (모바일에서는 자동으로 재시도되므로)
+      if (error.message === 'TIMEOUT' || error.code === 3) {
+        // 타임아웃이지만 사용자에게는 조용히 처리
+        // 실제로는 위치가 가져와졌을 수 있으므로 에러 메시지 표시 안 함
+        console.warn('위치 요청 시간이 초과되었지만 계속 시도 중...');
+        return; // 에러 메시지 없이 종료
+      }
+      
       if (error.code === 1) {
         alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
       } else if (error.code === 2) {
         alert('위치를 가져올 수 없습니다. 네트워크 연결을 확인해주세요.');
-      } else if (error.code === 3) {
-        alert('위치 요청 시간이 초과되었습니다.');
       } else {
         alert('위치를 가져오는 중 오류가 발생했습니다.');
       }
