@@ -153,6 +153,7 @@ export default function FamilyHub() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [locationRequests, setLocationRequests] = useState<Array<{
     id: string;
     requester_id: string;
@@ -389,10 +390,10 @@ export default function FamilyHub() {
     try {
       let currentAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 
-      // 주소 변환 (쓰로틀링: 최소 30초 간격)
+      // 주소 변환 (쓰로틀링: 최소 60초 간격 - 무료 할당량 절약)
       const now = Date.now();
       const lastGeocodeUpdate = sessionStorage.getItem('lastGeocodeUpdate');
-      if (!lastGeocodeUpdate || now - parseInt(lastGeocodeUpdate) > 30000) {
+      if (!lastGeocodeUpdate || now - parseInt(lastGeocodeUpdate) > 60000) {
         try {
           const geocoder = new (window as any).google.maps.Geocoder();
           const { results } = await geocoder.geocode({ location: { lat: latitude, lng: longitude } });
@@ -470,17 +471,36 @@ export default function FamilyHub() {
 
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
         if (!mapRef.current) {
-          mapRef.current = new (window as any).google.maps.Map(mapElement, {
-            center: center,
-            zoom: state.location.latitude && state.location.longitude ? 15 : 12,
-            mapTypeControl: true,
-            streetViewControl: true,
-            fullscreenControl: true
-          });
-          setMapLoaded(true);
+          try {
+            mapRef.current = new (window as any).google.maps.Map(mapElement, {
+              center: center,
+              zoom: state.location.latitude && state.location.longitude ? 15 : 12,
+              mapTypeControl: true,
+              streetViewControl: true,
+              fullscreenControl: true
+            });
+            setMapLoaded(true);
+            setMapError(null); // 에러 상태 초기화
+          } catch (mapInitError: any) {
+            console.error('Google Maps 초기화 오류:', mapInitError);
+            // BillingNotEnabledMapError 또는 다른 에러 처리
+            if (mapInitError?.name === 'BillingNotEnabledMapError' || 
+                mapInitError?.message?.includes('BillingNotEnabled') ||
+                mapInitError?.message?.includes('billing')) {
+              setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다.');
+            } else {
+              setMapError('Google Maps를 불러오는데 실패했습니다. API 키와 설정을 확인해주세요.');
+            }
+            setMapLoaded(false);
+            return;
+          }
         } else {
           // 지도 중심 업데이트
-          mapRef.current.setCenter(center);
+          try {
+            mapRef.current.setCenter(center);
+          } catch (centerError) {
+            console.error('지도 중심 업데이트 오류:', centerError);
+          }
         }
 
         // 기존 마커 모두 제거
@@ -537,8 +557,16 @@ export default function FamilyHub() {
             }
           }
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('지도 초기화 오류:', error);
+        if (error?.name === 'BillingNotEnabledMapError' || 
+            error?.message?.includes('BillingNotEnabled') ||
+            error?.message?.includes('billing')) {
+          setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다.');
+        } else {
+          setMapError('Google Maps를 불러오는데 실패했습니다.');
+        }
+        setMapLoaded(false);
       }
     };
 
@@ -548,9 +576,16 @@ export default function FamilyHub() {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
       script.async = true;
       script.defer = true;
-      script.onload = initializeMap;
+      script.onload = () => {
+        // 스크립트 로드 후 약간의 지연을 두고 초기화 (에러 감지용)
+        setTimeout(() => {
+          initializeMap();
+        }, 100);
+      };
       script.onerror = () => {
         console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
+        setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다.');
+        setMapLoaded(false);
       };
       document.head.appendChild(script);
     } else {
@@ -2956,8 +2991,8 @@ export default function FamilyHub() {
     const now = Date.now();
     const timeSinceLastUpdate = now - lastLocationUpdateRef.current;
     
-    // 최소 5초 간격으로만 저장 (성능 최적화)
-    if (timeSinceLastUpdate < 5000) {
+    // 최소 10초 간격으로만 저장 (성능 최적화 및 API 호출 최소화)
+    if (timeSinceLastUpdate < 10000) {
       return;
     }
 
@@ -3118,11 +3153,11 @@ export default function FamilyHub() {
               return;
             }
 
-            // 주소 변환 (쓰로틀링: 30초마다 한 번만)
+            // 주소 변환 (쓰로틀링: 60초마다 한 번만 - 무료 할당량 절약)
             const now = Date.now();
             let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             
-            if (now - lastLocationUpdateRef.current > 30000) {
+            if (now - lastLocationUpdateRef.current > 60000) {
               try {
                 address = await reverseGeocode(latitude, longitude);
               } catch (geocodeError) {
@@ -3148,8 +3183,8 @@ export default function FamilyHub() {
             // Supabase에 저장 (쓰로틀링 적용)
             await saveLocationToSupabase(latitude, longitude, address);
 
-            // 가족 구성원 위치 목록 업데이트 (30초마다)
-            if (now - lastLocationUpdateRef.current > 30000) {
+            // 가족 구성원 위치 목록 업데이트 (60초마다 - 무료 할당량 절약)
+            if (now - lastLocationUpdateRef.current > 60000) {
               await loadFamilyLocations();
             }
 
@@ -3428,6 +3463,91 @@ export default function FamilyHub() {
       }
     }
   }, [userId, isAuthenticated]); // useCallback 의존성 (supabase는 안정적인 싱글톤이므로 제외)
+
+  // "여기야" 버튼 클릭 시 현재 위치 공유
+  const handleShareMyLocation = async () => {
+    if (!userId || !isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+      return;
+    }
+
+    try {
+      // 현재 위치 가져오기
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      // 주소 변환
+      const address = await reverseGeocode(latitude, longitude);
+
+      // 위치를 Supabase에 저장
+      await saveLocationToSupabase(latitude, longitude, address);
+
+      // 상태 업데이트
+      setState(prev => ({
+        ...prev,
+        location: {
+          address: address,
+          latitude: latitude,
+          longitude: longitude,
+          userId: userId,
+          updatedAt: new Date().toISOString()
+        }
+      }));
+
+      // 받은 위치 요청들을 모두 accepted로 변경
+      const pendingRequests = locationRequests.filter(
+        req => req.target_id === userId && req.status === 'pending'
+      );
+
+      for (const req of pendingRequests) {
+        try {
+          const response = await fetch('/api/location-approve', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              requestId: req.id,
+              userId: userId,
+              action: 'accept',
+            }),
+          });
+
+          if (!response.ok) {
+            console.error('위치 요청 승인 실패:', req.id);
+          }
+        } catch (error) {
+          console.error('위치 요청 승인 오류:', error);
+        }
+      }
+
+      // 위치 요청 목록 다시 로드
+      await loadLocationRequests();
+      await loadFamilyLocations();
+
+      alert('위치를 공유했습니다!');
+    } catch (error: any) {
+      console.error('위치 공유 오류:', error);
+      if (error.code === 1) {
+        alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+      } else {
+        alert('위치를 가져오는데 실패했습니다. 다시 시도해주세요.');
+      }
+    }
+  };
 
   // 위치 요청 보내기
   const sendLocationRequest = async (targetUserId: string) => {
@@ -5270,8 +5390,8 @@ export default function FamilyHub() {
           {/* Location Section */}
           <section className="content-section">
             <div className="section-header">
-              <h3 className="section-title">실시간 위치 공유</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <h3 className="section-title">Family Location</h3>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => {
                     setShowLocationRequestModal(true);
@@ -5293,6 +5413,32 @@ export default function FamilyHub() {
                   <span>📍</span>
                   <span>어디야</span>
                 </button>
+                {/* 위치 요청을 받은 경우에만 "여기야" 버튼 표시 */}
+                {locationRequests.some(req => 
+                  req.target_id === userId && 
+                  req.status === 'pending'
+                ) && (
+                  <button
+                    onClick={handleShareMyLocation}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>📍</span>
+                    <span>여기야</span>
+                  </button>
+                )}
         </div>
             </div>
             <div className="section-body">
@@ -5309,16 +5455,76 @@ export default function FamilyHub() {
               
               {/* 구글맵 항상 표시 */}
               {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
-                <div 
-                  id="map" 
-                  style={{ 
-                    width: '100%', 
-                    height: '400px', 
+                mapError ? (
+                  <div style={{
+                    width: '100%',
+                    height: '400px',
                     borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    marginTop: '12px'
-                  }}
-                />
+                    border: '1px solid #fecaca',
+                    marginTop: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fef2f2',
+                    color: '#991b1b',
+                    padding: '20px'
+                  }}>
+                    <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+                      <p style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#dc2626' }}>
+                        ⚠️ Google Maps 오류
+                      </p>
+                      <p style={{ fontSize: '14px', marginBottom: '16px', lineHeight: '1.6' }}>
+                        {mapError}
+                      </p>
+                      <div style={{ 
+                        backgroundColor: '#fee2e2', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        marginBottom: '16px',
+                        fontSize: '13px',
+                        lineHeight: '1.6'
+                      }}>
+                        <p style={{ fontWeight: '600', marginBottom: '8px' }}>해결 방법 (무료 할당량 사용):</p>
+                        <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                          <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#dc2626', textDecoration: 'underline' }}>Google Cloud Console</a>에 접속</li>
+                          <li>프로젝트 선택 → <strong>결제 계정 연결</strong> (신용카드 등록 필요)</li>
+                          <li>Maps JavaScript API 활성화 확인</li>
+                          <li><strong>월 $200 무료 크레딧</strong>이 자동으로 제공됩니다 (개발/테스트 용도로 충분)</li>
+                        </ol>
+                        <p style={{ marginTop: '8px', fontSize: '12px', color: '#991b1b' }}>
+                          💡 참고: 무료 크레딧은 매월 자동으로 충전되며, 사용하지 않으면 소멸됩니다.
+                        </p>
+                      </div>
+                      {state.location.latitude && state.location.longitude && (
+                        <a 
+                          href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ 
+                            color: '#dc2626', 
+                            textDecoration: 'underline',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Google 지도에서 위치 보기
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    id="map" 
+                    style={{ 
+                      width: '100%', 
+                      height: '400px', 
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      marginTop: '12px'
+                    }}
+                  />
+                )
               ) : (
                 <div style={{
                   width: '100%',
@@ -5361,36 +5567,6 @@ export default function FamilyHub() {
                 </div>
               )}
               
-              {state.familyLocations.length > 0 && (
-                <div style={{ marginTop: '20px' }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
-                    가족 구성원 위치
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {state.familyLocations.map((loc) => (
-                      <div 
-                        key={loc.userId}
-                        style={{
-                          padding: '12px',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '8px',
-                          border: '1px solid #e2e8f0'
-                        }}
-                      >
-                        <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-                          {loc.userName}
-          </div>
-                        <div style={{ fontSize: '14px', color: '#64748b' }}>
-                          {loc.address}
-        </div>
-                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                          {new Date(loc.updatedAt).toLocaleString('ko-KR')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-              </div>
-              )}
 
               {/* 위치 요청 목록 */}
               {locationRequests.length > 0 && (
