@@ -2293,19 +2293,18 @@ export default function FamilyHub() {
 
     // 모달이 방금 열렸음을 표시하고 로드 시작
     modalOpenedRef.current = true;
-    loadingUsersRef.current = true;
     
-    console.log('모달 열림 - 사용자 목록 로드 시작', { userId, isAuthenticated });
+    console.log('🔓 모달 열림 - 사용자 목록 로드 시작', { userId, isAuthenticated, modalOpened: modalOpenedRef.current });
     
     // 비동기로 로드하여 리렌더링과 완전히 분리
     const loadUsers = async () => {
       try {
-        console.log('loadAllUsers 호출 시작');
-        await loadAllUsers();
-        console.log('loadAllUsers 호출 완료');
+        console.log('📋 loadAllUsers 호출 시작');
+        await loadAllUsers(0); // 명시적으로 retryCount 0 전달
+        console.log('✅ loadAllUsers 호출 완료');
       } catch (err) {
-        console.error('loadAllUsers 호출 중 오류:', err);
-      } finally {
+        console.error('❌ loadAllUsers 호출 중 오류:', err);
+        setLoadingUsers(false);
         loadingUsersRef.current = false;
       }
     };
@@ -2313,7 +2312,7 @@ export default function FamilyHub() {
     // 다음 이벤트 루프에서 실행하여 현재 렌더링 사이클과 분리
     setTimeout(() => {
       loadUsers();
-    }, 0);
+    }, 100); // 약간의 지연을 두어 모달이 완전히 렌더링된 후 로드
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showLocationRequestModal, isAuthenticated, userId]); // loadAllUsers는 useCallback으로 메모이제이션되어 userId, isAuthenticated 변경 시 자동 재생성됨
 
@@ -3415,7 +3414,7 @@ export default function FamilyHub() {
     const retryDelay = 1000; // 1초
 
     try {
-      console.log('사용자 목록 로드 시작 - API 호출:', { userId });
+      console.log('📋 사용자 목록 로드 시작 - API 호출:', { userId, retryCount });
       
       // API를 통해 서버 사이드에서 모든 사용자 조회 (profiles가 비어있으면 auth.users에서 조회)
       const response = await fetch(`/api/users/list?currentUserId=${userId}`, {
@@ -3423,43 +3422,51 @@ export default function FamilyHub() {
         headers: {
           'Content-Type': 'application/json',
         },
+        cache: 'no-store', // 캐시 방지
       });
+
+      console.log('📋 API 응답 상태:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('사용자 목록 API 오류:', response.status, errorData);
+        console.error('❌ 사용자 목록 API 오류:', response.status, errorData);
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('📋 API 응답 데이터:', result);
 
       if (result.success && result.data) {
-        console.log('사용자 목록 로드 성공:', result.data.length, '명', result.data);
+        console.log('✅ 사용자 목록 로드 성공:', result.data.length, '명', result.data);
         setAllUsers(result.data);
         
         if (result.data.length === 0) {
           console.warn('⚠️ 사용자 목록이 비어있습니다. auth.users에 다른 사용자가 있는지 확인하세요.');
         }
       } else {
-        console.warn('사용자 목록 로드 실패:', result);
+        console.warn('⚠️ 사용자 목록 로드 실패 - 응답 형식 오류:', result);
         setAllUsers([]);
       }
     } catch (error: any) {
+      console.error('❌ 사용자 목록 로드 오류:', error?.message || error, { retryCount, maxRetries });
+      
       // 네트워크 오류인 경우 재시도
       if (retryCount < maxRetries && (error?.message?.includes('fetch') || error?.message?.includes('network') || error?.name === 'TypeError')) {
-        console.warn(`사용자 목록 로드 재시도 (${retryCount + 1}/${maxRetries}):`, error?.message || error);
+        console.warn(`🔄 사용자 목록 로드 재시도 (${retryCount + 1}/${maxRetries}):`, error?.message || error);
         setTimeout(() => {
           loadAllUsers(retryCount + 1);
         }, retryDelay * (retryCount + 1));
         return;
       }
       
-      console.error('사용자 목록 로드 시도 중 오류:', error?.message || error);
+      // 최종 실패 시 빈 배열 설정
+      console.error('❌ 사용자 목록 로드 최종 실패:', error?.message || error);
       setAllUsers([]);
     } finally {
       if (retryCount === 0) {
         setLoadingUsers(false);
         loadingUsersRef.current = false;
+        console.log('📋 사용자 목록 로드 완료 (로딩 상태 해제)');
       }
     }
   }, [userId, isAuthenticated]); // useCallback 의존성 (supabase는 안정적인 싱글톤이므로 제외)
@@ -5891,9 +5898,30 @@ export default function FamilyHub() {
                         textAlign: 'center'
                       }}
                     >
-                      <p style={{ color: '#64748b', margin: 0 }}>
+                      <p style={{ color: '#64748b', margin: 0, marginBottom: '8px' }}>
                         요청할 수 있는 사용자가 없습니다.
                       </p>
+                      <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                        다른 사용자가 가입하면 여기에 표시됩니다.
+                      </p>
+                      <button
+                        onClick={() => {
+                          console.log('사용자 목록 새로고침');
+                          loadAllUsers(0);
+                        }}
+                        style={{
+                          marginTop: '12px',
+                          padding: '6px 12px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        새로고침
+                      </button>
                     </div>
                   )}
                 </div>
