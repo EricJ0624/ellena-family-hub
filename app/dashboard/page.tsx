@@ -4,6 +4,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { 
+  getPushToken, 
+  registerServiceWorker,
+  startBackgroundLocationTracking,
+  stopBackgroundLocationTracking
+} from '@/lib/webpush';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -140,6 +146,17 @@ export default function FamilyHub() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [locationRequests, setLocationRequests] = useState<Array<{
+    id: string;
+    requester_id: string;
+    target_id: string;
+    status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+    created_at: string;
+    requester?: { id: string; email: string; full_name: string | null };
+    target?: { id: string; email: string; full_name: string | null };
+  }>>([]);
+  const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
+  const [selectedUserForRequest, setSelectedUserForRequest] = useState<string | null>(null);
   
   // Realtime subscription 참조 (로그아웃 시 정리용)
   const subscriptionsRef = useRef<{
@@ -155,6 +172,11 @@ export default function FamilyHub() {
   const chatInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const geolocationWatchIdRef = useRef<number | null>(null);
+  const lastLocationUpdateRef = useRef<number>(0);
+  const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -239,6 +261,155 @@ export default function FamilyHub() {
     checkAuth();
   }, [isMounted, router, loadData]);
 
+  // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
+  useEffect(() => {
+    if (!isMounted || !isAuthenticated || !userId) return;
+
+    let pushTokenRegistered = false;
+
+    const initializeWebPush = async () => {
+      try {
+        // Service Worker 등록
+        const registration = await registerServiceWorker();
+        if (!registration) {
+          console.warn('Service Worker 등록 실패 - 백그라운드 기능이 제한될 수 있습니다.');
+          return;
+        }
+
+        // Web Push 토큰 가져오기
+        const token = await getPushToken();
+        if (!token) {
+          console.warn('Web Push 토큰을 가져올 수 없습니다 - 푸시 알림이 작동하지 않을 수 있습니다.');
+          return;
+        }
+
+        // Push 토큰을 Supabase에 등록
+        try {
+          const deviceInfo = {
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            timestamp: new Date().toISOString()
+          };
+
+          const response = await fetch('/api/push/register-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: userId,
+              token: token,
+              deviceInfo: deviceInfo
+            }),
+          });
+
+          if (response.ok) {
+            console.log('Web Push 토큰 등록 성공');
+            pushTokenRegistered = true;
+          } else {
+            console.error('Web Push 토큰 등록 실패:', await response.text());
+          }
+        } catch (error) {
+          console.error('Web Push 토큰 등록 중 오류:', error);
+        }
+
+        // Service Worker에서 위치 업데이트 메시지 수신 처리
+        if (registration) {
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'LOCATION_UPDATE') {
+              const { latitude, longitude, accuracy, timestamp } = event.data.data;
+              console.log('Service Worker에서 위치 업데이트 수신:', { latitude, longitude, accuracy });
+              
+              // 위치 업데이트 (기존 updateLocation 로직 재사용)
+              if (userId) {
+                updateLocationFromServiceWorker(latitude, longitude, accuracy);
+              }
+            }
+          });
+        }
+
+        // 위치 공유가 활성화되어 있으면 백그라운드 위치 추적 시작
+        if (isLocationSharing) {
+          startBackgroundLocationTracking();
+        }
+      } catch (error) {
+        console.error('Web Push 초기화 오류:', error);
+      }
+    };
+
+    initializeWebPush();
+
+    // 정리 함수: 로그아웃 시 Push 토큰 삭제 및 백그라운드 추적 중지
+    return () => {
+      if (pushTokenRegistered && userId) {
+        // 로그아웃 시 토큰 삭제는 handleLogout에서 처리
+        stopBackgroundLocationTracking();
+      }
+    };
+  }, [isMounted, isAuthenticated, userId, isLocationSharing]);
+
+  // Service Worker에서 받은 위치 업데이트 처리 함수
+  const updateLocationFromServiceWorker = async (latitude: number, longitude: number, accuracy: number) => {
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      let currentAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+      // 주소 변환 (쓰로틀링: 최소 30초 간격)
+      const now = Date.now();
+      const lastGeocodeUpdate = sessionStorage.getItem('lastGeocodeUpdate');
+      if (!lastGeocodeUpdate || now - parseInt(lastGeocodeUpdate) > 30000) {
+        try {
+          const geocoder = new (window as any).google.maps.Geocoder();
+          const { results } = await geocoder.geocode({ location: { lat: latitude, lng: longitude } });
+          if (results && results[0]) {
+            currentAddress = results[0].formatted_address;
+            sessionStorage.setItem('lastGeocodeUpdate', now.toString());
+          }
+        } catch (geocodeError) {
+          console.warn('주소 변환 오류:', geocodeError);
+        }
+      } else {
+        currentAddress = state.location.address || currentAddress;
+      }
+
+      setState(prev => ({
+        ...prev,
+        location: {
+          address: currentAddress,
+          latitude: latitude,
+          longitude: longitude,
+          userId: userId,
+          updatedAt: new Date().toISOString()
+        }
+      }));
+
+      // Supabase에 위치 저장
+      try {
+        const { error } = await supabase
+          .from('user_locations')
+          .upsert({
+            user_id: userId,
+            latitude: latitude,
+            longitude: longitude,
+            address: currentAddress,
+            last_updated: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (error) {
+          console.warn('위치 저장 오류:', error);
+        }
+      } catch (dbError: any) {
+        console.warn('위치 저장 시도 중 오류:', dbError);
+      }
+    } catch (error) {
+      console.error('Service Worker 위치 업데이트 처리 오류:', error);
+    }
+  };
+
   // 3. Scroll Chat to Bottom
   useEffect(() => {
     if (chatBoxRef.current) {
@@ -246,72 +417,105 @@ export default function FamilyHub() {
     }
   }, [state.messages, isAuthenticated]);
 
-  // 4. Google Maps 지도 초기화 (선택적 - API 키가 있을 때만)
+  // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
-    if (!googleMapApiKey || !state.location.latitude || !state.location.longitude || mapLoaded) return;
+    if (!googleMapApiKey || !state.location.latitude || !state.location.longitude) return;
 
-    // Google Maps API 스크립트 로드
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (typeof window !== 'undefined' && (window as any).google) {
-        try {
-          const mapElement = document.getElementById('map');
-          if (!mapElement) return;
+    const initializeMap = () => {
+      if (typeof window === 'undefined' || !(window as any).google) return;
 
-          const map = new (window as any).google.maps.Map(mapElement, {
+      try {
+        const mapElement = document.getElementById('map');
+        if (!mapElement) return;
+
+        // 지도가 이미 초기화되어 있으면 업데이트만 수행
+        if (!mapRef.current) {
+          mapRef.current = new (window as any).google.maps.Map(mapElement, {
             center: { lat: state.location.latitude, lng: state.location.longitude },
             zoom: 15,
             mapTypeControl: true,
             streetViewControl: true,
             fullscreenControl: true
           });
-          
-          // 현재 위치 마커
-          new (window as any).google.maps.Marker({
-            position: { lat: state.location.latitude, lng: state.location.longitude },
-            map: map,
-            title: '내 위치',
-            icon: {
-              url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            }
-          });
-
-          // 가족 구성원 위치 마커
-          state.familyLocations.forEach((loc) => {
-            if (loc.latitude && loc.longitude && loc.userId !== userId) {
-              new (window as any).google.maps.Marker({
-                position: { lat: loc.latitude, lng: loc.longitude },
-                map: map,
-                title: loc.userName,
-                icon: {
-                  url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                }
-              });
-            }
-          });
-
           setMapLoaded(true);
-        } catch (error) {
-          console.error('지도 초기화 오류:', error);
+        } else {
+          // 지도 중심 업데이트
+          mapRef.current.setCenter({ lat: state.location.latitude, lng: state.location.longitude });
         }
-      }
-    };
-    script.onerror = () => {
-      console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
-    };
-    document.head.appendChild(script);
 
-    return () => {
-      // 정리
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
+        // 기존 마커 모두 제거
+        markersRef.current.forEach((marker) => {
+          marker.setMap(null);
+        });
+        markersRef.current.clear();
+
+        // 현재 위치 마커 (항상 표시)
+        const myMarker = new (window as any).google.maps.Marker({
+          position: { lat: state.location.latitude, lng: state.location.longitude },
+          map: mapRef.current,
+          title: '내 위치',
+          icon: {
+            url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+          }
+        });
+        markersRef.current.set('my-location', myMarker);
+
+        // 승인된 위치 요청이 있는 사용자들의 위치만 마커로 표시
+        const acceptedRequests = locationRequests.filter(
+          req => req.status === 'accepted' &&
+          ((req.requester_id === userId && req.target_id !== userId) ||
+           (req.target_id === userId && req.requester_id !== userId))
+        );
+
+        // 승인된 사용자들의 위치 마커 추가 (실시간 업데이트)
+        state.familyLocations.forEach((loc) => {
+          if (loc.latitude && loc.longitude && loc.userId !== userId) {
+            // 해당 사용자와의 승인된 요청이 있는지 확인
+            const hasAcceptedRequest = acceptedRequests.some(
+              req => (req.requester_id === userId && req.target_id === loc.userId) ||
+                     (req.requester_id === loc.userId && req.target_id === userId)
+            );
+
+            if (hasAcceptedRequest) {
+              // 기존 마커가 있으면 위치만 업데이트, 없으면 새로 생성
+              const existingMarker = markersRef.current.get(loc.userId);
+              if (existingMarker) {
+                existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
+              } else {
+                const marker = new (window as any).google.maps.Marker({
+                  position: { lat: loc.latitude, lng: loc.longitude },
+                  map: mapRef.current,
+                  title: `${loc.userName}의 위치`,
+                  icon: {
+                    url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                  }
+                });
+                markersRef.current.set(loc.userId, marker);
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('지도 초기화 오류:', error);
       }
     };
-  }, [state.location.latitude, state.location.longitude, state.familyLocations, mapLoaded, userId]);
+
+    // Google Maps API 스크립트 로드
+    if (!(window as any).google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeMap;
+      script.onerror = () => {
+        console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
+      };
+      document.head.appendChild(script);
+    } else {
+      initializeMap();
+    }
+  }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded]);
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
@@ -507,36 +711,30 @@ export default function FamilyHub() {
           const formattedMessages: Message[] = messagesData.map((msg: any) => {
             const createdAt = new Date(msg.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            // 암호화된 메시지 복호화
+            // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
             let decryptedText = msg.message_text || '';
             if (currentKey && msg.message_text) {
-              try {
-                const decrypted = CryptoService.decrypt(msg.message_text, currentKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                } else {
-                  // 복호화 실패 또는 잘못된 형식 - 원본 텍스트 사용 (암호화된 상태일 수 있음)
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn('메시지 복호화 실패 또는 빈 결과:', msg.message_text.substring(0, 30));
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = msg.message_text.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(msg.message_text, currentKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedText = decrypted;
+                  } else {
+                    // 복호화 실패 - 원본 텍스트 사용
+                    decryptedText = msg.message_text;
                   }
+                } catch (e: any) {
+                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = msg.message_text;
                 }
-              } catch (e: any) {
-                // 복호화 오류 (Malformed UTF-8 data 등) - 원본 텍스트 사용
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('메시지 복호화 오류:', e.message || e, {
-                    original: msg.message_text.substring(0, 30),
-                    keyLength: currentKey.length,
-                    errorType: e.name || 'Unknown'
-                  });
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
                 decryptedText = msg.message_text;
               }
             } else {
               // masterKey가 없으면 원본 텍스트 사용
-              if (process.env.NODE_ENV === 'development' && !currentKey) {
-                console.warn('masterKey가 없어 메시지 복호화 불가');
-              }
               decryptedText = msg.message_text;
             }
             return {
@@ -566,43 +764,29 @@ export default function FamilyHub() {
 
         if (!tasksError && tasksData) {
           const formattedTodos: Todo[] = tasksData.map((task: any) => {
-            // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
+            // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
             const taskText = task.title || task.task_text || '';
             let decryptedText = taskText;
             if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
-              try {
-                const decrypted = CryptoService.decrypt(taskText, currentKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('할일 복호화 성공:', decrypted.substring(0, 20));
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = taskText.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(taskText, currentKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedText = decrypted;
+                  } else {
+                    decryptedText = taskText;
                   }
-                } else {
-                  // 복호화 실패 또는 잘못된 형식
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn('할일 복호화 실패:', {
-                      original: taskText.substring(0, 30),
-                      decrypted: decrypted,
-                      keyLength: currentKey.length
-                    });
-                  }
+                } catch (e: any) {
+                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = taskText;
                 }
-              } catch (e: any) {
-                // 복호화 오류
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('할일 복호화 오류:', e.message || e, {
-                    original: taskText.substring(0, 30),
-                    keyLength: currentKey.length
-                  });
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
                 decryptedText = taskText;
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
-              if (process.env.NODE_ENV === 'development' && !currentKey) {
-                console.warn('masterKey가 없어 할일 복호화 불가');
-              }
               decryptedText = taskText;
             }
             // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
@@ -663,78 +847,45 @@ export default function FamilyHub() {
             let decryptedTitle = eventTitleField;
             let decryptedDesc = eventDescField;
             if (currentKey && currentKey.length > 0) {
-              // 제목 복호화
+              // 제목 복호화 (암호화된 형식인 경우에만)
               if (eventTitleField && eventTitleField.length > 0) {
-                try {
-                  const decryptedTitleData = CryptoService.decrypt(eventTitleField, currentKey);
-                  if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
-                    decryptedTitle = decryptedTitleData;
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log('일정 제목 복호화 성공:', decryptedTitle.substring(0, 20));
+                const isEncrypted = eventTitleField.startsWith('U2FsdGVkX1');
+                if (isEncrypted) {
+                  try {
+                    const decryptedTitleData = CryptoService.decrypt(eventTitleField, currentKey);
+                    if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
+                      decryptedTitle = decryptedTitleData;
+                    } else {
+                      decryptedTitle = eventTitleField;
                     }
-                  } else {
-                    // 복호화 실패 - 원본 텍스트 사용
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn('일정 제목 복호화 실패:', {
-                        original: eventTitleField.substring(0, 30),
-                        decrypted: decryptedTitleData,
-                        keyLength: currentKey.length
-                      });
-                    }
+                  } catch (e: any) {
                     decryptedTitle = eventTitleField;
                   }
-                } catch (e: any) {
-                  // 복호화 오류 (Malformed UTF-8 data 등) - 원본 텍스트 사용
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('일정 제목 복호화 오류:', e.message || e, {
-                      original: eventTitleField.substring(0, 30),
-                      keyLength: currentKey.length,
-                      errorType: e.name || 'Unknown'
-                    });
-                  }
+                } else {
+                  // 이미 평문이면 그대로 사용
                   decryptedTitle = eventTitleField;
                 }
               }
-              // 설명 복호화
+              // 설명 복호화 (암호화된 형식인 경우에만)
               if (eventDescField && eventDescField.length > 0) {
-                try {
-                  const decryptedDescData = CryptoService.decrypt(eventDescField, currentKey);
-                  if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
-                    decryptedDesc = decryptedDescData;
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log('일정 설명 복호화 성공:', decryptedDesc.substring(0, 20));
+                const isEncrypted = eventDescField.startsWith('U2FsdGVkX1');
+                if (isEncrypted) {
+                  try {
+                    const decryptedDescData = CryptoService.decrypt(eventDescField, currentKey);
+                    if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
+                      decryptedDesc = decryptedDescData;
+                    } else {
+                      decryptedDesc = eventDescField;
                     }
-                  } else {
-                    // 복호화 실패 - 원본 텍스트 사용
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn('일정 설명 복호화 실패:', {
-                        original: eventDescField.substring(0, 30),
-                        decrypted: decryptedDescData,
-                        keyLength: currentKey.length
-                      });
-                    }
+                  } catch (e: any) {
                     decryptedDesc = eventDescField;
                   }
-                } catch (e: any) {
-                  // 복호화 오류 (Malformed UTF-8 data 등) - 원본 텍스트 사용
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('일정 설명 복호화 오류:', e.message || e, {
-                      original: eventDescField.substring(0, 30),
-                      keyLength: currentKey.length,
-                      errorType: e.name || 'Unknown'
-                    });
-                  }
+                } else {
+                  // 이미 평문이면 그대로 사용
                   decryptedDesc = eventDescField;
                 }
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('일정 복호화 불가 - 키 없음:', {
-                  hasKey: !!currentKey,
-                  keyLength: currentKey?.length || 0
-                });
-              }
               decryptedTitle = eventTitleField;
               decryptedDesc = eventDescField;
             }
@@ -970,30 +1121,25 @@ export default function FamilyHub() {
             let decryptedText = newMessage.message_text || '';
             const messageKey = getCurrentKey();
             if (messageKey && newMessage.message_text) {
-              try {
-                const decrypted = CryptoService.decrypt(newMessage.message_text, messageKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                } else {
-                  // 복호화 실패 또는 잘못된 형식
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn('Realtime 메시지 복호화 실패:', newMessage.message_text.substring(0, 30));
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = newMessage.message_text.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(newMessage.message_text, messageKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedText = decrypted;
+                  } else {
+                    decryptedText = newMessage.message_text;
                   }
+                } catch (e: any) {
+                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = newMessage.message_text;
                 }
-              } catch (e: any) {
-                // 복호화 오류 (Malformed UTF-8 data 등)
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('Realtime 메시지 복호화 오류:', e.message || e, {
-                    original: newMessage.message_text.substring(0, 30),
-                    keyLength: currentKey.length,
-                    errorType: e.name || 'Unknown'
-                  });
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
                 decryptedText = newMessage.message_text;
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
               decryptedText = newMessage.message_text;
             }
             
@@ -1065,20 +1211,25 @@ export default function FamilyHub() {
             const createdAt = new Date(updatedMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
             
-            // 암호화된 메시지 복호화
+            // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
             let decryptedText = updatedMessage.message_text || '';
             if (currentKey && updatedMessage.message_text) {
-              try {
-                const decrypted = CryptoService.decrypt(updatedMessage.message_text, currentKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                } else {
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = updatedMessage.message_text.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(updatedMessage.message_text, currentKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedText = decrypted;
+                  } else {
+                    decryptedText = updatedMessage.message_text;
+                  }
+                } catch (e: any) {
+                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = updatedMessage.message_text;
                 }
-              } catch (e: any) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('Realtime 메시지 업데이트 복호화 오류:', e.message || e);
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
                 decryptedText = updatedMessage.message_text;
               }
             }
@@ -1136,41 +1287,30 @@ export default function FamilyHub() {
             
             // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
             // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-            // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
+            // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
             const taskText = newTask.title || newTask.task_text || '';
             let decryptedText = taskText;
             const taskKey = getCurrentKey();
             if (taskKey && taskKey.length > 0 && taskText && taskText.length > 0) {
-              try {
-                const decrypted = CryptoService.decrypt(taskText, taskKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('Realtime 할일 복호화 성공:', decrypted.substring(0, 20));
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = taskText.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(taskText, taskKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedText = decrypted;
+                  } else {
+                    decryptedText = taskText;
                   }
-                } else {
-                  // 복호화 실패 또는 잘못된 형식
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn('Realtime 할일 복호화 실패:', {
-                      original: taskText.substring(0, 30),
-                      decrypted: decrypted,
-                      keyLength: currentKey.length
-                    });
-                  }
+                } catch (e: any) {
+                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = taskText;
                 }
-              } catch (e: any) {
-                // 복호화 오류
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('Realtime 할일 복호화 오류:', e.message || e, {
-                    original: taskText.substring(0, 30),
-                    keyLength: currentKey.length
-                  });
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
                 decryptedText = taskText;
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
               decryptedText = taskText;
             }
             
@@ -1190,19 +1330,23 @@ export default function FamilyHub() {
               }
             }
             
-            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
+            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (암호화된 형식인 경우에만)
             // 하지만 텍스트에서 추출한 assignee가 우선
             if (decryptedAssignee === '누구나' && newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to !== '누구나' && !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-              try {
-                const decrypted = CryptoService.decrypt(newTask.assigned_to, taskKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedAssignee = decrypted;
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = newTask.assigned_to.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(newTask.assigned_to, taskKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedAssignee = decrypted;
+                  }
+                } catch (e) {
+                  // 복호화 실패 - 기본값 사용 (조용히 처리)
                 }
-              } catch (e) {
-                // 복호화 실패 시 기본값 사용
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('Realtime 담당자 복호화 실패:', e);
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
+                decryptedAssignee = newTask.assigned_to;
               }
             }
             
@@ -1271,59 +1415,52 @@ export default function FamilyHub() {
             
             // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
             // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-            // 암호화된 텍스트 복호화 (task_text 대신 title 사용)
+            // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
             const taskText = updatedTask.title || updatedTask.task_text || '';
             let decryptedText = taskText;
             const updateTaskKey = getCurrentKey();
             if (updateTaskKey && updateTaskKey.length > 0 && taskText && taskText.length > 0) {
-              try {
-                const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedText = decrypted;
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('Realtime 할일 업데이트 복호화 성공:', decrypted.substring(0, 20));
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = taskText.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedText = decrypted;
+                  } else {
+                    decryptedText = taskText;
                   }
-                } else {
-                  // 복호화 실패 또는 잘못된 형식
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn('Realtime 할일 업데이트 복호화 실패:', {
-                      original: taskText.substring(0, 30),
-                      decrypted: decrypted,
-                      keyLength: currentKey.length
-                    });
-                  }
+                } catch (e: any) {
+                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = taskText;
                 }
-              } catch (e: any) {
-                // 복호화 오류
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('Realtime 할일 업데이트 복호화 오류:', e.message || e, {
-                    original: taskText.substring(0, 30),
-                    keyLength: currentKey.length
-                  });
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
                 decryptedText = taskText;
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
               decryptedText = taskText;
             }
             
             // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
             // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
             let decryptedAssignee = '누구나';
-            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
+            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (암호화된 형식인 경우에만)
             if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to !== '누구나' && !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-              try {
-                const decrypted = CryptoService.decrypt(updatedTask.assigned_to, updateTaskKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedAssignee = decrypted;
+              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
+              const isEncrypted = updatedTask.assigned_to.startsWith('U2FsdGVkX1');
+              if (isEncrypted) {
+                try {
+                  const decrypted = CryptoService.decrypt(updatedTask.assigned_to, updateTaskKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                    decryptedAssignee = decrypted;
+                  }
+                } catch (e) {
+                  // 복호화 실패 - 기본값 사용 (조용히 처리)
                 }
-              } catch (e) {
-                // 복호화 실패 시 기본값 사용
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('Realtime 담당자 업데이트 복호화 실패:', e);
-                }
+              } else {
+                // 이미 평문이면 그대로 사용
+                decryptedAssignee = updatedTask.assigned_to;
               }
             }
             
@@ -1429,77 +1566,45 @@ export default function FamilyHub() {
             let decryptedDesc = newEventDescField;
             const eventKey = getCurrentKey();
             if (eventKey && eventKey.length > 0) {
-              // 제목 복호화
+              // 제목 복호화 (암호화된 형식인 경우에만)
               if (newEventTitleField && newEventTitleField.length > 0) {
-                try {
-                  const decryptedTitleData = CryptoService.decrypt(newEventTitleField, eventKey);
-                  if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
-                    decryptedTitle = decryptedTitleData;
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log('Realtime 일정 제목 복호화 성공:', decryptedTitle.substring(0, 20));
+                const isEncrypted = newEventTitleField.startsWith('U2FsdGVkX1');
+                if (isEncrypted) {
+                  try {
+                    const decryptedTitleData = CryptoService.decrypt(newEventTitleField, eventKey);
+                    if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
+                      decryptedTitle = decryptedTitleData;
+                    } else {
+                      decryptedTitle = newEventTitleField;
                     }
-                  } else {
-                    // 복호화 실패
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn('Realtime 일정 제목 복호화 실패:', {
-                        original: newEventTitleField.substring(0, 30),
-                        decrypted: decryptedTitleData,
-                        keyLength: currentKey.length
-                      });
-                    }
+                  } catch (e: any) {
                     decryptedTitle = newEventTitleField;
                   }
-                } catch (e: any) {
-                  // 복호화 오류 (Malformed UTF-8 data 등)
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('Realtime 일정 제목 복호화 오류:', e.message || e, {
-                      original: newEventTitleField.substring(0, 30),
-                      keyLength: currentKey.length,
-                      errorType: e.name || 'Unknown'
-                    });
-                  }
+                } else {
+                  // 이미 평문이면 그대로 사용
                   decryptedTitle = newEventTitleField;
                 }
               }
-              // 설명 복호화
+              // 설명 복호화 (암호화된 형식인 경우에만)
               if (newEventDescField && newEventDescField.length > 0) {
-                try {
-                  const decryptedDescData = CryptoService.decrypt(newEventDescField, eventKey);
-                  if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
-                    decryptedDesc = decryptedDescData;
-                    if (process.env.NODE_ENV === 'development') {
-                      console.log('Realtime 일정 설명 복호화 성공:', decryptedDesc.substring(0, 20));
+                const isEncrypted = newEventDescField.startsWith('U2FsdGVkX1');
+                if (isEncrypted) {
+                  try {
+                    const decryptedDescData = CryptoService.decrypt(newEventDescField, eventKey);
+                    if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
+                      decryptedDesc = decryptedDescData;
+                    } else {
+                      decryptedDesc = newEventDescField;
                     }
-                  } else {
-                    // 복호화 실패
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn('Realtime 일정 설명 복호화 실패:', {
-                        original: newEventDescField.substring(0, 30),
-                        decrypted: decryptedDescData,
-                        keyLength: currentKey.length
-                      });
-                    }
+                  } catch (e: any) {
                     decryptedDesc = newEventDescField;
                   }
-    } catch (e) {
-                  // 복호화 오류
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('Realtime 일정 설명 복호화 오류:', e, {
-                      original: newEventDescField.substring(0, 30),
-                      keyLength: currentKey.length
-                    });
-                  }
+                } else {
+                  // 이미 평문이면 그대로 사용
                   decryptedDesc = newEventDescField;
                 }
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('Realtime 일정 복호화 불가 - 키 없음:', {
-                  hasKey: !!currentKey,
-                  keyLength: currentKey?.length || 0
-                });
-              }
               decryptedTitle = newEventTitleField;
               decryptedDesc = newEventDescField;
             }
@@ -1589,54 +1694,45 @@ export default function FamilyHub() {
             let decryptedDesc = updatedEventDescField;
             const updateEventKey = getCurrentKey();
             if (updateEventKey) {
-              // 제목 복호화
+              // 제목 복호화 (암호화된 형식인 경우에만)
               if (updatedEventTitleField) {
-                try {
-                  const decryptedTitleData = CryptoService.decrypt(updatedEventTitleField, updateEventKey);
-                  if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
-                    decryptedTitle = decryptedTitleData;
-                  } else {
-                    // 복호화 실패
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn('Realtime 일정 업데이트 제목 복호화 실패:', updatedEventTitleField.substring(0, 30));
+                const isEncrypted = updatedEventTitleField.startsWith('U2FsdGVkX1');
+                if (isEncrypted) {
+                  try {
+                    const decryptedTitleData = CryptoService.decrypt(updatedEventTitleField, updateEventKey);
+                    if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
+                      decryptedTitle = decryptedTitleData;
+                    } else {
+                      decryptedTitle = updatedEventTitleField;
                     }
+                  } catch (e: any) {
                     decryptedTitle = updatedEventTitleField;
                   }
-                } catch (e: any) {
-                  // 복호화 오류 (Malformed UTF-8 data 등)
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('Realtime 일정 업데이트 제목 복호화 오류:', e.message || e, {
-                      original: updatedEventTitleField.substring(0, 30),
-                      keyLength: currentKey.length,
-                      errorType: e.name || 'Unknown'
-                    });
-                  }
+                } else {
+                  // 이미 평문이면 그대로 사용
                   decryptedTitle = updatedEventTitleField;
                 }
               }
-              // 설명 복호화
+              // 설명 복호화 (암호화된 형식인 경우에만)
               if (updatedEventDescField) {
-                try {
-                  const decryptedDescData = CryptoService.decrypt(updatedEventDescField, updateEventKey);
-                  if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
-                    decryptedDesc = decryptedDescData;
-                  } else {
-                    // 복호화 실패
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn('Realtime 일정 업데이트 설명 복호화 실패:', updatedEventDescField.substring(0, 30));
+                const isEncrypted = updatedEventDescField.startsWith('U2FsdGVkX1');
+                if (isEncrypted) {
+                  try {
+                    const decryptedDescData = CryptoService.decrypt(updatedEventDescField, updateEventKey);
+                    if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
+                      decryptedDesc = decryptedDescData;
+                    } else {
+                      decryptedDesc = updatedEventDescField;
                     }
+                  } catch (e: any) {
                     decryptedDesc = updatedEventDescField;
                   }
-                } catch (e) {
-                  // 복호화 오류
-                  if (process.env.NODE_ENV === 'development') {
-                    console.error('Realtime 일정 업데이트 설명 복호화 오류:', e);
-                  }
+                } else {
+                  // 이미 평문이면 그대로 사용
                   decryptedDesc = updatedEventDescField;
                 }
               }
             } else {
-              // masterKey가 없으면 원본 텍스트 사용
               decryptedTitle = updatedEventTitleField;
               decryptedDesc = updatedEventDescField;
             }
@@ -1854,22 +1950,20 @@ export default function FamilyHub() {
         });
       
       console.log('📍 위치 subscription 설정 중...');
-      // 위치 구독 (family_locations)
+      // 위치 구독 (user_locations)
       const locationsSubscription = supabase
-        .channel('family_locations_changes')
+        .channel('user_locations_changes')
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'family_locations' },
+          { event: 'INSERT', schema: 'public', table: 'user_locations' },
           (payload: any) => {
             console.log('Realtime 위치 INSERT 이벤트 수신:', payload);
-            const newLocation = payload.new;
             loadFamilyLocations(); // 위치 목록 다시 로드
           }
         )
         .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'family_locations' },
+          { event: 'UPDATE', schema: 'public', table: 'user_locations' },
           (payload: any) => {
             console.log('Realtime 위치 UPDATE 이벤트 수신:', payload);
-            const updatedLocation = payload.new;
             loadFamilyLocations(); // 위치 목록 다시 로드
           }
         )
@@ -1878,6 +1972,43 @@ export default function FamilyHub() {
           if (err) console.error('❌ Realtime 위치 subscription 오류:', err);
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 위치 subscription 연결 성공');
+          }
+        });
+
+      console.log('📍 위치 요청 subscription 설정 중...');
+      // 위치 요청 구독 (location_requests)
+      const locationRequestsSubscription = supabase
+        .channel('location_requests_changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'location_requests' },
+          (payload: any) => {
+            console.log('Realtime 위치 요청 INSERT 이벤트 수신:', payload);
+            loadLocationRequests(); // 위치 요청 목록 다시 로드
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'location_requests' },
+          (payload: any) => {
+            console.log('Realtime 위치 요청 UPDATE 이벤트 수신:', payload);
+            loadLocationRequests(); // 위치 요청 목록 다시 로드
+            loadFamilyLocations(); // 승인 시 위치 목록도 다시 로드
+            // 지도 마커 업데이트를 위해 상태 변경 트리거
+            setState(prev => ({ ...prev }));
+          }
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'location_requests' },
+          (payload: any) => {
+            console.log('Realtime 위치 요청 DELETE 이벤트 수신:', payload);
+            loadLocationRequests(); // 위치 요청 목록 다시 로드
+            loadFamilyLocations(); // 위치 목록도 다시 로드
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('📍 Realtime 위치 요청 subscription 상태:', status);
+          if (err) console.error('❌ Realtime 위치 요청 subscription 오류:', err);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime 위치 요청 subscription 연결 성공');
           }
         });
       
@@ -1893,6 +2024,7 @@ export default function FamilyHub() {
         setupRealtimeSubscriptions();
         // 위치 데이터 로드
         loadFamilyLocations();
+        loadLocationRequests(); // 위치 요청 목록 로드
       }).catch((error) => {
         console.error('❌ Supabase 데이터 로드 실패:', error);
         // 데이터 로드 실패해도 Realtime 구독은 설정
@@ -1973,6 +2105,34 @@ export default function FamilyHub() {
       }
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId]); // familyId 변경 시 데이터 재로드
+
+  // 6. 위치 요청 만료 체크 (1분마다 실행)
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+
+    const checkExpiredRequests = () => {
+      const now = new Date();
+      locationRequests.forEach((req) => {
+        const expiresAt = new Date(req.expires_at);
+        // 만료된 accepted 요청은 자동으로 종료
+        if (expiresAt < now && req.status === 'accepted') {
+          endLocationSharing(req.id).catch(() => {});
+        }
+      });
+      // 위치 요청 목록 다시 로드하여 만료된 항목 제거
+      loadLocationRequests();
+    };
+
+    // 즉시 한 번 실행
+    checkExpiredRequests();
+
+    // 1분마다 체크
+    const interval = setInterval(checkExpiredRequests, 60000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isAuthenticated, userId, locationRequests]);
 
   // --- [LOGIC] 원본 Store.dispatch 로직 이식 ---
 
@@ -2587,7 +2747,85 @@ export default function FamilyHub() {
     }
   };
 
-  // 위치 공유 기능
+  // 좌표를 주소로 변환 (Reverse Geocoding)
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      // Google Maps Geocoding API 사용 (API 키가 있는 경우)
+      const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+      if (googleMapApiKey) {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}&language=ko`
+        );
+        const data = await response.json();
+        
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          return data.results[0].formatted_address;
+        }
+      }
+    } catch (error) {
+      console.warn('주소 변환 실패:', error);
+    }
+    
+    // 주소 변환 실패 시 좌표 반환
+    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+  };
+
+  // 위치를 Supabase에 저장 (쓰로틀링 적용: 최소 5초 간격)
+  const saveLocationToSupabase = async (latitude: number, longitude: number, address: string) => {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastLocationUpdateRef.current;
+    
+    // 최소 5초 간격으로만 저장 (성능 최적화)
+    if (timeSinceLastUpdate < 5000) {
+      return;
+    }
+
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_locations')
+        .upsert({
+          user_id: userId,
+          latitude: latitude,
+          longitude: longitude,
+          address: address,
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.warn('위치 저장 오류:', error);
+        // RLS 정책 오류일 수 있으므로 에러는 무시하고 로컬에만 저장
+      } else {
+        lastLocationUpdateRef.current = now;
+        console.log('위치 저장 성공');
+      }
+    } catch (dbError: any) {
+      console.warn('위치 저장 시도 중 오류:', dbError);
+    }
+  };
+
+  // 위치 추적 중지
+  const stopLocationTracking = () => {
+    if (geolocationWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(geolocationWatchIdRef.current);
+      geolocationWatchIdRef.current = null;
+    }
+    
+    if (locationUpdateIntervalRef.current) {
+      clearInterval(locationUpdateIntervalRef.current);
+      locationUpdateIntervalRef.current = null;
+    }
+    
+    setIsLocationSharing(false);
+    
+    // 백그라운드 위치 추적 중지
+    stopBackgroundLocationTracking();
+  };
+
+  // 위치 공유 기능 (스트림 방식 - watchPosition 사용)
   const updateLocation = async () => {
     if (!userId || !isAuthenticated) {
       alert('로그인이 필요합니다.');
@@ -2599,20 +2837,38 @@ export default function FamilyHub() {
       return;
     }
 
+    // 이미 추적 중이면 중지
+    if (geolocationWatchIdRef.current !== null) {
+      stopLocationTracking();
+      alert('위치 추적이 중지되었습니다.');
+      return;
+    }
+
     setIsLocationSharing(true);
+    
+    // 백그라운드 위치 추적 시작
+    startBackgroundLocationTracking();
 
     try {
-      // Geolocation API로 현재 위치 가져오기 (재시도 로직 포함)
-      let position: GeolocationPosition | null = null;
+      // 권한 확인
+      const permissionResult = await navigator.permissions?.query({ name: 'geolocation' }).catch(() => null);
+      if (permissionResult?.state === 'denied') {
+        alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+        setIsLocationSharing(false);
+        return;
+      }
+
+      // 초기 위치 가져오기 (즉시 표시를 위해)
+      let initialPosition: GeolocationPosition | null = null;
       let lastError: any = null;
       
       // 최대 2번 재시도
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          initialPosition = await new Promise<GeolocationPosition>((resolve, reject) => {
             const timeoutId = setTimeout(() => {
               reject(new Error('TIMEOUT'));
-            }, 20000); // 타임아웃을 20초로 증가
+            }, 20000);
 
             navigator.geolocation.getCurrentPosition(
               (pos) => {
@@ -2625,37 +2881,29 @@ export default function FamilyHub() {
               },
               {
                 enableHighAccuracy: true,
-                timeout: 20000, // 타임아웃을 20초로 증가
-                maximumAge: 60000 // 1분 이내 캐시된 위치 허용
+                timeout: 20000,
+                maximumAge: 60000
               }
             );
           });
-          
-          // 성공하면 루프 종료
           break;
         } catch (error: any) {
           lastError = error;
-          // 타임아웃이 아니거나 마지막 시도면 에러 처리
           if (error.message !== 'TIMEOUT' || attempt === 1) {
             throw error;
           }
-          // 타임아웃이면 1초 대기 후 재시도
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
-      if (!position) {
+      if (!initialPosition) {
         throw lastError || new Error('위치를 가져올 수 없습니다.');
       }
 
-      const { latitude, longitude } = position.coords;
+      // 초기 위치 처리
+      const { latitude, longitude } = initialPosition.coords;
+      const address = await reverseGeocode(latitude, longitude);
 
-      // 좌표를 주소로 변환 (Reverse Geocoding)
-      // Naver Maps API를 사용하거나, 간단하게 좌표만 저장
-      // 여기서는 좌표만 저장하고, 지도에서 표시
-      const address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-
-      // 현재 위치 업데이트
       setState(prev => ({
         ...prev,
         location: {
@@ -2667,90 +2915,190 @@ export default function FamilyHub() {
         }
       }));
 
-      // Supabase에 위치 저장 (테이블이 없어도 에러 없이 처리)
-      try {
-        const { error } = await supabase
-          .from('family_locations')
-          .upsert({
-            user_id: userId,
-            latitude: latitude,
-            longitude: longitude,
-            address: address,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
-          });
-
-        if (error) {
-          console.warn('위치 저장 오류 (테이블이 없을 수 있음):', error);
-          // Supabase 테이블이 없을 수 있으므로 에러는 무시하고 로컬에만 저장
-        } else {
-          console.log('위치 저장 성공');
-        }
-      } catch (dbError: any) {
-        console.warn('위치 저장 시도 중 오류 (테이블이 없을 수 있음):', dbError);
-        // 테이블이 없어도 앱은 정상 작동
-      }
-
-      // 가족 구성원 위치 목록 업데이트
+      // 초기 위치 저장
+      await saveLocationToSupabase(latitude, longitude, address);
       await loadFamilyLocations();
 
+      // 스트림 방식 위치 추적 시작 (watchPosition)
+      const watchOptions: PositionOptions = {
+        enableHighAccuracy: true,
+        timeout: 30000, // 30초 타임아웃
+        maximumAge: 10000 // 10초 이내 캐시된 위치 허용
+      };
+
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude, accuracy } = position.coords;
+            
+            // 정확도가 너무 낮으면 무시 (100미터 이상 오차)
+            if (accuracy > 100) {
+              console.warn('위치 정확도가 낮아 업데이트를 건너뜁니다:', accuracy);
+              return;
+            }
+
+            // 주소 변환 (쓰로틀링: 30초마다 한 번만)
+            const now = Date.now();
+            let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            
+            if (now - lastLocationUpdateRef.current > 30000) {
+              try {
+                address = await reverseGeocode(latitude, longitude);
+              } catch (geocodeError) {
+                console.warn('주소 변환 실패, 좌표 사용:', geocodeError);
+              }
+            } else {
+              // 주소 변환을 건너뛰면 기존 주소 유지
+              address = state.location.address || address;
+            }
+
+            // 상태 업데이트
+            setState(prev => ({
+              ...prev,
+              location: {
+                address: address,
+                latitude: latitude,
+                longitude: longitude,
+                userId: userId,
+                updatedAt: new Date().toISOString()
+              }
+            }));
+
+            // Supabase에 저장 (쓰로틀링 적용)
+            await saveLocationToSupabase(latitude, longitude, address);
+
+            // 가족 구성원 위치 목록 업데이트 (30초마다)
+            if (now - lastLocationUpdateRef.current > 30000) {
+              await loadFamilyLocations();
+            }
+
+          } catch (updateError: any) {
+            console.error('위치 업데이트 처리 오류:', updateError);
+            // 위치 업데이트 실패해도 추적은 계속
+          }
+        },
+        (error) => {
+          // 에러 핸들링
+          console.error('위치 추적 오류:', error);
+          
+          let errorMessage = '위치 추적 중 오류가 발생했습니다.';
+          let shouldStop = false;
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
+              shouldStop = true;
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = '위치 정보를 사용할 수 없습니다. GPS가 켜져 있는지 확인해주세요.';
+              shouldStop = false; // 일시적 오류일 수 있으므로 계속 시도
+              break;
+            case error.TIMEOUT:
+              errorMessage = '위치 요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.';
+              shouldStop = false; // 타임아웃은 일시적일 수 있으므로 계속 시도
+              break;
+            default:
+              errorMessage = '알 수 없는 위치 오류가 발생했습니다.';
+              shouldStop = false;
+          }
+
+          if (shouldStop) {
+            alert(errorMessage);
+            stopLocationTracking();
+          } else {
+            // 일시적 오류는 콘솔에만 기록하고 계속 시도
+            console.warn('위치 추적 일시적 오류 (계속 시도):', errorMessage);
+          }
+        },
+        watchOptions
+      );
+
+      geolocationWatchIdRef.current = watchId;
+
+      // 주기적으로 가족 구성원 위치 업데이트 (30초마다)
+      locationUpdateIntervalRef.current = setInterval(async () => {
+        await loadFamilyLocations();
+      }, 30000);
+
     } catch (error: any) {
-      console.error('위치 가져오기 오류:', error);
+      console.error('위치 추적 시작 오류:', error);
       
-      // 타임아웃 에러는 조용히 처리 (모바일에서는 자동으로 재시도되므로)
-      if (error.message === 'TIMEOUT' || error.code === 3) {
-        // 타임아웃이지만 사용자에게는 조용히 처리
-        // 실제로는 위치가 가져와졌을 수 있으므로 에러 메시지 표시 안 함
-        console.warn('위치 요청 시간이 초과되었지만 계속 시도 중...');
-        return; // 에러 메시지 없이 종료
-      }
-      
+      let errorMessage = '위치 추적을 시작할 수 없습니다.';
+      let shouldAlert = true;
+
       if (error.code === 1) {
-        alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
       } else if (error.code === 2) {
-        alert('위치를 가져올 수 없습니다. 네트워크 연결을 확인해주세요.');
-      } else {
-        alert('위치를 가져오는 중 오류가 발생했습니다.');
+        errorMessage = '위치를 가져올 수 없습니다. GPS가 켜져 있는지 확인해주세요.';
+      } else if (error.code === 3 || error.message === 'TIMEOUT') {
+        errorMessage = '위치 요청 시간이 초과되었습니다. 네트워크 연결을 확인해주세요.';
+        shouldAlert = false; // 타임아웃은 조용히 처리
+      } else if (error.message) {
+        errorMessage = `위치 오류: ${error.message}`;
       }
-    } finally {
+
+      if (shouldAlert) {
+        alert(errorMessage);
+      } else {
+        console.warn('위치 추적 시작 실패 (조용히 처리):', errorMessage);
+      }
+      
       setIsLocationSharing(false);
     }
   };
 
-  // 가족 구성원 위치 로드 (테이블이 없어도 에러 없이 처리)
+  // 컴포넌트 언마운트 시 위치 추적 정리
+  useEffect(() => {
+    return () => {
+      stopLocationTracking();
+    };
+  }, []);
+
+  // 가족 구성원 위치 로드 (승인된 관계만 표시)
   const loadFamilyLocations = async () => {
     if (!userId || !isAuthenticated) return;
 
     try {
+      // 승인된 위치 요청이 있는 사용자들의 위치만 조회
+      // RLS 정책에 의해 승인된 관계의 위치만 반환됨
       const { data, error } = await supabase
-        .from('family_locations')
+        .from('user_locations')
         .select('*')
-        .order('updated_at', { ascending: false });
+        .order('last_updated', { ascending: false });
 
       if (error) {
-        // 테이블이 없을 수 있으므로 에러는 무시
         if (process.env.NODE_ENV === 'development') {
-          console.warn('위치 로드 오류 (테이블이 없을 수 있음):', error);
+          console.warn('위치 로드 오류:', error);
         }
         return;
       }
 
       if (data && data.length > 0) {
-        // 사용자 이름은 onlineUsers에서 가져오거나 기본값 사용
-        const locations = data.map((loc: any) => {
-          const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
-          const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
-          
-          return {
-            userId: loc.user_id,
-            userName: userName,
-            address: loc.address || `${loc.latitude}, ${loc.longitude}`,
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            updatedAt: loc.updated_at
-          };
-        });
+        // 본인 위치와 승인된 사용자 위치만 표시
+        const locations = data
+          .filter((loc: any) => {
+            // 본인 위치는 항상 표시
+            if (loc.user_id === userId) return true;
+            // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시
+            return locationRequests.some(
+              req => 
+                (req.requester_id === userId && req.target_id === loc.user_id && req.status === 'accepted') ||
+                (req.requester_id === loc.user_id && req.target_id === userId && req.status === 'accepted')
+            );
+          })
+          .map((loc: any) => {
+            const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
+            const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
+            
+            return {
+              userId: loc.user_id,
+              userName: userName,
+              address: loc.address || `${loc.latitude}, ${loc.longitude}`,
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              updatedAt: loc.last_updated
+            };
+          });
 
         setState(prev => ({
           ...prev,
@@ -2758,16 +3106,174 @@ export default function FamilyHub() {
         }));
       }
     } catch (error) {
-      // 테이블이 없을 수 있으므로 에러는 무시
       if (process.env.NODE_ENV === 'development') {
-        console.warn('위치 로드 시도 중 오류 (테이블이 없을 수 있음):', error);
+        console.warn('위치 로드 시도 중 오류:', error);
       }
+    }
+  };
+
+  // 위치 요청 목록 로드 (만료된 요청 자동 정리)
+  const loadLocationRequests = async () => {
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      const response = await fetch(`/api/location-request?userId=${userId}&type=all`);
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const now = new Date();
+        // 만료된 요청 필터링 및 자동 종료
+        const validRequests = result.data.filter((req: any) => {
+          const expiresAt = new Date(req.expires_at);
+          if (expiresAt < now && req.status === 'accepted') {
+            // 만료된 accepted 요청은 자동으로 cancelled로 변경
+            handleLocationRequestAction(req.id, 'cancel').catch(() => {});
+            return false;
+          }
+          return true;
+        });
+        setLocationRequests(validRequests);
+      }
+    } catch (error) {
+      console.error('위치 요청 목록 로드 오류:', error);
+    }
+  };
+
+  // 위치 공유 종료 (accepted 요청 취소)
+  const endLocationSharing = async (requestId: string) => {
+    if (!userId || !isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!confirm('위치 공유를 종료하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/location-approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId,
+          userId,
+          action: 'cancel',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('위치 공유가 종료되었습니다.');
+        await loadLocationRequests();
+        await loadFamilyLocations();
+      } else {
+        alert(result.error || '위치 공유 종료에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('위치 공유 종료 오류:', error);
+      alert('위치 공유 종료 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 위치 요청 보내기
+  const sendLocationRequest = async (targetUserId: string) => {
+    if (!userId || !isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/location-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requesterId: userId,
+          targetId: targetUserId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('위치 요청을 보냈습니다.');
+        await loadLocationRequests();
+        setShowLocationRequestModal(false);
+        setSelectedUserForRequest(null);
+      } else {
+        alert(result.error || '위치 요청 전송에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('위치 요청 전송 오류:', error);
+      alert('위치 요청 전송 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 위치 요청 승인/거부/취소
+  const handleLocationRequestAction = async (requestId: string, action: 'accept' | 'reject' | 'cancel') => {
+    if (!userId || !isAuthenticated) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/location-approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId,
+          userId,
+          action,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        if (action === 'accept') {
+          alert('위치 공유가 승인되었습니다.');
+        } else if (action === 'reject') {
+          alert('위치 요청을 거부했습니다.');
+        } else {
+          alert('위치 요청을 취소했습니다.');
+        }
+        await loadLocationRequests();
+        await loadFamilyLocations(); // 승인된 위치 다시 로드
+      } else {
+        alert(result.error || '요청 처리에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('위치 요청 처리 오류:', error);
+      alert('요청 처리 중 오류가 발생했습니다.');
     }
   };
 
   // Logout Handler
   const handleLogout = async () => {
     if (confirm('로그아웃 하시겠습니까?')) {
+      // Push 토큰 삭제 (백그라운드 알림 방지)
+      if (userId) {
+        try {
+          // 현재 Push 토큰 가져오기
+          const token = await getPushToken();
+          if (token) {
+            await fetch(`/api/push/register-token?userId=${userId}&token=${encodeURIComponent(token)}`, {
+              method: 'DELETE'
+            }).catch(err => console.warn('Push 토큰 삭제 실패:', err));
+          }
+        } catch (error) {
+          console.warn('Push 토큰 삭제 중 오류:', error);
+        }
+      }
+      
+      // 백그라운드 위치 추적 중지
+      stopBackgroundLocationTracking();
       try {
         // Realtime subscription 정리 (컴포넌트 외부 변수 사용)
         if (messagesSubscription) {
@@ -3833,26 +4339,14 @@ export default function FamilyHub() {
       <div className="main-content">
         {/* Header */}
         <header className="app-header">
-          <h1 
-            onClick={handleRename}
-            className="app-title"
-          >
-            <span className="app-title-arch">
-              {state.familyName.split(' ').map((word, idx) => (
-                <span 
-                  key={idx}
-                  className="app-title-word"
-                  style={{ 
-                    display: 'inline-block',
-                    transform: `translateY(${Math.sin((idx / (state.familyName.split(' ').length - 1)) * Math.PI) * -8}px)`
-                  }}
-                >
-                  {word}
-                  {idx < state.familyName.split(' ').length - 1 && <span className="app-title-space"> </span>}
-                </span>
-              ))}
-            </span>
-          </h1>
+          <div className="title-container">
+            <h1 
+              onClick={handleRename}
+              className="app-title"
+            >
+              {state.familyName || 'Ellena Family Hub'}
+            </h1>
+          </div>
           <div className="status-indicator">
             <span className="status-dot">
               <span className="status-dot-ping"></span>
@@ -4489,24 +4983,57 @@ export default function FamilyHub() {
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">실시간 위치 공유</h3>
-              <button
-                onClick={updateLocation}
-                disabled={isLocationSharing}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: isLocationSharing ? '#cbd5e1' : '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: isLocationSharing ? 'not-allowed' : 'pointer',
-                  opacity: isLocationSharing ? 0.6 : 1
-                }}
-              >
-                {isLocationSharing ? '위치 가져오는 중...' : '📍 위치 공유하기'}
-              </button>
-          </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowLocationRequestModal(true)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📍</span>
+                  <span>어디야</span>
+                </button>
+                <button
+                  onClick={updateLocation}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: isLocationSharing ? '#ef4444' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {isLocationSharing ? (
+                    <>
+                      <span>⏹️</span>
+                      <span>위치 추적 중지</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📍</span>
+                      <span>위치 공유 시작</span>
+                    </>
+                  )}
+                </button>
+        </div>
+            </div>
             <div className="section-body">
               {state.location.latitude && state.location.longitude ? (
                 <div>
@@ -4591,10 +5118,10 @@ export default function FamilyHub() {
                       >
                         <div style={{ fontWeight: '500', marginBottom: '4px' }}>
                           {loc.userName}
-              </div>
+          </div>
                         <div style={{ fontSize: '14px', color: '#64748b' }}>
                           {loc.address}
-                        </div>
+        </div>
                         <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
                           {new Date(loc.updatedAt).toLocaleString('ko-KR')}
                         </div>
@@ -4602,9 +5129,300 @@ export default function FamilyHub() {
                     ))}
                   </div>
               </div>
+              )}
+
+              {/* 위치 요청 목록 */}
+              {locationRequests.length > 0 && (
+                <div style={{ marginTop: '20px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
+                    위치 요청
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Pending 요청 */}
+                    {locationRequests
+                      .filter(req => req.status === 'pending')
+                      .map((req) => {
+                        const isRequester = req.requester_id === userId;
+                        const otherUser = isRequester ? req.target : req.requester;
+                        const otherUserName = otherUser?.full_name || otherUser?.email || '알 수 없음';
+                        const expiresAt = new Date(req.expires_at);
+                        const now = new Date();
+                        const timeLeft = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60));
+                        const isExpired = expiresAt < now;
+
+                        return (
+                          <div
+                            key={req.id}
+                            style={{
+                              padding: '12px',
+                              backgroundColor: isExpired ? '#fee2e2' : '#f8fafc',
+                              borderRadius: '8px',
+                              border: `1px solid ${isExpired ? '#fca5a5' : '#e2e8f0'}`,
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                                {isRequester ? `→ ${otherUserName}` : `← ${otherUserName}`}
+          </div>
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                                {isRequester ? '요청 보냄' : '요청 받음'}
+                                {!isExpired && timeLeft > 0 && (
+                                  <span style={{ marginLeft: '8px'}}>
+                                    · {Math.floor(timeLeft / 60)}시간 {timeLeft % 60}분 남음
+                                  </span>
+                                )}
+                                {isExpired && <span style={{ marginLeft: '8px', color: '#ef4444' }}>· 만료됨</span>}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {isRequester ? (
+                <button 
+                                  onClick={() => handleLocationRequestAction(req.id, 'cancel')}
+                                  style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  취소
+                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleLocationRequestAction(req.id, 'accept')}
+                                    disabled={isExpired}
+                                    style={{
+                                      padding: '8px 16px',
+                                      backgroundColor: isExpired ? '#cbd5e1' : '#10b981',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '14px',
+                                      fontWeight: '500',
+                                      cursor: isExpired ? 'not-allowed' : 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      opacity: isExpired ? 0.6 : 1
+                                    }}
+                                  >
+                                    <span>📍</span>
+                                    <span>나 여기</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleLocationRequestAction(req.id, 'reject')}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: '#ef4444',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    거부
+                                  </button>
+                                </>
+                              )}
+              </div>
+                          </div>
+                        );
+                      })}
+                    
+                    {/* Accepted 요청 (활성 위치 공유) */}
+                    {locationRequests
+                      .filter(req => req.status === 'accepted')
+                      .map((req) => {
+                        const isRequester = req.requester_id === userId;
+                        const otherUser = isRequester ? req.target : req.requester;
+                        const otherUserName = otherUser?.full_name || otherUser?.email || '알 수 없음';
+                        const expiresAt = new Date(req.expires_at);
+                        const now = new Date();
+                        const timeLeft = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60));
+                        const isExpired = expiresAt < now;
+
+                        return (
+                          <div
+                            key={req.id}
+                            style={{
+                              padding: '12px',
+                              backgroundColor: isExpired ? '#fee2e2' : '#d1fae5',
+                              borderRadius: '8px',
+                              border: `1px solid ${isExpired ? '#fca5a5' : '#10b981'}`,
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', marginBottom: '4px', color: '#059669' }}>
+                                ✓ {otherUserName}와(과) 위치 공유 중
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                                {!isExpired && timeLeft > 0 ? (
+                                  <span>📍 {Math.floor(timeLeft / 60)}시간 {timeLeft % 60}분 남음</span>
+                                ) : (
+                                  <span style={{ color: '#ef4444' }}>📍 만료됨</span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => endLocationSharing(req.id)}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              종료
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
+              </div>
             )}
           </div>
         </section>
+        
+        {/* 위치 요청 모달 */}
+        {showLocationRequestModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => {
+              setShowLocationRequestModal(false);
+              setSelectedUserForRequest(null);
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                maxWidth: '500px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                위치 공유 요청 보내기
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {onlineUsers
+                  .filter(user => user.id !== userId)
+                  .map((user) => {
+                    const hasAcceptedRequest = locationRequests.some(
+                      req =>
+                        ((req.requester_id === userId && req.target_id === user.id) ||
+                         (req.requester_id === user.id && req.target_id === userId)) &&
+                        req.status === 'accepted'
+                    );
+                    const hasPendingRequest = locationRequests.some(
+                      req =>
+                        ((req.requester_id === userId && req.target_id === user.id) ||
+                         (req.requester_id === user.id && req.target_id === userId)) &&
+                        req.status === 'pending'
+                    );
+
+                    return (
+                      <div
+                        key={user.id}
+                        style={{
+                          padding: '12px',
+                          backgroundColor: hasAcceptedRequest ? '#d1fae5' : '#f8fafc',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: '500' }}>{user.name}</div>
+                          {hasAcceptedRequest && (
+                            <div style={{ fontSize: '12px', color: '#059669' }}>
+                              ✓ 이미 승인됨
+      </div>
+                          )}
+                          {hasPendingRequest && (
+                            <div style={{ fontSize: '12px', color: '#f59e0b' }}>
+                              ⏳ 요청 대기 중
+                            </div>
+                          )}
+                        </div>
+                        {!hasAcceptedRequest && !hasPendingRequest && (
+                          <button
+                            onClick={() => sendLocationRequest(user.id)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            요청 보내기
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              {onlineUsers.filter(user => user.id !== userId).length === 0 && (
+                <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
+                  요청할 수 있는 사용자가 없습니다.
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  setShowLocationRequestModal(false);
+                  setSelectedUserForRequest(null);
+                }}
+                style={{
+                  marginTop: '16px',
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#e2e8f0',
+                  color: '#1e293b',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        )}
       </div>
               </div>
       

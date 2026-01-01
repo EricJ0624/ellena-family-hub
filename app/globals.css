@@ -75,12 +75,17 @@ body {
 
   /* Main Content - Flexbox 컨테?�너 */
 .main-content {
-    width: 100%;
+    width: 100% !important; /* 너비 제한 */
+    max-width: 100% !important;
     display: flex;
     flex-direction: column;
     flex: 1;
     padding: var(--spacing-xl) var(--spacing-md);
     gap: var(--spacing-lg);
+    overflow-x: hidden !important; /* 너비 제한 */
+    overflow-y: auto;
+    min-width: 0;
+    box-sizing: border-box !important; /* 좌우 패딩이 있다면 box-sizing 적용 */
   }
 
   @media (min-width: 768px) {
@@ -98,101 +103,59 @@ body {
   flex-direction: column;
   gap: var(--spacing-sm);
   padding-bottom: var(--spacing-lg);
+  overflow: hidden; /* 타이틀이 넘치지 않도록 */
+  box-sizing: border-box;
 }
 
+/* 타이틀을 감싸는 컨테이너 */
+.title-container {
+  width: 100% !important;
+  max-width: 100% !important; /* 100vw 대신 100% 사용 */
+  overflow: hidden !important;
+  padding: 0 !important; /* 부모의 패딩과 충돌 방지 */
+  box-sizing: border-box !important;
+  display: flex !important;
+  justify-content: center !important; /* 중앙 정렬 */
+  align-items: center !important;
+}
+
+/* 타이틀 텍스트 본체 */
 .app-title {
-  font-size: 2.5rem;
+  white-space: nowrap !important;
+  font-size: min(6.5vw, 38px) !important; /* 7vw에서 6.5vw로 낮춤, 최대값도 40px에서 38px로 조정 */
+  display: block !important; /* inline-block 대신 block */
+  width: 100% !important; /* auto 대신 100% */
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  box-sizing: border-box !important;
   font-weight: 900;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  letter-spacing: -0.02em; /* letter-spacing을 조금 완화 */
+  line-height: 1.2;
   cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  padding: 0.5rem 0;
-  transition: all 0.3s ease;
-}
-
-.app-title-arch {
-  display: inline-block;
-  position: relative;
+  margin: 0;
+  padding: 0.5rem 0.75rem; /* 좌우 패딩을 1rem에서 0.75rem으로 줄여서 공간 확보 */
+  color: #667eea;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   filter: drop-shadow(0 2px 4px rgba(102, 126, 234, 0.3));
   transition: all 0.3s ease;
+  text-align: center !important;
 }
 
-.app-title-word {
-  display: inline-block;
-  position: relative;
-  transition: all 0.3s ease;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* 그라데이션을 지원하지 않는 브라우저를 위한 fallback */
+@supports not (-webkit-background-clip: text) {
+  .app-title {
+    color: #667eea;
+    -webkit-text-fill-color: #667eea;
+  }
 }
 
-.app-title-space {
-  margin: 0 0.15rem;
-}
-
-.app-title:hover .app-title-arch {
+.app-title:hover {
   filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.5));
   transform: scale(1.02);
-}
-
-.app-title:hover .app-title-word {
-  transform: translateY(-2px) !important;
-}
-
-.app-title::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.3) 50%, transparent 100%);
-  border-radius: 2px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.app-title:hover::before {
-  opacity: 1;
-}
-
-.app-title::after {
-  content: '✨';
-  position: absolute;
-  top: -0.5rem;
-  right: -1rem;
-  font-size: 1.2rem;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.5));
-}
-
-.app-title:hover::after {
-  opacity: 0.7;
-  transform: scale(1) rotate(15deg);
-}
-
-@media (min-width: 768px) {
-.app-title {
-    font-size: 3rem;
-  }
-  
-  .app-title::after {
-    font-size: 1.5rem;
-    top: -0.7rem;
-    right: -1.5rem;
-  }
 }
 
 .status-indicator {
@@ -925,31 +888,31 @@ body {
       opacity: 1;
       transform: translateY(0);
     }
-  }
+}
 
-  @keyframes fadeInDown {
-    from {
-      opacity: 0;
-      transform: translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
   }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
 
-  @keyframes shake {
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
     0%, 100% {
       transform: translateX(0);
     }
@@ -959,9 +922,9 @@ body {
     75% {
       transform: translateX(10px);
     }
-  }
+}
 
-  @keyframes spin {
+@keyframes spin {
     to {
       transform: rotate(360deg);
     }

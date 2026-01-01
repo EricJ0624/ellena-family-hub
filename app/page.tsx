@@ -18,16 +18,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+  const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
+
+  // Hydration 오류 방지: 마운트 후에만 클라이언트 사이드 로직 실행
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 이전 이메일 불러오기
   useEffect(() => {
-    if (typeof window !== 'undefined' && mode === 'login') {
+    if (isMounted && mode === 'login') {
       const lastEmail = localStorage.getItem(LAST_EMAIL_KEY);
       if (lastEmail) {
         setEmail(lastEmail);
+        setLastEmailFromStorage(lastEmail);
+      } else {
+        setLastEmailFromStorage(null);
       }
     }
-  }, [mode]);
+  }, [mode, isMounted]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,8 +57,9 @@ export default function LoginPage() {
       
       if (data.user) {
         // 이메일 저장 (다음 로그인 시 자동완성용)
-        if (email && typeof window !== 'undefined') {
+        if (email && isMounted) {
           localStorage.setItem(LAST_EMAIL_KEY, email);
+          setLastEmailFromStorage(email);
         }
         
         // 세션이 저장되도록 약간의 지연 후 리다이렉트
@@ -426,11 +437,8 @@ export default function LoginPage() {
               onFocus={(e) => {
                 e.target.style.borderColor = '#667eea';
                 e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
-                if (!email && mode === 'login' && typeof window !== 'undefined') {
-                  const lastEmail = localStorage.getItem(LAST_EMAIL_KEY);
-                  if (lastEmail) {
-                    setEmail(lastEmail);
-                  }
+                if (!email && mode === 'login' && isMounted && lastEmailFromStorage) {
+                  setEmail(lastEmailFromStorage);
                 }
               }}
               onBlur={(e) => {
@@ -439,7 +447,7 @@ export default function LoginPage() {
               }}
             />
             {/* 이전 이메일 투명 오버레이 (입력 필드가 비어있을 때만) */}
-            {mode === 'login' && !email && typeof window !== 'undefined' && localStorage.getItem(LAST_EMAIL_KEY) && (
+            {isMounted && mode === 'login' && !email && lastEmailFromStorage && (
               <div style={{
                 position: 'absolute',
                 left: '16px',
@@ -450,7 +458,7 @@ export default function LoginPage() {
                 fontSize: '15px',
                 fontWeight: '400'
               }}>
-                {localStorage.getItem(LAST_EMAIL_KEY)}
+                {lastEmailFromStorage}
               </div>
             )}
           </div>
