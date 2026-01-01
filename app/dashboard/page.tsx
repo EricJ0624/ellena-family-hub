@@ -3837,12 +3837,21 @@ export default function FamilyHub() {
             onClick={handleRename}
             className="app-title"
           >
-            {state.familyName.split(' ').map((word, idx, arr) => (
-              <React.Fragment key={idx}>
-                {word}
-                {idx < arr.length - 1 && <br />}
-              </React.Fragment>
-            ))}
+            <span className="app-title-arch">
+              {state.familyName.split(' ').map((word, idx) => (
+                <span 
+                  key={idx}
+                  className="app-title-word"
+                  style={{ 
+                    display: 'inline-block',
+                    transform: `translateY(${Math.sin((idx / (state.familyName.split(' ').length - 1)) * Math.PI) * -8}px)`
+                  }}
+                >
+                  {word}
+                  {idx < state.familyName.split(' ').length - 1 && <span className="app-title-space"> </span>}
+                </span>
+              ))}
+            </span>
           </h1>
           <div className="status-indicator">
             <span className="status-dot">
