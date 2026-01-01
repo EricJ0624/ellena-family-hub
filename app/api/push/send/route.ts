@@ -2,16 +2,24 @@
 // 위치 요청 시 상대방에게 푸시 알림을 보냅니다 (Supabase 사용)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import * as webpush from 'web-push';
+
+// Node.js 런타임 사용 (web-push는 Node.js 네이티브 모듈이므로 필요)
+export const runtime = 'nodejs';
+
+// 동적 import로 web-push 로드
+let webpush: typeof import('web-push');
+async function getWebPush() {
+  if (!webpush) {
+    webpush = await import('web-push');
+  }
+  return webpush;
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!;
 const vapidEmail = process.env.VAPID_EMAIL || 'mailto:your-email@example.com';
-
-// VAPID 키 설정
-webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 
 // Web Push 푸시 알림 전송
 export async function POST(request: NextRequest) {
@@ -32,6 +40,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // web-push 모듈 동적 로드 및 VAPID 키 설정
+    const webpush = await getWebPush();
+    webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 
     // Supabase에서 대상 사용자의 Push 토큰 조회
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {

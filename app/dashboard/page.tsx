@@ -152,6 +152,7 @@ export default function FamilyHub() {
     target_id: string;
     status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
     created_at: string;
+    expires_at?: string;
     requester?: { id: string; email: string; full_name: string | null };
     target?: { id: string; email: string; full_name: string | null };
   }>>([]);
@@ -2112,11 +2113,14 @@ export default function FamilyHub() {
 
     const checkExpiredRequests = () => {
       const now = new Date();
-      locationRequests.forEach((req) => {
-        const expiresAt = new Date(req.expires_at);
-        // 만료된 accepted 요청은 자동으로 종료
-        if (expiresAt < now && req.status === 'accepted') {
-          endLocationSharing(req.id).catch(() => {});
+      locationRequests.forEach((req: any) => {
+        // expires_at이 있는 경우에만 만료 체크
+        if (req.expires_at) {
+          const expiresAt = new Date(req.expires_at);
+          // 만료된 accepted 요청은 자동으로 종료
+          if (expiresAt < now && req.status === 'accepted') {
+            endLocationSharing(req.id).catch(() => {});
+          }
         }
       });
       // 위치 요청 목록 다시 로드하여 만료된 항목 제거
@@ -3124,6 +3128,7 @@ export default function FamilyHub() {
         const now = new Date();
         // 만료된 요청 필터링 및 자동 종료
         const validRequests = result.data.filter((req: any) => {
+          if (!req.expires_at) return true;
           const expiresAt = new Date(req.expires_at);
           if (expiresAt < now && req.status === 'accepted') {
             // 만료된 accepted 요청은 자동으로 cancelled로 변경
@@ -5145,10 +5150,10 @@ export default function FamilyHub() {
                         const isRequester = req.requester_id === userId;
                         const otherUser = isRequester ? req.target : req.requester;
                         const otherUserName = otherUser?.full_name || otherUser?.email || '알 수 없음';
-                        const expiresAt = new Date(req.expires_at);
+                        const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
                         const now = new Date();
-                        const timeLeft = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60));
-                        const isExpired = expiresAt < now;
+                        const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
+                        const isExpired = expiresAt ? expiresAt < now : false;
 
                         return (
                           <div
@@ -5244,10 +5249,10 @@ export default function FamilyHub() {
                         const isRequester = req.requester_id === userId;
                         const otherUser = isRequester ? req.target : req.requester;
                         const otherUserName = otherUser?.full_name || otherUser?.email || '알 수 없음';
-                        const expiresAt = new Date(req.expires_at);
+                        const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
                         const now = new Date();
-                        const timeLeft = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60));
-                        const isExpired = expiresAt < now;
+                        const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
+                        const isExpired = expiresAt ? expiresAt < now : false;
 
                         return (
                           <div
