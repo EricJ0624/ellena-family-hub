@@ -85,11 +85,11 @@ export async function POST(request: NextRequest) {
     // 요청자 정보 조회 (푸시 알림용)
     const { data: requesterProfile } = await supabase
       .from('profiles')
-      .select('full_name, email')
+      .select('nickname, email')
       .eq('id', requesterId)
       .single();
 
-    const requesterName = requesterProfile?.full_name || requesterProfile?.email || '알 수 없음';
+    const requesterName = requesterProfile?.nickname || requesterProfile?.email || '알 수 없음';
 
     // Web Push 알림 전송 (비동기, 실패해도 요청은 성공으로 처리)
     try {
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
       // profiles 테이블에서 사용자 정보 조회
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, email, full_name')
+        .select('id, email, nickname')
         .in('id', Array.from(userIds));
 
       const profilesMap = new Map(
@@ -193,12 +193,12 @@ export async function GET(request: NextRequest) {
         requester: profilesMap.get(req.requester_id) || {
           id: req.requester_id,
           email: req.requester_id,
-          full_name: null
+          nickname: null
         },
         target: profilesMap.get(req.target_id) || {
           id: req.target_id,
           email: req.target_id,
-          full_name: null
+          nickname: null
         }
       }));
 

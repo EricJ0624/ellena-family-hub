@@ -122,19 +122,19 @@ body {
 /* 타이틀 텍스트 본체 */
 .app-title {
   white-space: nowrap !important;
-  font-size: min(6.5vw, 38px) !important; /* 7vw에서 6.5vw로 낮춤, 최대값도 40px에서 38px로 조정 */
-  display: block !important; /* inline-block 대신 block */
-  width: 100% !important; /* auto 대신 100% */
+  font-size: min(6.5vw, 38px) !important;
+  display: block !important;
+  width: 100% !important;
   max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: clip !important;
   box-sizing: border-box !important;
   font-weight: 900;
-  letter-spacing: -0.02em; /* letter-spacing을 조금 완화 */
+  letter-spacing: -0.02em;
   line-height: 1.2;
   cursor: pointer;
   margin: 0;
-  padding: 0.5rem 0.75rem; /* 좌우 패딩을 1rem에서 0.75rem으로 줄여서 공간 확보 */
+  padding: 0.5rem 0.75rem;
   color: #667eea;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   -webkit-background-clip: text;

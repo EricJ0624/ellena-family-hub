@@ -111,13 +111,15 @@ export default function LoginPage() {
     }
 
     try {
+      const signupNickname = nickname || email.split('@')[0];
+      
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            nickname: nickname || email.split('@')[0],
-            full_name: nickname || email.split('@')[0]
+            nickname: signupNickname,
+            full_name: signupNickname
           }
         }
       });
@@ -125,6 +127,22 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user) {
+        // profiles 테이블에 nickname 저장 (비동기, 실패해도 가입은 성공)
+        try {
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email: email,
+              nickname: signupNickname
+            }, {
+              onConflict: 'id'
+            });
+        } catch (profileError) {
+          console.warn('profiles 테이블 업데이트 실패 (무시):', profileError);
+          // 가입은 성공했으므로 계속 진행
+        }
+
         setSuccessMsg('가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)');
         // 3초 후 로그인 모드로 전환
         setTimeout(() => {

@@ -47,6 +47,13 @@ const CryptoService = {
         return raw;
       }
     } catch (e: any) {
+      // Malformed UTF-8 data 오류 처리
+      if (e.message?.includes('Malformed UTF-8') || e.message?.includes('UTF-8')) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('UTF-8 인코딩 오류 감지, 복호화 건너뜀');
+        }
+        return null;
+      }
       if (process.env.NODE_ENV === 'development') {
         console.warn('복호화 실패:', e.message || e);
       }
@@ -153,11 +160,15 @@ export default function FamilyHub() {
     status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
     created_at: string;
     expires_at?: string;
-    requester?: { id: string; email: string; full_name: string | null };
-    target?: { id: string; email: string; full_name: string | null };
+    requester?: { id: string; email: string; nickname?: string | null };
+    target?: { id: string; email: string; nickname?: string | null };
   }>>([]);
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
   const [selectedUserForRequest, setSelectedUserForRequest] = useState<string | null>(null);
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname?: string | null }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
+  const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
   
   // Realtime subscription 참조 (로그아웃 시 정리용)
   const subscriptionsRef = useRef<{
@@ -234,14 +245,35 @@ export default function FamilyHub() {
           || 'ellena_family'; // 기본 family_id
         setFamilyId(userFamilyId);
         
-        // 사용자 이름 가져오기 (닉네임 우선)
+        // 사용자 이름 가져오기 (profiles 테이블의 nickname 우선, 없으면 user_metadata)
         if (session.user) {
-          const name = session.user.user_metadata?.nickname
+          // 먼저 profiles 테이블에서 nickname 조회
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('nickname')
+            .eq('id', currentUserId)
+            .single();
+
+          const name = profileData?.nickname
+            || session.user.user_metadata?.nickname
             || session.user.user_metadata?.full_name 
             || session.user.user_metadata?.name 
             || session.user.email?.split('@')[0] 
             || '사용자';
           setUserName(name);
+
+          // profiles 테이블에 nickname이 없고 user_metadata에 있으면 동기화
+          if (!profileData?.nickname && session.user.user_metadata?.nickname) {
+            await supabase
+              .from('profiles')
+              .upsert({ 
+                id: currentUserId,
+                nickname: session.user.user_metadata.nickname,
+                email: session.user.email || ''
+              }, {
+                onConflict: 'id'
+              });
+          }
         }
         
         // 가족 공유 마스터 키 확인 및 데이터 로드
@@ -533,10 +565,10 @@ export default function FamilyHub() {
     let photosSubscription: any = null;
     let presenceSubscription: any = null;
 
-    // Supabase Realtime Presence로 현재 로그인 중인 사용자 추적
+      // Supabase Realtime Presence로 현재 로그인 중인 사용자 추적
     presenceSubscription = supabase
       .channel('online_users')
-      .on('presence', { event: 'sync' }, () => {
+      .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
         const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
         
@@ -549,23 +581,67 @@ export default function FamilyHub() {
           });
         }
         
-        // 다른 사용자들의 정보 추가
-        Object.keys(state).forEach((presenceId) => {
-          const presence = state[presenceId];
-          if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0];
-            const uid = userPresence.userId;
-            if (uid && uid !== userId) {
-              // Presence에서 userName을 가져오거나, 없으면 기본값 사용
-              const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
-              usersList.push({
-                id: uid,
-                name: displayName,
-                isCurrentUser: false
-              });
+        // 다른 사용자들의 정보 추가 (profiles 테이블에서 nickname 조회)
+        const otherUserIds = Object.keys(state)
+          .map((presenceId) => {
+            const presence = state[presenceId];
+            if (Array.isArray(presence) && presence.length > 0) {
+              const userPresence = presence[0];
+              return userPresence.userId;
             }
-          }
-        });
+            return null;
+          })
+          .filter((uid): uid is string => uid !== null && uid !== userId);
+
+        // profiles 테이블에서 다른 사용자들의 nickname 조회
+        if (otherUserIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, nickname, email')
+            .in('id', otherUserIds);
+
+          const profilesMap = new Map(
+            (profilesData || []).map((p: any) => [p.id, p])
+          );
+
+          Object.keys(state).forEach((presenceId) => {
+            const presence = state[presenceId];
+            if (Array.isArray(presence) && presence.length > 0) {
+              const userPresence = presence[0];
+              const uid = userPresence.userId;
+              if (uid && uid !== userId) {
+                // profiles 테이블의 nickname 우선, 없으면 Presence의 userName, 없으면 기본값
+                const profile = profilesMap.get(uid);
+                const displayName = profile?.nickname 
+                  || profile?.email 
+                  || userPresence.userName 
+                  || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
+                usersList.push({
+                  id: uid,
+                  name: displayName,
+                  isCurrentUser: false
+                });
+              }
+            }
+          });
+        } else {
+          // otherUserIds가 없어도 Presence에서 직접 가져오기
+          Object.keys(state).forEach((presenceId) => {
+            const presence = state[presenceId];
+            if (Array.isArray(presence) && presence.length > 0) {
+              const userPresence = presence[0];
+              const uid = userPresence.userId;
+              if (uid && uid !== userId) {
+                const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
+                usersList.push({
+                  id: uid,
+                  name: displayName,
+                  isCurrentUser: false
+                });
+              }
+            }
+          });
+        }
         
         console.log('현재 로그인 중인 사용자 목록 (Presence):', usersList);
         setOnlineUsers(usersList);
@@ -644,7 +720,9 @@ export default function FamilyHub() {
             onlineAt: new Date().toISOString()
           });
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.error('❌ Presence subscription 연결 실패:', status);
+          console.warn('⚠️ Presence subscription 연결 실패:', status);
+          // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
+          // removeChannel을 여기서 호출하면 무한 루프 발생 가능
         }
       });
 
@@ -691,9 +769,17 @@ export default function FamilyHub() {
             if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
               localStoragePhotos = decrypted.album;
             }
-    } catch (e) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('localStorage 사진 로드 실패:', e);
+          } catch (e: any) {
+            // UTF-8 인코딩 오류 처리
+            if (e.message?.includes('Malformed UTF-8') || e.message?.includes('UTF-8')) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('localStorage 사진 로드 중 UTF-8 오류, 건너뜀');
+              }
+              localStoragePhotos = [];
+            } else {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('localStorage 사진 로드 실패:', e);
+              }
             }
           }
         }
@@ -1066,9 +1152,17 @@ export default function FamilyHub() {
               if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
                 errorLocalStoragePhotos = decrypted.album;
               }
-            } catch (e) {
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('에러 처리 중 localStorage 사진 로드 실패:', e);
+            } catch (e: any) {
+              // UTF-8 인코딩 오류 처리
+              if (e.message?.includes('Malformed UTF-8') || e.message?.includes('UTF-8')) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('에러 처리 중 UTF-8 오류, 건너뜀');
+                }
+                errorLocalStoragePhotos = [];
+              } else {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('에러 처리 중 localStorage 사진 로드 실패:', e);
+                }
               }
             }
           }
@@ -1088,6 +1182,15 @@ export default function FamilyHub() {
     // Realtime 구독 설정 (암호화된 데이터 복호화)
     // 가족 공유 키를 사용하여 모든 사용자의 데이터 복호화 가능
     const setupRealtimeSubscriptions = () => {
+      // 기존 subscription이 있으면 재구독하지 않음 (무한 루프 방지)
+      if (messagesSubscription || tasksSubscription || eventsSubscription || photosSubscription || presenceSubscription) {
+        // 개발 환경에서만 로그 출력 (반복 로그 방지)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('⚠️ 기존 subscription이 존재합니다. 재구독을 건너뜁니다.');
+        }
+        return;
+      }
+
       // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
       const getCurrentKey = () => {
         const authKey = getAuthKey(userId);
@@ -1262,11 +1365,16 @@ export default function FamilyHub() {
         )
         .subscribe((status, err) => {
           console.log('📨 Realtime 메시지 subscription 상태:', status);
-          if (err) console.error('❌ Realtime 메시지 subscription 오류:', err);
+          if (err) {
+            console.error('❌ Realtime 메시지 subscription 오류:', err);
+            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
+          }
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 메시지 subscription 연결 성공');
+            subscriptionsRef.current.messages = messagesSubscription;
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Realtime 메시지 subscription 연결 실패:', status);
+            console.warn('⚠️ Realtime 메시지 subscription 연결 실패:', status);
+            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
       
@@ -1527,11 +1635,16 @@ export default function FamilyHub() {
         )
         .subscribe((status, err) => {
           console.log('📋 Realtime 할일 subscription 상태:', status);
-          if (err) console.error('❌ Realtime 할일 subscription 오류:', err);
+          if (err) {
+            console.error('❌ Realtime 할일 subscription 오류:', err);
+            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
+          }
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 할일 subscription 연결 성공');
+            subscriptionsRef.current.tasks = tasksSubscription;
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Realtime 할일 subscription 연결 실패:', status);
+            console.warn('⚠️ Realtime 할일 subscription 연결 실패:', status);
+            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
       
@@ -1839,11 +1952,16 @@ export default function FamilyHub() {
         )
         .subscribe((status, err) => {
           console.log('📅 Realtime 일정 subscription 상태:', status);
-          if (err) console.error('❌ Realtime 일정 subscription 오류:', err);
+          if (err) {
+            console.error('❌ Realtime 일정 subscription 오류:', err);
+            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
+          }
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 일정 subscription 연결 성공');
+            subscriptionsRef.current.events = eventsSubscription;
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Realtime 일정 subscription 연결 실패:', status);
+            console.warn('⚠️ Realtime 일정 subscription 연결 실패:', status);
+            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
       
@@ -1942,11 +2060,14 @@ export default function FamilyHub() {
           console.log('📸 Realtime 사진 subscription 상태:', status);
           if (err) {
             console.error('❌ Realtime 사진 subscription 오류:', err);
+            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 사진 subscription 연결 성공');
+            subscriptionsRef.current.photos = photosSubscription;
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.error('❌ Realtime 사진 subscription 연결 실패:', status);
+            console.warn('⚠️ Realtime 사진 subscription 연결 실패:', status);
+            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
       
@@ -2048,10 +2169,9 @@ export default function FamilyHub() {
             subscriptionsRef.current.events !== null &&
             subscriptionsRef.current.photos !== null;
           
-          if (!hasSubscriptions && isAuthenticated && userId) {
-            console.log('🔄 Realtime 연결 끊김 감지, 재연결 시도...');
-            setupRealtimeSubscriptions();
-          } else if (hasSubscriptions) {
+          // 재연결 로직 제거 (무한 루프 방지)
+          // useEffect가 자동으로 재실행되므로 별도 재연결 불필요
+          if (hasSubscriptions && process.env.NODE_ENV === 'development') {
             console.log('✅ Realtime 연결 상태 정상');
           }
         };
@@ -2061,14 +2181,11 @@ export default function FamilyHub() {
       }
     };
     
-    // 네트워크 재연결 시 Realtime 재연결
+    // 네트워크 재연결 시 Realtime 재연결 제거 (무한 루프 방지)
+    // useEffect가 자동으로 재실행되므로 별도 재연결 불필요
     const handleOnline = () => {
-      console.log('🌐 네트워크 연결 복구, Realtime 재연결 확인...');
-      if (isAuthenticated && userId) {
-        setTimeout(() => {
-          setupRealtimeSubscriptions();
-        }, 1000);
-      }
+      console.log('🌐 네트워크 연결 복구');
+      // 재연결은 useEffect 의존성 배열이 자동으로 처리
     };
     
     // 이벤트 리스너 등록
@@ -2107,9 +2224,61 @@ export default function FamilyHub() {
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId]); // familyId 변경 시 데이터 재로드
 
-  // 6. 위치 요청 만료 체크 (1분마다 실행)
+  // 6. 위치 요청 모달이 열릴 때 사용자 목록 로드
+  useEffect(() => {
+    // 모달이 닫혔을 때 상태 초기화
+    if (!showLocationRequestModal) {
+      if (modalOpenedRef.current) {
+        setLoadingUsers(false);
+        setAllUsers([]);
+        loadingUsersRef.current = false;
+        modalOpenedRef.current = false;
+      }
+      return;
+    }
+
+    // 모달이 열렸고, 아직 데이터를 로드하지 않았을 때만 로드
+    if (!isAuthenticated || !userId) {
+      return;
+    }
+
+    // 모달이 방금 열렸는지 확인 (중복 로드 방지)
+    // ref를 사용하여 리렌더링과 완전히 분리
+    if (modalOpenedRef.current || loadingUsersRef.current) {
+      return; // 이미 열렸거나 로딩 중이면 아무것도 하지 않음
+    }
+
+    // 모달이 방금 열렸음을 표시하고 로드 시작
+    modalOpenedRef.current = true;
+    loadingUsersRef.current = true;
+    
+    console.log('모달 열림 - 사용자 목록 로드 시작', { userId, isAuthenticated });
+    
+    // 비동기로 로드하여 리렌더링과 완전히 분리
+    const loadUsers = async () => {
+      try {
+        console.log('loadAllUsers 호출 시작');
+        await loadAllUsers();
+        console.log('loadAllUsers 호출 완료');
+      } catch (err) {
+        console.error('loadAllUsers 호출 중 오류:', err);
+      } finally {
+        loadingUsersRef.current = false;
+      }
+    };
+    
+    // 다음 이벤트 루프에서 실행하여 현재 렌더링 사이클과 분리
+    setTimeout(() => {
+      loadUsers();
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLocationRequestModal, isAuthenticated, userId]); // loadAllUsers는 useCallback으로 메모이제이션되어 userId, isAuthenticated 변경 시 자동 재생성됨
+
+  // 7. 위치 요청 만료 체크 (1분마다 실행)
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
+
+    // 초기 사용자 목록 로드 제거 (모달이 열릴 때만 로드하도록 변경)
 
     const checkExpiredRequests = () => {
       const now = new Date();
@@ -3183,6 +3352,75 @@ export default function FamilyHub() {
     }
   };
 
+  // 모든 사용자 목록 로드 (로그인한/안한 모두) - profiles 테이블에서 직접 조회
+  const loadAllUsers = useCallback(async (retryCount = 0) => {
+    if (!userId || !isAuthenticated) {
+      setAllUsers([]);
+      setLoadingUsers(false);
+      loadingUsersRef.current = false;
+      return;
+    }
+
+    // 이미 로딩 중이면 중복 호출 방지
+    if (loadingUsersRef.current && retryCount === 0) {
+      return;
+    }
+
+    setLoadingUsers(true);
+    loadingUsersRef.current = true;
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1초
+
+    try {
+      console.log('사용자 목록 로드 시작 - API 호출:', { userId });
+      
+      // API를 통해 서버 사이드에서 모든 사용자 조회 (profiles가 비어있으면 auth.users에서 조회)
+      const response = await fetch(`/api/users/list?currentUserId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('사용자 목록 API 오류:', response.status, errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        console.log('사용자 목록 로드 성공:', result.data.length, '명', result.data);
+        setAllUsers(result.data);
+        
+        if (result.data.length === 0) {
+          console.warn('⚠️ 사용자 목록이 비어있습니다. auth.users에 다른 사용자가 있는지 확인하세요.');
+        }
+      } else {
+        console.warn('사용자 목록 로드 실패:', result);
+        setAllUsers([]);
+      }
+    } catch (error: any) {
+      // 네트워크 오류인 경우 재시도
+      if (retryCount < maxRetries && (error?.message?.includes('fetch') || error?.message?.includes('network') || error?.name === 'TypeError')) {
+        console.warn(`사용자 목록 로드 재시도 (${retryCount + 1}/${maxRetries}):`, error?.message || error);
+        setTimeout(() => {
+          loadAllUsers(retryCount + 1);
+        }, retryDelay * (retryCount + 1));
+        return;
+      }
+      
+      console.error('사용자 목록 로드 시도 중 오류:', error?.message || error);
+      setAllUsers([]);
+    } finally {
+      if (retryCount === 0) {
+        setLoadingUsers(false);
+        loadingUsersRef.current = false;
+      }
+    }
+  }, [userId, isAuthenticated]); // useCallback 의존성 (supabase는 안정적인 싱글톤이므로 제외)
+
   // 위치 요청 보내기
   const sendLocationRequest = async (targetUserId: string) => {
     if (!userId || !isAuthenticated) {
@@ -3209,6 +3447,11 @@ export default function FamilyHub() {
         await loadLocationRequests();
         setShowLocationRequestModal(false);
         setSelectedUserForRequest(null);
+        // 모달 닫을 때 상태 초기화
+        setLoadingUsers(false);
+        setAllUsers([]);
+        loadingUsersRef.current = false;
+        modalOpenedRef.current = false;
       } else {
         alert(result.error || '위치 요청 전송에 실패했습니다.');
       }
@@ -3345,27 +3588,59 @@ export default function FamilyHub() {
       return;
     }
 
+    if (!userId || !isAuthenticated) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert("세션이 만료되었습니다. 다시 로그인해주세요.");
-        return;
+      // 1. profiles 테이블에 nickname 저장/업데이트
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ nickname: sanitizedNickname })
+        .eq('id', userId);
+
+      if (profileError) {
+        // profiles 테이블에 레코드가 없을 수 있으므로 INSERT 시도
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .upsert({ 
+            id: userId, 
+            nickname: sanitizedNickname,
+            email: (await supabase.auth.getUser()).data.user?.email || ''
+          }, {
+            onConflict: 'id'
+          });
+
+        if (insertError) {
+          console.error('profiles 테이블 업데이트 오류:', insertError);
+          throw insertError;
+        }
       }
 
-      // Supabase user_metadata 업데이트
-      const { error } = await supabase.auth.updateUser({
+      // 2. Supabase user_metadata도 동기화 (기존 기능 유지)
+      const { error: authError } = await supabase.auth.updateUser({
         data: { nickname: sanitizedNickname }
       });
 
-      if (error) throw error;
+      if (authError) {
+        console.warn('user_metadata 업데이트 오류 (무시):', authError);
+        // profiles 테이블 업데이트는 성공했으므로 계속 진행
+      }
 
-      // 로컬 상태 업데이트
+      // 3. 로컬 상태 업데이트
       setUserName(sanitizedNickname);
       setIsNicknameModalOpen(false);
       if (nicknameInputRef.current) {
         nicknameInputRef.current.value = "";
       }
+
+      // 4. 사용자 목록 새로고침 (다른 사용자에게 변경사항 반영)
+      await loadAllUsers();
+
+      alert("닉네임이 업데이트되었습니다.");
     } catch (error: any) {
+      console.error('닉네임 업데이트 오류:', error);
       alert("닉네임 업데이트 실패: " + (error.message || "알 수 없는 오류"));
     }
   };
@@ -4345,8 +4620,8 @@ export default function FamilyHub() {
         {/* Header */}
         <header className="app-header">
           <div className="title-container">
-            <h1 
-              onClick={handleRename}
+          <h1 
+            onClick={handleRename}
               className="app-title"
             >
               {state.familyName || 'Ellena Family Hub'}
@@ -4363,7 +4638,7 @@ export default function FamilyHub() {
                   key={user.id}
                   className="user-info" 
                   onClick={user.isCurrentUser ? () => setIsNicknameModalOpen(true) : undefined}
-                  style={{ 
+            style={{
                     cursor: user.isCurrentUser ? 'pointer' : 'default',
                     padding: '3px 6px',
                     borderRadius: '6px',
@@ -4990,7 +5265,9 @@ export default function FamilyHub() {
               <h3 className="section-title">실시간 위치 공유</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={() => setShowLocationRequestModal(true)}
+                  onClick={() => {
+                    setShowLocationRequestModal(true);
+                  }}
                   style={{
                     padding: '8px 16px',
                     backgroundColor: '#10b981',
@@ -5008,35 +5285,41 @@ export default function FamilyHub() {
                   <span>📍</span>
                   <span>어디야</span>
                 </button>
-                <button
-                  onClick={updateLocation}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: isLocationSharing ? '#ef4444' : '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {isLocationSharing ? (
-                    <>
-                      <span>⏹️</span>
-                      <span>위치 추적 중지</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>📍</span>
-                      <span>위치 공유 시작</span>
-                    </>
-                  )}
-                </button>
+                {/* 어디야 요청을 받은 경우에만 위치 공유 버튼 표시 */}
+                {locationRequests.some(req => 
+                  req.target_id === userId && 
+                  req.status === 'pending'
+                ) && (
+                  <button
+                    onClick={updateLocation}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: isLocationSharing ? '#ef4444' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isLocationSharing ? (
+                      <>
+                        <span>⏹️</span>
+                        <span>위치 추적 중지</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📍</span>
+                        <span>내 위치 공유</span>
+                      </>
+                    )}
+                  </button>
+                )}
         </div>
             </div>
             <div className="section-body">
@@ -5149,7 +5432,7 @@ export default function FamilyHub() {
                       .map((req) => {
                         const isRequester = req.requester_id === userId;
                         const otherUser = isRequester ? req.target : req.requester;
-                        const otherUserName = otherUser?.full_name || otherUser?.email || '알 수 없음';
+                        const otherUserName = otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || '알 수 없음';
                         const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
                         const now = new Date();
                         const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
@@ -5248,7 +5531,7 @@ export default function FamilyHub() {
                       .map((req) => {
                         const isRequester = req.requester_id === userId;
                         const otherUser = isRequester ? req.target : req.requester;
-                        const otherUserName = otherUser?.full_name || otherUser?.email || '알 수 없음';
+                        const otherUserName = otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || '알 수 없음';
                         const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
                         const now = new Date();
                         const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
@@ -5320,6 +5603,11 @@ export default function FamilyHub() {
             onClick={() => {
               setShowLocationRequestModal(false);
               setSelectedUserForRequest(null);
+              // 모달 닫을 때 상태 초기화 (useEffect에서도 처리되지만 명시적으로)
+              setLoadingUsers(false);
+              setAllUsers([]);
+              loadingUsersRef.current = false;
+              modalOpenedRef.current = false;
             }}
           >
             <div
@@ -5337,78 +5625,139 @@ export default function FamilyHub() {
               <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
                 위치 공유 요청 보내기
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {onlineUsers
-                  .filter(user => user.id !== userId)
-                  .map((user) => {
-                    const hasAcceptedRequest = locationRequests.some(
-                      req =>
-                        ((req.requester_id === userId && req.target_id === user.id) ||
-                         (req.requester_id === user.id && req.target_id === userId)) &&
-                        req.status === 'accepted'
-                    );
-                    const hasPendingRequest = locationRequests.some(
-                      req =>
-                        ((req.requester_id === userId && req.target_id === user.id) ||
-                         (req.requester_id === user.id && req.target_id === userId)) &&
-                        req.status === 'pending'
-                    );
-
-                    return (
-                      <div
-                        key={user.id}
-                        style={{
-                          padding: '12px',
-                          backgroundColor: hasAcceptedRequest ? '#d1fae5' : '#f8fafc',
-                          borderRadius: '8px',
-                          border: '1px solid #e2e8f0',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
+              {loadingUsers ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  사용자 목록을 불러오는 중...
+      </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+                  {/* 모든 사용자 목록 (온라인/오프라인 모두) */}
+                  {allUsers.length > 0 ? (
+                    <div
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '16px'
+                      }}
+                    >
+                      <div 
+                        style={{ 
+                          fontSize: '14px', 
+                          color: '#1e293b', 
+                          marginBottom: '12px', 
+                          fontWeight: '600',
+                          paddingBottom: '8px',
+                          borderBottom: '1px solid #e2e8f0'
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: '500' }}>{user.name}</div>
-                          {hasAcceptedRequest && (
-                            <div style={{ fontSize: '12px', color: '#059669' }}>
-                              ✓ 이미 승인됨
-      </div>
-                          )}
-                          {hasPendingRequest && (
-                            <div style={{ fontSize: '12px', color: '#f59e0b' }}>
-                              ⏳ 요청 대기 중
-                            </div>
-                          )}
-                        </div>
-                        {!hasAcceptedRequest && !hasPendingRequest && (
-                          <button
-                            onClick={() => sendLocationRequest(user.id)}
+                        모든 사용자 ({allUsers.length}명)
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {allUsers.map((user) => {
+                        const isOnline = onlineUsers.some(onlineUser => onlineUser.id === user.id);
+                        const hasAcceptedRequest = locationRequests.some(
+                          req =>
+                            ((req.requester_id === userId && req.target_id === user.id) ||
+                             (req.requester_id === user.id && req.target_id === userId)) &&
+                            req.status === 'accepted'
+                        );
+                        const hasPendingRequest = locationRequests.some(
+                          req =>
+                            ((req.requester_id === userId && req.target_id === user.id) ||
+                             (req.requester_id === user.id && req.target_id === userId)) &&
+                            req.status === 'pending'
+                        );
+
+                        return (
+                          <div
+                            key={user.id}
                             style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
+                              padding: '12px',
+                              backgroundColor: hasAcceptedRequest ? '#d1fae5' : '#f8fafc',
+                              borderRadius: '8px',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '8px'
                             }}
                           >
-                            요청 보내기
-                          </button>
-                        )}
+                            <div>
+                              <div style={{ fontWeight: '500' }}>
+                                {user.nickname || user.email || `사용자 ${user.id.substring(0, 8)}`}
+                                {isOnline && (
+                                  <span style={{ fontSize: '10px', color: '#10b981', marginLeft: '6px' }}>● 온라인</span>
+                                )}
+                              </div>
+                              {user.nickname && user.email && (
+                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                  {user.email}
+                                </div>
+                              )}
+                              {!user.nickname && user.email && (
+                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                  ID: {user.id.substring(0, 8)}...
+                                </div>
+                              )}
+                              {hasAcceptedRequest && (
+                                <div style={{ fontSize: '12px', color: '#059669' }}>
+                                  ✓ 이미 승인됨
+                                </div>
+                              )}
+                              {hasPendingRequest && (
+                                <div style={{ fontSize: '12px', color: '#f59e0b' }}>
+                                  ⏳ 요청 대기 중
+                                </div>
+                              )}
+                            </div>
+                            {!hasAcceptedRequest && !hasPendingRequest && (
+                              <button
+                                onClick={() => sendLocationRequest(user.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                요청 보내기
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                       </div>
-                    );
-                  })}
-              </div>
-              {onlineUsers.filter(user => user.id !== userId).length === 0 && (
-                <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
-                  요청할 수 있는 사용자가 없습니다.
-                </p>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <p style={{ color: '#64748b', margin: 0 }}>
+                        요청할 수 있는 사용자가 없습니다.
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
               <button
                 onClick={() => {
                   setShowLocationRequestModal(false);
                   setSelectedUserForRequest(null);
+                  // 모달 닫을 때 상태 초기화
+                  setLoadingUsers(false);
+                  setAllUsers([]);
+                  loadingUsersRef.current = false;
+                  modalOpenedRef.current = false;
                 }}
                 style={{
                   marginTop: '16px',
