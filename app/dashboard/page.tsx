@@ -453,7 +453,7 @@ export default function FamilyHub() {
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
-    if (!googleMapApiKey || !state.location.latitude || !state.location.longitude) return;
+    if (!googleMapApiKey) return;
 
     const initializeMap = () => {
       if (typeof window === 'undefined' || !(window as any).google) return;
@@ -462,11 +462,17 @@ export default function FamilyHub() {
         const mapElement = document.getElementById('map');
         if (!mapElement) return;
 
+        // 기본 중심 위치 (서울시청) - 위치가 없을 때 사용
+        const defaultCenter = { lat: 37.5665, lng: 126.9780 };
+        const center = state.location.latitude && state.location.longitude
+          ? { lat: state.location.latitude, lng: state.location.longitude }
+          : defaultCenter;
+
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
         if (!mapRef.current) {
           mapRef.current = new (window as any).google.maps.Map(mapElement, {
-            center: { lat: state.location.latitude, lng: state.location.longitude },
-            zoom: 15,
+            center: center,
+            zoom: state.location.latitude && state.location.longitude ? 15 : 12,
             mapTypeControl: true,
             streetViewControl: true,
             fullscreenControl: true
@@ -474,7 +480,7 @@ export default function FamilyHub() {
           setMapLoaded(true);
         } else {
           // 지도 중심 업데이트
-          mapRef.current.setCenter({ lat: state.location.latitude, lng: state.location.longitude });
+          mapRef.current.setCenter(center);
         }
 
         // 기존 마커 모두 제거
@@ -483,16 +489,18 @@ export default function FamilyHub() {
         });
         markersRef.current.clear();
 
-        // 현재 위치 마커 (항상 표시)
-        const myMarker = new (window as any).google.maps.Marker({
-          position: { lat: state.location.latitude, lng: state.location.longitude },
-          map: mapRef.current,
-          title: '내 위치',
-          icon: {
-            url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-          }
-        });
-        markersRef.current.set('my-location', myMarker);
+        // 현재 위치 마커 (위치가 있을 때만 표시)
+        if (state.location.latitude && state.location.longitude) {
+          const myMarker = new (window as any).google.maps.Marker({
+            position: { lat: state.location.latitude, lng: state.location.longitude },
+            map: mapRef.current,
+            title: '내 위치',
+            icon: {
+              url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            }
+          });
+          markersRef.current.set('my-location', myMarker);
+        }
 
         // 승인된 위치 요청이 있는 사용자들의 위치만 마커로 표시
         const acceptedRequests = locationRequests.filter(
@@ -5285,107 +5293,72 @@ export default function FamilyHub() {
                   <span>📍</span>
                   <span>어디야</span>
                 </button>
-                {/* 어디야 요청을 받은 경우에만 위치 공유 버튼 표시 */}
-                {locationRequests.some(req => 
-                  req.target_id === userId && 
-                  req.status === 'pending'
-                ) && (
-                  <button
-                    onClick={updateLocation}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: isLocationSharing ? '#ef4444' : '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {isLocationSharing ? (
-                      <>
-                        <span>⏹️</span>
-                        <span>위치 추적 중지</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>📍</span>
-                        <span>내 위치 공유</span>
-                      </>
-                    )}
-                  </button>
-                )}
         </div>
             </div>
             <div className="section-body">
-              {state.location.latitude && state.location.longitude ? (
-                <div>
+              {state.location.latitude && state.location.longitude && (
+                <div style={{ marginBottom: '16px' }}>
                   <p className="location-text" style={{ marginBottom: '12px' }}>
                     내 위치: {state.location.address}
                   </p>
                   <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
                     좌표: {state.location.latitude.toFixed(6)}, {state.location.longitude.toFixed(6)}
                   </p>
-                  {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
-                    <div 
-                      id="map" 
-                      style={{ 
-                        width: '100%', 
-                        height: '400px', 
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
-                        marginTop: '12px'
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '100%',
-                      height: '400px',
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      marginTop: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#f8fafc',
-                      color: '#64748b',
-                      padding: '20px'
-                    }}>
-                      <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-                        <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1e293b' }}>
-                          📍 Google Maps API 키가 필요합니다
-                        </p>
-                        <div style={{ fontSize: '13px', textAlign: 'left', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                          <p style={{ marginBottom: '8px', fontWeight: '600' }}>설정 방법:</p>
-                          <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
-                            <li>프로젝트 루트에 <code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>.env.local</code> 파일 생성</li>
-                            <li>다음 내용 추가:<br />
-                              <code style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', display: 'inline-block', marginTop: '4px' }}>
-                                NEXT_PUBLIC_GOOGLE_MAP_API_KEY=여기에_API_키_입력
-                              </code>
-                            </li>
-                            <li>개발 서버 재시작 (<code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>npm run dev</code>)</li>
-                          </ol>
-                          <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
-                            💡 API 키 발급: <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google Cloud Console</a> → Maps JavaScript API 활성화
-                          </p>
-        </div>
-                        <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                          또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Google 지도에서 보기</a>
-                        </p>
-          </div>
-          </div>
-                  )}
                 </div>
+              )}
+              
+              {/* 구글맵 항상 표시 */}
+              {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
+                <div 
+                  id="map" 
+                  style={{ 
+                    width: '100%', 
+                    height: '400px', 
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    marginTop: '12px'
+                  }}
+                />
               ) : (
-                <p className="location-text" style={{ color: '#64748b' }}>
-                  위치를 공유하려면 위 버튼을 클릭하세요.
-                </p>
+                <div style={{
+                  width: '100%',
+                  height: '400px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  marginTop: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#f8fafc',
+                  color: '#64748b',
+                  padding: '20px'
+                }}>
+                  <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+                    <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1e293b' }}>
+                      📍 Google Maps API 키가 필요합니다
+                    </p>
+                    <div style={{ fontSize: '13px', textAlign: 'left', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                      <p style={{ marginBottom: '8px', fontWeight: '600' }}>설정 방법:</p>
+                      <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                        <li>프로젝트 루트에 <code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>.env.local</code> 파일 생성</li>
+                        <li>다음 내용 추가:<br />
+                          <code style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', display: 'inline-block', marginTop: '4px' }}>
+                            NEXT_PUBLIC_GOOGLE_MAP_API_KEY=여기에_API_키_입력
+                          </code>
+                        </li>
+                        <li>개발 서버 재시작 (<code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>npm run dev</code>)</li>
+                      </ol>
+                      <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
+                        💡 API 키 발급: <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google Cloud Console</a> → Maps JavaScript API 활성화
+                      </p>
+                    </div>
+                    {state.location.latitude && state.location.longitude && (
+                      <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                        또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Google 지도에서 보기</a>
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
               
               {state.familyLocations.length > 0 && (
