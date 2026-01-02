@@ -18,6 +18,10 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  /* Chalkboard Colors */
+  --chalkboard-bg: #0f2a08;
+  --chalkboard-border-light: #8b6914;
+  --chalkboard-border-dark: #6b5010;
 }
 
 * {
@@ -471,7 +475,7 @@ body {
    ============================================ */
 .chalkboard-container {
   position: relative;
-  background: #2d5016;
+  background: var(--chalkboard-bg);
   background-image: 
     radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
@@ -479,14 +483,14 @@ body {
   border-image: 
     repeating-linear-gradient(
       90deg,
-      #8b6914 0px,
-      #8b6914 2px,
-      #6b5010 2px,
-      #6b5010 4px,
-      #8b6914 4px,
-      #8b6914 6px,
-      #6b5010 6px,
-      #6b5010 8px
+      var(--chalkboard-border-light) 0px,
+      var(--chalkboard-border-light) 2px,
+      var(--chalkboard-border-dark) 2px,
+      var(--chalkboard-border-dark) 4px,
+      var(--chalkboard-border-light) 4px,
+      var(--chalkboard-border-light) 6px,
+      var(--chalkboard-border-dark) 6px,
+      var(--chalkboard-border-dark) 8px
     ) 16;
   border-radius: 8px;
   padding: var(--spacing-xl);
@@ -507,6 +511,18 @@ body {
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   opacity: 0.3;
   pointer-events: none;
+}
+
+/* Family Illustration Container - Match Chalkboard Background */
+.chalkboard-family-illustration {
+  background: var(--chalkboard-bg);
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%, 100% 100%, 60px 60px;
+  background-position: center, center, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
 }
 
 .chalkboard-title {
@@ -1175,6 +1191,88 @@ body {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-lg);
+}
+
+.photo-horizontal-scroll {
+  display: flex;
+  gap: var(--spacing-md);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: var(--spacing-sm) 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.photo-horizontal-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.photo-horizontal-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.photo-horizontal-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.photo-horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.photo-card {
+  flex: 0 0 calc(33.333% - var(--spacing-md));
+  min-width: calc(33.333% - var(--spacing-md));
+  max-width: calc(33.333% - var(--spacing-md));
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: var(--border-radius-lg);
+  border: 2px solid white;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .photo-card {
+    flex: 0 0 calc(33.333% - var(--spacing-md));
+    min-width: calc(33.333% - var(--spacing-md));
+    max-width: calc(33.333% - var(--spacing-md));
+  }
+}
+
+.photo-card-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(to bottom right, #f1f5f9, #e2e8f0);
+  overflow: hidden;
+}
+
+.photo-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-card-description {
+  padding: var(--spacing-sm) var(--spacing-md);
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s ease;
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+.photo-card-description:hover {
+  background-color: #f8fafc;
+}
+
+.photo-card-empty .photo-card-image {
+  border: 2px dashed #cbd5e1;
+  background: #f8fafc;
 }
 
 .photo-item {

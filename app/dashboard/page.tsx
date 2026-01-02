@@ -5341,31 +5341,6 @@ export default function FamilyHub() {
               </svg>
             </div>
 
-            {/* Family Illustration - Inside Chalkboard, Above Title */}
-            <div className="flex items-center justify-start w-full" style={{ padding: '12px 16px 8px 16px' }}>
-              <div
-                className="relative"
-                style={{
-                  width: '120px',
-                  height: 'auto',
-                  aspectRatio: '2 / 1',
-                }}
-              >
-                <Image
-                  src="/family-illustration2.png"
-                  alt="Family illustration - Mom, child, and dad holding hands"
-                  fill
-                  style={{
-                    objectFit: 'contain',
-                    objectPosition: 'left',
-                    filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))',
-                  }}
-                  sizes="(max-width: 768px) 100px, 120px"
-                  unoptimized={true}
-                />
-              </div>
-            </div>
-
             <div className="chalkboard-header">
               <h3 className="chalkboard-title">Family Tasks</h3>
               <button 
