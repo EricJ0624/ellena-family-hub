@@ -4669,50 +4669,50 @@ export default function FamilyHub() {
   return (
     <div className="app-container">
 
-      {/* Todo Modal */}
+      {/* Todo Modal - Chalkboard Style */}
       {isTodoModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title">
-              <span className="modal-icon">📝</span>
+        <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
+          <div className="chalkboard-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="chalkboard-modal-title">
+              <span className="chalkboard-modal-icon">📝</span>
               새 할 일 등록
-          </h3>
-            <div className="modal-form">
-              <div className="form-field">
-                <label className="form-label">무엇을 할까요?</label>
-              <input 
-                ref={todoTextRef}
-                type="text" 
-                  className="form-input" 
-                placeholder="할 일 내용 입력"
-              />
+            </h3>
+            <div className="chalkboard-modal-form">
+              <div className="chalkboard-form-field">
+                <label className="chalkboard-form-label">무엇을 할까요?</label>
+                <input 
+                  ref={todoTextRef}
+                  type="text" 
+                  className="chalkboard-form-input" 
+                  placeholder="할 일 내용 입력"
+                />
+              </div>
+              <div className="chalkboard-form-field">
+                <label className="chalkboard-form-label">누가 할까요?</label>
+                <input 
+                  ref={todoWhoRef}
+                  type="text" 
+                  className="chalkboard-form-input" 
+                  placeholder="이름 입력 (비워두면 누구나)"
+                />
+              </div>
             </div>
-              <div className="form-field">
-                <label className="form-label">누가 할까요?</label>
-              <input 
-                ref={todoWhoRef}
-                type="text" 
-                  className="form-input" 
-                placeholder="이름 입력 (비워두면 누구나)"
-              />
-            </div>
-          </div>
-            <div className="modal-actions">
+            <div className="chalkboard-modal-actions">
               <button 
                 onClick={() => setIsTodoModalOpen(false)} 
-                className="btn-secondary"
+                className="chalkboard-btn-secondary"
               >
                 취소
               </button>
-            <button 
-              onClick={submitNewTodo} 
-                className="btn-primary"
-            >
-              등록하기
-            </button>
+              <button 
+                onClick={submitNewTodo} 
+                className="chalkboard-btn-primary"
+              >
+                등록하기
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Nickname Modal */}
@@ -5091,17 +5091,77 @@ export default function FamilyHub() {
             )}
           </section>
 
-          {/* Family Tasks Section */}
-          <section className="content-section">
-            <div className="section-header">
-              <h3 className="section-title">Family Tasks</h3>
-            <button 
-              onClick={() => setIsTodoModalOpen(true)} 
-                className="btn-add"
-            >
-              + ADD
-            </button>
-          </div>
+          {/* Family Tasks Section - Chalkboard Style */}
+          <section className="chalkboard-container">
+            {/* Chalkboard Decorations - Top Right */}
+            <div className="chalkboard-decorations">
+              {/* House Icon */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              {/* Sun Icon */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              {/* Heart Icon */}
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </div>
+
+            {/* Chalkboard Characters - Bottom Right */}
+            <div className="chalkboard-characters">
+              {/* Brown Bear */}
+              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="#8B4513" stroke="#654321" strokeWidth="2"/>
+                <circle cx="40" cy="40" r="8" fill="#000"/>
+                <circle cx="60" cy="40" r="8" fill="#000"/>
+                <ellipse cx="50" cy="55" rx="8" ry="6" fill="#000"/>
+                <circle cx="35" cy="30" r="6" fill="#8B4513"/>
+                <circle cx="65" cy="30" r="6" fill="#8B4513"/>
+                <path d="M 50 65 Q 45 70 50 75 Q 55 70 50 65" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="1"/>
+              </svg>
+              {/* Blue Bear */}
+              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="40" fill="#87CEEB" stroke="#4682B4" strokeWidth="2"/>
+                <circle cx="40" cy="40" r="7" fill="#000"/>
+                <circle cx="60" cy="40" r="7" fill="#000"/>
+                <ellipse cx="50" cy="55" rx="7" ry="5" fill="#000"/>
+                <circle cx="35" cy="30" r="5" fill="#87CEEB"/>
+                <circle cx="65" cy="30" r="5" fill="#87CEEB"/>
+                <path d="M 50 65 Q 45 70 50 75 Q 55 70 50 65" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="1"/>
+              </svg>
+              {/* Pink Bunny */}
+              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="50" cy="60" rx="30" ry="35" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2"/>
+                <ellipse cx="50" cy="35" rx="20" ry="25" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2"/>
+                <ellipse cx="30" cy="20" rx="8" ry="20" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2" transform="rotate(-30 30 20)"/>
+                <ellipse cx="70" cy="20" rx="8" ry="20" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2" transform="rotate(30 70 20)"/>
+                <circle cx="45" cy="35" r="4" fill="#000"/>
+                <circle cx="55" cy="35" r="4" fill="#000"/>
+                <ellipse cx="50" cy="45" rx="4" ry="3" fill="#000"/>
+                <rect x="40" y="70" width="20" height="15" fill="#87CEEB" stroke="#4682B4" strokeWidth="1"/>
+              </svg>
+            </div>
+
+            <div className="chalkboard-header">
+              <h3 className="chalkboard-title">Family Tasks</h3>
+              <button 
+                onClick={() => setIsTodoModalOpen(true)} 
+                className="chalkboard-btn-add"
+              >
+                + ADD
+              </button>
+            </div>
             <div className="section-body">
               {state.todos.length > 0 ? (
                 <div className="todo-list">
@@ -5113,11 +5173,11 @@ export default function FamilyHub() {
                       >
                         <div className={`todo-checkbox ${t.done ? 'todo-checkbox-checked' : ''}`}>
                           {t.done && (
-                            <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                            <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path d="M5 13l4 4L19 7"></path>
                             </svg>
                           )}
-                  </div>
+                        </div>
                         <div className="todo-text-wrapper">
                           <span className={`todo-text ${t.done ? 'todo-text-done' : ''}`}>
                             {t.text}
@@ -5125,25 +5185,25 @@ export default function FamilyHub() {
                           {t.assignee && (
                             <span className="todo-assignee">{t.assignee}</span>
                           )}
-                  </div>
-                </div>
+                        </div>
+                      </div>
                       {(t.created_by === userId || !t.created_by) && (
                         <button 
                           onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
-                          className="btn-delete"
+                          className="chalkboard-btn-delete"
                         >
-                          <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                          <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
-                </button>
-            )}
-          </div>
+                        </button>
+                      )}
+                    </div>
                   ))}
-        </div>
+                </div>
               ) : (
-                <p className="empty-state">할 일을 모두 완료했습니다!</p>
-            )}
-          </div>
+                <p className="chalkboard-empty-state">할 일을 모두 완료했습니다! 🎉</p>
+              )}
+            </div>
           </section>
 
           {/* Family Calendar Section */}

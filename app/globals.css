@@ -467,12 +467,137 @@ body {
 }
 
 /* ============================================
-   Todo Section
+   Todo Section - Chalkboard Style
    ============================================ */
+.chalkboard-container {
+  position: relative;
+  background: #2d5016;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  border: 16px solid;
+  border-image: 
+    repeating-linear-gradient(
+      90deg,
+      #8b6914 0px,
+      #8b6914 2px,
+      #6b5010 2px,
+      #6b5010 4px,
+      #8b6914 4px,
+      #8b6914 6px,
+      #6b5010 6px,
+      #6b5010 8px
+    ) 16;
+  border-radius: 8px;
+  padding: var(--spacing-xl);
+  box-shadow: 
+    inset 0 0 20px rgba(0, 0, 0, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.chalkboard-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.chalkboard-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  text-shadow: 
+    2px 2px 0px rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(255, 255, 255, 0.1);
+  margin-bottom: var(--spacing-lg);
+  letter-spacing: 0.05em;
+  position: relative;
+  z-index: 1;
+}
+
+.chalkboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.chalkboard-decorations {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 12px;
+  opacity: 0.4;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.chalkboard-decorations svg {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.chalkboard-characters {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.chalkboard-characters svg {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.chalkboard-btn-add {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.05em;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.chalkboard-btn-add:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.chalkboard-btn-add:active {
+  transform: scale(0.95);
+}
+
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
+  position: relative;
+  z-index: 1;
 }
 
 .todo-item {
@@ -480,6 +605,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-sm) 0;
+  position: relative;
 }
 
 .todo-content {
@@ -497,27 +623,34 @@ body {
 }
 
 .todo-checkbox {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 0.25rem;
-  border: 2px solid #cbd5e1;
-  background: white;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  border: 2px solid #ffffff;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.todo-checkbox:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .todo-checkbox-checked {
-  background-color: #6366f1;
-  border-color: #6366f1;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
 }
 
 .todo-checkmark {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: white;
+  width: 1rem;
+  height: 1rem;
+  color: #ffffff;
+  stroke-width: 3;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .todo-text-wrapper {
@@ -529,29 +662,252 @@ body {
 }
 
 .todo-text {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #334155;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  text-shadow: 
+    1px 1px 0px rgba(0, 0, 0, 0.3),
+    0 0 5px rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.02em;
 }
 
 .todo-text-done {
-  color: #cbd5e1;
+  color: rgba(255, 255, 255, 0.5);
   text-decoration: line-through;
 }
 
 .todo-assignee {
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #94a3b8;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
   white-space: nowrap;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
-.empty-state {
-  padding: var(--spacing-sm) 0;
-  color: #94a3b8;
-  font-weight: 700;
-  font-size: 0.875rem;
+.chalkboard-btn-delete {
+  padding: var(--spacing-xs);
+  color: #ffffff;
+  background: transparent;
+  border: 2px solid #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chalkboard-btn-delete:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #ff6b6b;
+}
+
+.chalkboard-btn-delete:active {
+  transform: scale(0.9);
+}
+
+.chalkboard-icon-delete {
+  width: 0.875rem;
+  height: 0.875rem;
+  stroke-width: 3;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.chalkboard-empty-state {
+  padding: var(--spacing-lg) 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  font-size: 1rem;
   text-align: center;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+/* Chalkboard Modal Styles */
+.chalkboard-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+}
+
+.chalkboard-modal-content {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--spacing-2xl);
+  background: #2d5016;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  border: 16px solid;
+  border-image: 
+    repeating-linear-gradient(
+      90deg,
+      #8b6914 0px,
+      #8b6914 2px,
+      #6b5010 2px,
+      #6b5010 4px,
+      #8b6914 4px,
+      #8b6914 6px,
+      #6b5010 6px,
+      #6b5010 8px
+    ) 16;
+  border-radius: 8px;
+  box-shadow: 
+    inset 0 0 20px rgba(0, 0, 0, 0.3),
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.chalkboard-modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.chalkboard-modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  text-shadow: 
+    2px 2px 0px rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(255, 255, 255, 0.1);
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.chalkboard-modal-icon {
+  font-size: 1.75rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.chalkboard-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.chalkboard-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.chalkboard-form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  margin-left: var(--spacing-xs);
+}
+
+.chalkboard-form-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border-radius: 8px;
+  border: 2px solid #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  color: #ffffff;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  outline: none;
+  transition: all 0.2s ease;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chalkboard-form-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chalkboard-form-input:focus {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.chalkboard-modal-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-2xl);
+  position: relative;
+  z-index: 1;
+}
+
+.chalkboard-btn-secondary {
+  flex: 1;
+  padding: var(--spacing-md) 0;
+  color: #ffffff;
+  font-weight: 700;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  background: transparent;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chalkboard-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chalkboard-btn-primary {
+  flex: 2;
+  padding: var(--spacing-md) 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  font-weight: 700;
+  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+}
+
+.chalkboard-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.chalkboard-btn-primary:active {
+  transform: scale(0.95);
 }
 
 /* ============================================
