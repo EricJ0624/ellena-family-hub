@@ -3927,7 +3927,7 @@ export default function FamilyHub() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const img = new Image();
+        const img = new window.Image();
         img.onload = () => {
           if (process.env.NODE_ENV === 'development') {
             console.log('이미지 로드 완료:', { 
