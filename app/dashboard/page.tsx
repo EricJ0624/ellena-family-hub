@@ -10,6 +10,7 @@ import {
   startBackgroundLocationTracking,
   stopBackgroundLocationTracking
 } from '@/lib/webpush';
+import TitlePage from '@/app/components/TitlePage';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -576,17 +577,20 @@ export default function FamilyHub() {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
       script.async = true;
       script.defer = true;
+      
       script.onload = () => {
-        // 스크립트 로드 후 약간의 지연을 두고 초기화 (에러 감지용)
+        // 스크립트 로드 후 약간의 지연을 두고 초기화
         setTimeout(() => {
           initializeMap();
         }, 100);
       };
+      
       script.onerror = () => {
         console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
         setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다.');
         setMapLoaded(false);
       };
+      
       document.head.appendChild(script);
     } else {
       initializeMap();
@@ -4754,14 +4758,10 @@ export default function FamilyHub() {
       <div className="main-content">
         {/* Header */}
         <header className="app-header">
-          <div className="title-container">
-          <h1 
-            onClick={handleRename}
-              className="app-title"
-            >
-              {state.familyName || 'Ellena Family Hub'}
-            </h1>
-          </div>
+          <TitlePage 
+            title={state.familyName || 'Ellena Family Hub'}
+            onTitleClick={handleRename}
+          />
           <div className="status-indicator">
             <span className="status-dot">
               <span className="status-dot-ping"></span>
