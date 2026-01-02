@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
+import Image from 'next/image';
 
 // 상수 분리 - 텍스트 내용 관리
 const CONSTANTS = {
@@ -37,138 +38,41 @@ const TitleText: React.FC<TitleTextProps> = ({ title, onTitleClick }) => {
   );
 };
 
-// 가족 일러스트 컴포넌트 - 전신 캐릭터가 손을 잡고 있는 SVG
+// 가족 일러스트 컴포넌트 - public/family-illustration.png 이미지 파일 사용
 const FamilyIllustration: React.FC = () => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.5 }}
-      className="flex items-center justify-center my-4 w-full max-w-md mx-auto"
+      className="flex items-center justify-center my-4 w-full"
+      style={{
+        padding: '0 16px',
+      }}
     >
-      <svg
-        viewBox="0 0 400 200"
-        className="w-full h-auto max-h-48 md:max-h-64"
-        xmlns="http://www.w3.org/2000/svg"
+      <div
+        className="relative"
+        style={{
+          width: '100%',
+          maxWidth: '240px',
+          height: 'auto',
+          aspectRatio: '2 / 1',
+        }}
       >
-        {/* 여자아이 (왼쪽) */}
-        <g transform="translate(50, 50)">
-          {/* 머리 */}
-          <circle cx="30" cy="20" r="18" fill="#fdbcb4" />
-          {/* 머리카락 */}
-          <path
-            d="M 15 20 Q 12 10, 20 8 Q 30 6, 40 8 Q 48 10, 45 20 Q 42 25, 30 25 Q 18 25, 15 20"
-            fill="#f4a261"
-          />
-          {/* 눈 */}
-          <circle cx="25" cy="18" r="2" fill="#2a2a2a" />
-          <circle cx="35" cy="18" r="2" fill="#2a2a2a" />
-          {/* 입 */}
-          <path d="M 25 24 Q 30 26, 35 24" stroke="#2a2a2a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          {/* 몸통 */}
-          <rect x="20" y="38" width="20" height="30" rx="5" fill="#ff6b9d" />
-          {/* 팔 (왼쪽 - 손을 잡고 있음) */}
-          <ellipse cx="15" cy="50" rx="8" ry="15" fill="#fdbcb4" transform="rotate(-20 15 50)" />
-          {/* 팔 (오른쪽 - 손을 잡고 있음) */}
-          <ellipse cx="45" cy="50" rx="8" ry="15" fill="#fdbcb4" transform="rotate(20 45 50)" />
-          {/* 다리 */}
-          <rect x="22" y="68" width="6" height="25" rx="3" fill="#4a90e2" />
-          <rect x="32" y="68" width="6" height="25" rx="3" fill="#4a90e2" />
-          {/* 신발 */}
-          <ellipse cx="25" cy="96" rx="5" ry="3" fill="#2a2a2a" />
-          <ellipse cx="35" cy="96" rx="5" ry="3" fill="#2a2a2a" />
-        </g>
-
-        {/* 손 잡기 (왼쪽) */}
-        <g transform="translate(120, 80)">
-          <circle cx="0" cy="0" r="8" fill="#fdbcb4" />
-          <circle cx="15" cy="0" r="8" fill="#fdbcb4" />
-          <path
-            d="M 8 0 Q 11.5 0, 15 0"
-            stroke="#fdbcb4"
-            strokeWidth="6"
-            fill="none"
-            strokeLinecap="round"
-          />
-        </g>
-
-        {/* 엄마 (중앙) */}
-        <g transform="translate(150, 30)">
-          {/* 머리 */}
-          <circle cx="50" cy="25" r="22" fill="#fdbcb4" />
-          {/* 머리카락 */}
-          <path
-            d="M 30 25 Q 25 10, 40 5 Q 60 0, 70 5 Q 85 10, 70 25 Q 65 30, 50 30 Q 35 30, 30 25"
-            fill="#8b4513"
-          />
-          {/* 눈 */}
-          <circle cx="45" cy="23" r="2.5" fill="#2a2a2a" />
-          <circle cx="55" cy="23" r="2.5" fill="#2a2a2a" />
-          {/* 입 */}
-          <path d="M 45 30 Q 50 32, 55 30" stroke="#2a2a2a" strokeWidth="2" fill="none" strokeLinecap="round" />
-          {/* 몸통 */}
-          <rect x="40" y="47" width="20" height="40" rx="6" fill="#e63946" />
-          {/* 팔 (왼쪽 - 손을 잡고 있음) */}
-          <ellipse cx="30" cy="60" rx="10" ry="18" fill="#fdbcb4" transform="rotate(-25 30 60)" />
-          {/* 팔 (오른쪽 - 손을 잡고 있음) */}
-          <ellipse cx="70" cy="60" rx="10" ry="18" fill="#fdbcb4" transform="rotate(25 70 60)" />
-          {/* 다리 */}
-          <rect x="42" y="87" width="7" height="30" rx="3.5" fill="#264653" />
-          <rect x="51" y="87" width="7" height="30" rx="3.5" fill="#264653" />
-          {/* 신발 */}
-          <ellipse cx="45.5" cy="120" rx="6" ry="4" fill="#2a2a2a" />
-          <ellipse cx="54.5" cy="120" rx="6" ry="4" fill="#2a2a2a" />
-        </g>
-
-        {/* 손 잡기 (오른쪽) */}
-        <g transform="translate(280, 80)">
-          <circle cx="0" cy="0" r="8" fill="#fdbcb4" />
-          <circle cx="15" cy="0" r="8" fill="#fdbcb4" />
-          <path
-            d="M 8 0 Q 11.5 0, 15 0"
-            stroke="#fdbcb4"
-            strokeWidth="6"
-            fill="none"
-            strokeLinecap="round"
-          />
-        </g>
-
-        {/* 아빠 (오른쪽) */}
-        <g transform="translate(310, 40)">
-          {/* 머리 */}
-          <circle cx="40" cy="20" r="20" fill="#fdbcb4" />
-          {/* 머리카락 */}
-          <path
-            d="M 22 20 Q 20 8, 30 5 Q 50 2, 58 5 Q 68 8, 58 20 Q 55 25, 40 25 Q 25 25, 22 20"
-            fill="#2a2a2a"
-          />
-          {/* 눈 */}
-          <circle cx="35" cy="18" r="2.5" fill="#2a2a2a" />
-          <circle cx="45" cy="18" r="2.5" fill="#2a2a2a" />
-          {/* 수염 */}
-          <path
-            d="M 32 28 Q 35 30, 40 30 Q 45 30, 48 28"
-            stroke="#2a2a2a"
-            strokeWidth="2"
-            fill="none"
-            strokeLinecap="round"
-          />
-          {/* 입 */}
-          <path d="M 35 32 Q 40 34, 45 32" stroke="#2a2a2a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          {/* 몸통 */}
-          <rect x="30" y="40" width="20" height="45" rx="5" fill="#457b9d" />
-          {/* 팔 (왼쪽 - 손을 잡고 있음) */}
-          <ellipse cx="20" cy="55" rx="10" ry="18" fill="#fdbcb4" transform="rotate(-25 20 55)" />
-          {/* 팔 (오른쪽) */}
-          <ellipse cx="60" cy="55" rx="10" ry="18" fill="#fdbcb4" transform="rotate(25 60 55)" />
-          {/* 다리 */}
-          <rect x="32" y="85" width="7" height="32" rx="3.5" fill="#1d3557" />
-          <rect x="41" y="85" width="7" height="32" rx="3.5" fill="#1d3557" />
-          {/* 신발 */}
-          <ellipse cx="35.5" cy="120" rx="6" ry="4" fill="#2a2a2a" />
-          <ellipse cx="44.5" cy="120" rx="6" ry="4" fill="#2a2a2a" />
-        </g>
-      </svg>
+        <Image
+          src="/family-illustration.png"
+          alt="Family illustration - Mom, child, and dad holding hands"
+          fill
+          style={{
+            objectFit: 'contain',
+            objectPosition: 'center',
+            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))',
+          }}
+          priority
+          sizes="(max-width: 768px) 240px, 280px"
+          unoptimized={true}
+        />
+      </div>
     </motion.div>
   );
 };
@@ -282,9 +186,10 @@ interface TitlePageProps {
 const TitlePage: React.FC<TitlePageProps> = ({ title, onTitleClick }) => {
   return (
     <div 
-      className="relative w-full min-h-[450px] md:min-h-[550px] flex flex-col items-center justify-center overflow-hidden rounded-2xl mb-4"
+      className="relative w-full min-h-[380px] md:min-h-[450px] flex flex-col items-center justify-center overflow-visible rounded-2xl mb-4"
       style={{
         background: 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
+        paddingTop: '12px'
       }}
     >
       {/* 배경 그라데이션 */}
@@ -334,7 +239,7 @@ const TitlePage: React.FC<TitlePageProps> = ({ title, onTitleClick }) => {
       </div>
 
       {/* 컨텐츠 영역 */}
-      <div className="relative z-20 flex flex-col items-center justify-center px-4 py-8 w-full min-h-[450px]">
+      <div className="relative z-20 flex flex-col items-center justify-center px-4 pt-8 pb-6 w-full min-h-[380px]">
         {/* 배경 하트 아이콘 (투명) */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -357,13 +262,13 @@ const TitlePage: React.FC<TitlePageProps> = ({ title, onTitleClick }) => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-6 relative z-20"
+          className="mb-6 relative z-20 mt-4"
         >
           <div 
             className="leading-none"
             style={{
               filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-              fontSize: '100px'
+              fontSize: '80px'
             }}
           >
             🏠
