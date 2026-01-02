@@ -3,7 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
-import Image from 'next/image';
 
 // 상수 분리 - 텍스트 내용 관리
 const CONSTANTS = {
@@ -24,108 +23,18 @@ const TitleText: React.FC<TitleTextProps> = ({ title, onTitleClick }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
       onClick={onTitleClick}
-      className="text-4xl md:text-5xl font-bold text-center cursor-pointer select-none mb-6"
+      className="text-4xl md:text-5xl font-bold text-center cursor-pointer select-none mb-6 relative z-30"
       style={{
         background: 'linear-gradient(to right, #9333ea, #2563eb, #ec4899)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',
         color: '#9333ea', // fallback color
+        pointerEvents: 'auto',
       }}
     >
       {title || CONSTANTS.DEFAULT_TITLE}
     </motion.h1>
-  );
-};
-
-// 가족 일러스트 컴포넌트 - public/family-illustration.png 이미지 파일 사용
-const FamilyIllustration: React.FC = () => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.5 }}
-      className="flex items-center justify-center my-4 w-full"
-      style={{
-        padding: '0 16px',
-      }}
-    >
-      <div
-        className="relative"
-        style={{
-          width: '100%',
-          maxWidth: '240px',
-          height: 'auto',
-          aspectRatio: '2 / 1',
-        }}
-      >
-        <Image
-          src="/family-illustration.png"
-          alt="Family illustration - Mom, child, and dad holding hands"
-          fill
-          style={{
-            objectFit: 'contain',
-            objectPosition: 'center',
-            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))',
-          }}
-          priority
-          sizes="(max-width: 768px) 240px, 280px"
-          unoptimized={true}
-        />
-      </div>
-    </motion.div>
-  );
-};
-
-// 월계수 관 장식 컴포넌트
-const LaurelWreath: React.FC = () => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.6, delay: 0.9 }}
-      className="relative w-full max-w-xs md:max-w-md mx-auto mt-6"
-    >
-      <svg
-        viewBox="0 0 300 80"
-        className="w-full h-auto"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* 왼쪽 가지 */}
-        <path
-          d="M 30 40 Q 20 25, 40 20 Q 60 15, 80 25 Q 100 30, 120 35"
-          stroke="#d4af37"
-          strokeWidth="4"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* 오른쪽 가지 */}
-        <path
-          d="M 270 40 Q 280 25, 260 20 Q 240 15, 220 25 Q 200 30, 180 35"
-          stroke="#d4af37"
-          strokeWidth="4"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* 잎 장식 - 왼쪽 */}
-        <ellipse cx="50" cy="22" rx="4" ry="8" fill="#8b6914" transform="rotate(-30 50 22)" />
-        <ellipse cx="70" cy="18" rx="4" ry="8" fill="#8b6914" transform="rotate(20 70 18)" />
-        <ellipse cx="90" cy="25" rx="4" ry="8" fill="#8b6914" transform="rotate(-15 90 25)" />
-        {/* 잎 장식 - 오른쪽 */}
-        <ellipse cx="210" cy="25" rx="4" ry="8" fill="#8b6914" transform="rotate(15 210 25)" />
-        <ellipse cx="230" cy="18" rx="4" ry="8" fill="#8b6914" transform="rotate(-20 230 18)" />
-        <ellipse cx="250" cy="22" rx="4" ry="8" fill="#8b6914" transform="rotate(30 250 22)" />
-        {/* 중앙 연결선 */}
-        <path
-          d="M 120 35 L 180 35"
-          stroke="#d4af37"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      </svg>
-    </motion.div>
   );
 };
 
@@ -186,10 +95,10 @@ interface TitlePageProps {
 const TitlePage: React.FC<TitlePageProps> = ({ title, onTitleClick }) => {
   return (
     <div 
-      className="relative w-full min-h-[380px] md:min-h-[450px] flex flex-col items-center justify-center overflow-visible rounded-2xl mb-4"
+      className="relative w-full min-h-[240px] md:min-h-[280px] flex flex-col items-center justify-center overflow-visible rounded-2xl mb-4"
       style={{
         background: 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
-        paddingTop: '12px'
+        paddingTop: '8px'
       }}
     >
       {/* 배경 그라데이션 */}
@@ -239,7 +148,7 @@ const TitlePage: React.FC<TitlePageProps> = ({ title, onTitleClick }) => {
       </div>
 
       {/* 컨텐츠 영역 */}
-      <div className="relative z-20 flex flex-col items-center justify-center px-4 pt-8 pb-6 w-full min-h-[380px]">
+      <div className="relative z-20 flex flex-col items-center justify-center px-4 pt-4 pb-4 w-full min-h-[240px]">
         {/* 배경 하트 아이콘 (투명) */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -277,12 +186,6 @@ const TitlePage: React.FC<TitlePageProps> = ({ title, onTitleClick }) => {
 
         {/* 타이틀 텍스트 */}
         <TitleText title={title || CONSTANTS.TITLE} onTitleClick={onTitleClick} />
-
-        {/* 가족 일러스트 */}
-        <FamilyIllustration />
-
-        {/* 월계수 관 장식 */}
-        <LaurelWreath />
       </div>
     </div>
   );

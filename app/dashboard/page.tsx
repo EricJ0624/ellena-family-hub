@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
   getPushToken, 
   registerServiceWorker,
@@ -89,6 +90,7 @@ type Photo = {
   isUploaded?: boolean; // 업로드 완료 여부
   isUploading?: boolean; // 업로드 진행 중 여부
   created_by?: string; // 생성자 ID
+  description?: string; // 사진 설명
 };
 
 interface LocationData {
@@ -152,6 +154,9 @@ export default function FamilyHub() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [editingPhotoId, setEditingPhotoId] = useState<number | null>(null);
+  const [photoDescription, setPhotoDescription] = useState<string>('');
+  const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -1084,7 +1089,8 @@ export default function FamilyHub() {
                 mimeType: photo.mime_type,
                 supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
                 isUploaded: true, // Supabase에서 로드한 사진은 업로드 완료된 사진
-                created_by: photo.user_id || photo.created_by || undefined // 생성자 ID 저장
+                created_by: photo.user_id || photo.created_by || undefined, // 생성자 ID 저장
+                description: photo.description || undefined // 설명 추가
               }))
           : []; // Supabase 로드 실패 시 빈 배열
         
@@ -2945,6 +2951,34 @@ export default function FamilyHub() {
                 supabaseId: payload.newId,
                 isUploaded: true,
                 isUploading: false // 업로드 완료
+              };
+            }
+            return photo;
+          });
+          break;
+        case 'UPDATE_PHOTO_DESCRIPTION':
+          // 사진 설명 업데이트
+          newState.album = prev.album.map(photo => {
+            if (photo.id === payload.photoId) {
+              // Supabase에 설명 저장 (supabaseId가 있는 경우만)
+              if (photo.supabaseId) {
+                (async () => {
+                  try {
+                    const { error } = await supabase
+                      .from('memory_vault')
+                      .update({ description: payload.description || null })
+                      .eq('id', photo.supabaseId);
+                    if (error) {
+                      console.error('사진 설명 업데이트 오류:', error);
+                    }
+                  } catch (error) {
+                    console.error('사진 설명 업데이트 오류:', error);
+                  }
+                })();
+              }
+              return {
+                ...photo,
+                description: payload.description
               };
             }
             return photo;
@@ -4842,85 +4876,274 @@ export default function FamilyHub() {
                 onChange={handleFileSelect} 
               />
             </div>
-            <div className="photo-grid">
+            <div className="photo-horizontal-scroll">
               {state.album && state.album.length > 0 ? (
-                state.album.map((p, index) => (
-                  <div 
-                    key={p.id} 
-                    className="photo-item" 
-                    style={{ position: 'relative' }}
-                    onClick={() => setSelectedPhotoIndex(index)}
-                  >
-                    <img src={p.data} className="photo-image" alt="memory" />
-                    {/* 업로드 상태 표시 */}
-                    {p.isUploading && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                <>
+                  {state.album.map((p, index) => (
+                    <div 
+                      key={p.id} 
+                      className="photo-card" 
+                      style={{ position: 'relative' }}
+                      onMouseEnter={() => setHoveredPhotoId(p.id)}
+                      onMouseLeave={() => setHoveredPhotoId(null)}
+                    >
+                      <div 
+                        className="photo-card-image"
+                        onClick={() => setSelectedPhotoIndex(index)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img src={p.data} alt="memory" />
+                        {/* 업로드 상태 표시 */}
+                        {p.isUploading && (
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '12px 12px 0 0',
+                            zIndex: 1
+                          }}>
+                            <div style={{
+                              color: 'white',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              textAlign: 'center'
+                            }}>
+                              <div style={{
+                                width: '24px',
+                                height: '24px',
+                                border: '3px solid rgba(255, 255, 255, 0.3)',
+                                borderTop: '3px solid white',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite',
+                                margin: '0 auto 8px'
+                              }}></div>
+                              업로드 중...
+                            </div>
+                          </div>
+                        )}
+                        {p.isUploaded && !p.isUploading && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            backgroundColor: 'rgba(34, 197, 94, 0.9)',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 2,
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                          }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 6L9 17l-5-5"></path>
+                            </svg>
+                          </div>
+                        )}
+                        {/* 사진 삭제 버튼 (hover시 나타남) */}
+                        {p.created_by === userId && hoveredPhotoId === p.id && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm("사진을 삭제하시겠습니까?")) {
+                                updateState('DELETE_PHOTO', p.id);
+                              }
+                            }} 
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              left: '8px',
+                              width: '24px',
+                              height: '24px',
+                              backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                              border: 'none',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              zIndex: 3,
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.95)';
+                              e.currentTarget.style.transform = 'scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.9)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 6L6 18M6 6l12 12"></path>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      {/* 설명 영역 */}
+                      <div 
+                        className="photo-card-description"
+                        onClick={() => {
+                          if (editingPhotoId !== p.id) {
+                            setEditingPhotoId(p.id);
+                            setPhotoDescription(p.description || '');
+                          }
+                        }}
+                        style={{ cursor: editingPhotoId === p.id ? 'default' : 'pointer' }}
+                      >
+                        {editingPhotoId === p.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <input
+                              type="text"
+                              value={photoDescription}
+                              onChange={(e) => setPhotoDescription(e.target.value)}
+                              placeholder="사진 설명을 입력하세요"
+                              style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: '1px solid #6366f1',
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                outline: 'none'
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateState('UPDATE_PHOTO_DESCRIPTION', { photoId: p.id, description: photoDescription });
+                                  setEditingPhotoId(null);
+                                  setPhotoDescription('');
+                                } else if (e.key === 'Escape') {
+                                  setEditingPhotoId(null);
+                                  setPhotoDescription('');
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateState('UPDATE_PHOTO_DESCRIPTION', { photoId: p.id, description: photoDescription });
+                                  setEditingPhotoId(null);
+                                  setPhotoDescription('');
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '6px 12px',
+                                  backgroundColor: '#6366f1',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                저장
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("사진을 삭제하시겠습니까?")) {
+                                    updateState('DELETE_PHOTO', p.id);
+                                    setEditingPhotoId(null);
+                                    setPhotoDescription('');
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '6px 12px',
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                삭제
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingPhotoId(null);
+                                  setPhotoDescription('');
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#e2e8f0',
+                                  color: '#64748b',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                취소
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span 
+                            style={{ 
+                              fontSize: '14px', 
+                              color: p.description ? '#1e293b' : '#94a3b8',
+                              minHeight: '20px',
+                              display: 'block',
+                              lineHeight: '1.5'
+                            }}
+                          >
+                            {p.description || '설명 추가하기 (클릭)'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {/* 빈 카드 추가 (사진이 3개 미만일 때) */}
+                  {state.album.length < 3 && (
+                    <div className="photo-card photo-card-empty">
+                      <div className="photo-card-image" style={{ 
+                        border: '2px dashed #cbd5e1',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: '8px',
-                        zIndex: 1
-                      }}>
-                        <div style={{
-                          color: 'white',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          textAlign: 'center'
-                        }}>
-                          <div style={{
-                            width: '24px',
-                            height: '24px',
-                            border: '3px solid rgba(255, 255, 255, 0.3)',
-                            borderTop: '3px solid white',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite',
-                            margin: '0 auto 8px'
-                          }}></div>
-                          업로드 중...
+                        backgroundColor: '#f8fafc',
+                        cursor: 'pointer'
+                      }} onClick={() => document.getElementById('file-upload-input')?.click()}>
+                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+                          <div style={{ fontSize: '32px', marginBottom: '8px' }}>+</div>
+                          <div>사진 추가</div>
                         </div>
                       </div>
-                    )}
-                    {p.isUploaded && !p.isUploading && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        backgroundColor: 'rgba(34, 197, 94, 0.9)',
-                        borderRadius: '50%',
-                        width: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 2,
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                      }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 6L9 17l-5-5"></path>
-                        </svg>
-                      </div>
-                    )}
-                    {p.created_by === userId && (
-                      <button 
-                        onClick={() => confirm("사진을 삭제하시겠습니까?") && updateState('DELETE_PHOTO', p.id)} 
-                        className="btn-delete-photo"
-                      >
-                        <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                ))
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="photo-empty">
-                  사진을 업로드해보세요.
+                <div className="photo-card photo-card-empty" style={{ width: '100%' }}>
+                  <div className="photo-card-image" style={{ 
+                    border: '2px dashed #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#f8fafc',
+                    cursor: 'pointer',
+                    minHeight: '200px'
+                  }} onClick={() => document.getElementById('file-upload-input')?.click()}>
+                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📷</div>
+                      <div>사진을 업로드해보세요</div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -5118,39 +5341,29 @@ export default function FamilyHub() {
               </svg>
             </div>
 
-            {/* Chalkboard Characters - Bottom Right */}
-            <div className="chalkboard-characters">
-              {/* Brown Bear */}
-              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="50" cy="50" r="45" fill="#8B4513" stroke="#654321" strokeWidth="2"/>
-                <circle cx="40" cy="40" r="8" fill="#000"/>
-                <circle cx="60" cy="40" r="8" fill="#000"/>
-                <ellipse cx="50" cy="55" rx="8" ry="6" fill="#000"/>
-                <circle cx="35" cy="30" r="6" fill="#8B4513"/>
-                <circle cx="65" cy="30" r="6" fill="#8B4513"/>
-                <path d="M 50 65 Q 45 70 50 75 Q 55 70 50 65" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="1"/>
-              </svg>
-              {/* Blue Bear */}
-              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="50" cy="50" r="40" fill="#87CEEB" stroke="#4682B4" strokeWidth="2"/>
-                <circle cx="40" cy="40" r="7" fill="#000"/>
-                <circle cx="60" cy="40" r="7" fill="#000"/>
-                <ellipse cx="50" cy="55" rx="7" ry="5" fill="#000"/>
-                <circle cx="35" cy="30" r="5" fill="#87CEEB"/>
-                <circle cx="65" cy="30" r="5" fill="#87CEEB"/>
-                <path d="M 50 65 Q 45 70 50 75 Q 55 70 50 65" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="1"/>
-              </svg>
-              {/* Pink Bunny */}
-              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="50" cy="60" rx="30" ry="35" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2"/>
-                <ellipse cx="50" cy="35" rx="20" ry="25" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2"/>
-                <ellipse cx="30" cy="20" rx="8" ry="20" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2" transform="rotate(-30 30 20)"/>
-                <ellipse cx="70" cy="20" rx="8" ry="20" fill="#FFB6C1" stroke="#FF69B4" strokeWidth="2" transform="rotate(30 70 20)"/>
-                <circle cx="45" cy="35" r="4" fill="#000"/>
-                <circle cx="55" cy="35" r="4" fill="#000"/>
-                <ellipse cx="50" cy="45" rx="4" ry="3" fill="#000"/>
-                <rect x="40" y="70" width="20" height="15" fill="#87CEEB" stroke="#4682B4" strokeWidth="1"/>
-              </svg>
+            {/* Family Illustration - Inside Chalkboard, Above Title */}
+            <div className="flex items-center justify-start w-full" style={{ padding: '12px 16px 8px 16px' }}>
+              <div
+                className="relative"
+                style={{
+                  width: '120px',
+                  height: 'auto',
+                  aspectRatio: '2 / 1',
+                }}
+              >
+                <Image
+                  src="/family-illustration2.png"
+                  alt="Family illustration - Mom, child, and dad holding hands"
+                  fill
+                  style={{
+                    objectFit: 'contain',
+                    objectPosition: 'left',
+                    filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))',
+                  }}
+                  sizes="(max-width: 768px) 100px, 120px"
+                  unoptimized={true}
+                />
+              </div>
             </div>
 
             <div className="chalkboard-header">
