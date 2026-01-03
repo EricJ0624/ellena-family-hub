@@ -15,15 +15,38 @@ function getSupabaseServerClient() {
   return createClient(supabaseUrl, supabaseAnonKey);
 }
 
+// --- [UTILITY] 환경 변수 체크 함수 ---
+export function checkCloudinaryConfig(): { available: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push('CLOUDINARY_CLOUD_NAME');
+  if (!process.env.CLOUDINARY_API_KEY) missing.push('CLOUDINARY_API_KEY');
+  if (!process.env.CLOUDINARY_API_SECRET) missing.push('CLOUDINARY_API_SECRET');
+  return { available: missing.length === 0, missing };
+}
+
+export function checkS3Config(): { available: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!process.env.AWS_S3_BUCKET_NAME) missing.push('AWS_S3_BUCKET_NAME');
+  if (!process.env.AWS_ACCESS_KEY_ID) missing.push('AWS_ACCESS_KEY_ID');
+  if (!process.env.AWS_SECRET_ACCESS_KEY) missing.push('AWS_SECRET_ACCESS_KEY');
+  if (!process.env.AWS_REGION) missing.push('AWS_REGION');
+  return { available: missing.length === 0, missing };
+}
+
 // --- [SINGLETON PATTERN] Cloudinary 설정 (한 번만 초기화) ---
 let cloudinaryInitialized = false;
 
 function initializeCloudinary() {
   if (!cloudinaryInitialized) {
+    const config = checkCloudinaryConfig();
+    if (!config.available) {
+      throw new Error(`Cloudinary 환경 변수가 설정되지 않았습니다: ${config.missing.join(', ')}`);
+    }
+    
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+      api_key: process.env.CLOUDINARY_API_KEY!,
+      api_secret: process.env.CLOUDINARY_API_SECRET!,
     });
     cloudinaryInitialized = true;
   }

@@ -100,20 +100,31 @@ export async function POST(request: NextRequest) {
     const cloudinaryData = resizedData || originalData;
     let cloudinaryUrl = '';
     let cloudinaryPublicId = '';
+    let cloudinaryError: string | null = null;
     
-    try {
-      const cloudinaryBlob = base64ToBlob(cloudinaryData, mimeType);
-      const cloudinaryResult = await uploadToCloudinary(
-        cloudinaryBlob,
-        fileName,
-        mimeType,
-        user.id
-      );
-      cloudinaryUrl = cloudinaryResult.url;
-      cloudinaryPublicId = cloudinaryResult.publicId;
-    } catch (cloudinaryError: any) {
-      console.error('Cloudinary 업로드 오류:', cloudinaryError);
-      // Cloudinary 업로드 실패해도 S3 업로드는 계속 진행
+    // Cloudinary 환경 변수 체크
+    const { checkCloudinaryConfig } = await import('@/lib/api-helpers');
+    const cloudinaryConfig = checkCloudinaryConfig();
+    
+    if (cloudinaryConfig.available) {
+      try {
+        const cloudinaryBlob = base64ToBlob(cloudinaryData, mimeType);
+        const cloudinaryResult = await uploadToCloudinary(
+          cloudinaryBlob,
+          fileName,
+          mimeType,
+          user.id
+        );
+        cloudinaryUrl = cloudinaryResult.url;
+        cloudinaryPublicId = cloudinaryResult.publicId;
+      } catch (cloudinaryError: any) {
+        console.error('Cloudinary 업로드 오류:', cloudinaryError);
+        cloudinaryError = cloudinaryError?.message || 'Cloudinary 업로드 실패';
+        // Cloudinary 업로드 실패해도 S3 업로드는 계속 진행
+      }
+    } else {
+      cloudinaryError = `Cloudinary 환경 변수가 설정되지 않았습니다: ${cloudinaryConfig.missing.join(', ')}`;
+      console.warn(cloudinaryError);
     }
 
     // 2. AWS S3에 원본 파일 업로드 (선택적)
@@ -121,17 +132,27 @@ export async function POST(request: NextRequest) {
     let s3Result: { url: string; key: string } | null = null;
     let s3Error: string | null = null;
     
-    try {
-      s3Result = await uploadToS3(
-        originalBlob,
-        fileName,
-        mimeType,
-        user.id
-      );
-    } catch (s3UploadError: any) {
-      console.warn('S3 업로드 실패 (Cloudinary만 사용):', s3UploadError.message);
-      s3Error = s3UploadError.message;
-      // S3 업로드 실패해도 Cloudinary가 있으면 계속 진행
+    // S3 환경 변수 체크
+    const { checkS3Config } = await import('@/lib/api-helpers');
+    const s3Config = checkS3Config();
+    
+    if (s3Config.available) {
+      try {
+        s3Result = await uploadToS3(
+          originalBlob,
+          fileName,
+          mimeType,
+          user.id
+        );
+      } catch (s3UploadError: any) {
+        console.warn('S3 업로드 실패 (Cloudinary만 사용):', s3UploadError.message);
+        s3Error = s3UploadError.message;
+        // S3 업로드 실패해도 Cloudinary가 있으면 계속 진행
+      }
+    } else {
+      s3Error = `S3 환경 변수가 설정되지 않았습니다: ${s3Config.missing.join(', ')}`;
+      console.warn(s3Error);
+      // S3는 선택적이므로 계속 진행
     }
 
     // 3. Supabase memory_vault 테이블에 저장
@@ -141,8 +162,18 @@ export async function POST(request: NextRequest) {
     const imageUrl = cloudinaryUrl || s3Result?.url;
     
     if (!imageUrl) {
+      // 환경 변수 정보 포함한 에러 메시지
+      const errorDetails: string[] = [];
+      if (cloudinaryError) errorDetails.push(`Cloudinary: ${cloudinaryError}`);
+      if (s3Error) errorDetails.push(`S3: ${s3Error}`);
+      
       return NextResponse.json(
-        { error: 'Cloudinary와 S3 업로드가 모두 실패했습니다. 환경 변수를 확인해주세요.' },
+        { 
+          error: 'Cloudinary와 S3 업로드가 모두 실패했습니다.',
+          details: errorDetails.join(' / '),
+          cloudinaryConfig: cloudinaryConfig,
+          s3Config: s3Config,
+        },
         { status: 500 }
       );
     }

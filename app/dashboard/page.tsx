@@ -229,6 +229,11 @@ export default function FamilyHub() {
   // Supabase에서 사진 데이터 불러오기
   const loadPhotosFromSupabase = useCallback(async (userId: string) => {
     try {
+      if (!userId) {
+        console.warn('loadPhotosFromSupabase: userId가 없습니다.');
+        return [];
+      }
+
       const { data: photos, error } = await supabase
         .from('memory_vault')
         .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, description, created_at')
@@ -236,11 +241,47 @@ export default function FamilyHub() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase 사진 불러오기 오류:', error);
+        // 에러 객체를 더 자세히 로깅 (직렬화 가능한 형태로)
+        const errorInfo: any = {
+          message: error?.message || '알 수 없는 오류',
+          details: error?.details || null,
+          hint: error?.hint || null,
+          code: error?.code || null,
+          userId: userId,
+        };
+        
+        // 에러 객체의 모든 속성 추출 시도
+        if (error && typeof error === 'object') {
+          try {
+            const errorKeys = Object.keys(error);
+            errorKeys.forEach(key => {
+              try {
+                errorInfo[key] = (error as any)[key];
+              } catch (e) {
+                // 속성 접근 실패 시 무시
+              }
+            });
+          } catch (e) {
+            // 무시
+          }
+        }
+        
+        console.error('Supabase 사진 불러오기 오류:', errorInfo);
+        
+        // 특정 에러 코드에 대한 안내 메시지
+        if (error?.code === '42P01') {
+          console.error('테이블이 존재하지 않습니다. Supabase SQL Editor에서 memory_vault 테이블을 생성하세요.');
+        } else if (error?.code === '42501') {
+          console.error('권한이 없습니다. RLS 정책을 확인하세요.');
+        }
+        
         return [];
       }
 
       if (!photos || photos.length === 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('loadPhotosFromSupabase: 사진이 없습니다.', { userId });
+        }
         return [];
       }
 
@@ -256,7 +297,13 @@ export default function FamilyHub() {
         mimeType: photo.mime_type || 'image/jpeg',
       }));
     } catch (error: any) {
-      console.error('사진 불러오기 중 오류:', error);
+      // catch 블록에서도 더 자세한 에러 정보 로깅
+      console.error('사진 불러오기 중 예외 발생:', {
+        message: error?.message || '알 수 없는 오류',
+        stack: error?.stack,
+        name: error?.name,
+        userId: userId,
+      });
       return [];
     }
   }, []);
@@ -5031,17 +5078,25 @@ export default function FamilyHub() {
           uploadFailed: true // 실패 플래그
         });
         
-        // 사용자에게 에러 알림
+        // 사용자에게 에러 알림 (환경 변수 정보 포함)
         const errorMessage = uploadError.message || '업로드 중 오류가 발생했습니다.';
-        if (errorMessage.includes('AWS_S3_BUCKET_NAME')) {
-          alert('S3 환경 변수가 설정되지 않았습니다.\n\n로컬 저장은 완료되었습니다. S3 환경 변수를 설정하면 원본 파일도 저장됩니다.');
+        let userMessage = '';
+        
+        if (errorMessage.includes('Cloudinary 환경 변수') || errorMessage.includes('CLOUDINARY')) {
+          userMessage = 'Cloudinary 환경 변수가 설정되지 않았습니다.\n\n로컬 저장은 완료되었습니다.\n\n필요한 환경 변수:\n- CLOUDINARY_CLOUD_NAME\n- CLOUDINARY_API_KEY\n- CLOUDINARY_API_SECRET\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
+        } else if (errorMessage.includes('AWS_S3_BUCKET_NAME') || errorMessage.includes('S3 환경 변수')) {
+          userMessage = 'S3 환경 변수가 설정되지 않았습니다.\n\n로컬 저장은 완료되었습니다. S3 환경 변수를 설정하면 원본 파일도 저장됩니다.\n\n필요한 환경 변수:\n- AWS_S3_BUCKET_NAME\n- AWS_ACCESS_KEY_ID\n- AWS_SECRET_ACCESS_KEY\n- AWS_REGION\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
+        } else if (errorMessage.includes('Cloudinary와 S3 업로드가 모두 실패')) {
+          userMessage = 'Cloudinary와 S3 업로드가 모두 실패했습니다.\n\n로컬 저장은 완료되었습니다.\n\n환경 변수를 확인해주세요:\n- Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET\n- S3: AWS_S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION';
         } else if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
-          alert('업로드 실패: S3 버킷 CORS 설정이 필요합니다. 관리자에게 문의하세요.\n\n로컬 저장은 완료되었습니다.');
+          userMessage = '업로드 실패: S3 버킷 CORS 설정이 필요합니다.\n\n로컬 저장은 완료되었습니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
         } else if (errorMessage.includes('타임아웃')) {
-          alert('업로드 타임아웃: 파일이 너무 크거나 네트워크 연결이 불안정합니다.\n\n로컬 저장은 완료되었습니다.');
+          userMessage = '업로드 타임아웃: 파일이 너무 크거나 네트워크 연결이 불안정합니다.\n\n로컬 저장은 완료되었습니다.';
         } else {
-          alert(`업로드 실패: ${errorMessage}\n\n로컬 저장은 완료되었습니다.`);
+          userMessage = `업로드 실패: ${errorMessage}\n\n로컬 저장은 완료되었습니다.`;
         }
+        
+        alert(userMessage);
       } finally {
         // 업로드가 완료되지 않았고 플래그가 아직 true인 경우 강제로 해제
         if (!uploadCompleted && photoId !== null) {
