@@ -158,7 +158,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="relative w-full h-full z-0 flex items-center justify-center"
+              className="relative w-full h-full z-0"
             >
               <Image
                 src={selectedPhoto.data}
@@ -166,9 +166,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
                 fill
                 style={{
                   objectFit: 'cover',
-                  objectPosition: 'center center',
                 }}
-                className="absolute inset-0"
                 unoptimized={true}
               />
               {/* 은은한 우드 질감 오버레이 */}
