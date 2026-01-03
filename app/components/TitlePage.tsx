@@ -89,8 +89,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
       transition={{ duration: 0.6, delay: 0.2 }}
       className="relative mb-4 z-30"
       style={{
-        width: '280px',
-        height: '210px',
+        width: '320px',
+        height: '240px',
         maxWidth: '90%',
       }}
     >
@@ -114,7 +114,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
                 alt="오늘의 추억"
                 fill
                 style={{
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                 }}
                 unoptimized={true}
               />
