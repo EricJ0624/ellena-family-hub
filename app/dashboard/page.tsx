@@ -206,6 +206,7 @@ export default function FamilyHub() {
     fontSize: 48,
     fontWeight: '700',
     letterSpacing: 0,
+    fontFamily: 'Inter',
   });
   
   // 가족 이름 수정 모달 상태

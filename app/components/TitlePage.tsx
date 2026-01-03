@@ -49,6 +49,7 @@ interface TitleStyle {
   fontSize: number;
   fontWeight: string;
   letterSpacing: number;
+  fontFamily: string;
 }
 
 // 오늘의 무작위 사진 액자 컴포넌트
@@ -195,6 +196,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
         fontSize: `${titleStyle.fontSize}px`,
         fontWeight: titleStyle.fontWeight,
         letterSpacing: `${titleStyle.letterSpacing}px`,
+        fontFamily: titleStyle.fontFamily || 'Inter, sans-serif',
         pointerEvents: 'auto',
         textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
       }}
@@ -214,6 +216,22 @@ interface DesignEditorProps {
 const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, onClose }) => {
   const [localStyle, setLocalStyle] = useState<TitleStyle>(titleStyle);
   
+  // 인기 있는 웹 폰트 목록 (메모이제이션)
+  const fontFamilies = useMemo(() => [
+    { value: 'Inter', label: 'Inter (모던)', category: 'Sans-serif' },
+    { value: 'Roboto', label: 'Roboto (깔끔)', category: 'Sans-serif' },
+    { value: 'Poppins', label: 'Poppins (세련)', category: 'Sans-serif' },
+    { value: 'Montserrat', label: 'Montserrat (강렬)', category: 'Sans-serif' },
+    { value: 'Playfair Display', label: 'Playfair Display (우아)', category: 'Serif' },
+    { value: 'Merriweather', label: 'Merriweather (전통)', category: 'Serif' },
+    { value: 'Lora', label: 'Lora (읽기 좋음)', category: 'Serif' },
+    { value: 'Dancing Script', label: 'Dancing Script (손글씨)', category: 'Script' },
+    { value: 'Pacifico', label: 'Pacifico (캐주얼)', category: 'Script' },
+    { value: 'Arial', label: 'Arial (기본)', category: 'Sans-serif' },
+    { value: 'Georgia', label: 'Georgia (클래식)', category: 'Serif' },
+    { value: 'Times New Roman', label: 'Times New Roman (전통)', category: 'Serif' },
+  ], []);
+  
   // titleStyle prop이 변경될 때 localStyle 업데이트
   useEffect(() => {
     setLocalStyle(titleStyle);
@@ -225,94 +243,165 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
     onStyleChange(newStyle);
   }, [localStyle, onStyleChange]);
   
+  // 슬라이더 진행률 계산 (메모이제이션)
+  const fontSizeProgress = useMemo(() => {
+    return ((localStyle.fontSize - 24) / (72 - 24)) * 100;
+  }, [localStyle.fontSize]);
+  
+  const letterSpacingProgress = useMemo(() => {
+    return ((localStyle.letterSpacing + 2) / 12) * 100;
+  }, [localStyle.letterSpacing]);
+  
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] bg-white rounded-xl shadow-2xl p-6"
+      initial={{ opacity: 0, scale: 0.95, y: -20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -20 }}
+      transition={{ duration: 0.2 }}
+      className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] rounded-2xl shadow-2xl overflow-hidden"
       style={{
         width: '90%',
-        maxWidth: '400px',
-        backdropFilter: 'blur(10px)',
+        maxWidth: '480px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* 닫기 버튼 */}
-      <button
-        onClick={onClose}
-        className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-        aria-label="닫기"
+      {/* 그라데이션 헤더 */}
+      <div 
+        className="relative px-6 py-5 text-white"
+        style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        }}
       >
-        <X className="w-5 h-5 text-gray-500" />
-      </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <Palette className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold">디자인 수정</h3>
+              <p className="text-xs text-white/80">타이틀 스타일을 자유롭게 변경하세요</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+            aria-label="닫기"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
       
-      <div className="space-y-4">
-        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Palette className="w-5 h-5" />
-          디자인 수정
-        </h3>
-        
+      {/* 컨텐츠 영역 */}
+      <div className="bg-white p-6 space-y-5">
         {/* 글자 내용 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
             글자 내용
           </label>
           <input
             type="text"
             value={localStyle.content}
             onChange={(e) => handleChange('content', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="타이틀 텍스트"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+            placeholder="타이틀 텍스트를 입력하세요"
           />
         </div>
         
+        {/* 글꼴 선택 */}
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+            글꼴
+          </label>
+          <select
+            value={localStyle.fontFamily || 'Inter'}
+            onChange={(e) => handleChange('fontFamily', e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all appearance-none bg-white cursor-pointer"
+            style={{
+              fontFamily: localStyle.fontFamily || 'Inter',
+            }}
+          >
+            {fontFamilies.map((font) => (
+              <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
+                {font.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
         {/* 색상 선택 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
             색상
           </label>
           <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={localStyle.color}
-              onChange={(e) => handleChange('color', e.target.value)}
-              className="w-12 h-12 rounded-lg border border-gray-300 cursor-pointer"
-            />
+            <div className="relative">
+              <input
+                type="color"
+                value={localStyle.color}
+                onChange={(e) => handleChange('color', e.target.value)}
+                className="w-16 h-16 rounded-xl border-2 border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                }}
+              />
+            </div>
             <input
               type="text"
               value={localStyle.color}
               onChange={(e) => handleChange('color', e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all font-mono text-sm"
               placeholder="#9333ea"
             />
           </div>
         </div>
         
         {/* 폰트 크기 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            폰트 크기: {localStyle.fontSize}px
-          </label>
-          <input
-            type="range"
-            min="24"
-            max="72"
-            value={localStyle.fontSize}
-            onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
-          />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              폰트 크기
+            </label>
+            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
+              {localStyle.fontSize}px
+            </span>
+          </div>
+          <div className="relative">
+            <input
+              type="range"
+              min="24"
+              max="72"
+              value={localStyle.fontSize}
+              onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
+              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              style={{
+                background: `linear-gradient(to right, #667eea 0%, #667eea ${fontSizeProgress}%, #e5e7eb ${fontSizeProgress}%, #e5e7eb 100%)`,
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>24px</span>
+            <span>72px</span>
+          </div>
         </div>
         
         {/* 폰트 두께 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
             폰트 두께
           </label>
           <select
             value={localStyle.fontWeight}
             onChange={(e) => handleChange('fontWeight', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer"
           >
             <option value="300">Light (300)</option>
             <option value="400">Normal (400)</option>
@@ -325,19 +414,34 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         </div>
         
         {/* 자간 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            자간: {localStyle.letterSpacing}px
-          </label>
-          <input
-            type="range"
-            min="-2"
-            max="10"
-            step="0.5"
-            value={localStyle.letterSpacing}
-            onChange={(e) => handleChange('letterSpacing', parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
-          />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              자간
+            </label>
+            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
+              {localStyle.letterSpacing}px
+            </span>
+          </div>
+          <div className="relative">
+            <input
+              type="range"
+              min="-2"
+              max="10"
+              step="0.5"
+              value={localStyle.letterSpacing}
+              onChange={(e) => handleChange('letterSpacing', parseFloat(e.target.value))}
+              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              style={{
+                background: `linear-gradient(to right, #667eea 0%, #667eea ${letterSpacingProgress}%, #e5e7eb ${letterSpacingProgress}%, #e5e7eb 100%)`,
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>-2px</span>
+            <span>10px</span>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -415,6 +519,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
     fontSize: 48,
     fontWeight: '700',
     letterSpacing: 0,
+    fontFamily: 'Inter',
   });
   
   // 외부에서 전달된 titleStyle이 있으면 사용, 없으면 내부 상태 사용
