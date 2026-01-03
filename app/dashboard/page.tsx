@@ -244,7 +244,27 @@ export default function FamilyHub() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error || !session) {
+        // Refresh Token 에러 처리 (만료된 토큰인 경우)
+        if (error) {
+          // "Invalid Refresh Token" 또는 "Refresh Token Not Found" 에러인 경우
+          if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
+            console.warn('Refresh Token이 만료되었거나 없습니다. 로그아웃 처리합니다.');
+            // localStorage에서 세션 정보 제거
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('sb-auth-token');
+            }
+            // 로그아웃 처리
+            await supabase.auth.signOut();
+            router.push('/');
+            return;
+          }
+          // 다른 인증 에러인 경우
+          console.error('인증 확인 오류:', error);
+          router.push('/');
+          return;
+        }
+        
+        if (!session) {
           router.push('/');
           return;
         }
@@ -310,7 +330,28 @@ export default function FamilyHub() {
     };
     
     checkAuth();
-  }, [isMounted, router, loadData]);
+    
+    // 인증 상태 변경 리스너 (Refresh Token 에러 감지)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('인증 상태 변경:', event);
+        }
+      }
+      
+      // Refresh Token 에러가 발생한 경우 자동 로그아웃
+      if (event === 'SIGNED_OUT' && !session) {
+        // 세션이 없으면 로그인 페이지로 리다이렉트
+        if (isAuthenticated) {
+          router.push('/');
+        }
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isMounted, router, loadData, isAuthenticated]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
   useEffect(() => {
@@ -2498,7 +2539,16 @@ export default function FamilyHub() {
     if (!userId) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      // Refresh Token 에러 처리
+      if (sessionError) {
+        if (sessionError.message?.includes('Refresh Token') || sessionError.message?.includes('refresh_token')) {
+          console.warn('Refresh Token 에러 - 세션 저장 건너뜀:', sessionError.message);
+          return;
+        }
+      }
+      
       if (!session) return;
 
       // family_id 확인 (없으면 기본값 사용)
@@ -4381,7 +4431,15 @@ export default function FamilyHub() {
       // 하이브리드 방식: 작은 파일은 서버 경유, 큰 파일은 Presigned URL 방식
       let uploadCompleted = false;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        // Refresh Token 에러 처리
+        if (sessionError) {
+          if (sessionError.message?.includes('Refresh Token') || sessionError.message?.includes('refresh_token')) {
+            console.warn('Refresh Token 에러 - 업로드 건너뜀:', sessionError.message);
+          }
+        }
+        
         if (!session) {
           console.warn('세션이 없어 Cloudinary/S3 업로드를 건너뜁니다.');
           // 세션이 없어도 isUploading 플래그는 해제

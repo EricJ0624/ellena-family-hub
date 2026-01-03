@@ -26,4 +26,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       eventsPerSecond: 10, // Realtime 이벤트 처리 속도 제한
     },
   },
+  global: {
+    // 전역 에러 핸들러 (Refresh Token 에러는 조용히 처리)
+    headers: {
+      'x-client-info': 'ellena-family-hub',
+    },
+  },
 });
+
+// Refresh Token 에러를 조용히 처리하는 헬퍼 함수
+if (typeof window !== 'undefined') {
+  // 인증 상태 변경 리스너 추가
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      // 세션 상태 변경 시 처리 (필요시)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('인증 상태 변경:', event);
+      }
+    }
+  });
+}
