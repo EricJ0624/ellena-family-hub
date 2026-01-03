@@ -239,7 +239,7 @@ export default function FamilyHub() {
       // titleStyle도 함께 불러오기
       if (decrypted.titleStyle) {
         setTitleStyle(decrypted.titleStyle);
-      }
+    }
     }
     const authKey = getAuthKey(userId);
     sessionStorage.setItem(authKey, key);
@@ -1053,7 +1053,7 @@ export default function FamilyHub() {
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedAssignee = decrypted;
                 }
-              } catch (e) {
+    } catch (e) {
                 // 복호화 실패 시 기본값 사용
                 if (process.env.NODE_ENV === 'development') {
                   console.warn('담당자 복호화 실패:', e);
@@ -4554,14 +4554,27 @@ export default function FamilyHub() {
               throw urlError;
             }
 
-            const urlResult = await urlResponse.json();
+            let urlResult;
+            try {
+              urlResult = await urlResponse.json();
+            } catch (jsonError) {
+              // JSON 파싱 실패 시 응답 텍스트로 에러 메시지 생성
+              const responseText = await urlResponse.text();
+              console.error('Presigned URL 응답 파싱 실패:', {
+                status: urlResponse.status,
+                responseText
+              });
+              throw new Error(`Presigned URL 생성 실패 (${urlResponse.status}): ${responseText || '알 수 없는 오류'}`);
+            }
 
             if (!urlResponse.ok) {
+              const errorMessage = urlResult?.error || urlResult?.message || `HTTP ${urlResponse.status} 오류`;
               console.error('Presigned URL 생성 실패:', {
                 status: urlResponse.status,
-                error: urlResult.error
+                error: errorMessage,
+                fullResponse: urlResult
               });
-              throw new Error(urlResult.error || 'Presigned URL 생성 실패');
+              throw new Error(errorMessage);
             }
 
             if (!urlResult.presignedUrl) {
@@ -4996,27 +5009,27 @@ export default function FamilyHub() {
             <h3 className="chalkboard-modal-title">
               <span className="chalkboard-modal-icon">📝</span>
               새 할 일 등록
-            </h3>
+          </h3>
             <div className="chalkboard-modal-form">
               <div className="chalkboard-form-field">
                 <label className="chalkboard-form-label">무엇을 할까요?</label>
-                <input 
-                  ref={todoTextRef}
-                  type="text" 
+              <input 
+                ref={todoTextRef}
+                type="text" 
                   className="chalkboard-form-input" 
-                  placeholder="할 일 내용 입력"
-                />
-              </div>
+                placeholder="할 일 내용 입력"
+              />
+            </div>
               <div className="chalkboard-form-field">
                 <label className="chalkboard-form-label">누가 할까요?</label>
-                <input 
-                  ref={todoWhoRef}
-                  type="text" 
+              <input 
+                ref={todoWhoRef}
+                type="text" 
                   className="chalkboard-form-input" 
-                  placeholder="이름 입력 (비워두면 누구나)"
-                />
-              </div>
+                placeholder="이름 입력 (비워두면 누구나)"
+              />
             </div>
+          </div>
             <div className="chalkboard-modal-actions">
               <button 
                 onClick={() => setIsTodoModalOpen(false)} 
@@ -5024,15 +5037,15 @@ export default function FamilyHub() {
               >
                 취소
               </button>
-              <button 
-                onClick={submitNewTodo} 
+            <button 
+              onClick={submitNewTodo} 
                 className="chalkboard-btn-primary"
-              >
-                등록하기
-              </button>
-            </div>
+            >
+              등록하기
+            </button>
           </div>
         </div>
+      </div>
       )}
 
       {/* Nickname Modal */}
@@ -5686,13 +5699,13 @@ export default function FamilyHub() {
 
             <div className="chalkboard-header">
               <h3 className="chalkboard-title">Family Tasks</h3>
-              <button 
-                onClick={() => setIsTodoModalOpen(true)} 
+            <button 
+              onClick={() => setIsTodoModalOpen(true)} 
                 className="chalkboard-btn-add"
-              >
-                + ADD
-              </button>
-            </div>
+            >
+              + ADD
+            </button>
+          </div>
             <div className="section-body">
               {state.todos.length > 0 ? (
                 <div className="todo-list">
@@ -5708,7 +5721,7 @@ export default function FamilyHub() {
                               <path d="M5 13l4 4L19 7"></path>
                             </svg>
                           )}
-                        </div>
+                  </div>
                         <div className="todo-text-wrapper">
                           <span className={`todo-text ${t.done ? 'todo-text-done' : ''}`}>
                             {t.text}
@@ -5716,8 +5729,8 @@ export default function FamilyHub() {
                           {t.assignee && (
                             <span className="todo-assignee">{t.assignee}</span>
                           )}
-                        </div>
-                      </div>
+                  </div>
+                </div>
                       {(t.created_by === userId || !t.created_by) && (
                         <button 
                           onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
@@ -5726,11 +5739,11 @@ export default function FamilyHub() {
                           <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                           </svg>
-                        </button>
-                      )}
-                    </div>
+                </button>
+            )}
+          </div>
                   ))}
-                </div>
+        </div>
               ) : (
                 <p className="chalkboard-empty-state">할 일을 모두 완료했습니다! 🎉</p>
               )}
@@ -6093,7 +6106,7 @@ export default function FamilyHub() {
                         <p style={{ marginTop: '8px', fontSize: '12px', color: '#991b1b' }}>
                           💡 참고: 무료 크레딧은 매월 자동으로 충전되며, 사용하지 않으면 소멸됩니다.
                         </p>
-                      </div>
+          </div>
                       {state.location.latitude && state.location.longitude && (
                         <a 
                           href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} 
@@ -6109,7 +6122,7 @@ export default function FamilyHub() {
                           Google 지도에서 위치 보기
                         </a>
                       )}
-                    </div>
+        </div>
                   </div>
                 ) : (
                   <div 
@@ -6399,7 +6412,7 @@ export default function FamilyHub() {
                         }}
                       >
                         모든 사용자 ({allUsers.length}명)
-                      </div>
+    </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {allUsers.map((user) => {
                         const isOnline = onlineUsers.some(onlineUser => onlineUser.id === user.id);
