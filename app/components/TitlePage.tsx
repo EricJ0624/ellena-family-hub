@@ -69,13 +69,11 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
   
   const selectedPhoto = photoIndex !== null ? photos[photoIndex] : null;
   
-  // 수동 셔플 핸들러
+  // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
-    setIsFading(true);
-    setTimeout(() => {
-      setManualSeed(Date.now());
-      setIsFading(false);
-    }, 300); // 페이드 애니메이션 시간
+    // 즉시 새로운 시드 생성하여 다른 사진 선택
+    // AnimatePresence의 mode="wait"가 자동으로 페이드 효과 처리
+    setManualSeed(Date.now());
   }, []);
   
   useEffect(() => {
@@ -155,11 +153,11 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
         <AnimatePresence mode="wait">
           {selectedPhoto ? (
             <motion.div
-              key={selectedPhoto.id}
+              key={`${selectedPhoto.id}-${manualSeed || 'default'}`}
               initial={{ opacity: 0 }}
-              animate={{ opacity: isFading ? 0 : 1 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="relative w-full h-full z-0"
             >
               <Image
@@ -185,7 +183,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="w-full h-full flex items-center justify-center z-0"
               style={{
                 background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%)',
