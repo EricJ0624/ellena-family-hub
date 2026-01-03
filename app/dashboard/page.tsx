@@ -2369,8 +2369,8 @@ export default function FamilyHub() {
           const expiresAt = new Date(req.expires_at);
           // 만료된 accepted 요청만 자동으로 종료 (pending은 사용자가 직접 삭제)
           if (expiresAt < now && req.status === 'accepted') {
-            // 만료된 accepted 요청은 자동으로 종료
-            endLocationSharing(req.id).catch(() => {});
+            // 만료된 accepted 요청은 자동으로 종료 (silent 모드로 확인 없이 처리)
+            endLocationSharing(req.id, true).catch(() => {});
           }
           // pending 상태의 만료된 요청은 자동 삭제하지 않음 (사용자가 직접 삭제)
         }
@@ -3458,13 +3458,16 @@ export default function FamilyHub() {
   };
 
   // 위치 공유 종료 (accepted 요청 취소)
-  const endLocationSharing = async (requestId: string) => {
+  const endLocationSharing = async (requestId: string, silent: boolean = false) => {
     if (!userId || !isAuthenticated) {
-      alert('로그인이 필요합니다.');
+      if (!silent) {
+        alert('로그인이 필요합니다.');
+      }
       return;
     }
 
-    if (!confirm('위치 공유를 종료하시겠습니까?')) {
+    // silent 모드가 아닐 때만 확인 창 표시
+    if (!silent && !confirm('위치 공유를 종료하시겠습니까?')) {
       return;
     }
 
@@ -3478,21 +3481,31 @@ export default function FamilyHub() {
           requestId,
           userId,
           action: 'cancel',
+          silent, // silent 플래그 전달
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        alert('위치 공유가 종료되었습니다.');
+        if (!silent) {
+          alert('위치 공유가 종료되었습니다.');
+        }
         await loadLocationRequests();
         await loadFamilyLocations();
       } else {
-        alert(result.error || '위치 공유 종료에 실패했습니다.');
+        if (!silent) {
+          alert(result.error || '위치 공유 종료에 실패했습니다.');
+        } else {
+          // silent 모드에서는 에러만 로그로 기록
+          console.warn('위치 공유 자동 종료 실패:', result.error);
+        }
       }
     } catch (error) {
       console.error('위치 공유 종료 오류:', error);
-      alert('위치 공유 종료 중 오류가 발생했습니다.');
+      if (!silent) {
+        alert('위치 공유 종료 중 오류가 발생했습니다.');
+      }
     }
   };
 
@@ -3705,6 +3718,14 @@ export default function FamilyHub() {
       return;
     }
 
+    // 이미 처리된 요청인지 확인 (중복 호출 방지)
+    const currentRequest = locationRequests.find((req: any) => req.id === requestId);
+    if (currentRequest && currentRequest.status !== 'pending' && action !== 'cancel') {
+      // cancel은 만료된 요청도 가능하므로 제외
+      console.warn('이미 처리된 요청입니다:', currentRequest.status);
+      return; // 조용히 반환 (alert 없이)
+    }
+
     try {
       const response = await fetch('/api/location-approve', {
         method: 'POST',
@@ -3731,7 +3752,14 @@ export default function FamilyHub() {
         await loadLocationRequests();
         await loadFamilyLocations(); // 승인된 위치 다시 로드
       } else {
-        alert(result.error || '요청 처리에 실패했습니다.');
+        // "이미 처리된 요청입니다" 에러는 조용히 처리 (반복 alert 방지)
+        if (result.error && result.error.includes('이미 처리된 요청')) {
+          console.warn('이미 처리된 요청:', requestId);
+          // 상태만 업데이트 (재로드)
+          await loadLocationRequests();
+        } else {
+          alert(result.error || '요청 처리에 실패했습니다.');
+        }
       }
     } catch (error) {
       console.error('위치 요청 처리 오류:', error);
