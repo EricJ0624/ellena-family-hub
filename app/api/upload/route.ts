@@ -116,20 +116,36 @@ export async function POST(request: NextRequest) {
       // Cloudinary 업로드 실패해도 S3 업로드는 계속 진행
     }
 
-    // 2. AWS S3에 원본 파일 업로드
+    // 2. AWS S3에 원본 파일 업로드 (선택적)
     const originalBlob = base64ToBlob(originalData, mimeType);
-    const s3Result = await uploadToS3(
-      originalBlob,
-      fileName,
-      mimeType,
-      user.id
-    );
+    let s3Result: { url: string; key: string } | null = null;
+    let s3Error: string | null = null;
+    
+    try {
+      s3Result = await uploadToS3(
+        originalBlob,
+        fileName,
+        mimeType,
+        user.id
+      );
+    } catch (s3UploadError: any) {
+      console.warn('S3 업로드 실패 (Cloudinary만 사용):', s3UploadError.message);
+      s3Error = s3UploadError.message;
+      // S3 업로드 실패해도 Cloudinary가 있으면 계속 진행
+    }
 
     // 3. Supabase memory_vault 테이블에 저장
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';
     
     // image_url은 필수 컬럼이므로 cloudinary_url 우선, 없으면 s3_original_url 사용
-    const imageUrl = cloudinaryUrl || s3Result.url;
+    const imageUrl = cloudinaryUrl || s3Result?.url;
+    
+    if (!imageUrl) {
+      return NextResponse.json(
+        { error: 'Cloudinary와 S3 업로드가 모두 실패했습니다. 환경 변수를 확인해주세요.' },
+        { status: 500 }
+      );
+    }
     
     const { data: memoryData, error: dbError } = await supabase
       .from('memory_vault')
@@ -137,11 +153,11 @@ export async function POST(request: NextRequest) {
         uploader_id: user.id,
         image_url: imageUrl, // 필수 컬럼: cloudinary_url 우선, 없으면 s3_original_url
         cloudinary_url: cloudinaryUrl || null,
-        s3_original_url: s3Result.url,
+        s3_original_url: s3Result?.url || null,
         file_type: fileType,
         original_file_size: originalSize || originalBlob.size,
         cloudinary_public_id: cloudinaryPublicId || null,
-        s3_key: s3Result.key,
+        s3_key: s3Result?.key || null,
         mime_type: mimeType,
         original_filename: fileName,
       })
@@ -155,9 +171,10 @@ export async function POST(request: NextRequest) {
         success: true,
         warning: '파일 업로드는 성공했지만 데이터베이스 저장에 실패했습니다.',
         cloudinaryUrl,
-        s3Url: s3Result.url,
-        s3Key: s3Result.key,
+        s3Url: s3Result?.url || null,
+        s3Key: s3Result?.key || null,
         cloudinaryPublicId,
+        s3Error: s3Error || null,
       });
     }
 
@@ -165,10 +182,11 @@ export async function POST(request: NextRequest) {
       success: true,
       id: memoryData.id,
       cloudinaryUrl,
-      s3Url: s3Result.url,
-      s3Key: s3Result.key,
+      s3Url: s3Result?.url || null,
+      s3Key: s3Result?.key || null,
       cloudinaryPublicId,
       fileType,
+      s3Error: s3Error || null, // S3 업로드 실패 시 에러 메시지 포함
     });
 
   } catch (error: any) {

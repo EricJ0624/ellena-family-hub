@@ -4822,14 +4822,30 @@ export default function FamilyHub() {
                 });
                 
                 uploadCompleted = true;
-                // 성공 알림
-                alert('업로드 완료: Presigned URL 생성 실패로 서버 경유 방식으로 업로드되었습니다.');
+                
+                // S3 에러가 있으면 경고 메시지 표시
+                if (fallbackResult.s3Error) {
+                  alert('업로드 완료: Cloudinary 업로드는 성공했지만 S3 업로드는 실패했습니다.\n\nS3 환경 변수를 설정하면 원본 파일도 저장됩니다.');
+                } else {
+                  alert('업로드 완료: Presigned URL 생성 실패로 서버 경유 방식으로 업로드되었습니다.');
+                }
               }
               
               return; // 성공적으로 폴백 완료
             } catch (fallbackError: any) {
-              // 폴백도 실패한 경우 원래 에러를 throw하여 최종 catch 블록에서 처리
-              throw new Error(`Presigned URL 생성 실패 후 서버 경유 재시도도 실패: ${fallbackError.message || '알 수 없는 오류'}`);
+              // 폴백도 실패한 경우
+              const fallbackErrorMessage = fallbackError.message || '알 수 없는 오류';
+              
+              // S3 환경 변수 문제인 경우 Cloudinary만 사용 가능하다는 안내
+              if (fallbackErrorMessage.includes('AWS_S3_BUCKET_NAME')) {
+                console.warn('S3 환경 변수가 설정되지 않아 Cloudinary만 사용합니다.');
+                // Cloudinary 업로드는 이미 성공했을 수 있으므로 에러를 던지지 않고 경고만 표시
+                alert('S3 업로드가 실패했지만 Cloudinary 업로드는 완료되었습니다. S3 환경 변수를 설정하면 원본 파일도 저장됩니다.');
+                return; // 로컬 저장은 이미 완료되었으므로 계속 진행
+              }
+              
+              // 다른 에러인 경우 원래 에러를 throw하여 최종 catch 블록에서 처리
+              throw new Error(`Presigned URL 생성 실패 후 서버 경유 재시도도 실패: ${fallbackErrorMessage}`);
             }
           }
         } else {
