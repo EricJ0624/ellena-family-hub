@@ -180,7 +180,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
 interface TitleTextProps {
   title: string;
   titleStyle: TitleStyle;
-  onTitleClick?: () => void;
+  onTitleClick?: (e: React.MouseEvent) => void;
 }
 
 const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }) => {
