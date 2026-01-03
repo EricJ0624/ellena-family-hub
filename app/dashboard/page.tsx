@@ -2193,10 +2193,14 @@ export default function FamilyHub() {
         )
         .on('postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'location_requests' },
-          (payload: any) => {
+          async (payload: any) => {
             console.log('Realtime 위치 요청 UPDATE 이벤트 수신:', payload);
-            loadLocationRequests(); // 위치 요청 목록 다시 로드
-            loadFamilyLocations(); // 승인 시 위치 목록도 다시 로드
+            // 위치 요청 목록 다시 로드 (완료 대기)
+            await loadLocationRequests();
+            // locationRequests 상태가 업데이트될 때까지 약간의 지연
+            await new Promise(resolve => setTimeout(resolve, 200));
+            // 승인 시 위치 목록도 다시 로드 (승인된 요청이 반영된 후)
+            await loadFamilyLocations();
             // 지도 마커 업데이트를 위해 상태 변경 트리거
             setState(prev => ({ ...prev }));
           }
@@ -3354,6 +3358,19 @@ export default function FamilyHub() {
     if (!userId || !isAuthenticated) return;
 
     try {
+      // 최신 위치 요청 목록을 직접 조회하여 최신 상태 보장
+      let currentLocationRequests = locationRequests;
+      try {
+        const response = await fetch(`/api/location-request?userId=${userId}&type=all`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          currentLocationRequests = result.data;
+        }
+      } catch (err) {
+        // 조회 실패 시 기존 locationRequests 사용
+        console.warn('위치 요청 조회 실패, 기존 상태 사용:', err);
+      }
+
       // 승인된 위치 요청이 있는 사용자들의 위치만 조회
       // RLS 정책에 의해 승인된 관계의 위치만 반환됨
       const { data, error } = await supabase
@@ -3374,8 +3391,8 @@ export default function FamilyHub() {
           .filter((loc: any) => {
             // 본인 위치는 항상 표시
             if (loc.user_id === userId) return true;
-            // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시
-            return locationRequests.some(
+            // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시 (최신 locationRequests 사용)
+            return currentLocationRequests.some(
               req => 
                 (req.requester_id === userId && req.target_id === loc.user_id && req.status === 'accepted') ||
                 (req.requester_id === loc.user_id && req.target_id === userId && req.status === 'accepted')
@@ -3398,6 +3415,12 @@ export default function FamilyHub() {
         setState(prev => ({
           ...prev,
           familyLocations: locations
+        }));
+      } else {
+        // 데이터가 없을 때도 빈 배열로 설정하여 기존 위치 제거
+        setState(prev => ({
+          ...prev,
+          familyLocations: []
         }));
       }
     } catch (error) {
@@ -3684,8 +3707,13 @@ export default function FamilyHub() {
         }
       }
 
-      // 위치 요청 목록 다시 로드
+      // 위치 요청 목록 다시 로드 (완료 대기)
       await loadLocationRequests();
+      
+      // locationRequests 상태가 업데이트될 때까지 약간의 지연
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 위치 목록 다시 로드 (승인된 요청이 반영된 후)
       await loadFamilyLocations();
 
       alert('위치를 공유했습니다!');
