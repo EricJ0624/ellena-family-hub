@@ -11,7 +11,7 @@ import {
   startBackgroundLocationTracking,
   stopBackgroundLocationTracking
 } from '@/lib/webpush';
-import TitlePage from '@/app/components/TitlePage';
+import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -198,6 +198,15 @@ export default function FamilyHub() {
   const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
+  
+  // 타이틀 스타일 상태
+  const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
+    content: INITIAL_STATE.familyName,
+    color: '#9333ea',
+    fontSize: 48,
+    fontWeight: '700',
+    letterSpacing: 0,
+  });
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -4956,6 +4965,12 @@ export default function FamilyHub() {
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
             onTitleClick={handleRename}
+            photos={state.album || []}
+            titleStyle={titleStyle}
+            onTitleStyleChange={(style) => {
+              setTitleStyle(style);
+              // 추후 DB 저장 로직 추가 가능
+            }}
           />
           <div className="status-indicator">
             <span className="status-dot">
