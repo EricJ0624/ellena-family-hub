@@ -4935,7 +4935,9 @@ export default function FamilyHub() {
         
         // 사용자에게 에러 알림
         const errorMessage = uploadError.message || '업로드 중 오류가 발생했습니다.';
-        if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
+        if (errorMessage.includes('AWS_S3_BUCKET_NAME')) {
+          alert('S3 환경 변수가 설정되지 않았습니다.\n\n로컬 저장은 완료되었습니다. S3 환경 변수를 설정하면 원본 파일도 저장됩니다.');
+        } else if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
           alert('업로드 실패: S3 버킷 CORS 설정이 필요합니다. 관리자에게 문의하세요.\n\n로컬 저장은 완료되었습니다.');
         } else if (errorMessage.includes('타임아웃')) {
           alert('업로드 타임아웃: 파일이 너무 크거나 네트워크 연결이 불안정합니다.\n\n로컬 저장은 완료되었습니다.');
