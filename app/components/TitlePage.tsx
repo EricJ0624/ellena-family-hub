@@ -194,26 +194,28 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
           )}
         </AnimatePresence>
         
-        {/* 새로고침 버튼 (우측 하단) - 우드 스타일 */}
+        {/* 새로고침 버튼 (우측 하단) - 눈에 잘 띄는 스타일 */}
         {selectedPhoto && (
           <motion.button
-            whileHover={{ scale: 1.1 }}
+            whileHover={{ scale: 1.15, rotate: 180 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleShuffle}
-            className="absolute bottom-3 right-3 p-2 rounded-lg shadow-lg transition-all z-30"
+            className="absolute bottom-4 right-4 p-2.5 rounded-full shadow-xl transition-all z-40"
             style={{
-              width: '36px',
-              height: '36px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%)',
-              border: '2px solid #654321',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.2)',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+              border: '3px solid #8B4513',
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
+              cursor: 'pointer',
             }}
             aria-label="사진 새로고침"
+            title="사진 새로고침"
           >
-            <RefreshCw className="w-4 h-4 text-white" />
+            <RefreshCw className="w-5 h-5 text-[#8B4513]" strokeWidth={2.5} />
           </motion.button>
         )}
       </div>
