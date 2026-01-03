@@ -48,11 +48,9 @@ const CryptoService = {
         return raw;
       }
     } catch (e: any) {
-      // Malformed UTF-8 data 오류 처리
+      // Malformed UTF-8 data 오류 처리 (조용히 처리)
       if (e.message?.includes('Malformed UTF-8') || e.message?.includes('UTF-8')) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('UTF-8 인코딩 오류 감지, 복호화 건너뜀');
-        }
+        // 개발 환경에서만 로그 출력 (반복 로그 방지)
         return null;
       }
       if (process.env.NODE_ENV === 'development') {
@@ -235,7 +233,7 @@ export default function FamilyHub() {
 
       const { data: photos, error } = await supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, description, created_at')
+        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at')
         .eq('uploader_id', userId)
         .order('created_at', { ascending: false });
 
@@ -286,7 +284,7 @@ export default function FamilyHub() {
         supabaseId: photo.id,
         isUploaded: true,
         isUploading: false,
-        description: photo.description || '',
+        description: photo.caption || '', // caption만 사용
         originalFilename: photo.original_filename || '',
         mimeType: photo.mime_type || 'image/jpeg',
       }));
@@ -1019,9 +1017,12 @@ export default function FamilyHub() {
             onlineAt: new Date().toISOString()
           });
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('⚠️ Presence subscription 연결 실패:', status);
-          // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          // removeChannel을 여기서 호출하면 무한 루프 발생 가능
+          // 개발 환경에서만 경고 로그 출력 (반복 로그 방지)
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ Presence subscription 연결 실패:', status);
+          }
+          // CLOSED 상태일 때는 자동 재연결 시도하지 않음 (무한 루프 방지)
+          // 네트워크 재연결이나 페이지 포커스 시 useEffect가 자동으로 재실행됨
         }
       });
 
@@ -1295,25 +1296,59 @@ export default function FamilyHub() {
           // Supabase에 일정이 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 사진 로드 (memory_vault에서 가족 전체의 최근 50개 - 가족 공유)
+        // 사진 로드 (memory_vault에서 가족 전체의 최근 100개 - 가족 공유)
         // user_id 필터 없이 모든 가족 구성원의 사진 로드
-        const { data: photosData, error: photosError } = await supabase
-          .from('memory_vault')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
+        // 재로그인 시 모든 사진을 불러오기 위해 limit 증가
+        let photosData: any[] | null = null;
+        let photosError: any = null;
+        
+        // 재시도 로직 (최대 3회)
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries && !photosData && !photosError) {
+          try {
+            const result = await supabase
+              .from('memory_vault')
+              .select('*')
+              .order('created_at', { ascending: false })
+              .limit(100); // limit 증가 (50 -> 100)
+            
+            photosData = result.data;
+            photosError = result.error;
+            
+            if (photosError) {
+              console.error(`Supabase 사진 로드 오류 (시도 ${retryCount + 1}/${maxRetries}):`, photosError);
+              if (retryCount < maxRetries - 1) {
+                // 재시도 전 대기 (지수 백오프)
+                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                retryCount++;
+                photosError = null; // 재시도를 위해 초기화
+              }
+            }
+          } catch (error: any) {
+            console.error(`사진 로드 예외 발생 (시도 ${retryCount + 1}/${maxRetries}):`, error);
+            if (retryCount < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+              retryCount++;
+            } else {
+              photosError = error;
+            }
+          }
+        }
         
         if (process.env.NODE_ENV === 'development') {
           console.log('사진 로드 시도:', {
             userId: userId,
             photosDataCount: photosData?.length || 0,
-            photosError: photosError ? photosError.message : null
+            photosError: photosError ? photosError.message : null,
+            retryCount: retryCount + 1
           });
         }
 
         // Supabase 로드 에러 로깅
         if (photosError) {
-          console.error('Supabase 사진 로드 오류:', photosError);
+          console.error('Supabase 사진 로드 최종 오류:', photosError);
           if (process.env.NODE_ENV === 'development') {
             console.error('에러 상세:', {
               message: photosError.message,
@@ -1337,7 +1372,7 @@ export default function FamilyHub() {
                 supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
                 isUploaded: true, // Supabase에서 로드한 사진은 업로드 완료된 사진
                 created_by: photo.user_id || photo.created_by || undefined, // 생성자 ID 저장
-                description: photo.description || undefined // 설명 추가
+                description: photo.caption || undefined // caption 사용
               }))
           : []; // Supabase 로드 실패 시 빈 배열
         
@@ -1411,8 +1446,14 @@ export default function FamilyHub() {
             return acc;
           }, [] as Photo[]);
           
-          // Supabase 사진이 있으면 우선 사용
+          // Supabase 사진이 있으면 우선 사용 (재로그인 시 Supabase 데이터 강제 사용)
           if (formattedPhotos.length > 0) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ Supabase 사진 로드 성공, 상태 업데이트:', {
+                formattedPhotosCount: formattedPhotos.length,
+                uniqueAlbumCount: uniqueAlbum.length
+              });
+            }
             return {
               ...prev,
               album: uniqueAlbum
@@ -1420,9 +1461,10 @@ export default function FamilyHub() {
           }
           
           // Supabase 로드 실패 시 localStorage 사진도 포함 (오프라인 지원)
+          // 단, 재로그인 직후에는 localStorage가 비어있을 수 있으므로 Supabase 재시도 고려
           if (localStoragePhotos.length > 0) {
             if (process.env.NODE_ENV === 'development') {
-              console.log('Supabase 로드 실패, localStorage 사진 표시:', localStoragePhotos.length);
+              console.log('⚠️ Supabase 로드 실패, localStorage 사진 표시:', localStoragePhotos.length);
             }
             return {
               ...prev,
@@ -1430,7 +1472,15 @@ export default function FamilyHub() {
             };
           }
           
-          // 사진이 없으면 빈 배열 반환
+          // 사진이 없으면 빈 배열 반환 (재로그인 시 Supabase에서 로드 실패한 경우)
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('⚠️ 사진이 없습니다. Supabase 로드 상태:', {
+              photosError: photosError ? photosError.message : null,
+              photosDataCount: photosData?.length || 0,
+              formattedPhotosCount: formattedPhotos.length,
+              localStoragePhotosCount: localStoragePhotos.length
+            });
+          }
           return {
             ...prev,
             album: []
@@ -3154,15 +3204,50 @@ export default function FamilyHub() {
           // Supabase에서도 삭제
           (async () => {
             try {
-              const { error } = await supabase
+              const { error, data } = await supabase
                 .from('memory_vault')
                 .delete()
-                .eq('id', payload);
+                .eq('id', payload)
+                .select();
+              
               if (error) {
-                console.error('사진 삭제 오류:', error);
+                // Supabase 에러 객체의 상세 정보 추출
+                const errorDetails = {
+                  message: error.message || '알 수 없는 오류',
+                  code: error.code || 'UNKNOWN',
+                  details: error.details || null,
+                  hint: error.hint || null,
+                  photoId: payload,
+                };
+                
+                console.error('사진 삭제 오류:', {
+                  ...errorDetails,
+                  fullError: error,
+                });
+                
+                // 사용자에게 알림 (선택적)
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn(`사진 삭제 실패 (ID: ${payload}): ${errorDetails.message}`);
+                }
+              } else {
+                // 삭제 성공 로그 (개발 환경에서만)
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('사진 삭제 성공:', { photoId: payload, deletedData: data });
+                }
               }
-            } catch (error) {
-              console.error('사진 삭제 오류:', error);
+            } catch (error: any) {
+              // 예외 발생 시 상세 정보 추출
+              const errorDetails = {
+                name: error?.name || 'UnknownError',
+                message: error?.message || '알 수 없는 예외가 발생했습니다.',
+                stack: error?.stack?.substring(0, 200) || null,
+                photoId: payload,
+              };
+              
+              console.error('사진 삭제 중 예외 발생:', {
+                ...errorDetails,
+                fullError: error,
+              });
             }
           })();
           break;
@@ -3265,7 +3350,7 @@ export default function FamilyHub() {
                   try {
                     const { error } = await supabase
                       .from('memory_vault')
-                      .update({ description: payload.description || null })
+                      .update({ caption: payload.description || null })
                       .eq('id', photo.supabaseId);
                     if (error) {
                       console.error('사진 설명 업데이트 오류:', error);
@@ -4498,8 +4583,20 @@ export default function FamilyHub() {
       return;
     }
 
-    // 용량 제한 제거: 모든 파일 크기 허용 (RAW 파일 포함)
-    // localStorage에는 표시용 리사이징된 이미지만 저장하고, 원본은 S3에 직접 업로드하므로 용량 제한 불필요
+    // 파일 크기 체크 및 경고
+    // ⚠️ 매우 큰 파일은 메모리 문제를 일으킬 수 있음
+    const MAX_SAFE_FILE_SIZE = 100 * 1024 * 1024; // 100MB (안전한 최대 크기)
+    if (file.size > MAX_SAFE_FILE_SIZE) {
+      const confirmMessage = `파일이 매우 큽니다 (${Math.round(file.size / 1024 / 1024)}MB).\n\n` +
+        `업로드에 시간이 오래 걸릴 수 있고, 브라우저 메모리 부족으로 오류가 발생할 수 있습니다.\n\n` +
+        `계속하시겠습니까?`;
+      
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+    }
+    
+    // localStorage에는 표시용 리사이징된 이미지만 저장하고, 원본은 S3에 직접 업로드
 
     // photoId를 함수 스코프에서 선언 (catch 블록에서 접근 가능하도록)
     let photoId: number | null = null;
@@ -4661,16 +4758,28 @@ export default function FamilyHub() {
           return;
         }
 
-        // 파일 크기 기준으로 업로드 방식 결정 (5MB)
+        // 파일 크기 기준으로 업로드 방식 결정
+        // ⚠️ 중요: Vercel 서버 경유 방식은 4.5MB 제한이 있음
+        // Base64 인코딩 시 원본의 약 1.33배 크기 증가하므로,
+        // 안전하게 3MB 이상은 Presigned URL 방식 사용
         // RAW 파일은 리사이징 불가능하므로 무조건 Presigned URL 방식 사용
-        const PRESIGNED_URL_THRESHOLD = 5 * 1024 * 1024; // 5MB
+        const PRESIGNED_URL_THRESHOLD = 3 * 1024 * 1024; // 3MB (Vercel 제한 고려하여 5MB -> 3MB로 변경)
         const usePresignedUrl = isRawFile || file.size >= PRESIGNED_URL_THRESHOLD;
 
         if (process.env.NODE_ENV === 'development') {
           console.log('Cloudinary & S3 업로드 시작...', {
-            method: usePresignedUrl ? 'Presigned URL (직접 업로드)' : '서버 경유',
+            method: usePresignedUrl ? 'Presigned URL (직접 업로드)' : '서버 경유 (3MB 이하)',
             fileSize: Math.round(file.size / 1024) + 'KB',
+            threshold: '3MB',
+            reason: isRawFile ? 'RAW 파일' : (file.size >= PRESIGNED_URL_THRESHOLD ? '3MB 이상' : '3MB 미만')
           });
+        }
+        
+        // 3MB 이상 파일이 서버 경유 방식으로 시도되는 경우 경고
+        if (!usePresignedUrl && file.size >= 3 * 1024 * 1024) {
+          console.warn('⚠️ 3MB 이상 파일이 서버 경유 방식으로 시도됩니다. Presigned URL 방식으로 자동 전환합니다.');
+          // 자동으로 Presigned URL 방식으로 전환
+          const usePresignedUrl = true;
         }
 
         if (usePresignedUrl) {
@@ -4704,26 +4813,178 @@ export default function FamilyHub() {
               throw urlError;
             }
 
-            let urlResult;
+            // 응답 본문 읽기 (JSON 파싱 전에 텍스트로 먼저 읽기)
+            let responseText = '';
+            let urlResult: any = null;
+            
             try {
-              urlResult = await urlResponse.json();
-            } catch (jsonError) {
-              // JSON 파싱 실패 시 응답 텍스트로 에러 메시지 생성
-              const responseText = await urlResponse.text();
-              console.error('Presigned URL 응답 파싱 실패:', {
+              // 응답 본문을 텍스트로 먼저 읽기
+              responseText = await urlResponse.text();
+              
+              // 빈 응답 체크
+              if (!responseText || responseText.trim().length === 0) {
+                console.error('Presigned URL 응답이 비어있음:', {
+                  status: urlResponse.status,
+                  statusText: urlResponse.statusText,
+                  headers: Object.fromEntries(urlResponse.headers.entries())
+                });
+                throw new Error(`Presigned URL 생성 실패 (${urlResponse.status}): 응답이 비어있습니다.`);
+              }
+              
+              // JSON 파싱 시도
+              try {
+                urlResult = JSON.parse(responseText);
+              } catch (jsonError: any) {
+                // JSON 파싱 실패 시 원본 텍스트 사용
+                console.error('Presigned URL JSON 파싱 실패:', {
+                  status: urlResponse.status,
+                  responseText: responseText.substring(0, 500),
+                  jsonError: jsonError.message
+                });
+                throw new Error(`Presigned URL 생성 실패 (${urlResponse.status}): ${responseText.substring(0, 200) || '알 수 없는 오류'}`);
+              }
+            } catch (readError: any) {
+              // 응답 본문 읽기 실패
+              console.error('Presigned URL 응답 읽기 실패:', {
                 status: urlResponse.status,
-                responseText
+                statusText: urlResponse.statusText,
+                error: readError.message
               });
-              throw new Error(`Presigned URL 생성 실패 (${urlResponse.status}): ${responseText || '알 수 없는 오류'}`);
+              throw readError;
             }
 
+            // HTTP 상태 코드 확인
             if (!urlResponse.ok) {
-              const errorMessage = urlResult?.error || urlResult?.message || `HTTP ${urlResponse.status} 오류`;
-              console.error('Presigned URL 생성 실패:', {
+              // 에러 응답 상세 정보 추출
+              const errorDetails: any = {
                 status: urlResponse.status,
-                error: errorMessage,
-                fullResponse: urlResult
-              });
+                statusText: urlResponse.statusText || 'Unknown',
+                responseText: responseText ? responseText.substring(0, 500) : '(응답 없음)',
+                hasResponseText: !!responseText,
+                responseTextLength: responseText?.length || 0,
+              };
+              
+              // urlResult에서 에러 정보 추출
+              let errorMessage = '';
+              
+              if (urlResult) {
+                // urlResult가 빈 객체가 아닌지 확인
+                const urlResultKeys = Object.keys(urlResult);
+                const hasErrorInfo = urlResultKeys.length > 0;
+                
+                errorDetails.urlResultType = typeof urlResult;
+                errorDetails.urlResultKeys = urlResultKeys;
+                errorDetails.urlResultKeysCount = urlResultKeys.length;
+                
+                if (hasErrorInfo) {
+                  // 에러 메시지 우선순위: error > message > details > missing > 전체 JSON
+                  errorMessage = urlResult.error || 
+                                urlResult.message || 
+                                (typeof urlResult.details === 'string' ? urlResult.details : '') ||
+                                (urlResult.missing && Array.isArray(urlResult.missing) 
+                                  ? `누락된 환경 변수: ${urlResult.missing.join(', ')}` 
+                                  : '') ||
+                                (urlResultKeys.length > 0 ? JSON.stringify(urlResult) : '');
+                  
+                  errorDetails.fullResponse = urlResult;
+                  errorDetails.extractedError = urlResult.error;
+                  errorDetails.extractedMessage = urlResult.message;
+                  errorDetails.extractedDetails = urlResult.details;
+                  errorDetails.extractedMissing = urlResult.missing;
+                } else {
+                  // 빈 객체인 경우
+                  errorMessage = `HTTP ${urlResponse.status} 오류: 응답이 빈 객체입니다.`;
+                  errorDetails.isEmpty = true;
+                  errorDetails.urlResultStringified = JSON.stringify(urlResult);
+                }
+              } else {
+                // urlResult가 null 또는 undefined인 경우
+                errorMessage = `HTTP ${urlResponse.status} 오류: 응답을 파싱할 수 없습니다.`;
+                errorDetails.isNull = urlResult === null;
+                errorDetails.isUndefined = urlResult === undefined;
+              }
+              
+              // 기본 에러 메시지가 없으면 상태 코드 기반 메시지 생성
+              if (!errorMessage || errorMessage.trim().length === 0) {
+                const statusMessages: Record<number, string> = {
+                  400: '잘못된 요청입니다. 파일 정보를 확인해주세요.',
+                  401: '인증이 필요합니다. 로그인 상태를 확인해주세요.',
+                  403: '접근 권한이 없습니다.',
+                  404: 'API 엔드포인트를 찾을 수 없습니다.',
+                  413: '파일이 너무 큽니다.',
+                  500: '서버 오류가 발생했습니다. AWS 자격 증명을 확인해주세요.',
+                  503: '서비스를 일시적으로 사용할 수 없습니다.',
+                };
+                errorMessage = statusMessages[urlResponse.status] || 
+                              `HTTP ${urlResponse.status} 오류`;
+                errorDetails.fallbackMessage = true;
+              }
+              
+              // 최종 에러 로깅 (명시적으로 모든 정보 포함)
+              const finalErrorLog: any = {};
+              
+              // 기본 정보 (항상 포함)
+              finalErrorLog.status = urlResponse.status;
+              finalErrorLog.statusText = urlResponse.statusText || 'Unknown';
+              finalErrorLog.errorMessage = errorMessage || '(에러 메시지 없음)';
+              finalErrorLog.url = '/api/get-upload-url';
+              finalErrorLog.method = 'POST';
+              
+              // 응답 본문 정보
+              if (responseText) {
+                finalErrorLog.responseText = responseText.substring(0, 500);
+                finalErrorLog.responseTextLength = responseText.length;
+              } else {
+                finalErrorLog.responseText = '(응답 없음)';
+                finalErrorLog.responseTextLength = 0;
+              }
+              
+              // urlResult 정보
+              if (urlResult !== null && urlResult !== undefined) {
+                finalErrorLog.urlResultType = typeof urlResult;
+                const urlResultKeys = Object.keys(urlResult);
+                finalErrorLog.urlResultKeys = urlResultKeys;
+                finalErrorLog.urlResultKeysCount = urlResultKeys.length;
+                
+                if (urlResultKeys.length > 0) {
+                  finalErrorLog.urlResult = urlResult;
+                  
+                  // 개별 속성 추출
+                  if (urlResult.error) finalErrorLog.extractedError = urlResult.error;
+                  if (urlResult.message) finalErrorLog.extractedMessage = urlResult.message;
+                  if (urlResult.details) finalErrorLog.extractedDetails = urlResult.details;
+                  if (urlResult.missing) finalErrorLog.extractedMissing = urlResult.missing;
+                } else {
+                  finalErrorLog.isEmpty = true;
+                  finalErrorLog.urlResultStringified = JSON.stringify(urlResult);
+                }
+              } else {
+                finalErrorLog.isNull = urlResult === null;
+                finalErrorLog.isUndefined = urlResult === undefined;
+              }
+              
+              // 추가 플래그
+              if (errorDetails.fallbackMessage) finalErrorLog.fallbackMessage = true;
+              
+              // 명시적으로 로깅 (여러 줄로 나누어 더 명확하게)
+              console.error('❌ Presigned URL 생성 실패');
+              console.error('상태:', finalErrorLog.status, finalErrorLog.statusText);
+              console.error('에러 메시지:', finalErrorLog.errorMessage);
+              console.error('응답 본문:', finalErrorLog.responseText);
+              console.error('응답 본문 길이:', finalErrorLog.responseTextLength);
+              
+              if (finalErrorLog.urlResult) {
+                console.error('응답 객체:', finalErrorLog.urlResult);
+                if (finalErrorLog.urlResultKeys) {
+                  console.error('응답 객체 키:', finalErrorLog.urlResultKeys);
+                }
+              } else {
+                console.error('응답 객체:', finalErrorLog.isNull ? 'null' : finalErrorLog.isUndefined ? 'undefined' : '없음');
+              }
+              
+              // 전체 에러 로그도 함께 출력 (디버깅용)
+              console.error('전체 에러 정보:', finalErrorLog);
+              
               throw new Error(errorMessage);
             }
 
@@ -4752,31 +5013,147 @@ export default function FamilyHub() {
               clearTimeout(uploadTimeout);
 
               if (!s3UploadResponse.ok) {
-                const errorText = await s3UploadResponse.text();
-                console.error('S3 업로드 실패:', {
+                // 에러 응답 본문 읽기 시도 (실패 시 대체 메시지 사용)
+                let errorText = '';
+                let errorCode = '';
+                let errorDetails: any = {
                   status: s3UploadResponse.status,
                   statusText: s3UploadResponse.statusText,
-                  error: errorText.substring(0, 200)
+                };
+                
+                try {
+                  // 응답 본문 읽기
+                  const responseText = await s3UploadResponse.text();
+                  
+                  // XML 형식의 AWS 에러 응답 파싱
+                  if (responseText && responseText.trim().startsWith('<?xml')) {
+                    try {
+                      const parser = new DOMParser();
+                      const xmlDoc = parser.parseFromString(responseText, 'text/xml');
+                      const errorElement = xmlDoc.querySelector('Error');
+                      
+                      if (errorElement) {
+                        const codeElement = errorElement.querySelector('Code');
+                        const messageElement = errorElement.querySelector('Message');
+                        const requestIdElement = errorElement.querySelector('RequestId');
+                        
+                        errorCode = codeElement?.textContent || '';
+                        errorText = messageElement?.textContent || '';
+                        
+                        errorDetails = {
+                          ...errorDetails,
+                          awsErrorCode: errorCode,
+                          awsRequestId: requestIdElement?.textContent || '',
+                          rawXml: responseText.substring(0, 500),
+                        };
+                        
+                        // AWS 에러 코드별 사용자 친화적 메시지
+                        const awsErrorMessages: Record<string, string> = {
+                          'AuthorizationQueryParametersError': 'AWS 자격 증명 파라미터 오류: 환경 변수(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)를 확인해주세요.',
+                          'AccessDenied': 'S3 버킷 접근 권한이 없습니다. 버킷 정책을 확인해주세요.',
+                          'InvalidAccessKeyId': 'AWS Access Key ID가 유효하지 않습니다.',
+                          'SignatureDoesNotMatch': 'AWS 자격 증명 서명이 일치하지 않습니다.',
+                          'InvalidBucketName': 'S3 버킷 이름이 유효하지 않습니다.',
+                          'NoSuchBucket': 'S3 버킷을 찾을 수 없습니다.',
+                          'RequestTimeout': 'S3 요청이 타임아웃되었습니다.',
+                        };
+                        
+                        if (errorCode && awsErrorMessages[errorCode]) {
+                          errorText = `${awsErrorMessages[errorCode]}\n\n원본 메시지: ${errorText}`;
+                        }
+                      } else {
+                        // XML 파싱은 성공했지만 Error 요소를 찾을 수 없음
+                        errorText = responseText.substring(0, 500);
+                      }
+                    } catch (xmlError: any) {
+                      // XML 파싱 실패 시 원본 텍스트 사용
+                      errorText = responseText.substring(0, 500);
+                      errorDetails.xmlParseError = xmlError.message;
+                    }
+                  } else {
+                    // JSON 또는 일반 텍스트 응답
+                    const contentType = s3UploadResponse.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                      try {
+                        const errorJson = JSON.parse(responseText);
+                        errorText = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+                        errorDetails = { ...errorDetails, ...errorJson };
+                      } catch (jsonError) {
+                        errorText = responseText.substring(0, 500);
+                      }
+                    } else {
+                      errorText = responseText.substring(0, 500);
+                      if (errorText) {
+                        errorDetails.error = errorText;
+                      }
+                    }
+                  }
+                } catch (textError: any) {
+                  // 응답 본문 읽기 실패 시 상태 코드 기반 메시지 생성
+                  errorText = `응답 본문을 읽을 수 없습니다: ${textError.message || '알 수 없는 오류'}`;
+                  errorDetails.readError = textError.message;
+                }
+                
+                // 에러 메시지가 비어있으면 상태 코드 기반 메시지 생성
+                if (!errorText || errorText.trim().length === 0) {
+                  const statusMessages: Record<number, string> = {
+                    403: 'S3 업로드 권한이 없습니다. 버킷 정책을 확인해주세요.',
+                    404: 'S3 버킷을 찾을 수 없습니다.',
+                    400: '잘못된 요청입니다. 파일 형식이나 크기를 확인해주세요.',
+                    413: '파일이 너무 큽니다.',
+                    500: 'S3 서버 오류가 발생했습니다.',
+                    503: 'S3 서비스가 일시적으로 사용할 수 없습니다.',
+                  };
+                  errorText = statusMessages[s3UploadResponse.status] || 
+                    `S3 업로드 실패 (HTTP ${s3UploadResponse.status})`;
+                }
+                
+                console.error('S3 업로드 실패:', {
+                  ...errorDetails,
+                  errorMessage: errorText,
+                  errorCode: errorCode || 'N/A',
+                  url: presignedUrl.substring(0, 100) + '...', // URL 일부만 표시
                 });
                 
                 // CORS 오류 확인
-                if (s3UploadResponse.status === 0 || errorText.includes('CORS')) {
+                if (s3UploadResponse.status === 0 || 
+                    errorText.includes('CORS') || 
+                    errorText.includes('cors') ||
+                    errorText.includes('Access-Control')) {
                   console.error('CORS 오류로 의심됨');
                   throw new Error('CORS 오류: S3 버킷 CORS 설정이 필요합니다.');
                 }
                 
-                throw new Error(`S3 업로드 실패: ${s3UploadResponse.status} ${s3UploadResponse.statusText}`);
+                // AuthorizationQueryParametersError는 presigned URL 생성 문제
+                if (errorCode === 'AuthorizationQueryParametersError' || 
+                    errorText.includes('X-Amz-Credential') ||
+                    errorText.includes('Credential is mal-formed')) {
+                  throw new Error(`AWS 자격 증명 오류: ${errorText}\n\n환경 변수(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION)를 확인해주세요.`);
+                }
+                
+                throw new Error(`S3 업로드 실패: ${errorText}`);
               }
             } catch (uploadError: any) {
               clearTimeout(uploadTimeout);
               
-              // CORS 오류 감지
+              // 상세한 에러 정보 로깅
+              console.error('S3 업로드 중 예외 발생:', {
+                name: uploadError.name,
+                message: uploadError.message,
+                stack: uploadError.stack?.substring(0, 200),
+                cause: uploadError.cause,
+              });
+              
+              // CORS 오류 감지 (더 포괄적으로)
               const isCorsError = 
                 uploadError.message?.includes('CORS') ||
+                uploadError.message?.includes('cors') ||
                 uploadError.message?.includes('Failed to fetch') ||
-                uploadError.name === 'TypeError' ||
                 uploadError.message?.includes('NetworkError') ||
-                uploadError.message?.includes('blocked by CORS policy');
+                uploadError.message?.includes('blocked by CORS policy') ||
+                uploadError.message?.includes('Access-Control') ||
+                uploadError.name === 'TypeError' ||
+                (uploadError.name === 'TypeError' && uploadError.message?.includes('fetch'));
               
               if (uploadError.name === 'AbortError') {
                 throw new Error('S3 업로드 타임아웃 (30초 초과)');
@@ -4784,7 +5161,10 @@ export default function FamilyHub() {
               
               // CORS 오류 발생 시 서버 경유 방식으로 자동 폴백
               if (isCorsError) {
-                console.warn('CORS 오류 감지, 서버 경유 방식으로 자동 재시도:', uploadError.message);
+                console.warn('CORS 오류 감지, 서버 경유 방식으로 자동 재시도:', {
+                  errorName: uploadError.name,
+                  errorMessage: uploadError.message,
+                });
                 
                 try {
                   const fallbackController = new AbortController();

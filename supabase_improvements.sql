@@ -99,3 +99,4 @@ CREATE TRIGGER update_user_locations_updated_at
 
 
 
+

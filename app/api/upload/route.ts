@@ -11,8 +11,10 @@ import {
 } from '@/lib/api-helpers';
 
 // Next.js App Router: 큰 파일 업로드를 위한 설정
-// Vercel에서는 최대 4.5MB 제한이 있으므로, 
-// 프로덕션에서는 chunked 업로드나 presigned URL 방식을 고려해야 할 수 있습니다.
+// ⚠️ 중요: Vercel에서는 최대 4.5MB 제한이 있습니다.
+// Base64 인코딩 시 원본의 약 1.33배 크기 증가하므로,
+// 실제로는 약 3MB 파일도 Base64로 변환하면 4.5MB를 초과할 수 있습니다.
+// 따라서 서버 경유 방식은 3MB 이하 파일만 허용하는 것이 안전합니다.
 export const maxDuration = 60; // 60초 타임아웃
 
 // S3에 파일 업로드
@@ -57,8 +59,11 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Body 크기 체크 (Base64 인코딩 고려하여 약 20MB 제한)
-    const MAX_BODY_SIZE = 20 * 1024 * 1024; // 20MB
+    // Body 크기 체크 (Base64 인코딩 고려)
+    // ⚠️ Vercel 제한: 4.5MB
+    // Base64 인코딩 시 원본의 약 1.33배 크기 증가
+    // 안전하게 3MB로 제한 (Base64 변환 후 약 4MB)
+    const MAX_BODY_SIZE = 3 * 1024 * 1024; // 3MB (Vercel 제한 고려)
     
     let body;
     try {
@@ -87,10 +92,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Base64 데이터 크기 체크
+    // Base64 문자열 길이를 바이트로 변환: (length * 3) / 4
     const estimatedSize = (originalData.length * 3) / 4;
+    
     if (estimatedSize > MAX_BODY_SIZE) {
       return NextResponse.json(
-        { error: `파일이 너무 큽니다. (최대 ${MAX_BODY_SIZE / 1024 / 1024}MB)` },
+        { 
+          error: `파일이 너무 큽니다. (최대 ${MAX_BODY_SIZE / 1024 / 1024}MB)`,
+          details: `현재 파일 크기: ${(estimatedSize / 1024 / 1024).toFixed(2)}MB. 3MB 이상 파일은 Presigned URL 방식을 사용해주세요.`,
+          estimatedSize: estimatedSize,
+          maxSize: MAX_BODY_SIZE
+        },
         { status: 413 }
       );
     }

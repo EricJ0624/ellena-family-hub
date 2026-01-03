@@ -134,3 +134,4 @@ CREATE POLICY "위치 수정 본인만" ON public.user_locations
 
 
 
+

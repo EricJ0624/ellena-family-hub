@@ -76,12 +76,41 @@ let s3ClientInstance: S3Client | null = null;
 
 function getS3Client(): S3Client {
   if (!s3ClientInstance) {
-    const normalizedRegion = normalizeAwsRegion(process.env.AWS_REGION);
+    // AWS 자격 증명 검증
+    const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    const awsRegion = process.env.AWS_REGION;
+    
+    if (!awsAccessKeyId || !awsSecretAccessKey || !awsRegion) {
+      const missing = [];
+      if (!awsAccessKeyId) missing.push('AWS_ACCESS_KEY_ID');
+      if (!awsSecretAccessKey) missing.push('AWS_SECRET_ACCESS_KEY');
+      if (!awsRegion) missing.push('AWS_REGION');
+      throw new Error(`AWS 자격 증명이 설정되지 않았습니다: ${missing.join(', ')}`);
+    }
+    
+    // Access Key ID 형식 검증
+    if (awsAccessKeyId.trim().length < 16 || awsAccessKeyId.trim().length > 128) {
+      throw new Error(`AWS_ACCESS_KEY_ID 형식이 올바르지 않습니다. (길이: ${awsAccessKeyId.length})`);
+    }
+    
+    // Secret Access Key 형식 검증 (일반적으로 40자)
+    if (awsSecretAccessKey.trim().length < 20 || awsSecretAccessKey.trim().length > 128) {
+      throw new Error(`AWS_SECRET_ACCESS_KEY 형식이 올바르지 않습니다. (길이: ${awsSecretAccessKey.length})`);
+    }
+    
+    const normalizedRegion = normalizeAwsRegion(awsRegion);
+    
+    // 리전 형식 검증 (예: ap-southeast-2, us-east-1)
+    if (!normalizedRegion.match(/^[a-z]+-[a-z]+-\d+$/)) {
+      throw new Error(`AWS_REGION 형식이 올바르지 않습니다: ${normalizedRegion}`);
+    }
+    
     s3ClientInstance = new S3Client({
       region: normalizedRegion,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: awsAccessKeyId.trim(),
+        secretAccessKey: awsSecretAccessKey.trim(),
       },
     });
   }

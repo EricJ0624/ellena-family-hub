@@ -46,8 +46,14 @@ export async function POST(request: NextRequest) {
 
     // 권한 확인
     if (action === 'cancel') {
-      // 취소는 요청자만 가능
-      if (locationRequest.requester_id !== userId) {
+      // 취소 권한: 
+      // - pending 상태: 요청자(requester_id)만 취소 가능
+      // - accepted 상태: 요청자(requester_id)와 대상자(target_id) 모두 취소 가능
+      const isRequester = locationRequest.requester_id === userId;
+      const isTarget = locationRequest.target_id === userId;
+      const isAccepted = locationRequest.status === 'accepted';
+      
+      if (!isRequester && !(isAccepted && isTarget)) {
         return NextResponse.json(
           { error: '취소 권한이 없습니다.' },
           { status: 403 }
