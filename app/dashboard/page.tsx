@@ -207,6 +207,10 @@ export default function FamilyHub() {
     fontWeight: '700',
     letterSpacing: 0,
   });
+  
+  // 가족 이름 수정 모달 상태
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameInput, setRenameInput] = useState('');
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -3098,11 +3102,25 @@ export default function FamilyHub() {
 
 
   const handleRename = () => {
-    const n = prompt("가족 이름:", state.familyName);
-    if (n?.trim()) {
-      const sanitized = sanitizeInput(n, 50);
-      if (sanitized) updateState('RENAME', sanitized);
+    // prompt() 대신 모달 사용 (SSR 환경에서 prompt() 지원 안 됨)
+    setRenameInput(state.familyName || 'Ellena Family Hub');
+    setShowRenameModal(true);
+  };
+  
+  const handleRenameSubmit = () => {
+    if (renameInput?.trim()) {
+      const sanitized = sanitizeInput(renameInput, 50);
+      if (sanitized) {
+        updateState('RENAME', sanitized);
+        setTitleStyle(prev => ({ ...prev, content: sanitized }));
+      }
     }
+    setShowRenameModal(false);
+  };
+  
+  const handleRenameCancel = () => {
+    setShowRenameModal(false);
+    setRenameInput('');
   };
 
   // 좌표를 주소로 변환 (Reverse Geocoding)
@@ -5016,17 +5034,67 @@ export default function FamilyHub() {
         </div>
       )}
 
+      {/* 가족 이름 수정 모달 */}
+      {showRenameModal && (
+        <div className="modal-overlay" onClick={handleRenameCancel}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">
+              <span className="modal-icon">✏️</span>
+              가족 이름 수정
+            </h3>
+            <div className="modal-form">
+              <div className="form-field">
+                <label className="form-label">가족 이름</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="가족 이름을 입력하세요"
+                  maxLength={50}
+                  value={renameInput}
+                  onChange={(e) => setRenameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleRenameSubmit();
+                    } else if (e.key === 'Escape') {
+                      handleRenameCancel();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button 
+                onClick={handleRenameCancel} 
+                className="btn-secondary"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleRenameSubmit} 
+                className="btn-primary"
+              >
+                저장하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="main-content">
         {/* Header */}
         <header className="app-header">
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
-            onTitleClick={handleRename}
             photos={state.album || []}
             titleStyle={titleStyle}
             onTitleStyleChange={(style) => {
               setTitleStyle(style);
+              // 가족 이름도 함께 업데이트
+              if (style.content) {
+                updateState('RENAME', style.content);
+              }
               // 추후 DB 저장 로직 추가 가능
             }}
           />

@@ -424,11 +424,17 @@ const TitlePage: React.FC<TitlePageProps> = ({
     }
   }, [onTitleStyleChange]);
   
-  // 디자인 수정 버튼 클릭 핸들러
-  const handleDesignClick = useCallback((e: React.MouseEvent) => {
+  // 타이틀 클릭 핸들러 (디자인 에디터 표시)
+  const handleTitleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowEditor(!showEditor);
-  }, [showEditor]);
+    // onTitleClick이 있으면 먼저 호출 (가족 이름 수정 모달)
+    if (onTitleClick) {
+      onTitleClick();
+    } else {
+      // onTitleClick이 없으면 디자인 에디터 표시
+      setShowEditor(!showEditor);
+    }
+  }, [onTitleClick, showEditor]);
   
   return (
     <div 
@@ -530,21 +536,10 @@ const TitlePage: React.FC<TitlePageProps> = ({
         <TitleText 
           title={title || CONSTANTS.TITLE} 
           titleStyle={titleStyle}
-          onTitleClick={onTitleClick} 
+          onTitleClick={handleTitleClick} 
         />
         
-        {/* 디자인 수정 버튼 */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleDesignClick}
-          className="mt-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-lg shadow-md hover:bg-white transition-colors flex items-center gap-2 text-sm font-medium text-gray-700 z-30"
-        >
-          <Palette className="w-4 h-4" />
-          디자인 수정
-        </motion.button>
-        
-        {/* 디자인 에디터 */}
+        {/* 디자인 에디터 (타이틀 클릭 시 표시) */}
         <AnimatePresence>
           {showEditor && (
             <DesignEditor
