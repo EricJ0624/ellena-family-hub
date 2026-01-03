@@ -91,21 +91,66 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
       transition={{ duration: 0.6, delay: 0.2 }}
       className="relative mb-4 z-30"
       style={{
-        width: '200px',
-        height: '150px',
+        width: '280px',
+        height: '210px',
         maxWidth: '90%',
       }}
     >
-      {/* 입체적인 화이트 딥 프레임 */}
+      {/* 고급스러운 우드 프레임 */}
       <div
         className="relative w-full h-full rounded-lg overflow-hidden"
         style={{
-          border: '8px solid #ffffff',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), inset 0 2px 10px rgba(255, 255, 255, 0.8)',
-          backdropFilter: 'blur(10px)',
-          background: 'rgba(255, 255, 255, 0.95)',
+          border: '12px solid transparent',
+          background: 'linear-gradient(#8B4513, #8B4513) padding-box, linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #8B4513 50%, #654321 75%, #8B4513 100%) border-box',
+          boxShadow: '0 25px 70px rgba(0, 0, 0, 0.4), inset 0 3px 15px rgba(139, 69, 19, 0.6), inset 0 -3px 15px rgba(101, 67, 33, 0.4)',
+          position: 'relative',
         }}
       >
+        {/* 우드 텍스처 오버레이 */}
+        <div
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(101, 67, 33, 0.1) 2px, rgba(101, 67, 33, 0.1) 4px),
+              repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(160, 82, 45, 0.1) 2px, rgba(160, 82, 45, 0.1) 4px)
+            `,
+            opacity: 0.6,
+          }}
+        />
+        
+        {/* 장식용 코너 장식 */}
+        <div
+          className="absolute top-0 left-0 w-8 h-8 z-20"
+          style={{
+            borderTop: '3px solid #654321',
+            borderLeft: '3px solid #654321',
+            borderTopLeftRadius: '4px',
+          }}
+        />
+        <div
+          className="absolute top-0 right-0 w-8 h-8 z-20"
+          style={{
+            borderTop: '3px solid #654321',
+            borderRight: '3px solid #654321',
+            borderTopRightRadius: '4px',
+          }}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-8 h-8 z-20"
+          style={{
+            borderBottom: '3px solid #654321',
+            borderLeft: '3px solid #654321',
+            borderBottomLeftRadius: '4px',
+          }}
+        />
+        <div
+          className="absolute bottom-0 right-0 w-8 h-8 z-20"
+          style={{
+            borderBottom: '3px solid #654321',
+            borderRight: '3px solid #654321',
+            borderBottomRightRadius: '4px',
+          }}
+        />
         {/* 사진 또는 Fallback */}
         <AnimatePresence mode="wait">
           {selectedPhoto ? (
@@ -115,7 +160,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
               animate={{ opacity: isFading ? 0 : 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="relative w-full h-full"
+              className="relative w-full h-full z-0"
             >
               <Image
                 src={selectedPhoto.data}
@@ -126,12 +171,11 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
                 }}
                 unoptimized={true}
               />
-              {/* 은은한 유리 질감 오버레이 */}
+              {/* 은은한 우드 질감 오버레이 */}
               <div
                 className="absolute inset-0"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0, 0, 0, 0.05) 100%)',
-                  backdropFilter: 'blur(1px)',
+                  background: 'linear-gradient(135deg, rgba(139, 69, 19, 0.05) 0%, rgba(101, 67, 33, 0.03) 50%, rgba(0, 0, 0, 0.02) 100%)',
                 }}
               />
             </motion.div>
@@ -142,33 +186,36 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex items-center justify-center z-0"
               style={{
-                background: 'linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%)',
+                background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%)',
               }}
             >
-              <Home className="w-12 h-12 text-gray-400" />
+              <div className="text-6xl">📷</div>
             </motion.div>
           )}
         </AnimatePresence>
         
-        {/* 새로고침 버튼 (우측 하단) */}
+        {/* 새로고침 버튼 (우측 하단) - 우드 스타일 */}
         {selectedPhoto && (
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleShuffle}
-            className="absolute bottom-2 right-2 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white transition-colors z-10"
+            className="absolute bottom-3 right-3 p-2 rounded-lg shadow-lg transition-all z-30"
             style={{
-              width: '32px',
-              height: '32px',
+              width: '36px',
+              height: '36px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              background: 'linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%)',
+              border: '2px solid #654321',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.2)',
             }}
             aria-label="사진 새로고침"
           >
-            <RefreshCw className="w-4 h-4 text-gray-700" />
+            <RefreshCw className="w-4 h-4 text-white" />
           </motion.button>
         )}
       </div>
@@ -613,24 +660,6 @@ const TitlePage: React.FC<TitlePageProps> = ({
               opacity: 0.1
             }}
           />
-        </motion.div>
-
-        {/* 집 아이콘 */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-2 relative z-20 mt-4"
-        >
-          <div 
-            className="leading-none"
-            style={{
-              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-              fontSize: '80px'
-            }}
-          >
-            🏠
-          </div>
         </motion.div>
 
         {/* 오늘의 무작위 사진 액자 */}
