@@ -208,17 +208,15 @@ export default function FamilyHub() {
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   
-  // 타이틀 스타일 상태 (state에서 초기화)
-  const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>(
-    state.titleStyle || {
-      content: INITIAL_STATE.familyName,
-      color: '#9333ea',
-      fontSize: 48,
-      fontWeight: '700',
-      letterSpacing: 0,
-      fontFamily: 'Inter',
-    }
-  );
+  // 타이틀 스타일 상태
+  const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
+    content: INITIAL_STATE.familyName,
+    color: '#9333ea',
+    fontSize: 48,
+    fontWeight: '700',
+    letterSpacing: 0,
+    fontFamily: 'Inter',
+  });
   
   // 가족 이름 수정 모달 상태
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -372,6 +370,23 @@ export default function FamilyHub() {
       subscription.unsubscribe();
     };
   }, [isMounted, router, loadData, isAuthenticated]);
+
+  // 2.4.5. state가 로드되면 titleStyle 동기화
+  useEffect(() => {
+    if (state.titleStyle) {
+      setTitleStyle(state.titleStyle);
+    } else if (state.familyName && !state.titleStyle) {
+      // titleStyle이 없지만 familyName이 있으면 기본값으로 초기화 (기존 데이터 호환성)
+      setTitleStyle({
+        content: state.familyName,
+        color: '#9333ea',
+        fontSize: 48,
+        fontWeight: '700',
+        letterSpacing: 0,
+        fontFamily: 'Inter',
+      });
+    }
+  }, [state.titleStyle, state.familyName]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
   useEffect(() => {
