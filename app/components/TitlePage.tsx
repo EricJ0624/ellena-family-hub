@@ -214,6 +214,11 @@ interface DesignEditorProps {
 const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, onClose }) => {
   const [localStyle, setLocalStyle] = useState<TitleStyle>(titleStyle);
   
+  // titleStyle prop이 변경될 때 localStyle 업데이트
+  useEffect(() => {
+    setLocalStyle(titleStyle);
+  }, [titleStyle]);
+  
   const handleChange = useCallback((field: keyof TitleStyle, value: any) => {
     const newStyle = { ...localStyle, [field]: value };
     setLocalStyle(newStyle);
@@ -225,12 +230,13 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 z-50 bg-white rounded-xl shadow-2xl p-6"
+      className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] bg-white rounded-xl shadow-2xl p-6"
       style={{
         width: '90%',
         maxWidth: '400px',
         backdropFilter: 'blur(10px)',
       }}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* 닫기 버튼 */}
       <button
@@ -533,18 +539,29 @@ const TitlePage: React.FC<TitlePageProps> = ({
           titleStyle={titleStyle}
           onTitleClick={handleTitleClick} 
         />
-        
-        {/* 디자인 에디터 (타이틀 클릭 시 표시) */}
-        <AnimatePresence>
-          {showEditor && (
+      </div>
+      
+      {/* 디자인 에디터 (타이틀 클릭 시 표시) - 모달 오버레이와 함께 */}
+      <AnimatePresence>
+        {showEditor && (
+          <>
+            {/* 모달 오버레이 */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEditor(false)}
+              className="fixed inset-0 bg-black/30 z-[99]"
+            />
+            {/* 에디터 */}
             <DesignEditor
               titleStyle={titleStyle}
               onStyleChange={handleStyleChange}
               onClose={() => setShowEditor(false)}
             />
-          )}
-        </AnimatePresence>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
