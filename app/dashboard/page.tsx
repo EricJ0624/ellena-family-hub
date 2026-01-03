@@ -116,6 +116,7 @@ interface AppState {
   album: Photo[];
   events: EventItem[];
   messages: Message[];
+  titleStyle?: Partial<TitleStyle>;
 }
 
 const INITIAL_STATE: AppState = {
@@ -125,7 +126,15 @@ const INITIAL_STATE: AppState = {
   todos: [],
   album: [],
   events: [],
-  messages: [{ id: 0, user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }]
+  messages: [{ id: 0, user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }],
+  titleStyle: {
+    content: "Ellena Family Hub",
+    color: '#9333ea',
+    fontSize: 48,
+    fontWeight: '700',
+    letterSpacing: 0,
+    fontFamily: 'Inter',
+  }
 };
 
 // Realtime subscription 변수를 컴포넌트 외부로 이동하여 handleLogout에서 접근 가능하도록
@@ -199,15 +208,17 @@ export default function FamilyHub() {
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   
-  // 타이틀 스타일 상태
-  const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
-    content: INITIAL_STATE.familyName,
-    color: '#9333ea',
-    fontSize: 48,
-    fontWeight: '700',
-    letterSpacing: 0,
-    fontFamily: 'Inter',
-  });
+  // 타이틀 스타일 상태 (state에서 초기화)
+  const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>(
+    state.titleStyle || {
+      content: INITIAL_STATE.familyName,
+      color: '#9333ea',
+      fontSize: 48,
+      fontWeight: '700',
+      letterSpacing: 0,
+      fontFamily: 'Inter',
+    }
+  );
   
   // 가족 이름 수정 모달 상태
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -227,6 +238,10 @@ export default function FamilyHub() {
         return;
       }
       setState(decrypted);
+      // titleStyle도 함께 불러오기
+      if (decrypted.titleStyle) {
+        setTitleStyle(decrypted.titleStyle);
+      }
     }
     const authKey = getAuthKey(userId);
     sessionStorage.setItem(authKey, key);
@@ -2890,6 +2905,15 @@ export default function FamilyHub() {
           break;
         case 'RENAME':
           newState.familyName = payload;
+          // titleStyle의 content도 함께 업데이트
+          if (newState.titleStyle) {
+            newState.titleStyle.content = payload;
+          } else {
+            newState.titleStyle = { content: payload };
+          }
+          break;
+        case 'UPDATE_TITLE_STYLE':
+          newState.titleStyle = payload;
           break;
         case 'TOGGLE_TODO': {
           const todo = prev.todos.find(t => t.id === payload);
@@ -5096,7 +5120,8 @@ export default function FamilyHub() {
               if (style.content) {
                 updateState('RENAME', style.content);
               }
-              // 추후 DB 저장 로직 추가 가능
+              // titleStyle을 state에 저장
+              updateState('UPDATE_TITLE_STYLE', style);
             }}
           />
           <div className="status-indicator">
