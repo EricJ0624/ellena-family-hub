@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { 
   getPushToken, 
   registerServiceWorker,
@@ -241,38 +240,33 @@ export default function FamilyHub() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        // 에러 객체를 더 자세히 로깅 (직렬화 가능한 형태로)
-        const errorInfo: any = {
-          message: error?.message || '알 수 없는 오류',
-          details: error?.details || null,
-          hint: error?.hint || null,
-          code: error?.code || null,
-          userId: userId,
-        };
+        // 에러 객체를 더 자세히 로깅
+        const errorMessage = error?.message || '알 수 없는 오류';
+        const errorDetails = error?.details || null;
+        const errorHint = error?.hint || null;
+        const errorCode = error?.code || null;
         
-        // 에러 객체의 모든 속성 추출 시도
-        if (error && typeof error === 'object') {
-          try {
-            const errorKeys = Object.keys(error);
-            errorKeys.forEach(key => {
-              try {
-                errorInfo[key] = (error as any)[key];
-              } catch (e) {
-                // 속성 접근 실패 시 무시
-              }
-            });
-          } catch (e) {
-            // 무시
-          }
-        }
-        
-        console.error('Supabase 사진 불러오기 오류:', errorInfo);
+        // 각 속성을 개별적으로 로깅 (직렬화 문제 방지)
+        console.error('=== Supabase 사진 불러오기 오류 ===');
+        console.error('에러 메시지:', errorMessage);
+        console.error('에러 코드:', errorCode);
+        console.error('에러 상세:', errorDetails);
+        console.error('에러 힌트:', errorHint);
+        console.error('사용자 ID:', userId);
+        console.error('전체 에러 객체:', error);
+        console.error('=====================================');
         
         // 특정 에러 코드에 대한 안내 메시지
-        if (error?.code === '42P01') {
-          console.error('테이블이 존재하지 않습니다. Supabase SQL Editor에서 memory_vault 테이블을 생성하세요.');
-        } else if (error?.code === '42501') {
-          console.error('권한이 없습니다. RLS 정책을 확인하세요.');
+        if (errorCode === '42P01') {
+          console.error('❌ 테이블이 존재하지 않습니다.');
+          console.error('해결 방법: Supabase SQL Editor에서 memory_vault 테이블을 생성하세요.');
+          console.error('SQL 파일: supabase_memory_vault_cloudinary_s3.sql');
+        } else if (errorCode === '42501') {
+          console.error('❌ 권한이 없습니다.');
+          console.error('해결 방법: RLS (Row Level Security) 정책을 확인하세요.');
+        } else if (errorMessage?.includes('relation') || errorMessage?.includes('does not exist')) {
+          console.error('❌ 테이블 또는 컬럼이 존재하지 않습니다.');
+          console.error('해결 방법: Supabase SQL Editor에서 테이블을 생성하세요.');
         }
         
         return [];

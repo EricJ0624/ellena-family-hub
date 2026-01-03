@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Home, RefreshCw, Palette, X } from 'lucide-react';
+import { Heart, RefreshCw, Palette, X } from 'lucide-react';
 import Image from 'next/image';
 
 // 상수 분리 - 텍스트 내용 관리
@@ -60,7 +60,6 @@ interface DailyPhotoFrameProps {
 
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) => {
   const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
-  const [isFading, setIsFading] = useState(false);
   
   // 오늘의 사진 인덱스 계산 (메모이제이션)
   const photoIndex = useMemo(() => {
@@ -447,7 +446,7 @@ const FloatingPetals: React.FC = () => {
         <motion.div
           key={index}
           initial={{
-            x: Math.random() * 100 + '%',
+            x: `${(index * 17) % 100}%`, // 인덱스 기반 결정적 위치
             y: -20,
             opacity: 0.6,
             rotate: 0,
@@ -458,9 +457,9 @@ const FloatingPetals: React.FC = () => {
             opacity: [0.6, 0.8, 0.4, 0.6],
           }}
           transition={{
-            duration: Math.random() * 10 + 15,
+            duration: 15 + (index % 10), // 인덱스 기반 결정적 지속 시간
             repeat: Infinity,
-            delay: Math.random() * 5,
+            delay: index * 0.5, // 인덱스 기반 결정적 지연
             ease: 'linear',
           }}
           className="absolute"
