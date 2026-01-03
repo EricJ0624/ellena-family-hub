@@ -427,14 +427,9 @@ const TitlePage: React.FC<TitlePageProps> = ({
   // 타이틀 클릭 핸들러 (디자인 에디터 표시)
   const handleTitleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    // onTitleClick이 있으면 먼저 호출 (가족 이름 수정 모달)
-    if (onTitleClick) {
-      onTitleClick();
-    } else {
-      // onTitleClick이 없으면 디자인 에디터 표시
-      setShowEditor(!showEditor);
-    }
-  }, [onTitleClick, showEditor]);
+    // 타이틀 클릭 시 디자인 에디터 표시
+    setShowEditor(!showEditor);
+  }, [showEditor]);
   
   return (
     <div 
