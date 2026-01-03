@@ -327,39 +327,50 @@ export default function FamilyHub() {
       }
     }
 
-    // Supabase에서 사진 불러오기
-    const supabasePhotos = await loadPhotosFromSupabase(userId);
-    
-    if (supabasePhotos.length > 0) {
-      // localStorage와 Supabase 사진 병합 (중복 제거)
-      setState(prev => {
-        // localStorage 사진 중 Supabase ID가 있는 것과 없는 것 분리
-        const localPhotosWithSupabaseId = prev.album.filter(p => p.supabaseId);
-        const localPhotosWithoutSupabaseId = prev.album.filter(p => !p.supabaseId);
-        
-        // Supabase 사진 ID 집합 생성
-        const supabasePhotoIds = new Set(supabasePhotos.map(p => p.supabaseId || p.id));
-        
-        // localStorage의 Supabase ID가 Supabase에 없는 경우 제거 (이미 삭제된 사진)
-        const validLocalPhotosWithId = localPhotosWithSupabaseId.filter(
-          p => p.supabaseId && supabasePhotoIds.has(p.supabaseId)
-        );
-        
-        // Supabase에만 있는 새 사진 추가
-        const existingIds = new Set([
-          ...validLocalPhotosWithId.map(p => p.supabaseId || p.id),
-          ...localPhotosWithoutSupabaseId.map(p => p.id)
-        ]);
-        const newPhotos = supabasePhotos.filter(p => !existingIds.has(p.supabaseId || p.id));
-        
-        // Supabase 사진을 우선순위로 앞에 추가 (최신순)
-        const mergedAlbum = [...newPhotos, ...validLocalPhotosWithId, ...localPhotosWithoutSupabaseId];
-        
-        return {
-          ...prev,
-          album: mergedAlbum,
-        };
-      });
+    // Supabase에서 사진 불러오기 (환경 변수와 관계없이 시도)
+    try {
+      const supabasePhotos = await loadPhotosFromSupabase(userId);
+      
+      if (supabasePhotos.length > 0) {
+        // localStorage와 Supabase 사진 병합 (중복 제거)
+        setState(prev => {
+          // localStorage 사진 중 Supabase ID가 있는 것과 없는 것 분리
+          const localPhotosWithSupabaseId = prev.album.filter(p => p.supabaseId);
+          const localPhotosWithoutSupabaseId = prev.album.filter(p => !p.supabaseId);
+          
+          // Supabase 사진 ID 집합 생성
+          const supabasePhotoIds = new Set(supabasePhotos.map(p => p.supabaseId || p.id));
+          
+          // localStorage의 Supabase ID가 Supabase에 없는 경우 제거 (이미 삭제된 사진)
+          const validLocalPhotosWithId = localPhotosWithSupabaseId.filter(
+            p => p.supabaseId && supabasePhotoIds.has(p.supabaseId)
+          );
+          
+          // Supabase에만 있는 새 사진 추가
+          const existingIds = new Set([
+            ...validLocalPhotosWithId.map(p => p.supabaseId || p.id),
+            ...localPhotosWithoutSupabaseId.map(p => p.id)
+          ]);
+          const newPhotos = supabasePhotos.filter(p => !existingIds.has(p.supabaseId || p.id));
+          
+          // Supabase 사진을 우선순위로 앞에 추가 (최신순)
+          const mergedAlbum = [...newPhotos, ...validLocalPhotosWithId, ...localPhotosWithoutSupabaseId];
+          
+          return {
+            ...prev,
+            album: mergedAlbum,
+          };
+        });
+      } else {
+        // Supabase에 사진이 없으면 localStorage 사진만 사용 (정상 동작)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Supabase에 사진이 없습니다. localStorage 사진만 사용합니다.');
+        }
+      }
+    } catch (supabaseError: any) {
+      // Supabase 불러오기 실패해도 localStorage 사진은 사용 가능
+      console.warn('Supabase에서 사진 불러오기 실패 (localStorage 사진은 사용 가능):', supabaseError?.message || supabaseError);
+      // 에러가 발생해도 localStorage 사진은 정상적으로 표시됨
     }
 
     const authKey = getAuthKey(userId);
