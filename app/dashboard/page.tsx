@@ -196,6 +196,7 @@ export default function FamilyHub() {
   const geolocationWatchIdRef = useRef<number | null>(null);
   const lastLocationUpdateRef = useRef<number>(0);
   const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -576,29 +577,57 @@ export default function FamilyHub() {
       }
     };
 
-    // Google Maps API 스크립트 로드
-    if (!(window as any).google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        // 스크립트 로드 후 약간의 지연을 두고 초기화
-        setTimeout(() => {
-          initializeMap();
-        }, 100);
-      };
-      
-      script.onerror = () => {
-        console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
-        setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다.');
-        setMapLoaded(false);
-      };
-      
-      document.head.appendChild(script);
-    } else {
+    // Google Maps API 스크립트 로드 (중복 방지)
+    if ((window as any).google && (window as any).google.maps) {
+      // 이미 로드되어 있으면 바로 초기화
       initializeMap();
+    } else if (!googleMapsScriptLoadedRef.current) {
+      // 스크립트가 이미 DOM에 있는지 확인
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+      
+      if (existingScript) {
+        // 스크립트가 이미 있으면 로드 완료를 기다림
+        googleMapsScriptLoadedRef.current = true;
+        const checkGoogleMaps = setInterval(() => {
+          if ((window as any).google && (window as any).google.maps) {
+            clearInterval(checkGoogleMaps);
+            initializeMap();
+          }
+        }, 100);
+        
+        // 최대 10초 대기
+        setTimeout(() => {
+          clearInterval(checkGoogleMaps);
+          if (!(window as any).google) {
+            console.warn('Google Maps API 로드 타임아웃');
+            setMapError('Google Maps API 스크립트를 불러오는데 시간이 오래 걸립니다.');
+          }
+        }, 10000);
+      } else {
+        // 스크립트가 없으면 새로 추가
+        googleMapsScriptLoadedRef.current = true;
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.id = 'google-maps-script'; // 중복 확인을 위한 ID 추가
+        
+        script.onload = () => {
+          // 스크립트 로드 후 약간의 지연을 두고 초기화
+          setTimeout(() => {
+            initializeMap();
+          }, 100);
+        };
+        
+        script.onerror = () => {
+          googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
+          console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
+          setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다.');
+          setMapLoaded(false);
+        };
+        
+        document.head.appendChild(script);
+      }
     }
   }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded]);
 
@@ -2338,13 +2367,15 @@ export default function FamilyHub() {
         // expires_at이 있는 경우에만 만료 체크
         if (req.expires_at) {
           const expiresAt = new Date(req.expires_at);
-          // 만료된 accepted 요청은 자동으로 종료
+          // 만료된 accepted 요청만 자동으로 종료 (pending은 사용자가 직접 삭제)
           if (expiresAt < now && req.status === 'accepted') {
+            // 만료된 accepted 요청은 자동으로 종료
             endLocationSharing(req.id).catch(() => {});
           }
+          // pending 상태의 만료된 요청은 자동 삭제하지 않음 (사용자가 직접 삭제)
         }
       });
-      // 위치 요청 목록 다시 로드하여 만료된 항목 제거
+      // 위치 요청 목록 다시 로드
       loadLocationRequests();
     };
 
@@ -3365,7 +3396,37 @@ export default function FamilyHub() {
     }
   };
 
-  // 위치 요청 목록 로드 (만료된 요청 자동 정리)
+  // 만료된 요청을 조용히 처리하는 함수 (alert 없이)
+  const silentlyCancelExpiredRequest = async (requestId: string) => {
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      const response = await fetch('/api/location-approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requestId,
+          userId,
+          action: 'cancel',
+          silent: true, // 조용한 처리 플래그
+        }),
+      });
+
+      const result = await response.json();
+      // 성공 여부와 관계없이 조용히 처리 (loadLocationRequests는 호출하지 않음)
+      if (result.success) {
+        // 상태만 업데이트 (재로드 없이)
+        setLocationRequests(prev => prev.filter(req => req.id !== requestId));
+      }
+    } catch (error) {
+      // 조용히 실패 처리 (에러 로그만)
+      console.error('만료된 요청 자동 취소 오류:', error);
+    }
+  };
+
+  // 위치 요청 목록 로드 (만료된 pending 요청은 사용자가 직접 삭제)
   const loadLocationRequests = async () => {
     if (!userId || !isAuthenticated) return;
 
@@ -3375,18 +3436,21 @@ export default function FamilyHub() {
 
       if (result.success && result.data) {
         const now = new Date();
-        // 만료된 요청 필터링 및 자동 종료
-        const validRequests = result.data.filter((req: any) => {
-          if (!req.expires_at) return true;
-          const expiresAt = new Date(req.expires_at);
-          if (expiresAt < now && req.status === 'accepted') {
-            // 만료된 accepted 요청은 자동으로 cancelled로 변경
-            handleLocationRequestAction(req.id, 'cancel').catch(() => {});
-            return false;
+        // 만료된 accepted 요청만 자동 종료, pending은 그대로 표시
+        const processedRequests = result.data.map((req: any) => {
+          if (req.expires_at && req.status === 'accepted') {
+            const expiresAt = new Date(req.expires_at);
+            if (expiresAt < now) {
+              // 만료된 accepted 요청은 자동으로 종료
+              endLocationSharing(req.id).catch(() => {});
+              return null; // 필터링을 위해 null 반환
+            }
           }
-          return true;
-        });
-        setLocationRequests(validRequests);
+          // pending 상태의 만료된 요청은 그대로 반환 (사용자가 직접 삭제)
+          return req;
+        }).filter((req: any) => req !== null); // null 제거
+        
+        setLocationRequests(processedRequests);
       }
     } catch (error) {
       console.error('위치 요청 목록 로드 오류:', error);

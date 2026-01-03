@@ -7,7 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // 위치 요청 승인/거부/취소 API
 export async function POST(request: NextRequest) {
   try {
-    const { requestId, userId, action } = await request.json();
+    const { requestId, userId, action, silent } = await request.json();
 
     if (!requestId || !userId || !action) {
       return NextResponse.json(
@@ -63,20 +63,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 상태 확인
-    if (locationRequest.status !== 'pending') {
+    // 상태 확인 (silent 모드가 아닐 때만 체크)
+    if (!silent && locationRequest.status !== 'pending') {
       return NextResponse.json(
         { error: '이미 처리된 요청입니다.' },
         { status: 400 }
       );
     }
 
-    // 만료 확인
-    if (new Date(locationRequest.expires_at) < new Date()) {
+    // 만료 확인 (cancel 액션은 만료된 요청도 취소 가능, accept/reject는 만료된 요청 불가)
+    if (!silent && action !== 'cancel' && new Date(locationRequest.expires_at) < new Date()) {
       return NextResponse.json(
         { error: '만료된 요청입니다.' },
         { status: 400 }
       );
+    }
+
+    // silent 모드이고 이미 cancelled/rejected 상태면 성공으로 처리
+    if (silent && (locationRequest.status === 'cancelled' || locationRequest.status === 'rejected')) {
+      return NextResponse.json({ success: true, data: locationRequest }, { status: 200 });
     }
 
     // 상태 업데이트
