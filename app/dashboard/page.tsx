@@ -226,25 +226,99 @@ export default function FamilyHub() {
   
   // 온라인 사용자 목록은 Realtime presence로 관리 (별도 함수 불필요)
   
-  const loadData = useCallback((key: string, userId: string) => {
+  // Supabase에서 사진 데이터 불러오기
+  const loadPhotosFromSupabase = useCallback(async (userId: string) => {
+    try {
+      const { data: photos, error } = await supabase
+        .from('memory_vault')
+        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, description, created_at')
+        .eq('uploader_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase 사진 불러오기 오류:', error);
+        return [];
+      }
+
+      if (!photos || photos.length === 0) {
+        return [];
+      }
+
+      // Photo 형식으로 변환
+      return photos.map((photo: any) => ({
+        id: photo.id,
+        data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '',
+        supabaseId: photo.id,
+        isUploaded: true,
+        isUploading: false,
+        description: photo.description || '',
+        originalFilename: photo.original_filename || '',
+        mimeType: photo.mime_type || 'image/jpeg',
+      }));
+    } catch (error: any) {
+      console.error('사진 불러오기 중 오류:', error);
+      return [];
+    }
+  }, []);
+
+  const loadData = useCallback(async (key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
     const saved = localStorage.getItem(storageKey);
+    
+    let localState: AppState | null = null;
     if (saved) {
       const decrypted = CryptoService.decrypt(saved, key);
       if (!decrypted) {
         alert("보안 키가 일치하지 않습니다.");
         return;
       }
+      localState = decrypted;
       setState(decrypted);
       // titleStyle도 함께 불러오기
       if (decrypted.titleStyle) {
         setTitleStyle(decrypted.titleStyle);
+      }
     }
+
+    // Supabase에서 사진 불러오기
+    const supabasePhotos = await loadPhotosFromSupabase(userId);
+    
+    if (supabasePhotos.length > 0) {
+      // localStorage와 Supabase 사진 병합 (중복 제거)
+      setState(prev => {
+        // localStorage 사진 중 Supabase ID가 있는 것과 없는 것 분리
+        const localPhotosWithSupabaseId = prev.album.filter(p => p.supabaseId);
+        const localPhotosWithoutSupabaseId = prev.album.filter(p => !p.supabaseId);
+        
+        // Supabase 사진 ID 집합 생성
+        const supabasePhotoIds = new Set(supabasePhotos.map(p => p.supabaseId || p.id));
+        
+        // localStorage의 Supabase ID가 Supabase에 없는 경우 제거 (이미 삭제된 사진)
+        const validLocalPhotosWithId = localPhotosWithSupabaseId.filter(
+          p => p.supabaseId && supabasePhotoIds.has(p.supabaseId)
+        );
+        
+        // Supabase에만 있는 새 사진 추가
+        const existingIds = new Set([
+          ...validLocalPhotosWithId.map(p => p.supabaseId || p.id),
+          ...localPhotosWithoutSupabaseId.map(p => p.id)
+        ]);
+        const newPhotos = supabasePhotos.filter(p => !existingIds.has(p.supabaseId || p.id));
+        
+        // Supabase 사진을 우선순위로 앞에 추가 (최신순)
+        const mergedAlbum = [...newPhotos, ...validLocalPhotosWithId, ...localPhotosWithoutSupabaseId];
+        
+        return {
+          ...prev,
+          album: mergedAlbum,
+        };
+      });
     }
+
     const authKey = getAuthKey(userId);
     sessionStorage.setItem(authKey, key);
     setIsAuthenticated(true);
-  }, []);
+  }, [loadPhotosFromSupabase]);
 
   // --- [EFFECTS] ---
   
@@ -340,6 +414,12 @@ export default function FamilyHub() {
         const key = process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
         setMasterKey(key);
         sessionStorage.setItem(authKey, key); // 가족 공유 키로 덮어쓰기
+        
+        // user_metadata에서 타이틀 스타일 불러오기
+        if (session.user.user_metadata?.titleStyle) {
+          setTitleStyle(session.user.user_metadata.titleStyle);
+        }
+        
         // 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
         loadData(key, currentUserId);
       } catch (err) {
@@ -2929,6 +3009,24 @@ export default function FamilyHub() {
           break;
         case 'UPDATE_TITLE_STYLE':
           newState.titleStyle = payload;
+          // Supabase에 타이틀 스타일 저장 (user_metadata에 저장)
+          (async () => {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                const { error } = await supabase.auth.updateUser({
+                  data: {
+                    titleStyle: payload
+                  }
+                });
+                if (error) {
+                  console.error('타이틀 스타일 저장 오류:', error);
+                }
+              }
+            } catch (error: any) {
+              console.error('타이틀 스타일 저장 중 오류:', error);
+            }
+          })();
           break;
         case 'TOGGLE_TODO': {
           const todo = prev.todos.find(t => t.id === payload);
