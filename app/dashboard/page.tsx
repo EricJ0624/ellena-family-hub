@@ -836,7 +836,13 @@ export default function FamilyHub() {
           const myMarker = new (window as any).google.maps.Marker({
             position: { lat: state.location.latitude, lng: state.location.longitude },
             map: mapRef.current,
-            title: '내 위치',
+            title: `${userName || '내'} 위치`,
+            label: {
+              text: userName || '나',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            },
             icon: {
               url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
             }
@@ -845,23 +851,42 @@ export default function FamilyHub() {
         }
 
         // ✅ 승인된 사용자들의 위치 마커 추가 (familyLocations에는 이미 승인된 요청이 있는 사용자만 포함됨)
+        // ✅ 본인 위치는 state.location에만 표시되므로 familyLocations에는 포함되지 않아야 함
         state.familyLocations.forEach((loc) => {
-          if (loc.latitude && loc.longitude && loc.userId !== userId) {
+          // ✅ 본인 위치는 확실히 제외 (이중 체크)
+          if (loc.latitude && loc.longitude && loc.userId && loc.userId !== userId) {
             // 기존 마커가 있으면 위치만 업데이트, 없으면 새로 생성
             const existingMarker = markersRef.current.get(loc.userId);
             if (existingMarker) {
               existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
+              // ✅ 기존 마커의 label도 업데이트 (별명이 변경된 경우 대비)
+              if (existingMarker.setLabel) {
+                existingMarker.setLabel({
+                  text: loc.userName || '사용자',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                });
+              }
             } else {
               const marker = new (window as any).google.maps.Marker({
                 position: { lat: loc.latitude, lng: loc.longitude },
                 map: mapRef.current,
                 title: `${loc.userName}의 위치`,
+                label: {
+                  text: loc.userName || '사용자',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                },
                 icon: {
                   url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
                 }
               });
               markersRef.current.set(loc.userId, marker);
             }
+          } else if (process.env.NODE_ENV === 'development' && loc.userId === userId) {
+            console.warn('지도 마커: 본인 위치가 familyLocations에 포함되어 있음 (제외됨)', loc);
           }
         });
       } catch (error: any) {
@@ -2320,9 +2345,18 @@ export default function FamilyHub() {
         .channel('location_requests_changes')
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'location_requests' },
-          (payload: any) => {
+          async (payload: any) => {
             console.log('Realtime 위치 요청 INSERT 이벤트 수신:', payload);
-            loadLocationRequests(); // 위치 요청 목록 다시 로드
+            // ✅ 현재 사용자가 요청을 받은 경우(target_id)에만 즉시 로드
+            const newRequest = payload.new;
+            if (newRequest && newRequest.target_id === userId) {
+              await loadLocationRequests(); // 위치 요청 목록 다시 로드
+              // ✅ UI 업데이트를 위해 상태 강제 갱신
+              setState(prev => ({ ...prev }));
+            } else {
+              // 요청을 보낸 경우에도 목록 업데이트 (상태 동기화)
+              loadLocationRequests();
+            }
           }
         )
         .on('postgres_changes',
@@ -2375,6 +2409,13 @@ export default function FamilyHub() {
                   console.warn('위치 추적 시작 실패:', error);
                 }
               }
+            }
+            
+            // ✅ 취소된 요청이 있으면 양쪽 사용자 모두 요청 목록에서 제거
+            if (updatedRequest && updatedRequest.status === 'cancelled') {
+              // loadLocationRequests()가 이미 호출되었으므로 UI가 자동으로 업데이트됨
+              // 위치 목록도 다시 로드하여 마커 제거
+              await loadFamilyLocations();
             }
             
             // 승인 시 위치 목록도 다시 로드 (승인된 요청이 반영된 후)
@@ -3653,14 +3694,29 @@ export default function FamilyHub() {
         // ✅ 승인된 다른 사용자 위치만 표시 (본인 위치는 제외)
         const locations = data
           .filter((loc: any) => {
-            // 본인 위치는 제외 (본인 위치는 state.location에만 있음)
-            if (loc.user_id === userId) return false;
+            // ✅ 본인 위치는 확실히 제외 (본인 위치는 state.location에만 있음)
+            if (loc.user_id === userId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('loadFamilyLocations: 본인 위치 제외', loc.user_id);
+              }
+              return false;
+            }
             // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시 (최신 locationRequests 사용)
-            return currentLocationRequests.some(
+            const hasAcceptedRequest = currentLocationRequests.some(
               req => 
                 (req.requester_id === userId && req.target_id === loc.user_id && req.status === 'accepted') ||
                 (req.requester_id === loc.user_id && req.target_id === userId && req.status === 'accepted')
             );
+            
+            if (process.env.NODE_ENV === 'development') {
+              if (hasAcceptedRequest) {
+                console.log('loadFamilyLocations: 승인된 사용자 위치 포함', loc.user_id);
+              } else {
+                console.log('loadFamilyLocations: 승인되지 않은 사용자 위치 제외', loc.user_id);
+              }
+            }
+            
+            return hasAcceptedRequest;
           })
           .map((loc: any) => {
             const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
