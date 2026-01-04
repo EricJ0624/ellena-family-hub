@@ -319,6 +319,10 @@ export default function FamilyHub() {
       if (decrypted.titleStyle) {
         setTitleStyle(decrypted.titleStyle);
       }
+    } else {
+      // ✅ 재로그인 시 localStorage가 비어있어도 초기 상태 설정
+      // 이렇게 하지 않으면 prev.album이 빈 배열로 남아서 사진이 표시되지 않음
+      setState(INITIAL_STATE);
     }
 
     // ✅ Supabase에서 모든 사진 불러오기 (필터 없이 - 가족 전체)
@@ -348,13 +352,32 @@ export default function FamilyHub() {
             created_by: photo.uploader_id || photo.created_by,
           }));
 
-        // localStorage와 Supabase 사진 병합
+        // ✅ 재로그인 시 localStorage가 비어있으면 Supabase 사진만 사용
+        // localStorage가 있으면 병합, 없으면 Supabase 사진만 사용
         setState(prev => {
-          const localPhotos = prev.album || [];
+          // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
+          const storageKey = getStorageKey(userId);
+          const saved = localStorage.getItem(storageKey);
+          let localStoragePhotos: Photo[] = [];
+          
+          if (saved) {
+            try {
+              const decrypted = CryptoService.decrypt(saved, key);
+              if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
+                localStoragePhotos = decrypted.album;
+              }
+            } catch (e) {
+              // 복호화 실패는 무시
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('localStorage 사진 복호화 실패:', e);
+              }
+            }
+          }
+          
           const supabasePhotoIds = new Set(supabasePhotos.map(p => String(p.id)));
           
           // localStorage에만 있는 사진 (업로드 중인 Base64/Blob만)
-          const localStorageOnlyPhotos = localPhotos.filter(p => {
+          const localStorageOnlyPhotos = localStoragePhotos.filter(p => {
             const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
             if (supabaseId && supabasePhotoIds.has(supabaseId)) {
               return false; // Supabase에 이미 있으면 제외
@@ -370,7 +393,8 @@ export default function FamilyHub() {
             console.log('✅ loadData: 사진 병합 완료', {
               supabasePhotos: supabasePhotos.length,
               localStorageOnlyPhotos: localStorageOnlyPhotos.length,
-              mergedAlbum: mergedAlbum.length
+              mergedAlbum: mergedAlbum.length,
+              hasLocalStorage: !!saved
             });
           }
 
@@ -1347,196 +1371,11 @@ export default function FamilyHub() {
           // Supabase에 일정이 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 사진 로드 (memory_vault에서 가족 전체의 최근 100개 - 가족 공유)
-        // user_id 필터 없이 모든 가족 구성원의 사진 로드
-        // 재로그인 시 모든 사진을 불러오기 위해 limit 증가
-        let photosData: any[] | null = null;
-        let photosError: any = null;
-        
-        // 재시도 로직 (최대 3회)
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (retryCount < maxRetries && !photosData && !photosError) {
-          try {
-            const result = await supabase
-              .from('memory_vault')
-              .select('*')
-              .order('created_at', { ascending: false })
-              .limit(100); // limit 증가 (50 -> 100)
-            
-            photosData = result.data;
-            photosError = result.error;
-            
-            if (photosError) {
-              console.error(`Supabase 사진 로드 오류 (시도 ${retryCount + 1}/${maxRetries}):`, photosError);
-              if (retryCount < maxRetries - 1) {
-                // 재시도 전 대기 (지수 백오프)
-                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-                retryCount++;
-                photosError = null; // 재시도를 위해 초기화
-              }
-            }
-          } catch (error: any) {
-            console.error(`사진 로드 예외 발생 (시도 ${retryCount + 1}/${maxRetries}):`, error);
-            if (retryCount < maxRetries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-              retryCount++;
-            } else {
-              photosError = error;
-            }
-          }
-        }
-        
+        // ✅ 사진 로드는 loadData 함수에서만 처리 (중복 방지)
+        // loadData가 먼저 실행되어 사진을 로드하므로, 여기서는 사진 로드를 건너뜀
         if (process.env.NODE_ENV === 'development') {
-          console.log('사진 로드 시도:', {
-            userId: userId,
-            photosDataCount: photosData?.length || 0,
-            photosError: photosError ? photosError.message : null,
-            retryCount: retryCount + 1
-          });
+          console.log('loadSupabaseData: 사진 로드는 loadData에서 처리되므로 건너뜀');
         }
-
-        // Supabase 로드 에러 로깅
-        if (photosError) {
-          console.error('Supabase 사진 로드 최종 오류:', photosError);
-          if (process.env.NODE_ENV === 'development') {
-            console.error('에러 상세:', {
-              message: photosError.message,
-              details: photosError.details,
-              hint: photosError.hint,
-              code: photosError.code
-            });
-          }
-        }
-
-        // Supabase 사진 로드 (성공/실패 관계없이 처리)
-        const formattedPhotos: Photo[] = (!photosError && photosData) 
-          ? photosData
-              .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
-              .map((photo: any) => ({
-                id: photo.id,
-                data: photo.cloudinary_url || photo.s3_original_url || photo.image_url || '', // ✅ URL 우선순위: cloudinary_url > s3_original_url > image_url
-                originalSize: photo.original_file_size,
-                originalFilename: photo.original_filename,
-                mimeType: photo.mime_type,
-                supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
-                isUploaded: true, // Supabase에서 로드한 사진은 업로드 완료된 사진
-                created_by: photo.uploader_id || photo.user_id || photo.created_by || undefined, // 생성자 ID 저장
-                description: photo.caption || undefined // caption 사용
-              }))
-          : []; // Supabase 로드 실패 시 빈 배열
-        
-        // 디버깅 정보 추가
-        if (process.env.NODE_ENV === 'development') {
-          console.log('사진 로드 결과:', {
-            photosError: photosError ? photosError.message : null,
-            photosDataCount: photosData?.length || 0,
-            formattedPhotosCount: formattedPhotos.length,
-            localStoragePhotosCount: localStoragePhotos.length
-          });
-        }
-        
-        // Supabase 사진과 localStorage 사진 병합
-        
-        // 재로그인 시 Supabase 데이터를 우선하고, localStorage는 업로드 중인 사진만 유지
-        setState(prev => {
-          // Supabase에 있는 사진 ID 목록 (숫자 ID 또는 UUID)
-          const supabasePhotoIds = new Set(formattedPhotos.map(p => String(p.id)));
-          
-          // localStorage에만 있는 사진 (Base64 데이터, 업로드 중인 사진만)
-          const localStorageOnlyPhotos = localStoragePhotos.filter(p => {
-            const photoId = String(p.id);
-            const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
-            
-            // Supabase ID가 있고 Supabase에 이미 있는 사진이면 제외
-            if (supabaseId && supabasePhotoIds.has(supabaseId)) {
-              return false;
-            }
-            
-            // 업로드 완료된 사진(URL)은 제외 (Supabase에서 로드해야 함)
-            if (p.isUploaded && p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))) {
-              return false;
-            }
-            
-            // 업로드 중이거나 Base64/Blob 데이터만 유지
-            return p.isUploading || (p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:')));
-          });
-          
-          // Supabase 사진과 localStorage 전용 사진 병합 (Supabase 우선)
-          const mergedAlbum = [...formattedPhotos, ...localStorageOnlyPhotos];
-          
-          // 디버깅: 병합 결과 확인
-          if (process.env.NODE_ENV === 'development') {
-            console.log('사진 병합 결과:', {
-              formattedPhotosCount: formattedPhotos.length,
-              localStorageOnlyPhotosCount: localStorageOnlyPhotos.length,
-              mergedAlbumCount: mergedAlbum.length,
-              supabasePhotoIds: Array.from(supabasePhotoIds)
-            });
-          }
-          
-          // 중복 제거: 같은 ID를 가진 사진 제거
-          const uniqueAlbum = mergedAlbum.reduce((acc, photo) => {
-            const photoId = String(photo.id);
-            const supabaseId = photo.supabaseId ? String(photo.supabaseId) : null;
-            
-            // 이미 같은 ID의 사진이 있는지 확인
-            const exists = acc.some(p => {
-              const pId = String(p.id);
-              const pSupabaseId = p.supabaseId ? String(p.supabaseId) : null;
-              return pId === photoId || pSupabaseId === photoId || 
-                     (supabaseId && pSupabaseId === supabaseId) ||
-                     (photoId === pSupabaseId) || (pId === supabaseId);
-            });
-            
-            if (!exists) {
-              acc.push(photo);
-            }
-            
-            return acc;
-          }, [] as Photo[]);
-          
-          // Supabase 사진이 있으면 우선 사용 (재로그인 시 Supabase 데이터 강제 사용)
-          if (formattedPhotos.length > 0) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('✅ Supabase 사진 로드 성공, 상태 업데이트:', {
-                formattedPhotosCount: formattedPhotos.length,
-                uniqueAlbumCount: uniqueAlbum.length
-              });
-            }
-            return {
-              ...prev,
-              album: uniqueAlbum
-            };
-          }
-          
-          // Supabase 로드 실패 시 localStorage 사진도 포함 (오프라인 지원)
-          // 단, 재로그인 직후에는 localStorage가 비어있을 수 있으므로 Supabase 재시도 고려
-          if (localStoragePhotos.length > 0) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('⚠️ Supabase 로드 실패, localStorage 사진 표시:', localStoragePhotos.length);
-            }
-            return {
-              ...prev,
-              album: localStoragePhotos
-            };
-          }
-          
-          // 사진이 없으면 빈 배열 반환 (재로그인 시 Supabase에서 로드 실패한 경우)
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('⚠️ 사진이 없습니다. Supabase 로드 상태:', {
-              photosError: photosError ? photosError.message : null,
-              photosDataCount: photosData?.length || 0,
-              formattedPhotosCount: formattedPhotos.length,
-              localStoragePhotosCount: localStoragePhotos.length
-            });
-          }
-          return {
-            ...prev,
-            album: []
-          };
-        });
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
         // 에러 발생 시에도 localStorage 사진 유지
