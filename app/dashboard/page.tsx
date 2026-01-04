@@ -844,38 +844,23 @@ export default function FamilyHub() {
           markersRef.current.set('my-location', myMarker);
         }
 
-        // 승인된 위치 요청이 있는 사용자들의 위치만 마커로 표시
-        const acceptedRequests = locationRequests.filter(
-          req => req.status === 'accepted' &&
-          ((req.requester_id === userId && req.target_id !== userId) ||
-           (req.target_id === userId && req.requester_id !== userId))
-        );
-
-        // 승인된 사용자들의 위치 마커 추가 (실시간 업데이트)
+        // ✅ 승인된 사용자들의 위치 마커 추가 (familyLocations에는 이미 승인된 요청이 있는 사용자만 포함됨)
         state.familyLocations.forEach((loc) => {
           if (loc.latitude && loc.longitude && loc.userId !== userId) {
-            // 해당 사용자와의 승인된 요청이 있는지 확인
-            const hasAcceptedRequest = acceptedRequests.some(
-              req => (req.requester_id === userId && req.target_id === loc.userId) ||
-                     (req.requester_id === loc.userId && req.target_id === userId)
-            );
-
-            if (hasAcceptedRequest) {
-              // 기존 마커가 있으면 위치만 업데이트, 없으면 새로 생성
-              const existingMarker = markersRef.current.get(loc.userId);
-              if (existingMarker) {
-                existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
-              } else {
-                const marker = new (window as any).google.maps.Marker({
-                  position: { lat: loc.latitude, lng: loc.longitude },
-                  map: mapRef.current,
-                  title: `${loc.userName}의 위치`,
-                  icon: {
-                    url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                  }
-                });
-                markersRef.current.set(loc.userId, marker);
-              }
+            // 기존 마커가 있으면 위치만 업데이트, 없으면 새로 생성
+            const existingMarker = markersRef.current.get(loc.userId);
+            if (existingMarker) {
+              existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
+            } else {
+              const marker = new (window as any).google.maps.Marker({
+                position: { lat: loc.latitude, lng: loc.longitude },
+                map: mapRef.current,
+                title: `${loc.userName}의 위치`,
+                icon: {
+                  url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                }
+              });
+              markersRef.current.set(loc.userId, marker);
             }
           }
         });
@@ -2348,6 +2333,50 @@ export default function FamilyHub() {
             await loadLocationRequests();
             // locationRequests 상태가 업데이트될 때까지 약간의 지연
             await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // ✅ 승인된 요청이 있으면 양쪽 사용자 모두 위치 추적 시작
+            const updatedRequest = payload.new;
+            if (updatedRequest && updatedRequest.status === 'accepted') {
+              const isRequester = updatedRequest.requester_id === userId;
+              const isTarget = updatedRequest.target_id === userId;
+              
+              // 양쪽 사용자 모두 위치 추적 시작 (아직 시작하지 않은 경우)
+              if ((isRequester || isTarget) && !isLocationSharing) {
+                try {
+                  if (navigator.geolocation) {
+                    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                      navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                      });
+                    });
+                    
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    const address = await reverseGeocode(latitude, longitude);
+                    
+                    // 위치 저장 및 추적 시작
+                    await saveLocationToSupabase(latitude, longitude, address);
+                    setState(prev => ({
+                      ...prev,
+                      location: {
+                        address: address,
+                        latitude: latitude,
+                        longitude: longitude,
+                        userId: userId,
+                        updatedAt: new Date().toISOString()
+                      }
+                    }));
+                    
+                    updateLocation();
+                  }
+                } catch (error) {
+                  console.warn('위치 추적 시작 실패:', error);
+                }
+              }
+            }
+            
             // 승인 시 위치 목록도 다시 로드 (승인된 요청이 반영된 후)
             await loadFamilyLocations();
             // 지도 마커 업데이트를 위해 상태 변경 트리거
@@ -3621,11 +3650,11 @@ export default function FamilyHub() {
       }
 
       if (data && data.length > 0) {
-        // 본인 위치와 승인된 사용자 위치만 표시
+        // ✅ 승인된 다른 사용자 위치만 표시 (본인 위치는 제외)
         const locations = data
           .filter((loc: any) => {
-            // 본인 위치는 항상 표시
-            if (loc.user_id === userId) return true;
+            // 본인 위치는 제외 (본인 위치는 state.location에만 있음)
+            if (loc.user_id === userId) return false;
             // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시 (최신 locationRequests 사용)
             return currentLocationRequests.some(
               req => 
