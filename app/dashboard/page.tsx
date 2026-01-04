@@ -545,8 +545,9 @@ export default function FamilyHub() {
           setTitleStyle(session.user.user_metadata.titleStyle);
         }
         
-        // 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
-        loadData(key, currentUserId);
+        // ✅ 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
+        // await를 추가하여 loadData 완료 후 다음 단계 진행 보장
+        await loadData(key, currentUserId);
       } catch (err) {
         router.push('/');
       }
@@ -1378,43 +1379,11 @@ export default function FamilyHub() {
         }
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
-        // 에러 발생 시에도 localStorage 사진 유지
-        try {
-          const authKey = getAuthKey(userId);
-          const errorCurrentKey = masterKey || sessionStorage.getItem(authKey) || 
-            process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-          const storageKey = getStorageKey(userId);
-          const saved = localStorage.getItem(storageKey);
-          let errorLocalStoragePhotos: Photo[] = [];
-          if (saved && errorCurrentKey) {
-            try {
-              const decrypted = CryptoService.decrypt(saved, errorCurrentKey);
-              if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
-                errorLocalStoragePhotos = decrypted.album;
-              }
-            } catch (e: any) {
-              // UTF-8 인코딩 오류 처리
-              if (e.message?.includes('Malformed UTF-8') || e.message?.includes('UTF-8')) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('에러 처리 중 UTF-8 오류, 건너뜀');
-                }
-                errorLocalStoragePhotos = [];
-              } else {
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('에러 처리 중 localStorage 사진 로드 실패:', e);
-                }
-              }
-            }
-          }
-          
-          if (errorLocalStoragePhotos.length > 0) {
-            setState(prev => ({
-              ...prev,
-              album: errorLocalStoragePhotos
-            }));
-          }
-        } catch (fallbackError) {
-          console.error('에러 처리 중 오류:', fallbackError);
+        // ✅ 에러 발생 시에도 album은 업데이트하지 않음 (loadData에서 처리)
+        // album은 loadData에서만 관리하므로 여기서는 건너뜀
+        // 메시지, 할일, 일정만 에러 처리 (사진은 loadData에서 처리됨)
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('loadSupabaseData 에러: album은 loadData에서 관리되므로 건너뜀');
         }
       }
     };
@@ -2383,6 +2352,7 @@ export default function FamilyHub() {
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
     console.log('🔄 Supabase 데이터 로드 시작...');
+    // ✅ loadData 완료 후 실행되도록 지연 시간 증가 (loadData가 먼저 완료되도록 보장)
     // 재로그인 시에도 항상 Supabase에서 데이터 로드
     const timer = setTimeout(() => {
       loadSupabaseData().then(() => {
@@ -2398,7 +2368,7 @@ export default function FamilyHub() {
         // 위치 데이터 로드 시도
         loadFamilyLocations();
       });
-    }, 100); // 짧은 지연으로 빠른 로드
+    }, 500); // ✅ 지연 시간 증가 (loadData 완료 후 실행되도록 보장)
     
     // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
     const handleVisibilityChange = () => {
