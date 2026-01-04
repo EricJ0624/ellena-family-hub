@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 import { 
   authenticateUser, 
   base64ToBlob, 
   uploadToCloudinary, 
-  downloadFromS3 
+  downloadFromS3,
+  getSupabaseServerClient
 } from '@/lib/api-helpers';
 
 export async function POST(request: NextRequest) {
@@ -77,7 +77,10 @@ export async function POST(request: NextRequest) {
     // image_url은 필수 컬럼이므로 cloudinary_url 우선, 없으면 s3_original_url 사용
     const imageUrl = cloudinaryUrl || s3Url;
     
-    const { data: memoryData, error: dbError } = await supabase
+    // 서버 사이드용 Supabase 클라이언트 사용 (RLS 정책 우회)
+    const supabaseServer = getSupabaseServerClient();
+    
+    const { data: memoryData, error: dbError } = await supabaseServer
       .from('memory_vault')
       .insert({
         uploader_id: user.id,
