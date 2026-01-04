@@ -134,13 +134,6 @@ const INITIAL_STATE: AppState = {
   }
 };
 
-// Realtime subscription 변수를 컴포넌트 외부로 이동하여 handleLogout에서 접근 가능하도록
-let messagesSubscription: any = null;
-let tasksSubscription: any = null;
-let eventsSubscription: any = null;
-let photosSubscription: any = null;
-let presenceSubscription: any = null;
-
 export default function FamilyHub() {
   const router = useRouter();
   // --- [STATE] ---
@@ -183,13 +176,24 @@ export default function FamilyHub() {
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
   
-  // Realtime subscription 참조 (로그아웃 시 정리용)
+  // Realtime subscription 참조 (로그아웃 시 정리용) - 기능별 분리 관리
   const subscriptionsRef = useRef<{
     messages: any;
     tasks: any;
     events: any;
     photos: any;
-  }>({ messages: null, tasks: null, events: null, photos: null });
+    presence: any;
+    locations: any;
+    locationRequests: any;
+  }>({ 
+    messages: null, 
+    tasks: null, 
+    events: null, 
+    photos: null,
+    presence: null,
+    locations: null,
+    locationRequests: null
+  });
 
   // Inputs Ref (Uncontrolled inputs for cleaner handlers similar to original)
   const todoTextRef = useRef<HTMLInputElement>(null);
@@ -764,6 +768,101 @@ export default function FamilyHub() {
     }
   }, [state.messages, isAuthenticated]);
 
+  // ✅ 지도 마커 업데이트 함수 (재사용 가능, useCallback으로 외부에서도 호출 가능)
+  const updateMapMarkers = useCallback(() => {
+    if (!mapRef.current || typeof window === 'undefined' || !(window as any).google) return;
+
+    try {
+      // 현재 위치 마커 업데이트 또는 생성
+      if (state.location.latitude && state.location.longitude) {
+        const existingMyMarker = markersRef.current.get('my-location');
+        if (existingMyMarker) {
+          // 기존 마커 위치 업데이트
+          existingMyMarker.setPosition({ lat: state.location.latitude, lng: state.location.longitude });
+          if (existingMyMarker.setLabel) {
+            existingMyMarker.setLabel({
+              text: userName || '나',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            });
+          }
+        } else {
+          // 새 마커 생성
+          const myMarker = new (window as any).google.maps.Marker({
+            position: { lat: state.location.latitude, lng: state.location.longitude },
+            map: mapRef.current,
+            title: `${userName || '내'} 위치`,
+            label: {
+              text: userName || '나',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            },
+            icon: {
+              url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            }
+          });
+          markersRef.current.set('my-location', myMarker);
+        }
+      } else {
+        // 위치가 없으면 본인 위치 마커 제거
+        const existingMyMarker = markersRef.current.get('my-location');
+        if (existingMyMarker) {
+          existingMyMarker.setMap(null);
+          markersRef.current.delete('my-location');
+        }
+      }
+
+      // 승인된 사용자들의 위치 마커 업데이트 또는 생성
+      state.familyLocations.forEach((loc) => {
+        if (loc.latitude && loc.longitude && loc.userId && loc.userId !== userId) {
+          const existingMarker = markersRef.current.get(loc.userId);
+          if (existingMarker) {
+            // 기존 마커 위치 및 label 업데이트
+            existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
+            if (existingMarker.setLabel) {
+              existingMarker.setLabel({
+                text: loc.userName || '사용자',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              });
+            }
+          } else {
+            // 새 마커 생성
+            const marker = new (window as any).google.maps.Marker({
+              position: { lat: loc.latitude, lng: loc.longitude },
+              map: mapRef.current,
+              title: `${loc.userName}의 위치`,
+              label: {
+                text: loc.userName || '사용자',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              },
+              icon: {
+                url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+              }
+            });
+            markersRef.current.set(loc.userId, marker);
+          }
+        }
+      });
+
+      // familyLocations에 없는 사용자의 마커 제거
+      const currentUserIds = new Set(state.familyLocations.map((loc: any) => loc.userId).filter((id: string) => id !== userId));
+      markersRef.current.forEach((marker, markerUserId) => {
+        if (markerUserId !== 'my-location' && !currentUserIds.has(markerUserId)) {
+          marker.setMap(null);
+          markersRef.current.delete(markerUserId);
+        }
+      });
+    } catch (error) {
+      console.error('지도 마커 업데이트 오류:', error);
+    }
+  }, [state.location, state.familyLocations, userName, userId]);
+
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
@@ -825,70 +924,18 @@ export default function FamilyHub() {
           }
         }
 
-        // 기존 마커 모두 제거
-        markersRef.current.forEach((marker) => {
-          marker.setMap(null);
-        });
-        markersRef.current.clear();
-
-        // 현재 위치 마커 (위치가 있을 때만 표시)
-        if (state.location.latitude && state.location.longitude) {
-          const myMarker = new (window as any).google.maps.Marker({
-            position: { lat: state.location.latitude, lng: state.location.longitude },
-            map: mapRef.current,
-            title: `${userName || '내'} 위치`,
-            label: {
-              text: userName || '나',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            },
-            icon: {
-              url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            }
+        // ✅ 지도가 이미 초기화된 경우 기존 마커는 유지하고 업데이트만 수행
+        // ✅ 처음 초기화하는 경우에만 기존 마커 제거
+        if (!mapRef.current) {
+          // 기존 마커 모두 제거 (처음 초기화 시에만)
+          markersRef.current.forEach((marker) => {
+            marker.setMap(null);
           });
-          markersRef.current.set('my-location', myMarker);
+          markersRef.current.clear();
         }
 
-        // ✅ 승인된 사용자들의 위치 마커 추가 (familyLocations에는 이미 승인된 요청이 있는 사용자만 포함됨)
-        // ✅ 본인 위치는 state.location에만 표시되므로 familyLocations에는 포함되지 않아야 함
-        state.familyLocations.forEach((loc) => {
-          // ✅ 본인 위치는 확실히 제외 (이중 체크)
-          if (loc.latitude && loc.longitude && loc.userId && loc.userId !== userId) {
-            // 기존 마커가 있으면 위치만 업데이트, 없으면 새로 생성
-            const existingMarker = markersRef.current.get(loc.userId);
-            if (existingMarker) {
-              existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
-              // ✅ 기존 마커의 label도 업데이트 (별명이 변경된 경우 대비)
-              if (existingMarker.setLabel) {
-                existingMarker.setLabel({
-                  text: loc.userName || '사용자',
-                  color: '#ffffff',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                });
-              }
-            } else {
-              const marker = new (window as any).google.maps.Marker({
-                position: { lat: loc.latitude, lng: loc.longitude },
-                map: mapRef.current,
-                title: `${loc.userName}의 위치`,
-                label: {
-                  text: loc.userName || '사용자',
-                  color: '#ffffff',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                },
-                icon: {
-                  url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                }
-              });
-              markersRef.current.set(loc.userId, marker);
-            }
-          } else if (process.env.NODE_ENV === 'development' && loc.userId === userId) {
-            console.warn('지도 마커: 본인 위치가 familyLocations에 포함되어 있음 (제외됨)', loc);
-          }
-        });
+        // ✅ 마커 업데이트 (본인 위치 + 상대방 위치)
+        updateMapMarkers();
       } catch (error: any) {
         console.error('지도 초기화 오류:', error);
         if (error?.name === 'BillingNotEnabledMapError' || 
@@ -954,7 +1001,7 @@ export default function FamilyHub() {
         document.head.appendChild(script);
       }
     }
-  }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded]);
+  }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
@@ -965,14 +1012,25 @@ export default function FamilyHub() {
     
     console.log('✅ Realtime 구독 시작 - userId:', userId);
 
-    let messagesSubscription: any = null;
-    let tasksSubscription: any = null;
-    let eventsSubscription: any = null;
-    let photosSubscription: any = null;
-    let presenceSubscription: any = null;
+    // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
+    const getCurrentKey = () => {
+      const authKey = getAuthKey(userId);
+      return masterKey || sessionStorage.getItem(authKey) || 
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+    };
 
-      // Supabase Realtime Presence로 현재 로그인 중인 사용자 추적
-    presenceSubscription = supabase
+    // ========== 기능별 구독 함수 분리 ==========
+    
+    // 1. Presence 구독 설정 (온라인 사용자 추적)
+    const setupPresenceSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.presence) {
+        supabase.removeChannel(subscriptionsRef.current.presence);
+        subscriptionsRef.current.presence = null;
+      }
+
+      console.log('👥 Presence subscription 설정 중...');
+      const presenceSubscription = supabase
       .channel('online_users')
       .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
@@ -992,7 +1050,7 @@ export default function FamilyHub() {
           .map((presenceId) => {
             const presence = state[presenceId];
             if (Array.isArray(presence) && presence.length > 0) {
-              const userPresence = presence[0];
+              const userPresence = presence[0] as any;
               return userPresence.userId;
             }
             return null;
@@ -1013,7 +1071,7 @@ export default function FamilyHub() {
           Object.keys(state).forEach((presenceId) => {
             const presence = state[presenceId];
             if (Array.isArray(presence) && presence.length > 0) {
-              const userPresence = presence[0];
+              const userPresence = presence[0] as any;
               const uid = userPresence.userId;
               if (uid && uid !== userId) {
                 // profiles 테이블의 nickname 우선, 없으면 Presence의 userName, 없으면 기본값
@@ -1035,7 +1093,7 @@ export default function FamilyHub() {
           Object.keys(state).forEach((presenceId) => {
             const presence = state[presenceId];
             if (Array.isArray(presence) && presence.length > 0) {
-              const userPresence = presence[0];
+              const userPresence = presence[0] as any;
               const uid = userPresence.userId;
               if (uid && uid !== userId) {
                 const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
@@ -1068,7 +1126,7 @@ export default function FamilyHub() {
         Object.keys(state).forEach((presenceId) => {
           const presence = state[presenceId];
           if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0];
+            const userPresence = presence[0] as any;
             const uid = userPresence.userId;
             if (uid && uid !== userId) {
               // Presence에서 userName을 가져오거나, 없으면 기본값 사용
@@ -1100,7 +1158,7 @@ export default function FamilyHub() {
         Object.keys(state).forEach((presenceId) => {
           const presence = state[presenceId];
           if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0];
+            const userPresence = presence[0] as any;
             const uid = userPresence.userId;
             if (uid && uid !== userId) {
               // Presence에서 userName을 가져오거나, 없으면 기본값 사용
@@ -1119,6 +1177,7 @@ export default function FamilyHub() {
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Presence subscription 연결 성공');
+          subscriptionsRef.current.presence = presenceSubscription;
           // 현재 사용자의 presence 전송
           await presenceSubscription.track({
             userId: userId,
@@ -1134,6 +1193,18 @@ export default function FamilyHub() {
           // 네트워크 재연결이나 페이지 포커스 시 useEffect가 자동으로 재실행됨
         }
       });
+    };
+
+    // 2. 메시지 구독 설정
+    const setupMessagesSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.messages) {
+        supabase.removeChannel(subscriptionsRef.current.messages);
+        subscriptionsRef.current.messages = null;
+      }
+
+      console.log('📨 메시지 subscription 설정 중...');
+      const messagesSubscription = supabase
 
     // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
     // localStorage 데이터를 덮어쓰지 않고, Supabase 데이터가 있을 때만 업데이트
@@ -1421,208 +1492,16 @@ export default function FamilyHub() {
       }
     };
 
-    // Realtime 구독 설정 (암호화된 데이터 복호화)
-    // 가족 공유 키를 사용하여 모든 사용자의 데이터 복호화 가능
-    const setupRealtimeSubscriptions = () => {
-      // 기존 subscription이 있으면 재구독하지 않음 (무한 루프 방지)
-      if (messagesSubscription || tasksSubscription || eventsSubscription || photosSubscription || presenceSubscription) {
-        // 개발 환경에서만 로그 출력 (반복 로그 방지)
-        if (process.env.NODE_ENV === 'development') {
-          console.log('⚠️ 기존 subscription이 존재합니다. 재구독을 건너뜁니다.');
-        }
-        return;
+
+    // 3. 할일 구독 설정
+    const setupTasksSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.tasks) {
+        supabase.removeChannel(subscriptionsRef.current.tasks);
+        subscriptionsRef.current.tasks = null;
       }
 
-      // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
-      const getCurrentKey = () => {
-        const authKey = getAuthKey(userId);
-        return masterKey || sessionStorage.getItem(authKey) || 
-          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-      };
-      
-      const authKey = getAuthKey(userId);
-      const currentKey = getCurrentKey();
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('setupRealtimeSubscriptions - userId:', userId);
-        console.log('setupRealtimeSubscriptions - masterKey from state:', masterKey);
-        console.log('setupRealtimeSubscriptions - currentKey from sessionStorage:', sessionStorage.getItem(authKey));
-        console.log('setupRealtimeSubscriptions - final currentKey:', currentKey ? '있음' : '없음');
-      }
-      
-      // 메시지 구독
-      messagesSubscription = supabase
-        .channel('family_messages_changes')
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'family_messages' },
-          (payload: any) => {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Realtime 메시지 INSERT 이벤트 수신:', payload);
-            }
-            const newMessage = payload.new;
-            const createdAt = new Date(newMessage.created_at);
-            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            
-            // 암호화된 메시지 복호화
-            let decryptedText = newMessage.message_text || '';
-            const messageKey = getCurrentKey();
-            if (messageKey && newMessage.message_text) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = newMessage.message_text.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(newMessage.message_text, messageKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = newMessage.message_text;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = newMessage.message_text;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = newMessage.message_text;
-              }
-            } else {
-              decryptedText = newMessage.message_text;
-            }
-            
-            setState(prev => {
-              // 중복 체크 1: 같은 ID를 가진 메시지가 이미 있는지 확인
-              const existingMessageById = prev.messages?.find(m => String(m.id) === String(newMessage.id));
-              if (existingMessageById) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.log('중복 메시지 감지 (ID 기반), 추가하지 않음:', { id: newMessage.id, text: decryptedText.substring(0, 20) });
-                }
-                return prev; // 중복이면 상태 변경하지 않음
-              }
-              
-              // 중복 체크 2: 자신이 입력한 데이터가 Realtime으로 다시 들어오는 경우 방지
-              // sender_id가 현재 사용자이면, 임시 ID 항목을 찾아서 교체
-              if (newMessage.sender_id === userId) {
-                // 먼저 임시 ID 항목을 찾아서 교체 시도
-                const recentDuplicate = prev.messages?.find(m => {
-                  // 임시 ID (숫자)를 가진 항목만 체크
-                  const isTempId = typeof m.id === 'number';
-                  return isTempId && 
-                         m.text === decryptedText && 
-                         m.time === timeStr;
-                });
-                
-                if (recentDuplicate) {
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('중복 메시지 감지 (자신이 입력한 항목), 임시 항목을 Supabase ID로 교체:', { 
-                      tempId: recentDuplicate.id, 
-                      newId: newMessage.id, 
-                      text: decryptedText.substring(0, 20) 
-                    });
-                  }
-                  
-                  // 임시 항목을 Supabase ID로 교체
-                  return {
-                    ...prev,
-                    messages: prev.messages.map(m => 
-                      m.id === recentDuplicate.id 
-                        ? {
-                            id: newMessage.id,
-                            user: m.user, // 기존 user 유지
-                            text: decryptedText,
-                            time: timeStr
-                          }
-                        : m
-                    )
-                  };
-                }
-              }
-              
-              // 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없는 경우 추가
-              return {
-                ...prev,
-                messages: [...(prev.messages || []), {
-                  id: newMessage.id, // 메시지 ID 저장 (DELETE를 위해 필요)
-                  user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
-                  text: decryptedText,
-                  time: timeStr
-                }].slice(-50)
-              };
-            });
-          }
-        )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'family_messages' },
-          (payload: any) => {
-            const updatedMessage = payload.new;
-            const createdAt = new Date(updatedMessage.created_at);
-            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            
-            // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
-            let decryptedText = updatedMessage.message_text || '';
-            if (currentKey && updatedMessage.message_text) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = updatedMessage.message_text.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(updatedMessage.message_text, currentKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = updatedMessage.message_text;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = updatedMessage.message_text;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = updatedMessage.message_text;
-              }
-            }
-            
-            setState(prev => ({
-              ...prev,
-              messages: prev.messages.map(m => 
-                // 메시지 ID로 매칭 (created_at 기반으로도 시도)
-                m.time === timeStr && m.text === decryptedText ? {
-                  ...m,
-                  text: decryptedText
-                } : m
-              )
-            }));
-          }
-        )
-        .on('postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'family_messages' },
-          (payload: any) => {
-            const deletedId = payload.old?.id;
-            if (!deletedId) {
-              return;
-            }
-            setState(prev => ({
-              ...prev,
-              messages: prev.messages.filter(m => String(m.id) !== String(deletedId))
-            }));
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('📨 Realtime 메시지 subscription 상태:', status);
-          if (err) {
-            console.error('❌ Realtime 메시지 subscription 오류:', err);
-            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          }
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime 메시지 subscription 연결 성공');
-            subscriptionsRef.current.messages = messagesSubscription;
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('⚠️ Realtime 메시지 subscription 연결 실패:', status);
-            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          }
-        });
-      
-      console.log('📋 할일 subscription 설정 중...');
-      // 할일 구독
-      tasksSubscription = supabase
+      const tasksSubscription = supabase
         .channel('family_tasks_changes')
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'family_tasks' },
@@ -1889,10 +1768,18 @@ export default function FamilyHub() {
             // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
-      
+    };
+
+    // 4. 일정 구독 설정
+    const setupEventsSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.events) {
+        supabase.removeChannel(subscriptionsRef.current.events);
+        subscriptionsRef.current.events = null;
+      }
+
       console.log('📅 일정 subscription 설정 중...');
-      // 일정 구독
-      eventsSubscription = supabase
+      const eventsSubscription = supabase
         .channel('family_events_changes')
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'family_events' },
@@ -2206,10 +2093,18 @@ export default function FamilyHub() {
             // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
-      
+    };
+
+    // 5. 사진 구독 설정
+    const setupPhotosSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.photos) {
+        supabase.removeChannel(subscriptionsRef.current.photos);
+        subscriptionsRef.current.photos = null;
+      }
+
       console.log('📸 사진 subscription 설정 중...');
-      // 사진 구독 (memory_vault)
-      photosSubscription = supabase
+      const photosSubscription = supabase
         .channel('memory_vault_changes')
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'memory_vault' },
@@ -2312,9 +2207,17 @@ export default function FamilyHub() {
             // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
-      
+    };
+
+    // 6. 위치 구독 설정
+    const setupLocationsSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.locations) {
+        supabase.removeChannel(subscriptionsRef.current.locations);
+        subscriptionsRef.current.locations = null;
+      }
+
       console.log('📍 위치 subscription 설정 중...');
-      // 위치 구독 (user_locations)
       const locationsSubscription = supabase
         .channel('user_locations_changes')
         .on('postgres_changes',
@@ -2326,9 +2229,13 @@ export default function FamilyHub() {
         )
         .on('postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'user_locations' },
-          (payload: any) => {
+          async (payload: any) => {
             console.log('Realtime 위치 UPDATE 이벤트 수신:', payload);
-            loadFamilyLocations(); // 위치 목록 다시 로드
+            await loadFamilyLocations(); // 위치 목록 다시 로드
+            // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
+            setTimeout(() => {
+              updateMapMarkers();
+            }, 200);
           }
         )
         .subscribe((status, err) => {
@@ -2336,11 +2243,20 @@ export default function FamilyHub() {
           if (err) console.error('❌ Realtime 위치 subscription 오류:', err);
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 위치 subscription 연결 성공');
+            subscriptionsRef.current.locations = locationsSubscription;
           }
         });
+    };
+
+    // 7. 위치 요청 구독 설정
+    const setupLocationRequestsSubscription = () => {
+      // 기존 구독 정리
+      if (subscriptionsRef.current.locationRequests) {
+        supabase.removeChannel(subscriptionsRef.current.locationRequests);
+        subscriptionsRef.current.locationRequests = null;
+      }
 
       console.log('📍 위치 요청 subscription 설정 중...');
-      // 위치 요청 구독 (location_requests)
       const locationRequestsSubscription = supabase
         .channel('location_requests_changes')
         .on('postgres_changes',
@@ -2403,6 +2319,11 @@ export default function FamilyHub() {
                       }
                     }));
                     
+                    // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
+                    setTimeout(() => {
+                      updateMapMarkers();
+                    }, 100);
+                    
                     updateLocation();
                   }
                 } catch (error) {
@@ -2420,6 +2341,10 @@ export default function FamilyHub() {
             
             // 승인 시 위치 목록도 다시 로드 (승인된 요청이 반영된 후)
             await loadFamilyLocations();
+            // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
+            setTimeout(() => {
+              updateMapMarkers();
+            }, 200);
             // 지도 마커 업데이트를 위해 상태 변경 트리거
             setState(prev => ({ ...prev }));
           }
@@ -2437,8 +2362,32 @@ export default function FamilyHub() {
           if (err) console.error('❌ Realtime 위치 요청 subscription 오류:', err);
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 위치 요청 subscription 연결 성공');
+            subscriptionsRef.current.locationRequests = locationRequestsSubscription;
           }
         });
+    };
+
+    // ========== 통합 구독 설정 함수 ==========
+    // Realtime 구독 설정 (암호화된 데이터 복호화)
+    // 가족 공유 키를 사용하여 모든 사용자의 데이터 복호화 가능
+    const setupRealtimeSubscriptions = () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('setupRealtimeSubscriptions - userId:', userId);
+        console.log('setupRealtimeSubscriptions - masterKey from state:', masterKey);
+        const authKey = getAuthKey(userId);
+        console.log('setupRealtimeSubscriptions - currentKey from sessionStorage:', sessionStorage.getItem(authKey));
+        const currentKey = getCurrentKey();
+        console.log('setupRealtimeSubscriptions - final currentKey:', currentKey ? '있음' : '없음');
+      }
+      
+      // 각 기능별 구독 함수 호출
+      setupPresenceSubscription();
+      setupMessagesSubscription();
+      setupTasksSubscription();
+      setupEventsSubscription();
+      setupPhotosSubscription();
+      setupLocationsSubscription();
+      setupLocationRequestsSubscription();
       
       console.log('✅ 모든 Realtime subscription 설정 완료');
     };
@@ -2509,24 +2458,34 @@ export default function FamilyHub() {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('online', handleOnline);
       }
-      if (messagesSubscription) {
-        supabase.removeChannel(messagesSubscription);
+      // subscriptionsRef를 통해 모든 구독 정리 (기능별 분리 관리)
+      if (subscriptionsRef.current.messages) {
+        supabase.removeChannel(subscriptionsRef.current.messages);
         subscriptionsRef.current.messages = null;
       }
-      if (tasksSubscription) {
-        supabase.removeChannel(tasksSubscription);
+      if (subscriptionsRef.current.tasks) {
+        supabase.removeChannel(subscriptionsRef.current.tasks);
         subscriptionsRef.current.tasks = null;
       }
-      if (eventsSubscription) {
-        supabase.removeChannel(eventsSubscription);
+      if (subscriptionsRef.current.events) {
+        supabase.removeChannel(subscriptionsRef.current.events);
         subscriptionsRef.current.events = null;
       }
-      if (photosSubscription) {
-        supabase.removeChannel(photosSubscription);
+      if (subscriptionsRef.current.photos) {
+        supabase.removeChannel(subscriptionsRef.current.photos);
         subscriptionsRef.current.photos = null;
       }
-      if (presenceSubscription) {
-        supabase.removeChannel(presenceSubscription);
+      if (subscriptionsRef.current.presence) {
+        supabase.removeChannel(subscriptionsRef.current.presence);
+        subscriptionsRef.current.presence = null;
+      }
+      if (subscriptionsRef.current.locations) {
+        supabase.removeChannel(subscriptionsRef.current.locations);
+        subscriptionsRef.current.locations = null;
+      }
+      if (subscriptionsRef.current.locationRequests) {
+        supabase.removeChannel(subscriptionsRef.current.locationRequests);
+        subscriptionsRef.current.locationRequests = null;
       }
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId]); // familyId 변경 시 데이터 재로드
@@ -4159,6 +4118,11 @@ export default function FamilyHub() {
                 }
               }));
 
+              // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
+              setTimeout(() => {
+                updateMapMarkers();
+              }, 100);
+
               // 위치 추적 시작 (실시간 업데이트)
               if (!isLocationSharing) {
                 updateLocation();
@@ -4177,6 +4141,10 @@ export default function FamilyHub() {
         }
         await loadLocationRequests();
         await loadFamilyLocations(); // 승인된 위치 다시 로드
+        // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
+        setTimeout(() => {
+          updateMapMarkers();
+        }, 200);
       } else {
         // "이미 처리된 요청입니다" 에러는 조용히 처리 (반복 alert 방지)
         if (result.error && (result.error.includes('이미 처리된 요청') || result.error.includes('만료된 요청'))) {
@@ -4217,26 +4185,34 @@ export default function FamilyHub() {
       // 백그라운드 위치 추적 중지
       stopBackgroundLocationTracking();
       try {
-        // Realtime subscription 정리 (컴포넌트 외부 변수 사용)
-        if (messagesSubscription) {
-          await supabase.removeChannel(messagesSubscription);
-          messagesSubscription = null;
+        // Realtime subscription 정리 (subscriptionsRef 사용 - 기능별 분리 관리)
+        if (subscriptionsRef.current.messages) {
+          await supabase.removeChannel(subscriptionsRef.current.messages);
+          subscriptionsRef.current.messages = null;
         }
-        if (tasksSubscription) {
-          await supabase.removeChannel(tasksSubscription);
-          tasksSubscription = null;
+        if (subscriptionsRef.current.tasks) {
+          await supabase.removeChannel(subscriptionsRef.current.tasks);
+          subscriptionsRef.current.tasks = null;
         }
-        if (eventsSubscription) {
-          await supabase.removeChannel(eventsSubscription);
-          eventsSubscription = null;
+        if (subscriptionsRef.current.events) {
+          await supabase.removeChannel(subscriptionsRef.current.events);
+          subscriptionsRef.current.events = null;
         }
-        if (photosSubscription) {
-          await supabase.removeChannel(photosSubscription);
-          photosSubscription = null;
+        if (subscriptionsRef.current.photos) {
+          await supabase.removeChannel(subscriptionsRef.current.photos);
+          subscriptionsRef.current.photos = null;
         }
-        if (presenceSubscription) {
-          await supabase.removeChannel(presenceSubscription);
-          presenceSubscription = null;
+        if (subscriptionsRef.current.presence) {
+          await supabase.removeChannel(subscriptionsRef.current.presence);
+          subscriptionsRef.current.presence = null;
+        }
+        if (subscriptionsRef.current.locations) {
+          await supabase.removeChannel(subscriptionsRef.current.locations);
+          subscriptionsRef.current.locations = null;
+        }
+        if (subscriptionsRef.current.locationRequests) {
+          await supabase.removeChannel(subscriptionsRef.current.locationRequests);
+          subscriptionsRef.current.locationRequests = null;
         }
         
         // Supabase 세션 종료
