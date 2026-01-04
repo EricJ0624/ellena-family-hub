@@ -778,9 +778,18 @@ export default function FamilyHub() {
 
         // 기본 중심 위치 (서울시청) - 위치가 없을 때 사용
         const defaultCenter = { lat: 37.5665, lng: 126.9780 };
-        const center = state.location.latitude && state.location.longitude
-          ? { lat: state.location.latitude, lng: state.location.longitude }
-          : defaultCenter;
+        
+        // 지도 중심 결정: 내 위치 우선, 없으면 다른 사용자 위치, 둘 다 없으면 서울
+        let center = defaultCenter;
+        if (state.location.latitude && state.location.longitude) {
+          center = { lat: state.location.latitude, lng: state.location.longitude };
+        } else if (state.familyLocations && state.familyLocations.length > 0) {
+          // 다른 사용자 위치가 있으면 첫 번째 위치를 중심으로
+          const firstLocation = state.familyLocations[0];
+          if (firstLocation.latitude && firstLocation.longitude) {
+            center = { lat: firstLocation.latitude, lng: firstLocation.longitude };
+          }
+        }
 
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
         if (!mapRef.current) {
@@ -3766,8 +3775,8 @@ export default function FamilyHub() {
         
         // skipReload가 false일 때만 재로드 (무한 루프 방지)
         if (!skipReload) {
-          // 상태만 업데이트 (재로드 없이, 무한 루프 방지)
-          setLocationRequests(prev => prev.filter(req => req.id !== requestId));
+          // 위치 요청 목록 다시 로드
+          await loadLocationRequests();
           await loadFamilyLocations();
         }
       } else {
@@ -4035,6 +4044,46 @@ export default function FamilyHub() {
 
       if (result.success) {
         if (action === 'accept') {
+          // ✅ 위치 공유 승인 시 현재 위치를 자동으로 가져와서 저장
+          try {
+            if (navigator.geolocation) {
+              const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                  enableHighAccuracy: true,
+                  timeout: 10000,
+                  maximumAge: 0
+                });
+              });
+
+              const latitude = position.coords.latitude;
+              const longitude = position.coords.longitude;
+              const address = await reverseGeocode(latitude, longitude);
+              
+              // 위치를 Supabase에 저장
+              await saveLocationToSupabase(latitude, longitude, address);
+
+              // 상태 업데이트
+              setState(prev => ({
+                ...prev,
+                location: {
+                  address: address,
+                  latitude: latitude,
+                  longitude: longitude,
+                  userId: userId,
+                  updatedAt: new Date().toISOString()
+                }
+              }));
+
+              // 위치 추적 시작 (실시간 업데이트)
+              if (!isLocationSharing) {
+                updateLocation();
+              }
+            }
+          } catch (locationError) {
+            console.warn('위치 가져오기 실패:', locationError);
+            // 위치 가져오기 실패해도 승인은 완료되었으므로 계속 진행
+          }
+          
           alert('위치 공유가 승인되었습니다.');
         } else if (action === 'reject') {
           alert('위치 요청을 거부했습니다.');

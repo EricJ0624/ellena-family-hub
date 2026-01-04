@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 상태 확인 (silent 모드가 아닐 때만 체크)
-    if (!silent && locationRequest.status !== 'pending') {
+    // cancel 액션은 accepted 상태에서도 가능하므로 제외
+    if (!silent && action !== 'cancel' && locationRequest.status !== 'pending') {
       return NextResponse.json(
         { error: '이미 처리된 요청입니다.' },
         { status: 400 }
