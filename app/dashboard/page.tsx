@@ -231,11 +231,12 @@ export default function FamilyHub() {
         return [];
       }
 
+      // ✅ 필터 제거 - 가족 전체 사진 로드 (uploader_id 필터 제거)
       const { data: photos, error } = await supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at')
-        .eq('uploader_id', userId)
-        .order('created_at', { ascending: false });
+        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption')
+        .order('created_at', { ascending: false })
+        .limit(100); // ✅ limit 추가
 
       if (error) {
         // 에러 객체를 더 자세히 로깅
@@ -277,16 +278,17 @@ export default function FamilyHub() {
         return [];
       }
 
-      // Photo 형식으로 변환
+      // Photo 형식으로 변환 (URL 우선순위: cloudinary_url > s3_original_url > image_url)
       return photos.map((photo: any) => ({
         id: photo.id,
-        data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '',
+        data: photo.cloudinary_url || photo.s3_original_url || photo.image_url || '',
         supabaseId: photo.id,
         isUploaded: true,
         isUploading: false,
         description: photo.caption || '', // caption만 사용
         originalFilename: photo.original_filename || '',
         mimeType: photo.mime_type || 'image/jpeg',
+        created_by: photo.uploader_id || photo.created_by,
       }));
     } catch (error: any) {
       // catch 블록에서도 더 자세한 에러 정보 로깅
@@ -319,35 +321,59 @@ export default function FamilyHub() {
       }
     }
 
-    // Supabase에서 사진 불러오기 (환경 변수와 관계없이 시도)
+    // ✅ Supabase에서 모든 사진 불러오기 (필터 없이 - 가족 전체)
     try {
-      const supabasePhotos = await loadPhotosFromSupabase(userId);
-      
-      if (supabasePhotos.length > 0) {
-        // localStorage와 Supabase 사진 병합 (중복 제거)
+      const { data: photos, error } = await supabase
+        .from('memory_vault')
+        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Supabase 사진 로드 오류:', error);
+        // 에러가 있어도 localStorage 사진은 사용 가능
+      } else if (photos && photos.length > 0) {
+        // Photo 형식으로 변환
+        const supabasePhotos: Photo[] = photos
+          .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
+          .map((photo: any) => ({
+            id: photo.id,
+            data: photo.cloudinary_url || photo.s3_original_url || photo.image_url || '',
+            supabaseId: photo.id,
+            isUploaded: true,
+            isUploading: false,
+            description: photo.caption || '',
+            originalFilename: photo.original_filename || '',
+            mimeType: photo.mime_type || 'image/jpeg',
+            created_by: photo.uploader_id || photo.created_by,
+          }));
+
+        // localStorage와 Supabase 사진 병합
         setState(prev => {
-          // localStorage 사진 중 Supabase ID가 있는 것과 없는 것 분리
-          const localPhotosWithSupabaseId = prev.album.filter(p => p.supabaseId);
-          const localPhotosWithoutSupabaseId = prev.album.filter(p => !p.supabaseId);
+          const localPhotos = prev.album || [];
+          const supabasePhotoIds = new Set(supabasePhotos.map(p => String(p.id)));
           
-          // Supabase 사진 ID 집합 생성
-          const supabasePhotoIds = new Set(supabasePhotos.map(p => p.supabaseId || p.id));
-          
-          // localStorage의 Supabase ID가 Supabase에 없는 경우 제거 (이미 삭제된 사진)
-          const validLocalPhotosWithId = localPhotosWithSupabaseId.filter(
-            p => p.supabaseId && supabasePhotoIds.has(p.supabaseId)
-          );
-          
-          // Supabase에만 있는 새 사진 추가
-          const existingIds = new Set([
-            ...validLocalPhotosWithId.map(p => p.supabaseId || p.id),
-            ...localPhotosWithoutSupabaseId.map(p => p.id)
-          ]);
-          const newPhotos = supabasePhotos.filter(p => !existingIds.has(p.supabaseId || p.id));
-          
-          // Supabase 사진을 우선순위로 앞에 추가 (최신순)
-          const mergedAlbum = [...newPhotos, ...validLocalPhotosWithId, ...localPhotosWithoutSupabaseId];
-          
+          // localStorage에만 있는 사진 (업로드 중인 Base64/Blob만)
+          const localStorageOnlyPhotos = localPhotos.filter(p => {
+            const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
+            if (supabaseId && supabasePhotoIds.has(supabaseId)) {
+              return false; // Supabase에 이미 있으면 제외
+            }
+            // 업로드 중이거나 Base64/Blob 데이터만 유지
+            return p.isUploading || (p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:')));
+          });
+
+          // Supabase 사진 우선, localStorage 전용 사진 추가
+          const mergedAlbum = [...supabasePhotos, ...localStorageOnlyPhotos];
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ loadData: 사진 병합 완료', {
+              supabasePhotos: supabasePhotos.length,
+              localStorageOnlyPhotos: localStorageOnlyPhotos.length,
+              mergedAlbum: mergedAlbum.length
+            });
+          }
+
           return {
             ...prev,
             album: mergedAlbum,
@@ -368,7 +394,7 @@ export default function FamilyHub() {
     const authKey = getAuthKey(userId);
     sessionStorage.setItem(authKey, key);
     setIsAuthenticated(true);
-  }, [loadPhotosFromSupabase]);
+  }, []);
 
   // --- [EFFECTS] ---
   
@@ -1365,13 +1391,13 @@ export default function FamilyHub() {
               .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
               .map((photo: any) => ({
                 id: photo.id,
-                data: photo.cloudinary_url || photo.image_url || photo.s3_original_url || '', // Cloudinary URL 우선, 없으면 image_url, 마지막으로 S3 URL 사용
+                data: photo.cloudinary_url || photo.s3_original_url || photo.image_url || '', // ✅ URL 우선순위: cloudinary_url > s3_original_url > image_url
                 originalSize: photo.original_file_size,
                 originalFilename: photo.original_filename,
                 mimeType: photo.mime_type,
                 supabaseId: photo.id, // Supabase ID 설정 (재로그인 시 매칭용)
                 isUploaded: true, // Supabase에서 로드한 사진은 업로드 완료된 사진
-                created_by: photo.user_id || photo.created_by || undefined, // 생성자 ID 저장
+                created_by: photo.uploader_id || photo.user_id || photo.created_by || undefined, // 생성자 ID 저장
                 description: photo.caption || undefined // caption 사용
               }))
           : []; // Supabase 로드 실패 시 빈 배열
