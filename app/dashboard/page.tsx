@@ -1023,6 +1023,11 @@ export default function FamilyHub() {
     
     // 1. Presence 구독 설정 (온라인 사용자 추적)
     const setupPresenceSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.presence) {
         supabase.removeChannel(subscriptionsRef.current.presence);
@@ -1197,6 +1202,11 @@ export default function FamilyHub() {
 
     // 2. 메시지 구독 설정
     const setupMessagesSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.messages) {
         supabase.removeChannel(subscriptionsRef.current.messages);
@@ -1698,6 +1708,11 @@ export default function FamilyHub() {
 
     // 3. 할일 구독 설정
     const setupTasksSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.tasks) {
         supabase.removeChannel(subscriptionsRef.current.tasks);
@@ -1975,6 +1990,11 @@ export default function FamilyHub() {
 
     // 4. 일정 구독 설정
     const setupEventsSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.events) {
         supabase.removeChannel(subscriptionsRef.current.events);
@@ -2300,6 +2320,11 @@ export default function FamilyHub() {
 
     // 5. 사진 구독 설정
     const setupPhotosSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.photos) {
         supabase.removeChannel(subscriptionsRef.current.photos);
@@ -2414,6 +2439,11 @@ export default function FamilyHub() {
 
     // 6. 위치 구독 설정
     const setupLocationsSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.locations) {
         supabase.removeChannel(subscriptionsRef.current.locations);
@@ -2453,6 +2483,11 @@ export default function FamilyHub() {
 
     // 7. 위치 요청 구독 설정
     const setupLocationRequestsSubscription = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // 기존 구독 정리
       if (subscriptionsRef.current.locationRequests) {
         supabase.removeChannel(subscriptionsRef.current.locationRequests);
@@ -2574,6 +2609,11 @@ export default function FamilyHub() {
     // Realtime 구독 설정 (암호화된 데이터 복호화)
     // 가족 공유 키를 사용하여 모든 사용자의 데이터 복호화 가능
     const setupRealtimeSubscriptions = () => {
+      // 클라이언트에서만 실행되도록 보호
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       if (process.env.NODE_ENV === 'development') {
         console.log('setupRealtimeSubscriptions - userId:', userId);
         console.log('setupRealtimeSubscriptions - masterKey from state:', masterKey);
