@@ -410,19 +410,44 @@ export default function FamilyHub() {
     // Supabase 인증 확인
     const checkAuth = async () => {
       try {
+        // 근본 원인 해결: getSession() 호출 전에 localStorage 세션 데이터 검증
+        if (typeof window !== 'undefined') {
+          try {
+            const storedSession = localStorage.getItem('sb-auth-token');
+            if (storedSession) {
+              try {
+                const parsed = JSON.parse(storedSession);
+                // refresh_token이 없거나 유효하지 않으면 사전에 정리
+                if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string' || parsed.refresh_token.trim() === '') {
+                  localStorage.removeItem('sb-auth-token');
+                }
+              } catch (parseError) {
+                // JSON 파싱 실패 = 손상된 데이터 → 정리
+                localStorage.removeItem('sb-auth-token');
+              }
+            }
+          } catch (error) {
+            // localStorage 접근 실패는 무시
+          }
+        }
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         // Refresh Token 에러 처리 (만료된 토큰인 경우)
+        // 근본 원인 해결: 에러를 조용히 처리하고 localStorage 정리
         if (error) {
           // "Invalid Refresh Token" 또는 "Refresh Token Not Found" 에러인 경우
           if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
-            console.warn('Refresh Token이 만료되었거나 없습니다. 로그아웃 처리합니다.');
-            // localStorage에서 세션 정보 제거
+            // localStorage에서 세션 정보 제거 (에러 메시지 출력 안 함)
             if (typeof window !== 'undefined') {
               localStorage.removeItem('sb-auth-token');
             }
-            // 로그아웃 처리
-            await supabase.auth.signOut();
+            // 로그아웃 처리 (에러 메시지 출력 안 함)
+            try {
+              await supabase.auth.signOut();
+            } catch (signOutError) {
+              // signOut 에러는 무시
+            }
             router.push('/');
             return;
           }

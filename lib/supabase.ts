@@ -20,17 +20,26 @@ if (typeof window !== 'undefined') {
         const parsed = JSON.parse(storedSession);
         
         // refresh_token이 없거나 유효하지 않으면 정리
-        if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string') {
+        if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string' || parsed.refresh_token.trim() === '') {
           localStorage.removeItem('sb-auth-token');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('손상된 refresh_token 감지 - localStorage 정리됨');
+          }
         }
         
         // access_token이 없거나 유효하지 않으면 정리
-        if (!parsed?.access_token || typeof parsed.access_token !== 'string') {
+        if (!parsed?.access_token || typeof parsed.access_token !== 'string' || parsed.access_token.trim() === '') {
           localStorage.removeItem('sb-auth-token');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('손상된 access_token 감지 - localStorage 정리됨');
+          }
         }
       } catch (parseError) {
         // JSON 파싱 실패 = 손상된 데이터 → 정리
         localStorage.removeItem('sb-auth-token');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('JSON 파싱 실패 - localStorage 정리됨');
+        }
       }
     }
   } catch (error) {
@@ -63,17 +72,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // 인증 상태 변경 리스너 추가
+// 근본 원인 해결: refresh token 에러를 조용히 처리
 if (typeof window !== 'undefined') {
   supabase.auth.onAuthStateChange(async (event, session) => {
+    // Refresh Token 에러가 발생한 경우 조용히 처리
+    if (event === 'SIGNED_OUT' && !session) {
+      // refresh token이 유효하지 않아서 자동 로그아웃된 경우
+      // localStorage를 정리하고 조용히 처리 (에러 메시지 출력 안 함)
+      try {
+        localStorage.removeItem('sb-auth-token');
+      } catch (error) {
+        // localStorage 접근 실패는 무시
+      }
+      return; // 에러 메시지 출력하지 않고 조용히 처리
+    }
+    
     if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
       if (process.env.NODE_ENV === 'development') {
         console.log('인증 상태 변경:', event);
-      }
-    }
-    
-    if (event === 'SIGNED_OUT') {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('사용자 로그아웃됨');
       }
     }
   });
