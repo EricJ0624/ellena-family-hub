@@ -11,3 +11,6 @@ WHERE table_name = 'memory_vault'
   AND table_schema = 'public'
   AND column_name = 'description';
 
+
+
+

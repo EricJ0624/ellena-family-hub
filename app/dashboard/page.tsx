@@ -319,11 +319,9 @@ export default function FamilyHub() {
       if (decrypted.titleStyle) {
         setTitleStyle(decrypted.titleStyle);
       }
-    } else {
-      // ✅ 재로그인 시 localStorage가 비어있어도 초기 상태 설정
-      // 이렇게 하지 않으면 prev.album이 빈 배열로 남아서 사진이 표시되지 않음
-      setState(INITIAL_STATE);
     }
+    // ✅ setState(INITIAL_STATE) 제거 - album을 빈 배열로 초기화하지 않음
+    // 재로그인 시에도 기존 state를 유지하고, Supabase에서 사진을 로드한 후 업데이트
 
     // ✅ Supabase에서 모든 사진 불러오기 (필터 없이 - 가족 전체)
     try {
@@ -335,7 +333,14 @@ export default function FamilyHub() {
 
       if (error) {
         console.error('Supabase 사진 로드 오류:', error);
-        // 에러가 있어도 localStorage 사진은 사용 가능
+        // ✅ 에러 발생 시에도 state를 업데이트하지 않음 (기존 state 유지)
+        // localStorage가 있으면 이미 위에서 setState(decrypted)로 설정됨
+        if (!saved) {
+          // localStorage도 없으면 빈 배열 유지 (이미 INITIAL_STATE로 초기화됨)
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Supabase 사진 로드 실패, localStorage도 없음 - 빈 배열 유지');
+          }
+        }
       } else if (photos && photos.length > 0) {
         // Photo 형식으로 변환
         const supabasePhotos: Photo[] = photos
@@ -394,7 +399,8 @@ export default function FamilyHub() {
               supabasePhotos: supabasePhotos.length,
               localStorageOnlyPhotos: localStorageOnlyPhotos.length,
               mergedAlbum: mergedAlbum.length,
-              hasLocalStorage: !!saved
+              hasLocalStorage: !!saved,
+              prevAlbumLength: prev.album?.length || 0
             });
           }
 
@@ -404,15 +410,23 @@ export default function FamilyHub() {
           };
         });
       } else {
-        // Supabase에 사진이 없으면 localStorage 사진만 사용 (정상 동작)
+        // ✅ Supabase에 사진이 없으면 localStorage 사진만 사용 (정상 동작)
+        // localStorage도 없으면 빈 배열 유지 (이미 INITIAL_STATE로 초기화됨)
         if (process.env.NODE_ENV === 'development') {
-          console.log('Supabase에 사진이 없습니다. localStorage 사진만 사용합니다.');
+          console.log('Supabase에 사진이 없습니다.', {
+            hasLocalStorage: !!saved,
+            willUseLocalStorage: saved !== null
+          });
         }
+        // ✅ localStorage가 있으면 이미 위에서 setState(decrypted)로 설정됨
+        // localStorage가 없으면 빈 배열 유지 (INITIAL_STATE)
+        // Supabase에 사진이 없어도 state를 업데이트하지 않음 (기존 state 유지)
       }
     } catch (supabaseError: any) {
       // Supabase 불러오기 실패해도 localStorage 사진은 사용 가능
       console.warn('Supabase에서 사진 불러오기 실패 (localStorage 사진은 사용 가능):', supabaseError?.message || supabaseError);
-      // 에러가 발생해도 localStorage 사진은 정상적으로 표시됨
+      // ✅ 에러 발생 시에도 state를 업데이트하지 않음 (기존 state 유지)
+      // localStorage가 있으면 이미 위에서 setState(decrypted)로 설정됨
     }
 
     const authKey = getAuthKey(userId);
