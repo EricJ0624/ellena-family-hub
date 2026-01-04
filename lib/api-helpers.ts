@@ -3,16 +3,25 @@ import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
-// 서버 사이드용 Supabase 클라이언트 (인증용)
-function getSupabaseServerClient() {
+// 서버 사이드용 Supabase 클라이언트 (DB 작업용)
+// Next.js App Router 서버 사이드에서는 세션 관리가 필요 없으므로 persistSession: false 설정
+export function getSupabaseServerClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase 설정이 누락되었습니다.');
+    throw new Error('Supabase 설정이 누락되었습니다. NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 확인해주세요.');
   }
   
-  return createClient(supabaseUrl, supabaseAnonKey);
+  // 서버 사이드용 클라이언트: 세션 관리 불필요
+  // Supabase 공식 문서 권장: 서버 사이드에서는 detectSessionInUrl: false 설정
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false, // 서버 사이드에서는 URL에서 세션 감지 불필요
+    },
+  });
 }
 
 // --- [UTILITY] 환경 변수 체크 함수 ---
@@ -43,10 +52,21 @@ function initializeCloudinary() {
       throw new Error(`Cloudinary 환경 변수가 설정되지 않았습니다: ${config.missing.join(', ')}`);
     }
     
+    // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
+    // checkCloudinaryConfig()로 이미 검증했으므로 안전하게 사용 가능
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    
+    // 추가 안전 검증 (이중 체크)
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new Error(`Cloudinary 환경 변수가 설정되지 않았습니다: ${config.missing.join(', ')}`);
+    }
+    
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-      api_key: process.env.CLOUDINARY_API_KEY!,
-      api_secret: process.env.CLOUDINARY_API_SECRET!,
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
     });
     cloudinaryInitialized = true;
   }

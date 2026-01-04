@@ -177,8 +177,13 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
+      // SSR 안전성: window 객체가 있을 때만 origin 사용
+      const redirectTo = typeof window !== 'undefined' 
+        ? `${window.location.origin}/reset-password`
+        : '/reset-password';
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo
       });
 
       if (error) throw error;

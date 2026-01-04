@@ -13,6 +13,9 @@ export default function ResetPasswordPage() {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
+    // SSR 안전성: 클라이언트 사이드에서만 실행
+    if (typeof window === 'undefined') return;
+    
     // URL에서 토큰 확인
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const accessToken = hashParams.get('access_token');

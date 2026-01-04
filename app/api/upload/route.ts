@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Upload } from '@aws-sdk/lib-storage';
-import { supabase } from '@/lib/supabase';
 import { 
   authenticateUser, 
   base64ToBlob, 
   uploadToCloudinary, 
   getS3ClientInstance, 
   generateS3Key, 
-  generateS3Url 
+  generateS3Url,
+  getSupabaseServerClient
 } from '@/lib/api-helpers';
 
 // Next.js App Router: 큰 파일 업로드를 위한 설정
@@ -190,7 +190,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { data: memoryData, error: dbError } = await supabase
+    // 서버 사이드용 Supabase 클라이언트 사용 (클라이언트용 supabase 대신)
+    const supabaseServer = getSupabaseServerClient();
+    
+    const { data: memoryData, error: dbError } = await supabaseServer
       .from('memory_vault')
       .insert({
         uploader_id: user.id,

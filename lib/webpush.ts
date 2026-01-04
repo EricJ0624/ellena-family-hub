@@ -46,7 +46,19 @@ export async function getPushToken(): Promise<string | null> {
 }
 
 // VAPID 공개 키를 Uint8Array로 변환
+// 서버 사이드와 클라이언트 사이드 모두 지원
 function urlBase64ToUint8Array(base64String: string): BufferSource {
+  // 서버 사이드 (Node.js) 환경 체크
+  if (typeof window === 'undefined') {
+    // Node.js 환경에서는 Buffer 사용
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+    return Buffer.from(base64, 'base64');
+  }
+  
+  // 브라우저 환경
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, '+')

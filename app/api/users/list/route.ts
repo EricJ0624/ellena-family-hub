@@ -2,8 +2,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// 환경 변수 검증 (런타임 에러 방지)
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('필수 환경 변수가 설정되지 않았습니다. NEXT_PUBLIC_SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY를 확인해주세요.');
+}
+
+// TypeScript 타입 안전성: 환경 변수 체크 후에는 undefined가 아님을 보장
+const SUPABASE_URL: string = supabaseUrl;
+const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Service role key를 사용하여 RLS 우회 (서버 사이드에서 모든 사용자 조회)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
