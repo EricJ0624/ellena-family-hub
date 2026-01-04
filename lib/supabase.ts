@@ -9,6 +9,35 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase 설정이 .env.local 파일에 누락되었습니다.');
 }
 
+// Supabase 초기화 전에 localStorage의 손상된 세션 데이터 정리
+// 근본 원인 해결: Supabase가 초기화될 때 유효하지 않은 세션 데이터로 인한 에러 방지
+if (typeof window !== 'undefined') {
+  try {
+    const storedSession = localStorage.getItem('sb-auth-token');
+    if (storedSession) {
+      try {
+        // 저장된 세션 데이터가 유효한 JSON인지 확인
+        const parsed = JSON.parse(storedSession);
+        
+        // refresh_token이 없거나 유효하지 않으면 정리
+        if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string') {
+          localStorage.removeItem('sb-auth-token');
+        }
+        
+        // access_token이 없거나 유효하지 않으면 정리
+        if (!parsed?.access_token || typeof parsed.access_token !== 'string') {
+          localStorage.removeItem('sb-auth-token');
+        }
+      } catch (parseError) {
+        // JSON 파싱 실패 = 손상된 데이터 → 정리
+        localStorage.removeItem('sb-auth-token');
+      }
+    }
+  } catch (error) {
+    // localStorage 접근 실패는 무시
+  }
+}
+
 // 이 supabase 객체를 통해 DB에 접근합니다.
 // 브라우저에서 세션을 유지하기 위해 auth 옵션 명시
 // 세션 지속 시간: Supabase 대시보드에서 JWT 만료 시간을 24시간(86400초)으로 설정해야 합니다.
@@ -27,21 +56,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
   global: {
-    // 전역 에러 핸들러 (Refresh Token 에러는 조용히 처리)
     headers: {
       'x-client-info': 'ellena-family-hub',
     },
   },
 });
 
-// Refresh Token 에러를 조용히 처리하는 헬퍼 함수
+// 인증 상태 변경 리스너 추가
 if (typeof window !== 'undefined') {
-  // 인증 상태 변경 리스너 추가
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-      // 세션 상태 변경 시 처리 (필요시)
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
       if (process.env.NODE_ENV === 'development') {
         console.log('인증 상태 변경:', event);
+      }
+    }
+    
+    if (event === 'SIGNED_OUT') {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('사용자 로그아웃됨');
       }
     }
   });
