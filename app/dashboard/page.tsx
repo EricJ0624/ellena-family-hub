@@ -6454,32 +6454,6 @@ export default function FamilyHub() {
                   <span>📍</span>
                   <span>어디야</span>
                 </button>
-                {/* 위치 요청을 받은 경우에만 "여기야" 버튼 표시 */}
-                {locationRequests.some(req => 
-                  req.target_id === userId && 
-                  req.status === 'pending'
-                ) && (
-                  <button
-                    onClick={handleShareMyLocation}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <span>📍</span>
-                    <span>여기야</span>
-                  </button>
-                )}
         </div>
             </div>
             <div className="section-body">
@@ -6692,7 +6666,7 @@ export default function FamilyHub() {
                                     }}
                                   >
                                     <span>📍</span>
-                                    <span>나 여기</span>
+                                    <span>여기야</span>
                                   </button>
                                   <button
                                     onClick={() => handleLocationRequestAction(req.id, 'reject')}
