@@ -4,18 +4,20 @@ import { v2 as cloudinary } from 'cloudinary';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
 // 서버 사이드용 Supabase 클라이언트 (DB 작업용)
+// Service Role Key 사용: RLS 정책 우회하여 서버 사이드에서 모든 작업 수행 가능
 // Next.js App Router 서버 사이드에서는 세션 관리가 필요 없으므로 persistSession: false 설정
 export function getSupabaseServerClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase 설정이 누락되었습니다. NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 확인해주세요.');
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('Supabase 설정이 누락되었습니다. NEXT_PUBLIC_SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY를 확인해주세요.');
   }
   
+  // Service Role Key 사용: RLS 정책 우회
   // 서버 사이드용 클라이언트: 세션 관리 불필요
   // Supabase 공식 문서 권장: 서버 사이드에서는 detectSessionInUrl: false 설정
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
