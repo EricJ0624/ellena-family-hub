@@ -3837,6 +3837,18 @@ export default function FamilyHub() {
     
     // 백그라운드 위치 추적 중지
     stopBackgroundLocationTracking();
+    
+    // ✅ 위치 추적 중지 시 state.location 초기화
+    setState(prev => ({
+      ...prev,
+      location: {
+        address: '',
+        latitude: 0,
+        longitude: 0,
+        userId: '',
+        updatedAt: ''
+      }
+    }));
   };
 
   // 위치 공유 기능 (스트림 방식 - watchPosition 사용)
@@ -4792,6 +4804,21 @@ export default function FamilyHub() {
         } else if (action === 'reject') {
           alert('위치 요청을 거부했습니다.');
         } else {
+          // ✅ 위치 요청 취소 시 state.location 초기화
+          setState(prev => ({
+            ...prev,
+            location: {
+              address: '',
+              latitude: 0,
+              longitude: 0,
+              userId: '',
+              updatedAt: ''
+            }
+          }));
+          
+          // 위치 추적 중지
+          stopLocationTracking();
+          
           alert('위치 요청을 취소했습니다.');
         }
         await loadLocationRequests();
