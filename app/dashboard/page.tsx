@@ -2343,23 +2343,82 @@ export default function FamilyHub() {
             const newPhoto = payload.new;
             if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
               setState(prev => {
-                // 이미 같은 ID의 사진이 있는지 확인 (중복 방지)
-                const existingPhoto = prev.album.find(p => {
+                // 1. ID 기반 중복 체크 (이미 Supabase ID로 업데이트된 경우)
+                const existingPhotoById = prev.album.find(p => {
                   const photoId = String(p.id);
                   const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
                   const newPhotoId = String(newPhoto.id);
                   return photoId === newPhotoId || supabaseId === newPhotoId;
                 });
                 
-                if (existingPhoto) {
+                if (existingPhotoById) {
                   if (process.env.NODE_ENV === 'development') {
-                    console.log('중복 사진 감지, 추가하지 않음:', { id: newPhoto.id, supabaseId: newPhoto.id });
+                    console.log('중복 사진 감지 (ID 기반), 추가하지 않음:', { id: newPhoto.id });
                   }
-                  return prev; // 이미 있으면 업데이트하지 않음
+                  return prev; // 이미 있으면 추가하지 않음
                 }
                 
+                // 2. 자신이 업로드한 사진인 경우, 파일명과 크기로 임시 항목 찾기
+                if (newPhoto.uploader_id === userId) {
+                  // 임시 ID 항목을 찾기: 파일명과 크기가 일치하는 업로드 중인 임시 항목
+                  const recentUploadingPhoto = prev.album.find(p => {
+                    const isUploading = p.isUploading === true;
+                    const isTempId = typeof p.id === 'number';
+                    // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
+                    const isRecent = isTempId && (p.id as number) > (Date.now() - 30000);
+                    // 파일명과 크기가 정확히 일치하는지 확인
+                    const filenameMatch = p.originalFilename && newPhoto.original_filename && 
+                      p.originalFilename === newPhoto.original_filename;
+                    const sizeMatch = p.originalSize && newPhoto.original_file_size && 
+                      p.originalSize === newPhoto.original_file_size;
+                    return isUploading && isRecent && filenameMatch && sizeMatch;
+                  });
+                  
+                  if (recentUploadingPhoto) {
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('임시 항목을 파일명/크기로 찾아 Supabase ID로 업데이트:', {
+                        tempId: recentUploadingPhoto.id,
+                        newId: newPhoto.id,
+                        filename: newPhoto.original_filename,
+                        size: newPhoto.original_file_size
+                      });
+                    }
+                    // 임시 항목을 Supabase ID로 교체
+                    return {
+                      ...prev,
+                      album: prev.album.map(p => 
+                        p.id === recentUploadingPhoto.id
+                          ? {
+                              ...p,
+                              id: newPhoto.id,
+                              data: newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || p.data,
+                              originalSize: newPhoto.original_file_size || p.originalSize,
+                              originalFilename: newPhoto.original_filename || p.originalFilename,
+                              mimeType: newPhoto.mime_type || p.mimeType,
+                              supabaseId: newPhoto.id,
+                              isUploaded: true,
+                              isUploading: false,
+                              created_by: newPhoto.uploader_id || newPhoto.created_by || p.created_by
+                            }
+                          : p
+                      )
+                    };
+                  }
+                  
+                  // 임시 항목을 찾지 못했으면 Realtime 이벤트 무시 (이미 updateState로 처리됨)
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('자신이 업로드한 사진이지만 임시 항목을 찾지 못함, Realtime 이벤트 무시:', { 
+                      id: newPhoto.id,
+                      filename: newPhoto.original_filename,
+                      size: newPhoto.original_file_size
+                    });
+                  }
+                  return prev; // 자신이 업로드한 사진은 Realtime 이벤트 무시
+                }
+                
+                // 3. 다른 사용자가 업로드한 사진만 추가
                 if (process.env.NODE_ENV === 'development') {
-                  console.log('새 사진 추가:', { id: newPhoto.id, url: (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '').substring(0, 50) });
+                  console.log('새 사진 추가 (다른 사용자):', { id: newPhoto.id, url: (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '').substring(0, 50) });
                 }
                 
                 return {
@@ -2372,7 +2431,8 @@ export default function FamilyHub() {
                     mimeType: newPhoto.mime_type,
                     supabaseId: newPhoto.id,
                     isUploaded: true,
-                    created_by: newPhoto.user_id || newPhoto.created_by || undefined
+                    isUploading: false,
+                    created_by: newPhoto.uploader_id || newPhoto.created_by || undefined
                   }, ...prev.album]
                 };
               });
