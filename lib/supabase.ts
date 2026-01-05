@@ -110,8 +110,9 @@ if (typeof window !== 'undefined') {
     }
   });
   
-  // 전역 에러 핸들러로 Refresh Token 에러 필터링
+  // 전역 에러 핸들러로 Refresh Token 에러 및 Map ID 에러 필터링
   // Supabase가 내부적으로 발생시키는 refresh token 에러를 콘솔에서 숨김
+  // Google Maps Map ID 관련 에러도 필터링 (Map ID가 없어도 기본 마커는 작동)
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {
     const errorMessage = args.join(' ');
@@ -127,6 +128,15 @@ if (typeof window !== 'undefined') {
         console.warn('Refresh Token 만료 - 자동 로그아웃 처리됨');
       }
       return; // 에러를 콘솔에 표시하지 않음
+    }
+    // Map ID 관련 에러는 콘솔에 표시하지 않음 (Map ID가 없어도 기본 마커는 작동)
+    if (
+      errorMessage.includes('Map ID') ||
+      errorMessage.includes('Advanced Markers') ||
+      errorMessage.includes('map is initialised without a valid Map ID')
+    ) {
+      // Map ID가 없어도 기본 마커는 작동하므로 에러를 숨김
+      return;
     }
     // 다른 에러는 정상적으로 표시
     originalConsoleError.apply(console, args);

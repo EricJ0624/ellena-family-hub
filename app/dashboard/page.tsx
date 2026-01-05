@@ -1082,12 +1082,57 @@ export default function FamilyHub() {
             };
             
             // Map ID가 환경 변수로 설정되어 있으면 사용 (선택사항)
+            // Map ID가 없으면 기본 마커를 사용하고, Advanced Markers는 사용하지 않음
             const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID;
+            
+            // 개발 환경에서 Map ID 로드 상태 확인
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Google Maps Map ID 로드됨:', mapId ? '설정됨' : '설정 안됨');
+              if (mapId) {
+                console.log('Map ID:', mapId.substring(0, 10) + '...'); // 일부만 표시
+              }
+            }
+            
             if (mapId) {
               mapOptions.mapId = mapId;
             }
             
+            // Map ID가 없을 때 발생하는 경고/에러를 조용히 처리
+            const originalConsoleWarn = console.warn;
+            const originalConsoleError = console.error;
+            
+            if (!mapId) {
+              // 경고 필터링
+              console.warn = (...args: any[]) => {
+                const message = args.join(' ');
+                // Map ID 관련 경고는 무시 (기본 마커 사용)
+                if (message.includes('Map ID') || message.includes('Advanced Markers') ||
+                    message.includes('map is initialised without a valid Map ID')) {
+                  return;
+                }
+                originalConsoleWarn.apply(console, args);
+              };
+              
+              // 에러도 필터링 (Google Maps API가 에러로 출력하는 경우)
+              console.error = (...args: any[]) => {
+                const message = args.join(' ');
+                // Map ID 관련 에러는 무시 (기본 마커 사용)
+                if (message.includes('Map ID') || message.includes('Advanced Markers') ||
+                    message.includes('map is initialised without a valid Map ID')) {
+                  return;
+                }
+                originalConsoleError.apply(console, args);
+              };
+            }
+            
             mapRef.current = new (window as any).google.maps.Map(mapElement, mapOptions);
+            
+            // console.warn, console.error 복원
+            if (!mapId) {
+              console.warn = originalConsoleWarn;
+              console.error = originalConsoleError;
+            }
+            
             setMapLoaded(true);
             setMapError(null); // 에러 상태 초기화
           } catch (mapInitError: any) {
@@ -1194,8 +1239,8 @@ export default function FamilyHub() {
         // 스크립트가 없으면 새로 추가
         googleMapsScriptLoadedRef.current = true;
         const script = document.createElement('script');
-        // 이전 설정 유지 (async와 defer 동시 사용)
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places,marker`;
+        // loading=async 파라미터 추가로 경고 해결
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places,marker&loading=async`;
         script.async = true;
         script.defer = true;
         script.id = 'google-maps-script'; // 중복 확인을 위한 ID 추가
