@@ -2992,12 +2992,19 @@ export default function FamilyHub() {
                       }
                     }));
                     
+                    // 위치 추적 시작 (실시간 업데이트)
+                    if (!isLocationSharing) {
+                      updateLocation();
+                    }
+                    
+                    // ✅ 양쪽 사용자 모두 위치가 표시되도록 위치 목록 다시 로드
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await loadFamilyLocations();
+                    
                     // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
                     setTimeout(() => {
                       updateMapMarkers();
-                    }, 100);
-                    
-                    updateLocation();
+                    }, 300);
                   }
                 } catch (error) {
                   console.warn('위치 추적 시작 실패:', error);
@@ -3013,11 +3020,17 @@ export default function FamilyHub() {
             }
             
             // 승인 시 위치 목록도 다시 로드 (승인된 요청이 반영된 후)
+            // 양쪽 사용자 모두 위치가 저장될 때까지 충분한 대기 시간
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 위치 목록 다시 로드 (양쪽 사용자 위치 모두 포함)
             await loadFamilyLocations();
+            
             // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
             setTimeout(() => {
               updateMapMarkers();
-            }, 200);
+            }, 300);
+            
             // 지도 마커 업데이트를 위해 상태 변경 트리거
             setState(prev => ({ ...prev }));
           }
@@ -5244,15 +5257,20 @@ export default function FamilyHub() {
                 }
               }));
 
-              // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
-              setTimeout(() => {
-                updateMapMarkers();
-              }, 100);
-
               // 위치 추적 시작 (실시간 업데이트)
               if (!isLocationSharing) {
                 updateLocation();
               }
+              
+              // ✅ 양쪽 사용자 모두 위치가 표시되도록 위치 목록 다시 로드
+              // 승인한 사용자의 위치 저장 후, 요청한 사용자의 위치도 로드되도록 대기
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await loadFamilyLocations();
+              
+              // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
+              setTimeout(() => {
+                updateMapMarkers();
+              }, 300);
             }
           } catch (locationError) {
             console.warn('위치 가져오기 실패:', locationError);
@@ -5280,12 +5298,20 @@ export default function FamilyHub() {
           
           alert('위치 요청을 취소했습니다.');
         }
+        
         await loadLocationRequests();
-        await loadFamilyLocations(); // 승인된 위치 다시 로드
+        
+        // ✅ 양쪽 사용자 모두 위치가 표시되도록 충분한 대기 시간
+        // 위치 저장 및 로드가 완료될 때까지 대기
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 위치 목록 다시 로드 (양쪽 사용자 위치 모두 포함)
+        await loadFamilyLocations();
+        
         // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
         setTimeout(() => {
           updateMapMarkers();
-        }, 200);
+        }, 300);
       } else {
         // "이미 처리된 요청입니다" 에러는 조용히 처리 (반복 alert 방지)
         if (result.error && (result.error.includes('이미 처리된 요청') || result.error.includes('만료된 요청'))) {
