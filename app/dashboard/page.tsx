@@ -1164,9 +1164,10 @@ export default function FamilyHub() {
         // 스크립트가 없으면 새로 추가
         googleMapsScriptLoadedRef.current = true;
         const script = document.createElement('script');
-        // async 속성만 사용 (defer와 동시 사용 시 async가 우선되어 defer는 무시됨)
+        // 이전 설정 유지 (async와 defer 동시 사용)
         script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places,marker`;
         script.async = true;
+        script.defer = true;
         script.id = 'google-maps-script'; // 중복 확인을 위한 ID 추가
         
         script.onload = () => {
