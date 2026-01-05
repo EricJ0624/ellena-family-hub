@@ -407,7 +407,7 @@ export default function FamilyHub() {
               prevAlbumLength: prev.album?.length || 0
             });
           }
-
+          
           return {
             ...prev,
             album: mergedAlbum,
@@ -486,7 +486,7 @@ export default function FamilyHub() {
             }
             // 로그아웃 처리 (에러 메시지 출력 안 함)
             try {
-              await supabase.auth.signOut();
+            await supabase.auth.signOut();
             } catch (signOutError) {
               // signOut 에러는 무시
             }
@@ -928,10 +928,10 @@ export default function FamilyHub() {
         // ✅ 처음 초기화하는 경우에만 기존 마커 제거
         if (!mapRef.current) {
           // 기존 마커 모두 제거 (처음 초기화 시에만)
-          markersRef.current.forEach((marker) => {
-            marker.setMap(null);
-          });
-          markersRef.current.clear();
+        markersRef.current.forEach((marker) => {
+          marker.setMap(null);
+        });
+        markersRef.current.clear();
         }
 
         // ✅ 마커 업데이트 (본인 위치 + 상대방 위치)
@@ -1693,13 +1693,13 @@ export default function FamilyHub() {
         // loadData가 먼저 실행되어 사진을 로드하므로, 여기서는 사진 로드를 건너뜀
         if (process.env.NODE_ENV === 'development') {
           console.log('loadSupabaseData: 사진 로드는 loadData에서 처리되므로 건너뜀');
-        }
+            }
       } catch (error) {
         console.error('Supabase 데이터 로드 오류:', error);
         // ✅ 에러 발생 시에도 album은 업데이트하지 않음 (loadData에서 처리)
         // album은 loadData에서만 관리하므로 여기서는 건너뜀
         // 메시지, 할일, 일정만 에러 처리 (사진은 loadData에서 처리됨)
-        if (process.env.NODE_ENV === 'development') {
+                if (process.env.NODE_ENV === 'development') {
           console.warn('loadSupabaseData 에러: album은 loadData에서 관리되므로 건너뜀');
         }
       }
@@ -2000,7 +2000,7 @@ export default function FamilyHub() {
         supabase.removeChannel(subscriptionsRef.current.events);
         subscriptionsRef.current.events = null;
       }
-
+      
       console.log('📅 일정 subscription 설정 중...');
       const eventsSubscription = supabase
         .channel('family_events_changes')
@@ -2330,7 +2330,7 @@ export default function FamilyHub() {
         supabase.removeChannel(subscriptionsRef.current.photos);
         subscriptionsRef.current.photos = null;
       }
-
+      
       console.log('📸 사진 subscription 설정 중...');
       const photosSubscription = supabase
         .channel('memory_vault_changes')
@@ -2375,7 +2375,7 @@ export default function FamilyHub() {
                   });
                   
                   if (recentUploadingPhoto) {
-                    if (process.env.NODE_ENV === 'development') {
+                if (process.env.NODE_ENV === 'development') {
                       console.log('임시 항목을 파일명/크기로 찾아 Supabase ID로 업데이트:', {
                         tempId: recentUploadingPhoto.id,
                         newId: newPhoto.id,
@@ -2509,7 +2509,7 @@ export default function FamilyHub() {
         supabase.removeChannel(subscriptionsRef.current.locations);
         subscriptionsRef.current.locations = null;
       }
-
+      
       console.log('📍 위치 subscription 설정 중...');
       const locationsSubscription = supabase
         .channel('user_locations_changes')
@@ -3613,7 +3613,7 @@ export default function FamilyHub() {
     setRenameInput('');
   };
 
-  // 좌표를 주소로 변환 (Reverse Geocoding)
+  // 좌표를 주소로 변환 (Reverse Geocoding) - 도로이름만 반환
   const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
     try {
       // Google Maps Geocoding API 사용 (API 키가 있는 경우)
@@ -3625,15 +3625,30 @@ export default function FamilyHub() {
         const data = await response.json();
         
         if (data.status === 'OK' && data.results && data.results.length > 0) {
-          return data.results[0].formatted_address;
+          // 첫 번째 결과의 address_components에서 route(도로이름) 찾기
+          const result = data.results[0];
+          if (result.address_components) {
+            const routeComponent = result.address_components.find((component: any) => 
+              component.types && component.types.includes('route')
+            );
+            
+            if (routeComponent && routeComponent.long_name) {
+              // 도로이름만 반환
+              return routeComponent.long_name;
+            }
+          }
+          
+          // route를 찾지 못한 경우 formatted_address에서 도로이름 추출 시도
+          // 또는 formatted_address를 그대로 사용 (fallback)
+          return result.formatted_address || '';
         }
       }
     } catch (error) {
       console.warn('주소 변환 실패:', error);
     }
     
-    // 주소 변환 실패 시 좌표 반환
-    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    // 주소 변환 실패 시 빈 문자열 반환 (좌표는 표시하지 않음)
+    return '';
   };
 
   // 위치를 Supabase에 저장 (쓰로틀링 적용: 최소 5초 간격)
@@ -6870,13 +6885,10 @@ export default function FamilyHub() {
         </div>
             </div>
             <div className="section-body">
-              {state.location.latitude && state.location.longitude && (
+              {state.location.latitude && state.location.longitude && state.location.address && (
                 <div style={{ marginBottom: '16px' }}>
                   <p className="location-text" style={{ marginBottom: '12px' }}>
                     내 위치: {state.location.address}
-                  </p>
-                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
-                    좌표: {state.location.latitude.toFixed(6)}, {state.location.longitude.toFixed(6)}
                   </p>
                 </div>
               )}
