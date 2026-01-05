@@ -3615,42 +3615,69 @@ export default function FamilyHub() {
     setRenameInput('');
   };
 
-  // 주소 문자열에서 도로이름만 추출하는 헬퍼 함수
-  const extractRoadName = (address: string): string => {
+  // 주소 문자열에서 시/도, 구/군, 도로이름 추출하는 헬퍼 함수
+  const extractLocationAddress = (address: string): string => {
     if (!address) return '';
     
-    // 이미 도로이름만 있는 경우 (예: "반포대로")
-    if (!address.includes('시') && !address.includes('구') && !address.includes('동')) {
-      return address;
-    }
-    
-    // 한국 주소 형식에서 도로이름 추출
-    // 예: "서울특별시 서초구 반포대로 222" -> "반포대로"
-    // 예: "서울특별시 강남구 테헤란로 123" -> "테헤란로"
+    // 한국 주소 형식에서 시/도, 구/군, 도로이름 추출
+    // 예: "서울특별시 서초구 반포대로 222" -> "서울특별시 서초구 반포대로"
+    // 예: "서울특별시 강남구 테헤란로 123" -> "서울특별시 강남구 테헤란로"
     
     // 공백으로 분리
     const parts = address.trim().split(/\s+/);
     
-    // "로" 또는 "대로"로 끝나는 부분 찾기
-    for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].endsWith('로') || parts[i].endsWith('대로') || parts[i].endsWith('길')) {
-        return parts[i];
+    if (parts.length < 3) {
+      // 주소가 너무 짧으면 원본 반환
+      return address;
+    }
+    
+    // 시/도 찾기 (예: "서울특별시", "부산광역시", "경기도")
+    let cityIndex = -1;
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].endsWith('시') || parts[i].endsWith('도') || parts[i].endsWith('특별시') || parts[i].endsWith('광역시')) {
+        cityIndex = i;
+        break;
       }
     }
     
-    // 찾지 못한 경우 마지막 두 부분 조합 시도 (예: "반포대로 222" -> "반포대로")
-    if (parts.length >= 2) {
-      const lastTwo = parts.slice(-2).join(' ');
-      if (lastTwo.match(/[가-힣]+(로|대로|길)\s*\d+/)) {
-        return parts[parts.length - 2];
+    // 구/군 찾기 (예: "서초구", "강남구", "수원시 영통구")
+    let districtIndex = -1;
+    for (let i = cityIndex + 1; i < parts.length; i++) {
+      if (parts[i].endsWith('구') || parts[i].endsWith('군')) {
+        districtIndex = i;
+        break;
       }
+    }
+    
+    // 도로이름 찾기 (예: "반포대로", "테헤란로")
+    let roadIndex = -1;
+    for (let i = (districtIndex >= 0 ? districtIndex : cityIndex) + 1; i < parts.length; i++) {
+      if (parts[i].endsWith('로') || parts[i].endsWith('대로') || parts[i].endsWith('길')) {
+        roadIndex = i;
+        break;
+      }
+    }
+    
+    // 시/도, 구/군, 도로이름이 모두 있으면 조합
+    if (cityIndex >= 0 && districtIndex >= 0 && roadIndex >= 0) {
+      return `${parts[cityIndex]} ${parts[districtIndex]} ${parts[roadIndex]}`;
+    }
+    
+    // 시/도와 도로이름만 있으면 조합
+    if (cityIndex >= 0 && roadIndex >= 0) {
+      return `${parts[cityIndex]} ${parts[roadIndex]}`;
+    }
+    
+    // 도로이름만 있으면 도로이름만 반환
+    if (roadIndex >= 0) {
+      return parts[roadIndex];
     }
     
     // 모두 실패하면 원본 반환 (fallback)
     return address;
   };
 
-  // 좌표를 주소로 변환 (Reverse Geocoding) - 도로이름만 반환
+  // 좌표를 주소로 변환 (Reverse Geocoding) - 시/도, 구/군, 도로이름 반환
   const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
     try {
       // Google Maps Geocoding API 사용 (API 키가 있는 경우)
@@ -3662,22 +3689,48 @@ export default function FamilyHub() {
         const data = await response.json();
         
         if (data.status === 'OK' && data.results && data.results.length > 0) {
-          // 첫 번째 결과의 address_components에서 route(도로이름) 찾기
+          // 첫 번째 결과의 address_components에서 시/도, 구/군, 도로이름 찾기
           const result = data.results[0];
           if (result.address_components) {
+            const cityComponent = result.address_components.find((component: any) => 
+              component.types && component.types.includes('administrative_area_level_1')
+            );
+            const districtComponent = result.address_components.find((component: any) => 
+              component.types && component.types.includes('administrative_area_level_2')
+            );
             const routeComponent = result.address_components.find((component: any) => 
               component.types && component.types.includes('route')
             );
             
-            if (routeComponent && routeComponent.long_name) {
-              // 도로이름만 반환
-              return routeComponent.long_name;
+            const city = cityComponent?.long_name || '';
+            const district = districtComponent?.long_name || '';
+            const road = routeComponent?.long_name || '';
+            
+            // 시/도, 구/군, 도로이름이 모두 있으면 조합
+            if (city && district && road) {
+              return `${city} ${district} ${road}`;
+            }
+            
+            // 시/도와 도로이름만 있으면 조합
+            if (city && road) {
+              return `${city} ${road}`;
+            }
+            
+            // 도로이름만 있으면 도로이름만 반환
+            if (road) {
+              return road;
+            }
+            
+            // formatted_address에서 추출 시도
+            if (result.formatted_address) {
+              return extractLocationAddress(result.formatted_address);
             }
           }
           
-          // route를 찾지 못한 경우 formatted_address에서 도로이름 추출 시도
-          // 또는 formatted_address를 그대로 사용 (fallback)
-          return result.formatted_address || '';
+          // address_components가 없으면 formatted_address 사용
+          if (result.formatted_address) {
+            return extractLocationAddress(result.formatted_address);
+          }
         }
       }
     } catch (error) {
@@ -4095,13 +4148,13 @@ export default function FamilyHub() {
             const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
             const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
             
-            // 주소에서 도로이름만 추출
-            const roadName = loc.address ? extractRoadName(loc.address) : '';
+            // 주소에서 시/도, 구/군, 도로이름 추출
+            const locationAddress = loc.address ? extractLocationAddress(loc.address) : '';
             
             return {
               userId: loc.user_id,
               userName: userName,
-              address: roadName || '', // 도로이름만 저장 (좌표는 표시하지 않음)
+              address: locationAddress || '', // 시/도, 구/군, 도로이름 저장
               latitude: loc.latitude,
               longitude: loc.longitude,
               updatedAt: loc.last_updated
@@ -6999,7 +7052,7 @@ export default function FamilyHub() {
               {state.location.latitude && state.location.longitude && state.location.address && (
                 <div style={{ marginBottom: '16px' }}>
                   <p className="location-text" style={{ marginBottom: '12px' }}>
-                    내 위치: {extractRoadName(state.location.address)}
+                    내 위치: {extractLocationAddress(state.location.address)}
                   </p>
                 </div>
               )}
@@ -7510,4 +7563,5 @@ export default function FamilyHub() {
       `}</style>
     </div>
   );
+}
 }
