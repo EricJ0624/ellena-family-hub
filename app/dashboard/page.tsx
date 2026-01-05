@@ -705,24 +705,66 @@ export default function FamilyHub() {
     if (!userId || !isAuthenticated) return;
 
     try {
-      let currentAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-
       // 주소 변환 (쓰로틀링: 최소 60초 간격 - 무료 할당량 절약)
       const now = Date.now();
       const lastGeocodeUpdate = sessionStorage.getItem('lastGeocodeUpdate');
+      let currentAddress = state.location.address || ''; // 기존 주소 유지
+      
       if (!lastGeocodeUpdate || now - parseInt(lastGeocodeUpdate) > 60000) {
         try {
-          const geocoder = new (window as any).google.maps.Geocoder();
-          const { results } = await geocoder.geocode({ location: { lat: latitude, lng: longitude } });
-          if (results && results[0]) {
-            currentAddress = results[0].formatted_address;
+          // reverseGeocode 사용 (일관된 형식으로 변환)
+          currentAddress = await reverseGeocode(latitude, longitude);
+          
+          // 주소 변환이 실패하면 재시도 (최대 2번)
+          if (!currentAddress || currentAddress.trim() === '') {
+            console.warn('주소 변환 실패, 재시도 중...');
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+            currentAddress = await reverseGeocode(latitude, longitude);
+            
+            // 여전히 실패하면 한 번 더 시도
+            if (!currentAddress || currentAddress.trim() === '') {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+              currentAddress = await reverseGeocode(latitude, longitude);
+            }
+          }
+
+          // 주소가 여전히 없으면 formatted_address에서 추출 시도
+          if (!currentAddress || currentAddress.trim() === '') {
+            try {
+              const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+              if (googleMapApiKey) {
+                const response = await fetch(
+                  `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}&language=ko`
+                );
+                const data = await response.json();
+                
+                if (data.status === 'OK' && data.results && data.results.length > 0) {
+                  const formattedAddress = data.results[0].formatted_address;
+                  if (formattedAddress) {
+                    currentAddress = extractLocationAddress(formattedAddress);
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn('주소 변환 최종 시도 실패:', error);
+            }
+          }
+
+          // 주소 변환 성공 시 세션 스토리지에 저장
+          if (currentAddress && currentAddress.trim() !== '') {
             sessionStorage.setItem('lastGeocodeUpdate', now.toString());
           }
         } catch (geocodeError) {
           console.warn('주소 변환 오류:', geocodeError);
+          // 기존 주소 유지
+          currentAddress = state.location.address || '';
         }
-      } else {
-        currentAddress = state.location.address || currentAddress;
+      }
+
+      // 주소가 여전히 없으면 저장하지 않음 (좌표는 표시하지 않음)
+      if (!currentAddress || currentAddress.trim() === '') {
+        console.warn('주소 변환 실패, 위치 업데이트 건너뜀');
+        return;
       }
 
       setState(prev => ({
@@ -736,7 +778,7 @@ export default function FamilyHub() {
         }
       }));
 
-      // Supabase에 위치 저장
+      // Supabase에 위치 저장 (일관된 형식으로)
       try {
         const { error } = await supabase
           .from('user_locations')
@@ -744,7 +786,7 @@ export default function FamilyHub() {
             user_id: userId,
             latitude: latitude,
             longitude: longitude,
-            address: currentAddress,
+            address: currentAddress, // extractLocationAddress로 변환된 주소
             last_updated: new Date().toISOString()
           }, {
             onConflict: 'user_id'
@@ -4486,11 +4528,67 @@ export default function FamilyHub() {
       }
 
       if (data && data.latitude && data.longitude) {
+        // 저장된 주소 확인 및 변환 (좌표 형식인 경우 다시 변환)
+        let locationAddress = data.address || '';
+        
+        // 좌표 형식인지 확인 (예: "3.123456, 101.654321" 또는 "3.123456,101.654321")
+        const isCoordinateFormat = /^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(locationAddress.trim());
+        
+        if (!locationAddress || isCoordinateFormat) {
+          // 주소가 없거나 좌표 형식이면 다시 변환 시도
+          console.log('저장된 주소가 좌표 형식이거나 없음, 다시 변환 시도...');
+          locationAddress = await reverseGeocode(data.latitude, data.longitude);
+          
+          // 주소 변환이 실패하면 재시도 (최대 2번)
+          if (!locationAddress || locationAddress.trim() === '') {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            locationAddress = await reverseGeocode(data.latitude, data.longitude);
+            
+            if (!locationAddress || locationAddress.trim() === '') {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              locationAddress = await reverseGeocode(data.latitude, data.longitude);
+            }
+          }
+
+          // 주소가 여전히 없으면 formatted_address에서 추출 시도
+          if (!locationAddress || locationAddress.trim() === '') {
+            try {
+              const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+              if (googleMapApiKey) {
+                const response = await fetch(
+                  `https://maps.googleapis.com/maps/api/geocode/json?latlng=${data.latitude},${data.longitude}&key=${googleMapApiKey}&language=ko`
+                );
+                const data_geocode = await response.json();
+                
+                if (data_geocode.status === 'OK' && data_geocode.results && data_geocode.results.length > 0) {
+                  const formattedAddress = data_geocode.results[0].formatted_address;
+                  if (formattedAddress) {
+                    locationAddress = extractLocationAddress(formattedAddress);
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn('주소 변환 최종 시도 실패:', error);
+            }
+          }
+
+          // 주소 변환 성공 시 Supabase에 업데이트
+          if (locationAddress && locationAddress.trim() !== '') {
+            await supabase
+              .from('user_locations')
+              .update({ address: locationAddress })
+              .eq('user_id', userId);
+          }
+        } else {
+          // 이미 주소 형식이면 extractLocationAddress로 일관된 형식으로 변환
+          locationAddress = extractLocationAddress(locationAddress);
+        }
+
         // Supabase에서 로드한 위치로 state 업데이트
         setState(prev => ({
           ...prev,
           location: {
-            address: data.address || '',
+            address: locationAddress || '',
             latitude: data.latitude,
             longitude: data.longitude,
             userId: userId,
@@ -4500,7 +4598,7 @@ export default function FamilyHub() {
 
         if (process.env.NODE_ENV === 'development') {
           console.log('자신의 위치 로드 완료:', {
-            address: data.address,
+            address: locationAddress,
             latitude: data.latitude,
             longitude: data.longitude
           });
@@ -4582,8 +4680,79 @@ export default function FamilyHub() {
             const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
             const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
             
-            // 주소에서 시/도, 구/군, 도로이름 추출
-            const locationAddress = loc.address ? extractLocationAddress(loc.address) : '';
+            // 저장된 주소 확인 및 변환 (좌표 형식인 경우 다시 변환)
+            let locationAddress = loc.address || '';
+            
+            // 좌표 형식인지 확인 (예: "3.123456, 101.654321" 또는 "3.123456,101.654321")
+            const isCoordinateFormat = /^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(locationAddress.trim());
+            
+            if (!locationAddress || isCoordinateFormat) {
+              // 주소가 없거나 좌표 형식이면 비동기로 변환 시도 (백그라운드 처리)
+              // 즉시 반환하되, 백그라운드에서 주소 변환 후 업데이트
+              (async () => {
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('가족 위치 주소가 좌표 형식이거나 없음, 다시 변환 시도...', loc.user_id);
+                }
+                let convertedAddress = await reverseGeocode(loc.latitude, loc.longitude);
+                
+                // 주소 변환이 실패하면 재시도 (최대 2번)
+                if (!convertedAddress || convertedAddress.trim() === '') {
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  convertedAddress = await reverseGeocode(loc.latitude, loc.longitude);
+                  
+                  if (!convertedAddress || convertedAddress.trim() === '') {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    convertedAddress = await reverseGeocode(loc.latitude, loc.longitude);
+                  }
+                }
+
+                // 주소가 여전히 없으면 formatted_address에서 추출 시도
+                if (!convertedAddress || convertedAddress.trim() === '') {
+                  try {
+                    const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+                    if (googleMapApiKey) {
+                      const response = await fetch(
+                        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${loc.latitude},${loc.longitude}&key=${googleMapApiKey}&language=ko`
+                      );
+                      const data = await response.json();
+                      
+                      if (data.status === 'OK' && data.results && data.results.length > 0) {
+                        const formattedAddress = data.results[0].formatted_address;
+                        if (formattedAddress) {
+                          convertedAddress = extractLocationAddress(formattedAddress);
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.warn('주소 변환 최종 시도 실패:', error);
+                  }
+                }
+
+                // 주소 변환 성공 시 Supabase에 업데이트 및 상태 업데이트
+                if (convertedAddress && convertedAddress.trim() !== '') {
+                  await supabase
+                    .from('user_locations')
+                    .update({ address: convertedAddress })
+                    .eq('user_id', loc.user_id);
+                  
+                  // 상태 업데이트 (해당 사용자 위치만 업데이트)
+                  setState(prev => ({
+                    ...prev,
+                    familyLocations: prev.familyLocations.map((fl: any) =>
+                      fl.userId === loc.user_id
+                        ? { ...fl, address: convertedAddress }
+                        : fl
+                    )
+                  }));
+                }
+              })();
+              
+              // 즉시 반환 (주소 없음)
+              locationAddress = '';
+            } else {
+              // 이미 주소 형식이면 extractLocationAddress로 일관된 형식으로 변환
+              locationAddress = extractLocationAddress(locationAddress);
+            }
             
             return {
               userId: loc.user_id,
