@@ -3613,6 +3613,41 @@ export default function FamilyHub() {
     setRenameInput('');
   };
 
+  // 주소 문자열에서 도로이름만 추출하는 헬퍼 함수
+  const extractRoadName = (address: string): string => {
+    if (!address) return '';
+    
+    // 이미 도로이름만 있는 경우 (예: "반포대로")
+    if (!address.includes('시') && !address.includes('구') && !address.includes('동')) {
+      return address;
+    }
+    
+    // 한국 주소 형식에서 도로이름 추출
+    // 예: "서울특별시 서초구 반포대로 222" -> "반포대로"
+    // 예: "서울특별시 강남구 테헤란로 123" -> "테헤란로"
+    
+    // 공백으로 분리
+    const parts = address.trim().split(/\s+/);
+    
+    // "로" 또는 "대로"로 끝나는 부분 찾기
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].endsWith('로') || parts[i].endsWith('대로') || parts[i].endsWith('길')) {
+        return parts[i];
+      }
+    }
+    
+    // 찾지 못한 경우 마지막 두 부분 조합 시도 (예: "반포대로 222" -> "반포대로")
+    if (parts.length >= 2) {
+      const lastTwo = parts.slice(-2).join(' ');
+      if (lastTwo.match(/[가-힣]+(로|대로|길)\s*\d+/)) {
+        return parts[parts.length - 2];
+      }
+    }
+    
+    // 모두 실패하면 원본 반환 (fallback)
+    return address;
+  };
+
   // 좌표를 주소로 변환 (Reverse Geocoding) - 도로이름만 반환
   const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
     try {
@@ -3999,10 +4034,13 @@ export default function FamilyHub() {
             const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
             const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
             
+            // 주소에서 도로이름만 추출
+            const roadName = loc.address ? extractRoadName(loc.address) : '';
+            
             return {
               userId: loc.user_id,
               userName: userName,
-              address: loc.address || `${loc.latitude}, ${loc.longitude}`,
+              address: roadName || '', // 도로이름만 저장 (좌표는 표시하지 않음)
               latitude: loc.latitude,
               longitude: loc.longitude,
               updatedAt: loc.last_updated
@@ -4131,6 +4169,18 @@ export default function FamilyHub() {
       const result = await response.json();
 
       if (result.success) {
+        // ✅ 위치 공유 종료 시 state.location 초기화
+        setState(prev => ({
+          ...prev,
+          location: {
+            address: '',
+            latitude: 0,
+            longitude: 0,
+            userId: '',
+            updatedAt: ''
+          }
+        }));
+        
         if (!silent) {
           alert('위치 공유가 종료되었습니다.');
         }
@@ -6888,7 +6938,7 @@ export default function FamilyHub() {
               {state.location.latitude && state.location.longitude && state.location.address && (
                 <div style={{ marginBottom: '16px' }}>
                   <p className="location-text" style={{ marginBottom: '12px' }}>
-                    내 위치: {state.location.address}
+                    내 위치: {extractRoadName(state.location.address)}
                   </p>
                 </div>
               )}
