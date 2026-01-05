@@ -981,7 +981,17 @@ export default function FamilyHub() {
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
-    if (!googleMapApiKey) return;
+    if (!googleMapApiKey) {
+      console.error('Google Maps API 키가 설정되지 않았습니다. NEXT_PUBLIC_GOOGLE_MAP_API_KEY 환경 변수를 확인해주세요.');
+      setMapError('Google Maps API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.');
+      setMapLoaded(false);
+      return;
+    }
+    
+    // 개발 환경에서만 API 키 존재 여부 로그 (키 값은 로그하지 않음)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Google Maps API 키 로드됨:', googleMapApiKey ? '설정됨' : '설정 안됨');
+    }
 
     const initializeMap = () => {
       if (typeof window === 'undefined' || !(window as any).google) return;
@@ -1061,32 +1071,52 @@ export default function FamilyHub() {
           }
 
           try {
-            mapRef.current = new (window as any).google.maps.Map(mapElement, {
+            // Map ID는 선택사항이지만 Advanced Markers 사용 시 권장됨
+            // Map ID가 없어도 기본 마커는 작동하지만, Advanced Markers 경고가 발생할 수 있음
+            const mapOptions: any = {
               center: center,
               zoom: state.location.latitude && state.location.longitude ? 15 : 12,
               mapTypeControl: true,
               streetViewControl: true,
               fullscreenControl: true
-            });
+            };
+            
+            // Map ID가 환경 변수로 설정되어 있으면 사용 (선택사항)
+            const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID;
+            if (mapId) {
+              mapOptions.mapId = mapId;
+            }
+            
+            mapRef.current = new (window as any).google.maps.Map(mapElement, mapOptions);
             setMapLoaded(true);
             setMapError(null); // 에러 상태 초기화
           } catch (mapInitError: any) {
             console.error('Google Maps 초기화 오류:', mapInitError);
+            console.error('에러 상세 정보:', {
+              name: mapInitError?.name,
+              message: mapInitError?.message,
+              stack: mapInitError?.stack
+            });
             googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
             
             // 다양한 에러 타입 처리
-            if (mapInitError?.name === 'BillingNotEnabledMapError' || 
-                mapInitError?.message?.includes('BillingNotEnabled') ||
-                mapInitError?.message?.includes('billing')) {
-              setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다.');
-            } else if (mapInitError?.message?.includes('InvalidKey') || 
-                       mapInitError?.message?.includes('API key')) {
-              setMapError('Google Maps API 키가 유효하지 않습니다. API 키와 도메인 제한 설정을 확인해주세요.');
-            } else if (mapInitError?.message?.includes('RefererNotAllowedMapError') ||
-                       mapInitError?.message?.includes('Referer')) {
-              setMapError('현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console에서 API 키의 도메인 제한을 확인해주세요.');
+            const errorMessage = mapInitError?.message || '';
+            const errorName = mapInitError?.name || '';
+            
+            if (errorName === 'BillingNotEnabledMapError' || 
+                errorMessage.includes('BillingNotEnabled') ||
+                errorMessage.includes('billing') ||
+                errorMessage.includes('This page can\'t load Google Maps correctly')) {
+              setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다. Google Cloud Console에서 결제 계정을 연결해주세요.');
+            } else if (errorMessage.includes('InvalidKey') || 
+                       errorMessage.includes('API key') ||
+                       errorMessage.includes('RefererNotAllowedMapError')) {
+              setMapError('Google Maps API 키 설정 오류: Google Cloud Console에서 API 키의 도메인 제한 설정을 확인하고, Maps JavaScript API가 활성화되어 있는지 확인해주세요.');
+            } else if (errorMessage.includes('Referer') || 
+                       errorMessage.includes('domain')) {
+              setMapError('현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 API 키의 HTTP 리퍼러(웹사이트) 제한에 Vercel 도메인을 추가해주세요.');
             } else {
-              setMapError('Google Maps를 불러오는데 실패했습니다. API 키와 설정을 확인해주세요.');
+              setMapError('Google Maps를 불러오는데 실패했습니다. Google Cloud Console에서 Maps JavaScript API 활성화 및 결제 계정 연결을 확인해주세요.');
             }
             setMapLoaded(false);
             return;
@@ -1154,7 +1184,7 @@ export default function FamilyHub() {
             clearInterval(checkGoogleMaps);
             initializeMap();
           } else if (checkCount >= maxChecks) {
-            clearInterval(checkGoogleMaps);
+          clearInterval(checkGoogleMaps);
             console.warn('Google Maps API 로드 타임아웃');
             setMapError('Google Maps API 스크립트를 불러오는데 시간이 오래 걸립니다. API 키와 설정을 확인해주세요.');
             setMapLoaded(false);
@@ -1179,8 +1209,8 @@ export default function FamilyHub() {
             if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
               clearInterval(checkGoogleMapsReady);
               // 약간의 지연을 두고 초기화 (API가 완전히 준비되도록)
-              setTimeout(() => {
-                initializeMap();
+          setTimeout(() => {
+            initializeMap();
               }, 200);
             } else if (checkCount >= maxChecks) {
               clearInterval(checkGoogleMapsReady);
@@ -1192,10 +1222,19 @@ export default function FamilyHub() {
           }, 100);
         };
         
-        script.onerror = () => {
+        script.onerror = (error) => {
           googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
-          console.error('Google Maps API 스크립트 로드 실패');
-          setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다. API 키와 네트워크 연결을 확인해주세요.');
+          console.error('Google Maps API 스크립트 로드 실패:', error);
+          console.error('API 키 확인:', googleMapApiKey ? '설정됨' : '설정 안됨');
+          console.error('스크립트 URL:', script.src.replace(googleMapApiKey, '***HIDDEN***'));
+          
+          // Google Cloud Console에서 오류 확인 안내
+          console.error('Google Cloud Console에서 오류 확인:');
+          console.error('1. 로깅 → 로그 탐색기 → 리소스 타입: "API" 선택');
+          console.error('2. API 및 서비스 → 사용 설정된 API 및 서비스 → Maps JavaScript API → 사용량 탭');
+          console.error('3. 결제 → 결제 계정 연결 확인');
+          
+          setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다. 브라우저 콘솔과 Google Cloud Console의 로그 탐색기를 확인해주세요.');
           setMapLoaded(false);
         };
         
@@ -1206,6 +1245,11 @@ export default function FamilyHub() {
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
+    // SSR 보호: 클라이언트에서만 실행
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     if (!isAuthenticated || !userId) {
       console.log('Realtime 구독 스킵 - 인증되지 않음:', { isAuthenticated, userId });
       return;
@@ -2944,21 +2988,21 @@ export default function FamilyHub() {
     // ✅ loadData 완료 후 실행되도록 지연 시간 증가 (loadData가 먼저 완료되도록 보장)
     // 재로그인 시에도 항상 Supabase에서 데이터 로드
     const timer = setTimeout(() => {
-        loadSupabaseData().then(() => {
-          console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
-          setupRealtimeSubscriptions();
-          // 위치 데이터 로드
+      loadSupabaseData().then(() => {
+        console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
+        setupRealtimeSubscriptions();
+        // 위치 데이터 로드
           loadMyLocation(); // 자신의 위치 먼저 로드
-          loadFamilyLocations();
-          loadLocationRequests(); // 위치 요청 목록 로드
-        }).catch((error) => {
-          console.error('❌ Supabase 데이터 로드 실패:', error);
-          // 데이터 로드 실패해도 Realtime 구독은 설정
-          setupRealtimeSubscriptions();
-          // 위치 데이터 로드 시도
+        loadFamilyLocations();
+        loadLocationRequests(); // 위치 요청 목록 로드
+      }).catch((error) => {
+        console.error('❌ Supabase 데이터 로드 실패:', error);
+        // 데이터 로드 실패해도 Realtime 구독은 설정
+        setupRealtimeSubscriptions();
+        // 위치 데이터 로드 시도
           loadMyLocation(); // 자신의 위치 먼저 로드
-          loadFamilyLocations();
-        });
+        loadFamilyLocations();
+      });
     }, 500); // ✅ 지연 시간 증가 (loadData 완료 후 실행되도록 보장)
     
     // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
