@@ -875,19 +875,64 @@ export default function FamilyHub() {
         const mapElement = document.getElementById('map');
         if (!mapElement) return;
 
-        // 기본 중심 위치 (서울시청) - 위치가 없을 때 사용
-        const defaultCenter = { lat: 37.5665, lng: 126.9780 };
+        // 기본 중심 위치 (Kuala Lumpur Twin Tower) - 위치가 없을 때 사용
+        const defaultCenter = { lat: 3.1390, lng: 101.6869 };
         
-        // 지도 중심 결정: 내 위치 우선, 없으면 다른 사용자 위치, 둘 다 없으면 서울
+        // 지도 중심 결정 우선순위:
+        // 1. 내 위치가 있으면 -> 내 위치를 중심으로
+        // 2. 내 위치가 없으면 -> 가장 최근 공유한 위치로
+        // 3. 내 위치가 없고 최근 공유한 위치가 없는데 다른 사용자 위치가 있으면 -> 첫 번째 사용자 위치를 중심으로
+        // 4. 위 셋다 없으면 -> Kuala Lumpur Twin Tower를 기본으로 사용
         let center = defaultCenter;
+        
         if (state.location.latitude && state.location.longitude) {
+          // 1. 내 위치가 있으면 -> 내 위치를 중심으로
           center = { lat: state.location.latitude, lng: state.location.longitude };
-        } else if (state.familyLocations && state.familyLocations.length > 0) {
-          // 다른 사용자 위치가 있으면 첫 번째 위치를 중심으로
-          const firstLocation = state.familyLocations[0];
-          if (firstLocation.latitude && firstLocation.longitude) {
-            center = { lat: firstLocation.latitude, lng: firstLocation.longitude };
+        } else {
+          // 2. 내 위치가 없으면 -> 가장 최근 공유한 위치로
+          let mostRecentSharedLocation = null;
+          
+          // locationRequests에서 accepted 상태인 요청 중 가장 최근 것 찾기
+          const acceptedRequests = locationRequests
+            .filter((req: any) => req.status === 'accepted')
+            .sort((a: any, b: any) => {
+              // created_at 기준으로 정렬 (가장 최근 것이 먼저)
+              const dateA = new Date(a.created_at).getTime();
+              const dateB = new Date(b.created_at).getTime();
+              return dateB - dateA;
+            });
+          
+          if (acceptedRequests.length > 0) {
+            // 가장 최근 accepted 요청 찾기
+            const mostRecentRequest = acceptedRequests[0];
+            
+            // 해당 요청과 관련된 사용자 ID 찾기 (requester_id 또는 target_id 중 userId가 아닌 것)
+            const sharedUserId = mostRecentRequest.requester_id === userId 
+              ? mostRecentRequest.target_id 
+              : mostRecentRequest.requester_id;
+            
+            // familyLocations에서 해당 사용자의 위치 찾기
+            if (sharedUserId && state.familyLocations && state.familyLocations.length > 0) {
+              mostRecentSharedLocation = state.familyLocations.find(
+                (loc: any) => loc.userId === sharedUserId && loc.latitude && loc.longitude
+              );
+            }
           }
+          
+          if (mostRecentSharedLocation) {
+            // 가장 최근 공유한 위치를 중심으로
+            center = { 
+              lat: mostRecentSharedLocation.latitude, 
+              lng: mostRecentSharedLocation.longitude 
+            };
+          } else if (state.familyLocations && state.familyLocations.length > 0) {
+            // 3. 내 위치가 없고 최근 공유한 위치가 없는데 다른 사용자 위치가 있으면 -> 첫 번째 사용자 위치를 중심으로
+            const firstLocation = state.familyLocations[0];
+            if (firstLocation.latitude && firstLocation.longitude) {
+              center = { lat: firstLocation.latitude, lng: firstLocation.longitude };
+            }
+          }
+          // 4. 위 셋다 없으면 -> defaultCenter (Kuala Lumpur Twin Tower) 사용
         }
 
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
