@@ -1052,6 +1052,14 @@ export default function FamilyHub() {
 
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
         if (!mapRef.current) {
+          // google.maps.Map이 사용 가능한지 다시 한 번 확인
+          if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.Map) {
+            console.error('Google Maps API가 아직 준비되지 않았습니다.');
+            setMapError('Google Maps API를 초기화하는데 실패했습니다. 페이지를 새로고침해주세요.');
+            setMapLoaded(false);
+            return;
+          }
+
           try {
             mapRef.current = new (window as any).google.maps.Map(mapElement, {
               center: center,
@@ -1064,11 +1072,19 @@ export default function FamilyHub() {
             setMapError(null); // 에러 상태 초기화
           } catch (mapInitError: any) {
             console.error('Google Maps 초기화 오류:', mapInitError);
-            // BillingNotEnabledMapError 또는 다른 에러 처리
+            googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
+            
+            // 다양한 에러 타입 처리
             if (mapInitError?.name === 'BillingNotEnabledMapError' || 
                 mapInitError?.message?.includes('BillingNotEnabled') ||
                 mapInitError?.message?.includes('billing')) {
               setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다.');
+            } else if (mapInitError?.message?.includes('InvalidKey') || 
+                       mapInitError?.message?.includes('API key')) {
+              setMapError('Google Maps API 키가 유효하지 않습니다. API 키와 도메인 제한 설정을 확인해주세요.');
+            } else if (mapInitError?.message?.includes('RefererNotAllowedMapError') ||
+                       mapInitError?.message?.includes('Referer')) {
+              setMapError('현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console에서 API 키의 도메인 제한을 확인해주세요.');
             } else {
               setMapError('Google Maps를 불러오는데 실패했습니다. API 키와 설정을 확인해주세요.');
             }
@@ -1098,19 +1114,29 @@ export default function FamilyHub() {
         updateMapMarkers();
       } catch (error: any) {
         console.error('지도 초기화 오류:', error);
+        googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
+        
+        // 다양한 에러 타입 처리
         if (error?.name === 'BillingNotEnabledMapError' || 
             error?.message?.includes('BillingNotEnabled') ||
             error?.message?.includes('billing')) {
           setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다.');
+        } else if (error?.message?.includes('InvalidKey') || 
+                   error?.message?.includes('API key')) {
+          setMapError('Google Maps API 키가 유효하지 않습니다. API 키와 도메인 제한 설정을 확인해주세요.');
+        } else if (error?.message?.includes('RefererNotAllowedMapError') ||
+                   error?.message?.includes('Referer')) {
+          setMapError('현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console에서 API 키의 도메인 제한을 확인해주세요.');
         } else {
-          setMapError('Google Maps를 불러오는데 실패했습니다.');
+          setMapError('Google Maps를 불러오는데 실패했습니다. API 키와 설정을 확인해주세요.');
         }
         setMapLoaded(false);
       }
     };
 
     // Google Maps API 스크립트 로드 (중복 방지)
-    if ((window as any).google && (window as any).google.maps) {
+    // google.maps.Map이 사용 가능한지 확인 (완전히 로드되었는지 확인)
+    if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
       // 이미 로드되어 있으면 바로 초기화
       initializeMap();
     } else if (!googleMapsScriptLoadedRef.current) {
@@ -1120,21 +1146,20 @@ export default function FamilyHub() {
       if (existingScript) {
         // 스크립트가 이미 있으면 로드 완료를 기다림
         googleMapsScriptLoadedRef.current = true;
+        let checkCount = 0;
+        const maxChecks = 100; // 최대 10초 (100ms * 100)
         const checkGoogleMaps = setInterval(() => {
-          if ((window as any).google && (window as any).google.maps) {
+          checkCount++;
+          if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
             clearInterval(checkGoogleMaps);
             initializeMap();
+          } else if (checkCount >= maxChecks) {
+            clearInterval(checkGoogleMaps);
+            console.warn('Google Maps API 로드 타임아웃');
+            setMapError('Google Maps API 스크립트를 불러오는데 시간이 오래 걸립니다. API 키와 설정을 확인해주세요.');
+            setMapLoaded(false);
           }
         }, 100);
-        
-        // 최대 10초 대기
-        setTimeout(() => {
-          clearInterval(checkGoogleMaps);
-          if (!(window as any).google) {
-            console.warn('Google Maps API 로드 타임아웃');
-            setMapError('Google Maps API 스크립트를 불러오는데 시간이 오래 걸립니다.');
-          }
-        }, 10000);
       } else {
         // 스크립트가 없으면 새로 추가
         googleMapsScriptLoadedRef.current = true;
@@ -1145,16 +1170,31 @@ export default function FamilyHub() {
         script.id = 'google-maps-script'; // 중복 확인을 위한 ID 추가
         
         script.onload = () => {
-          // 스크립트 로드 후 약간의 지연을 두고 초기화
-          setTimeout(() => {
-            initializeMap();
+          // 스크립트 로드 후 google.maps.Map이 사용 가능할 때까지 대기
+          let checkCount = 0;
+          const maxChecks = 100; // 최대 10초 (100ms * 100)
+          const checkGoogleMapsReady = setInterval(() => {
+            checkCount++;
+            if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
+              clearInterval(checkGoogleMapsReady);
+              // 약간의 지연을 두고 초기화 (API가 완전히 준비되도록)
+              setTimeout(() => {
+                initializeMap();
+              }, 200);
+            } else if (checkCount >= maxChecks) {
+              clearInterval(checkGoogleMapsReady);
+              console.error('Google Maps API 초기화 실패 - google.maps.Map을 찾을 수 없습니다.');
+              setMapError('Google Maps API를 초기화하는데 실패했습니다. API 키와 설정을 확인해주세요.');
+              setMapLoaded(false);
+              googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
+            }
           }, 100);
         };
         
         script.onerror = () => {
           googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
-          console.warn('Google Maps API 로드 실패 - 지도 없이 좌표만 표시됩니다.');
-          setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다.');
+          console.error('Google Maps API 스크립트 로드 실패');
+          setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다. API 키와 네트워크 연결을 확인해주세요.');
           setMapLoaded(false);
         };
         
