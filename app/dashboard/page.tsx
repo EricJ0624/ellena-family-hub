@@ -2848,36 +2848,23 @@ export default function FamilyHub() {
       const locationRequestsSubscription = supabase
         .channel('location_requests_changes')
         .on('postgres_changes',
-          { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'location_requests',
-            filter: `or(requester_id=eq.${userId},target_id=eq.${userId})`
-          },
+          { event: 'INSERT', schema: 'public', table: 'location_requests' },
           async (payload: any) => {
             console.log('📍 Realtime 위치 요청 INSERT 이벤트 수신:', payload);
-            // ✅ 현재 사용자가 관련된 모든 요청에 대해 즉시 로드
+            // ✅ 현재 사용자가 요청을 받은 경우(target_id)에만 즉시 로드
             const newRequest = payload.new;
-            if (newRequest) {
-              const isRequester = newRequest.requester_id === userId;
-              const isTarget = newRequest.target_id === userId;
-              
-              if (isRequester || isTarget) {
-                console.log('📍 위치 요청 INSERT - 사용자 관련 요청 감지, 목록 업데이트');
-                await loadLocationRequests(); // 위치 요청 목록 다시 로드
-                // ✅ UI 업데이트를 위해 상태 강제 갱신
-                setState(prev => ({ ...prev }));
-              }
+            if (newRequest && newRequest.target_id === userId) {
+              await loadLocationRequests(); // 위치 요청 목록 다시 로드
+              // ✅ UI 업데이트를 위해 상태 강제 갱신
+              setState(prev => ({ ...prev }));
+            } else {
+              // 요청을 보낸 경우에도 목록 업데이트 (상태 동기화)
+              loadLocationRequests();
             }
           }
         )
         .on('postgres_changes',
-          { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'location_requests',
-            filter: `or(requester_id=eq.${userId},target_id=eq.${userId})`
-          },
+          { event: 'UPDATE', schema: 'public', table: 'location_requests' },
           async (payload: any) => {
             console.log('📍 Realtime 위치 요청 UPDATE 이벤트 수신:', payload);
             // 위치 요청 목록 다시 로드 (완료 대기)
@@ -2994,12 +2981,7 @@ export default function FamilyHub() {
           }
         )
         .on('postgres_changes',
-          { 
-            event: 'DELETE', 
-            schema: 'public', 
-            table: 'location_requests',
-            filter: `or(requester_id=eq.${userId},target_id=eq.${userId})`
-          },
+          { event: 'DELETE', schema: 'public', table: 'location_requests' },
           (payload: any) => {
             console.log('📍 Realtime 위치 요청 DELETE 이벤트 수신:', payload);
             loadLocationRequests(); // 위치 요청 목록 다시 로드
@@ -3008,25 +2990,10 @@ export default function FamilyHub() {
         )
         .subscribe((status, err) => {
           console.log('📍 Realtime 위치 요청 subscription 상태:', status);
-          if (err) {
-            console.error('❌ Realtime 위치 요청 subscription 오류:', err);
-            // 에러 발생 시 재연결 시도
-            setTimeout(() => {
-              console.log('📍 위치 요청 subscription 재연결 시도...');
-              setupLocationRequestsSubscription();
-            }, 3000);
-            return;
-          }
+          if (err) console.error('❌ Realtime 위치 요청 subscription 오류:', err);
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 위치 요청 subscription 연결 성공');
             subscriptionsRef.current.locationRequests = locationRequestsSubscription;
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('⚠️ 위치 요청 subscription 연결 실패:', status);
-            // 재연결 시도
-            setTimeout(() => {
-              console.log('📍 위치 요청 subscription 재연결 시도...');
-              setupLocationRequestsSubscription();
-            }, 3000);
           }
         });
     };
