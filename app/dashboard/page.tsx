@@ -2602,7 +2602,50 @@ export default function FamilyHub() {
                     
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
-                    const address = await reverseGeocode(latitude, longitude);
+                    
+                    // 주소 변환 (재시도 로직 포함)
+                    let address = await reverseGeocode(latitude, longitude);
+                    
+                    // 주소 변환이 실패하면 재시도 (최대 2번)
+                    if (!address || address.trim() === '') {
+                      console.warn('주소 변환 실패, 재시도 중...');
+                      await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+                      address = await reverseGeocode(latitude, longitude);
+                      
+                      // 여전히 실패하면 한 번 더 시도
+                      if (!address || address.trim() === '') {
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+                        address = await reverseGeocode(latitude, longitude);
+                      }
+                    }
+
+                    // 주소가 여전히 없으면 formatted_address에서 추출 시도
+                    if (!address || address.trim() === '') {
+                      try {
+                        const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+                        if (googleMapApiKey) {
+                          const response = await fetch(
+                            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}&language=ko`
+                          );
+                          const data = await response.json();
+                          
+                          if (data.status === 'OK' && data.results && data.results.length > 0) {
+                            const formattedAddress = data.results[0].formatted_address;
+                            if (formattedAddress) {
+                              address = extractLocationAddress(formattedAddress);
+                            }
+                          }
+                        }
+                      } catch (error) {
+                        console.warn('주소 변환 최종 시도 실패:', error);
+                      }
+                    }
+
+                    // 주소가 여전히 없으면 저장하지 않음 (좌표는 표시하지 않음)
+                    if (!address || address.trim() === '') {
+                      console.warn('주소 변환 실패, 위치 저장 건너뜀');
+                      return;
+                    }
                     
                     // 위치 저장 및 추적 시작
                     await saveLocationToSupabase(latitude, longitude, address);
@@ -3873,7 +3916,51 @@ export default function FamilyHub() {
 
       // 초기 위치 처리
       const { latitude, longitude } = initialPosition.coords;
-      const address = await reverseGeocode(latitude, longitude);
+      
+      // 주소 변환 (재시도 로직 포함)
+      let address = await reverseGeocode(latitude, longitude);
+      
+      // 주소 변환이 실패하면 재시도 (최대 2번)
+      if (!address || address.trim() === '') {
+        console.warn('주소 변환 실패, 재시도 중...');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+        address = await reverseGeocode(latitude, longitude);
+        
+        // 여전히 실패하면 한 번 더 시도
+        if (!address || address.trim() === '') {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+          address = await reverseGeocode(latitude, longitude);
+        }
+      }
+
+      // 주소가 여전히 없으면 formatted_address에서 추출 시도
+      if (!address || address.trim() === '') {
+        try {
+          const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+          if (googleMapApiKey) {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}&language=ko`
+            );
+            const data = await response.json();
+            
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const formattedAddress = data.results[0].formatted_address;
+              if (formattedAddress) {
+                address = extractLocationAddress(formattedAddress);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('주소 변환 최종 시도 실패:', error);
+        }
+      }
+
+      // 주소가 여전히 없으면 저장하지 않음 (좌표는 표시하지 않음)
+      if (!address || address.trim() === '') {
+        console.warn('주소 변환 실패, 위치 저장 건너뜀');
+        setIsLocationSharing(false);
+        return;
+      }
 
       setState(prev => ({
         ...prev,
@@ -3910,17 +3997,62 @@ export default function FamilyHub() {
 
             // 주소 변환 (쓰로틀링: 60초마다 한 번만 - 무료 할당량 절약)
             const now = Date.now();
-            let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            let address = state.location.address || ''; // 기존 주소 유지
             
             if (now - lastLocationUpdateRef.current > 60000) {
               try {
+                // 주소 변환 시도
                 address = await reverseGeocode(latitude, longitude);
+                
+                // 주소 변환이 실패하면 재시도 (최대 2번)
+                if (!address || address.trim() === '') {
+                  console.warn('주소 변환 실패, 재시도 중...');
+                  await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+                  address = await reverseGeocode(latitude, longitude);
+                  
+                  // 여전히 실패하면 한 번 더 시도
+                  if (!address || address.trim() === '') {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+                    address = await reverseGeocode(latitude, longitude);
+                  }
+                }
+
+                // 주소가 여전히 없으면 formatted_address에서 추출 시도
+                if (!address || address.trim() === '') {
+                  try {
+                    const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+                    if (googleMapApiKey) {
+                      const response = await fetch(
+                        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}&language=ko`
+                      );
+                      const data = await response.json();
+                      
+                      if (data.status === 'OK' && data.results && data.results.length > 0) {
+                        const formattedAddress = data.results[0].formatted_address;
+                        if (formattedAddress) {
+                          address = extractLocationAddress(formattedAddress);
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.warn('주소 변환 최종 시도 실패:', error);
+                  }
+                }
+
+                // 주소가 여전히 없으면 기존 주소 유지 (좌표는 저장하지 않음)
+                if (!address || address.trim() === '') {
+                  console.warn('주소 변환 실패, 기존 주소 유지');
+                  address = state.location.address || '';
+                }
               } catch (geocodeError) {
-                console.warn('주소 변환 실패, 좌표 사용:', geocodeError);
+                console.warn('주소 변환 실패, 기존 주소 유지:', geocodeError);
+                address = state.location.address || '';
               }
-            } else {
-              // 주소 변환을 건너뛰면 기존 주소 유지
-              address = state.location.address || address;
+            }
+
+            // 주소가 없으면 업데이트하지 않음 (좌표는 표시하지 않음)
+            if (!address || address.trim() === '') {
+              return;
             }
 
             // 상태 업데이트
@@ -4423,8 +4555,49 @@ export default function FamilyHub() {
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
 
-      // 주소 변환
-      const address = await reverseGeocode(latitude, longitude);
+      // 주소 변환 (재시도 로직 포함)
+      let address = await reverseGeocode(latitude, longitude);
+      
+      // 주소 변환이 실패하면 재시도 (최대 2번)
+      if (!address || address.trim() === '') {
+        console.warn('주소 변환 실패, 재시도 중...');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+        address = await reverseGeocode(latitude, longitude);
+        
+        // 여전히 실패하면 한 번 더 시도
+        if (!address || address.trim() === '') {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+          address = await reverseGeocode(latitude, longitude);
+        }
+      }
+
+      // 주소가 여전히 없으면 formatted_address에서 추출 시도
+      if (!address || address.trim() === '') {
+        try {
+          const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+          if (googleMapApiKey) {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapApiKey}&language=ko`
+            );
+            const data = await response.json();
+            
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const formattedAddress = data.results[0].formatted_address;
+              if (formattedAddress) {
+                address = extractLocationAddress(formattedAddress);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('주소 변환 최종 시도 실패:', error);
+        }
+      }
+
+      // 주소가 여전히 없으면 저장하지 않음 (좌표는 표시하지 않음)
+      if (!address || address.trim() === '') {
+        console.warn('주소 변환 실패, 위치 저장 건너뜀');
+        return;
+      }
 
       // 위치를 Supabase에 저장
       await saveLocationToSupabase(latitude, longitude, address);
