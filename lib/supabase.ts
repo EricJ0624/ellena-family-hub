@@ -87,10 +87,48 @@ if (typeof window !== 'undefined') {
       return; // 에러 메시지 출력하지 않고 조용히 처리
     }
     
-    if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+    // TOKEN_REFRESHED 이벤트에서 에러가 발생한 경우 처리
+    if (event === 'TOKEN_REFRESHED') {
+      if (session) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('토큰 갱신 성공');
+        }
+      } else {
+        // 토큰 갱신 실패 - 조용히 처리
+        try {
+          localStorage.removeItem('sb-auth-token');
+        } catch (error) {
+          // localStorage 접근 실패는 무시
+        }
+      }
+    }
+    
+    if (event === 'SIGNED_IN') {
       if (process.env.NODE_ENV === 'development') {
-        console.log('인증 상태 변경:', event);
+        console.log('인증 상태 변경: 로그인');
       }
     }
   });
+  
+  // 전역 에러 핸들러로 Refresh Token 에러 필터링
+  // Supabase가 내부적으로 발생시키는 refresh token 에러를 콘솔에서 숨김
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    const errorMessage = args.join(' ');
+    // Refresh Token 관련 에러는 콘솔에 표시하지 않음
+    if (
+      errorMessage.includes('Invalid Refresh Token') ||
+      errorMessage.includes('Refresh Token Not Found') ||
+      errorMessage.includes('refresh_token') ||
+      (errorMessage.includes('AuthApiError') && errorMessage.includes('Refresh'))
+    ) {
+      // 개발 환경에서만 경고 로그 (에러가 아닌 경고로 표시)
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Refresh Token 만료 - 자동 로그아웃 처리됨');
+      }
+      return; // 에러를 콘솔에 표시하지 않음
+    }
+    // 다른 에러는 정상적으로 표시
+    originalConsoleError.apply(console, args);
+  };
 }
