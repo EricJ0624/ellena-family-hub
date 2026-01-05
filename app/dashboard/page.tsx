@@ -118,7 +118,7 @@ interface AppState {
 
 const INITIAL_STATE: AppState = {
   familyName: "Ellena Family Hub",
-  location: { address: "서울특별시 서초구 반포대로 222" },
+  location: { address: "", latitude: 0, longitude: 0, userId: "", updatedAt: "" },
   familyLocations: [],
   todos: [],
   album: [],
@@ -2700,19 +2700,21 @@ export default function FamilyHub() {
     // ✅ loadData 완료 후 실행되도록 지연 시간 증가 (loadData가 먼저 완료되도록 보장)
     // 재로그인 시에도 항상 Supabase에서 데이터 로드
     const timer = setTimeout(() => {
-      loadSupabaseData().then(() => {
-        console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
-        setupRealtimeSubscriptions();
-        // 위치 데이터 로드
-        loadFamilyLocations();
-        loadLocationRequests(); // 위치 요청 목록 로드
-      }).catch((error) => {
-        console.error('❌ Supabase 데이터 로드 실패:', error);
-        // 데이터 로드 실패해도 Realtime 구독은 설정
-        setupRealtimeSubscriptions();
-        // 위치 데이터 로드 시도
-        loadFamilyLocations();
-      });
+        loadSupabaseData().then(() => {
+          console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
+          setupRealtimeSubscriptions();
+          // 위치 데이터 로드
+          loadMyLocation(); // 자신의 위치 먼저 로드
+          loadFamilyLocations();
+          loadLocationRequests(); // 위치 요청 목록 로드
+        }).catch((error) => {
+          console.error('❌ Supabase 데이터 로드 실패:', error);
+          // 데이터 로드 실패해도 Realtime 구독은 설정
+          setupRealtimeSubscriptions();
+          // 위치 데이터 로드 시도
+          loadMyLocation(); // 자신의 위치 먼저 로드
+          loadFamilyLocations();
+        });
     }, 500); // ✅ 지연 시간 증가 (loadData 완료 후 실행되도록 보장)
     
     // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
@@ -3969,6 +3971,65 @@ export default function FamilyHub() {
       stopLocationTracking();
     };
   }, []);
+
+  // 자신의 위치 로드 (Supabase에서)
+  const loadMyLocation = async () => {
+    if (!userId || !isAuthenticated) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_locations')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        // 위치가 없으면 초기화 상태 유지
+        if (error.code === 'PGRST116') {
+          // 데이터가 없음 (정상)
+          if (process.env.NODE_ENV === 'development') {
+            console.log('자신의 위치가 Supabase에 없음');
+          }
+          return;
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('자신의 위치 로드 오류:', error);
+        }
+        return;
+      }
+
+      if (data && data.latitude && data.longitude) {
+        // Supabase에서 로드한 위치로 state 업데이트
+        setState(prev => ({
+          ...prev,
+          location: {
+            address: data.address || '',
+            latitude: data.latitude,
+            longitude: data.longitude,
+            userId: userId,
+            updatedAt: data.last_updated || new Date().toISOString()
+          }
+        }));
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('자신의 위치 로드 완료:', {
+            address: data.address,
+            latitude: data.latitude,
+            longitude: data.longitude
+          });
+        }
+
+        // 지도 마커 업데이트
+        setTimeout(() => {
+          updateMapMarkers();
+        }, 100);
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('자신의 위치 로드 시도 중 오류:', error);
+      }
+    }
+  };
 
   // 가족 구성원 위치 로드 (승인된 관계만 표시)
   const loadFamilyLocations = async () => {
