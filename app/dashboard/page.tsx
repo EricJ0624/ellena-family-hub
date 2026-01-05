@@ -769,17 +769,47 @@ export default function FamilyHub() {
   }, [state.messages, isAuthenticated]);
 
   // ✅ 지도 마커 업데이트 함수 (재사용 가능, useCallback으로 외부에서도 호출 가능)
+  // AdvancedMarkerElement 사용으로 deprecated 경고 해결
   const updateMapMarkers = useCallback(() => {
     if (!mapRef.current || typeof window === 'undefined' || !(window as any).google) return;
 
     try {
+      const google = (window as any).google;
+      const { AdvancedMarkerElement, PinElement } = google.maps.marker || {};
+
+      // AdvancedMarkerElement가 사용 가능한지 확인
+      const useAdvancedMarker = AdvancedMarkerElement && PinElement;
+
       // 현재 위치 마커 업데이트 또는 생성
       if (state.location.latitude && state.location.longitude) {
         const existingMyMarker = markersRef.current.get('my-location');
         if (existingMyMarker) {
           // 기존 마커 위치 업데이트
-          existingMyMarker.setPosition({ lat: state.location.latitude, lng: state.location.longitude });
-          if (existingMyMarker.setLabel) {
+          if (useAdvancedMarker && existingMyMarker.position) {
+            existingMyMarker.position = { lat: state.location.latitude, lng: state.location.longitude };
+          } else if (existingMyMarker.setPosition) {
+            existingMyMarker.setPosition({ lat: state.location.latitude, lng: state.location.longitude });
+          }
+          // AdvancedMarkerElement는 content를 업데이트해야 함
+          if (useAdvancedMarker && existingMyMarker.content) {
+            const pinElement = new PinElement({
+              background: '#4285F4',
+              borderColor: '#ffffff',
+              glyphColor: '#ffffff',
+              scale: 1.2
+            });
+            const labelDiv = document.createElement('div');
+            labelDiv.textContent = userName || '나';
+            labelDiv.style.color = '#ffffff';
+            labelDiv.style.fontSize = '12px';
+            labelDiv.style.fontWeight = 'bold';
+            labelDiv.style.textAlign = 'center';
+            labelDiv.style.marginTop = '4px';
+            const container = document.createElement('div');
+            container.appendChild(pinElement.element);
+            container.appendChild(labelDiv);
+            existingMyMarker.content = container;
+          } else if (existingMyMarker.setLabel) {
             existingMyMarker.setLabel({
               text: userName || '나',
               color: '#ffffff',
@@ -789,27 +819,58 @@ export default function FamilyHub() {
           }
         } else {
           // 새 마커 생성
-          const myMarker = new (window as any).google.maps.Marker({
-            position: { lat: state.location.latitude, lng: state.location.longitude },
-            map: mapRef.current,
-            title: `${userName || '내'} 위치`,
-            label: {
-              text: userName || '나',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            },
-            icon: {
-              url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            }
-          });
+          let myMarker;
+          if (useAdvancedMarker) {
+            const pinElement = new PinElement({
+              background: '#4285F4',
+              borderColor: '#ffffff',
+              glyphColor: '#ffffff',
+              scale: 1.2
+            });
+            const labelDiv = document.createElement('div');
+            labelDiv.textContent = userName || '나';
+            labelDiv.style.color = '#ffffff';
+            labelDiv.style.fontSize = '12px';
+            labelDiv.style.fontWeight = 'bold';
+            labelDiv.style.textAlign = 'center';
+            labelDiv.style.marginTop = '4px';
+            const container = document.createElement('div');
+            container.appendChild(pinElement.element);
+            container.appendChild(labelDiv);
+            myMarker = new AdvancedMarkerElement({
+              map: mapRef.current,
+              position: { lat: state.location.latitude, lng: state.location.longitude },
+              title: `${userName || '내'} 위치`,
+              content: container
+            });
+          } else {
+            // 폴백: 기존 Marker API 사용
+            myMarker = new google.maps.Marker({
+              position: { lat: state.location.latitude, lng: state.location.longitude },
+              map: mapRef.current,
+              title: `${userName || '내'} 위치`,
+              label: {
+                text: userName || '나',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              },
+              icon: {
+                url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+              }
+            });
+          }
           markersRef.current.set('my-location', myMarker);
         }
       } else {
         // 위치가 없으면 본인 위치 마커 제거
         const existingMyMarker = markersRef.current.get('my-location');
         if (existingMyMarker) {
-          existingMyMarker.setMap(null);
+          if (useAdvancedMarker && existingMyMarker.map) {
+            existingMyMarker.map = null;
+          } else if (existingMyMarker.setMap) {
+            existingMyMarker.setMap(null);
+          }
           markersRef.current.delete('my-location');
         }
       }
@@ -820,8 +881,31 @@ export default function FamilyHub() {
           const existingMarker = markersRef.current.get(loc.userId);
           if (existingMarker) {
             // 기존 마커 위치 및 label 업데이트
-            existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
-            if (existingMarker.setLabel) {
+            if (useAdvancedMarker && existingMarker.position) {
+              existingMarker.position = { lat: loc.latitude, lng: loc.longitude };
+            } else if (existingMarker.setPosition) {
+              existingMarker.setPosition({ lat: loc.latitude, lng: loc.longitude });
+            }
+            // AdvancedMarkerElement는 content를 업데이트해야 함
+            if (useAdvancedMarker && existingMarker.content) {
+              const pinElement = new PinElement({
+                background: '#EA4335',
+                borderColor: '#ffffff',
+                glyphColor: '#ffffff',
+                scale: 1.2
+              });
+              const labelDiv = document.createElement('div');
+              labelDiv.textContent = loc.userName || '사용자';
+              labelDiv.style.color = '#ffffff';
+              labelDiv.style.fontSize = '12px';
+              labelDiv.style.fontWeight = 'bold';
+              labelDiv.style.textAlign = 'center';
+              labelDiv.style.marginTop = '4px';
+              const container = document.createElement('div');
+              container.appendChild(pinElement.element);
+              container.appendChild(labelDiv);
+              existingMarker.content = container;
+            } else if (existingMarker.setLabel) {
               existingMarker.setLabel({
                 text: loc.userName || '사용자',
                 color: '#ffffff',
@@ -831,20 +915,47 @@ export default function FamilyHub() {
             }
           } else {
             // 새 마커 생성
-            const marker = new (window as any).google.maps.Marker({
-              position: { lat: loc.latitude, lng: loc.longitude },
-              map: mapRef.current,
-              title: `${loc.userName}의 위치`,
-              label: {
-                text: loc.userName || '사용자',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              },
-              icon: {
-                url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-              }
-            });
+            let marker;
+            if (useAdvancedMarker) {
+              const pinElement = new PinElement({
+                background: '#EA4335',
+                borderColor: '#ffffff',
+                glyphColor: '#ffffff',
+                scale: 1.2
+              });
+              const labelDiv = document.createElement('div');
+              labelDiv.textContent = loc.userName || '사용자';
+              labelDiv.style.color = '#ffffff';
+              labelDiv.style.fontSize = '12px';
+              labelDiv.style.fontWeight = 'bold';
+              labelDiv.style.textAlign = 'center';
+              labelDiv.style.marginTop = '4px';
+              const container = document.createElement('div');
+              container.appendChild(pinElement.element);
+              container.appendChild(labelDiv);
+              marker = new AdvancedMarkerElement({
+                map: mapRef.current,
+                position: { lat: loc.latitude, lng: loc.longitude },
+                title: `${loc.userName}의 위치`,
+                content: container
+              });
+            } else {
+              // 폴백: 기존 Marker API 사용
+              marker = new google.maps.Marker({
+                position: { lat: loc.latitude, lng: loc.longitude },
+                map: mapRef.current,
+                title: `${loc.userName}의 위치`,
+                label: {
+                  text: loc.userName || '사용자',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                },
+                icon: {
+                  url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                }
+              });
+            }
             markersRef.current.set(loc.userId, marker);
           }
         }
@@ -854,7 +965,11 @@ export default function FamilyHub() {
       const currentUserIds = new Set(state.familyLocations.map((loc: any) => loc.userId).filter((id: string) => id !== userId));
       markersRef.current.forEach((marker, markerUserId) => {
         if (markerUserId !== 'my-location' && !currentUserIds.has(markerUserId)) {
-          marker.setMap(null);
+          if (useAdvancedMarker && marker.map) {
+            marker.map = null;
+          } else if (marker.setMap) {
+            marker.setMap(null);
+          }
           markersRef.current.delete(markerUserId);
         }
       });
@@ -1024,9 +1139,9 @@ export default function FamilyHub() {
         // 스크립트가 없으면 새로 추가
         googleMapsScriptLoadedRef.current = true;
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places`;
+        // async 속성만 사용 (defer와 동시 사용 시 async가 우선되어 defer는 무시됨)
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapApiKey}&libraries=places,marker`;
         script.async = true;
-        script.defer = true;
         script.id = 'google-maps-script'; // 중복 확인을 위한 ID 추가
         
         script.onload = () => {
