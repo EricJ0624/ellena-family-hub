@@ -142,11 +142,15 @@ const INITIAL_STATE: AppState = {
 
 export default function FamilyHub() {
   const router = useRouter();
-  // 그룹 컨텍스트에서 현재 그룹 ID 가져오기 (안전하게 처리)
+  // 그룹 컨텍스트에서 현재 그룹 ID 및 권한 정보 가져오기 (안전하게 처리)
   let currentGroupId: string | null = null;
+  let groupUserRole: string | null = null;
+  let groupIsOwner = false;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
+    groupUserRole = groupContext.userRole;
+    groupIsOwner = groupContext.isOwner;
   } catch (error) {
     // GroupProvider가 없을 때는 null로 처리 (빌드 시점)
     if (process.env.NODE_ENV === 'development') {
@@ -8411,42 +8415,52 @@ export default function FamilyHub() {
           zIndex: 1000,
         }}
       >
-        {/* 관리자 버튼 (관리자만 표시) */}
-        {isSystemAdmin && (
-          <button
-            onClick={() => router.push('/admin')}
-            style={{
-              padding: '12px 20px',
-              backgroundColor: '#9333ea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(147, 51, 234, 0.4)',
-              transition: 'all 0.3s ease',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#7e22ce';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(147, 51, 234, 0.5)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#9333ea';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.4)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            aria-label="관리자 페이지"
-          >
-            <span style={{ fontSize: '18px' }}>⚙️</span>
-            관리자
-          </button>
-        )}
+        {/* 관리자 버튼 (시스템 관리자 또는 그룹 관리자만 표시) */}
+        {(() => {
+          const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
+          const showAdminButton = isSystemAdmin || isGroupAdmin;
+          
+          if (!showAdminButton) return null;
+          
+          // 시스템 관리자면 시스템 관리자 페이지로, 그룹 관리자면 그룹 관리자 페이지로
+          const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
+          
+          return (
+            <button
+              onClick={() => router.push(adminPagePath)}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: isSystemAdmin ? '#9333ea' : '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: isSystemAdmin ? '0 4px 12px rgba(147, 51, 234, 0.4)' : '0 4px 12px rgba(59, 130, 246, 0.4)',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = isSystemAdmin ? '#7e22ce' : '#2563eb';
+                e.currentTarget.style.boxShadow = isSystemAdmin ? '0 6px 16px rgba(147, 51, 234, 0.5)' : '0 6px 16px rgba(59, 130, 246, 0.5)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = isSystemAdmin ? '#9333ea' : '#3b82f6';
+                e.currentTarget.style.boxShadow = isSystemAdmin ? '0 4px 12px rgba(147, 51, 234, 0.4)' : '0 4px 12px rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              aria-label={isSystemAdmin ? "시스템 관리자 페이지" : "그룹 관리자 페이지"}
+            >
+              <span style={{ fontSize: '18px' }}>⚙️</span>
+              관리자
+            </button>
+          );
+        })()}
         
         {/* 회원탈퇴 버튼 */}
         <button
