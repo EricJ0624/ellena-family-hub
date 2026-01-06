@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 
 // 서버 사이드용 Supabase 클라이언트 (DB 작업용)
 // Service Role Key 사용: RLS 정책 우회하여 서버 사이드에서 모든 작업 수행 가능
@@ -214,6 +215,8 @@ export async function uploadToCloudinary(
       {
         folder,
         resource_type: fileType === 'image' ? 'image' : 'video',
+        // 보안 강화: authenticated 모드로 설정 (서명된 URL만 접근 가능)
+        access_mode: 'authenticated',
         transformation: fileType === 'image' 
           ? [
               { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
@@ -303,5 +306,158 @@ export async function downloadFromS3(s3Key: string): Promise<Blob> {
   }
   const buffer = Buffer.concat(chunks);
   return new Blob([buffer]);
+}
+
+// ============================================
+// 그룹 권한 메타데이터 포함 업로드 함수들
+// ============================================
+
+/**
+ * Cloudinary 업로드 함수 (그룹 권한 메타데이터 포함)
+ * 
+ * @param file - 업로드할 파일 (Blob)
+ * @param fileName - 파일명
+ * @param mimeType - MIME 타입
+ * @param userId - 사용자 ID
+ * @param groupId - 그룹 ID (선택사항, 권한 검증용)
+ * @returns 업로드 결과 (url, publicId)
+ */
+export async function uploadToCloudinaryWithGroup(
+  file: Blob,
+  fileName: string,
+  mimeType: string,
+  userId: string,
+  groupId?: string
+): Promise<{ url: string; publicId: string }> {
+  initializeCloudinary();
+  
+  const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
+  const folder = groupId 
+    ? `family-memories/${groupId}/${userId}`
+    : `family-memories/${userId}`;
+
+  // 그룹 ID를 메타데이터에 포함 (권한 검증용)
+  const context: Record<string, string> = {};
+  if (groupId) {
+    context.groupId = groupId;
+    context.userId = userId;
+  }
+
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: fileType === 'image' ? 'image' : 'video',
+        context, // 메타데이터에 그룹 ID 포함
+        // 보안 강화: authenticated 모드로 설정 (서명된 URL만 접근 가능)
+        access_mode: 'authenticated',
+        transformation: fileType === 'image' 
+          ? [
+              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
+              { fetch_format: 'auto' }
+            ]
+          : [
+              { quality: 'auto', fetch_format: 'auto' }
+            ],
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else if (result) {
+          resolve({
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
+        } else {
+          reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
+        }
+      }
+    );
+
+    file.arrayBuffer()
+      .then(buffer => {
+        const nodeBuffer = Buffer.from(buffer);
+        uploadStream.end(nodeBuffer);
+      })
+      .catch(reject);
+  });
+}
+
+/**
+ * S3 Key 생성 (그룹 권한 메타데이터 포함)
+ * 
+ * @param fileName - 파일명
+ * @param mimeType - MIME 타입
+ * @param userId - 사용자 ID
+ * @param groupId - 그룹 ID (선택사항, 권한 검증용)
+ * @returns S3 Key
+ */
+export function generateS3KeyWithGroup(
+  fileName: string,
+  mimeType: string,
+  userId: string,
+  groupId?: string
+): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const fileType = mimeType.startsWith('image/') ? 'photos' : 'videos';
+  const fileExtension = fileName.split('.').pop() || 'jpg';
+  const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  
+  // 그룹 ID가 있으면 경로에 포함
+  const groupPath = groupId ? `groups/${groupId}/` : '';
+  return `originals/${groupPath}${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
+}
+
+/**
+ * S3에 파일 업로드 (그룹 권한 메타데이터 포함)
+ * 
+ * @param file - 업로드할 파일 (Blob)
+ * @param fileName - 파일명
+ * @param mimeType - MIME 타입
+ * @param userId - 사용자 ID
+ * @param groupId - 그룹 ID (선택사항, 권한 검증용)
+ * @returns 업로드 결과 (url, key)
+ */
+export async function uploadToS3WithGroup(
+  file: Blob,
+  fileName: string,
+  mimeType: string,
+  userId: string,
+  groupId?: string
+): Promise<{ url: string; key: string }> {
+  const s3Key = generateS3KeyWithGroup(fileName, mimeType, userId, groupId);
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+  
+  if (!bucketName) {
+    throw new Error('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
+  }
+
+  const s3Client = getS3ClientInstance();
+  
+  // S3 메타데이터에 그룹 ID 포함 (권한 검증용)
+  const metadata: Record<string, string> = {};
+  if (groupId) {
+    metadata['groupId'] = groupId;
+    metadata['userId'] = userId;
+  }
+
+  const upload = new Upload({
+    client: s3Client,
+    params: {
+      Bucket: bucketName,
+      Key: s3Key,
+      Body: file,
+      ContentType: mimeType,
+      Metadata: metadata, // 그룹 ID를 메타데이터에 포함
+      ACL: 'private', // 보안: private로 설정
+    },
+  });
+
+  await upload.done();
+
+  const s3Url = generateS3Url(s3Key);
+  return { url: s3Url, key: s3Key };
 }
 

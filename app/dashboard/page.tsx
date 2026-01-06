@@ -11,6 +11,8 @@ import {
   stopBackgroundLocationTracking
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
+import GroupSelector from '@/app/components/GroupSelector';
+import MemberManagement from '@/app/components/MemberManagement';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -221,6 +223,7 @@ export default function FamilyHub() {
   
   // 가족 이름 수정 모달 상태
   const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [renameInput, setRenameInput] = useState('');
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
@@ -6859,6 +6862,10 @@ export default function FamilyHub() {
               updateState('UPDATE_TITLE_STYLE', style);
             }}
           />
+          {/* 그룹 선택기 */}
+          <div style={{ marginBottom: '12px', padding: '0 16px' }}>
+            <GroupSelector />
+          </div>
           <div className="status-indicator">
             <span className="status-dot">
               <span className="status-dot-ping"></span>
@@ -6921,15 +6928,34 @@ export default function FamilyHub() {
           </div>
         </header>
 
+        {/* 멤버 관리 모달 */}
+        {showMemberManagement && (
+          <div className="modal-overlay" onClick={() => setShowMemberManagement(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <MemberManagement onClose={() => setShowMemberManagement(false)} />
+            </div>
+          </div>
+        )}
+
         {/* Content Sections Container */}
         <div className="sections-container">
           {/* Family Memories Section */}
           <section className="content-section memory-vault">
             <div className="section-header">
               <h2 className="section-title-large">Family Memories</h2>
-              <label htmlFor="file-upload-input" className="btn-upload" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                Upload
-              </label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => setShowMemberManagement(true)}
+                  className="btn-upload"
+                  style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '14px', backgroundColor: '#9333ea', color: 'white', border: 'none', borderRadius: '6px' }}
+                  aria-label="멤버 관리"
+                >
+                  멤버 관리
+                </button>
+                <label htmlFor="file-upload-input" className="btn-upload" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                  Upload
+                </label>
+              </div>
               <input 
                 id="file-upload-input"
                 type="file" 
