@@ -709,7 +709,6 @@ const GroupSelector: React.FC = () => {
             </>
           )}
         </AnimatePresence>
-      </div>
     </div>
   );
 };

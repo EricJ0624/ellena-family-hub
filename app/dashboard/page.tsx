@@ -1,5 +1,8 @@
 'use client';
 
+// 동적 렌더링 강제 (GroupProvider 의존성 때문에)
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
@@ -139,7 +142,17 @@ const INITIAL_STATE: AppState = {
 
 export default function FamilyHub() {
   const router = useRouter();
-  const { currentGroupId } = useGroup(); // 그룹 컨텍스트에서 현재 그룹 ID 가져오기
+  // 그룹 컨텍스트에서 현재 그룹 ID 가져오기 (안전하게 처리)
+  let currentGroupId: string | null = null;
+  try {
+    const groupContext = useGroup();
+    currentGroupId = groupContext.currentGroupId;
+  } catch (error) {
+    // GroupProvider가 없을 때는 null로 처리 (빌드 시점)
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('GroupProvider가 없습니다. 그룹 필터링이 비활성화됩니다.');
+    }
+  }
   // --- [STATE] ---
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -341,7 +354,6 @@ export default function FamilyHub() {
       return [];
     }
   }, [userId, currentGroupId]);
-  }, []);
 
   const loadData = useCallback(async (key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
