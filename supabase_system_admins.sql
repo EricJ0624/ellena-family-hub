@@ -182,7 +182,7 @@ END;
 $$;
 
 -- ============================================
--- 4. 초기 관리자 설정 (soungtak@gmail.com)
+-- 4. 초기 관리자 설정 (soungtak@icloud.com)
 -- ============================================
 
 -- 초기 관리자 추가 (이메일로 사용자 찾아서 추가)
@@ -190,10 +190,10 @@ DO $$
 DECLARE
   admin_user_id UUID;
 BEGIN
-  -- soungtak@gmail.com 사용자 찾기
+  -- soungtak@icloud.com 사용자 찾기
   SELECT id INTO admin_user_id
   FROM auth.users
-  WHERE email = 'soungtak@gmail.com'
+  WHERE email = 'soungtak@icloud.com'
   LIMIT 1;
   
   IF admin_user_id IS NOT NULL THEN
@@ -203,15 +203,15 @@ BEGIN
       WHERE user_id = admin_user_id
     ) THEN
       INSERT INTO public.system_admins (user_id, email, is_active)
-      VALUES (admin_user_id, 'soungtak@gmail.com', TRUE)
+      VALUES (admin_user_id, 'soungtak@icloud.com', TRUE)
       ON CONFLICT (user_id) DO NOTHING;
       
-      RAISE NOTICE 'Initial admin added: soungtak@gmail.com';
+      RAISE NOTICE 'Initial admin added: soungtak@icloud.com';
     ELSE
-      RAISE NOTICE 'Admin already exists: soungtak@gmail.com';
+      RAISE NOTICE 'Admin already exists: soungtak@icloud.com';
     END IF;
   ELSE
-    RAISE NOTICE 'User not found: soungtak@gmail.com (will be added when user signs up)';
+    RAISE NOTICE 'User not found: soungtak@icloud.com (will be added when user signs up)';
   END IF;
 END $$;
 
@@ -226,7 +226,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  admin_emails TEXT[] := ARRAY['soungtak@gmail.com'];
+  admin_emails TEXT[] := ARRAY['soungtak@icloud.com'];
   user_email TEXT;
 BEGIN
   user_email := NEW.email;
@@ -261,7 +261,7 @@ BEGIN
   RAISE NOTICE '시스템 관리자 테이블 생성 완료!';
   RAISE NOTICE '========================================';
   RAISE NOTICE '테이블: system_admins';
-  RAISE NOTICE '초기 관리자: soungtak@gmail.com';
+  RAISE NOTICE '초기 관리자: soungtak@icloud.com';
   RAISE NOTICE 'RLS 정책: 활성화됨';
   RAISE NOTICE '========================================';
 END $$;

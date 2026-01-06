@@ -1,6 +1,6 @@
 -- ============================================
 -- 기존 사용자 그룹 시스템 마이그레이션 스크립트
--- soungtak@gmail.com을 관리자로, 나머지를 가족 멤버로 설정
+-- soungtak@icloud.com을 관리자로, 나머지를 가족 멤버로 설정
 -- ============================================
 -- 
 -- 사용 방법:
@@ -18,10 +18,10 @@ BEGIN
   -- 1. 관리자 사용자 찾기
   SELECT id INTO admin_user_id
   FROM auth.users
-  WHERE email = 'soungtak@gmail.com';
+  WHERE email = 'soungtak@icloud.com';
   
   IF admin_user_id IS NULL THEN
-    RAISE EXCEPTION '관리자 사용자(soungtak@gmail.com)를 찾을 수 없습니다.';
+    RAISE EXCEPTION '관리자 사용자(soungtak@icloud.com)를 찾을 수 없습니다.';
   END IF;
   
   RAISE NOTICE '관리자 사용자 확인: %', admin_user_id;
@@ -69,7 +69,7 @@ BEGIN
   RAISE NOTICE '그룹 ID: %', default_group_id;
   RAISE NOTICE '그룹 이름: 우리 가족';
   RAISE NOTICE '초대 코드: %', default_invite_code;
-  RAISE NOTICE '관리자: soungtak@gmail.com (ADMIN)';
+  RAISE NOTICE '관리자: soungtak@icloud.com (ADMIN)';
   RAISE NOTICE '가족 멤버: %명 (MEMBER)', member_count;
   RAISE NOTICE '========================================';
   
