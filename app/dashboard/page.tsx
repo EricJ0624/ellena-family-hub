@@ -171,6 +171,7 @@ export default function FamilyHub() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [editingPhotoId, setEditingPhotoId] = useState<number | null>(null);
+  const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [photoDescription, setPhotoDescription] = useState<string>('');
   const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
@@ -3231,6 +3232,35 @@ export default function FamilyHub() {
       }
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId]); // familyId 변경 시 데이터 재로드
+
+  // 시스템 관리자 권한 확인
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!isAuthenticated || !userId) {
+        setIsSystemAdmin(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('is_system_admin', {
+          user_id_param: userId,
+        });
+
+        if (error) {
+          console.error('시스템 관리자 확인 오류:', error);
+          setIsSystemAdmin(false);
+          return;
+        }
+
+        setIsSystemAdmin(data === true);
+      } catch (error) {
+        console.error('시스템 관리자 확인 중 오류:', error);
+        setIsSystemAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [isAuthenticated, userId]);
 
   // 6. 위치 요청 모달이 열릴 때 사용자 목록 로드
   useEffect(() => {
@@ -7021,33 +7051,6 @@ export default function FamilyHub() {
             >
               로그아웃
             </button>
-            <button
-              onClick={handleDeleteAccount}
-              style={{
-                marginLeft: '8px',
-                padding: '8px 16px',
-                backgroundColor: 'rgba(139, 69, 19, 0.1)',
-                color: '#8b4513',
-                border: '1px solid rgba(139, 69, 19, 0.3)',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.2)';
-                e.currentTarget.style.borderColor = 'rgba(139, 69, 19, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.1)';
-                e.currentTarget.style.borderColor = 'rgba(139, 69, 19, 0.3)';
-              }}
-              aria-label="회원탈퇴"
-            >
-              회원탈퇴
-            </button>
           </div>
         </header>
 
@@ -8395,6 +8398,91 @@ export default function FamilyHub() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* 하단 고정 버튼 영역 */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          zIndex: 1000,
+        }}
+      >
+        {/* 관리자 버튼 (관리자만 표시) */}
+        {isSystemAdmin && (
+          <button
+            onClick={() => router.push('/admin')}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: '#9333ea',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(147, 51, 234, 0.4)',
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#7e22ce';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(147, 51, 234, 0.5)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#9333ea';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.4)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            aria-label="관리자 페이지"
+          >
+            <span style={{ fontSize: '18px' }}>⚙️</span>
+            관리자
+          </button>
+        )}
+        
+        {/* 회원탈퇴 버튼 */}
+        <button
+          onClick={handleDeleteAccount}
+          style={{
+            padding: '12px 20px',
+            backgroundColor: 'rgba(139, 69, 19, 0.9)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(139, 69, 19, 0.4)',
+            transition: 'all 0.3s ease',
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 1)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 69, 19, 0.5)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.9)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 69, 19, 0.4)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          aria-label="회원탈퇴"
+        >
+          <span style={{ fontSize: '18px' }}>🗑️</span>
+          회원탈퇴
+        </button>
+      </div>
     </div>
   );
 }

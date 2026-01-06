@@ -87,6 +87,49 @@ export interface Database {
           }
         ]
       }
+      system_admins: {
+        Row: {
+          user_id: string
+          email: string
+          created_at: string
+          created_by: string | null
+          is_active: boolean
+          last_access_at: string | null
+          notes: string | null
+        }
+        Insert: {
+          user_id: string
+          email: string
+          created_at?: string
+          created_by?: string | null
+          is_active?: boolean
+          last_access_at?: string | null
+          notes?: string | null
+        }
+        Update: {
+          user_id?: string
+          email?: string
+          created_at?: string
+          created_by?: string | null
+          is_active?: boolean
+          last_access_at?: string | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_admins_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_admins_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           id: string
@@ -237,6 +280,33 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: unknown
       }
+      is_system_admin: {
+        Args: {
+          user_id_param?: string
+        }
+        Returns: boolean
+      }
+      get_system_admins: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          email: string
+          created_at: string
+          last_access_at: string | null
+          is_active: boolean
+        }[]
+      }
+      add_system_admin: {
+        Args: {
+          target_user_id: string
+          target_email: string
+        }
+        Returns: string
+      }
+      update_admin_last_access: {
+        Args: Record<PropertyKey, never>
+        Returns: void
+      }
     }
     Enums: {
       membership_role: 'ADMIN' | 'MEMBER'
@@ -341,4 +411,8 @@ export type MembershipUpdate = Database["public"]["Tables"]["memberships"]["Upda
 export type GroupMemberView = Database["public"]["Views"]["group_members_view"]["Row"]
 
 export type MembershipRole = Database["public"]["Enums"]["membership_role"]
+
+export type SystemAdmin = Database["public"]["Tables"]["system_admins"]["Row"]
+export type SystemAdminInsert = Database["public"]["Tables"]["system_admins"]["Insert"]
+export type SystemAdminUpdate = Database["public"]["Tables"]["system_admins"]["Update"]
 

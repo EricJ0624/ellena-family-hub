@@ -221,3 +221,42 @@ export async function isGroupOwner(
   return result.success && result.isOwner;
 }
 
+/**
+ * 시스템 관리자 여부 확인
+ * 
+ * @param userId - 확인할 사용자 ID (기본값: 현재 인증된 사용자)
+ * @returns boolean - 시스템 관리자 여부
+ */
+export async function isSystemAdmin(userId?: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseServerClient();
+    
+    // userId가 제공되지 않으면 현재 인증된 사용자 확인
+    if (!userId) {
+      // 클라이언트 사이드에서는 직접 쿼리 불가하므로 RPC 함수 사용
+      // 서버 사이드에서는 직접 쿼리 가능
+      const { data, error } = await supabase.rpc('is_system_admin');
+      if (error) {
+        console.error('시스템 관리자 확인 오류:', error);
+        return false;
+      }
+      return data === true;
+    }
+    
+    // 특정 사용자 ID로 확인
+    const { data, error } = await supabase.rpc('is_system_admin', {
+      user_id_param: userId,
+    });
+    
+    if (error) {
+      console.error('시스템 관리자 확인 오류:', error);
+      return false;
+    }
+    
+    return data === true;
+  } catch (error: any) {
+    console.error('시스템 관리자 확인 중 오류:', error);
+    return false;
+  }
+}
+
