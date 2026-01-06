@@ -64,7 +64,25 @@ interface GroupStats {
 
 export default function GroupAdminPage() {
   const router = useRouter();
-  const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
+  
+  // 그룹 컨텍스트에서 정보 가져오기 (안전하게 처리)
+  let currentGroupId: string | null = null;
+  let currentGroup: any = null;
+  let userRole: string | null = null;
+  let isOwner = false;
+  try {
+    const groupContext = useGroup();
+    currentGroupId = groupContext.currentGroupId;
+    currentGroup = groupContext.currentGroup;
+    userRole = groupContext.userRole;
+    isOwner = groupContext.isOwner;
+  } catch (error) {
+    // GroupProvider가 없을 때는 null로 처리 (빌드 시점)
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('GroupProvider가 없습니다.');
+    }
+  }
+  
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'members' | 'settings' | 'content'>('dashboard');
@@ -80,6 +98,12 @@ export default function GroupAdminPage() {
   // 그룹 관리자 권한 확인
   useEffect(() => {
     const checkGroupAdmin = async () => {
+      // 클라이언트 사이드에서만 실행
+      if (typeof window === 'undefined') {
+        setLoading(false);
+        return;
+      }
+
       if (!currentGroupId) {
         router.push('/dashboard');
         return;
