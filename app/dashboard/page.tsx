@@ -13,6 +13,7 @@ import {
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import GroupSelector from '@/app/components/GroupSelector';
 import MemberManagement from '@/app/components/MemberManagement';
+import { useGroup } from '@/app/contexts/GroupContext';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -138,6 +139,7 @@ const INITIAL_STATE: AppState = {
 
 export default function FamilyHub() {
   const router = useRouter();
+  const { currentGroupId } = useGroup(); // 그룹 컨텍스트에서 현재 그룹 ID 가져오기
   // --- [STATE] ---
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -238,12 +240,42 @@ export default function FamilyHub() {
         return [];
       }
 
-      // ✅ 필터 제거 - 가족 전체 사진 로드 (uploader_id 필터 제거)
-      const { data: photos, error } = await supabase
+      // 그룹 필터링: 현재 그룹의 멤버들이 업로드한 사진만 로드
+      let query = supabase
         .from('memory_vault')
         .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption')
         .order('created_at', { ascending: false })
-        .limit(100); // ✅ limit 추가
+        .limit(100);
+
+      // 현재 그룹이 있으면 그룹 멤버 필터링
+      if (currentGroupId) {
+        // 현재 그룹의 멤버 ID 목록 가져오기
+        const { data: memberships } = await supabase
+          .from('memberships')
+          .select('user_id')
+          .eq('group_id', currentGroupId);
+
+        if (memberships && memberships.length > 0) {
+          const memberIds = memberships.map(m => m.user_id);
+          // 그룹 소유자도 포함
+          const { data: group } = await supabase
+            .from('groups')
+            .select('owner_id')
+            .eq('id', currentGroupId)
+            .single();
+
+          if (group?.owner_id && !memberIds.includes(group.owner_id)) {
+            memberIds.push(group.owner_id);
+          }
+
+          query = query.in('uploader_id', memberIds);
+        } else {
+          // 멤버가 없으면 빈 배열 반환
+          return [];
+        }
+      }
+
+      const { data: photos, error } = await query;
 
       if (error) {
         // 에러 객체를 더 자세히 로깅
@@ -304,9 +336,11 @@ export default function FamilyHub() {
         stack: error?.stack,
         name: error?.name,
         userId: userId,
+        currentGroupId,
       });
       return [];
     }
+  }, [userId, currentGroupId]);
   }, []);
 
   const loadData = useCallback(async (key: string, userId: string) => {

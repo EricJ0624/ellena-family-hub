@@ -6,6 +6,7 @@ import {
   downloadFromS3,
   getSupabaseServerClient
 } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
       mimeType,
       originalSize,
       resizedData, // 리사이징된 이미지 (Base64, 선택적)
+      groupId, // 그룹 ID (선택적, 있으면 권한 검증)
     } = body;
 
     if (!s3Key || !s3Url || !fileName || !mimeType) {
@@ -31,6 +33,23 @@ export async function POST(request: NextRequest) {
         { error: '필수 파라미터가 누락되었습니다.' },
         { status: 400 }
       );
+    }
+
+    // 그룹 권한 검증 (groupId가 제공된 경우)
+    if (groupId) {
+      const permissionResult = await checkPermission(
+        user.id,
+        groupId,
+        null, // MEMBER 이상 권한 필요
+        user.id
+      );
+
+      if (!permissionResult.success) {
+        return NextResponse.json(
+          { error: '그룹 접근 권한이 없습니다.' },
+          { status: 403 }
+        );
+      }
     }
 
     // 1. Cloudinary에 리사이징된 이미지 업로드 (표시용)

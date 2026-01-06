@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, ChevronDown, Loader2, Plus, UserPlus, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, ChevronDown, Loader2, Plus, UserPlus, X, AlertCircle, CheckCircle, Copy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 
@@ -437,8 +437,23 @@ const GroupSelector: React.FC = () => {
                   aria-selected={currentGroupId === group.id}
                 >
                   <div className="font-medium">{group.name}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {group.invite_code}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-500 font-mono">
+                      {group.invite_code}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(group.invite_code).then(() => {
+                          // 간단한 피드백 (선택사항)
+                        }).catch(console.error);
+                      }}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      aria-label="초대 코드 복사"
+                      title="초대 코드 복사"
+                    >
+                      <Copy className="w-3 h-3 text-gray-400" />
+                    </button>
                   </div>
                 </button>
               ))}

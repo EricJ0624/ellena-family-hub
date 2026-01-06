@@ -6,6 +6,7 @@ import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle } from 'lu
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import type { MembershipRole } from '@/types/db';
+import GroupSettings from './GroupSettings';
 
 interface MemberInfo {
   user_id: string;
@@ -28,6 +29,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [showConfirmRemove, setShowConfirmRemove] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showGroupSettings, setShowGroupSettings] = useState<boolean>(false);
 
   const isAdmin = userRole === 'ADMIN' || isOwner;
 
@@ -376,6 +378,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       {isAdmin && (
         <div className="mt-6 flex gap-3">
           <button
+            onClick={() => setShowGroupSettings(true)}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
             aria-label="그룹 설정"
           >
@@ -384,6 +387,30 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
           </button>
         </div>
       )}
+
+      {/* 그룹 설정 모달 */}
+      <AnimatePresence>
+        {showGroupSettings && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setShowGroupSettings(false)}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <GroupSettings onClose={() => setShowGroupSettings(false)} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

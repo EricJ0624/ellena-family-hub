@@ -9,6 +9,7 @@ import {
   generateS3Url,
   getSupabaseServerClient
 } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 // Next.js App Router: 큰 파일 업로드를 위한 설정
 // ⚠️ 중요: Vercel에서는 최대 4.5MB 제한이 있습니다.
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       fileName,
       mimeType,
       originalSize,
+      groupId, // 그룹 ID (선택적, 있으면 권한 검증)
     } = body;
 
     if (!originalData || !fileName || !mimeType) {
@@ -89,6 +91,23 @@ export async function POST(request: NextRequest) {
         { error: '필수 파라미터가 누락되었습니다.' },
         { status: 400 }
       );
+    }
+
+    // 그룹 권한 검증 (groupId가 제공된 경우)
+    if (groupId) {
+      const permissionResult = await checkPermission(
+        user.id,
+        groupId,
+        null, // MEMBER 이상 권한 필요
+        user.id
+      );
+
+      if (!permissionResult.success) {
+        return NextResponse.json(
+          { error: '그룹 접근 권한이 없습니다.' },
+          { status: 403 }
+        );
+      }
     }
 
     // Base64 데이터 크기 체크
