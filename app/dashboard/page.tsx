@@ -5334,6 +5334,56 @@ export default function FamilyHub() {
     }
   };
 
+  // 회원탈퇴 Handler
+  const handleDeleteAccount = async () => {
+    // 이중 확인
+    const firstConfirm = confirm('⚠️ 정말로 회원탈퇴를 하시겠습니까?\n\n탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.');
+    if (!firstConfirm) return;
+
+    const secondConfirm = confirm('⚠️ 최종 확인\n\n회원탈퇴를 진행하시겠습니까?');
+    if (!secondConfirm) return;
+
+    try {
+      // 인증 토큰 가져오기
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('인증 정보를 가져올 수 없습니다. 다시 로그인해주세요.');
+        return;
+      }
+
+      // 회원탈퇴 API 호출
+      const response = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '회원탈퇴에 실패했습니다.');
+      }
+
+      // 성공 시 모든 데이터 정리 및 로그아웃
+      alert('회원탈퇴가 완료되었습니다.');
+      
+      // 모든 localStorage 및 sessionStorage 데이터 정리
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Supabase 세션 종료
+      await supabase.auth.signOut();
+      
+      // 로그인 페이지로 리다이렉트
+      router.push('/');
+    } catch (error: any) {
+      console.error('회원탈퇴 오류:', error);
+      alert(error.message || '회원탈퇴 처리 중 오류가 발생했습니다.');
+    }
+  };
+
   // Logout Handler
   const handleLogout = async () => {
     if (confirm('로그아웃 하시겠습니까?')) {
@@ -6924,6 +6974,33 @@ export default function FamilyHub() {
               }}
             >
               로그아웃
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              style={{
+                marginLeft: '8px',
+                padding: '8px 16px',
+                backgroundColor: 'rgba(139, 69, 19, 0.1)',
+                color: '#8b4513',
+                border: '1px solid rgba(139, 69, 19, 0.3)',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.2)';
+                e.currentTarget.style.borderColor = 'rgba(139, 69, 19, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(139, 69, 19, 0.3)';
+              }}
+              aria-label="회원탈퇴"
+            >
+              회원탈퇴
             </button>
           </div>
         </header>
