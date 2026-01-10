@@ -204,43 +204,63 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 사용자 목록 로드
+  // 사용자 목록 로드 (시스템 관리자용: auth.users에서 모든 사용자 조회)
   const loadUsers = useCallback(async () => {
     try {
       setLoadingData(true);
       setError(null);
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, nickname, created_at')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      // 현재 사용자 인증 토큰 가져오기
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
 
-      if (profilesError) throw profilesError;
+      // API 호출: 모든 사용자 목록 조회 (auth.users에서 직접 조회)
+      const response = await fetch('/api/admin/users/list', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // 각 사용자의 그룹 수 계산
-      const usersWithGroups: UserInfo[] = await Promise.all(
-        (profilesData || []).map(async (profile) => {
-          const { count } = await supabase
-            .from('memberships')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.id);
+      const result = await response.json();
 
-          return {
-            id: profile.id,
-            email: profile.email,
-            nickname: profile.nickname,
-            created_at: profile.created_at || new Date().toISOString(),
-            groups_count: count || 0,
-            is_active: true,
-          };
-        })
-      );
+      if (!response.ok) {
+        throw new Error(result.error || '사용자 목록 조회에 실패했습니다.');
+      }
+
+      if (!result.success || !result.data) {
+        setUsers([]);
+        setLoadingData(false);
+        return;
+      }
+
+      // UserInfo 형식으로 변환
+      const usersWithGroups: UserInfo[] = result.data.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        created_at: user.created_at || new Date().toISOString(),
+        groups_count: user.groups_count || 0,
+        is_active: user.is_active !== false,
+      }));
+
+      // 최신 가입일 기준으로 정렬
+      usersWithGroups.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
 
       setUsers(usersWithGroups);
     } catch (err: any) {
       console.error('사용자 목록 로드 오류:', err);
       setError(err.message || '사용자 목록을 불러오는데 실패했습니다.');
+      setUsers([]);
     } finally {
       setLoadingData(false);
     }
