@@ -72,8 +72,37 @@ export default function LoginPage() {
           console.log('Login successful, session:', !!session);
         }
         
-        if (session) {
-          router.push('/dashboard');
+        if (session && session.user) {
+          // 시스템 관리자는 바로 대시보드로
+          const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+            user_id_param: session.user.id,
+          });
+
+          if (isAdmin) {
+            router.push('/dashboard');
+            return;
+          }
+
+          // 그룹이 있는지 확인
+          const { data: memberships } = await supabase
+            .from('memberships')
+            .select('group_id')
+            .eq('user_id', session.user.id)
+            .limit(1);
+
+          // 그룹 소유자 확인
+          const { data: ownedGroups } = await supabase
+            .from('groups')
+            .select('id')
+            .eq('owner_id', session.user.id)
+            .limit(1);
+
+          // 그룹이 없으면 온보딩으로, 있으면 대시보드로
+          if ((!memberships || memberships.length === 0) && (!ownedGroups || ownedGroups.length === 0)) {
+            router.push('/onboarding');
+          } else {
+            router.push('/dashboard');
+          }
         } else {
           setErrorMsg('세션 저장에 실패했습니다. 다시 시도해주세요.');
         }
@@ -143,16 +172,26 @@ export default function LoginPage() {
           // 가입은 성공했으므로 계속 진행
         }
 
-        setSuccessMsg('가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)');
-        // 3초 후 로그인 모드로 전환
-        setTimeout(() => {
-          setMode('login');
-          setEmail('');
-          setPassword('');
-          setConfirmPassword('');
-          setNickname('');
-          setSuccessMsg('');
-        }, 3000);
+        // 세션이 저장되도록 약간의 지연 후 온보딩 페이지로 리다이렉트
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 세션 확인
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // 온보딩 페이지로 리다이렉트
+          router.push('/onboarding');
+        } else {
+          setSuccessMsg('가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)');
+          // 3초 후 로그인 모드로 전환
+          setTimeout(() => {
+            setMode('login');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setNickname('');
+            setSuccessMsg('');
+          }, 3000);
+        }
       }
     } catch (error: any) {
       // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지

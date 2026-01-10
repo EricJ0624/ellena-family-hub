@@ -570,6 +570,33 @@ export default function FamilyHub() {
           || 'ellena_family'; // 기본 family_id
         setFamilyId(userFamilyId);
         
+        // 시스템 관리자 확인 (온보딩 건너뛰기)
+        const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+          user_id_param: currentUserId,
+        });
+
+        // 그룹 확인 (시스템 관리자가 아닌 경우에만)
+        if (!isAdmin) {
+          const { data: memberships } = await supabase
+            .from('memberships')
+            .select('group_id')
+            .eq('user_id', currentUserId)
+            .limit(1);
+
+          // 그룹 소유자 확인
+          const { data: ownedGroups } = await supabase
+            .from('groups')
+            .select('id')
+            .eq('owner_id', currentUserId)
+            .limit(1);
+
+          // 그룹이 없으면 온보딩으로 리다이렉트
+          if ((!memberships || memberships.length === 0) && (!ownedGroups || ownedGroups.length === 0)) {
+            router.push('/onboarding');
+            return;
+          }
+        }
+
         // 사용자 이름 가져오기 (profiles 테이블의 nickname 우선, 없으면 user_metadata)
         if (session.user) {
           // 먼저 profiles 테이블에서 nickname 조회
