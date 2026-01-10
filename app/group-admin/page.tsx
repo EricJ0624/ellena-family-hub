@@ -131,6 +131,13 @@ export default function GroupAdminPage() {
       setLoadingData(true);
       setError(null);
 
+      // 그룹 정보 가져오기 (소유자 ID 확인용)
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', currentGroupId)
+        .single();
+
       // 그룹 멤버 수
       const { count: memberCount } = await supabase
         .from('memberships')
@@ -149,15 +156,15 @@ export default function GroupAdminPage() {
       const memberIds = membersData?.map(m => m.user_id) || [];
       
       // 그룹 소유자 추가
-      if (currentGroup?.owner_id && !memberIds.includes(currentGroup.owner_id)) {
-        memberIds.push(currentGroup.owner_id);
+      if (groupData?.owner_id && !memberIds.includes(groupData.owner_id)) {
+        memberIds.push(groupData.owner_id);
       }
 
       // 그룹 사진 수
       const { count: photoCount } = await supabase
         .from('memory_vault')
         .select('*', { count: 'exact', head: true })
-        .in('uploader_id', memberIds);
+        .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000']);
 
       // 최근 7일 사진 수
       const sevenDaysAgo = new Date();
@@ -165,14 +172,14 @@ export default function GroupAdminPage() {
       const { count: recentPhotoCount } = await supabase
         .from('memory_vault')
         .select('*', { count: 'exact', head: true })
-        .in('uploader_id', memberIds)
+        .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000'])
         .gte('created_at', sevenDaysAgo.toISOString());
 
       // 위치 데이터 수
       const { count: locationCount } = await supabase
         .from('user_locations')
         .select('*', { count: 'exact', head: true })
-        .in('user_id', memberIds);
+        .in('user_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000']);
 
       setStats({
         totalMembers,
@@ -186,7 +193,7 @@ export default function GroupAdminPage() {
     } finally {
       setLoadingData(false);
     }
-  }, [currentGroupId, currentGroup]);
+  }, [currentGroupId]);
 
   // 사진 목록 로드
   const loadPhotos = useCallback(async () => {
@@ -196,6 +203,13 @@ export default function GroupAdminPage() {
       setLoadingData(true);
       setError(null);
 
+      // 그룹 정보 가져오기 (소유자 ID 확인용)
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', currentGroupId)
+        .single();
+
       // 그룹 멤버 ID 목록
       const { data: membersData } = await supabase
         .from('memberships')
@@ -204,12 +218,13 @@ export default function GroupAdminPage() {
 
       const memberIds = membersData?.map(m => m.user_id) || [];
       
-      if (currentGroup?.owner_id && !memberIds.includes(currentGroup.owner_id)) {
-        memberIds.push(currentGroup.owner_id);
+      if (groupData?.owner_id && !memberIds.includes(groupData.owner_id)) {
+        memberIds.push(groupData.owner_id);
       }
 
       if (memberIds.length === 0) {
         setPhotos([]);
+        setLoadingData(false);
         return;
       }
 
@@ -229,7 +244,7 @@ export default function GroupAdminPage() {
     } finally {
       setLoadingData(false);
     }
-  }, [currentGroupId, currentGroup]);
+  }, [currentGroupId]);
 
   // 위치 데이터 로드
   const loadLocations = useCallback(async () => {
@@ -239,6 +254,13 @@ export default function GroupAdminPage() {
       setLoadingData(true);
       setError(null);
 
+      // 그룹 정보 가져오기 (소유자 ID 확인용)
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', currentGroupId)
+        .single();
+
       // 그룹 멤버 ID 목록
       const { data: membersData } = await supabase
         .from('memberships')
@@ -247,12 +269,13 @@ export default function GroupAdminPage() {
 
       const memberIds = membersData?.map(m => m.user_id) || [];
       
-      if (currentGroup?.owner_id && !memberIds.includes(currentGroup.owner_id)) {
-        memberIds.push(currentGroup.owner_id);
+      if (groupData?.owner_id && !memberIds.includes(groupData.owner_id)) {
+        memberIds.push(groupData.owner_id);
       }
 
       if (memberIds.length === 0) {
         setLocations([]);
+        setLoadingData(false);
         return;
       }
 
@@ -286,7 +309,7 @@ export default function GroupAdminPage() {
     } finally {
       setLoadingData(false);
     }
-  }, [currentGroupId, currentGroup]);
+  }, [currentGroupId]);
 
   // 탭 변경 시 데이터 로드
   useEffect(() => {
@@ -298,7 +321,8 @@ export default function GroupAdminPage() {
       loadPhotos();
       loadLocations();
     }
-  }, [activeTab, isAuthorized, currentGroupId, loadStats, loadPhotos, loadLocations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, isAuthorized, currentGroupId]);
 
   // 사진 삭제
   const handleDeletePhoto = async (photoId: string) => {
