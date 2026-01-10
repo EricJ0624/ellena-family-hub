@@ -670,6 +670,7 @@ export default function AdminPage() {
     }
 
     try {
+      setLoadingData(true);
       const { error } = await supabase
         .from('memory_vault')
         .delete()
@@ -678,13 +679,15 @@ export default function AdminPage() {
       if (error) throw error;
 
       alert('사진이 삭제되었습니다.');
-      if (selectedGroup) {
-        loadGroupPhotos(selectedGroup.id);
-        loadGroupStats(selectedGroup.id);
+      if (selectedGroupId) {
+        loadGroupPhotos(selectedGroupId);
+        loadGroupStats(selectedGroupId);
       }
     } catch (err: any) {
       console.error('사진 삭제 오류:', err);
       alert(err.message || '사진 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingData(false);
     }
   };
 
@@ -1441,6 +1444,663 @@ export default function AdminPage() {
                   }}>
                     <Settings style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
                     <p>그룹이 없습니다.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 그룹 관리 탭 (시스템 관리자가 그룹을 관리하는 탭) */}
+            {activeTab === 'group-admin' && selectedGroup && (
+              <div>
+                {/* 그룹 선택 드롭다운 */}
+                <div style={{
+                  marginBottom: '24px',
+                  padding: '16px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    marginBottom: '8px',
+                  }}>
+                    관리할 그룹 선택
+                  </label>
+                  <select
+                    value={selectedGroupId || ''}
+                    onChange={async (e) => {
+                      const groupId = e.target.value;
+                      setSelectedGroupId(groupId || null);
+                      setGroupAdminTab('dashboard');
+                      if (groupId) {
+                        await loadSelectedGroup(groupId);
+                      } else {
+                        setSelectedGroup(null);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">그룹을 선택하세요</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name} ({group.member_count}명)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedGroup && (
+                  <>
+                    {/* 그룹 관리 서브 탭 */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      borderBottom: '2px solid #e2e8f0',
+                      marginBottom: '24px',
+                    }}>
+                      <button
+                        onClick={() => setGroupAdminTab('dashboard')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'dashboard' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'dashboard' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'dashboard' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <BarChart3 style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        대시보드
+                      </button>
+                      <button
+                        onClick={() => setGroupAdminTab('members')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'members' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'members' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'members' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <Users style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        멤버 관리
+                      </button>
+                      <button
+                        onClick={() => setGroupAdminTab('settings')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'settings' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'settings' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'settings' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <Settings style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        그룹 설정
+                      </button>
+                      <button
+                        onClick={() => setGroupAdminTab('content')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'content' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'content' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'content' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <ImageIcon style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        콘텐츠 관리
+                      </button>
+                    </div>
+
+                    {/* 대시보드 서브 탭 */}
+                    {groupAdminTab === 'dashboard' && groupStats && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          그룹 통계
+                        </h2>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '16px',
+                        }}>
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{
+                              padding: '24px',
+                              backgroundColor: '#f0f9ff',
+                              borderRadius: '12px',
+                              border: '1px solid #bae6fd',
+                            }}
+                          >
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#0369a1',
+                              fontWeight: '500',
+                              marginBottom: '8px',
+                            }}>
+                              전체 멤버
+                            </div>
+                            <div style={{
+                              fontSize: '32px',
+                              fontWeight: '700',
+                              color: '#0c4a6e',
+                            }}>
+                              {groupStats.totalMembers.toLocaleString()}
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            style={{
+                              padding: '24px',
+                              backgroundColor: '#fef3c7',
+                              borderRadius: '12px',
+                              border: '1px solid #fde68a',
+                            }}
+                          >
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#92400e',
+                              fontWeight: '500',
+                              marginBottom: '8px',
+                            }}>
+                              전체 사진
+                            </div>
+                            <div style={{
+                              fontSize: '32px',
+                              fontWeight: '700',
+                              color: '#78350f',
+                            }}>
+                              {groupStats.totalPhotos.toLocaleString()}
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            style={{
+                              padding: '24px',
+                              backgroundColor: '#f3e8ff',
+                              borderRadius: '12px',
+                              border: '1px solid #d8b4fe',
+                            }}
+                          >
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6b21a8',
+                              fontWeight: '500',
+                              marginBottom: '8px',
+                            }}>
+                              최근 7일 사진
+                            </div>
+                            <div style={{
+                              fontSize: '32px',
+                              fontWeight: '700',
+                              color: '#581c87',
+                            }}>
+                              {groupStats.recentPhotos.toLocaleString()}
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            style={{
+                              padding: '24px',
+                              backgroundColor: '#fce7f3',
+                              borderRadius: '12px',
+                              border: '1px solid #fbcfe8',
+                            }}
+                          >
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#9f1239',
+                              fontWeight: '500',
+                              marginBottom: '8px',
+                            }}>
+                              위치 데이터
+                            </div>
+                            <div style={{
+                              fontSize: '32px',
+                              fontWeight: '700',
+                              color: '#831843',
+                            }}>
+                              {groupStats.totalLocations.toLocaleString()}
+                            </div>
+                          </motion.div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 멤버 관리 서브 탭 */}
+                    {groupAdminTab === 'members' && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          멤버 관리 ({groupMembers.length}명)
+                        </h2>
+                        <div style={{
+                          overflowX: 'auto',
+                        }}>
+                          <table style={{
+                            width: '100%',
+                            borderCollapse: 'collapse',
+                          }}>
+                            <thead>
+                              <tr style={{
+                                backgroundColor: '#f8fafc',
+                                borderBottom: '2px solid #e2e8f0',
+                              }}>
+                                <th style={{
+                                  padding: '12px',
+                                  textAlign: 'left',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: '#475569',
+                                }}>
+                                  이메일
+                                </th>
+                                <th style={{
+                                  padding: '12px',
+                                  textAlign: 'left',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: '#475569',
+                                }}>
+                                  닉네임
+                                </th>
+                                <th style={{
+                                  padding: '12px',
+                                  textAlign: 'left',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: '#475569',
+                                }}>
+                                  역할
+                                </th>
+                                <th style={{
+                                  padding: '12px',
+                                  textAlign: 'left',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: '#475569',
+                                }}>
+                                  가입일
+                                </th>
+                                <th style={{
+                                  padding: '12px',
+                                  textAlign: 'right',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  color: '#475569',
+                                }}>
+                                  액션
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {groupMembers.map((member, index) => (
+                                <motion.tr
+                                  key={member.user_id}
+                                  initial={{ opacity: 0, x: -20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.05 }}
+                                  style={{
+                                    borderBottom: '1px solid #e2e8f0',
+                                    transition: 'background-color 0.2s',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }}
+                                >
+                                  <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                                    {member.email || '-'}
+                                  </td>
+                                  <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                                    {member.nickname || '-'}
+                                  </td>
+                                  <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
+                                    <span style={{
+                                      padding: '4px 8px',
+                                      backgroundColor: member.role === 'ADMIN' || selectedGroup.owner_id === member.user_id ? '#dbeafe' : '#f3f4f6',
+                                      color: member.role === 'ADMIN' || selectedGroup.owner_id === member.user_id ? '#1e40af' : '#374151',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                    }}>
+                                      {selectedGroup.owner_id === member.user_id ? '소유자' : (member.role === 'ADMIN' ? '관리자' : '멤버')}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
+                                    {new Date(member.joined_at).toLocaleDateString('ko-KR')}
+                                  </td>
+                                  <td style={{ padding: '12px', textAlign: 'right' }}>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                      {selectedGroup.owner_id !== member.user_id && (
+                                        <button
+                                          style={{
+                                            padding: '6px 12px',
+                                            backgroundColor: '#fee2e2',
+                                            color: '#991b1b',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            transition: 'all 0.2s',
+                                          }}
+                                          onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#fecaca';
+                                          }}
+                                          onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#fee2e2';
+                                          }}
+                                          onClick={async () => {
+                                            if (!confirm(`정말로 ${member.email || member.nickname || '이 멤버'}를 "${selectedGroup.name}" 그룹에서 추방하시겠습니까?`)) {
+                                              return;
+                                            }
+
+                                            try {
+                                              setLoadingData(true);
+                                              const { error } = await supabase
+                                                .from('memberships')
+                                                .delete()
+                                                .eq('user_id', member.user_id)
+                                                .eq('group_id', selectedGroupId!);
+
+                                              if (error) throw error;
+
+                                              alert('멤버가 그룹에서 추방되었습니다.');
+                                              if (selectedGroupId) {
+                                                loadGroupMembers(selectedGroupId);
+                                                loadGroupStats(selectedGroupId);
+                                              }
+                                            } catch (err: any) {
+                                              console.error('멤버 추방 오류:', err);
+                                              alert(err.message || '멤버 추방 중 오류가 발생했습니다.');
+                                            } finally {
+                                              setLoadingData(false);
+                                            }
+                                          }}
+                                        >
+                                          <UserX style={{ width: '14px', height: '14px' }} />
+                                          추방
+                                        </button>
+                                      )}
+                                      <button
+                                        style={{
+                                          padding: '6px 12px',
+                                          backgroundColor: '#dc2626',
+                                          color: 'white',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          fontSize: '12px',
+                                          fontWeight: '600',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.backgroundColor = '#b91c1c';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.backgroundColor = '#dc2626';
+                                        }}
+                                        onClick={async () => {
+                                          // 현재 로그인한 사용자 확인
+                                          const { data: { user: currentUser } } = await supabase.auth.getUser();
+                                          
+                                          // 시스템 관리자 본인은 삭제 불가
+                                          if (currentUser?.id === member.user_id) {
+                                            alert('본인의 계정은 삭제할 수 없습니다.');
+                                            return;
+                                          }
+
+                                          const userDisplayName = member.email || member.nickname || '이 사용자';
+                                          const confirmMessage = `정말로 "${userDisplayName}" 회원을 강제 탈퇴 처리하시겠습니까?\n\n⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n- 사용자 계정이 영구적으로 삭제됩니다.\n- 관련된 모든 데이터가 삭제됩니다.\n- 모든 그룹에서 자동으로 제거됩니다.`;
+                                          
+                                          if (!confirm(confirmMessage)) {
+                                            return;
+                                          }
+
+                                          try {
+                                            setLoadingData(true);
+                                            const { data: { session } } = await supabase.auth.getSession();
+                                            if (!session?.access_token) {
+                                              alert('인증 정보를 가져올 수 없습니다.');
+                                              return;
+                                            }
+
+                                            const response = await fetch('/api/admin/users/delete', {
+                                              method: 'DELETE',
+                                              headers: {
+                                                'Authorization': `Bearer ${session.access_token}`,
+                                                'Content-Type': 'application/json',
+                                              },
+                                              body: JSON.stringify({ userId: member.user_id }),
+                                            });
+
+                                            const result = await response.json();
+
+                                            if (!response.ok) {
+                                              throw new Error(result.error || '회원 강제 탈퇴에 실패했습니다.');
+                                            }
+
+                                            alert(`"${userDisplayName}" 회원이 강제 탈퇴 처리되었습니다.`);
+                                            if (selectedGroupId) {
+                                              loadGroupMembers(selectedGroupId);
+                                              loadGroupStats(selectedGroupId);
+                                            }
+                                          } catch (error: any) {
+                                            console.error('회원 강제 탈퇴 오류:', error);
+                                            alert(error.message || '회원 강제 탈퇴 중 오류가 발생했습니다.');
+                                          } finally {
+                                            setLoadingData(false);
+                                          }
+                                        }}
+                                      >
+                                        <UserX style={{ width: '14px', height: '14px' }} />
+                                        회원 강제 탈퇴
+                                      </button>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {groupMembers.length === 0 && (
+                            <div style={{
+                              padding: '48px',
+                              textAlign: 'center',
+                              color: '#94a3b8',
+                            }}>
+                              <Users style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                              <p>멤버가 없습니다.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 그룹 설정 서브 탭 */}
+                    {groupAdminTab === 'settings' && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          그룹 설정
+                        </h2>
+                        <div style={{
+                          padding: '24px',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                        }}>
+                          <p style={{ color: '#64748b', fontSize: '14px' }}>
+                            그룹 설정 기능은 곧 추가될 예정입니다.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 콘텐츠 관리 서브 탭 */}
+                    {groupAdminTab === 'content' && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          콘텐츠 관리
+                        </h2>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                          gap: '16px',
+                          marginBottom: '24px',
+                        }}>
+                          {groupPhotos.slice(0, 20).map((photo, index) => (
+                            <motion.div
+                              key={photo.id}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: index * 0.05 }}
+                              style={{
+                                position: 'relative',
+                                aspectRatio: '1',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '1px solid #e2e8f0',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => {
+                                const url = photo.s3_original_url || photo.cloudinary_url || photo.image_url;
+                                if (url) window.open(url, '_blank');
+                              }}
+                            >
+                              {photo.s3_original_url || photo.cloudinary_url || photo.image_url ? (
+                                <img
+                                  src={photo.s3_original_url || photo.cloudinary_url || photo.image_url || ''}
+                                  alt={photo.original_filename || '사진'}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                  }}
+                                />
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  backgroundColor: '#f1f5f9',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}>
+                                  <ImageIcon style={{ width: '32px', height: '32px', color: '#94a3b8' }} />
+                                </div>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePhoto(photo.id);
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '8px',
+                                  right: '8px',
+                                  padding: '6px',
+                                  backgroundColor: 'rgba(220, 38, 38, 0.9)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Trash2 style={{ width: '14px', height: '14px' }} />
+                              </button>
+                            </motion.div>
+                          ))}
+                        </div>
+                        {groupPhotos.length === 0 && (
+                          <div style={{
+                            padding: '48px',
+                            textAlign: 'center',
+                            color: '#94a3b8',
+                          }}>
+                            <ImageIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                            <p>사진이 없습니다.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {!selectedGroup && (
+                  <div style={{
+                    padding: '48px',
+                    textAlign: 'center',
+                    color: '#94a3b8',
+                  }}>
+                    <Shield style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <p>관리할 그룹을 선택해주세요.</p>
                   </div>
                 )}
               </div>
