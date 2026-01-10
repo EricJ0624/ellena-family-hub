@@ -1,8 +1,9 @@
--- memberships 테이블 RLS 정책 무한 재귀 문제 수정 (최적화 버전)
+-- groups 및 memberships 테이블 RLS 정책 무한 재귀 문제 완전 수정
 -- Supabase SQL Editor에서 실행하세요
+-- fix_memberships_rls_recursion_v2.sql과 fix_groups_rls_recursion.sql을 통합한 버전
 
 -- ============================================
--- 1. 재귀 방지를 위한 헬퍼 함수 생성
+-- 1. 재귀 방지를 위한 헬퍼 함수 생성 (memberships용)
 -- ============================================
 
 -- 사용자가 특정 그룹의 멤버인지 확인하는 함수 (재귀 방지)
@@ -59,7 +60,16 @@ END;
 $$;
 
 -- ============================================
--- 2. 기존 정책 삭제
+-- 2. groups 테이블 기존 정책 삭제
+-- ============================================
+
+DROP POLICY IF EXISTS "그룹 읽기 - 멤버만" ON public.groups;
+DROP POLICY IF EXISTS "그룹 작성 - 인증된 사용자" ON public.groups;
+DROP POLICY IF EXISTS "그룹 수정 - ADMIN만" ON public.groups;
+DROP POLICY IF EXISTS "그룹 삭제 - 소유자만" ON public.groups;
+
+-- ============================================
+-- 3. memberships 테이블 기존 정책 삭제
 -- ============================================
 
 DROP POLICY IF EXISTS "멤버십 읽기 - 그룹 멤버만" ON public.memberships;
@@ -68,7 +78,70 @@ DROP POLICY IF EXISTS "멤버십 수정 - ADMIN만" ON public.memberships;
 DROP POLICY IF EXISTS "멤버십 삭제 - ADMIN 또는 본인" ON public.memberships;
 
 -- ============================================
--- 3. 수정된 memberships 보안 규칙 (RLS) - 재귀 완전 방지
+-- 4. 수정된 groups 보안 규칙 (RLS) - 재귀 완전 방지
+-- ============================================
+
+-- 읽기: 자신이 속한 그룹의 데이터만 조회 가능
+-- 재귀 방지: SECURITY DEFINER 함수 사용 또는 groups.owner_id 직접 확인
+CREATE POLICY "그룹 읽기 - 멤버만" ON public.groups
+  FOR SELECT
+  USING (
+    -- 시스템 관리자는 모든 그룹 조회 가능
+    public.is_system_admin(auth.uid())
+    OR
+    -- 그룹 소유자는 자신의 그룹 조회 가능 (재귀 없음)
+    auth.uid() = groups.owner_id
+    OR
+    -- 멤버인 경우: SECURITY DEFINER 함수 사용 (재귀 방지)
+    public.is_group_member(groups.id, auth.uid())
+  );
+
+-- 작성: 인증된 사용자는 누구나 그룹 생성 가능 (생성자는 자동으로 ADMIN으로 추가됨)
+CREATE POLICY "그룹 작성 - 인증된 사용자" ON public.groups
+  FOR INSERT
+  WITH CHECK (
+    auth.role() = 'authenticated' AND
+    auth.uid() = owner_id
+  );
+
+-- 수정: ADMIN 권한을 가진 사용자만 그룹 정보 수정 가능
+-- 재귀 방지: SECURITY DEFINER 함수 사용
+CREATE POLICY "그룹 수정 - ADMIN만" ON public.groups
+  FOR UPDATE
+  USING (
+    -- 시스템 관리자는 모든 그룹 수정 가능
+    public.is_system_admin(auth.uid())
+    OR
+    -- 그룹 소유자는 그룹 정보 수정 가능 (재귀 없음)
+    auth.uid() = groups.owner_id
+    OR
+    -- ADMIN 권한을 가진 사용자만 수정 가능 (SECURITY DEFINER 함수 사용)
+    public.is_group_admin(groups.id, auth.uid())
+  )
+  WITH CHECK (
+    -- 시스템 관리자는 모든 그룹 수정 가능
+    public.is_system_admin(auth.uid())
+    OR
+    -- 그룹 소유자는 그룹 정보 수정 가능 (재귀 없음)
+    auth.uid() = groups.owner_id
+    OR
+    -- ADMIN 권한을 가진 사용자만 수정 가능 (SECURITY DEFINER 함수 사용)
+    public.is_group_admin(groups.id, auth.uid())
+  );
+
+-- 삭제: 그룹 소유자(owner)만 그룹 삭제 가능
+CREATE POLICY "그룹 삭제 - 소유자만" ON public.groups
+  FOR DELETE
+  USING (
+    -- 시스템 관리자는 모든 그룹 삭제 가능
+    public.is_system_admin(auth.uid())
+    OR
+    -- 그룹 소유자만 삭제 가능 (재귀 없음)
+    auth.uid() = groups.owner_id
+  );
+
+-- ============================================
+-- 5. 수정된 memberships 보안 규칙 (RLS) - 재귀 완전 방지
 -- ============================================
 
 -- 읽기: 자신이 속한 그룹의 멤버십 정보만 조회 가능
@@ -194,8 +267,8 @@ CREATE POLICY "멤버십 삭제 - ADMIN 또는 본인" ON public.memberships
 
 DO $$
 BEGIN
-  RAISE NOTICE 'memberships 테이블 RLS 정책이 재귀 완전 방지 버전으로 업데이트되었습니다!';
+  RAISE NOTICE 'groups 및 memberships 테이블 RLS 정책이 재귀 완전 방지 버전으로 업데이트되었습니다!';
   RAISE NOTICE 'SECURITY DEFINER 함수를 사용하여 재귀를 완전히 방지했습니다.';
-  RAISE NOTICE '시스템 관리자는 이제 모든 멤버십을 조회할 수 있습니다.';
+  RAISE NOTICE '시스템 관리자는 이제 모든 그룹과 멤버십을 조회할 수 있습니다.';
 END $$;
 

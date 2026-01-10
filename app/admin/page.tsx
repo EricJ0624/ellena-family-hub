@@ -243,37 +243,83 @@ export default function AdminPage() {
       setLoadingData(true);
       setError(null);
 
+      // 시스템 관리자 권한 확인
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('인증 정보를 가져올 수 없습니다.');
+        setLoadingData(false);
+        return;
+      }
+
+      const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_system_admin', {
+        user_id_param: user.id,
+      });
+
+      if (adminCheckError) {
+        console.error('시스템 관리자 확인 오류:', adminCheckError);
+      }
+
+      // 시스템 관리자인 경우 모든 그룹 조회
       const { data: groupsData, error: groupsError } = await supabase
         .from('groups')
         .select('id, name, owner_id, created_at')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (groupsError) throw groupsError;
+      if (groupsError) {
+        console.error('그룹 조회 오류:', groupsError);
+        throw groupsError;
+      }
+
+      if (!groupsData || groupsData.length === 0) {
+        setGroups([]);
+        setLoadingData(false);
+        return;
+      }
 
       // 각 그룹의 소유자 이메일과 멤버 수 계산
       const groupsWithDetails: GroupInfo[] = await Promise.all(
-        (groupsData || []).map(async (group) => {
-          // 소유자 이메일
-          const { data: ownerData } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', group.owner_id)
-            .single();
+        groupsData.map(async (group) => {
+          try {
+            // 소유자 이메일
+            const { data: ownerData } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', group.owner_id)
+              .single();
 
-          // 멤버 수
-          const { count } = await supabase
-            .from('memberships')
-            .select('*', { count: 'exact', head: true })
-            .eq('group_id', group.id);
+            // 멤버 수 - 에러가 발생하면 0으로 처리
+            let memberCount = 0;
+            try {
+              const { count, error: countError } = await supabase
+                .from('memberships')
+                .select('*', { count: 'exact', head: true })
+                .eq('group_id', group.id);
+              
+              if (!countError) {
+                memberCount = count || 0;
+              }
+            } catch (countErr) {
+              console.warn(`그룹 ${group.id} 멤버 수 조회 오류:`, countErr);
+            }
 
-          return {
-            id: group.id,
-            name: group.name,
-            owner_email: ownerData?.email || null,
-            member_count: (count || 0) + 1, // 소유자 포함
-            created_at: group.created_at,
-          };
+            return {
+              id: group.id,
+              name: group.name,
+              owner_email: ownerData?.email || null,
+              member_count: memberCount + 1, // 소유자 포함
+              created_at: group.created_at,
+            };
+          } catch (err: any) {
+            console.error(`그룹 ${group.id} 상세 정보 로드 오류:`, err);
+            return {
+              id: group.id,
+              name: group.name,
+              owner_email: null,
+              member_count: 1, // 최소값 (소유자만)
+              created_at: group.created_at,
+            };
+          }
         })
       );
 
@@ -281,6 +327,7 @@ export default function AdminPage() {
     } catch (err: any) {
       console.error('그룹 목록 로드 오류:', err);
       setError(err.message || '그룹 목록을 불러오는데 실패했습니다.');
+      setGroups([]);
     } finally {
       setLoadingData(false);
     }
@@ -807,10 +854,10 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => {
-              if (selectedGroupId) {
+              if (selectedGroupId || activeTab === 'group-admin') {
                 setActiveTab('group-admin');
               } else {
-                alert('그룹을 먼저 선택해주세요.');
+                alert('그룹 목록에서 그룹을 선택하고 "관리하기" 버튼을 클릭해주세요.');
               }
             }}
             style={{
@@ -818,14 +865,13 @@ export default function AdminPage() {
               backgroundColor: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'group-admin' ? '3px solid #9333ea' : '3px solid transparent',
-              color: activeTab === 'group-admin' ? '#9333ea' : '#64748b',
+              color: activeTab === 'group-admin' ? '#9333ea' : (selectedGroupId ? '#64748b' : '#94a3b8'),
               fontSize: '16px',
               fontWeight: activeTab === 'group-admin' ? '600' : '500',
-              cursor: 'pointer',
+              cursor: selectedGroupId || activeTab === 'group-admin' ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
-              opacity: selectedGroupId ? 1 : 0.5,
+              opacity: selectedGroupId || activeTab === 'group-admin' ? 1 : 0.5,
             }}
-            disabled={!selectedGroupId}
           >
             <Shield style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             그룹 관리

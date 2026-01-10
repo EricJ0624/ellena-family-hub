@@ -15,7 +15,6 @@ import {
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import GroupSelector from '@/app/components/GroupSelector';
-import MemberManagement from '@/app/components/MemberManagement';
 import { useGroup } from '@/app/contexts/GroupContext';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
@@ -243,7 +242,6 @@ export default function FamilyHub() {
   
   // 가족 이름 수정 모달 상태
   const [showRenameModal, setShowRenameModal] = useState(false);
-  const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [renameInput, setRenameInput] = useState('');
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
@@ -7058,14 +7056,6 @@ export default function FamilyHub() {
           </div>
         </header>
 
-        {/* 멤버 관리 모달 */}
-        {showMemberManagement && (
-          <div className="modal-overlay" onClick={() => setShowMemberManagement(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-              <MemberManagement onClose={() => setShowMemberManagement(false)} />
-            </div>
-          </div>
-        )}
 
         {/* Content Sections Container */}
         <div className="sections-container">
@@ -7073,19 +7063,9 @@ export default function FamilyHub() {
           <section className="content-section memory-vault">
             <div className="section-header">
               <h2 className="section-title-large">Family Memories</h2>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={() => setShowMemberManagement(true)}
-                  className="btn-upload"
-                  style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '14px', backgroundColor: '#9333ea', color: 'white', border: 'none', borderRadius: '6px' }}
-                  aria-label="멤버 관리"
-                >
-                  멤버 관리
-                </button>
-                <label htmlFor="file-upload-input" className="btn-upload" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                  Upload
-                </label>
-              </div>
+              <label htmlFor="file-upload-input" className="btn-upload" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                Upload
+              </label>
               <input 
                 id="file-upload-input"
                 type="file" 
