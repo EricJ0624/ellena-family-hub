@@ -101,6 +101,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
+  const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingData, setLoadingData] = useState(false);
@@ -117,7 +118,7 @@ export default function AdminPage() {
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
 
-  // 관리자 권한 확인
+  // 관리자 권한 확인 및 초기 데이터 로드
   useEffect(() => {
     const checkAdmin = async () => {
       try {
@@ -150,6 +151,14 @@ export default function AdminPage() {
 
     checkAdmin();
   }, [router]);
+
+  // 초기 로드 시 관리 가능한 그룹 로드
+  useEffect(() => {
+    if (isAuthorized) {
+      loadManageableGroups();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthorized]);
 
   // 통계 데이터 로드
   const loadStats = useCallback(async () => {
@@ -333,9 +342,121 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 선택된 그룹 정보 로드
+  // 시스템 관리자가 소유자이거나 ADMIN인 그룹만 조회 (관리 가능한 그룹)
+  const loadManageableGroups = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setManageableGroups([]);
+        return;
+      }
+
+      // 1. 소유자인 그룹 조회
+      const { data: ownedGroups, error: ownedError } = await supabase
+        .from('groups')
+        .select('id, name, owner_id, created_at')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (ownedError) {
+        console.error('소유 그룹 조회 오류:', ownedError);
+      }
+
+      // 2. ADMIN 역할인 그룹 조회
+      const { data: adminMemberships, error: adminError } = await supabase
+        .from('memberships')
+        .select('group_id')
+        .eq('user_id', user.id)
+        .eq('role', 'ADMIN');
+
+      if (adminError) {
+        console.error('ADMIN 멤버십 조회 오류:', adminError);
+      }
+
+      const adminGroupIds = adminMemberships?.map(m => m.group_id) || [];
+      
+      let adminGroups: any[] = [];
+      if (adminGroupIds.length > 0) {
+        const { data, error: adminGroupsError } = await supabase
+          .from('groups')
+          .select('id, name, owner_id, created_at')
+          .in('id', adminGroupIds)
+          .order('created_at', { ascending: false });
+
+        if (adminGroupsError) {
+          console.error('ADMIN 그룹 조회 오류:', adminGroupsError);
+        } else {
+          adminGroups = data || [];
+        }
+      }
+
+      // 3. 중복 제거 및 병합
+      const allManageableGroupsMap = new Map();
+      (ownedGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
+      (adminGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
+      const allManageableGroups = Array.from(allManageableGroupsMap.values());
+
+      // 4. 상세 정보 추가 (소유자 이메일, 멤버 수)
+      const groupsWithDetails: GroupInfo[] = await Promise.all(
+        allManageableGroups.map(async (group) => {
+          try {
+            const { data: ownerData } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', group.owner_id)
+              .single();
+
+            let memberCount = 0;
+            try {
+              const { count } = await supabase
+                .from('memberships')
+                .select('*', { count: 'exact', head: true })
+                .eq('group_id', group.id);
+              memberCount = count || 0;
+            } catch (countErr) {
+              console.warn(`그룹 ${group.id} 멤버 수 조회 오류:`, countErr);
+            }
+
+            return {
+              id: group.id,
+              name: group.name,
+              owner_email: ownerData?.email || null,
+              member_count: memberCount + 1,
+              created_at: group.created_at,
+            };
+          } catch (err: any) {
+            console.error(`그룹 ${group.id} 상세 정보 로드 오류:`, err);
+            return {
+              id: group.id,
+              name: group.name,
+              owner_email: null,
+              member_count: 1,
+              created_at: group.created_at,
+            };
+          }
+        })
+      );
+
+      setManageableGroups(groupsWithDetails);
+    } catch (err: any) {
+      console.error('관리 가능한 그룹 로드 오류:', err);
+      setManageableGroups([]);
+    }
+  }, []);
+
+  // 선택된 그룹 정보 로드 (권한 검증 포함)
   const loadSelectedGroup = useCallback(async (groupId: string) => {
     try {
+      // 현재 사용자 확인
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('인증 정보를 가져올 수 없습니다.');
+        setSelectedGroup(null);
+        setSelectedGroupId(null);
+        return;
+      }
+
+      // 그룹 정보 조회
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
         .select('id, name, owner_id, created_at, avatar_url, invite_code')
@@ -343,6 +464,30 @@ export default function AdminPage() {
         .single();
 
       if (groupError) throw groupError;
+
+      // 권한 확인: 소유자이거나 ADMIN인지 확인
+      const isOwner = groupData.owner_id === user.id;
+      let isAdmin = false;
+      
+      if (!isOwner) {
+        const { data: membership } = await supabase
+          .from('memberships')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('group_id', groupId)
+          .eq('role', 'ADMIN')
+          .single();
+        
+        isAdmin = !!membership;
+      }
+
+      // 권한이 없으면 에러
+      if (!isOwner && !isAdmin) {
+        setError('이 그룹에 대한 관리 권한이 없습니다.');
+        setSelectedGroup(null);
+        setSelectedGroupId(null);
+        return;
+      }
 
       // 소유자 이메일 조회
       const { data: ownerData } = await supabase
@@ -355,9 +500,12 @@ export default function AdminPage() {
         ...groupData,
         owner_email: ownerData?.email || null,
       });
+      setError(null); // 권한 검증 통과 시 에러 초기화
     } catch (err: any) {
       console.error('그룹 정보 로드 오류:', err);
       setError(err.message || '그룹 정보를 불러오는데 실패했습니다.');
+      setSelectedGroup(null);
+      setSelectedGroupId(null);
     }
   }, []);
 
@@ -627,7 +775,8 @@ export default function AdminPage() {
     } else if (activeTab === 'users') {
       loadUsers();
     } else if (activeTab === 'groups') {
-      loadGroups();
+      loadGroups(); // 모든 그룹 조회 (그룹 목록 탭용)
+      loadManageableGroups(); // 관리 가능한 그룹 조회 (관리하기 버튼용)
     } else if (activeTab === 'group-admin' && selectedGroupId) {
       // 그룹 관리 탭일 때만 데이터 로드
       if (groupAdminTab === 'dashboard') {
@@ -691,11 +840,20 @@ export default function AdminPage() {
     }
   };
 
-  // 그룹 관리 탭으로 전환
-  const handleSelectGroupForAdmin = (groupId: string) => {
+  // 그룹 관리 탭으로 전환 (권한 검증 포함)
+  const handleSelectGroupForAdmin = async (groupId: string) => {
+    // 관리 가능한 그룹인지 확인
+    const isManageable = manageableGroups.some(mg => mg.id === groupId);
+    if (!isManageable) {
+      alert('이 그룹에 대한 관리 권한이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.');
+      return;
+    }
+    
     setSelectedGroupId(groupId);
     setActiveTab('group-admin');
     setGroupAdminTab('dashboard');
+    // 그룹 정보 로드 (권한 검증 포함)
+    await loadSelectedGroup(groupId);
   };
 
   // 검색 필터링 (그룹 관리)
@@ -857,10 +1015,22 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => {
+              // 관리 가능한 그룹이 있는지 확인
+              if (manageableGroups.length === 0) {
+                alert('관리할 수 있는 그룹이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.');
+                return;
+              }
+              
               if (selectedGroupId || activeTab === 'group-admin') {
                 setActiveTab('group-admin');
               } else {
-                alert('그룹 목록에서 그룹을 선택하고 "관리하기" 버튼을 클릭해주세요.');
+                // 관리 가능한 그룹 목록에서 첫 번째 그룹 자동 선택
+                if (manageableGroups.length > 0) {
+                  setSelectedGroupId(manageableGroups[0].id);
+                  setActiveTab('group-admin');
+                } else {
+                  alert('그룹 목록에서 그룹을 선택하고 "관리하기" 버튼을 클릭해주세요.');
+                }
               }
             }}
             style={{
@@ -868,16 +1038,18 @@ export default function AdminPage() {
               backgroundColor: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'group-admin' ? '3px solid #9333ea' : '3px solid transparent',
-              color: activeTab === 'group-admin' ? '#9333ea' : (selectedGroupId ? '#64748b' : '#94a3b8'),
+              color: activeTab === 'group-admin' 
+                ? '#9333ea' 
+                : (manageableGroups.length > 0 ? '#64748b' : '#94a3b8'),
               fontSize: '16px',
               fontWeight: activeTab === 'group-admin' ? '600' : '500',
-              cursor: selectedGroupId || activeTab === 'group-admin' ? 'pointer' : 'not-allowed',
+              cursor: manageableGroups.length > 0 || activeTab === 'group-admin' ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
-              opacity: selectedGroupId || activeTab === 'group-admin' ? 1 : 0.5,
+              opacity: manageableGroups.length > 0 || activeTab === 'group-admin' ? 1 : 0.5,
             }}
           >
             <Shield style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            그룹 관리
+            그룹 관리 {manageableGroups.length > 0 && `(${manageableGroups.length})`}
           </button>
         </div>
       </div>
@@ -1392,25 +1564,29 @@ export default function AdminPage() {
                         display: 'flex',
                         gap: '8px',
                       }}>
+                        {/* 관리 가능한 그룹에만 "관리하기" 버튼 표시 */}
+                        {manageableGroups.some(mg => mg.id === group.id) && (
+                          <button
+                            style={{
+                              flex: 1,
+                              padding: '8px 16px',
+                              backgroundColor: '#9333ea',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => handleSelectGroupForAdmin(group.id)}
+                          >
+                            관리하기
+                          </button>
+                        )}
                         <button
                           style={{
-                            flex: 1,
-                            padding: '8px 16px',
-                            backgroundColor: '#9333ea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => handleSelectGroupForAdmin(group.id)}
-                        >
-                          관리하기
-                        </button>
-                        <button
-                          style={{
-                            flex: 1,
+                            flex: manageableGroups.some(mg => mg.id === group.id) ? 1 : 1,
+                            width: manageableGroups.some(mg => mg.id === group.id) ? 'auto' : '100%',
                             padding: '8px 16px',
                             backgroundColor: '#fee2e2',
                             color: '#991b1b',
@@ -1449,6 +1625,7 @@ export default function AdminPage() {
 
                               alert('그룹이 삭제되었습니다.');
                               loadGroups(); // 목록 새로고침
+                              loadManageableGroups(); // 관리 가능한 그룹 목록도 새로고침
                             } catch (error: any) {
                               console.error('그룹 삭제 오류:', error);
                               alert(error.message || '그룹 삭제 중 오류가 발생했습니다.');
@@ -1476,7 +1653,7 @@ export default function AdminPage() {
             )}
 
             {/* 그룹 관리 탭 (시스템 관리자가 그룹을 관리하는 탭) */}
-            {activeTab === 'group-admin' && selectedGroup && (
+            {activeTab === 'group-admin' && (
               <div>
                 {/* 그룹 선택 드롭다운 */}
                 <div style={{
@@ -1518,12 +1695,23 @@ export default function AdminPage() {
                     }}
                   >
                     <option value="">그룹을 선택하세요</option>
-                    {groups.map((group) => (
+                    {/* 관리 가능한 그룹만 표시 */}
+                    {manageableGroups.map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name} ({group.member_count}명)
                       </option>
                     ))}
                   </select>
+                  {manageableGroups.length === 0 && (
+                    <p style={{
+                      marginTop: '8px',
+                      fontSize: '13px',
+                      color: '#f59e0b',
+                      fontStyle: 'italic',
+                    }}>
+                      관리할 수 있는 그룹이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.
+                    </p>
+                  )}
                 </div>
 
                 {selectedGroup && (

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle } from 'lucide-react';
+import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import type { MembershipRole } from '@/types/db';
@@ -28,6 +28,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [showConfirmRemove, setShowConfirmRemove] = useState<string | null>(null);
+  const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showGroupSettings, setShowGroupSettings] = useState<boolean>(false);
 
@@ -146,6 +147,68 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
     }
   }, [currentGroupId, isAdmin, currentGroup, currentUserId, loadMembers, refreshMemberships]);
 
+  // 멤버 역할 변경
+  const handleUpdateRole = useCallback(async (memberUserId: string, newRole: MembershipRole) => {
+    if (!currentGroupId || !isAdmin) return;
+
+    try {
+      setUpdatingRoleUserId(memberUserId);
+
+      // 본인은 역할 변경 불가
+      if (currentUserId && currentUserId === memberUserId) {
+        alert('자기 자신의 역할은 변경할 수 없습니다.');
+        setUpdatingRoleUserId(null);
+        return;
+      }
+
+      // 소유자는 역할 변경 불가
+      if (currentGroup?.owner_id === memberUserId) {
+        alert('그룹 소유자의 역할은 변경할 수 없습니다.');
+        setUpdatingRoleUserId(null);
+        return;
+      }
+
+      // 현재 사용자 인증 토큰 가져오기
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setUpdatingRoleUserId(null);
+        return;
+      }
+
+      // API 호출
+      const response = await fetch('/api/groups/members/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: memberUserId,
+          groupId: currentGroupId,
+          newRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '역할 변경에 실패했습니다.');
+      }
+
+      alert(data.message || `멤버 역할이 ${newRole === 'ADMIN' ? '관리자' : '멤버'}로 변경되었습니다.`);
+
+      // 멤버 목록 새로고침
+      await loadMembers();
+      await refreshMemberships();
+    } catch (err: any) {
+      console.error('역할 변경 실패:', err);
+      alert(err.message || '역할 변경에 실패했습니다.');
+    } finally {
+      setUpdatingRoleUserId(null);
+    }
+  }, [currentGroupId, isAdmin, currentGroup, currentUserId, loadMembers, refreshMemberships]);
+
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
@@ -256,7 +319,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
           <AnimatePresence>
             {members.map((member, index) => {
               const isCurrentUser = currentUserId === member.user_id;
-              const canRemove = isAdmin && !isCurrentUser && member.user_id !== currentGroup?.owner_id;
+              const isOwner = member.user_id === currentGroup?.owner_id;
+              const canRemove = isAdmin && !isCurrentUser && !isOwner;
+              const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
+              const isUpdatingRole = updatingRoleUserId === member.user_id;
 
               return (
                 <motion.div
@@ -325,38 +391,86 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                   </div>
 
                   {/* 액션 버튼 */}
-                  {canRemove && (
+                  {(canRemove || canChangeRole) && (
                     <div className="flex items-center gap-2">
-                      {showConfirmRemove === member.user_id ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleRemoveMember(member.user_id)}
-                            disabled={removingUserId === member.user_id}
-                            className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            aria-label={`${member.nickname || member.email} 추방 확인`}
-                          >
-                            {removingUserId === member.user_id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              '확인'
-                            )}
-                          </button>
-                          <button
-                            onClick={() => setShowConfirmRemove(null)}
-                            className="px-3 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            aria-label="취소"
-                          >
-                            취소
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setShowConfirmRemove(member.user_id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          aria-label={`${member.nickname || member.email} 추방`}
-                        >
-                          <UserX className="w-5 h-5" />
-                        </button>
+                      {/* 역할 변경 버튼 */}
+                      {canChangeRole && (
+                        <>
+                          {member.role === 'MEMBER' ? (
+                            <button
+                              onClick={() => {
+                                if (confirm(`${member.nickname || member.email}님을 관리자로 승격시키시겠습니까?`)) {
+                                  handleUpdateRole(member.user_id, 'ADMIN');
+                                }
+                              }}
+                              disabled={isUpdatingRole || removingUserId === member.user_id}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              aria-label={`${member.nickname || member.email} 관리자로 승격`}
+                              title="관리자로 승격"
+                            >
+                              {isUpdatingRole ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <Shield className="w-5 h-5" />
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (confirm(`${member.nickname || member.email}님의 관리자 권한을 일반 멤버로 변경하시겠습니까?`)) {
+                                  handleUpdateRole(member.user_id, 'MEMBER');
+                                }
+                              }}
+                              disabled={isUpdatingRole || removingUserId === member.user_id}
+                              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
+                              title="일반 멤버로 변경"
+                            >
+                              {isUpdatingRole ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <User className="w-5 h-5" />
+                              )}
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {/* 추방 버튼 */}
+                      {canRemove && (
+                        <>
+                          {showConfirmRemove === member.user_id ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleRemoveMember(member.user_id)}
+                                disabled={removingUserId === member.user_id || isUpdatingRole}
+                                className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                aria-label={`${member.nickname || member.email} 추방 확인`}
+                              >
+                                {removingUserId === member.user_id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  '확인'
+                                )}
+                              </button>
+                              <button
+                                onClick={() => setShowConfirmRemove(null)}
+                                className="px-3 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                aria-label="취소"
+                              >
+                                취소
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setShowConfirmRemove(member.user_id)}
+                              disabled={isUpdatingRole}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              aria-label={`${member.nickname || member.email} 추방`}
+                            >
+                              <UserX className="w-5 h-5" />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
