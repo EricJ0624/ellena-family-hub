@@ -256,40 +256,19 @@ export default function FamilyHub() {
         return [];
       }
 
-      // 그룹 필터링: 현재 그룹의 멤버들이 업로드한 사진만 로드
+      // Multi-tenant 아키텍처: group_id 필수 검증
+      if (!currentGroupId) {
+        console.warn('loadPhotosFromSupabase: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+        return [];
+      }
+
+      // 그룹 필터링: Multi-tenant 아키텍처 - group_id로 직접 필터링
       let query = supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption')
+        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+        .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
         .order('created_at', { ascending: false })
         .limit(100);
-
-      // 현재 그룹이 있으면 그룹 멤버 필터링
-      if (currentGroupId) {
-        // 현재 그룹의 멤버 ID 목록 가져오기
-        const { data: memberships } = await supabase
-          .from('memberships')
-          .select('user_id')
-          .eq('group_id', currentGroupId);
-
-        if (memberships && memberships.length > 0) {
-          const memberIds = memberships.map(m => m.user_id);
-          // 그룹 소유자도 포함
-          const { data: group } = await supabase
-            .from('groups')
-            .select('owner_id')
-            .eq('id', currentGroupId)
-            .single();
-
-          if (group?.owner_id && !memberIds.includes(group.owner_id)) {
-            memberIds.push(group.owner_id);
-          }
-
-          query = query.in('uploader_id', memberIds);
-        } else {
-          // 멤버가 없으면 빈 배열 반환
-          return [];
-        }
-      }
 
       const { data: photos, error } = await query;
 
@@ -379,11 +358,17 @@ export default function FamilyHub() {
     // ✅ setState(INITIAL_STATE) 제거 - album을 빈 배열로 초기화하지 않음
     // 재로그인 시에도 기존 state를 유지하고, Supabase에서 사진을 로드한 후 업데이트
 
-    // ✅ Supabase에서 모든 사진 불러오기 (필터 없이 - 가족 전체)
+    // ✅ Supabase에서 사진 불러오기 (Multi-tenant: group_id 필터링)
     try {
+      if (!currentGroupId) {
+        console.warn('loadData: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+        return;
+      }
+
       const { data: photos, error } = await supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption')
+        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+        .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -1947,10 +1932,16 @@ export default function FamilyHub() {
           // Supabase에 메시지가 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 할일 로드 (모든 가족 구성원이 같은 데이터를 공유)
+        // 할일 로드 (Multi-tenant: group_id 필터링)
+        if (!currentGroupId) {
+          console.warn('loadInitialData: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+          return;
+        }
+
         const { data: tasksData, error: tasksError } = await supabase
           .from('family_tasks')
           .select('*')
+          .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
           .order('created_at', { ascending: false });
 
         if (!tasksError && tasksData) {
@@ -2018,10 +2009,11 @@ export default function FamilyHub() {
           // Supabase에 할일이 없고 localStorage 데이터도 없으면 초기 상태 유지
         }
 
-        // 일정 로드 (모든 가족 구성원이 같은 데이터를 공유)
+        // 일정 로드 (Multi-tenant: group_id 필터링)
         const { data: eventsData, error: eventsError } = await supabase
           .from('family_events')
           .select('*')
+          .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
           .order('event_date', { ascending: true }); // event_date 컬럼명 사용
 
         if (!eventsError && eventsData) {
@@ -2144,8 +2136,16 @@ export default function FamilyHub() {
               return;
             }
             
-            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
+            // Multi-tenant 아키텍처: group_id 필터링
+            if (newTask.group_id !== currentGroupId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 할일: 다른 그룹의 데이터는 무시합니다.', {
+                  eventGroupId: newTask.group_id,
+                  currentGroupId
+                });
+              }
+              return;
+            }
             // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
             const taskText = newTask.title || newTask.task_text || '';
             let decryptedText = taskText;
@@ -2427,8 +2427,16 @@ export default function FamilyHub() {
               return;
             }
             
-            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
+            // Multi-tenant 아키텍처: group_id 필터링
+            if (newEvent.group_id !== currentGroupId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 일정: 다른 그룹의 데이터는 무시합니다.', {
+                  eventGroupId: newEvent.group_id,
+                  currentGroupId
+                });
+              }
+              return;
+            }
             // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
             const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
             const eventDate = new Date(eventDateValue);
@@ -2752,6 +2760,18 @@ export default function FamilyHub() {
               console.log('Realtime 사진 INSERT 이벤트 수신:', payload);
             }
             const newPhoto = payload.new;
+            
+            // Multi-tenant 아키텍처: group_id 필터링
+            if (newPhoto.group_id !== currentGroupId) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Realtime 사진: 다른 그룹의 데이터는 무시합니다.', {
+                  eventGroupId: newPhoto.group_id,
+                  currentGroupId
+                });
+              }
+              return;
+            }
+            
             if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
               setState(prev => {
                 // 1. ID 기반 중복 체크 (이미 Supabase ID로 업데이트된 경우)
@@ -3524,18 +3544,23 @@ export default function FamilyHub() {
           // 할일 텍스트 암호화
           const encryptedText = CryptoService.encrypt(payload.text, currentKey);
           
+          // Multi-tenant 아키텍처: currentGroupId 필수 검증
+          if (!currentGroupId) {
+            console.error('ADD_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+            return;
+          }
+
           // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
           // assigned_to는 UUID 타입이므로 NULL로 저장 (담당자 정보는 title에 포함하거나 별도 처리)
           const taskData: any = {
-            // family_id는 선택적 (데이터베이스에 컬럼이 있는 경우에만 추가)
-            // family_id: currentFamilyId, // 주석 처리: 기존 데이터와의 호환성을 위해
+            group_id: currentGroupId, // Multi-tenant: group_id 필수
             created_by: userId,
             title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
             assigned_to: null, // UUID 타입이므로 NULL로 저장 (담당자 정보는 암호화된 텍스트에 포함)
             is_completed: payload.done || false // is_completed 컬럼 사용
           };
           
-          console.log('ADD_TODO: family_tasks 테이블에 저장:', { text: payload.text.substring(0, 20), assignee: payload.assignee });
+          console.log('ADD_TODO: family_tasks 테이블에 저장:', { text: payload.text.substring(0, 20), assignee: payload.assignee, groupId: currentGroupId });
           
           const { error, data } = await supabase
             .from('family_tasks')
@@ -3564,6 +3589,12 @@ export default function FamilyHub() {
             break; // 로컬 데이터는 Supabase 업데이트 시도하지 않음
           }
           
+          // Multi-tenant 아키텍처: currentGroupId 필수 검증
+          if (!currentGroupId) {
+            console.error('TOGGLE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+            return;
+          }
+
           // is_completed 컬럼 사용 (실제 테이블 구조에 맞게)
           const updateData: any = {};
           updateData.is_completed = payload.done; // is_completed 컬럼 사용
@@ -3571,7 +3602,8 @@ export default function FamilyHub() {
           const { error } = await supabase
             .from('family_tasks')
             .update(updateData)
-            .eq('id', payload.id);
+            .eq('id', payload.id)
+            .eq('group_id', currentGroupId); // Multi-tenant: group_id 검증
           
           if (error) {
             console.error('할일 업데이트 오류:', error);
@@ -3599,18 +3631,26 @@ export default function FamilyHub() {
           
           console.log('Supabase 삭제 시도:', { taskId, userId });
           
-          // 삭제 전에 해당 할일이 존재하는지 확인
+          // Multi-tenant 아키텍처: currentGroupId 필수 검증
+          if (!currentGroupId) {
+            console.error('DELETE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+            return;
+          }
+
+          // 삭제 전에 해당 할일이 존재하는지 확인 (그룹 내에서만)
           const { data: existingTask } = await supabase
             .from('family_tasks')
-            .select('id, created_by, title')
+            .select('id, created_by, title, group_id')
             .eq('id', taskId)
+            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
             .single();
           
           if (existingTask) {
             console.log('삭제할 할일 확인:', {
               id: existingTask.id,
               created_by: existingTask.created_by,
-              title: existingTask.title?.substring(0, 30)
+              title: existingTask.title?.substring(0, 30),
+              group_id: existingTask.group_id
             });
           }
           
@@ -3618,6 +3658,7 @@ export default function FamilyHub() {
             .from('family_tasks')
             .delete()
             .eq('id', taskId)
+            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
             .select();
           
           if (error) {
@@ -3684,10 +3725,15 @@ export default function FamilyHub() {
           const currentYear = new Date().getFullYear();
           const eventDate = new Date(currentYear, month, day);
           
+          // Multi-tenant 아키텍처: currentGroupId 필수 검증
+          if (!currentGroupId) {
+            console.error('ADD_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+            return;
+          }
+
           // event_date 컬럼이 없을 수 있으므로 선택적으로 처리
           const eventData: any = {
-            // family_id는 선택적 (데이터베이스에 컬럼이 있는 경우에만 추가)
-            // family_id: currentFamilyId, // 주석 처리: 기존 데이터와의 호환성을 위해
+            group_id: currentGroupId, // Multi-tenant: group_id 필수
             created_by: userId,
             title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
             description: encryptedDesc, // 암호화된 설명 저장
@@ -3696,7 +3742,7 @@ export default function FamilyHub() {
             // created_at은 자동 생성되므로 제거
           };
           
-          console.log('ADD_EVENT: family_events 테이블에 저장:', { title: payload.title.substring(0, 20), month: payload.month, day: payload.day });
+          console.log('ADD_EVENT: family_events 테이블에 저장:', { title: payload.title.substring(0, 20), month: payload.month, day: payload.day, groupId: currentGroupId });
           
           const { error, data } = await supabase
             .from('family_events')
@@ -3731,27 +3777,36 @@ export default function FamilyHub() {
           
           console.log('Supabase 삭제 시도:', { eventId, eventIdType: typeof eventId, userId });
           
-          // 삭제 전에 해당 이벤트가 존재하는지 확인 (디버깅용)
+          // Multi-tenant 아키텍처: currentGroupId 필수 검증
+          if (!currentGroupId) {
+            console.error('DELETE_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+            return;
+          }
+
+          // 삭제 전에 해당 이벤트가 존재하는지 확인 (그룹 내에서만)
           const { data: existingEvent } = await supabase
             .from('family_events')
-            .select('id, created_by, title')
+            .select('id, created_by, title, group_id')
             .eq('id', eventId)
+            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
             .single();
           
           if (existingEvent) {
             console.log('삭제할 이벤트 확인:', {
               id: existingEvent.id,
               created_by: existingEvent.created_by,
-              title: existingEvent.title?.substring(0, 30)
+              title: existingEvent.title?.substring(0, 30),
+              group_id: existingEvent.group_id
             });
           } else {
-            console.warn('⚠️ 삭제할 이벤트를 찾을 수 없음:', eventId);
+            console.warn('⚠️ 삭제할 이벤트를 찾을 수 없음:', eventId, 'groupId:', currentGroupId);
           }
           
           const { error, data } = await supabase
             .from('family_events')
             .delete()
             .eq('id', eventId)
+            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
             .select();
           
           if (error) {
@@ -3914,28 +3969,47 @@ export default function FamilyHub() {
           break;
         case 'DELETE_PHOTO':
           newState.album = prev.album.filter(p => p.id !== payload);
-          // Supabase에서도 삭제
+          // Supabase, Cloudinary, S3에서 모두 삭제 (API 엔드포인트 사용)
           (async () => {
             try {
-              const { error, data } = await supabase
-                .from('memory_vault')
-                .delete()
-                .eq('id', payload)
-                .select();
-              
-              if (error) {
-                // Supabase 에러 객체의 상세 정보 추출
-                const errorDetails = {
-                  message: error.message || '알 수 없는 오류',
-                  code: error.code || 'UNKNOWN',
-                  details: error.details || null,
-                  hint: error.hint || null,
+              // currentGroupId 필수 검증
+              if (!currentGroupId) {
+                console.error('DELETE_PHOTO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+                return;
+              }
+
+              // 세션 확인
+              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+              if (sessionError || !session) {
+                console.error('사진 삭제 실패: 세션이 없습니다.', sessionError);
+                return;
+              }
+
+              // 삭제 API 호출 (Cloudinary, S3, Supabase 모두 삭제)
+              const deleteResponse = await fetch('/api/photos/delete', {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
                   photoId: payload,
+                  groupId: currentGroupId, // Multi-tenant: groupId 필수
+                }),
+              });
+
+              const deleteResult = await deleteResponse.json();
+
+              if (!deleteResponse.ok) {
+                const errorDetails = {
+                  message: deleteResult.error || '알 수 없는 오류',
+                  photoId: payload,
+                  status: deleteResponse.status,
                 };
                 
                 console.error('사진 삭제 오류:', {
                   ...errorDetails,
-                  fullError: error,
+                  fullError: deleteResult,
                 });
                 
                 // 사용자에게 알림 (선택적)
@@ -3945,7 +4019,12 @@ export default function FamilyHub() {
               } else {
                 // 삭제 성공 로그 (개발 환경에서만)
                 if (process.env.NODE_ENV === 'development') {
-                  console.log('사진 삭제 성공:', { photoId: payload, deletedData: data });
+                  console.log('사진 삭제 성공:', { 
+                    photoId: payload, 
+                    cloudinaryDeleted: deleteResult.cloudinaryDeleted,
+                    s3Deleted: deleteResult.s3Deleted,
+                    message: deleteResult.message
+                  });
                 }
               }
             } catch (error: any) {

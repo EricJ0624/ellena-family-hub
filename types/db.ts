@@ -169,6 +169,7 @@ export interface Database {
           id: string
           requester_id: string
           target_id: string
+          group_id: string | null
           status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
           created_at: string
           updated_at: string
@@ -178,6 +179,7 @@ export interface Database {
           id?: string
           requester_id: string
           target_id: string
+          group_id?: string | null
           status?: 'pending' | 'accepted' | 'rejected' | 'cancelled'
           created_at?: string
           updated_at?: string
@@ -187,6 +189,7 @@ export interface Database {
           id?: string
           requester_id?: string
           target_id?: string
+          group_id?: string | null
           status?: 'pending' | 'accepted' | 'rejected' | 'cancelled'
           created_at?: string
           updated_at?: string
@@ -203,6 +206,12 @@ export interface Database {
             foreignKeyName: "location_requests_target_id_fkey"
             columns: ["target_id"]
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_requests_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           }
         ]
@@ -237,6 +246,193 @@ export interface Database {
             foreignKeyName: "user_locations_user_id_fkey"
             columns: ["user_id"]
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      memory_vault: {
+        Row: {
+          id: string
+          uploader_id: string
+          group_id: string | null
+          image_url: string
+          cloudinary_url: string | null
+          s3_original_url: string | null
+          file_type: 'photo' | 'video'
+          original_file_size: number | null
+          cloudinary_public_id: string | null
+          s3_key: string | null
+          mime_type: string | null
+          original_filename: string | null
+          caption: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          uploader_id: string
+          group_id: string | null
+          image_url: string
+          cloudinary_url?: string | null
+          s3_original_url?: string | null
+          file_type?: 'photo' | 'video'
+          original_file_size?: number | null
+          cloudinary_public_id?: string | null
+          s3_key?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
+          caption?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          uploader_id?: string
+          group_id?: string | null
+          image_url?: string
+          cloudinary_url?: string | null
+          s3_original_url?: string | null
+          file_type?: 'photo' | 'video'
+          original_file_size?: number | null
+          cloudinary_public_id?: string | null
+          s3_key?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
+          caption?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_vault_uploader_id_fkey"
+            columns: ["uploader_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_vault_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      family_tasks: {
+        Row: {
+          id: string
+          group_id: string | null
+          created_by: string
+          title: string
+          assigned_to: string | null
+          is_completed: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string | null
+          created_by: string
+          title: string
+          assigned_to?: string | null
+          is_completed?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string | null
+          created_by?: string
+          title?: string
+          assigned_to?: string | null
+          is_completed?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_tasks_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_tasks_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      family_events: {
+        Row: {
+          id: string
+          group_id: string | null
+          created_by: string
+          title: string
+          description: string | null
+          event_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string | null
+          created_by: string
+          title: string
+          description?: string | null
+          event_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string | null
+          created_by?: string
+          title?: string
+          description?: string | null
+          event_date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_events_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_events_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      family_messages: {
+        Row: {
+          id: string
+          group_id: string | null
+          sender_id: string
+          message: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string | null
+          sender_id: string
+          message: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string | null
+          sender_id?: string
+          message?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_messages_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           }
         ]

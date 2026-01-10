@@ -309,6 +309,171 @@ export async function downloadFromS3(s3Key: string): Promise<Blob> {
 }
 
 // ============================================
+// Cloudinary & S3 파일 삭제 함수
+// ============================================
+
+/**
+ * Cloudinary에서 파일 삭제
+ * 
+ * @param publicId - Cloudinary Public ID
+ * @returns 삭제 성공 여부
+ */
+export async function deleteFromCloudinary(publicId: string): Promise<boolean> {
+  try {
+    initializeCloudinary();
+    const result = await cloudinary.uploader.destroy(publicId);
+    
+    if (result.result === 'ok' || result.result === 'not found') {
+      return true; // 삭제 성공 또는 이미 삭제됨
+    }
+    return false;
+  } catch (error: any) {
+    console.error('Cloudinary 삭제 오류:', error);
+    return false; // 삭제 실패해도 계속 진행
+  }
+}
+
+/**
+ * S3에서 파일 삭제
+ * 
+ * @param s3Key - S3 Key (파일 경로)
+ * @returns 삭제 성공 여부
+ */
+export async function deleteFromS3(s3Key: string): Promise<boolean> {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    if (!bucketName) {
+      console.warn('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
+      return false;
+    }
+
+    const s3Client = getS3ClientInstance();
+    const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: s3Key,
+    });
+
+    await s3Client.send(command);
+    return true;
+  } catch (error: any) {
+    console.error('S3 삭제 오류:', error);
+    return false; // 삭제 실패해도 계속 진행
+  }
+}
+
+// ============================================
+// Multi-tenant 아키텍처: active_group_id 검증
+// ============================================
+
+/**
+ * API 요청에서 active_group_id 검증 및 추출
+ * 
+ * @param request - NextRequest 객체
+ * @param userId - 인증된 사용자 ID
+ * @returns groupId 또는 에러 응답
+ */
+export async function validateActiveGroupId(
+  request: NextRequest,
+  userId: string
+): Promise<{ groupId: string } | NextResponse> {
+  // 1. 요청 본문에서 groupId 추출
+  let body;
+  try {
+    body = await request.json().catch(() => ({})); // JSON 파싱 실패 시 빈 객체
+  } catch {
+    // JSON이 없는 경우 (GET 요청 등) 쿼리 파라미터에서 추출
+    const searchParams = request.nextUrl.searchParams;
+    const groupIdFromQuery = searchParams.get('groupId');
+    
+    if (groupIdFromQuery) {
+      const { checkPermission } = await import('@/lib/permissions');
+      const permissionResult = await checkPermission(
+        userId,
+        groupIdFromQuery,
+        null, // MEMBER 이상 권한 필요
+        userId
+      );
+      
+      if (!permissionResult.success) {
+        return NextResponse.json(
+          { error: '그룹 접근 권한이 없습니다.' },
+          { status: 403 }
+        );
+      }
+      
+      return { groupId: groupIdFromQuery };
+    }
+    
+    return NextResponse.json(
+      { error: 'groupId가 필요합니다.' },
+      { status: 400 }
+    );
+  }
+
+  const { groupId } = body || {};
+
+  // 2. groupId 필수 검증
+  if (!groupId) {
+    return NextResponse.json(
+      { error: 'groupId가 필요합니다.' },
+      { status: 400 }
+    );
+  }
+
+  // 3. UUID 형식 검증
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(groupId)) {
+    return NextResponse.json(
+      { error: '유효하지 않은 groupId 형식입니다.' },
+      { status: 400 }
+    );
+  }
+
+  // 4. 그룹 멤버십 권한 검증
+  const { checkPermission } = await import('@/lib/permissions');
+  const permissionResult = await checkPermission(
+    userId,
+    groupId,
+    null, // MEMBER 이상 권한 필요
+    userId
+  );
+
+  if (!permissionResult.success) {
+    return NextResponse.json(
+      { error: '그룹 접근 권한이 없습니다.' },
+      { status: 403 }
+    );
+  }
+
+  return { groupId };
+}
+
+/**
+ * Supabase 쿼리에 groupId 필터 추가 (보안 강화)
+ * 
+ * @param query - Supabase 쿼리 빌더
+ * @param groupId - 그룹 ID (필수)
+ * @returns 필터링된 쿼리
+ */
+export function ensureGroupIdFilter<T>(
+  query: any,
+  groupId: string | null | undefined
+): any {
+  if (!groupId) {
+    throw new Error('groupId는 필수입니다. Multi-tenant 아키텍처에서는 모든 데이터 조회에 groupId가 필요합니다.');
+  }
+  
+  // UUID 형식 검증
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(groupId)) {
+    throw new Error('유효하지 않은 groupId 형식입니다.');
+  }
+  
+  return query.eq('group_id', groupId);
+}
+
+// ============================================
 // 그룹 권한 메타데이터 포함 업로드 함수들
 // ============================================
 

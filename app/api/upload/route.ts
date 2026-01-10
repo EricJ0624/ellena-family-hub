@@ -18,7 +18,8 @@ import { checkPermission } from '@/lib/permissions';
 // 따라서 서버 경유 방식은 3MB 이하 파일만 허용하는 것이 안전합니다.
 export const maxDuration = 60; // 60초 타임아웃
 
-// S3에 파일 업로드
+// S3에 파일 업로드 (레거시 함수 - 호환성 유지)
+// ⚠️ Multi-tenant 아키텍처에서는 uploadToS3WithGroup 사용 권장
 async function uploadToS3(
   file: Blob,
   fileName: string,
@@ -93,21 +94,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 그룹 권한 검증 (groupId가 제공된 경우)
-    if (groupId) {
-      const permissionResult = await checkPermission(
-        user.id,
-        groupId,
-        null, // MEMBER 이상 권한 필요
-        user.id
+    // Multi-tenant 아키텍처: groupId 필수 검증
+    if (!groupId) {
+      return NextResponse.json(
+        { error: 'groupId는 필수입니다. Multi-tenant 아키텍처에서는 모든 데이터에 groupId가 필요합니다.' },
+        { status: 400 }
       );
+    }
 
-      if (!permissionResult.success) {
-        return NextResponse.json(
-          { error: '그룹 접근 권한이 없습니다.' },
-          { status: 403 }
-        );
-      }
+    // 그룹 권한 검증 (필수)
+    const permissionResult = await checkPermission(
+      user.id,
+      groupId,
+      null, // MEMBER 이상 권한 필요
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 접근 권한이 없습니다.' },
+        { status: 403 }
+      );
     }
 
     // Base64 데이터 크기 체크
@@ -140,11 +147,14 @@ export async function POST(request: NextRequest) {
     if (cloudinaryConfig.available) {
       try {
         const cloudinaryBlob = base64ToBlob(cloudinaryData, mimeType);
-        const cloudinaryResult = await uploadToCloudinary(
+        // Multi-tenant: groupId를 포함한 Cloudinary 업로드
+        const { uploadToCloudinaryWithGroup } = await import('@/lib/api-helpers');
+        const cloudinaryResult = await uploadToCloudinaryWithGroup(
           cloudinaryBlob,
           fileName,
           mimeType,
-          user.id
+          user.id,
+          groupId // groupId 전달
         );
         cloudinaryUrl = cloudinaryResult.url;
         cloudinaryPublicId = cloudinaryResult.publicId;
@@ -169,11 +179,14 @@ export async function POST(request: NextRequest) {
     
     if (s3Config.available) {
       try {
-        s3Result = await uploadToS3(
+        // Multi-tenant: groupId를 포함한 S3 업로드
+        const { uploadToS3WithGroup } = await import('@/lib/api-helpers');
+        s3Result = await uploadToS3WithGroup(
           originalBlob,
           fileName,
           mimeType,
-          user.id
+          user.id,
+          groupId // groupId 전달
         );
       } catch (s3UploadError: any) {
         console.warn('S3 업로드 실패 (Cloudinary만 사용):', s3UploadError.message);
@@ -216,6 +229,7 @@ export async function POST(request: NextRequest) {
       .from('memory_vault')
       .insert({
         uploader_id: user.id,
+        group_id: groupId, // Multi-tenant: group_id 필수
         image_url: imageUrl, // 필수 컬럼: cloudinary_url 우선, 없으면 s3_original_url
         cloudinary_url: cloudinaryUrl || null,
         s3_original_url: s3Result?.url || null,
