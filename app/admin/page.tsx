@@ -1186,21 +1186,44 @@ export default function AdminPage() {
                           <td style={{ padding: '12px', textAlign: 'right' }}>
                             <button
                               style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#fee2e2',
-                                color: '#991b1b',
+                                padding: '8px 16px',
+                                backgroundColor: '#dc2626',
+                                color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
-                                fontSize: '12px',
+                                fontSize: '13px',
                                 fontWeight: '600',
                                 cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#b91c1c';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#dc2626';
                               }}
                               onClick={async () => {
-                                if (!confirm(`정말로 ${user.email || user.nickname || '이 사용자'}를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+                                // 현재 로그인한 사용자 확인
+                                const { data: { user: currentUser } } = await supabase.auth.getUser();
+                                
+                                // 시스템 관리자 본인은 삭제 불가
+                                if (currentUser?.id === user.id) {
+                                  alert('본인의 계정은 삭제할 수 없습니다.');
+                                  return;
+                                }
+
+                                const userDisplayName = user.email || user.nickname || '이 사용자';
+                                const confirmMessage = `정말로 "${userDisplayName}" 회원을 강제 탈퇴 처리하시겠습니까?\n\n⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n- 사용자 계정이 영구적으로 삭제됩니다.\n- 관련된 모든 데이터가 삭제됩니다.\n- 모든 그룹에서 자동으로 제거됩니다.`;
+                                
+                                if (!confirm(confirmMessage)) {
                                   return;
                                 }
 
                                 try {
+                                  setLoadingData(true);
                                   const { data: { session } } = await supabase.auth.getSession();
                                   if (!session?.access_token) {
                                     alert('인증 정보를 가져올 수 없습니다.');
@@ -1219,18 +1242,21 @@ export default function AdminPage() {
                                   const result = await response.json();
 
                                   if (!response.ok) {
-                                    throw new Error(result.error || '사용자 삭제에 실패했습니다.');
+                                    throw new Error(result.error || '회원 강제 탈퇴에 실패했습니다.');
                                   }
 
-                                  alert('사용자가 삭제되었습니다.');
+                                  alert(`"${userDisplayName}" 회원이 강제 탈퇴 처리되었습니다.`);
                                   loadUsers(); // 목록 새로고침
                                 } catch (error: any) {
-                                  console.error('사용자 삭제 오류:', error);
-                                  alert(error.message || '사용자 삭제 중 오류가 발생했습니다.');
+                                  console.error('회원 강제 탈퇴 오류:', error);
+                                  alert(error.message || '회원 강제 탈퇴 중 오류가 발생했습니다.');
+                                } finally {
+                                  setLoadingData(false);
                                 }
                               }}
                             >
-                              삭제
+                              <UserX style={{ width: '14px', height: '14px' }} />
+                              회원 강제 탈퇴
                             </button>
                           </td>
                         </motion.tr>
