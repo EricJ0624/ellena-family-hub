@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -14,7 +14,10 @@ import {
   AlertCircle,
   X,
   Search,
-  Crown
+  Crown,
+  Image as ImageIcon,
+  MapPin,
+  Trash2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -45,17 +48,74 @@ interface SystemStats {
   totalAdmins: number;
 }
 
+interface GroupDetailInfo {
+  id: string;
+  name: string;
+  owner_id: string;
+  owner_email: string | null;
+  created_at: string;
+  avatar_url: string | null;
+  invite_code: string | null;
+}
+
+interface MemberInfo {
+  user_id: string;
+  email: string | null;
+  nickname: string | null;
+  role: string;
+  joined_at: string;
+}
+
+interface PhotoInfo {
+  id: string;
+  image_url: string | null;
+  cloudinary_url: string | null;
+  s3_original_url: string | null;
+  original_filename: string | null;
+  created_at: string;
+  uploader_id: string;
+  caption: string | null;
+}
+
+interface LocationInfo {
+  user_id: string;
+  latitude: number;
+  longitude: number;
+  address: string | null;
+  updated_at: string;
+  email: string | null;
+  nickname: string | null;
+}
+
+interface GroupStats {
+  totalMembers: number;
+  totalPhotos: number;
+  totalLocations: number;
+  recentPhotos: number;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // 그룹 관리 관련 상태
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<GroupDetailInfo | null>(null);
+  const [groupAdminTab, setGroupAdminTab] = useState<'dashboard' | 'members' | 'settings' | 'content'>('dashboard');
+  const [groupStats, setGroupStats] = useState<GroupStats | null>(null);
+  const [groupMembers, setGroupMembers] = useState<MemberInfo[]>([]);
+  const [groupPhotos, setGroupPhotos] = useState<PhotoInfo[]>([]);
+  const [groupLocations, setGroupLocations] = useState<LocationInfo[]>([]);
+  const [showMemberManagement, setShowMemberManagement] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
 
   // 관리자 권한 확인
   useEffect(() => {
@@ -226,6 +286,272 @@ export default function AdminPage() {
     }
   };
 
+  // 선택된 그룹 정보 로드
+  const loadSelectedGroup = useCallback(async (groupId: string) => {
+    try {
+      const { data: groupData, error: groupError } = await supabase
+        .from('groups')
+        .select('id, name, owner_id, created_at, avatar_url, invite_code')
+        .eq('id', groupId)
+        .single();
+
+      if (groupError) throw groupError;
+
+      // 소유자 이메일 조회
+      const { data: ownerData } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', groupData.owner_id)
+        .single();
+
+      setSelectedGroup({
+        ...groupData,
+        owner_email: ownerData?.email || null,
+      });
+    } catch (err: any) {
+      console.error('그룹 정보 로드 오류:', err);
+      setError(err.message || '그룹 정보를 불러오는데 실패했습니다.');
+    }
+  }, []);
+
+  // 그룹 통계 로드
+  const loadGroupStats = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      // 그룹 멤버 수
+      const { count: memberCount } = await supabase
+        .from('memberships')
+        .select('*', { count: 'exact', head: true })
+        .eq('group_id', groupId);
+
+      const totalMembers = (memberCount || 0) + 1; // 소유자 포함
+
+      // 그룹 멤버 ID 목록
+      const { data: membersData } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('group_id', groupId);
+
+      const memberIds = membersData?.map(m => m.user_id) || [];
+      
+      // 그룹 소유자 추가
+      if (selectedGroup?.owner_id && !memberIds.includes(selectedGroup.owner_id)) {
+        memberIds.push(selectedGroup.owner_id);
+      }
+
+      // 그룹 사진 수
+      const { count: photoCount } = await supabase
+        .from('memory_vault')
+        .select('*', { count: 'exact', head: true })
+        .in('uploader_id', memberIds);
+
+      // 최근 7일 사진 수
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const { count: recentPhotoCount } = await supabase
+        .from('memory_vault')
+        .select('*', { count: 'exact', head: true })
+        .in('uploader_id', memberIds)
+        .gte('created_at', sevenDaysAgo.toISOString());
+
+      // 위치 데이터 수
+      const { count: locationCount } = await supabase
+        .from('user_locations')
+        .select('*', { count: 'exact', head: true })
+        .in('user_id', memberIds);
+
+      setGroupStats({
+        totalMembers,
+        totalPhotos: photoCount || 0,
+        totalLocations: locationCount || 0,
+        recentPhotos: recentPhotoCount || 0,
+      });
+    } catch (err: any) {
+      console.error('그룹 통계 로드 오류:', err);
+      setError(err.message || '통계를 불러오는데 실패했습니다.');
+    } finally {
+      setLoadingData(false);
+    }
+  }, [selectedGroup]);
+
+  // 그룹 멤버 목록 로드
+  const loadGroupMembers = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      // 멤버십 조회
+      const { data: membershipsData, error: membershipsError } = await supabase
+        .from('memberships')
+        .select('user_id, role, joined_at')
+        .eq('group_id', groupId);
+
+      if (membershipsError) throw membershipsError;
+
+      // 그룹 소유자 정보
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', groupId)
+        .single();
+
+      const memberIds = membershipsData?.map(m => m.user_id) || [];
+      if (groupData?.owner_id && !memberIds.includes(groupData.owner_id)) {
+        memberIds.push(groupData.owner_id);
+      }
+
+      // 프로필 정보 조회
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, email, nickname, avatar_url')
+        .in('id', memberIds);
+
+      const membersWithProfiles: MemberInfo[] = (membershipsData || []).map(membership => {
+        const profile = profilesData?.find(p => p.id === membership.user_id);
+        return {
+          user_id: membership.user_id,
+          email: profile?.email || null,
+          nickname: profile?.nickname || null,
+          role: membership.role,
+          joined_at: membership.joined_at,
+        };
+      });
+
+      // 소유자 추가
+      if (groupData?.owner_id) {
+        const ownerProfile = profilesData?.find(p => p.id === groupData.owner_id);
+        if (ownerProfile && !membersWithProfiles.find(m => m.user_id === groupData.owner_id)) {
+          membersWithProfiles.unshift({
+            user_id: groupData.owner_id,
+            email: ownerProfile.email || null,
+            nickname: ownerProfile.nickname || null,
+            role: 'ADMIN',
+            joined_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      setGroupMembers(membersWithProfiles);
+    } catch (err: any) {
+      console.error('그룹 멤버 로드 오류:', err);
+      setError(err.message || '멤버 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
+  // 그룹 사진 목록 로드
+  const loadGroupPhotos = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      // 그룹 멤버 ID 목록
+      const { data: membersData } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('group_id', groupId);
+
+      const memberIds = membersData?.map(m => m.user_id) || [];
+      
+      if (selectedGroup?.owner_id && !memberIds.includes(selectedGroup.owner_id)) {
+        memberIds.push(selectedGroup.owner_id);
+      }
+
+      if (memberIds.length === 0) {
+        setGroupPhotos([]);
+        return;
+      }
+
+      const { data: photosData, error: photosError } = await supabase
+        .from('memory_vault')
+        .select('id, image_url, cloudinary_url, s3_original_url, original_filename, created_at, uploader_id, caption')
+        .in('uploader_id', memberIds)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (photosError) throw photosError;
+
+      setGroupPhotos(photosData || []);
+    } catch (err: any) {
+      console.error('사진 목록 로드 오류:', err);
+      setError(err.message || '사진 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoadingData(false);
+    }
+  }, [selectedGroup]);
+
+  // 그룹 위치 데이터 로드
+  const loadGroupLocations = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      // 그룹 멤버 ID 목록
+      const { data: membersData } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('group_id', groupId);
+
+      const memberIds = membersData?.map(m => m.user_id) || [];
+      
+      if (selectedGroup?.owner_id && !memberIds.includes(selectedGroup.owner_id)) {
+        memberIds.push(selectedGroup.owner_id);
+      }
+
+      if (memberIds.length === 0) {
+        setGroupLocations([]);
+        return;
+      }
+
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('user_locations')
+        .select('user_id, latitude, longitude, address, updated_at')
+        .in('user_id', memberIds);
+
+      if (locationsError) throw locationsError;
+
+      // 프로필 정보 조회
+      const userIds = (locationsData || []).map(l => l.user_id);
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, email, nickname')
+        .in('id', userIds);
+
+      const locationsWithProfiles: LocationInfo[] = (locationsData || []).map(location => {
+        const profile = profilesData?.find(p => p.id === location.user_id);
+        return {
+          ...location,
+          email: profile?.email || null,
+          nickname: profile?.nickname || null,
+        };
+      });
+
+      setGroupLocations(locationsWithProfiles);
+    } catch (err: any) {
+      console.error('위치 데이터 로드 오류:', err);
+      setError(err.message || '위치 데이터를 불러오는데 실패했습니다.');
+    } finally {
+      setLoadingData(false);
+    }
+  }, [selectedGroup]);
+
+  // 그룹 선택 변경
+  useEffect(() => {
+    if (selectedGroupId) {
+      loadSelectedGroup(selectedGroupId);
+    }
+  }, [selectedGroupId, loadSelectedGroup]);
+
+  // 선택된 그룹 정보 변경 시 통계 로드
+  useEffect(() => {
+    if (selectedGroup && activeTab === 'group-admin' && groupAdminTab === 'dashboard') {
+      loadGroupStats(selectedGroup.id);
+    }
+  }, [selectedGroup, activeTab, groupAdminTab, loadGroupStats]);
+
   // 탭 변경 시 데이터 로드
   useEffect(() => {
     if (!isAuthorized) return;
@@ -236,8 +562,17 @@ export default function AdminPage() {
       loadUsers();
     } else if (activeTab === 'groups') {
       loadGroups();
+    } else if (activeTab === 'group-admin' && selectedGroup) {
+      if (groupAdminTab === 'dashboard') {
+        loadGroupStats(selectedGroup.id);
+      } else if (groupAdminTab === 'members') {
+        loadGroupMembers(selectedGroup.id);
+      } else if (groupAdminTab === 'content') {
+        loadGroupPhotos(selectedGroup.id);
+        loadGroupLocations(selectedGroup.id);
+      }
     }
-  }, [activeTab, isAuthorized]);
+  }, [activeTab, isAuthorized, groupAdminTab, selectedGroup, loadStats, loadUsers, loadGroups, loadGroupStats, loadGroupMembers, loadGroupPhotos, loadGroupLocations]);
 
   // 검색 필터링
   const filteredUsers = users.filter((user) => {
@@ -257,6 +592,49 @@ export default function AdminPage() {
       group.name.toLowerCase().includes(query) ||
       group.owner_email?.toLowerCase().includes(query) ||
       group.id.toLowerCase().includes(query)
+    );
+  });
+
+  // 사진 삭제
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm('정말로 이 사진을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('memory_vault')
+        .delete()
+        .eq('id', photoId);
+
+      if (error) throw error;
+
+      alert('사진이 삭제되었습니다.');
+      if (selectedGroup) {
+        loadGroupPhotos(selectedGroup.id);
+        loadGroupStats(selectedGroup.id);
+      }
+    } catch (err: any) {
+      console.error('사진 삭제 오류:', err);
+      alert(err.message || '사진 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 그룹 관리 탭으로 전환
+  const handleSelectGroupForAdmin = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setActiveTab('group-admin');
+    setGroupAdminTab('dashboard');
+  };
+
+  // 검색 필터링 (그룹 관리)
+  const filteredGroupPhotos = groupPhotos.filter((photo) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      photo.original_filename?.toLowerCase().includes(query) ||
+      photo.caption?.toLowerCase().includes(query) ||
+      photo.id.toLowerCase().includes(query)
     );
   });
 
@@ -404,6 +782,31 @@ export default function AdminPage() {
             }}
           >
             <Settings style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            그룹 목록
+          </button>
+          <button
+            onClick={() => {
+              if (selectedGroupId) {
+                setActiveTab('group-admin');
+              } else {
+                alert('그룹을 먼저 선택해주세요.');
+              }
+            }}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'group-admin' ? '3px solid #9333ea' : '3px solid transparent',
+              color: activeTab === 'group-admin' ? '#9333ea' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'group-admin' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              opacity: selectedGroupId ? 1 : 0.5,
+            }}
+            disabled={!selectedGroupId}
+          >
+            <Shield style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             그룹 관리
           </button>
         </div>
@@ -889,55 +1292,76 @@ export default function AdminPage() {
                       }}>
                         생성일: {new Date(group.created_at).toLocaleDateString('ko-KR')}
                       </div>
-                      <button
-                        style={{
-                          width: '100%',
-                          padding: '8px 16px',
-                          backgroundColor: '#fee2e2',
-                          color: '#991b1b',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                        }}
-                        onClick={async () => {
-                          if (!confirm(`정말로 "${group.name}" 그룹을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
-                            return;
-                          }
-
-                          try {
-                            const { data: { session } } = await supabase.auth.getSession();
-                            if (!session?.access_token) {
-                              alert('인증 정보를 가져올 수 없습니다.');
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                      }}>
+                        <button
+                          style={{
+                            flex: 1,
+                            padding: '8px 16px',
+                            backgroundColor: '#9333ea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => handleSelectGroupForAdmin(group.id)}
+                        >
+                          관리하기
+                        </button>
+                        <button
+                          style={{
+                            flex: 1,
+                            padding: '8px 16px',
+                            backgroundColor: '#fee2e2',
+                            color: '#991b1b',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                          onClick={async () => {
+                            if (!confirm(`정말로 "${group.name}" 그룹을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
                               return;
                             }
 
-                            const response = await fetch('/api/admin/groups/delete', {
-                              method: 'DELETE',
-                              headers: {
-                                'Authorization': `Bearer ${session.access_token}`,
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({ groupId: group.id }),
-                            });
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert('인증 정보를 가져올 수 없습니다.');
+                                return;
+                              }
 
-                            const result = await response.json();
+                              const response = await fetch('/api/admin/groups/delete', {
+                                method: 'DELETE',
+                                headers: {
+                                  'Authorization': `Bearer ${session.access_token}`,
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ groupId: group.id }),
+                              });
 
-                            if (!response.ok) {
-                              throw new Error(result.error || '그룹 삭제에 실패했습니다.');
+                              const result = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(result.error || '그룹 삭제에 실패했습니다.');
+                              }
+
+                              alert('그룹이 삭제되었습니다.');
+                              loadGroups(); // 목록 새로고침
+                            } catch (error: any) {
+                              console.error('그룹 삭제 오류:', error);
+                              alert(error.message || '그룹 삭제 중 오류가 발생했습니다.');
                             }
-
-                            alert('그룹이 삭제되었습니다.');
-                            loadGroups(); // 목록 새로고침
-                          } catch (error: any) {
-                            console.error('그룹 삭제 오류:', error);
-                            alert(error.message || '그룹 삭제 중 오류가 발생했습니다.');
-                          }
-                        }}
-                      >
-                        그룹 삭제
-                      </button>
+                          }}
+                        >
+                          삭제
+                        </button>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
