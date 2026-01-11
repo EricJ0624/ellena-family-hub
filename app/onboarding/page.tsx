@@ -48,15 +48,10 @@ export default function OnboardingPage() {
           return;
         }
 
-        // 시스템 관리자는 온보딩 건너뛰기
+        // 시스템 관리자 확인
         const { data: isAdmin } = await supabase.rpc('is_system_admin', {
           user_id_param: user.id,
         });
-
-        if (isAdmin) {
-          router.push('/dashboard');
-          return;
-        }
 
         // 이미 그룹이 있는지 확인
         const { data: memberships } = await supabase
@@ -72,9 +67,17 @@ export default function OnboardingPage() {
           .eq('owner_id', user.id)
           .limit(1);
 
-        if ((memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0)) {
-          // 이미 그룹이 있으면 대시보드로 이동
+        const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+
+        if (hasGroups) {
+          // 그룹이 있으면 대시보드로 이동
           router.push('/dashboard');
+          return;
+        }
+
+        // 시스템 관리자이고 그룹이 없으면 관리자 페이지로
+        if (isAdmin) {
+          router.push('/admin');
           return;
         }
 

@@ -73,15 +73,10 @@ export default function LoginPage() {
         }
         
         if (session && session.user) {
-          // 시스템 관리자는 바로 대시보드로
+          // 시스템 관리자 확인
           const { data: isAdmin } = await supabase.rpc('is_system_admin', {
             user_id_param: session.user.id,
           });
-
-          if (isAdmin) {
-            router.push('/dashboard');
-            return;
-          }
 
           // 그룹이 있는지 확인
           const { data: memberships } = await supabase
@@ -97,8 +92,20 @@ export default function LoginPage() {
             .eq('owner_id', session.user.id)
             .limit(1);
 
-          // 그룹이 없으면 온보딩으로, 있으면 대시보드로
-          if ((!memberships || memberships.length === 0) && (!ownedGroups || ownedGroups.length === 0)) {
+          const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+
+          if (isAdmin) {
+            // 시스템 관리자: 그룹이 있으면 대시보드, 없으면 관리자 페이지
+            if (hasGroups) {
+              router.push('/dashboard');
+            } else {
+              router.push('/admin');
+            }
+            return;
+          }
+
+          // 일반 사용자: 그룹이 없으면 온보딩으로, 있으면 대시보드로
+          if (!hasGroups) {
             router.push('/onboarding');
           } else {
             router.push('/dashboard');
