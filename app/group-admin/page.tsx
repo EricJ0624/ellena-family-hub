@@ -1683,6 +1683,7 @@ export default function GroupAdminPage() {
                               fontWeight: '600',
                             }}>
                               {request.status === 'pending' ? '대기중' : request.status === 'approved' ? '승인됨' : request.status === 'rejected' ? '거절됨' : request.status === 'expired' ? '만료됨' : '취소됨'}
+                            </span>
                           </div>
                           <p style={{
                             fontSize: '14px',
