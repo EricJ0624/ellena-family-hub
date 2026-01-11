@@ -122,12 +122,25 @@ export default function OnboardingPage() {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 그룹 생성 (초대 코드는 트리거에서 자동 생성)
+      // 초대 코드 생성 (RPC 함수 호출)
+      const { data: inviteCodeData, error: codeError } = await supabase.rpc('generate_invite_code');
+      if (codeError) {
+        console.error('초대 코드 생성 오류:', codeError);
+        throw new Error('초대 코드 생성에 실패했습니다.');
+      }
+
+      const inviteCode = inviteCodeData || '';
+      if (!inviteCode) {
+        throw new Error('초대 코드 생성에 실패했습니다.');
+      }
+
+      // 그룹 생성 (초대 코드 포함)
       const { data, error: createError } = await supabase
         .from('groups')
         .insert({
           name: groupName.trim(),
           owner_id: user.id,
+          invite_code: inviteCode,
         })
         .select()
         .single();
@@ -148,15 +161,9 @@ export default function OnboardingPage() {
         throw membershipError;
       }
 
-      // 초대 코드 가져오기
-      const { data: groupData } = await supabase
-        .from('groups')
-        .select('invite_code')
-        .eq('id', data.id)
-        .single();
-
+      // 생성된 그룹 정보 설정
       setCreatedGroupId(data.id);
-      setCreatedInviteCode(groupData?.invite_code || null);
+      setCreatedInviteCode(inviteCode); // 생성된 초대 코드 사용
       setSuccess('그룹이 생성되었습니다!');
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
