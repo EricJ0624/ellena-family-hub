@@ -203,20 +203,14 @@ export default function OnboardingPage() {
         throw new Error('올바른 초대 코드를 입력해주세요.');
       }
 
-      // 멤버 수 조회
+      // 멤버 수 조회 (memberships 테이블만 사용)
+      // 소유자는 memberships 테이블에 ADMIN 역할로 포함되어 있으므로 별도 계산 불필요
       const { count: memberCount } = await supabase
         .from('memberships')
         .select('*', { count: 'exact', head: true })
         .eq('group_id', groupData.id);
 
-      // 그룹 소유자 포함
-      const { data: ownerData } = await supabase
-        .from('groups')
-        .select('owner_id')
-        .eq('id', groupData.id)
-        .single();
-
-      const totalMembers = (memberCount || 0) + (ownerData?.owner_id ? 1 : 0);
+      const totalMembers = memberCount || 0;
 
       setGroupPreview({
         id: groupData.id,
