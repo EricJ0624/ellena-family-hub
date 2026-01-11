@@ -1382,7 +1382,7 @@ export default function GroupAdminPage() {
                               fontWeight: '600',
                             }}>
                               {ticket.status === 'pending' ? '?�기�? : ticket.status === 'answered' ? '?��??�료' : '?�힘'}
-                            </span>
+                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '닫힘'}
                           </div>
                           <p style={{
                             fontSize: '14px',
