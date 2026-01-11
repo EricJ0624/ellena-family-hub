@@ -1382,6 +1382,7 @@ export default function GroupAdminPage() {
                               fontWeight: '600',
                             }}>
                               {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '닫힘'}
+                            </span>
                           </div>
                           <p style={{
                             fontSize: '14px',
@@ -1681,7 +1682,6 @@ export default function GroupAdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-{request.status === 'pending' ? '?湲곗쨷' : request.status === 'approved' ? '?뱀씤?? : request.status === 'rejected' ? '嫄곗젅?? : request.status === 'expired' ? '留뚮즺?? : '痍⑥냼??}
                               {request.status === 'pending' ? '대기중' : request.status === 'approved' ? '승인됨' : request.status === 'rejected' ? '거절됨' : request.status === 'expired' ? '만료됨' : '취소됨'}
                           </div>
                           <p style={{
