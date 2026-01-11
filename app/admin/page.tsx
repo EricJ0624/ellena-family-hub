@@ -1504,6 +1504,60 @@ export default function AdminPage() {
                     </div>
                   </motion.div>
                 </div>
+
+                {/* 가족 생성/가입 기능 버튼 */}
+                <div style={{
+                  marginTop: '32px',
+                  padding: '24px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '12px',
+                  border: '1px solid #e5e7eb',
+                }}>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    marginBottom: '12px',
+                  }}>
+                    가족 생성/가입
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#64748b',
+                    marginBottom: '16px',
+                  }}>
+                    가족 그룹을 생성하거나 초대 코드로 가입할 수 있습니다.
+                  </div>
+                  <button
+                    onClick={() => router.push('/onboarding')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '12px 24px',
+                      backgroundColor: '#9333ea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 4px rgba(147, 51, 234, 0.2)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#7e22ce';
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(147, 51, 234, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#9333ea';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(147, 51, 234, 0.2)';
+                    }}
+                  >
+                    <UserPlus style={{ width: '18px', height: '18px' }} />
+                    가족 생성/가입하기
+                  </button>
+                </div>
               </div>
             )}
 

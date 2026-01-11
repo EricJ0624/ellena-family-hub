@@ -128,7 +128,7 @@ const INITIAL_STATE: AppState = {
   todos: [],
   album: [],
   events: [],
-  messages: [{ id: 0, user: "System", text: "가족 채팅방이 활성화되었습니다.", time: "방금" }],
+  messages: [],
   titleStyle: {
     content: "Ellena Family Hub",
     color: '#9333ea',
