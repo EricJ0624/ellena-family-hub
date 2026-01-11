@@ -17,7 +17,15 @@ import {
   Crown,
   Image as ImageIcon,
   MapPin,
-  Trash2
+  Trash2,
+  Megaphone,
+  MessageSquare,
+  KeyRound,
+  Plus,
+  Edit,
+  Check,
+  XCircle,
+  Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -94,11 +102,59 @@ interface GroupStats {
   recentPhotos: number;
 }
 
+interface AnnouncementInfo {
+  id: string;
+  title: string;
+  content: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+interface SupportTicketInfo {
+  id: string;
+  group_id: string;
+  created_by: string | null;
+  title: string;
+  content: string;
+  status: 'pending' | 'answered' | 'closed';
+  answer: string | null;
+  answered_by: string | null;
+  answered_at: string | null;
+  created_at: string;
+  updated_at: string;
+  groups?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface DashboardAccessRequestInfo {
+  id: string;
+  group_id: string;
+  requested_by: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'revoked';
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  groups?: {
+    id: string;
+    name: string;
+  };
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'support-tickets' | 'dashboard-access-requests'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
@@ -117,6 +173,17 @@ export default function AdminPage() {
   const [groupLocations, setGroupLocations] = useState<LocationInfo[]>([]);
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
+
+  // 공지사항, 문의, 접근 요청 관련 상태
+  const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
+  const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null>(null);
+  const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
+  const [announcementTitle, setAnnouncementTitle] = useState('');
+  const [announcementContent, setAnnouncementContent] = useState('');
+  const [ticketAnswer, setTicketAnswer] = useState('');
+  const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
 
   // 관리자 권한 확인 및 초기 데이터 로드
   useEffect(() => {
@@ -807,9 +874,126 @@ export default function AdminPage() {
         loadGroupPhotos(selectedGroupId);
         loadGroupLocations(selectedGroupId);
       }
+    } else if (activeTab === 'announcements') {
+      loadAnnouncements();
+    } else if (activeTab === 'support-tickets') {
+      loadSupportTickets();
+    } else if (activeTab === 'dashboard-access-requests') {
+      loadAccessRequests();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthorized, groupAdminTab, selectedGroupId]);
+
+  // 공지사항 로드
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch('/api/admin/announcements', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '공지사항 조회에 실패했습니다.');
+      }
+
+      setAnnouncements(result.data || []);
+    } catch (err: any) {
+      console.error('공지사항 로드 오류:', err);
+      setError(err.message || '공지사항을 불러오는데 실패했습니다.');
+      setAnnouncements([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
+  // 문의 목록 로드
+  const loadSupportTickets = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch('/api/admin/support-tickets', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '문의 조회에 실패했습니다.');
+      }
+
+      setSupportTickets(result.data || []);
+    } catch (err: any) {
+      console.error('문의 로드 오류:', err);
+      setError(err.message || '문의를 불러오는데 실패했습니다.');
+      setSupportTickets([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
+  // 접근 요청 목록 로드
+  const loadAccessRequests = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch('/api/admin/dashboard-access-requests', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '접근 요청 조회에 실패했습니다.');
+      }
+
+      setAccessRequests(result.data || []);
+    } catch (err: any) {
+      console.error('접근 요청 로드 오류:', err);
+      setError(err.message || '접근 요청을 불러오는데 실패했습니다.');
+      setAccessRequests([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
 
   // 검색 필터링
   const filteredUsers = users.filter((user) => {
@@ -1070,6 +1254,89 @@ export default function AdminPage() {
           >
             <Shield style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             그룹 관리 {manageableGroups.length > 0 && `(${manageableGroups.length})`}
+          </button>
+          <button
+            onClick={() => setActiveTab('announcements')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'announcements' ? '3px solid #9333ea' : '3px solid transparent',
+              color: activeTab === 'announcements' ? '#9333ea' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'announcements' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Megaphone style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            공지 관리
+          </button>
+          <button
+            onClick={() => setActiveTab('support-tickets')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'support-tickets' ? '3px solid #9333ea' : '3px solid transparent',
+              color: activeTab === 'support-tickets' ? '#9333ea' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'support-tickets' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              position: 'relative',
+            }}
+          >
+            <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            문의 관리
+            {supportTickets.filter(t => t.status === 'pending').length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                borderRadius: '10px',
+                padding: '2px 6px',
+                fontSize: '11px',
+                fontWeight: '600',
+              }}>
+                {supportTickets.filter(t => t.status === 'pending').length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('dashboard-access-requests')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'dashboard-access-requests' ? '3px solid #9333ea' : '3px solid transparent',
+              color: activeTab === 'dashboard-access-requests' ? '#9333ea' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'dashboard-access-requests' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              position: 'relative',
+            }}
+          >
+            <KeyRound style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            접근 요청 관리
+            {accessRequests.filter(r => r.status === 'pending').length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                borderRadius: '10px',
+                padding: '2px 6px',
+                fontSize: '11px',
+                fontWeight: '600',
+              }}>
+                {accessRequests.filter(r => r.status === 'pending').length}
+              </span>
+            )}
           </button>
         </div>
       </div>
