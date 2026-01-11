@@ -2606,6 +2606,949 @@ export default function AdminPage() {
                 )}
               </div>
             )}
+
+            {/* 공지 관리 탭 */}
+            {activeTab === 'announcements' && (
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '24px',
+                }}>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    margin: 0,
+                  }}>
+                    공지사항 관리
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setEditingAnnouncement(null);
+                      setAnnouncementTitle('');
+                      setAnnouncementContent('');
+                    }}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#9333ea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Plus style={{ width: '18px', height: '18px' }} />
+                    새 공지 작성
+                  </button>
+                </div>
+
+                {/* 공지 목록 */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}>
+                  {announcements.map((announcement) => (
+                    <motion.div
+                      key={announcement.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: '20px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            color: '#1e293b',
+                            margin: '0 0 8px 0',
+                          }}>
+                            {announcement.title}
+                          </h3>
+                          <p style={{
+                            fontSize: '14px',
+                            color: '#64748b',
+                            margin: 0,
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            {announcement.content}
+                          </p>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginLeft: '16px',
+                        }}>
+                          <button
+                            onClick={async () => {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert('인증 정보를 가져올 수 없습니다.');
+                                return;
+                              }
+
+                              try {
+                                setLoadingData(true);
+                                const response = await fetch(`/api/admin/announcements?id=${announcement.id}`, {
+                                  method: 'DELETE',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(result.error || '공지 삭제에 실패했습니다.');
+                                }
+
+                                alert('공지가 삭제되었습니다.');
+                                loadAnnouncements();
+                              } catch (error: any) {
+                                console.error('공지 삭제 오류:', error);
+                                alert(error.message || '공지 삭제 중 오류가 발생했습니다.');
+                              } finally {
+                                setLoadingData(false);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: '#fee2e2',
+                              color: '#991b1b',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginTop: '12px',
+                      }}>
+                        작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                        {announcement.updated_at !== announcement.created_at && ` | 수정일: ${new Date(announcement.updated_at).toLocaleString('ko-KR')}`}
+                        {!announcement.is_active && ' | 비활성화됨'}
+                      </div>
+                    </motion.div>
+                  ))}
+                  {announcements.length === 0 && (
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      color: '#94a3b8',
+                    }}>
+                      <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                      <p>공지사항이 없습니다.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 공지 작성/수정 모달 */}
+                {editingAnnouncement !== undefined && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                  }}
+                  onClick={() => {
+                    setEditingAnnouncement(null);
+                    setAnnouncementTitle('');
+                    setAnnouncementContent('');
+                  }}
+                  >
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '24px',
+                      width: '90%',
+                      maxWidth: '600px',
+                      maxHeight: '80vh',
+                      overflow: 'auto',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 style={{
+                        fontSize: '20px',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        marginBottom: '16px',
+                      }}>
+                        {editingAnnouncement ? '공지 수정' : '새 공지 작성'}
+                      </h3>
+                      <input
+                        type="text"
+                        value={announcementTitle}
+                        onChange={(e) => setAnnouncementTitle(e.target.value)}
+                        placeholder="제목을 입력하세요..."
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          fontFamily: 'inherit',
+                          marginBottom: '16px',
+                        }}
+                      />
+                      <textarea
+                        value={announcementContent}
+                        onChange={(e) => setAnnouncementContent(e.target.value)}
+                        placeholder="내용을 입력하세요..."
+                        style={{
+                          width: '100%',
+                          minHeight: '300px',
+                          padding: '12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
+                          marginBottom: '16px',
+                        }}
+                      />
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        justifyContent: 'flex-end',
+                      }}>
+                        <button
+                          onClick={() => {
+                            setEditingAnnouncement(null);
+                            setAnnouncementTitle('');
+                            setAnnouncementContent('');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#e2e8f0',
+                            color: '#475569',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!announcementTitle.trim() || !announcementContent.trim()) {
+                              alert('제목과 내용을 모두 입력해주세요.');
+                              return;
+                            }
+
+                            try {
+                              setLoadingData(true);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert('인증 정보를 가져올 수 없습니다.');
+                                return;
+                              }
+
+                              if (editingAnnouncement) {
+                                // 수정
+                                const response = await fetch('/api/admin/announcements', {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    id: editingAnnouncement.id,
+                                    title: announcementTitle,
+                                    content: announcementContent,
+                                    is_active: true,
+                                  }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(result.error || '공지 수정에 실패했습니다.');
+                                }
+
+                                alert('공지가 수정되었습니다.');
+                              } else {
+                                // 작성
+                                const response = await fetch('/api/admin/announcements', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    title: announcementTitle,
+                                    content: announcementContent,
+                                    is_active: true,
+                                  }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(result.error || '공지 작성에 실패했습니다.');
+                                }
+
+                                alert('공지가 작성되었습니다.');
+                              }
+
+                              setEditingAnnouncement(null);
+                              setAnnouncementTitle('');
+                              setAnnouncementContent('');
+                              loadAnnouncements();
+                            } catch (error: any) {
+                              console.error('공지 작성/수정 오류:', error);
+                              alert(error.message || '공지 작성/수정 중 오류가 발생했습니다.');
+                            } finally {
+                              setLoadingData(false);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#9333ea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {editingAnnouncement ? '수정' : '작성'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 문의 관리 탭 */}
+            {activeTab === 'support-tickets' && (
+              <div>
+                <h2 style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  marginBottom: '24px',
+                }}>
+                  문의 관리 ({supportTickets.filter(t => t.status === 'pending').length}개 대기중)
+                </h2>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}>
+                  {supportTickets.map((ticket) => (
+                    <motion.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: '20px',
+                        backgroundColor: ticket.status === 'pending' ? '#fef3c7' : '#f8fafc',
+                        borderRadius: '12px',
+                        border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '8px',
+                          }}>
+                            <h3 style={{
+                              fontSize: '18px',
+                              fontWeight: '600',
+                              color: '#1e293b',
+                              margin: 0,
+                            }}>
+                              {ticket.title}
+                            </h3>
+                            <span style={{
+                              padding: '4px 12px',
+                              backgroundColor: ticket.status === 'pending' ? '#fbbf24' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
+                              color: 'white',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                            }}>
+                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '닫힘'}
+                            </span>
+                            {ticket.groups && (
+                              <span style={{
+                                fontSize: '14px',
+                                color: '#64748b',
+                              }}>
+                                그룹: {ticket.groups.name}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{
+                            fontSize: '14px',
+                            color: '#64748b',
+                            margin: '0 0 12px 0',
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            {ticket.content}
+                          </p>
+                          {ticket.answer && (
+                            <div style={{
+                              marginTop: '16px',
+                              padding: '16px',
+                              backgroundColor: '#f0f9ff',
+                              borderRadius: '8px',
+                              border: '1px solid #bae6fd',
+                            }}>
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#0369a1',
+                                marginBottom: '8px',
+                              }}>
+                                답변:
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {ticket.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {ticket.status === 'pending' && (
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '16px',
+                        }}>
+                          <button
+                            onClick={async () => {
+                              setEditingTicket(ticket);
+                              setTicketAnswer(ticket.answer || '');
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#9333ea',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            답변하기
+                          </button>
+                        </div>
+                      )}
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginTop: '12px',
+                      }}>
+                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                      </div>
+                    </motion.div>
+                  ))}
+                  {supportTickets.length === 0 && (
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      color: '#94a3b8',
+                    }}>
+                      <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                      <p>문의가 없습니다.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 답변 모달 */}
+                {editingTicket && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                  }}
+                  onClick={() => setEditingTicket(null)}
+                  >
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '24px',
+                      width: '90%',
+                      maxWidth: '600px',
+                      maxHeight: '80vh',
+                      overflow: 'auto',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 style={{
+                        fontSize: '20px',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        marginBottom: '16px',
+                      }}>
+                        답변 작성
+                      </h3>
+                      <textarea
+                        value={ticketAnswer}
+                        onChange={(e) => setTicketAnswer(e.target.value)}
+                        placeholder="답변을 입력하세요..."
+                        style={{
+                          width: '100%',
+                          minHeight: '200px',
+                          padding: '12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
+                          marginBottom: '16px',
+                        }}
+                      />
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        justifyContent: 'flex-end',
+                      }}>
+                        <button
+                          onClick={() => {
+                            setEditingTicket(null);
+                            setTicketAnswer('');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#e2e8f0',
+                            color: '#475569',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!ticketAnswer.trim()) {
+                              alert('답변 내용을 입력해주세요.');
+                              return;
+                            }
+
+                            try {
+                              setLoadingData(true);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert('인증 정보를 가져올 수 없습니다.');
+                                return;
+                              }
+
+                              const response = await fetch('/api/admin/support-tickets', {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${session.access_token}`,
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  id: editingTicket.id,
+                                  answer: ticketAnswer,
+                                  status: 'answered',
+                                }),
+                              });
+
+                              const result = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(result.error || '답변 작성에 실패했습니다.');
+                              }
+
+                              alert('답변이 작성되었습니다.');
+                              setEditingTicket(null);
+                              setTicketAnswer('');
+                              loadSupportTickets();
+                            } catch (error: any) {
+                              console.error('답변 작성 오류:', error);
+                              alert(error.message || '답변 작성 중 오류가 발생했습니다.');
+                            } finally {
+                              setLoadingData(false);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#9333ea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          답변 작성
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 접근 요청 관리 탭 */}
+            {activeTab === 'dashboard-access-requests' && (
+              <div>
+                <h2 style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  marginBottom: '24px',
+                }}>
+                  대시보드 접근 요청 관리 ({accessRequests.filter(r => r.status === 'pending').length}개 대기중)
+                </h2>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}>
+                  {accessRequests.map((request) => (
+                    <motion.div
+                      key={request.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: '20px',
+                        backgroundColor: request.status === 'pending' ? '#fef3c7' : request.status === 'approved' ? '#d1fae5' : '#f8fafc',
+                        borderRadius: '12px',
+                        border: `1px solid ${request.status === 'pending' ? '#fde68a' : request.status === 'approved' ? '#a7f3d0' : '#e2e8f0'}`,
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '8px',
+                          }}>
+                            {request.groups && (
+                              <h3 style={{
+                                fontSize: '18px',
+                                fontWeight: '600',
+                                color: '#1e293b',
+                                margin: 0,
+                              }}>
+                                {request.groups.name}
+                              </h3>
+                            )}
+                            <span style={{
+                              padding: '4px 12px',
+                              backgroundColor: request.status === 'pending' ? '#fbbf24' : request.status === 'approved' ? '#10b981' : request.status === 'rejected' ? '#ef4444' : '#94a3b8',
+                              color: 'white',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                            }}>
+                              {request.status === 'pending' ? '대기중' : request.status === 'approved' ? '승인됨' : request.status === 'rejected' ? '거절됨' : request.status === 'expired' ? '만료됨' : '취소됨'}
+                            </span>
+                          </div>
+                          <p style={{
+                            fontSize: '14px',
+                            color: '#64748b',
+                            margin: '0 0 12px 0',
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            {request.reason}
+                          </p>
+                          {request.status === 'approved' && request.expires_at && (
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#059669',
+                              marginBottom: '8px',
+                            }}>
+                              만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
+                            </div>
+                          )}
+                          {request.status === 'rejected' && request.rejection_reason && (
+                            <div style={{
+                              marginTop: '12px',
+                              padding: '12px',
+                              backgroundColor: '#fee2e2',
+                              borderRadius: '8px',
+                              border: '1px solid #fecaca',
+                            }}>
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#991b1b',
+                                marginBottom: '4px',
+                              }}>
+                                거절 사유:
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                              }}>
+                                {request.rejection_reason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {request.status === 'pending' && (
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '16px',
+                        }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                setLoadingData(true);
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  return;
+                                }
+
+                                const response = await fetch('/api/admin/dashboard-access-requests', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    id: request.id,
+                                    action: 'approve',
+                                    expires_hours: accessRequestExpiresHours,
+                                  }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(result.error || '승인에 실패했습니다.');
+                                }
+
+                                alert('접근 요청이 승인되었습니다.');
+                                loadAccessRequests();
+                              } catch (error: any) {
+                                console.error('승인 오류:', error);
+                                alert(error.message || '승인 중 오류가 발생했습니다.');
+                              } finally {
+                                setLoadingData(false);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            승인
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const reason = prompt('거절 사유를 입력하세요:');
+                              if (!reason) return;
+
+                              try {
+                                setLoadingData(true);
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  return;
+                                }
+
+                                const response = await fetch('/api/admin/dashboard-access-requests', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    id: request.id,
+                                    action: 'reject',
+                                    rejection_reason: reason,
+                                  }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(result.error || '거절에 실패했습니다.');
+                                }
+
+                                alert('접근 요청이 거절되었습니다.');
+                                loadAccessRequests();
+                              } catch (error: any) {
+                                console.error('거절 오류:', error);
+                                alert(error.message || '거절 중 오류가 발생했습니다.');
+                              } finally {
+                                setLoadingData(false);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            거절
+                          </button>
+                        </div>
+                      )}
+                      {request.status === 'approved' && request.expires_at && new Date(request.expires_at) > new Date() && (
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '16px',
+                        }}>
+                          <button
+                            onClick={async () => {
+                              if (!confirm('정말로 이 접근 권한을 취소하시겠습니까?')) {
+                                return;
+                              }
+
+                              try {
+                                setLoadingData(true);
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  return;
+                                }
+
+                                const response = await fetch('/api/admin/dashboard-access-requests', {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    id: request.id,
+                                  }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(result.error || '취소에 실패했습니다.');
+                                }
+
+                                alert('접근 권한이 취소되었습니다.');
+                                loadAccessRequests();
+                              } catch (error: any) {
+                                console.error('취소 오류:', error);
+                                alert(error.message || '취소 중 오류가 발생했습니다.');
+                              } finally {
+                                setLoadingData(false);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            권한 취소
+                          </button>
+                        </div>
+                      )}
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginTop: '12px',
+                      }}>
+                        요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
+                        {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                        {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                      </div>
+                    </motion.div>
+                  ))}
+                  {accessRequests.length === 0 && (
+                    <div style={{
+                      padding: '48px',
+                      textAlign: 'center',
+                      color: '#94a3b8',
+                    }}>
+                      <KeyRound style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                      <p>접근 요청이 없습니다.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
