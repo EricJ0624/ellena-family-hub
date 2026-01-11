@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 접근 요청 작성
-    const { data: request, error } = await supabase
+    const { data: accessRequest, error } = await supabase
       .from('dashboard_access_requests')
       .insert({
         group_id,
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: request,
+      data: accessRequest,
     });
   } catch (error: any) {
     console.error('접근 요청 작성 오류:', error);
