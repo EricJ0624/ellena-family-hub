@@ -183,14 +183,14 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseServerClient();
 
     // 접근 요청 확인 (본인이 요청한 것만)
-    const { data: request, error: fetchError } = await supabase
+    const { data: accessRequest, error: fetchError } = await supabase
       .from('dashboard_access_requests')
       .select('*')
       .eq('id', id)
       .eq('requested_by', user.id)
       .single();
 
-    if (fetchError || !request) {
+    if (fetchError || !accessRequest) {
       return NextResponse.json(
         { error: '접근 요청을 찾을 수 없습니다.' },
         { status: 404 }
@@ -198,7 +198,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // pending 상태인 경우에만 삭제 가능
-    if (request.status !== 'pending') {
+    if (accessRequest.status !== 'pending') {
       return NextResponse.json(
         { error: '대기중인 요청만 취소할 수 있습니다.' },
         { status: 400 }
