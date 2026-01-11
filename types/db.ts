@@ -216,6 +216,254 @@ export interface Database {
           }
         ]
       }
+      announcements: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          is_active?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          user_id: string
+          read_at: string
+        }
+        Insert: {
+          announcement_id: string
+          user_id: string
+          read_at?: string
+        }
+        Update: {
+          announcement_id?: string
+          user_id?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_reads_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      support_tickets: {
+        Row: {
+          id: string
+          group_id: string
+          created_by: string | null
+          title: string
+          content: string
+          status: 'pending' | 'answered' | 'closed'
+          answer: string | null
+          answered_by: string | null
+          answered_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          created_by?: string | null
+          title: string
+          content: string
+          status?: 'pending' | 'answered' | 'closed'
+          answer?: string | null
+          answered_by?: string | null
+          answered_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          created_by?: string | null
+          title?: string
+          content?: string
+          status?: 'pending' | 'answered' | 'closed'
+          answer?: string | null
+          answered_by?: string | null
+          answered_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_answered_by_fkey"
+            columns: ["answered_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      dashboard_access_requests: {
+        Row: {
+          id: string
+          group_id: string
+          requested_by: string
+          reason: string
+          status: 'pending' | 'approved' | 'rejected' | 'expired' | 'revoked'
+          approved_by: string | null
+          approved_at: string | null
+          rejected_at: string | null
+          expires_at: string | null
+          revoked_at: string | null
+          rejection_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          requested_by: string
+          reason: string
+          status?: 'pending' | 'approved' | 'rejected' | 'expired' | 'revoked'
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          expires_at?: string | null
+          revoked_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          requested_by?: string
+          reason?: string
+          status?: 'pending' | 'approved' | 'rejected' | 'expired' | 'revoked'
+          approved_by?: string | null
+          approved_at?: string | null
+          rejected_at?: string | null
+          expires_at?: string | null
+          revoked_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_access_requests_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_access_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_access_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      dashboard_access_logs: {
+        Row: {
+          id: string
+          access_request_id: string | null
+          system_admin_id: string
+          group_id: string
+          accessed_at: string
+          session_duration_seconds: number | null
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          access_request_id?: string | null
+          system_admin_id: string
+          group_id: string
+          accessed_at?: string
+          session_duration_seconds?: number | null
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          access_request_id?: string | null
+          system_admin_id?: string
+          group_id?: string
+          accessed_at?: string
+          session_duration_seconds?: number | null
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_access_logs_access_request_id_fkey"
+            columns: ["access_request_id"]
+            referencedRelation: "dashboard_access_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_access_logs_system_admin_id_fkey"
+            columns: ["system_admin_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_access_logs_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       user_locations: {
         Row: {
           user_id: string
@@ -500,6 +748,17 @@ export interface Database {
         Returns: string
       }
       update_admin_last_access: {
+        Args: Record<PropertyKey, never>
+        Returns: void
+      }
+      can_access_group_dashboard: {
+        Args: {
+          group_id_param: string
+          admin_id_param: string
+        }
+        Returns: boolean
+      }
+      expire_dashboard_access_requests: {
         Args: Record<PropertyKey, never>
         Returns: void
       }
