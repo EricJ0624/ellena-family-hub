@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 접근 요청 업데이트
-    const { data: request, error } = await supabase
+    const { data: accessRequest, error } = await supabase
       .from('dashboard_access_requests')
       .update(updateData)
       .eq('id', id)
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: request,
+      data: accessRequest,
     });
   } catch (error: any) {
     console.error('접근 요청 처리 오류:', error);
@@ -184,7 +184,7 @@ export async function PUT(request: NextRequest) {
     const supabase = getSupabaseServerClient();
 
     // 접근 권한 취소
-    const { data: request, error } = await supabase
+    const { data: accessRequest, error } = await supabase
       .from('dashboard_access_requests')
       .update({
         status: 'revoked',
@@ -204,7 +204,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: request,
+      data: accessRequest,
     });
   } catch (error: any) {
     console.error('접근 권한 취소 오류:', error);
