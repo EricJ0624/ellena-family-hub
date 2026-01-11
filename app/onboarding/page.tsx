@@ -168,6 +168,11 @@ export default function OnboardingPage() {
       setCreatedGroupId(data.id);
       setCreatedInviteCode(inviteCode); // 생성된 초대 코드 사용
       setSuccess('그룹이 생성되었습니다!');
+      
+      // 1.5초 후 대시보드로 자동 이동
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
       setError(err.message || '그룹 생성에 실패했습니다.');

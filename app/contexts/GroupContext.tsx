@@ -42,7 +42,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setLoading(true);
       setError(null);
 
-      // 사용자가 속한 그룹 조회
+      // 1. memberships 테이블에서 사용자가 속한 그룹 조회
       const { data: membershipData, error: membershipError } = await supabase
         .from('memberships')
         .select('group_id, role')
@@ -50,31 +50,48 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       if (membershipError) throw membershipError;
 
-      if (!membershipData || membershipData.length === 0) {
+      // 2. groups 테이블에서 사용자가 소유한 그룹 조회
+      const { data: ownedGroupsData, error: ownedGroupsError } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('owner_id', userId);
+
+      if (ownedGroupsError) throw ownedGroupsError;
+
+      // 3. 모든 그룹 ID 수집 (memberships + 소유 그룹, 중복 제거)
+      const membershipGroupIds = membershipData?.map(m => m.group_id) || [];
+      const ownedGroupIds = ownedGroupsData?.map(g => g.id) || [];
+      const allGroupIds = [...new Set([...membershipGroupIds, ...ownedGroupIds])];
+
+      if (allGroupIds.length === 0) {
         setGroups([]);
         setMemberships([]);
         setLoading(false);
         return;
       }
 
-      const groupIds = membershipData.map(m => m.group_id);
-
-      // 그룹 정보 조회
+      // 4. 그룹 정보 조회
       const { data: groupsData, error: groupsError } = await supabase
         .from('groups')
         .select('*')
-        .in('id', groupIds)
+        .in('id', allGroupIds)
         .order('created_at', { ascending: false });
 
       if (groupsError) throw groupsError;
 
       setGroups(groupsData || []);
-      setMemberships(membershipData.map(m => ({
-        user_id: userId,
-        group_id: m.group_id,
-        role: m.role as MembershipRole,
-        joined_at: new Date().toISOString(),
-      })));
+
+      // 5. 멤버십 정보 매핑 (소유자인 경우 ADMIN 역할 부여)
+      setMemberships(allGroupIds.map(groupId => {
+        const membership = membershipData?.find(m => m.group_id === groupId);
+        const isOwner = ownedGroupIds.includes(groupId);
+        return {
+          user_id: userId,
+          group_id: groupId,
+          role: isOwner ? 'ADMIN' : (membership?.role as MembershipRole || 'MEMBER'),
+          joined_at: new Date().toISOString(),
+        };
+      }));
 
       // 현재 그룹이 없거나 삭제된 경우, 첫 번째 그룹으로 설정
       if (!currentGroupId || !groupsData?.find(g => g.id === currentGroupId)) {
