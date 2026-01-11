@@ -124,6 +124,29 @@ export async function checkPermission(
       // 멤버가 아니더라도 소유자인지 확인
       const isOwner = group.owner_id === userId;
       if (!isOwner) {
+        // 시스템 관리자이고 임시 접근 권한이 있는 경우 확인
+        const { data: isSystemAdminResult } = await supabase.rpc('is_system_admin', {
+          user_id_param: userId,
+        });
+        const isSystemAdmin = isSystemAdminResult === true;
+
+        if (isSystemAdmin) {
+          const { data: canAccess, error: accessError } = await supabase.rpc('can_access_group_dashboard', {
+            group_id_param: groupId,
+            admin_id_param: userId,
+          });
+
+          if (!accessError && canAccess === true) {
+            // 시스템 관리자가 임시 접근 권한을 가지고 있는 경우
+            // MEMBER 수준의 권한 부여
+            return {
+              success: true,
+              role: 'MEMBER',
+              isOwner: false,
+            };
+          }
+        }
+
         return {
           success: false,
           error: PermissionError.NOT_A_MEMBER,
@@ -144,7 +167,7 @@ export async function checkPermission(
     // 소유자는 항상 ADMIN 권한
     const effectiveRole: MembershipRole = isOwner ? 'ADMIN' : userRole;
 
-    // 4. 필요한 권한 확인
+    // 5. 필요한 권한 확인
     if (requiredRole) {
       const roleHierarchy: Record<MembershipRole, number> = {
         MEMBER: 1,
