@@ -383,7 +383,7 @@ export default function LoginPage() {
             margin: 0,
             letterSpacing: '0.3px'
           }}>
-            우리 가족만의<br />안전한 공간입니다
+            우리 가족만의<br />추억의 공간입니다
           </p>
         </div>
 
