@@ -6295,6 +6295,15 @@ export default function FamilyHub() {
             if (!currentGroupId) {
               throw new Error('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
             }
+            const uploadDebugPayload = {
+              fileName: file.name,
+              mimeType: file.type || null,
+              fileSize: file.size,
+              groupId: currentGroupId,
+              isRawFile,
+              usePresignedUrl,
+            };
+            console.info('업로드 디버그 정보 (Presigned URL):', uploadDebugPayload);
             // 1. Presigned URL 요청 (타임아웃: 10초)
             const urlController = new AbortController();
             const urlTimeout = setTimeout(() => urlController.abort(), 10000);
@@ -6440,6 +6449,7 @@ export default function FamilyHub() {
               finalErrorLog.errorMessage = errorMessage || '(에러 메시지 없음)';
               finalErrorLog.url = '/api/get-upload-url';
               finalErrorLog.method = 'POST';
+              finalErrorLog.uploadDebugPayload = uploadDebugPayload;
               
               // 응답 본문 정보
               if (responseText) {
