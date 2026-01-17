@@ -5,7 +5,7 @@ import {
   authenticateUser,
   getS3ClientInstance,
   generateS3KeyWithGroup,
-  generateS3Url
+  generatePublicAssetUrl
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     // S3 URL 생성 (업로드 후 접근용)
-    const s3Url = generateS3Url(s3Key);
+    const s3Url = generatePublicAssetUrl(s3Key);
 
     return NextResponse.json({
       success: true,

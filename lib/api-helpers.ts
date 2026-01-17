@@ -204,15 +204,11 @@ export async function uploadToCloudinary(
   file: Blob,
   fileName: string,
   mimeType: string,
-  userId: string,
-  options?: { maxDimension?: number; quality?: string; fetchFormat?: string }
+  userId: string
 ): Promise<{ url: string; publicId: string }> {
   initializeCloudinary();
   
   const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
-  const maxDimension = options?.maxDimension ?? 1920;
-  const quality = options?.quality ?? 'auto';
-  const fetchFormat = options?.fetchFormat ?? 'auto';
   const folder = `family-memories/${userId}`;
 
   return new Promise((resolve, reject) => {
@@ -224,8 +220,8 @@ export async function uploadToCloudinary(
         access_mode: 'authenticated',
         transformation: fileType === 'image' 
           ? [
-              { width: maxDimension, height: maxDimension, crop: 'limit', quality },
-              { fetch_format: fetchFormat }
+              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
+              { fetch_format: 'auto' }
             ]
           : [
               { quality: 'auto', fetch_format: 'auto' }
@@ -283,6 +279,20 @@ export function generateS3Url(s3Key: string): string {
   }
   const normalizedRegion = normalizeAwsRegion(process.env.AWS_REGION);
   return `https://${bucketName}.s3.${normalizedRegion}.amazonaws.com/${s3Key}`;
+}
+
+// --- [UTILITY] Public Asset URL 생성 (CloudFront 우선) ---
+export function generatePublicAssetUrl(s3Key: string): string {
+  const cfDomain =
+    process.env.AWS_CLOUDFRONT_DOMAIN ||
+    process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+
+  if (cfDomain) {
+    const normalized = cfDomain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    return `https://${normalized}/${s3Key}`;
+  }
+
+  return generateS3Url(s3Key);
 }
 
 // --- [S3] S3에서 파일 다운로드 (Cloudinary 업로드용) ---
@@ -497,15 +507,11 @@ export async function uploadToCloudinaryWithGroup(
   fileName: string,
   mimeType: string,
   userId: string,
-  groupId?: string,
-  options?: { maxDimension?: number; quality?: string; fetchFormat?: string }
-): Promise<{ url: string; publicId: string; format?: string }> {
+  groupId?: string
+): Promise<{ url: string; publicId: string }> {
   initializeCloudinary();
   
   const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
-  const maxDimension = options?.maxDimension ?? 1920;
-  const quality = options?.quality ?? 'auto';
-  const fetchFormat = options?.fetchFormat ?? 'auto';
   const folder = groupId 
     ? `family-memories/${groupId}/${userId}`
     : `family-memories/${userId}`;
@@ -527,8 +533,8 @@ export async function uploadToCloudinaryWithGroup(
         access_mode: 'authenticated',
         transformation: fileType === 'image' 
           ? [
-              { width: maxDimension, height: maxDimension, crop: 'limit', quality },
-              { fetch_format: fetchFormat }
+              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
+              { fetch_format: 'auto' }
             ]
           : [
               { quality: 'auto', fetch_format: 'auto' }
@@ -541,7 +547,6 @@ export async function uploadToCloudinaryWithGroup(
           resolve({
             url: result.secure_url,
             publicId: result.public_id,
-            format: result.format,
           });
         } else {
           reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
@@ -586,7 +591,7 @@ export function generateS3KeyWithGroup(
 }
 
 /**
- * S3 App ?대?吏 Key ?앹꽦 (留덉뒪??Key 湲곕컲)
+ * S3 App 이미지 Key 생성 (마스터 Key 기반)
  */
 export function generateAppS3KeyFromMasterKey(masterKey: string): string {
   let appKey = masterKey.replace(/^originals\//, 'app/');
@@ -596,7 +601,6 @@ export function generateAppS3KeyFromMasterKey(masterKey: string): string {
   }
   return `${appKey.slice(0, dotIndex)}_app${appKey.slice(dotIndex)}`;
 }
-
 
 /**
  * S3에 파일 업로드 (그룹 권한 메타데이터 포함)
@@ -645,12 +649,12 @@ export async function uploadToS3WithGroup(
 
   await upload.done();
 
-  const s3Url = generateS3Url(s3Key);
-  return { url: s3Url, key: s3Key };
+  const publicUrl = generatePublicAssetUrl(s3Key);
+  return { url: publicUrl, key: s3Key };
 }
 
 /**
- * S3???뚯씪 ?낅줈??(Key 吏??
+ * S3에 파일 업로드 (Key 지정)
  */
 export async function uploadToS3WithGroupAndKey(
   file: Buffer,
@@ -661,7 +665,7 @@ export async function uploadToS3WithGroupAndKey(
 ): Promise<{ url: string; key: string }> {
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
   if (!bucketName) {
-    throw new Error('AWS_S3_BUCKET_NAME ?섍꼍 蹂?섍? ?ㅼ젙?섏? ?딆븯?듬땲??');
+    throw new Error('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
   }
 
   const s3Client = getS3ClientInstance();
@@ -684,10 +688,9 @@ export async function uploadToS3WithGroupAndKey(
   });
 
   await upload.done();
-  const s3Url = generateS3Url(key);
-  return { url: s3Url, key };
+  const publicUrl = generatePublicAssetUrl(key);
+  return { url: publicUrl, key };
 }
-
 
 export function replaceFileExtension(fileName: string, newExtension: string): string {
   const baseName = fileName.replace(/\.[^.]+$/, '');
@@ -696,14 +699,13 @@ export function replaceFileExtension(fileName: string, newExtension: string): st
 
 export function getMimeTypeFromFormat(format?: string, fallback?: string): string {
   if (!format) return fallback || 'image/jpeg';
-  if (format === 'jpg') return 'image/jpeg';
   return `image/${format}`;
 }
 
 export async function downloadFromUrl(url: string): Promise<Buffer> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`?먭꺽 ?뚯씪 ?ㅼ슫濡쒕뱶 ?ㅽ뙣: ${response.status}`);
+    throw new Error(`원격 파일 다운로드 실패: ${response.status}`);
   }
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
