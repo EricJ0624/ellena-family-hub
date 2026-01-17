@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import sharp from 'sharp';
 
 // 서버 사이드용 Supabase 클라이언트 (DB 작업용)
 // Service Role Key 사용: RLS 정책 우회하여 서버 사이드에서 모든 작업 수행 가능
@@ -208,6 +209,9 @@ export async function uploadToCloudinary(
   initializeCloudinary();
   
   const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
+  const maxDimension = options?.maxDimension ?? 1920;
+  const quality = options?.quality ?? 'auto';
+  const fetchFormat = options?.fetchFormat ?? 'auto';
   const folder = `family-memories/${userId}`;
 
   return new Promise((resolve, reject) => {
@@ -219,8 +223,8 @@ export async function uploadToCloudinary(
         access_mode: 'authenticated',
         transformation: fileType === 'image' 
           ? [
-              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
-              { fetch_format: 'auto' }
+              { width: maxDimension, height: maxDimension, crop: 'limit', quality },
+              { fetch_format: fetchFormat }
             ]
           : [
               { quality: 'auto', fetch_format: 'auto' }
@@ -233,6 +237,7 @@ export async function uploadToCloudinary(
           resolve({
             url: result.secure_url,
             publicId: result.public_id,
+            format: result.format,
           });
         } else {
           reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
@@ -492,11 +497,15 @@ export async function uploadToCloudinaryWithGroup(
   fileName: string,
   mimeType: string,
   userId: string,
-  groupId?: string
-): Promise<{ url: string; publicId: string }> {
+  groupId?: string,
+  options?: { maxDimension?: number; quality?: string; fetchFormat?: string }
+): Promise<{ url: string; publicId: string; format?: string }> {
   initializeCloudinary();
   
   const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
+  const maxDimension = options?.maxDimension ?? 1920;
+  const quality = options?.quality ?? 'auto';
+  const fetchFormat = options?.fetchFormat ?? 'auto';
   const folder = groupId 
     ? `family-memories/${groupId}/${userId}`
     : `family-memories/${userId}`;
@@ -518,8 +527,8 @@ export async function uploadToCloudinaryWithGroup(
         access_mode: 'authenticated',
         transformation: fileType === 'image' 
           ? [
-              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
-              { fetch_format: 'auto' }
+              { width: maxDimension, height: maxDimension, crop: 'limit', quality },
+              { fetch_format: fetchFormat }
             ]
           : [
               { quality: 'auto', fetch_format: 'auto' }
@@ -532,6 +541,7 @@ export async function uploadToCloudinaryWithGroup(
           resolve({
             url: result.secure_url,
             publicId: result.public_id,
+            format: result.format,
           });
         } else {
           reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
@@ -574,6 +584,19 @@ export function generateS3KeyWithGroup(
   const groupPath = groupId ? `groups/${groupId}/` : '';
   return `originals/${groupPath}${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
 }
+
+/**
+ * S3 App ?대?吏 Key ?앹꽦 (留덉뒪??Key 湲곕컲)
+ */
+export function generateAppS3KeyFromMasterKey(masterKey: string): string {
+  let appKey = masterKey.replace(/^originals\//, 'app/');
+  const dotIndex = appKey.lastIndexOf('.');
+  if (dotIndex === -1) {
+    return `${appKey}_app`;
+  }
+  return `${appKey.slice(0, dotIndex)}_app${appKey.slice(dotIndex)}`;
+}
+
 
 /**
  * S3에 파일 업로드 (그룹 권한 메타데이터 포함)
@@ -626,3 +649,92 @@ export async function uploadToS3WithGroup(
   return { url: s3Url, key: s3Key };
 }
 
+/**
+ * S3???뚯씪 ?낅줈??(Key 吏??
+ */
+export async function uploadToS3WithGroupAndKey(
+  file: Buffer,
+  key: string,
+  mimeType: string,
+  userId: string,
+  groupId?: string
+): Promise<{ url: string; key: string }> {
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('AWS_S3_BUCKET_NAME ?섍꼍 蹂?섍? ?ㅼ젙?섏? ?딆븯?듬땲??');
+  }
+
+  const s3Client = getS3ClientInstance();
+  const metadata: Record<string, string> = {};
+  if (groupId) {
+    metadata['groupId'] = groupId;
+    metadata['userId'] = userId;
+  }
+
+  const upload = new Upload({
+    client: s3Client,
+    params: {
+      Bucket: bucketName,
+      Key: key,
+      Body: file,
+      ContentType: mimeType,
+      Metadata: metadata,
+      ACL: 'private',
+    },
+  });
+
+  await upload.done();
+  const s3Url = generateS3Url(key);
+  return { url: s3Url, key };
+}
+
+
+export function replaceFileExtension(fileName: string, newExtension: string): string {
+  const baseName = fileName.replace(/\.[^.]+$/, '');
+  return `${baseName}.${newExtension}`;
+}
+
+export function getMimeTypeFromFormat(format?: string, fallback?: string): string {
+  if (!format) return fallback || 'image/jpeg';
+  if (format === 'jpg') return 'image/jpeg';
+  return `image/${format}`;
+}
+
+export async function downloadFromUrl(url: string): Promise<Buffer> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`?먭꺽 ?뚯씪 ?ㅼ슫濡쒕뱶 ?ㅽ뙣: ${response.status}`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+export async function getImageMetadata(buffer: Buffer): Promise<{ width?: number; height?: number; format?: string }> {
+  const metadata = await sharp(buffer).metadata();
+  return { width: metadata.width, height: metadata.height, format: metadata.format };
+}
+
+export async function resizeImageBuffer(
+  buffer: Buffer,
+  maxDimension: number,
+  format: string,
+  quality: number
+): Promise<Buffer> {
+  const pipeline = sharp(buffer).resize({
+    width: maxDimension,
+    height: maxDimension,
+    fit: 'inside',
+    withoutEnlargement: true,
+  });
+
+  switch (format) {
+    case 'png':
+      return pipeline.png({ quality, progressive: true }).toBuffer();
+    case 'webp':
+      return pipeline.webp({ quality }).toBuffer();
+    case 'avif':
+      return pipeline.avif({ quality }).toBuffer();
+    default:
+      return pipeline.jpeg({ quality, progressive: true }).toBuffer();
+  }
+}

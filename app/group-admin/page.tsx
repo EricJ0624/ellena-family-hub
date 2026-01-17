@@ -1026,7 +1026,7 @@ export default function GroupAdminPage() {
                         }}
                       >
                         <img
-                          src={photo.cloudinary_url || photo.s3_original_url || photo.image_url || ''}
+                          src={photo.image_url || photo.cloudinary_url || photo.s3_original_url || ''}
                           alt={photo.original_filename || '?�진'}
                           style={{
                             width: '100%',

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  authenticateUser, 
-  base64ToBlob, 
-  uploadToCloudinary, 
+import {
+  authenticateUser,
+  checkCloudinaryConfig,
   downloadFromS3,
-  getSupabaseServerClient
+  downloadFromUrl,
+  generateAppS3KeyFromMasterKey,
+  getImageMetadata,
+  getMimeTypeFromFormat,
+  getSupabaseServerClient,
+  resizeImageBuffer,
+  uploadToCloudinaryWithGroup,
+  uploadToS3WithGroupAndKey,
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 
@@ -58,52 +64,89 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // 1. Cloudinary에 리사이징된 이미지 업로드 (표시용)
+    // 1. Build master and app images
+    const isImage = mimeType.startsWith('image/');
+    const MASTER_MAX_DIMENSION = 2560;
+    const APP_MAX_DIMENSION = 1920;
+    const APP_QUALITY = 85;
+    const MASTER_QUALITY = 90;
+
     let cloudinaryUrl = '';
     let cloudinaryPublicId = '';
-    
-    try {
-      let cloudinaryBlob: Blob;
-      
-      if (resizedData) {
-        // 리사이징된 이미지가 있으면 사용
-        cloudinaryBlob = base64ToBlob(resizedData, mimeType);
-      } else {
-        // 리사이징된 이미지가 없으면 S3에서 원본 다운로드
-        try {
-          cloudinaryBlob = await downloadFromS3(s3Key);
-        } catch (s3DownloadError: any) {
-          console.error('S3에서 파일 다운로드 실패:', s3DownloadError);
-          // S3 다운로드 실패 시 Cloudinary 업로드를 건너뛰고 Supabase 저장만 진행
-          throw new Error('S3에서 파일을 다운로드할 수 없습니다. Cloudinary 업로드를 건너뜁니다.');
-        }
-      }
 
-      // Multi-tenant: groupId를 포함한 Cloudinary 업로드
-      const { uploadToCloudinaryWithGroup } = await import('@/lib/api-helpers');
-      const cloudinaryResult = await uploadToCloudinaryWithGroup(
-        cloudinaryBlob,
-        fileName,
-        mimeType,
-        user.id,
-        groupId // groupId 전달
-      );
-      cloudinaryUrl = cloudinaryResult.url;
-      cloudinaryPublicId = cloudinaryResult.publicId;
-    } catch (cloudinaryError: any) {
-      console.error('Cloudinary 업로드 오류:', cloudinaryError);
-      // Cloudinary 업로드 실패해도 Supabase 저장은 계속 진행
-      // 에러 메시지에 따라 다르게 처리
-      if (cloudinaryError.message?.includes('S3에서 파일을 다운로드할 수 없습니다')) {
-        console.warn('S3 다운로드 실패로 Cloudinary 업로드를 건너뜁니다.');
+    let masterBuffer: Buffer | null = null;
+    let masterMimeType = mimeType;
+    let masterFormat = mimeType === 'image/jpeg' ? 'jpg' : (mimeType.split('/')[1] || 'jpg');
+
+    if (isImage) {
+      try {
+        const originalBlob = await downloadFromS3(s3Key);
+        const originalBuffer = Buffer.from(await originalBlob.arrayBuffer());
+        masterBuffer = originalBuffer;
+
+        const metadata = await getImageMetadata(originalBuffer);
+        const maxDimension = Math.max(metadata.width || 0, metadata.height || 0);
+
+        if (maxDimension > MASTER_MAX_DIMENSION) {
+          const cloudinaryConfig = checkCloudinaryConfig();
+          if (cloudinaryConfig.available) {
+            try {
+              const cloudinaryBlob = new Blob([originalBuffer], { type: mimeType });
+              const cloudinaryResult = await uploadToCloudinaryWithGroup(
+                cloudinaryBlob,
+                fileName,
+                mimeType,
+                user.id,
+                groupId,
+                { maxDimension: MASTER_MAX_DIMENSION, quality: 'auto', fetchFormat: masterFormat }
+              );
+              cloudinaryUrl = cloudinaryResult.url;
+              cloudinaryPublicId = cloudinaryResult.publicId;
+              const downloaded = await downloadFromUrl(cloudinaryResult.url);
+              masterBuffer = downloaded;
+              masterFormat = cloudinaryResult.format || masterFormat;
+              masterMimeType = getMimeTypeFromFormat(masterFormat, mimeType);
+            } catch (cloudinaryUploadError: any) {
+              console.error('Cloudinary master transform error:', cloudinaryUploadError);
+            }
+          }
+
+          if (!cloudinaryUrl && masterBuffer) {
+            masterBuffer = await resizeImageBuffer(masterBuffer, MASTER_MAX_DIMENSION, masterFormat, MASTER_QUALITY);
+            masterMimeType = getMimeTypeFromFormat(masterFormat, mimeType);
+          }
+
+          if (masterBuffer) {
+            await uploadToS3WithGroupAndKey(masterBuffer, s3Key, masterMimeType, user.id, groupId);
+          }
+        }
+      } catch (imageError: any) {
+        console.error('Image processing error:', imageError);
       }
     }
 
-    // 2. Supabase memory_vault 테이블에 저장
+    let appUrl: string | null = null;
+    if (isImage && masterBuffer) {
+      try {
+        const appBuffer = await resizeImageBuffer(masterBuffer, APP_MAX_DIMENSION, masterFormat, APP_QUALITY);
+        const appS3Key = generateAppS3KeyFromMasterKey(s3Key);
+        const appUpload = await uploadToS3WithGroupAndKey(
+          appBuffer,
+          appS3Key,
+          masterMimeType,
+          user.id,
+          groupId
+        );
+        appUrl = appUpload.url;
+      } catch (appResizeError: any) {
+        console.warn('App image generation failed:', appResizeError.message);
+      }
+    }
+
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';
     
     // image_url은 필수 컬럼이므로 cloudinary_url 우선, 없으면 s3_original_url 사용
-    const imageUrl = cloudinaryUrl || s3Url;
+    const imageUrl = appUrl || s3Url;
     
     // 서버 사이드용 Supabase 클라이언트 사용 (RLS 정책 우회)
     const supabaseServer = getSupabaseServerClient();
@@ -120,7 +163,7 @@ export async function POST(request: NextRequest) {
         original_file_size: originalSize || null,
         cloudinary_public_id: cloudinaryPublicId || null,
         s3_key: s3Key,
-        mime_type: mimeType,
+        mime_type: masterMimeType,
         original_filename: fileName,
       })
       .select()
@@ -133,7 +176,7 @@ export async function POST(request: NextRequest) {
         success: true,
         warning: '파일 업로드는 성공했지만 데이터베이스 저장에 실패했습니다.',
         cloudinaryUrl,
-        s3Url,
+        s3Url: appUrl || s3Url,
         s3Key,
         cloudinaryPublicId,
       });
@@ -143,7 +186,7 @@ export async function POST(request: NextRequest) {
       success: true,
       id: memoryData.id,
       cloudinaryUrl,
-      s3Url,
+      s3Url: appUrl || s3Url,
       s3Key,
       cloudinaryPublicId,
       fileType,

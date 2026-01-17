@@ -3,7 +3,8 @@ import {
   authenticateUser, 
   getSupabaseServerClient,
   deleteFromCloudinary,
-  deleteFromS3
+  deleteFromS3,
+  generateAppS3KeyFromMasterKey
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 
@@ -91,12 +92,16 @@ export async function DELETE(request: NextRequest) {
 
     // 2. S3에서 파일 삭제
     let s3Deleted = false;
+    let s3AppDeleted = false;
     if (photoData.s3_key) {
       s3Deleted = await deleteFromS3(photoData.s3_key);
+      const appKey = generateAppS3KeyFromMasterKey(photoData.s3_key);
+      s3AppDeleted = await deleteFromS3(appKey);
       if (process.env.NODE_ENV === 'development') {
         console.log('S3 삭제 결과:', {
           s3Key: photoData.s3_key,
-          success: s3Deleted
+          success: s3Deleted,
+          appSuccess: s3AppDeleted
         });
       }
     }
@@ -122,6 +127,7 @@ export async function DELETE(request: NextRequest) {
       photoId,
       cloudinaryDeleted,
       s3Deleted,
+      s3AppDeleted,
       message: '사진이 삭제되었습니다.'
     });
 

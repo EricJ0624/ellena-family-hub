@@ -2582,13 +2582,13 @@ export default function AdminPage() {
                                 cursor: 'pointer',
                               }}
                               onClick={() => {
-                                const url = photo.s3_original_url || photo.cloudinary_url || photo.image_url;
+                                const url = photo.image_url || photo.cloudinary_url || photo.s3_original_url;
                                 if (url) window.open(url, '_blank');
                               }}
                             >
-                              {photo.s3_original_url || photo.cloudinary_url || photo.image_url ? (
+                              {photo.image_url || photo.cloudinary_url || photo.s3_original_url ? (
                                 <img
-                                  src={photo.s3_original_url || photo.cloudinary_url || photo.image_url || ''}
+                                  src={photo.image_url || photo.cloudinary_url || photo.s3_original_url || ''}
                                   alt={photo.original_filename || '사진'}
                                   style={{
                                     width: '100%',

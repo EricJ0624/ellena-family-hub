@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Upload } from '@aws-sdk/lib-storage';
-import { 
-  authenticateUser, 
-  base64ToBlob, 
-  uploadToCloudinary, 
-  getS3ClientInstance, 
-  generateS3Key, 
-  generateS3Url,
-  getSupabaseServerClient
+import {
+  authenticateUser,
+  base64ToBlob,
+  checkCloudinaryConfig,
+  checkS3Config,
+  downloadFromUrl,
+  generateAppS3KeyFromMasterKey,
+  getImageMetadata,
+  getMimeTypeFromFormat,
+  getSupabaseServerClient,
+  replaceFileExtension,
+  resizeImageBuffer,
+  uploadToCloudinaryWithGroup,
+  uploadToS3WithGroup,
+  uploadToS3WithGroupAndKey,
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 
@@ -80,7 +86,6 @@ export async function POST(request: NextRequest) {
 
     const { 
       originalData, // 원본 Base64
-      resizedData, // 리사이징된 Base64 (Cloudinary용)
       fileName,
       mimeType,
       originalSize,
@@ -133,77 +138,119 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Cloudinary에 리사이징된 이미지 업로드 (표시용)
-    // resizedData가 있으면 리사이징된 이미지 사용, 없으면 원본 사용
-    const cloudinaryData = resizedData || originalData;
+    // 1. Build master and app images
+    const isImage = mimeType.startsWith('image/');
+    const MASTER_MAX_DIMENSION = 2560;
+    const APP_MAX_DIMENSION = 1920;
+    const APP_QUALITY = 85;
+    const MASTER_QUALITY = 90;
+
     let cloudinaryUrl = '';
     let cloudinaryPublicId = '';
     let cloudinaryError: string | null = null;
-    
-    // Cloudinary 환경 변수 체크
-    const { checkCloudinaryConfig } = await import('@/lib/api-helpers');
-    const cloudinaryConfig = checkCloudinaryConfig();
-    
-    if (cloudinaryConfig.available) {
+
+    let masterBuffer = Buffer.from(await base64ToBlob(originalData, mimeType).arrayBuffer());
+    let masterMimeType = mimeType;
+    let masterFileName = fileName;
+    let masterFormat = mimeType === 'image/jpeg' ? 'jpg' : (mimeType.split('/')[1] || 'jpg');
+
+    if (isImage) {
       try {
-        const cloudinaryBlob = base64ToBlob(cloudinaryData, mimeType);
-        // Multi-tenant: groupId를 포함한 Cloudinary 업로드
-        const { uploadToCloudinaryWithGroup } = await import('@/lib/api-helpers');
-        const cloudinaryResult = await uploadToCloudinaryWithGroup(
-          cloudinaryBlob,
-          fileName,
-          mimeType,
-          user.id,
-          groupId // groupId 전달
-        );
-        cloudinaryUrl = cloudinaryResult.url;
-        cloudinaryPublicId = cloudinaryResult.publicId;
-      } catch (cloudinaryError: any) {
-        console.error('Cloudinary 업로드 오류:', cloudinaryError);
-        cloudinaryError = cloudinaryError?.message || 'Cloudinary 업로드 실패';
-        // Cloudinary 업로드 실패해도 S3 업로드는 계속 진행
+        const metadata = await getImageMetadata(masterBuffer);
+        const maxDimension = Math.max(metadata.width || 0, metadata.height || 0);
+
+        if (maxDimension > MASTER_MAX_DIMENSION) {
+          const cloudinaryConfig = checkCloudinaryConfig();
+          if (cloudinaryConfig.available) {
+            try {
+              const cloudinaryBlob = new Blob([masterBuffer], { type: mimeType });
+              const cloudinaryResult = await uploadToCloudinaryWithGroup(
+                cloudinaryBlob,
+                fileName,
+                mimeType,
+                user.id,
+                groupId,
+                { maxDimension: MASTER_MAX_DIMENSION, quality: 'auto', fetchFormat: masterFormat }
+              );
+              cloudinaryUrl = cloudinaryResult.url;
+              cloudinaryPublicId = cloudinaryResult.publicId;
+              const downloaded = await downloadFromUrl(cloudinaryResult.url);
+              masterBuffer = downloaded;
+              masterFormat = cloudinaryResult.format || masterFormat;
+              masterMimeType = getMimeTypeFromFormat(masterFormat, mimeType);
+              masterFileName = replaceFileExtension(fileName, masterFormat);
+            } catch (cloudinaryUploadError: any) {
+              console.error('Cloudinary master transform error:', cloudinaryUploadError);
+              cloudinaryError = cloudinaryUploadError?.message || 'Cloudinary transform failed';
+            }
+          } else {
+            cloudinaryError = `Cloudinary config missing: ${cloudinaryConfig.missing.join(', ')}`;
+          }
+
+          if (!cloudinaryUrl) {
+            masterBuffer = await resizeImageBuffer(masterBuffer, MASTER_MAX_DIMENSION, masterFormat, MASTER_QUALITY);
+            masterMimeType = getMimeTypeFromFormat(masterFormat, mimeType);
+          }
+        }
+      } catch (resizeError: any) {
+        console.error('Image metadata/resize error:', resizeError);
       }
-    } else {
-      cloudinaryError = `Cloudinary 환경 변수가 설정되지 않았습니다: ${cloudinaryConfig.missing.join(', ')}`;
-      console.warn(cloudinaryError);
     }
 
-    // 2. AWS S3에 원본 파일 업로드 (선택적)
-    const originalBlob = base64ToBlob(originalData, mimeType);
+    const s3Config = checkS3Config();
+    if (!s3Config.available) {
+      return NextResponse.json(
+        { error: `S3 config missing: ${s3Config.missing.join(', ')}` },
+        { status: 500 }
+      );
+    }
+
     let s3Result: { url: string; key: string } | null = null;
     let s3Error: string | null = null;
-    
-    // S3 환경 변수 체크
-    const { checkS3Config } = await import('@/lib/api-helpers');
-    const s3Config = checkS3Config();
-    
-    if (s3Config.available) {
-      try {
-        // Multi-tenant: groupId를 포함한 S3 업로드
-        const { uploadToS3WithGroup } = await import('@/lib/api-helpers');
-        s3Result = await uploadToS3WithGroup(
-          originalBlob,
-          fileName,
-          mimeType,
-          user.id,
-          groupId // groupId 전달
-        );
-      } catch (s3UploadError: any) {
-        console.warn('S3 업로드 실패 (Cloudinary만 사용):', s3UploadError.message);
-        s3Error = s3UploadError.message;
-        // S3 업로드 실패해도 Cloudinary가 있으면 계속 진행
-      }
-    } else {
-      s3Error = `S3 환경 변수가 설정되지 않았습니다: ${s3Config.missing.join(', ')}`;
-      console.warn(s3Error);
-      // S3는 선택적이므로 계속 진행
+
+    try {
+      s3Result = await uploadToS3WithGroup(
+        new Blob([masterBuffer], { type: masterMimeType }),
+        masterFileName,
+        masterMimeType,
+        user.id,
+        groupId
+      );
+    } catch (s3UploadError: any) {
+      console.warn('S3 master upload failed:', s3UploadError.message);
+      s3Error = s3UploadError.message;
     }
 
-    // 3. Supabase memory_vault 테이블에 저장
+    if (!s3Result) {
+      return NextResponse.json(
+        { error: 'S3 upload failed.', details: s3Error || 'Unknown error' },
+        { status: 500 }
+      );
+    }
+
+    let appUrl: string | null = null;
+
+    if (isImage) {
+      try {
+        const appBuffer = await resizeImageBuffer(masterBuffer, APP_MAX_DIMENSION, masterFormat, APP_QUALITY);
+        const appS3Key = generateAppS3KeyFromMasterKey(s3Result.key);
+        const appUpload = await uploadToS3WithGroupAndKey(
+          appBuffer,
+          appS3Key,
+          masterMimeType,
+          user.id,
+          groupId
+        );
+        appUrl = appUpload.url;
+      } catch (appResizeError: any) {
+        console.warn('App image generation failed:', appResizeError.message);
+      }
+    }
+
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';
     
     // image_url은 필수 컬럼이므로 cloudinary_url 우선, 없으면 s3_original_url 사용
-    const imageUrl = cloudinaryUrl || s3Result?.url;
+    const imageUrl = appUrl || s3Result?.url;
     
     if (!imageUrl) {
       // 환경 변수 정보 포함한 에러 메시지
@@ -215,8 +262,6 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Cloudinary와 S3 업로드가 모두 실패했습니다.',
           details: errorDetails.join(' / '),
-          cloudinaryConfig: cloudinaryConfig,
-          s3Config: s3Config,
         },
         { status: 500 }
       );
@@ -234,10 +279,10 @@ export async function POST(request: NextRequest) {
         cloudinary_url: cloudinaryUrl || null,
         s3_original_url: s3Result?.url || null,
         file_type: fileType,
-        original_file_size: originalSize || originalBlob.size,
+        original_file_size: originalSize || masterBuffer.length,
         cloudinary_public_id: cloudinaryPublicId || null,
         s3_key: s3Result?.key || null,
-        mime_type: mimeType,
+        mime_type: masterMimeType,
         original_filename: fileName,
       })
       .select()
@@ -250,7 +295,7 @@ export async function POST(request: NextRequest) {
         success: true,
         warning: '파일 업로드는 성공했지만 데이터베이스 저장에 실패했습니다.',
         cloudinaryUrl,
-        s3Url: s3Result?.url || null,
+        s3Url: appUrl || s3Result?.url || null,
         s3Key: s3Result?.key || null,
         cloudinaryPublicId,
         s3Error: s3Error || null,
@@ -261,7 +306,7 @@ export async function POST(request: NextRequest) {
       success: true,
       id: memoryData.id,
       cloudinaryUrl,
-      s3Url: s3Result?.url || null,
+      s3Url: appUrl || s3Result?.url || null,
       s3Key: s3Result?.key || null,
       cloudinaryPublicId,
       fileType,

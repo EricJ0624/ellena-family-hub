@@ -315,7 +315,7 @@ export default function FamilyHub() {
       // Photo 형식으로 변환 (URL 우선순위: cloudinary_url > s3_original_url > image_url)
       return photos.map((photo: any) => ({
         id: photo.id,
-        data: photo.cloudinary_url || photo.s3_original_url || photo.image_url || '',
+        data: photo.image_url || photo.cloudinary_url || photo.s3_original_url || '',
         supabaseId: photo.id,
         isUploaded: true,
         isUploading: false,
@@ -385,10 +385,10 @@ export default function FamilyHub() {
       } else if (photos && photos.length > 0) {
         // Photo 형식으로 변환
         const supabasePhotos: Photo[] = photos
-          .filter((photo: any) => photo.cloudinary_url || photo.image_url || photo.s3_original_url)
+          .filter((photo: any) => photo.image_url || photo.cloudinary_url || photo.s3_original_url)
           .map((photo: any) => ({
             id: photo.id,
-            data: photo.cloudinary_url || photo.s3_original_url || photo.image_url || '',
+            data: photo.image_url || photo.cloudinary_url || photo.s3_original_url || '',
             supabaseId: photo.id,
             isUploaded: true,
             isUploading: false,
@@ -2785,7 +2785,7 @@ export default function FamilyHub() {
               return;
             }
             
-            if (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url) {
+            if (newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url) {
               setState(prev => {
                 // 1. ID 기반 중복 체크 (이미 Supabase ID로 업데이트된 경우)
                 const existingPhotoById = prev.album.find(p => {
@@ -2835,7 +2835,7 @@ export default function FamilyHub() {
                           ? {
                               ...p,
                               id: newPhoto.id,
-                              data: newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || p.data,
+                              data: newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url || p.data,
                               originalSize: newPhoto.original_file_size || p.originalSize,
                               originalFilename: newPhoto.original_filename || p.originalFilename,
                               mimeType: newPhoto.mime_type || p.mimeType,
@@ -2862,14 +2862,14 @@ export default function FamilyHub() {
                 
                 // 3. 다른 사용자가 업로드한 사진만 추가
                 if (process.env.NODE_ENV === 'development') {
-                  console.log('새 사진 추가 (다른 사용자):', { id: newPhoto.id, url: (newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '').substring(0, 50) });
+                  console.log('새 사진 추가 (다른 사용자):', { id: newPhoto.id, url: (newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url || '').substring(0, 50) });
                 }
                 
                 return {
                   ...prev,
                   album: [{
                     id: newPhoto.id,
-                    data: newPhoto.cloudinary_url || newPhoto.image_url || newPhoto.s3_original_url || '',
+                    data: newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url || '',
                     originalSize: newPhoto.original_file_size,
                     originalFilename: newPhoto.original_filename,
                     mimeType: newPhoto.mime_type,
@@ -2887,7 +2887,7 @@ export default function FamilyHub() {
           { event: 'UPDATE', schema: 'public', table: 'memory_vault' },
           (payload: any) => {
             const updatedPhoto = payload.new;
-            if (updatedPhoto.cloudinary_url || updatedPhoto.image_url || updatedPhoto.s3_original_url) {
+            if (updatedPhoto.image_url || updatedPhoto.cloudinary_url || updatedPhoto.s3_original_url) {
               setState(prev => ({
                 ...prev,
                 album: prev.album.map(p => 
@@ -2895,7 +2895,7 @@ export default function FamilyHub() {
                     ? {
                         ...p,
                         id: updatedPhoto.id,
-                        data: updatedPhoto.cloudinary_url || updatedPhoto.image_url || updatedPhoto.s3_original_url || '',
+                        data: updatedPhoto.image_url || updatedPhoto.cloudinary_url || updatedPhoto.s3_original_url || '',
                         originalSize: updatedPhoto.original_file_size,
                         originalFilename: updatedPhoto.original_filename,
                         mimeType: updatedPhoto.mime_type,
