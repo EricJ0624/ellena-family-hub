@@ -507,8 +507,13 @@ export async function uploadToCloudinaryWithGroup(
   fileName: string,
   mimeType: string,
   userId: string,
-  groupId?: string
-): Promise<{ url: string; publicId: string }> {
+  groupId?: string,
+  options?: {
+    maxDimension?: number;
+    quality?: string;
+    fetchFormat?: string;
+  }
+): Promise<{ url: string; publicId: string; format?: string }> {
   initializeCloudinary();
   
   const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
@@ -523,6 +528,10 @@ export async function uploadToCloudinaryWithGroup(
     context.userId = userId;
   }
 
+  const maxDimension = options?.maxDimension || 1920;
+  const quality = options?.quality || 'auto';
+  const fetchFormat = options?.fetchFormat || 'auto';
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -533,11 +542,11 @@ export async function uploadToCloudinaryWithGroup(
         access_mode: 'authenticated',
         transformation: fileType === 'image' 
           ? [
-              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
-              { fetch_format: 'auto' }
+              { width: maxDimension, height: maxDimension, crop: 'limit', quality },
+              { fetch_format: fetchFormat }
             ]
           : [
-              { quality: 'auto', fetch_format: 'auto' }
+              { quality, fetch_format: fetchFormat }
             ],
       },
       (error, result) => {
@@ -547,6 +556,7 @@ export async function uploadToCloudinaryWithGroup(
           resolve({
             url: result.secure_url,
             publicId: result.public_id,
+            format: result.format,
           });
         } else {
           reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
