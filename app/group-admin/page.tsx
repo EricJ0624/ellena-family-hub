@@ -505,7 +505,7 @@ export default function GroupAdminPage() {
 
   // ???�쎌?�占?????�쎌�??
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('???�쎌?�彛?�뜝??????�쎌?�占??????�쎌�????�쎌???�썲칰醫롫�????�쎌???')) {
+    if (!confirm('정말로 이 사진을 삭제하시겠습니까?')) {
       return;
     }
 
@@ -517,12 +517,12 @@ export default function GroupAdminPage() {
 
       if (error) throw error;
 
-      alert('???�쎌?�占??????�쎌�????�쎌?�肉????�쎌????');
+      alert('사진이 삭제되었습니다.');
       loadPhotos();
       loadStats();
     } catch (err: any) {
       console.error('???�쎌?�占?????�쎌�?????�쎌?�占?', err);
-      alert(err.message || '???�쎌?�占?????�쎌�???????�쎌?�履?�첎? ?�쏆뮇占???�쎌?????�쎌???');
+      alert(err.message || '사진 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -548,7 +548,7 @@ export default function GroupAdminPage() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>�?��??��????�쎌?????..</p>
+          <p style={{ color: '#64748b', fontSize: '16px' }}>권한 확인 중...</p>
         </div>
       </div>
     );
@@ -594,7 +594,7 @@ export default function GroupAdminPage() {
                 color: '#1e293b',
                 margin: 0,
               }}>
-                ?�밸챶占???�승???�싼?�쁽 ???�쎌???�쏙�?
+                그룹 관리자 페이지
               </h1>
               <p style={{
                 fontSize: '14px',
@@ -622,7 +622,7 @@ export default function GroupAdminPage() {
             }}
           >
             <X style={{ width: '16px', height: '16px' }} />
-            ???�쎌?�占?
+            닫기
           </button>
         </div>
 
@@ -647,7 +647,7 @@ export default function GroupAdminPage() {
             }}
           >
             <BarChart3 style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ?????�쎌????
+            대시보드
           </button>
           <button
             onClick={() => setActiveTab('members')}
@@ -664,7 +664,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Users style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            筌롢?�占???�승???
+            멤버 관리
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -681,7 +681,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Settings style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ?�밸챶占????�쎌???
+            그룹 설정
           </button>
           <button
             onClick={() => setActiveTab('content')}
@@ -698,7 +698,7 @@ export default function GroupAdminPage() {
             }}
           >
             <ImageIcon style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ??�쎌�??�썲????�승???
+            콘텐츠 관리
           </button>
           <button
             onClick={() => setActiveTab('announcements')}
@@ -716,7 +716,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Megaphone style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ??�쎈�?????�쏙????
+            공지사항
             {announcements.filter(a => !a.is_read).length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -748,7 +748,7 @@ export default function GroupAdminPage() {
             }}
           >
             <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ??�쎈�????�쎌?�占?
+            문의하기
           </button>
           <button
             onClick={() => setActiveTab('dashboard-access-requests')}
@@ -765,7 +765,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Key style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ???�쎌??????�쎌?�占?
+            접근 요청
           </button>
         </div>
       </div>
@@ -802,7 +802,7 @@ export default function GroupAdminPage() {
             padding: '48px',
           }}>
             <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
-            <span style={{ marginLeft: '12px', color: '#64748b' }}>?�≪뮆占???..</span>
+            <span style={{ marginLeft: '12px', color: '#64748b' }}>로딩 중...</span>
           </div>
         ) : (
           <>
@@ -815,7 +815,7 @@ export default function GroupAdminPage() {
                   color: '#1e293b',
                   marginBottom: '24px',
                 }}>
-                  ?�밸챶占????�쎌???
+                  그룹 통계
                 </h2>
                 <div style={{
                   display: 'grid',
@@ -838,7 +838,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      ?�밸챶占?筌롢?�占?
+                      그룹 멤버
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -866,7 +866,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      ???�쎌?�占????�쎌?�占?
+                      전체 사진
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -894,7 +894,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      ???�쎌?????�쎈�???
+                      위치 공유
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -922,7 +922,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      筌ㅼ�?????�쎌?�占?(7??
+                      최근 사진 (7일)
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -965,7 +965,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    ??�쎌�??�썲????�승???
+                    콘텐츠 관리
                   </h2>
                   <div style={{
                     position: 'relative',
@@ -982,7 +982,7 @@ export default function GroupAdminPage() {
                     }} />
                     <input
                       type="text"
-                      placeholder="???�쎌???�썲?? ???�쎌?�占???�쎌?�占??�꺜???.."
+                      placeholder="파일명, 설명으로 검색..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
@@ -1004,7 +1004,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     marginBottom: '16px',
                   }}>
-                    ???�쎌?�占?({filteredPhotos.length}??
+                    사진 (${filteredPhotos.length}개)
                   </h3>
                   <div style={{
                     display: 'grid',
@@ -1072,7 +1072,7 @@ export default function GroupAdminPage() {
                           }}
                         >
                           <Trash2 style={{ width: '14px', height: '14px' }} />
-                          ????�쎌�??
+                          삭제
                         </button>
                       </motion.div>
                     ))}
@@ -1084,7 +1084,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <ImageIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>???�쎌?�占?????�쎌?????�쎌???</p>
+                      <p>사진이 없습니다.</p>
                     </div>
                   )}
                 </div>
@@ -1097,7 +1097,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     marginBottom: '16px',
                   }}>
-                    ???�쎌??????�쎌????({locations.length}??
+                    위치 데이터 (${locations.length}개)
                   </h3>
                   <div style={{
                     display: 'grid',
@@ -1155,7 +1155,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <MapPin style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>???�쎌??????�쎌?????�쎌�?? ???�쎌?????�쎌???</p>
+                      <p>위치 데이터가 없습니다.</p>
                     </div>
                   )}
                 </div>
@@ -1171,7 +1171,7 @@ export default function GroupAdminPage() {
                   color: '#1e293b',
                   marginBottom: '24px',
                 }}>
-                  ??�쎈�?????�쏙????({announcements.filter(a => !a.is_read).length}???????�쎌???
+                  공지사항 (${announcements.filter(a => !a.is_read).length}개 읽지 않음)
                 </h2>
 
                 <div style={{
@@ -1256,7 +1256,7 @@ export default function GroupAdminPage() {
                                 fontSize: '11px',
                                 fontWeight: '600',
                               }}>
-                                ????�쎈�??
+                                공지
                               </span>
                             )}
                           </div>
@@ -1275,7 +1275,7 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        ???�쎌?�占?? {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                        작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
                       </div>
                     </motion.div>
                   ))}
@@ -1286,7 +1286,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>??�쎈�?????�쏙????????�쎌?????�쎌???</p>
+                      <p>공지사항이 없습니다.</p>
                     </div>
                   )}
                 </div>
@@ -1308,7 +1308,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    ??�쎈�????�쎌?�占?
+                    문의하기
                   </h2>
                   <button
                     onClick={() => {
@@ -1331,7 +1331,7 @@ export default function GroupAdminPage() {
                     }}
                   >
                     <Plus style={{ width: '18px', height: '18px' }} />
-                    ????�쎈�?????�쎌?�占?
+                    문의 작성
                   </button>
                 </div>
 
@@ -1407,7 +1407,7 @@ export default function GroupAdminPage() {
                                 color: '#0369a1',
                                 marginBottom: '8px',
                               }}>
-                                ???�쎌�??:
+                                답변:
                               </div>
                               <p style={{
                                 fontSize: '14px',
@@ -1426,8 +1426,8 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        ???�쎌?�占?? {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | ???�쎌�???? ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -1438,7 +1438,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>??�쎈�??�썲�? ???�쎌?????�쎌???</p>
+                      <p>문의가 없습니다.</p>
                     </div>
                   )}
                 </div>
@@ -1476,13 +1476,13 @@ export default function GroupAdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        ????�쎈�?????�쎌?�占?
+                        문의 작성
                       </h3>
                       <input
                         type="text"
                         value={ticketTitle}
                         onChange={(e) => setTicketTitle(e.target.value)}
-                        placeholder="???�쎌???????�쎌?????�쎌?�占??.."
+                        placeholder="제목을 입력하세요.."
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1496,7 +1496,7 @@ export default function GroupAdminPage() {
                       <textarea
                         value={ticketContent}
                         onChange={(e) => setTicketContent(e.target.value)}
-                        placeholder="??�쎈�?????�쎌???????�쎌?????�쎌?�占??.."
+                        placeholder="문의 내용을 입력하세요.."
                         style={{
                           width: '100%',
                           minHeight: '300px',
@@ -1530,17 +1530,17 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ??�썩�??
+                          취소
                         </button>
                         <button
                           onClick={async () => {
                             if (!ticketTitle.trim() || !ticketContent.trim()) {
-                              alert('???�쎌???�썲?????�쎌????筌뤴뫀?????�쎌?????�쎌?�占???�쎌???');
+                              alert('제목과 내용 모두 입력해주세요.');
                               return;
                             }
 
                             if (!currentGroupId) {
-                              alert('?�밸챶占????�쎌???�썲???�쎛????�쎌????????�쎌?????�쎌???');
+                              alert('그룹 정보를 가져올 수 없습니다.');
                               return;
                             }
 
@@ -1548,7 +1548,7 @@ export default function GroupAdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('???�쎌?�占????�쎌???�썲???�쎛????�쎌????????�쎌?????�쎌???');
+                                alert('인증 정보를 가져올 수 없습니다.');
                                 return;
                               }
 
@@ -1568,17 +1568,17 @@ export default function GroupAdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '??�쎈�?????�쎌?�占?????�쏙??????�쎌?????�쎌???');
+                                throw new Error(result.error || '문의 작성에 실패했습니다.');
                               }
 
-                              alert('??�쎈�??�썲�? ???�쎌?�占???�쎌?�肉????�쎌????');
+                              alert('문의가 작성되었습니다.');
                               setShowTicketForm(false);
                               setTicketTitle('');
                               setTicketContent('');
                               loadSupportTickets();
                             } catch (error: any) {
                               console.error('??�쎈�?????�쎌?�占????�쎌?�占?', error);
-                              alert(error.message || '??�쎈�?????�쎌?�占??????�쎌?�履?�첎? ?�쏆뮇占???�쎌?????�쎌???');
+                              alert(error.message || '문의 작성 중 오류가 발생했습니다.');
                             } finally {
                               setLoadingData(false);
                             }
@@ -1594,7 +1594,7 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ???�쎌?�占?
+                          작성
                         </button>
                       </div>
                     </div>
@@ -1618,7 +1618,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    ?????�쎌???????�쎌??????�쎌?�占?
+                    대시보드 접근 요청
                   </h2>
                   <button
                     onClick={() => {
@@ -1640,7 +1640,7 @@ export default function GroupAdminPage() {
                     }}
                   >
                     <Plus style={{ width: '18px', height: '18px' }} />
-                    ?????�쎌??????�쎌?�占?
+                    접근 요청
                   </button>
                 </div>
 
@@ -1708,7 +1708,7 @@ export default function GroupAdminPage() {
                               color: '#059669',
                               marginBottom: '8px',
                             }}>
-                              筌띾?�占?? {new Date(request.expires_at).toLocaleString('ko-KR')}
+                              만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
@@ -1725,7 +1725,7 @@ export default function GroupAdminPage() {
                                 color: '#991b1b',
                                 marginBottom: '4px',
                               }}>
-                                椰꾧??????�쎌????
+                                거절 사유:
                               </div>
                               <p style={{
                                 fontSize: '14px',
@@ -1746,7 +1746,7 @@ export default function GroupAdminPage() {
                         }}>
                           <button
                             onClick={async () => {
-                              if (!confirm('???�쎌?�彛?�뜝??????�쎌??????�쎌?�占????�썩�????�쎌???�썲칰醫롫�????�쎌???')) {
+                              if (!confirm('정말로 접근 요청을 취소하시겠습니까?')) {
                                 return;
                               }
 
@@ -1754,7 +1754,7 @@ export default function GroupAdminPage() {
                                 setLoadingData(true);
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('???�쎌?�占????�쎌???�썲???�쎛????�쎌????????�쎌?????�쎌???');
+                                  alert('인증 정보를 가져올 수 없습니다.');
                                   return;
                                 }
 
@@ -1769,14 +1769,14 @@ export default function GroupAdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '???�쎌??????�쎌?�占???�썩�??????�쏙??????�쎌?????�쎌???');
+                                  throw new Error(result.error || '접근 요청 취소에 실패했습니다.');
                                 }
 
-                                alert('???�쎌??????�쎌?�占????�썩�????�쎌?�肉????�쎌????');
+                                alert('접근 요청이 취소되었습니다.');
                                 loadAccessRequests();
                               } catch (error: any) {
                                 console.error('???�쎌??????�쎌?�占???�썩�?????�쎌?�占?', error);
-                                alert(error.message || '???�쎌??????�쎌?�占???�썩�???????�쎌?�履?�첎? ?�쏆뮇占???�쎌?????�쎌???');
+                                alert(error.message || '접근 요청 취소 중 오류가 발생했습니다.');
                               } finally {
                                 setLoadingData(false);
                               }
@@ -1792,7 +1792,7 @@ export default function GroupAdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            ??�썩�??
+                            취소
                           </button>
                         </div>
                       )}
@@ -1801,8 +1801,9 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        ???�쎌?�占?? {new Date(request.created_at).toLocaleString('ko-KR')}
-                        {request.approved_at && ` | ???�쎌???? ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                        요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
+                        {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                        {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
                         {request.rejected_at && ` | 椰꾧???? ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
@@ -1814,7 +1815,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Key style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>???�쎌??????�쎌?�占?????�쎌?????�쎌???</p>
+                      <p>접근 요청이 없습니다.</p>
                     </div>
                   )}
                 </div>
@@ -1852,19 +1853,19 @@ export default function GroupAdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        ?????�쎌???????�쎌??????�쎌?�占?
+                        대시보드 접근 요청
                       </h3>
                       <p style={{
                         fontSize: '14px',
                         color: '#64748b',
                         marginBottom: '16px',
                       }}>
-                        ???�쎌??????�승???�싼?�쁽?�쎛? ?�귣�???�쎛????????�쎌?????�쎌?�占????�쎌?????????�쎌?�猷�?��????�쎌?�占???�쎌????
+                        시스템 관리자가 본인 가족 대시보드에 접근하도록 요청합니다.
                       </p>
                       <textarea
                         value={accessRequestReason}
                         onChange={(e) => setAccessRequestReason(e.target.value)}
-                        placeholder="???�쎌??????�쎌?�占????�쎌????????�쎌?????�쎌?�占??(?? ?�꿸???筌왖????�쎌??????�쎌?????�쎌???? ??�쎈�?????�쎌?�占?????�쎌?????�쎌??????..."
+                        placeholder="접근 요청 사유를 입력하세요 (예: 기술 지원이 필요합니다...)"
                         style={{
                           width: '100%',
                           minHeight: '200px',
@@ -1897,17 +1898,17 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ??�썩�??
+                          취소
                         </button>
                         <button
                           onClick={async () => {
                             if (!accessRequestReason.trim()) {
-                              alert('???�쎌??????�쎌?�占????�쎌????????�쎌?????�쎌?�占???�쎌???');
+                              alert('접근 요청 사유를 입력해주세요.');
                               return;
                             }
 
                             if (!currentGroupId) {
-                              alert('?�밸챶占????�쎌???�썲???�쎛????�쎌????????�쎌?????�쎌???');
+                              alert('그룹 정보를 가져올 수 없습니다.');
                               return;
                             }
 
@@ -1915,7 +1916,7 @@ export default function GroupAdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('???�쎌?�占????�쎌???�썲???�쎛????�쎌????????�쎌?????�쎌???');
+                                alert('인증 정보를 가져올 수 없습니다.');
                                 return;
                               }
 
@@ -1934,16 +1935,16 @@ export default function GroupAdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '???�쎌??????�쎌?�占????�쎌?�占?????�쏙??????�쎌?????�쎌???');
+                                throw new Error(result.error || '접근 요청 생성에 실패했습니다.');
                               }
 
-                              alert('???�쎌??????�쎌?�占?????�쎌?�占???�쎌?�肉????�쎌????');
+                              alert('접근 요청이 생성되었습니다.');
                               setShowAccessRequestForm(false);
                               setAccessRequestReason('');
                               loadAccessRequests();
                             } catch (error: any) {
                               console.error('???�쎌??????�쎌?�占????�쎌?�占????�쎌?�占?', error);
-                              alert(error.message || '???�쎌??????�쎌?�占????�쎌?�占??????�쎌?�履?�첎? ?�쏆뮇占???�쎌?????�쎌???');
+                              alert(error.message || '접근 요청 생성 중 오류가 발생했습니다.');
                             } finally {
                               setLoadingData(false);
                             }
@@ -1959,7 +1960,7 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ???�쎌?�占?
+                          요청
                         </button>
                       </div>
                     </div>
