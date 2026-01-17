@@ -2012,7 +2012,8 @@ export default function AdminPage() {
                         </button>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {filteredGroups.length === 0 && (
