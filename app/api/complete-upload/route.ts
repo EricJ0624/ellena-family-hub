@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
           const cloudinaryConfig = checkCloudinaryConfig();
           if (cloudinaryConfig.available) {
             try {
-              const cloudinaryBlob = new Blob([originalBuffer], { type: mimeType });
+              const cloudinaryBlob = new Blob([new Uint8Array(originalBuffer)], { type: mimeType });
               const cloudinaryResult = await uploadToCloudinaryWithGroup(
                 cloudinaryBlob,
                 fileName,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
               cloudinaryUrl = cloudinaryResult.url;
               cloudinaryPublicId = cloudinaryResult.publicId;
               const downloaded = await downloadFromUrl(cloudinaryResult.url);
-              masterBuffer = downloaded;
+              masterBuffer = Buffer.from(downloaded);
               masterFormat = cloudinaryResult.format || masterFormat;
               masterMimeType = getMimeTypeFromFormat(masterFormat, mimeType);
             } catch (cloudinaryUploadError: any) {

@@ -204,7 +204,8 @@ export async function uploadToCloudinary(
   file: Blob,
   fileName: string,
   mimeType: string,
-  userId: string
+  userId: string,
+  options?: { maxDimension?: number; quality?: string; fetchFormat?: string }
 ): Promise<{ url: string; publicId: string }> {
   initializeCloudinary();
   
@@ -237,7 +238,6 @@ export async function uploadToCloudinary(
           resolve({
             url: result.secure_url,
             publicId: result.public_id,
-            format: result.format,
           });
         } else {
           reject(new Error('Cloudinary 업로드 결과가 없습니다.'));

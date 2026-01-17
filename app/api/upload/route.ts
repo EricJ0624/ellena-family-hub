@@ -26,38 +26,6 @@ export const maxDuration = 60; // 60초 타임아웃
 
 // S3에 파일 업로드 (레거시 함수 - 호환성 유지)
 // ⚠️ Multi-tenant 아키텍처에서는 uploadToS3WithGroup 사용 권장
-async function uploadToS3(
-  file: Blob,
-  fileName: string,
-  mimeType: string,
-  userId: string
-): Promise<{ url: string; key: string }> {
-  const s3Key = generateS3Key(fileName, mimeType, userId);
-  const bucketName = process.env.AWS_S3_BUCKET_NAME;
-  if (!bucketName) {
-    throw new Error('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
-  }
-
-  const s3Client = getS3ClientInstance();
-  const upload = new Upload({
-    client: s3Client,
-    params: {
-      Bucket: bucketName,
-      Key: s3Key,
-      Body: file,
-      ContentType: mimeType,
-      ACL: 'private', // 보안: private로 설정
-    },
-  });
-
-  await upload.done();
-
-  // S3 URL 생성
-  const s3Url = generateS3Url(s3Key);
-
-  return { url: s3Url, key: s3Key };
-}
-
 export async function POST(request: NextRequest) {
   try {
     // 인증 확인
@@ -149,7 +117,7 @@ export async function POST(request: NextRequest) {
     let cloudinaryPublicId = '';
     let cloudinaryError: string | null = null;
 
-    let masterBuffer = Buffer.from(await base64ToBlob(originalData, mimeType).arrayBuffer());
+    let masterBuffer: Buffer = Buffer.from(await base64ToBlob(originalData, mimeType).arrayBuffer());
     let masterMimeType = mimeType;
     let masterFileName = fileName;
     let masterFormat = mimeType === 'image/jpeg' ? 'jpg' : (mimeType.split('/')[1] || 'jpg');
@@ -163,7 +131,7 @@ export async function POST(request: NextRequest) {
           const cloudinaryConfig = checkCloudinaryConfig();
           if (cloudinaryConfig.available) {
             try {
-              const cloudinaryBlob = new Blob([masterBuffer], { type: mimeType });
+              const cloudinaryBlob = new Blob([new Uint8Array(masterBuffer)], { type: mimeType });
               const cloudinaryResult = await uploadToCloudinaryWithGroup(
                 cloudinaryBlob,
                 fileName,
@@ -175,7 +143,7 @@ export async function POST(request: NextRequest) {
               cloudinaryUrl = cloudinaryResult.url;
               cloudinaryPublicId = cloudinaryResult.publicId;
               const downloaded = await downloadFromUrl(cloudinaryResult.url);
-              masterBuffer = downloaded;
+              masterBuffer = Buffer.from(downloaded);
               masterFormat = cloudinaryResult.format || masterFormat;
               masterMimeType = getMimeTypeFromFormat(masterFormat, mimeType);
               masterFileName = replaceFileExtension(fileName, masterFormat);
@@ -210,7 +178,7 @@ export async function POST(request: NextRequest) {
 
     try {
       s3Result = await uploadToS3WithGroup(
-        new Blob([masterBuffer], { type: masterMimeType }),
+        new Blob([new Uint8Array(masterBuffer)], { type: masterMimeType }),
         masterFileName,
         masterMimeType,
         user.id,
