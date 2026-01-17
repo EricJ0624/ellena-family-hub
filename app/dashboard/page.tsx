@@ -6693,6 +6693,7 @@ export default function FamilyHub() {
                       fileName: file.name,
                       mimeType: file.type,
                       originalSize: file.size,
+                    groupId: currentGroupId,
                     }),
                     signal: fallbackController.signal,
                   });
@@ -6752,6 +6753,7 @@ export default function FamilyHub() {
                 mimeType: file.type,
                 originalSize: file.size,
                 resizedData: imageData !== originalData ? imageData : null, // 리사이징된 이미지 (Cloudinary용)
+                groupId: currentGroupId,
               }),
               signal: completeController.signal,
             });
@@ -6841,6 +6843,7 @@ export default function FamilyHub() {
                   fileName: file.name,
                   mimeType: file.type,
                   originalSize: file.size,
+                  groupId: currentGroupId,
                 }),
                 signal: fallbackController.signal,
               });
@@ -6908,6 +6911,7 @@ export default function FamilyHub() {
                 fileName: file.name,
                 mimeType: file.type,
                 originalSize: file.size,
+                groupId: currentGroupId,
               }),
               signal: uploadController.signal,
             });
