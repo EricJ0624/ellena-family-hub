@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       mimeType,
       originalSize,
       resizedData, // 리사이징된 이미지 (Base64, 선택적)
+      forceCloudinary,
       groupId, // 그룹 ID (선택적, 있으면 권한 검증)
     } = body;
 
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
         const metadata = await getImageMetadata(originalBuffer);
         const maxDimension = Math.max(metadata.width || 0, metadata.height || 0);
 
-        if (maxDimension > MASTER_MAX_DIMENSION) {
+        if (forceCloudinary || maxDimension > MASTER_MAX_DIMENSION) {
           const cloudinaryConfig = checkCloudinaryConfig();
           if (cloudinaryConfig.available) {
             try {

@@ -6040,6 +6040,51 @@ export default function FamilyHub() {
     });
   };
 
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const [header, base64] = dataUrl.split(',');
+    const mimeMatch = header.match(/data:([^;]+);base64/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mimeType });
+  };
+
+  const replaceFileExtension = (fileName: string, newExtension: string): string => {
+    const dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex === -1) {
+      return `${fileName}.${newExtension}`;
+    }
+    return `${fileName.slice(0, dotIndex)}.${newExtension}`;
+  };
+
+  const getMimeTypeFromExtension = (extension: string): string | null => {
+    const map: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      heic: 'image/heic',
+      heif: 'image/heif',
+      cr2: 'image/x-canon-cr2',
+      nef: 'image/x-nikon-nef',
+      arw: 'image/x-sony-arw',
+      dng: 'image/x-adobe-dng',
+      raw: 'image/x-raw',
+      raf: 'image/x-fuji-raf',
+      orf: 'image/x-olympus-orf',
+      rw2: 'image/x-panasonic-rw2',
+      srw: 'image/x-samsung-srw',
+      tif: 'image/tiff',
+      tiff: 'image/tiff',
+    };
+    return map[extension] || null;
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -6071,6 +6116,14 @@ export default function FamilyHub() {
     const isRawFile = [
       'raw', 'cr2', 'nef', 'arw', 'orf', 'rw2', 'dng', 'raf', 'srw', '3fr', 'ari', 'bay', 'crw', 'cap', 'data', 'dcs', 'dcr', 'drf', 'eip', 'erf', 'fff', 'iiq', 'k25', 'kdc', 'mef', 'mos', 'mrw', 'nrw', 'obm', 'pef', 'ptx', 'pxn', 'r3d', 'raf', 'raw', 'rwl', 'rw2', 'rwz', 'sr2', 'srf', 'srw', 'tif', 'x3f'
     ].includes(fileExtension);
+
+    const normalizedMimeType = file.type || getMimeTypeFromExtension(fileExtension) || 'application/octet-stream';
+
+    let uploadFile: File = file;
+    let uploadFileName = file.name;
+    let uploadMimeType = normalizedMimeType;
+    let uploadFileSize = file.size;
+    let clientResizedForUpload = false;
     
     // MIME 타입 또는 확장자로 검증
     const isValidType = ALLOWED_TYPES.includes(file.type) || 
@@ -6126,8 +6179,38 @@ export default function FamilyHub() {
       let imageData: string; // 표시용 리사이징된 이미지
       const RESIZE_THRESHOLD = 500 * 1024; // 500KB
 
-      // RAW 파일은 브라우저에서 리사이징 불가능하므로 원본 그대로 사용
+      // RAW 파일은 브라우저에서 리사이징 불가능할 수 있으므로 시도 후 실패 시 원본 그대로 사용
       if (isRawFile) {
+        const RAW_CLIENT_MAX_DIMENSION = 2560;
+        const RAW_CLIENT_QUALITY = 0.85;
+        let resizedDataUrl: string | null = null;
+
+        try {
+          resizedDataUrl = await resizeImage(file, RAW_CLIENT_MAX_DIMENSION, RAW_CLIENT_MAX_DIMENSION, RAW_CLIENT_QUALITY);
+        } catch (resizeError: any) {
+          console.warn('RAW 1차 축소 실패 - 원본으로 진행:', resizeError?.message || resizeError);
+        }
+
+        if (resizedDataUrl) {
+          const resizedBlob = dataUrlToBlob(resizedDataUrl);
+          const resizedFileName = replaceFileExtension(file.name, 'jpg');
+          const resizedFile = new File([resizedBlob], resizedFileName, { type: 'image/jpeg' });
+          uploadFile = resizedFile;
+          uploadFileName = resizedFileName;
+          uploadMimeType = 'image/jpeg';
+          uploadFileSize = resizedFile.size;
+          clientResizedForUpload = true;
+
+          imageData = resizedDataUrl;
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('RAW 1차 축소 완료:', {
+              originalSize: Math.round(file.size / 1024) + 'KB',
+              resizedSize: Math.round(resizedFile.size / 1024) + 'KB',
+              maxDimension: RAW_CLIENT_MAX_DIMENSION,
+            });
+          }
+        } else {
         if (process.env.NODE_ENV === 'development') {
           console.log('RAW 파일 감지 - 리사이징 건너뜀:', {
             fileName: file.name,
@@ -6142,6 +6225,7 @@ export default function FamilyHub() {
         
         if (process.env.NODE_ENV === 'development') {
           console.log('RAW 파일 처리 완료 - 원본 그대로 업로드');
+        }
         }
       }
       // 일반 이미지 파일: 파일이 500KB 이상이면 리사이징 및 압축
@@ -6219,7 +6303,7 @@ export default function FamilyHub() {
       // originalData는 localStorage에 저장하지 않음 (공간 절약)
       // 업로드 시에만 사용하기 위해 별도 변수로 보관
       photoId = Date.now();
-      const originalDataForUpload = originalData; // 업로드용 원본 데이터 보관
+      const originalDataForUpload = clientResizedForUpload ? imageData : originalData; // 업로드용 원본 데이터 보관
       
       updateState('ADD_PHOTO', { 
         id: photoId, 
@@ -6227,7 +6311,7 @@ export default function FamilyHub() {
         // originalData는 localStorage에 저장하지 않음 (공간 절약)
         originalSize: file.size, // 원본 파일 크기
         originalFilename: file.name, // 원본 파일명
-        mimeType: file.type, // MIME 타입
+        mimeType: uploadMimeType, // MIME 타입
         isUploading: true // 업로드 시작
       });
       
@@ -6271,12 +6355,13 @@ export default function FamilyHub() {
         // 안전하게 3MB 이상은 Presigned URL 방식 사용
         // RAW 파일은 리사이징 불가능하므로 무조건 Presigned URL 방식 사용
         const PRESIGNED_URL_THRESHOLD = 3 * 1024 * 1024; // 3MB (Vercel 제한 고려하여 5MB -> 3MB로 변경)
-        const usePresignedUrl = isRawFile || file.size >= PRESIGNED_URL_THRESHOLD;
+        const usePresignedUrl = isRawFile || uploadFileSize >= PRESIGNED_URL_THRESHOLD;
 
         if (process.env.NODE_ENV === 'development') {
           console.log('Cloudinary & S3 업로드 시작...', {
             method: usePresignedUrl ? 'Presigned URL (직접 업로드)' : '서버 경유 (3MB 이하)',
-            fileSize: Math.round(file.size / 1024) + 'KB',
+            fileSize: Math.round(uploadFileSize / 1024) + 'KB',
+            originalFileSize: Math.round(file.size / 1024) + 'KB',
             threshold: '3MB',
             reason: isRawFile ? 'RAW 파일' : (file.size >= PRESIGNED_URL_THRESHOLD ? '3MB 이상' : '3MB 미만')
           });
@@ -6296,11 +6381,13 @@ export default function FamilyHub() {
               throw new Error('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
             }
             const uploadDebugPayload = {
-              fileName: file.name,
-              mimeType: file.type || null,
-              fileSize: file.size,
+              fileName: uploadFileName,
+              mimeType: uploadMimeType || null,
+              fileSize: uploadFileSize,
+              originalFileSize: file.size,
               groupId: currentGroupId,
               isRawFile,
+              clientResizedForUpload,
               usePresignedUrl,
             };
             console.info('업로드 디버그 정보 (Presigned URL):', uploadDebugPayload);
@@ -6317,9 +6404,9 @@ export default function FamilyHub() {
                   'Authorization': `Bearer ${session.access_token}`,
                 },
                 body: JSON.stringify({
-                  fileName: file.name,
-                  mimeType: file.type,
-                  fileSize: file.size,
+                  fileName: uploadFileName,
+                  mimeType: uploadMimeType,
+                  fileSize: uploadFileSize,
                   groupId: currentGroupId,
                 }),
                 signal: urlController.signal,
@@ -6522,14 +6609,14 @@ export default function FamilyHub() {
             const uploadTimeout = setTimeout(() => uploadController.abort(), 120000);
             
             try {
-              const s3UploadResponse = await fetch(presignedUrl, {
-                method: 'PUT',
-                body: file, // 원본 파일 그대로 (Base64 변환 불필요)
-                headers: {
-                  'Content-Type': file.type,
-                },
-                signal: uploadController.signal,
-              });
+            const s3UploadResponse = await fetch(presignedUrl, {
+              method: 'PUT',
+              body: uploadFile, // 원본 또는 1차 축소된 파일
+              headers: {
+                'Content-Type': uploadMimeType,
+              },
+              signal: uploadController.signal,
+            });
 
               clearTimeout(uploadTimeout);
 
@@ -6700,10 +6787,11 @@ export default function FamilyHub() {
                     body: JSON.stringify({
                       originalData: originalDataForUpload,
                       resizedData: imageData !== originalDataForUpload ? imageData : null,
-                      fileName: file.name,
-                      mimeType: file.type,
+                      fileName: uploadFileName,
+                      mimeType: uploadMimeType,
                       originalSize: file.size,
-                    groupId: currentGroupId,
+                      groupId: currentGroupId,
+                      forceCloudinary: isRawFile,
                     }),
                     signal: fallbackController.signal,
                   });
@@ -6759,11 +6847,12 @@ export default function FamilyHub() {
               body: JSON.stringify({
                 s3Key,
                 s3Url,
-                fileName: file.name,
-                mimeType: file.type,
+                fileName: uploadFileName,
+                mimeType: uploadMimeType,
                 originalSize: file.size,
                 resizedData: imageData !== originalData ? imageData : null, // 리사이징된 이미지 (Cloudinary용)
                 groupId: currentGroupId,
+                forceCloudinary: isRawFile,
               }),
               signal: completeController.signal,
             });
@@ -6850,10 +6939,11 @@ export default function FamilyHub() {
                 body: JSON.stringify({
                   originalData: originalDataForUpload,
                   resizedData: imageData !== originalDataForUpload ? imageData : null,
-                  fileName: file.name,
-                  mimeType: file.type,
+                  fileName: uploadFileName,
+                  mimeType: uploadMimeType,
                   originalSize: file.size,
                   groupId: currentGroupId,
+                  forceCloudinary: isRawFile,
                 }),
                 signal: fallbackController.signal,
               });
@@ -6918,10 +7008,11 @@ export default function FamilyHub() {
               body: JSON.stringify({
                 originalData: originalDataForUpload, // 원본 (S3용, 별도 보관된 데이터)
                 resizedData: imageData !== originalDataForUpload ? imageData : null, // 리사이징된 이미지 (Cloudinary용, 원본과 다를 때만)
-                fileName: file.name,
-                mimeType: file.type,
+                fileName: uploadFileName,
+                mimeType: uploadMimeType,
                 originalSize: file.size,
                 groupId: currentGroupId,
+                forceCloudinary: isRawFile,
               }),
               signal: uploadController.signal,
             });
