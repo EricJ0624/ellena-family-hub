@@ -1,4 +1,4 @@
-﻿'use client';
+﻿癤?use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
 
-// ?�적 ?�더�?강제
+// ?占쎌쟻 ?占쎈뜑占?媛뺤젣
 export const dynamic = 'force-dynamic';
 
 interface MemberInfo {
@@ -111,7 +111,7 @@ interface DashboardAccessRequestInfo {
 export default function GroupAdminPage() {
   const router = useRouter();
   
-  // 그룹 컨텍?�트?�서 ?�보 가?�오�?(?�전?�게 처리)
+  // 洹몃９ 而⑦뀓?占쏀듃?占쎌꽌 ?占쎈낫 媛?占쎌삤占?(?占쎌쟾?占쎄쾶 泥섎━)
   let currentGroupId: string | null = null;
   let currentGroup: any = null;
   let userRole: string | null = null;
@@ -123,9 +123,9 @@ export default function GroupAdminPage() {
     userRole = groupContext.userRole;
     isOwner = groupContext.isOwner;
   } catch (error) {
-    // GroupProvider가 ?�을 ?�는 null�?처리 (빌드 ?�점)
+    // GroupProvider媛 ?占쎌쓣 ?占쎈뒗 null占?泥섎━ (鍮뚮뱶 ?占쎌젏)
     if (process.env.NODE_ENV === 'development') {
-      console.warn('GroupProvider가 ?�습?�다.');
+      console.warn('GroupProvider媛 ?占쎌뒿?占쎈떎.');
     }
   }
   
@@ -141,7 +141,7 @@ export default function GroupAdminPage() {
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 공�??�항, 문의, ?�근 ?�청 관???�태
+  // 怨듸옙??占쏀빆, 臾몄쓽, ?占쎄렐 ?占쎌껌 愿???占쏀깭
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
@@ -151,10 +151,10 @@ export default function GroupAdminPage() {
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [showAccessRequestForm, setShowAccessRequestForm] = useState(false);
 
-  // 그룹 관리자 권한 ?�인
+  // 洹몃９ 愿由ъ옄 沅뚰븳 ?占쎌씤
   useEffect(() => {
     const checkGroupAdmin = async () => {
-      // ?�라?�언???�이?�에?�만 ?�행
+      // ?占쎈씪?占쎌뼵???占쎌씠?占쎌뿉?占쎈쭔 ?占쏀뻾
       if (typeof window === 'undefined') {
         setLoading(false);
         return;
@@ -179,7 +179,7 @@ export default function GroupAdminPage() {
     checkGroupAdmin();
   }, [currentGroupId, userRole, isOwner, router]);
 
-  // ?�계 ?�이??로드
+  // ?占쎄퀎 ?占쎌씠??濡쒕뱶
   const loadStats = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -187,23 +187,23 @@ export default function GroupAdminPage() {
       setLoadingData(true);
       setError(null);
 
-      // 그룹 ?�보 가?�오�?(?�유??ID ?�인??
+      // 洹몃９ ?占쎈낫 媛?占쎌삤占?(?占쎌쑀??ID ?占쎌씤??
       const { data: groupData } = await supabase
         .from('groups')
         .select('owner_id')
         .eq('id', currentGroupId)
         .single();
 
-      // 그룹 멤버 ??
+      // 洹몃９ 硫ㅻ쾭 ??
       const { count: memberCount } = await supabase
         .from('memberships')
         .select('*', { count: 'exact', head: true })
         .eq('group_id', currentGroupId);
 
-      // 그룹 ?�유???�함
+      // 洹몃９ ?占쎌쑀???占쏀븿
       const totalMembers = (memberCount || 0) + 1;
 
-      // 그룹 멤버 ID 목록
+      // 洹몃９ 硫ㅻ쾭 ID 紐⑸줉
       const { data: membersData } = await supabase
         .from('memberships')
         .select('user_id')
@@ -211,18 +211,18 @@ export default function GroupAdminPage() {
 
       const memberIds = membersData?.map(m => m.user_id) || [];
       
-      // 그룹 ?�유??추�?
+      // 洹몃９ ?占쎌쑀??異뷂옙?
       if (groupData?.owner_id && !memberIds.includes(groupData.owner_id)) {
         memberIds.push(groupData.owner_id);
       }
 
-      // 그룹 ?�진 ??
+      // 洹몃９ ?占쎌쭊 ??
       const { count: photoCount } = await supabase
         .from('memory_vault')
         .select('*', { count: 'exact', head: true })
         .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000']);
 
-      // 최근 7???�진 ??
+      // 理쒓렐 7???占쎌쭊 ??
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const { count: recentPhotoCount } = await supabase
@@ -231,7 +231,7 @@ export default function GroupAdminPage() {
         .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000'])
         .gte('created_at', sevenDaysAgo.toISOString());
 
-      // ?�치 ?�이????
+      // ?占쎌튂 ?占쎌씠????
       const { count: locationCount } = await supabase
         .from('user_locations')
         .select('*', { count: 'exact', head: true })
@@ -244,14 +244,14 @@ export default function GroupAdminPage() {
         recentPhotos: recentPhotoCount || 0,
       });
     } catch (err: any) {
-      console.error('?�계 로드 ?�류:', err);
-      setError(err.message || '?�계�?불러?�는???�패?�습?�다.');
+      console.error('?占쎄퀎 濡쒕뱶 ?占쎈쪟:', err);
+      setError(err.message || '?占쎄퀎占?遺덈윭?占쎈뒗???占쏀뙣?占쎌뒿?占쎈떎.');
     } finally {
       setLoadingData(false);
     }
   }, [currentGroupId]);
 
-  // ?�진 목록 로드
+  // ?占쎌쭊 紐⑸줉 濡쒕뱶
   const loadPhotos = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -259,14 +259,14 @@ export default function GroupAdminPage() {
       setLoadingData(true);
       setError(null);
 
-      // 그룹 ?�보 가?�오�?(?�유??ID ?�인??
+      // 洹몃９ ?占쎈낫 媛?占쎌삤占?(?占쎌쑀??ID ?占쎌씤??
       const { data: groupData } = await supabase
         .from('groups')
         .select('owner_id')
         .eq('id', currentGroupId)
         .single();
 
-      // 그룹 멤버 ID 목록
+      // 洹몃９ 硫ㅻ쾭 ID 紐⑸줉
       const { data: membersData } = await supabase
         .from('memberships')
         .select('user_id')
@@ -295,14 +295,14 @@ export default function GroupAdminPage() {
 
       setPhotos(photosData || []);
     } catch (err: any) {
-      console.error('?�진 목록 로드 ?�류:', err);
-      setError(err.message || '?�진 목록??불러?�는???�패?�습?�다.');
+      console.error('?占쎌쭊 紐⑸줉 濡쒕뱶 ?占쎈쪟:', err);
+      setError(err.message || '?占쎌쭊 紐⑸줉??遺덈윭?占쎈뒗???占쏀뙣?占쎌뒿?占쎈떎.');
     } finally {
       setLoadingData(false);
     }
   }, [currentGroupId]);
 
-  // ?�치 ?�이??로드
+  // ?占쎌튂 ?占쎌씠??濡쒕뱶
   const loadLocations = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -310,14 +310,14 @@ export default function GroupAdminPage() {
       setLoadingData(true);
       setError(null);
 
-      // 그룹 ?�보 가?�오�?(?�유??ID ?�인??
+      // 洹몃９ ?占쎈낫 媛?占쎌삤占?(?占쎌쑀??ID ?占쎌씤??
       const { data: groupData } = await supabase
         .from('groups')
         .select('owner_id')
         .eq('id', currentGroupId)
         .single();
 
-      // 그룹 멤버 ID 목록
+      // 洹몃９ 硫ㅻ쾭 ID 紐⑸줉
       const { data: membersData } = await supabase
         .from('memberships')
         .select('user_id')
@@ -342,7 +342,7 @@ export default function GroupAdminPage() {
 
       if (locationsError) throw locationsError;
 
-      // ?�로???�보 조회
+      // ?占쎈줈???占쎈낫 議고쉶
       const userIds = (locationsData || []).map(l => l.user_id);
       const { data: profilesData } = await supabase
         .from('profiles')
@@ -360,14 +360,14 @@ export default function GroupAdminPage() {
 
       setLocations(locationsWithProfiles);
     } catch (err: any) {
-      console.error('?�치 ?�이??로드 ?�류:', err);
-      setError(err.message || '?�치 ?�이?��? 불러?�는???�패?�습?�다.');
+      console.error('?占쎌튂 ?占쎌씠??濡쒕뱶 ?占쎈쪟:', err);
+      setError(err.message || '?占쎌튂 ?占쎌씠?占쏙옙? 遺덈윭?占쎈뒗???占쏀뙣?占쎌뒿?占쎈떎.');
     } finally {
       setLoadingData(false);
     }
   }, [currentGroupId]);
 
-  // 공�??�항 로드 (그룹 관리자??
+  // 怨듸옙??占쏀빆 濡쒕뱶 (洹몃９ 愿由ъ옄??
   const loadAnnouncements = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -377,7 +377,7 @@ export default function GroupAdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('?�증 ?�션??만료?�었?�니?? ?�시 로그?�해주세??');
+        setError('?占쎌쬆 ?占쎌뀡??留뚮즺?占쎌뿀?占쎈땲?? ?占쎌떆 濡쒓렇?占쏀빐二쇱꽭??');
         setLoadingData(false);
         return;
       }
@@ -393,20 +393,20 @@ export default function GroupAdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '공�??�항 조회???�패?�습?�다.');
+        throw new Error(result.error || '怨듸옙??占쏀빆 議고쉶???占쏀뙣?占쎌뒿?占쎈떎.');
       }
 
       setAnnouncements(result.data || []);
     } catch (err: any) {
-      console.error('공�??�항 로드 ?�류:', err);
-      setError(err.message || '공�??�항??불러?�는???�패?�습?�다.');
+      console.error('怨듸옙??占쏀빆 濡쒕뱶 ?占쎈쪟:', err);
+      setError(err.message || '怨듸옙??占쏀빆??遺덈윭?占쎈뒗???占쏀뙣?占쎌뒿?占쎈떎.');
       setAnnouncements([]);
     } finally {
       setLoadingData(false);
     }
   }, [currentGroupId]);
 
-  // 문의 목록 로드 (그룹 관리자??
+  // 臾몄쓽 紐⑸줉 濡쒕뱶 (洹몃９ 愿由ъ옄??
   const loadSupportTickets = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -416,7 +416,7 @@ export default function GroupAdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('?�증 ?�션??만료?�었?�니?? ?�시 로그?�해주세??');
+        setError('?占쎌쬆 ?占쎌뀡??留뚮즺?占쎌뿀?占쎈땲?? ?占쎌떆 濡쒓렇?占쏀빐二쇱꽭??');
         setLoadingData(false);
         return;
       }
@@ -432,20 +432,20 @@ export default function GroupAdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '문의 조회???�패?�습?�다.');
+        throw new Error(result.error || '臾몄쓽 議고쉶???占쏀뙣?占쎌뒿?占쎈떎.');
       }
 
       setSupportTickets(result.data || []);
     } catch (err: any) {
-      console.error('문의 로드 ?�류:', err);
-      setError(err.message || '문의�?불러?�는???�패?�습?�다.');
+      console.error('臾몄쓽 濡쒕뱶 ?占쎈쪟:', err);
+      setError(err.message || '臾몄쓽占?遺덈윭?占쎈뒗???占쏀뙣?占쎌뒿?占쎈떎.');
       setSupportTickets([]);
     } finally {
       setLoadingData(false);
     }
   }, [currentGroupId]);
 
-  // ?�근 ?�청 목록 로드 (그룹 관리자??
+  // ?占쎄렐 ?占쎌껌 紐⑸줉 濡쒕뱶 (洹몃９ 愿由ъ옄??
   const loadAccessRequests = useCallback(async () => {
     if (!currentGroupId) return;
 
@@ -455,7 +455,7 @@ export default function GroupAdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('?�증 ?�션??만료?�었?�니?? ?�시 로그?�해주세??');
+        setError('?占쎌쬆 ?占쎌뀡??留뚮즺?占쎌뿀?占쎈땲?? ?占쎌떆 濡쒓렇?占쏀빐二쇱꽭??');
         setLoadingData(false);
         return;
       }
@@ -471,20 +471,20 @@ export default function GroupAdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '?�근 ?�청 조회???�패?�습?�다.');
+        throw new Error(result.error || '?占쎄렐 ?占쎌껌 議고쉶???占쏀뙣?占쎌뒿?占쎈떎.');
       }
 
       setAccessRequests(result.data || []);
     } catch (err: any) {
-      console.error('?�근 ?�청 로드 ?�류:', err);
-      setError(err.message || '?�근 ?�청??불러?�는???�패?�습?�다.');
+      console.error('?占쎄렐 ?占쎌껌 濡쒕뱶 ?占쎈쪟:', err);
+      setError(err.message || '?占쎄렐 ?占쎌껌??遺덈윭?占쎈뒗???占쏀뙣?占쎌뒿?占쎈떎.');
       setAccessRequests([]);
     } finally {
       setLoadingData(false);
     }
   }, [currentGroupId]);
 
-  // ??변�????�이??로드
+  // ??蹂占????占쎌씠??濡쒕뱶
   useEffect(() => {
     if (!isAuthorized || !currentGroupId) return;
 
@@ -503,9 +503,9 @@ export default function GroupAdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthorized, currentGroupId]);
 
-  // ?�진 ??��
+  // ?占쎌쭊 ??占쏙옙
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('?�말�????�진????��?�시겠습?�까?')) {
+    if (!confirm('?占쎈쭚占????占쎌쭊????占쏙옙?占쎌떆寃좎뒿?占쎄퉴?')) {
       return;
     }
 
@@ -517,16 +517,16 @@ export default function GroupAdminPage() {
 
       if (error) throw error;
 
-      alert('?�진????��?�었?�니??');
+      alert('?占쎌쭊????占쏙옙?占쎌뿀?占쎈땲??');
       loadPhotos();
       loadStats();
     } catch (err: any) {
-      console.error('?�진 ??�� ?�류:', err);
-      alert(err.message || '?�진 ??�� �??�류가 발생?�습?�다.');
+      console.error('?占쎌쭊 ??占쏙옙 ?占쎈쪟:', err);
+      alert(err.message || '?占쎌쭊 ??占쏙옙 占??占쎈쪟媛 諛쒖깮?占쎌뒿?占쎈떎.');
     }
   };
 
-  // 검???�터�?
+  // 寃???占쏀꽣占?
   const filteredPhotos = photos.filter((photo) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -548,7 +548,7 @@ export default function GroupAdminPage() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>권한 ?�인 �?..</p>
+          <p style={{ color: '#64748b', fontSize: '16px' }}>沅뚰븳 ?占쎌씤 占?..</p>
         </div>
       </div>
     );
@@ -564,7 +564,7 @@ export default function GroupAdminPage() {
       backgroundColor: '#f5f7fa',
       padding: '20px',
     }}>
-      {/* ?�더 */}
+      {/* ?占쎈뜑 */}
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
@@ -594,14 +594,14 @@ export default function GroupAdminPage() {
                 color: '#1e293b',
                 margin: 0,
               }}>
-                그룹 관리자 ?�이지
+                洹몃９ 愿由ъ옄 ?占쎌씠吏
               </h1>
               <p style={{
                 fontSize: '14px',
                 color: '#64748b',
                 margin: '4px 0 0 0',
               }}>
-                {currentGroup?.name || '그룹'} 관�?
+                {currentGroup?.name || '洹몃９'} 愿占?
               </p>
             </div>
           </div>
@@ -622,11 +622,11 @@ export default function GroupAdminPage() {
             }}
           >
             <X style={{ width: '16px', height: '16px' }} />
-            ?�기
+            ?占쎄린
           </button>
         </div>
 
-        {/* ??메뉴 */}
+        {/* ??硫붾돱 */}
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -647,7 +647,7 @@ export default function GroupAdminPage() {
             }}
           >
             <BarChart3 style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ?�?�보??
+            ?占?占쎈낫??
           </button>
           <button
             onClick={() => setActiveTab('members')}
@@ -664,7 +664,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Users style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            멤버 관�?
+            硫ㅻ쾭 愿占?
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -681,7 +681,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Settings style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            그룹 ?�정
+            洹몃９ ?占쎌젙
           </button>
           <button
             onClick={() => setActiveTab('content')}
@@ -698,7 +698,7 @@ export default function GroupAdminPage() {
             }}
           >
             <ImageIcon style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            콘텐�?관�?
+            肄섑뀗占?愿占?
           </button>
           <button
             onClick={() => setActiveTab('announcements')}
@@ -716,7 +716,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Megaphone style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            공�??�항
+            怨듸옙??占쏀빆
             {announcements.filter(a => !a.is_read).length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -748,7 +748,7 @@ export default function GroupAdminPage() {
             }}
           >
             <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            문의?�기
+            臾몄쓽?占쎄린
           </button>
           <button
             onClick={() => setActiveTab('dashboard-access-requests')}
@@ -765,12 +765,12 @@ export default function GroupAdminPage() {
             }}
           >
             <Key style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            ?�근 ?�청
+            ?占쎄렐 ?占쎌껌
           </button>
         </div>
       </div>
 
-      {/* 콘텐�??�역 */}
+      {/* 肄섑뀗占??占쎌뿭 */}
       <div style={{
         backgroundColor: 'white',
         borderRadius: '12px',
@@ -802,11 +802,11 @@ export default function GroupAdminPage() {
             padding: '48px',
           }}>
             <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
-            <span style={{ marginLeft: '12px', color: '#64748b' }}>로딩 �?..</span>
+            <span style={{ marginLeft: '12px', color: '#64748b' }}>濡쒕뵫 占?..</span>
           </div>
         ) : (
           <>
-            {/* ?�?�보????*/}
+            {/* ?占?占쎈낫????*/}
             {activeTab === 'dashboard' && stats && (
               <div>
                 <h2 style={{
@@ -815,7 +815,7 @@ export default function GroupAdminPage() {
                   color: '#1e293b',
                   marginBottom: '24px',
                 }}>
-                  그룹 ?�계
+                  洹몃９ ?占쎄퀎
                 </h2>
                 <div style={{
                   display: 'grid',
@@ -838,7 +838,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      그룹 멤버
+                      洹몃９ 硫ㅻ쾭
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -866,7 +866,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      ?�체 ?�진
+                      ?占쎌껜 ?占쎌쭊
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -894,7 +894,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      ?�치 공유
+                      ?占쎌튂 怨듭쑀
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -922,7 +922,7 @@ export default function GroupAdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      최근 ?�진 (7??
+                      理쒓렐 ?占쎌쭊 (7??
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -936,21 +936,21 @@ export default function GroupAdminPage() {
               </div>
             )}
 
-            {/* 멤버 관�???*/}
+            {/* 硫ㅻ쾭 愿占???*/}
             {activeTab === 'members' && (
               <div>
                 <MemberManagement onClose={() => setShowMemberManagement(false)} />
               </div>
             )}
 
-            {/* 그룹 ?�정 ??*/}
+            {/* 洹몃９ ?占쎌젙 ??*/}
             {activeTab === 'settings' && (
               <div>
                 <GroupSettings onClose={() => setShowGroupSettings(false)} />
               </div>
             )}
 
-            {/* 콘텐�?관�???*/}
+            {/* 肄섑뀗占?愿占???*/}
             {activeTab === 'content' && (
               <div>
                 <div style={{
@@ -965,7 +965,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    콘텐�?관�?
+                    肄섑뀗占?愿占?
                   </h2>
                   <div style={{
                     position: 'relative',
@@ -982,7 +982,7 @@ export default function GroupAdminPage() {
                     }} />
                     <input
                       type="text"
-                      placeholder="?�일�? ?�명?�로 검??.."
+                      placeholder="?占쎌씪占? ?占쎈챸?占쎈줈 寃??.."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
@@ -996,7 +996,7 @@ export default function GroupAdminPage() {
                   </div>
                 </div>
 
-                {/* ?�진 목록 */}
+                {/* ?占쎌쭊 紐⑸줉 */}
                 <div style={{ marginBottom: '32px' }}>
                   <h3 style={{
                     fontSize: '18px',
@@ -1004,7 +1004,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     marginBottom: '16px',
                   }}>
-                    ?�진 ({filteredPhotos.length}�?
+                    ?占쎌쭊 ({filteredPhotos.length}占?
                   </h3>
                   <div style={{
                     display: 'grid',
@@ -1027,7 +1027,7 @@ export default function GroupAdminPage() {
                       >
                         <img
                           src={photo.image_url || photo.cloudinary_url || photo.s3_original_url || ''}
-                          alt={photo.original_filename || '?�진'}
+                          alt={photo.original_filename || '?占쎌쭊'}
                           style={{
                             width: '100%',
                             height: '150px',
@@ -1044,7 +1044,7 @@ export default function GroupAdminPage() {
                           color: '#64748b',
                           marginBottom: '4px',
                         }}>
-                          {photo.original_filename || '?�름 ?�음'}
+                          {photo.original_filename || '?占쎈쫫 ?占쎌쓬'}
                         </div>
                         <div style={{
                           fontSize: '11px',
@@ -1072,7 +1072,7 @@ export default function GroupAdminPage() {
                           }}
                         >
                           <Trash2 style={{ width: '14px', height: '14px' }} />
-                          ??��
+                          ??占쏙옙
                         </button>
                       </motion.div>
                     ))}
@@ -1084,12 +1084,12 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <ImageIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>?�진???�습?�다.</p>
+                      <p>?占쎌쭊???占쎌뒿?占쎈떎.</p>
                     </div>
                   )}
                 </div>
 
-                {/* ?�치 ?�이??목록 */}
+                {/* ?占쎌튂 ?占쎌씠??紐⑸줉 */}
                 <div>
                   <h3 style={{
                     fontSize: '18px',
@@ -1097,7 +1097,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     marginBottom: '16px',
                   }}>
-                    ?�치 ?�이??({locations.length}�?
+                    ?占쎌튂 ?占쎌씠??({locations.length}占?
                   </h3>
                   <div style={{
                     display: 'grid',
@@ -1129,7 +1129,7 @@ export default function GroupAdminPage() {
                             fontWeight: '600',
                             color: '#1e293b',
                           }}>
-                            {location.nickname || location.email || '?????�음'}
+                            {location.nickname || location.email || '?????占쎌쓬'}
                           </div>
                         </div>
                         <div style={{
@@ -1155,14 +1155,14 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <MapPin style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>?�치 ?�이?��? ?�습?�다.</p>
+                      <p>?占쎌튂 ?占쎌씠?占쏙옙? ?占쎌뒿?占쎈떎.</p>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* 공�??�항 ??*/}
+            {/* 怨듸옙??占쏀빆 ??*/}
             {activeTab === 'announcements' && (
               <div>
                 <h2 style={{
@@ -1171,7 +1171,7 @@ export default function GroupAdminPage() {
                   color: '#1e293b',
                   marginBottom: '24px',
                 }}>
-                  공�??�항 ({announcements.filter(a => !a.is_read).length}�????�음)
+                  怨듸옙??占쏀빆 ({announcements.filter(a => !a.is_read).length}占????占쎌쓬)
                 </h2>
 
                 <div style={{
@@ -1197,7 +1197,7 @@ export default function GroupAdminPage() {
                         try {
                           const { data: { session } } = await supabase.auth.getSession();
                           if (!session?.access_token) {
-                            alert('?�증 ?�보�?가?�올 ???�습?�다.');
+                            alert('?占쎌쬆 ?占쎈낫占?媛?占쎌삱 ???占쎌뒿?占쎈떎.');
                             return;
                           }
 
@@ -1216,13 +1216,13 @@ export default function GroupAdminPage() {
                           const result = await response.json();
 
                           if (!response.ok) {
-                            throw new Error(result.error || '공�? ?�음 처리???�패?�습?�다.');
+                            throw new Error(result.error || '怨듸옙? ?占쎌쓬 泥섎━???占쏀뙣?占쎌뒿?占쎈떎.');
                           }
 
                           loadAnnouncements();
                         } catch (error: any) {
-                          console.error('공�? ?�음 처리 ?�류:', error);
-                          alert(error.message || '공�? ?�음 처리 �??�류가 발생?�습?�다.');
+                          console.error('怨듸옙? ?占쎌쓬 泥섎━ ?占쎈쪟:', error);
+                          alert(error.message || '怨듸옙? ?占쎌쓬 泥섎━ 占??占쎈쪟媛 諛쒖깮?占쎌뒿?占쎈떎.');
                         }
                       }}
                     >
@@ -1256,7 +1256,7 @@ export default function GroupAdminPage() {
                                 fontSize: '11px',
                                 fontWeight: '600',
                               }}>
-                                ??공�?
+                                ??怨듸옙?
                               </span>
                             )}
                           </div>
@@ -1275,7 +1275,7 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        ?�성?? {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                        ?占쎌꽦?? {new Date(announcement.created_at).toLocaleString('ko-KR')}
                       </div>
                     </motion.div>
                   ))}
@@ -1286,14 +1286,14 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>공�??�항???�습?�다.</p>
+                      <p>怨듸옙??占쏀빆???占쎌뒿?占쎈떎.</p>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* 문의?�기 ??*/}
+            {/* 臾몄쓽?占쎄린 ??*/}
             {activeTab === 'support-tickets' && (
               <div>
                 <div style={{
@@ -1308,7 +1308,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    문의?�기
+                    臾몄쓽?占쎄린
                   </h2>
                   <button
                     onClick={() => {
@@ -1331,11 +1331,11 @@ export default function GroupAdminPage() {
                     }}
                   >
                     <Plus style={{ width: '18px', height: '18px' }} />
-                    ??문의 ?�성
+                    ??臾몄쓽 ?占쎌꽦
                   </button>
                 </div>
 
-                {/* 문의 목록 */}
+                {/* 臾몄쓽 紐⑸줉 */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1382,7 +1382,7 @@ export default function GroupAdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '닫힘'}
+                              {ticket.status === 'pending' ? '?湲곗쨷' : ticket.status === 'answered' ? '?듬??꾨즺' : '?ロ옒'}
                             </span>
                           </div>
                           <p style={{
@@ -1407,7 +1407,7 @@ export default function GroupAdminPage() {
                                 color: '#0369a1',
                                 marginBottom: '8px',
                               }}>
-                                ?��?:
+                                ?占쏙옙?:
                               </div>
                               <p style={{
                                 fontSize: '14px',
@@ -1426,8 +1426,8 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        ?�성?? {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | ?��??? ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        ?占쎌꽦?? {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | ?占쏙옙??? ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -1438,12 +1438,12 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>문의가 ?�습?�다.</p>
+                      <p>臾몄쓽媛 ?占쎌뒿?占쎈떎.</p>
                     </div>
                   )}
                 </div>
 
-                {/* 문의 ?�성 모달 */}
+                {/* 臾몄쓽 ?占쎌꽦 紐⑤떖 */}
                 {showTicketForm && (
                   <div style={{
                     position: 'fixed',
@@ -1476,13 +1476,13 @@ export default function GroupAdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        ??문의 ?�성
+                        ??臾몄쓽 ?占쎌꽦
                       </h3>
                       <input
                         type="text"
                         value={ticketTitle}
                         onChange={(e) => setTicketTitle(e.target.value)}
-                        placeholder="?�목???�력?�세??.."
+                        placeholder="?占쎈ぉ???占쎈젰?占쎌꽭??.."
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1496,7 +1496,7 @@ export default function GroupAdminPage() {
                       <textarea
                         value={ticketContent}
                         onChange={(e) => setTicketContent(e.target.value)}
-                        placeholder="문의 ?�용???�력?�세??.."
+                        placeholder="臾몄쓽 ?占쎌슜???占쎈젰?占쎌꽭??.."
                         style={{
                           width: '100%',
                           minHeight: '300px',
@@ -1530,17 +1530,17 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          취소
+                          痍⑥냼
                         </button>
                         <button
                           onClick={async () => {
                             if (!ticketTitle.trim() || !ticketContent.trim()) {
-                              alert('?�목�??�용??모두 ?�력?�주?�요.');
+                              alert('?占쎈ぉ占??占쎌슜??紐⑤몢 ?占쎈젰?占쎌＜?占쎌슂.');
                               return;
                             }
 
                             if (!currentGroupId) {
-                              alert('그룹 ?�보�?가?�올 ???�습?�다.');
+                              alert('洹몃９ ?占쎈낫占?媛?占쎌삱 ???占쎌뒿?占쎈떎.');
                               return;
                             }
 
@@ -1548,7 +1548,7 @@ export default function GroupAdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('?�증 ?�보�?가?�올 ???�습?�다.');
+                                alert('?占쎌쬆 ?占쎈낫占?媛?占쎌삱 ???占쎌뒿?占쎈떎.');
                                 return;
                               }
 
@@ -1568,17 +1568,17 @@ export default function GroupAdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '문의 ?�성???�패?�습?�다.');
+                                throw new Error(result.error || '臾몄쓽 ?占쎌꽦???占쏀뙣?占쎌뒿?占쎈떎.');
                               }
 
-                              alert('문의가 ?�성?�었?�니??');
+                              alert('臾몄쓽媛 ?占쎌꽦?占쎌뿀?占쎈땲??');
                               setShowTicketForm(false);
                               setTicketTitle('');
                               setTicketContent('');
                               loadSupportTickets();
                             } catch (error: any) {
-                              console.error('문의 ?�성 ?�류:', error);
-                              alert(error.message || '문의 ?�성 �??�류가 발생?�습?�다.');
+                              console.error('臾몄쓽 ?占쎌꽦 ?占쎈쪟:', error);
+                              alert(error.message || '臾몄쓽 ?占쎌꽦 占??占쎈쪟媛 諛쒖깮?占쎌뒿?占쎈떎.');
                             } finally {
                               setLoadingData(false);
                             }
@@ -1594,7 +1594,7 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ?�성
+                          ?占쎌꽦
                         </button>
                       </div>
                     </div>
@@ -1603,7 +1603,7 @@ export default function GroupAdminPage() {
               </div>
             )}
 
-            {/* ?�근 ?�청 ??*/}
+            {/* ?占쎄렐 ?占쎌껌 ??*/}
             {activeTab === 'dashboard-access-requests' && (
               <div>
                 <div style={{
@@ -1618,7 +1618,7 @@ export default function GroupAdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    ?�?�보???�근 ?�청
+                    ?占?占쎈낫???占쎄렐 ?占쎌껌
                   </h2>
                   <button
                     onClick={() => {
@@ -1640,11 +1640,11 @@ export default function GroupAdminPage() {
                     }}
                   >
                     <Plus style={{ width: '18px', height: '18px' }} />
-                    ???�근 ?�청
+                    ???占쎄렐 ?占쎌껌
                   </button>
                 </div>
 
-                {/* ?�근 ?�청 목록 */}
+                {/* ?占쎄렐 ?占쎌껌 紐⑸줉 */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1683,7 +1683,7 @@ export default function GroupAdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-                              {request.status === 'pending' ? '대기중' : request.status === 'approved' ? '승인됨' : request.status === 'rejected' ? '거절됨' : request.status === 'expired' ? '만료됨' : '취소됨'}
+                              {request.status === 'pending' ? '?湲곗쨷' : request.status === 'approved' ? '?뱀씤?? : request.status === 'rejected' ? '嫄곗젅?? : request.status === 'expired' ? '留뚮즺?? : '痍⑥냼??}
                             </span>
                           </div>
                           <p style={{
@@ -1700,7 +1700,7 @@ export default function GroupAdminPage() {
                               color: '#059669',
                               marginBottom: '8px',
                             }}>
-                              만료?? {new Date(request.expires_at).toLocaleString('ko-KR')}
+                              留뚮즺?? {new Date(request.expires_at).toLocaleString('ko-KR')}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
@@ -1717,7 +1717,7 @@ export default function GroupAdminPage() {
                                 color: '#991b1b',
                                 marginBottom: '4px',
                               }}>
-                                거절 ?�유:
+                                嫄곗젅 ?占쎌쑀:
                               </div>
                               <p style={{
                                 fontSize: '14px',
@@ -1738,7 +1738,7 @@ export default function GroupAdminPage() {
                         }}>
                           <button
                             onClick={async () => {
-                              if (!confirm('?�말�????�근 ?�청??취소?�시겠습?�까?')) {
+                              if (!confirm('?占쎈쭚占????占쎄렐 ?占쎌껌??痍⑥냼?占쎌떆寃좎뒿?占쎄퉴?')) {
                                 return;
                               }
 
@@ -1746,7 +1746,7 @@ export default function GroupAdminPage() {
                                 setLoadingData(true);
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('?�증 ?�보�?가?�올 ???�습?�다.');
+                                  alert('?占쎌쬆 ?占쎈낫占?媛?占쎌삱 ???占쎌뒿?占쎈떎.');
                                   return;
                                 }
 
@@ -1761,14 +1761,14 @@ export default function GroupAdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '?�근 ?�청 취소???�패?�습?�다.');
+                                  throw new Error(result.error || '?占쎄렐 ?占쎌껌 痍⑥냼???占쏀뙣?占쎌뒿?占쎈떎.');
                                 }
 
-                                alert('?�근 ?�청??취소?�었?�니??');
+                                alert('?占쎄렐 ?占쎌껌??痍⑥냼?占쎌뿀?占쎈땲??');
                                 loadAccessRequests();
                               } catch (error: any) {
-                                console.error('?�근 ?�청 취소 ?�류:', error);
-                                alert(error.message || '?�근 ?�청 취소 �??�류가 발생?�습?�다.');
+                                console.error('?占쎄렐 ?占쎌껌 痍⑥냼 ?占쎈쪟:', error);
+                                alert(error.message || '?占쎄렐 ?占쎌껌 痍⑥냼 占??占쎈쪟媛 諛쒖깮?占쎌뒿?占쎈떎.');
                               } finally {
                                 setLoadingData(false);
                               }
@@ -1784,7 +1784,7 @@ export default function GroupAdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            취소
+                            痍⑥냼
                           </button>
                         </div>
                       )}
@@ -1793,9 +1793,9 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        ?�청?? {new Date(request.created_at).toLocaleString('ko-KR')}
-                        {request.approved_at && ` | ?�인?? ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
-                        {request.rejected_at && ` | 거절?? ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                        ?占쎌껌?? {new Date(request.created_at).toLocaleString('ko-KR')}
+                        {request.approved_at && ` | ?占쎌씤?? ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                        {request.rejected_at && ` | 嫄곗젅?? ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -1806,12 +1806,12 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Key style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>?�근 ?�청???�습?�다.</p>
+                      <p>?占쎄렐 ?占쎌껌???占쎌뒿?占쎈떎.</p>
                     </div>
                   )}
                 </div>
 
-                {/* ?�근 ?�청 ?�성 모달 */}
+                {/* ?占쎄렐 ?占쎌껌 ?占쎌꽦 紐⑤떖 */}
                 {showAccessRequestForm && (
                   <div style={{
                     position: 'fixed',
@@ -1844,19 +1844,19 @@ export default function GroupAdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        ?�?�보???�근 ?�청
+                        ?占?占쎈낫???占쎄렐 ?占쎌껌
                       </h3>
                       <p style={{
                         fontSize: '14px',
                         color: '#64748b',
                         marginBottom: '16px',
                       }}>
-                        ?�스??관리자가 본인 가�??�?�보?�에 ?�근?????�도�??�청?�니??
+                        ?占쎌뒪??愿由ъ옄媛 蹂몄씤 媛占??占?占쎈낫?占쎌뿉 ?占쎄렐?????占쎈룄占??占쎌껌?占쎈땲??
                       </p>
                       <textarea
                         value={accessRequestReason}
                         onChange={(e) => setAccessRequestReason(e.target.value)}
-                        placeholder="?�근 ?�청 ?�유�??�력?�세??(?? 기술 지?�이 ?�요?�니?? 문제 ?�결???�요?�니????..."
+                        placeholder="?占쎄렐 ?占쎌껌 ?占쎌쑀占??占쎈젰?占쎌꽭??(?? 湲곗닠 吏?占쎌씠 ?占쎌슂?占쎈땲?? 臾몄젣 ?占쎄껐???占쎌슂?占쎈땲????..."
                         style={{
                           width: '100%',
                           minHeight: '200px',
@@ -1889,17 +1889,17 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          취소
+                          痍⑥냼
                         </button>
                         <button
                           onClick={async () => {
                             if (!accessRequestReason.trim()) {
-                              alert('?�근 ?�청 ?�유�??�력?�주?�요.');
+                              alert('?占쎄렐 ?占쎌껌 ?占쎌쑀占??占쎈젰?占쎌＜?占쎌슂.');
                               return;
                             }
 
                             if (!currentGroupId) {
-                              alert('그룹 ?�보�?가?�올 ???�습?�다.');
+                              alert('洹몃９ ?占쎈낫占?媛?占쎌삱 ???占쎌뒿?占쎈떎.');
                               return;
                             }
 
@@ -1907,7 +1907,7 @@ export default function GroupAdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('?�증 ?�보�?가?�올 ???�습?�다.');
+                                alert('?占쎌쬆 ?占쎈낫占?媛?占쎌삱 ???占쎌뒿?占쎈떎.');
                                 return;
                               }
 
@@ -1926,16 +1926,16 @@ export default function GroupAdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '?�근 ?�청 ?�성???�패?�습?�다.');
+                                throw new Error(result.error || '?占쎄렐 ?占쎌껌 ?占쎌꽦???占쏀뙣?占쎌뒿?占쎈떎.');
                               }
 
-                              alert('?�근 ?�청???�성?�었?�니??');
+                              alert('?占쎄렐 ?占쎌껌???占쎌꽦?占쎌뿀?占쎈땲??');
                               setShowAccessRequestForm(false);
                               setAccessRequestReason('');
                               loadAccessRequests();
                             } catch (error: any) {
-                              console.error('?�근 ?�청 ?�성 ?�류:', error);
-                              alert(error.message || '?�근 ?�청 ?�성 �??�류가 발생?�습?�다.');
+                              console.error('?占쎄렐 ?占쎌껌 ?占쎌꽦 ?占쎈쪟:', error);
+                              alert(error.message || '?占쎄렐 ?占쎌껌 ?占쎌꽦 占??占쎈쪟媛 諛쒖깮?占쎌뒿?占쎈떎.');
                             } finally {
                               setLoadingData(false);
                             }
@@ -1951,7 +1951,7 @@ export default function GroupAdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ?�청
+                          ?占쎌껌
                         </button>
                       </div>
                     </div>
