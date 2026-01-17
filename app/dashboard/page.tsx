@@ -6517,9 +6517,9 @@ export default function FamilyHub() {
             const { presignedUrl, s3Key, s3Url } = urlResult;
 
             // 2. 클라이언트에서 직접 S3에 원본 파일 업로드
-            // 타임아웃 설정 (30초)
+            // 타임아웃 설정 (120초)
             const uploadController = new AbortController();
-            const uploadTimeout = setTimeout(() => uploadController.abort(), 30000);
+            const uploadTimeout = setTimeout(() => uploadController.abort(), 120000);
             
             try {
               const s3UploadResponse = await fetch(presignedUrl, {
@@ -6745,9 +6745,9 @@ export default function FamilyHub() {
           }
 
           // 3. 업로드 완료 처리 (Cloudinary 업로드 + Supabase 저장)
-          // 타임아웃 설정 (60초)
+          // 타임아웃 설정 (180초)
           const completeController = new AbortController();
-          const completeTimeout = setTimeout(() => completeController.abort(), 60000);
+          const completeTimeout = setTimeout(() => completeController.abort(), 180000);
           
           try {
             const completeResponse = await fetch('/api/complete-upload', {
