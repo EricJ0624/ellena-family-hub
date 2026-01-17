@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { authenticateUser } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,12 +19,25 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 // 위치 요청 생성 API
 export async function POST(request: NextRequest) {
   try {
-    const { targetId, requesterId } = await request.json();
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
 
-    if (!targetId || !requesterId) {
+    const { targetId, requesterId, groupId } = await request.json();
+
+    if (!targetId || !requesterId || !groupId) {
       return NextResponse.json(
-        { error: 'targetId와 requesterId가 필요합니다.' },
+        { error: 'targetId, requesterId, groupId가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    if (requesterId !== user.id) {
+      return NextResponse.json(
+        { error: '요청자 정보가 올바르지 않습니다.' },
+        { status: 403 }
       );
     }
 
@@ -30,6 +45,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '자기 자신에게 위치 요청을 보낼 수 없습니다.' },
         { status: 400 }
+      );
+    }
+
+    const permissionResult = await checkPermission(
+      user.id,
+      groupId,
+      'MEMBER',
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 접근 권한이 없습니다.' },
+        { status: 403 }
       );
     }
 
@@ -41,12 +70,42 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // 대상 사용자가 같은 그룹에 속하는지 확인
+    const { data: groupData, error: groupError } = await supabase
+      .from('groups')
+      .select('owner_id')
+      .eq('id', groupId)
+      .single();
+
+    if (groupError || !groupData) {
+      return NextResponse.json(
+        { error: '그룹을 찾을 수 없습니다.' },
+        { status: 404 }
+      );
+    }
+
+    const { data: targetMembership } = await supabase
+      .from('memberships')
+      .select('user_id')
+      .eq('group_id', groupId)
+      .eq('user_id', targetId)
+      .single();
+
+    const isTargetOwner = groupData.owner_id === targetId;
+    if (!targetMembership && !isTargetOwner) {
+      return NextResponse.json(
+        { error: '대상 사용자는 해당 그룹의 멤버가 아닙니다.' },
+        { status: 400 }
+      );
+    }
+
     // 이미 pending 요청이 있는지 확인
     const { data: existingRequest, error: checkError } = await supabase
       .from('location_requests')
       .select('id, status')
       .eq('requester_id', requesterId)
       .eq('target_id', targetId)
+      .eq('group_id', groupId)
       .eq('status', 'pending')
       .single();
 
@@ -62,6 +121,7 @@ export async function POST(request: NextRequest) {
       .from('location_requests')
       .select('id')
       .or(`and(requester_id.eq.${requesterId},target_id.eq.${targetId}),and(requester_id.eq.${targetId},target_id.eq.${requesterId})`)
+      .eq('group_id', groupId)
       .eq('status', 'accepted')
       .single();
 
@@ -78,6 +138,7 @@ export async function POST(request: NextRequest) {
       .insert({
         requester_id: requesterId,
         target_id: targetId,
+        group_id: groupId,
         status: 'pending',
         expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1시간 후 만료
       })
@@ -138,11 +199,39 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const type = searchParams.get('type'); // 'sent' | 'received' | 'all'
+    const groupId = searchParams.get('groupId');
 
-    if (!userId) {
+    if (!userId || !groupId) {
       return NextResponse.json(
-        { error: 'userId가 필요합니다.' },
+        { error: 'userId와 groupId가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    if (userId !== user.id) {
+      return NextResponse.json(
+        { error: '요청자 정보가 올바르지 않습니다.' },
+        { status: 403 }
+      );
+    }
+
+    const permissionResult = await checkPermission(
+      user.id,
+      groupId,
+      'MEMBER',
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 접근 권한이 없습니다.' },
+        { status: 403 }
       );
     }
 
@@ -157,6 +246,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('location_requests')
       .select('*')
+      .eq('group_id', groupId)
       .order('created_at', { ascending: false });
 
     // 타입에 따라 필터링

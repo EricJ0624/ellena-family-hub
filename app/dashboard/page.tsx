@@ -706,6 +706,12 @@ export default function FamilyHub() {
 
         // Push 토큰을 Supabase에 등록
         try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            console.warn('Push 토큰 등록: 인증 세션이 없습니다.');
+            return;
+          }
+
           const deviceInfo = {
             userAgent: navigator.userAgent,
             platform: navigator.platform,
@@ -717,6 +723,7 @@ export default function FamilyHub() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
               userId: userId,
@@ -4825,12 +4832,27 @@ export default function FamilyHub() {
   // 가족 구성원 위치 로드 (승인된 관계만 표시)
   const loadFamilyLocations = async () => {
     if (!userId || !isAuthenticated) return;
+    if (!currentGroupId) {
+      console.warn('loadFamilyLocations: currentGroupId가 없습니다. groupId가 필요합니다.');
+      return;
+    }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.warn('loadFamilyLocations: 인증 세션이 없습니다.');
+        return;
+      }
+
       // 최신 위치 요청 목록을 직접 조회하여 최신 상태 보장
       let currentLocationRequests = locationRequests;
       try {
-        const response = await fetch(`/api/location-request?userId=${userId}&type=all`);
+        const response = await fetch(`/api/location-request?userId=${userId}&type=all&groupId=${currentGroupId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
         const result = await response.json();
         if (result.success && result.data) {
           currentLocationRequests = result.data;
@@ -4991,16 +5013,28 @@ export default function FamilyHub() {
   // 만료된 요청을 조용히 처리하는 함수 (alert 없이)
   const silentlyCancelExpiredRequest = async (requestId: string) => {
     if (!userId || !isAuthenticated) return;
+    if (!currentGroupId) {
+      console.warn('silentlyCancelExpiredRequest: currentGroupId가 없습니다. groupId가 필요합니다.');
+      return;
+    }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.warn('silentlyCancelExpiredRequest: 인증 세션이 없습니다.');
+        return;
+      }
+
       const response = await fetch('/api/location-approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requestId,
           userId,
+          groupId: currentGroupId,
           action: 'cancel',
           silent: true, // 조용한 처리 플래그
         }),
@@ -5021,9 +5055,24 @@ export default function FamilyHub() {
   // 위치 요청 목록 로드 (만료된 pending 요청은 사용자가 직접 삭제)
   const loadLocationRequests = async () => {
     if (!userId || !isAuthenticated) return;
+    if (!currentGroupId) {
+      console.warn('loadLocationRequests: currentGroupId가 없습니다. groupId가 필요합니다.');
+      return;
+    }
 
     try {
-      const response = await fetch(`/api/location-request?userId=${userId}&type=all`);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.warn('loadLocationRequests: 인증 세션이 없습니다.');
+        return;
+      }
+
+      const response = await fetch(`/api/location-request?userId=${userId}&type=all&groupId=${currentGroupId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -5069,6 +5118,10 @@ export default function FamilyHub() {
       }
       return;
     }
+    if (!currentGroupId) {
+      console.warn('endLocationSharing: currentGroupId가 없습니다. groupId가 필요합니다.');
+      return;
+    }
 
     // silent 모드가 아닐 때만 확인 창 표시
     if (!silent && !confirm('위치 공유를 종료하시겠습니까?')) {
@@ -5076,14 +5129,24 @@ export default function FamilyHub() {
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        if (!silent) {
+          alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        }
+        return;
+      }
+
       const response = await fetch('/api/location-approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requestId,
           userId,
+          groupId: currentGroupId,
           action: 'cancel',
           silent, // silent 플래그 전달
         }),
@@ -5152,11 +5215,17 @@ export default function FamilyHub() {
     try {
       console.log('📋 사용자 목록 로드 시작 - API 호출:', { userId, retryCount });
       
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+      }
+
       // API를 통해 서버 사이드에서 모든 사용자 조회 (profiles가 비어있으면 auth.users에서 조회)
       const response = await fetch(`/api/users/list?currentUserId=${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         cache: 'no-store', // 캐시 방지
       });
@@ -5296,16 +5365,28 @@ export default function FamilyHub() {
         req => req.target_id === userId && req.status === 'pending'
       );
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.warn('위치 요청 자동 승인: 인증 세션이 없습니다.');
+        return;
+      }
+
       for (const req of pendingRequests) {
+        if (!currentGroupId) {
+          console.warn('위치 요청 자동 승인: currentGroupId가 없습니다. groupId가 필요합니다.');
+          break;
+        }
         try {
           const response = await fetch('/api/location-approve', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
               requestId: req.id,
               userId: userId,
+              groupId: currentGroupId,
               action: 'accept',
             }),
           });
@@ -5344,16 +5425,28 @@ export default function FamilyHub() {
       alert('로그인이 필요합니다.');
       return;
     }
+    if (!currentGroupId) {
+      alert('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
+      return;
+    }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        return;
+      }
+
       const response = await fetch('/api/location-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requesterId: userId,
           targetId: targetUserId,
+          groupId: currentGroupId,
         }),
       });
 
@@ -5384,6 +5477,10 @@ export default function FamilyHub() {
       alert('로그인이 필요합니다.');
       return;
     }
+    if (!currentGroupId) {
+      alert('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
+      return;
+    }
 
     // 처리 중인 요청인지 확인 (중복 호출 방지)
     const requestKey = `${requestId}-${action}`;
@@ -5404,14 +5501,22 @@ export default function FamilyHub() {
     processingRequestsRef.current.add(requestKey);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        return;
+      }
+
       const response = await fetch('/api/location-approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requestId,
           userId,
+          groupId: currentGroupId,
           action,
         }),
       });
@@ -5583,8 +5688,16 @@ export default function FamilyHub() {
           // 현재 Push 토큰 가져오기
           const token = await getPushToken();
           if (token) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              console.warn('Push 토큰 삭제: 인증 세션이 없습니다.');
+              return;
+            }
             await fetch(`/api/push/register-token?userId=${userId}&token=${encodeURIComponent(token)}`, {
-              method: 'DELETE'
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
             }).catch(err => console.warn('Push 토큰 삭제 실패:', err));
           }
         } catch (error) {
@@ -6179,6 +6292,9 @@ export default function FamilyHub() {
         if (usePresignedUrl) {
           // Presigned URL 방식 (큰 파일)
           try {
+            if (!currentGroupId) {
+              throw new Error('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
+            }
             // 1. Presigned URL 요청 (타임아웃: 10초)
             const urlController = new AbortController();
             const urlTimeout = setTimeout(() => urlController.abort(), 10000);
@@ -6195,6 +6311,7 @@ export default function FamilyHub() {
                   fileName: file.name,
                   mimeType: file.type,
                   fileSize: file.size,
+                  groupId: currentGroupId,
                 }),
                 signal: urlController.signal,
               });

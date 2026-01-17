@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { authenticateUser } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,12 +19,25 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 // 위치 요청 승인/거부/취소 API
 export async function POST(request: NextRequest) {
   try {
-    const { requestId, userId, action, silent } = await request.json();
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
 
-    if (!requestId || !userId || !action) {
+    const { requestId, userId, action, silent, groupId } = await request.json();
+
+    if (!requestId || !userId || !action || !groupId) {
       return NextResponse.json(
-        { error: 'requestId, userId, action이 필요합니다.' },
+        { error: 'requestId, userId, action, groupId가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    if (userId !== user.id) {
+      return NextResponse.json(
+        { error: '요청자 정보가 올바르지 않습니다.' },
+        { status: 403 }
       );
     }
 
@@ -30,6 +45,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'action은 accept, reject, cancel 중 하나여야 합니다.' },
         { status: 400 }
+      );
+    }
+
+    const permissionResult = await checkPermission(
+      user.id,
+      groupId,
+      'MEMBER',
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 접근 권한이 없습니다.' },
+        { status: 403 }
       );
     }
 
@@ -45,6 +74,7 @@ export async function POST(request: NextRequest) {
       .from('location_requests')
       .select('*')
       .eq('id', requestId)
+      .eq('group_id', groupId)
       .single();
 
     if (fetchError || !locationRequest) {
@@ -115,6 +145,7 @@ export async function POST(request: NextRequest) {
       .from('location_requests')
       .update({ status: newStatus })
       .eq('id', requestId)
+      .eq('group_id', groupId)
       .select()
       .single();
 

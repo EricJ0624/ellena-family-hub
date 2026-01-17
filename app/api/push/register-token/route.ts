@@ -1,6 +1,7 @@
 // Web Push 토큰 등록/업데이트 API (Supabase 사용)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { authenticateUser } from '@/lib/api-helpers';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,12 +19,25 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 // Web Push 토큰 등록 또는 업데이트
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
     const { userId, token, deviceInfo } = await request.json();
 
     if (!userId || !token) {
       return NextResponse.json(
         { error: 'userId와 token이 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    if (userId !== user.id) {
+      return NextResponse.json(
+        { error: '요청자 정보가 올바르지 않습니다.' },
+        { status: 403 }
       );
     }
 
@@ -102,6 +116,12 @@ export async function POST(request: NextRequest) {
 // Push 토큰 삭제 (로그아웃 시)
 export async function DELETE(request: NextRequest) {
   try {
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const token = searchParams.get('token');
@@ -110,6 +130,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: 'userId와 token이 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    if (userId !== user.id) {
+      return NextResponse.json(
+        { error: '요청자 정보가 올바르지 않습니다.' },
+        { status: 403 }
       );
     }
 

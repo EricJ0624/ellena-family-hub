@@ -1,6 +1,7 @@
-// 모든 사용자 목록 조회 API (로그인 여부와 관계없이 profiles 테이블의 모든 사용자)
+// 모든 사용자 목록 조회 API (로그인 사용자 기준으로 profiles 테이블의 사용자)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { authenticateUser } from '@/lib/api-helpers';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,6 +18,12 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
     const { searchParams } = new URL(request.url);
     const currentUserId = searchParams.get('currentUserId');
 
@@ -24,6 +31,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'currentUserId가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    if (currentUserId !== user.id) {
+      return NextResponse.json(
+        { error: '요청자 정보가 올바르지 않습니다.' },
+        { status: 403 }
       );
     }
 
@@ -39,7 +53,7 @@ export async function GET(request: NextRequest) {
     let { data, error } = await supabase
       .from('profiles')
       .select('id, email, nickname')
-      .neq('id', currentUserId);
+      .neq('id', user.id);
 
     // 2. profiles 테이블이 비어있거나 에러가 발생하면 auth.users에서 데이터를 가져와서 profiles에 동기화
     if (error || !data || data.length === 0) {
@@ -82,7 +96,7 @@ export async function GET(request: NextRequest) {
         const { data: syncedData, error: syncedError } = await supabase
           .from('profiles')
           .select('id, email, nickname')
-          .neq('id', currentUserId);
+          .neq('id', user.id);
 
         if (syncedError) {
           console.error('동기화 후 조회 오류:', syncedError);

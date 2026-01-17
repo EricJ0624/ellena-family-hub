@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 /**
  * 공지사항 목록 조회 (그룹 관리자용 - 읽음 상태 포함)
@@ -12,6 +13,30 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
     const { user } = authResult;
+
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('group_id');
+
+    if (!groupId) {
+      return NextResponse.json(
+        { error: '그룹 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    const permissionResult = await checkPermission(
+      user.id,
+      groupId,
+      'ADMIN',
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 관리자 권한이 필요합니다.' },
+        { status: 403 }
+      );
+    }
 
     const supabase = getSupabaseServerClient();
 
@@ -80,12 +105,26 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { announcement_id } = body;
+    const { announcement_id, group_id } = body;
 
-    if (!announcement_id) {
+    if (!announcement_id || !group_id) {
       return NextResponse.json(
-        { error: '공지사항 ID가 필요합니다.' },
+        { error: '공지사항 ID와 그룹 ID가 필요합니다.' },
         { status: 400 }
+      );
+    }
+
+    const permissionResult = await checkPermission(
+      user.id,
+      group_id,
+      'ADMIN',
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 관리자 권한이 필요합니다.' },
+        { status: 403 }
       );
     }
 

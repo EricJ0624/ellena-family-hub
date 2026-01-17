@@ -140,7 +140,7 @@ export default function GroupAdminPage() {
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // 공�??�항, 문의, ?�근 ?�청 관???�태
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
@@ -382,7 +382,7 @@ export default function GroupAdminPage() {
         return;
       }
 
-      const response = await fetch('/api/group-admin/announcements', {
+      const response = await fetch(`/api/group-admin/announcements?group_id=${currentGroupId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -1209,6 +1209,7 @@ export default function GroupAdminPage() {
                             },
                             body: JSON.stringify({
                               announcement_id: announcement.id,
+                              group_id: currentGroupId,
                             }),
                           });
 

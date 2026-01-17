@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { 
-  authenticateUser, 
-  getS3ClientInstance, 
-  generateS3Key, 
-  generateS3Url 
+import {
+  authenticateUser,
+  getS3ClientInstance,
+  generateS3KeyWithGroup,
+  generateS3Url
 } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +19,26 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { fileName, mimeType, fileSize } = body;
+    const { fileName, mimeType, fileSize, groupId } = body;
 
-    if (!fileName || !mimeType) {
+    if (!fileName || !mimeType || !groupId) {
       return NextResponse.json(
-        { error: '필수 파라미터가 누락되었습니다.' },
+        { error: 'fileName, mimeType, groupId는 필수입니다.' },
         { status: 400 }
+      );
+    }
+
+    const permissionResult = await checkPermission(
+      user.id,
+      groupId,
+      'MEMBER',
+      user.id
+    );
+
+    if (!permissionResult.success) {
+      return NextResponse.json(
+        { error: '그룹 접근 권한이 없습니다.' },
+        { status: 403 }
       );
     }
 
@@ -45,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // S3 Key 생성
-    const s3Key = generateS3Key(fileName, mimeType, user.id);
+    const s3Key = generateS3KeyWithGroup(fileName, mimeType, user.id, groupId);
 
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     if (!bucketName) {

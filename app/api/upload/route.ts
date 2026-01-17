@@ -103,18 +103,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 그룹 권한 검증 (필수)
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      null, // MEMBER 이상 권한 필요
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 접근 권한이 없습니다.' },
-        { status: 403 }
+      const permissionResult = await checkPermission(
+        user.id,
+        groupId,
+        null, // MEMBER 이상 권한 필요
+        user.id
       );
+
+      if (!permissionResult.success) {
+        return NextResponse.json(
+          { error: '그룹 접근 권한이 없습니다.' },
+          { status: 403 }
+        );
     }
 
     // Base64 데이터 크기 체크
