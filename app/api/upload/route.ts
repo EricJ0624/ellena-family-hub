@@ -16,6 +16,7 @@ import {
   uploadToS3WithGroupAndKey,
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
+import { getGroupStorageStats } from '@/lib/storage-quota';
 
 // Next.js App Router: 큰 파일 업로드를 위한 설정
 // ⚠️ 중요: Vercel에서는 최대 4.5MB 제한이 있습니다.
@@ -105,6 +106,20 @@ export async function POST(request: NextRequest) {
         },
         { status: 413 }
       );
+    }
+
+    const incomingSize = originalSize || estimatedSize;
+    if (incomingSize) {
+      const { quotaBytes, usedBytes } = await getGroupStorageStats(groupId);
+      if (usedBytes + incomingSize > quotaBytes) {
+        return NextResponse.json(
+          {
+            error: '그룹 저장 용량을 초과했습니다.',
+            details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
+          },
+          { status: 413 }
+        );
+      }
     }
 
     // 1. Build master and app images

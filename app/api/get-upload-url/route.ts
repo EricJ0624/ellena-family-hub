@@ -8,6 +8,7 @@ import {
   generatePublicAssetUrl
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
+import { getGroupStorageStats } from '@/lib/storage-quota';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +56,17 @@ export async function POST(request: NextRequest) {
     if (fileSize && fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: `파일이 너무 큽니다. (${isRawFile ? 'RAW 파일' : '일반 파일'} 최대 ${MAX_FILE_SIZE / 1024 / 1024}MB)` },
+        { status: 413 }
+      );
+    }
+
+    const { quotaBytes, usedBytes } = await getGroupStorageStats(groupId);
+    if (fileSize && usedBytes + fileSize > quotaBytes) {
+      return NextResponse.json(
+        {
+          error: '그룹 저장 용량을 초과했습니다.',
+          details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
+        },
         { status: 413 }
       );
     }

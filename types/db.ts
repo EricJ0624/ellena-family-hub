@@ -25,6 +25,7 @@ export interface Database {
           avatar_url: string | null
           created_at: string
           updated_at: string
+          storage_quota_bytes: number
         }
         Insert: {
           id?: string
@@ -34,6 +35,7 @@ export interface Database {
           avatar_url?: string | null
           created_at?: string
           updated_at?: string
+          storage_quota_bytes?: number
         }
         Update: {
           id?: string
@@ -43,6 +45,7 @@ export interface Database {
           avatar_url?: string | null
           created_at?: string
           updated_at?: string
+          storage_quota_bytes?: number
         }
         Relationships: [
           {

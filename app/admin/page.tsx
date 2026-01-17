@@ -47,6 +47,8 @@ interface GroupInfo {
   owner_email: string | null;
   member_count: number;
   created_at: string;
+  storage_quota_bytes?: number;
+  storage_used_bytes?: number;
 }
 
 interface SystemStats {
@@ -184,6 +186,19 @@ export default function AdminPage() {
   const [announcementContent, setAnnouncementContent] = useState('');
   const [ticketAnswer, setTicketAnswer] = useState('');
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
+
+  const formatBytes = (bytes: number | null | undefined): string => {
+    if (!bytes || bytes <= 0) return '0GB';
+    const gb = bytes / 1024 / 1024 / 1024;
+    if (gb >= 1) return `${gb.toFixed(2)}GB`;
+    const mb = bytes / 1024 / 1024;
+    return `${mb.toFixed(2)}MB`;
+  };
+
+  const getStoragePercent = (used: number | null | undefined, quota: number | null | undefined): number => {
+    if (!used || !quota || quota <= 0) return 0;
+    return Math.min((used / quota) * 100, 100);
+  };
 
   // 관리자 권한 확인 및 초기 데이터 로드
   useEffect(() => {
@@ -339,87 +354,26 @@ export default function AdminPage() {
       setLoadingData(true);
       setError(null);
 
-      // 시스템 관리자 권한 확인
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
         setError('인증 정보를 가져올 수 없습니다.');
         setLoadingData(false);
         return;
       }
 
-      const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_system_admin', {
-        user_id_param: user.id,
+      const response = await fetch('/api/admin/group-storage', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
       });
 
-      if (adminCheckError) {
-        console.error('시스템 관리자 확인 오류:', adminCheckError);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || '그룹 목록을 불러오는데 실패했습니다.');
       }
 
-      // 시스템 관리자인 경우 모든 그룹 조회
-      const { data: groupsData, error: groupsError } = await supabase
-        .from('groups')
-        .select('id, name, owner_id, created_at')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (groupsError) {
-        console.error('그룹 조회 오류:', groupsError);
-        throw groupsError;
-      }
-
-      if (!groupsData || groupsData.length === 0) {
-        setGroups([]);
-        setLoadingData(false);
-        return;
-      }
-
-      // 각 그룹의 소유자 이메일과 멤버 수 계산
-      const groupsWithDetails: GroupInfo[] = await Promise.all(
-        groupsData.map(async (group) => {
-          try {
-            // 소유자 이메일
-            const { data: ownerData } = await supabase
-              .from('profiles')
-              .select('email')
-              .eq('id', group.owner_id)
-              .single();
-
-            // 멤버 수 - 에러가 발생하면 0으로 처리
-            let memberCount = 0;
-            try {
-              const { count, error: countError } = await supabase
-                .from('memberships')
-                .select('*', { count: 'exact', head: true })
-                .eq('group_id', group.id);
-              
-              if (!countError) {
-                memberCount = count || 0;
-              }
-            } catch (countErr) {
-              console.warn(`그룹 ${group.id} 멤버 수 조회 오류:`, countErr);
-            }
-
-            return {
-              id: group.id,
-              name: group.name,
-              owner_email: ownerData?.email || null,
-              member_count: memberCount + 1, // 소유자 포함
-              created_at: group.created_at,
-            };
-          } catch (err: any) {
-            console.error(`그룹 ${group.id} 상세 정보 로드 오류:`, err);
-            return {
-              id: group.id,
-              name: group.name,
-              owner_email: null,
-              member_count: 1, // 최소값 (소유자만)
-              created_at: group.created_at,
-            };
-          }
-        })
-      );
-
-      setGroups(groupsWithDetails);
+      setGroups(result.data || []);
     } catch (err: any) {
       console.error('그룹 목록 로드 오류:', err);
       setError(err.message || '그룹 목록을 불러오는데 실패했습니다.');
@@ -1842,69 +1796,150 @@ export default function AdminPage() {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                   gap: '16px',
                 }}>
-                  {filteredGroups.map((group, index) => (
-                    <motion.div
-                      key={group.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                      }}>
-                        <h3 style={{
-                          fontSize: '18px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          margin: 0,
+                  {filteredGroups.map((group, index) => {
+                    const usedBytes = group.storage_used_bytes || 0;
+                    const quotaBytes = group.storage_quota_bytes || 0;
+                    const percent = getStoragePercent(usedBytes, quotaBytes);
+
+                    return (
+                      <motion.div
+                        key={group.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        style={{
+                          padding: '20px',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#cbd5e1';
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: '12px',
                         }}>
-                          {group.name}
-                        </h3>
-                        <Crown style={{ width: '20px', height: '20px', color: '#f59e0b' }} />
-                      </div>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#64748b',
-                        marginBottom: '8px',
-                      }}>
-                        소유자: {group.owner_email || '-'}
-                      </div>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#64748b',
-                        marginBottom: '16px',
-                      }}>
-                        멤버: {group.member_count}명
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        marginBottom: '16px',
-                      }}>
-                        생성일: {new Date(group.created_at).toLocaleDateString('ko-KR')}
-                      </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                      }}>
+                          <h3 style={{
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            color: '#1e293b',
+                            margin: 0,
+                          }}>
+                            {group.name}
+                          </h3>
+                          <Crown style={{ width: '20px', height: '20px', color: '#f59e0b' }} />
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#64748b',
+                          marginBottom: '8px',
+                        }}>
+                          소유자: {group.owner_email || '-'}
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#64748b',
+                          marginBottom: '8px',
+                        }}>
+                          멤버: {group.member_count}명
+                        </div>
+                        <div style={{
+                          fontSize: '14px',
+                          color: '#64748b',
+                          marginBottom: '12px',
+                        }}>
+                          용량: {formatBytes(usedBytes)} / {formatBytes(quotaBytes)} ({percent.toFixed(0)}%)
+                        </div>
+                        <div style={{
+                          height: '6px',
+                          backgroundColor: '#e2e8f0',
+                          borderRadius: '999px',
+                          overflow: 'hidden',
+                          marginBottom: '16px',
+                        }}>
+                          <div style={{
+                            width: `${percent}%`,
+                            height: '100%',
+                            backgroundColor: percent >= 90 ? '#ef4444' : percent >= 70 ? '#f59e0b' : '#22c55e',
+                            transition: 'width 0.2s',
+                          }} />
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#94a3b8',
+                          marginBottom: '16px',
+                        }}>
+                          생성일: {new Date(group.created_at).toLocaleDateString('ko-KR')}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          flexWrap: 'wrap',
+                        }}>
+                          <button
+                            style={{
+                              flex: '1 1 120px',
+                              padding: '8px 12px',
+                              backgroundColor: '#e0f2fe',
+                              color: '#0369a1',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                            onClick={async () => {
+                              const currentGb = quotaBytes ? (quotaBytes / 1024 / 1024 / 1024).toFixed(2) : '5';
+                              const input = prompt('그룹 용량(GB)을 입력하세요.', currentGb);
+                              if (!input) return;
+                              const nextGb = Number(input);
+                              if (!Number.isFinite(nextGb) || nextGb <= 0) {
+                                alert('유효한 GB 값을 입력해주세요.');
+                                return;
+                              }
+
+                              try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  return;
+                                }
+
+                                const response = await fetch('/api/admin/group-storage', {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Authorization': `Bearer ${session.access_token}`,
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    groupId: group.id,
+                                    storageQuotaGb: nextGb,
+                                  }),
+                                });
+
+                                const result = await response.json();
+                                if (!response.ok) {
+                                  throw new Error(result.error || '용량 변경에 실패했습니다.');
+                                }
+
+                                await loadGroups();
+                              } catch (error: any) {
+                                alert(error.message || '용량 변경 중 오류가 발생했습니다.');
+                              }
+                            }}
+                          >
+                            용량 설정
+                          </button>
                         {/* 관리 가능한 그룹에만 "관리하기" 버튼 표시 */}
                         {manageableGroups.some(mg => mg.id === group.id) && (
                           <button

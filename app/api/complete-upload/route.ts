@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateUser,
   checkCloudinaryConfig,
+  deleteFromS3,
   downloadFromS3,
   downloadFromUrl,
   generateAppS3KeyFromMasterKey,
@@ -13,6 +14,7 @@ import {
   uploadToS3WithGroupAndKey,
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
+import { getGroupStorageStats } from '@/lib/storage-quota';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +65,21 @@ export async function POST(request: NextRequest) {
           { error: '그룹 접근 권한이 없습니다.' },
           { status: 403 }
         );
+    }
+
+    const incomingSize = originalSize || 0;
+    if (incomingSize) {
+      const { quotaBytes, usedBytes } = await getGroupStorageStats(groupId);
+      if (usedBytes + incomingSize > quotaBytes) {
+        await deleteFromS3(s3Key);
+        return NextResponse.json(
+          {
+            error: '그룹 저장 용량을 초과했습니다.',
+            details: `현재 사용량 ${(usedBytes / 1024 / 1024 / 1024).toFixed(2)}GB / 한도 ${(quotaBytes / 1024 / 1024 / 1024).toFixed(2)}GB`,
+          },
+          { status: 413 }
+        );
+      }
     }
 
     // 1. Build master and app images
