@@ -98,19 +98,23 @@ export async function GET(request: NextRequest) {
         const profile = profilesData?.find(p => p.id === authUser.id);
         
         try {
-          // 그룹 수 계산
-          const { count } = await supabase
+          // 그룹 수 계산 (중복 제거: memberships + owner 그룹 합집합)
+          const { data: membershipGroups } = await supabase
             .from('memberships')
-            .select('*', { count: 'exact', head: true })
+            .select('group_id')
             .eq('user_id', authUser.id);
 
-          // 소유자인 그룹 수 계산
-          const { count: ownedCount } = await supabase
+          const { data: ownedGroups } = await supabase
             .from('groups')
-            .select('*', { count: 'exact', head: true })
+            .select('id')
             .eq('owner_id', authUser.id);
 
-          const totalGroups = (count || 0) + (ownedCount || 0);
+          const groupIds = new Set<string>([
+            ...(membershipGroups?.map((m) => m.group_id) || []),
+            ...(ownedGroups?.map((g) => g.id) || []),
+          ]);
+
+          const totalGroups = groupIds.size;
 
           return {
             id: authUser.id,
