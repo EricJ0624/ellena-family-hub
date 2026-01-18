@@ -40,7 +40,21 @@ const formatAmount = (value: number) => `${value.toLocaleString('ko-KR')}원`;
 
 export default function PiggyBankPage() {
   const router = useRouter();
-  const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
+  let currentGroupId: string | null = null;
+  let currentGroup: { name?: string | null } | null = null;
+  let userRole: 'ADMIN' | 'MEMBER' | null = null;
+  let isOwner = false;
+  try {
+    const groupContext = useGroup();
+    currentGroupId = groupContext.currentGroupId;
+    currentGroup = groupContext.currentGroup;
+    userRole = groupContext.userRole;
+    isOwner = groupContext.isOwner;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('GroupProvider가 없습니다.');
+    }
+  }
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<{
     account: PiggyAccount;
