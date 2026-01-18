@@ -191,6 +191,19 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
   // 초기 로드 및 그룹 ID 복원
   useEffect(() => {
+    if (!userId) {
+      setCurrentGroupIdState(null);
+      setCurrentGroup(null);
+      setUserRole(null);
+      setIsOwner(false);
+      setGroups([]);
+      setMemberships([]);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('currentGroupId');
+      }
+      prevUserIdRef.current = null;
+      return;
+    }
     if (userId && prevUserIdRef.current && prevUserIdRef.current !== userId) {
       setCurrentGroupIdState(null);
       if (typeof window !== 'undefined') {
