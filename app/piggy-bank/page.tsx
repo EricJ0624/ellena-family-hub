@@ -215,16 +215,16 @@ export default function PiggyBankPage() {
       )}
 
       <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ background: '#fff7ed', borderRadius: '14px', padding: '16px', border: '1px solid #fed7aa' }}>
-          <div style={{ fontSize: '13px', color: '#9a3412' }}>저금통 잔액</div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#9a3412' }}>
-            {formatAmount(summary.account.balance)}
-          </div>
-        </div>
         <div style={{ background: '#eff6ff', borderRadius: '14px', padding: '16px', border: '1px solid #bfdbfe' }}>
           <div style={{ fontSize: '13px', color: '#1d4ed8' }}>내 용돈 잔액</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#1d4ed8' }}>
             {formatAmount(summary.wallet.balance)}
+          </div>
+        </div>
+        <div style={{ background: '#fff7ed', borderRadius: '14px', padding: '16px', border: '1px solid #fed7aa' }}>
+          <div style={{ fontSize: '13px', color: '#9a3412' }}>저금통 잔액</div>
+          <div style={{ fontSize: '24px', fontWeight: 700, color: '#9a3412' }}>
+            {formatAmount(summary.account.balance)}
           </div>
         </div>
       </div>

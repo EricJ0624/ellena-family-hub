@@ -180,6 +180,12 @@ export default function FamilyHub() {
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [piggySummary, setPiggySummary] = useState<{
+    name: string;
+    walletBalance: number;
+    bankBalance: number;
+  } | null>(null);
+  const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const [locationRequests, setLocationRequests] = useState<Array<{
     id: string;
     requester_id: string;
@@ -664,6 +670,50 @@ export default function FamilyHub() {
       subscription.unsubscribe();
     };
   }, [isMounted, router, loadData, isAuthenticated]);
+
+  // Piggy Bank 요약 정보 로드 (그룹 선택 시)
+  useEffect(() => {
+    if (!isAuthenticated || !currentGroupId) {
+      setPiggySummary(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadPiggySummary = async () => {
+      try {
+        setPiggySummaryError(null);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          return;
+        }
+
+        const response = await fetch(`/api/piggy-bank/summary?group_id=${currentGroupId}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Piggy Bank 요약 정보를 불러오지 못했습니다.');
+        }
+
+        if (cancelled) return;
+        setPiggySummary({
+          name: result.data?.account?.name || 'Ellena Piggy Bank',
+          walletBalance: result.data?.wallet?.balance ?? 0,
+          bankBalance: result.data?.account?.balance ?? 0,
+        });
+      } catch (err: any) {
+        if (cancelled) return;
+        setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+      }
+    };
+
+    loadPiggySummary();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, currentGroupId]);
 
   // 2.4.5. state가 로드되면 titleStyle 동기화
   useEffect(() => {
@@ -7171,6 +7221,12 @@ export default function FamilyHub() {
     return null; // useEffect에서 리다이렉트 처리 중
   }
 
+  const piggyLabel = (() => {
+    const rawName = piggySummary?.name?.trim() || 'Ellena Piggy Bank';
+    const base = rawName.replace(/piggy\s*bank/gi, '').trim();
+    return base || rawName;
+  })();
+
   return (
     <div className="app-container">
 
@@ -8211,6 +8267,48 @@ export default function FamilyHub() {
                   </p>
                 </div>
               )}
+
+              {currentGroupId && (
+                <div style={{ marginBottom: '16px', display: 'grid', gap: '10px' }}>
+                  {piggySummaryError && (
+                    <div style={{ fontSize: '12px', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '8px 10px', borderRadius: '8px' }}>
+                      {piggySummaryError}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
+                      <div style={{ fontSize: '12px', color: '#b91c1c' }}>{piggyLabel} 용돈 잔액</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
+                        {piggySummary ? `${piggySummary.walletBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
+                      </div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
+                      <div style={{ fontSize: '12px', color: '#9a3412' }}>{piggyLabel} 저금통 잔액</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
+                        {piggySummary ? `${piggySummary.bankBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push('/piggy-bank')}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: '#ef4444',
+                      color: '#fff',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: 'fit-content',
+                    }}
+                  >
+                    <span>🐷</span>
+                    {piggyLabel} Piggy Bank 이동
+                  </button>
+                </div>
+              )}
               
               {/* 구글맵 항상 표시 */}
               {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
@@ -8729,42 +8827,6 @@ export default function FamilyHub() {
           zIndex: 1000,
         }}
       >
-        {/* Piggy Bank 버튼 (그룹 선택된 경우 표시) */}
-        {currentGroupId && (
-          <button
-            onClick={() => router.push('/piggy-bank')}
-            style={{
-              padding: '12px 20px',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
-              transition: 'all 0.3s ease',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.5)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#ef4444';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            aria-label="Ellena Piggy Bank"
-          >
-            <span style={{ fontSize: '18px' }}>🐷</span>
-            Piggy Bank
-          </button>
-        )}
         {/* 관리자 버튼 (시스템 관리자 또는 그룹 관리자만 표시) */}
         {(() => {
           const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
