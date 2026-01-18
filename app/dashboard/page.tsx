@@ -8729,6 +8729,42 @@ export default function FamilyHub() {
           zIndex: 1000,
         }}
       >
+        {/* Piggy Bank 버튼 (그룹 선택된 경우 표시) */}
+        {currentGroupId && (
+          <button
+            onClick={() => router.push('/piggy-bank')}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(239, 68, 68, 0.5)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ef4444';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            aria-label="Ellena Piggy Bank"
+          >
+            <span style={{ fontSize: '18px' }}>🐷</span>
+            Piggy Bank
+          </button>
+        )}
         {/* 관리자 버튼 (시스템 관리자 또는 그룹 관리자만 표시) */}
         {(() => {
           const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
