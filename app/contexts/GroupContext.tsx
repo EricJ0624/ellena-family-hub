@@ -109,11 +109,22 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         };
       }));
 
+      // 저장된 그룹 ID 우선 반영 (로그인 모달 선택 반영)
+      let preferredGroupId = currentGroupId;
+      if (typeof window !== 'undefined') {
+        const savedGroupId = localStorage.getItem('currentGroupId');
+        if (savedGroupId && groupsData?.find(g => g.id === savedGroupId)) {
+          preferredGroupId = savedGroupId;
+        }
+      }
+
       // 현재 그룹이 없거나 삭제된 경우, 첫 번째 그룹으로 설정
-      if (!currentGroupId || !groupsData?.find(g => g.id === currentGroupId)) {
+      if (!preferredGroupId || !groupsData?.find(g => g.id === preferredGroupId)) {
         if (groupsData && groupsData.length > 0) {
           setCurrentGroupIdState(groupsData[0].id);
         }
+      } else if (preferredGroupId !== currentGroupId) {
+        setCurrentGroupIdState(preferredGroupId);
       }
     } catch (err: any) {
       console.error('그룹 목록 로드 실패:', err);
