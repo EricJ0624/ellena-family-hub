@@ -569,7 +569,7 @@ export default function AdminPage() {
         .select('*', { count: 'exact', head: true })
         .eq('group_id', groupId);
 
-      const totalMembers = (memberCount || 0) + 1; // 소유자 포함
+      const totalMembers = memberCount || 0;
 
       // 그룹 멤버 ID 목록
       const { data: membersData } = await supabase
