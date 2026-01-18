@@ -116,12 +116,18 @@ export default function GroupAdminPage() {
   let currentGroup: any = null;
   let userRole: string | null = null;
   let isOwner = false;
+  let groupList: any[] = [];
+  let groupMemberships: any[] = [];
+  let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
     currentGroup = groupContext.currentGroup;
     userRole = groupContext.userRole;
     isOwner = groupContext.isOwner;
+    groupList = groupContext.groups || [];
+    groupMemberships = groupContext.memberships || [];
+    setCurrentGroupId = groupContext.setCurrentGroupId;
   } catch (error) {
     // GroupProvider?�쎛? ???�쎌??????�쎌???null??筌ｌ�??(???�쏙?�占????�쎌???
     if (process.env.NODE_ENV === 'development') {
@@ -558,6 +564,12 @@ export default function GroupAdminPage() {
     return null;
   }
 
+  const adminGroups = groupList.filter((group: any) => {
+    const membership = groupMemberships.find((m: any) => m.group_id === group.id);
+    return membership?.role === 'ADMIN';
+  });
+  const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId;
+
   return (
     <div
       className="group-admin-page"
@@ -634,6 +646,41 @@ export default function GroupAdminPage() {
             닫기
           </button>
         </div>
+
+        {canSwitchAdminGroups && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+              관리할 그룹 선택
+            </div>
+            <select
+              value={currentGroupId || ''}
+              onChange={(e) => {
+                const nextGroupId = e.target.value;
+                if (setCurrentGroupId) {
+                  setCurrentGroupId(nextGroupId);
+                  setActiveTab('dashboard');
+                }
+              }}
+              style={{
+                width: '100%',
+                maxWidth: '320px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                backgroundColor: '#f8fafc',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#1e293b',
+              }}
+            >
+              {adminGroups.map((group: any) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* ??筌롫?�??*/}
         <div

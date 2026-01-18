@@ -727,10 +727,6 @@ export default function FamilyHub() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
     if (!adminStatusResolved) return;
-    if (isSystemAdmin) {
-      setShowGroupSelectModal(false);
-      return;
-    }
     if (!groupList || groupList.length <= 1) {
       setShowGroupSelectModal(false);
       return;
@@ -7299,7 +7295,10 @@ export default function FamilyHub() {
               그룹 선택
             </h3>
             <p style={{ margin: '8px 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-              여러 그룹에 가입되어 있습니다. 접속할 그룹을 선택하세요. 다른 그룹으로 이동하려면 로그아웃 후 다시 로그인해야 합니다.
+              여러 그룹에 가입되어 있습니다. 접속할 그룹을 선택하세요.
+              {(isSystemAdmin || isGroupAdmin)
+                ? ' 관리자 계정은 관리자 페이지에서 관리 가능한 그룹으로 바로 이동할 수 있습니다.'
+                : ' 다른 그룹으로 이동하려면 로그아웃 후 다시 로그인해야 합니다.'}
             </p>
             <div style={{ display: 'grid', gap: '10px', marginBottom: '16px' }}>
               {groupList.map((group: any) => {
