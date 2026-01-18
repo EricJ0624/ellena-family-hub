@@ -331,15 +331,25 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
         {/* 멤버 목록 */}
         {!loading && !error && (
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="w-full border-collapse">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="bg-gray-50 border-b-2 border-gray-200">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">이메일</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">닉네임</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">역할</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">가입일</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">관리</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                    이메일
+                  </th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                    닉네임
+                  </th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                    역할
+                  </th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                    가입일
+                  </th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                    관리
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -357,41 +367,32 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                      style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 0.2s' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        <div className="flex items-center gap-3">
-                          {member.avatar_url ? (
-                            <img
-                              src={member.avatar_url}
-                              alt={member.nickname || member.email || '멤버'}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-semibold">
-                              {(member.nickname || member.email || 'U').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <span className="truncate">{member.email || '-'}</span>
-                        </div>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                        {member.email || '-'}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <span>{member.nickname || '-'}</span>
-                          {isCurrentUser && <span className="text-xs text-gray-500">(나)</span>}
+                          {isCurrentUser && <span style={{ fontSize: '12px', color: '#64748b' }}>(나)</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
-                          {roleLabel}
-                        </span>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                        {roleLabel}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
                         {new Date(member.joined_at).toLocaleDateString('ko-KR')}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td style={{ padding: '12px', textAlign: 'right' }}>
                         {(canRemove || canChangeRole) && (
-                          <div className="inline-flex items-center gap-2 justify-end">
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
                             {canChangeRole && (
                               <>
                                 {member.role === 'MEMBER' ? (
@@ -402,14 +403,24 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                       }
                                     }}
                                     disabled={isUpdatingRole || removingUserId === member.user_id}
-                                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                      padding: '6px',
+                                      color: '#7c3aed',
+                                      backgroundColor: 'transparent',
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '8px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
                                     aria-label={`${member.nickname || member.email} 관리자로 승격`}
                                     title="관리자로 승격"
                                   >
                                     {isUpdatingRole ? (
-                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                      <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
                                     ) : (
-                                      <Shield className="w-5 h-5" />
+                                      <Shield style={{ width: '18px', height: '18px' }} />
                                     )}
                                   </button>
                                 ) : (
@@ -420,14 +431,24 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                       }
                                     }}
                                     disabled={isUpdatingRole || removingUserId === member.user_id}
-                                    className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                      padding: '6px',
+                                      color: '#475569',
+                                      backgroundColor: 'transparent',
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '8px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
                                     aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
                                     title="일반 멤버로 변경"
                                   >
                                     {isUpdatingRole ? (
-                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                      <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
                                     ) : (
-                                      <User className="w-5 h-5" />
+                                      <User style={{ width: '18px', height: '18px' }} />
                                     )}
                                   </button>
                                 )}
@@ -436,22 +457,40 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                             {canRemove && (
                               <>
                                 {showConfirmRemove === member.user_id ? (
-                                  <div className="flex items-center gap-2">
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <button
                                       onClick={() => handleRemoveMember(member.user_id)}
                                       disabled={removingUserId === member.user_id || isUpdatingRole}
-                                      className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      style={{
+                                        padding: '6px 10px',
+                                        backgroundColor: '#ef4444',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
                                       aria-label={`${member.nickname || member.email} 추방 확인`}
                                     >
                                       {removingUserId === member.user_id ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
                                       ) : (
                                         '확인'
                                       )}
                                     </button>
                                     <button
                                       onClick={() => setShowConfirmRemove(null)}
-                                      className="px-3 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                      style={{
+                                        padding: '6px 10px',
+                                        backgroundColor: '#e2e8f0',
+                                        color: '#334155',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
                                       aria-label="취소"
                                     >
                                       취소
@@ -461,10 +500,20 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                   <button
                                     onClick={() => setShowConfirmRemove(member.user_id)}
                                     disabled={isUpdatingRole}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                      padding: '6px',
+                                      color: '#dc2626',
+                                      backgroundColor: 'transparent',
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '8px',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
                                     aria-label={`${member.nickname || member.email} 추방`}
                                   >
-                                    <UserX className="w-5 h-5" />
+                                    <UserX style={{ width: '18px', height: '18px' }} />
                                   </button>
                                 )}
                               </>
@@ -478,8 +527,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
                 {members.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
-                      <Users className="w-10 h-10 mx-auto mb-3 text-gray-400" />
+                    <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
                       멤버가 없습니다.
                     </td>
                   </tr>

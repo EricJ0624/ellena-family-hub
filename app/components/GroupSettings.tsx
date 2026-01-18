@@ -276,14 +276,24 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       </div>
 
       <div className="space-y-6">
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="w-full border-collapse">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
-              <tr className="border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 w-40 bg-gray-50">
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th
+                  style={{
+                    padding: '12px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    width: '160px',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
                   그룹 이름
                 </th>
-                <td className="px-4 py-3">
+                <td style={{ padding: '12px' }}>
                   <input
                     type="text"
                     value={groupName}
@@ -292,32 +302,73 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                       setError(null);
                     }}
                     placeholder="그룹 이름을 입력하세요"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                    }}
                     disabled={saving}
                   />
                 </td>
               </tr>
-              <tr className="border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 bg-gray-50">
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th
+                  style={{
+                    padding: '12px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
                   그룹 아바타
                 </th>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative' }}>
                       {avatarPreview ? (
                         <img
                           src={avatarPreview}
                           alt="그룹 아바타"
-                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                          style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '999px',
+                            objectFit: 'cover',
+                            border: '2px solid #e2e8f0',
+                          }}
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                          <ImageIcon className="w-8 h-8 text-white" />
+                        <div
+                          style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '999px',
+                            background: 'linear-gradient(135deg, #a78bfa, #f472b6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <ImageIcon style={{ width: '28px', height: '28px', color: 'white' }} />
                         </div>
                       )}
                       {uploading && (
-                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            borderRadius: '999px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Loader2 style={{ width: '20px', height: '20px', color: 'white', animation: 'spin 1s linear infinite' }} />
                         </div>
                       )}
                     </div>
@@ -327,19 +378,31 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                         type="file"
                         accept="image/*"
                         onChange={handleAvatarSelect}
-                        className="hidden"
+                        style={{ display: 'none' }}
                         disabled={saving || uploading}
                       />
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={saving || uploading}
-                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#f1f5f9',
+                          color: '#334155',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
                       >
-                        <Upload className="w-4 h-4" />
+                        <Upload style={{ width: '16px', height: '16px' }} />
                         {avatarFile ? '파일 변경' : '이미지 선택'}
                       </button>
                       {avatarFile && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
                           {avatarFile.name} ({(avatarFile.size / 1024).toFixed(1)}KB)
                         </p>
                       )}
@@ -348,30 +411,62 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                 </td>
               </tr>
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 bg-gray-50">
+                <th
+                  style={{
+                    padding: '12px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
                   초대 코드
                 </th>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                <td style={{ padding: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <input
                       type="text"
                       value={inviteCode}
                       readOnly
-                      className="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-center text-lg tracking-wider"
+                      style={{
+                        minWidth: '220px',
+                        padding: '10px 12px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        backgroundColor: '#f8fafc',
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                        textAlign: 'center',
+                        fontSize: '16px',
+                        letterSpacing: '0.12em',
+                        flex: 1,
+                      }}
                     />
                     <button
                       onClick={handleCopyInviteCode}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
                       aria-label="초대 코드 복사"
                     >
                       {copied ? (
                         <>
-                          <CheckCircle className="w-4 h-4" />
+                          <CheckCircle style={{ width: '16px', height: '16px' }} />
                           복사됨
                         </>
                       ) : (
                         <>
-                          <Copy className="w-4 h-4" />
+                          <Copy style={{ width: '16px', height: '16px' }} />
                           복사
                         </>
                       )}
@@ -379,18 +474,31 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     <button
                       onClick={handleRefreshInviteCode}
                       disabled={refreshing}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#7c3aed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        opacity: refreshing ? 0.6 : 1,
+                      }}
                       aria-label="초대 코드 갱신"
                     >
                       {refreshing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
                       ) : (
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw style={{ width: '16px', height: '16px' }} />
                       )}
                       갱신
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
                     초대 코드를 복사하여 가족 구성원에게 공유하세요.
                   </p>
                 </td>
