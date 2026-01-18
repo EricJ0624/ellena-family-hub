@@ -247,6 +247,7 @@ export default function FamilyHub() {
   const locationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
+  const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
   
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -354,6 +355,20 @@ export default function FamilyHub() {
       return [];
     }
   }, [userId, currentGroupId]);
+
+  // 새로고침 직후 currentGroupId가 늦게 설정되는 경우를 대비해 그룹 기준으로 사진 로드 재시도
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isAuthenticated || !userId || !currentGroupId) return;
+    if (lastLoadedGroupIdRef.current === currentGroupId) return;
+
+    const authKey = getAuthKey(userId);
+    const key = masterKey || sessionStorage.getItem(authKey) ||
+      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+
+    lastLoadedGroupIdRef.current = currentGroupId;
+    loadData(key, userId).catch(() => undefined);
+  }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
 
   const loadData = useCallback(async (key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
