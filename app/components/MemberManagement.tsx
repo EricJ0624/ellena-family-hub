@@ -262,13 +262,32 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       {/* 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
         <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
           회원 목록 ({filteredMembers.length}명)
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ position: 'relative', width: '280px' }}>
-            <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#94a3b8' }} />
+            <Search
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '18px',
+                height: '18px',
+                color: '#94a3b8',
+              }}
+            />
             <input
               type="text"
               placeholder="이메일, 닉네임, ID로 검색..."
@@ -348,238 +367,233 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
         </div>
       )}
 
-        {/* 멤버 목록 */}
-        {!loading && !error && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                    이메일
-                  </th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                    닉네임
-                  </th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                    역할
-                  </th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                    가입일
-                  </th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                    관리
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMembers.map((member, index) => {
-                  const isCurrentUser = currentUserId === member.user_id;
-                  const isOwner = member.user_id === currentGroup?.owner_id;
-                  const canRemove = isAdmin && !isCurrentUser && !isOwner;
-                  const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
-                  const isUpdatingRole = updatingRoleUserId === member.user_id;
-                  const roleLabel = isOwner ? '소유자' : member.role === 'ADMIN' ? '관리자' : '멤버';
+      {/* 멤버 목록 */}
+      {!loading && !error && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                  이메일
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                  닉네임
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                  역할
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                  가입일
+                </th>
+                <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                  관리
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMembers.map((member, index) => {
+                const isCurrentUser = currentUserId === member.user_id;
+                const isOwner = member.user_id === currentGroup?.owner_id;
+                const canRemove = isAdmin && !isCurrentUser && !isOwner;
+                const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
+                const isUpdatingRole = updatingRoleUserId === member.user_id;
+                const roleLabel = isOwner ? '소유자' : member.role === 'ADMIN' ? '관리자' : '멤버';
 
-                  return (
-                    <motion.tr
-                      key={member.user_id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 0.2s' }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
-                        {member.email || '-'}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <span>{member.nickname || '-'}</span>
-                          {isCurrentUser && <span style={{ fontSize: '12px', color: '#64748b' }}>(나)</span>}
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
-                        {roleLabel}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
-                        {new Date(member.joined_at).toLocaleDateString('ko-KR')}
-                      </td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>
-                        {(canRemove || canChangeRole) && (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
-                            {canChangeRole && (
-                              <>
-                                {member.role === 'MEMBER' ? (
-                                  <button
-                                    onClick={() => {
-                                      if (confirm(`${member.nickname || member.email}님을 관리자로 승격시키시겠습니까?`)) {
-                                        handleUpdateRole(member.user_id, 'ADMIN');
-                                      }
-                                    }}
-                                    disabled={isUpdatingRole || removingUserId === member.user_id}
-                                    style={{
-                                      padding: '6px',
-                                      color: '#7c3aed',
-                                      backgroundColor: 'transparent',
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '8px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                    aria-label={`${member.nickname || member.email} 관리자로 승격`}
-                                    title="관리자로 승격"
-                                  >
-                                    {isUpdatingRole ? (
-                                      <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
-                                    ) : (
-                                      <Shield style={{ width: '18px', height: '18px' }} />
-                                    )}
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      if (confirm(`${member.nickname || member.email}님의 관리자 권한을 일반 멤버로 변경하시겠습니까?`)) {
-                                        handleUpdateRole(member.user_id, 'MEMBER');
-                                      }
-                                    }}
-                                    disabled={isUpdatingRole || removingUserId === member.user_id}
-                                    style={{
-                                      padding: '6px',
-                                      color: '#475569',
-                                      backgroundColor: 'transparent',
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '8px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                    aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
-                                    title="일반 멤버로 변경"
-                                  >
-                                    {isUpdatingRole ? (
-                                      <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
-                                    ) : (
-                                      <User style={{ width: '18px', height: '18px' }} />
-                                    )}
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            {canRemove && (
-                              <>
-                                {showConfirmRemove === member.user_id ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <button
-                                      onClick={() => handleRemoveMember(member.user_id)}
-                                      disabled={removingUserId === member.user_id || isUpdatingRole}
-                                      style={{
-                                        padding: '6px 10px',
-                                        backgroundColor: '#ef4444',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                      }}
-                                      aria-label={`${member.nickname || member.email} 추방 확인`}
-                                    >
-                                      {removingUserId === member.user_id ? (
-                                        <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
-                                      ) : (
-                                        '확인'
-                                      )}
-                                    </button>
-                                    <button
-                                      onClick={() => setShowConfirmRemove(null)}
-                                      style={{
-                                        padding: '6px 10px',
-                                        backgroundColor: '#e2e8f0',
-                                        color: '#334155',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                      }}
-                                      aria-label="취소"
-                                    >
-                                      취소
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => setShowConfirmRemove(member.user_id)}
-                                    disabled={isUpdatingRole}
-                                    style={{
-                                      padding: '6px',
-                                      color: '#dc2626',
-                                      backgroundColor: 'transparent',
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '8px',
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                    aria-label={`${member.nickname || member.email} 추방`}
-                                  >
-                                    <UserX style={{ width: '18px', height: '18px' }} />
-                                  </button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-
-                {filteredMembers.length === 0 && (
-                  <tr>
-                    <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                      멤버가 없습니다.
+                return (
+                  <motion.tr
+                    key={member.user_id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 0.2s' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>{member.email || '-'}</td>
+                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span>{member.nickname || '-'}</span>
+                        {isCurrentUser && <span style={{ fontSize: '12px', color: '#64748b' }}>(나)</span>}
+                      </div>
                     </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>{roleLabel}</td>
+                    <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
+                      {new Date(member.joined_at).toLocaleDateString('ko-KR')}
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                      {(canRemove || canChangeRole) && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                          {canChangeRole && (
+                            <>
+                              {member.role === 'MEMBER' ? (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`${member.nickname || member.email}님을 관리자로 승격시키시겠습니까?`)) {
+                                      handleUpdateRole(member.user_id, 'ADMIN');
+                                    }
+                                  }}
+                                  disabled={isUpdatingRole || removingUserId === member.user_id}
+                                  style={{
+                                    padding: '6px',
+                                    color: '#7c3aed',
+                                    backgroundColor: 'transparent',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                  aria-label={`${member.nickname || member.email} 관리자로 승격`}
+                                  title="관리자로 승격"
+                                >
+                                  {isUpdatingRole ? (
+                                    <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                                  ) : (
+                                    <Shield style={{ width: '18px', height: '18px' }} />
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`${member.nickname || member.email}님의 관리자 권한을 일반 멤버로 변경하시겠습니까?`)) {
+                                      handleUpdateRole(member.user_id, 'MEMBER');
+                                    }
+                                  }}
+                                  disabled={isUpdatingRole || removingUserId === member.user_id}
+                                  style={{
+                                    padding: '6px',
+                                    color: '#475569',
+                                    backgroundColor: 'transparent',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                  aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
+                                  title="일반 멤버로 변경"
+                                >
+                                  {isUpdatingRole ? (
+                                    <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                                  ) : (
+                                    <User style={{ width: '18px', height: '18px' }} />
+                                  )}
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {canRemove && (
+                            <>
+                              {showConfirmRemove === member.user_id ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <button
+                                    onClick={() => handleRemoveMember(member.user_id)}
+                                    disabled={removingUserId === member.user_id || isUpdatingRole}
+                                    style={{
+                                      padding: '6px 10px',
+                                      backgroundColor: '#ef4444',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
+                                    aria-label={`${member.nickname || member.email} 추방 확인`}
+                                  >
+                                    {removingUserId === member.user_id ? (
+                                      <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
+                                    ) : (
+                                      '확인'
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => setShowConfirmRemove(null)}
+                                    style={{
+                                      padding: '6px 10px',
+                                      backgroundColor: '#e2e8f0',
+                                      color: '#334155',
+                                      border: 'none',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
+                                    aria-label="취소"
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setShowConfirmRemove(member.user_id)}
+                                  disabled={isUpdatingRole}
+                                  style={{
+                                    padding: '6px',
+                                    color: '#dc2626',
+                                    backgroundColor: 'transparent',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                  aria-label={`${member.nickname || member.email} 추방`}
+                                >
+                                  <UserX style={{ width: '18px', height: '18px' }} />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </motion.tr>
+                );
+              })}
 
-        {/* 그룹 설정 모달 */}
-        <AnimatePresence>
-          {showGroupSettings && (
-            <>
-              <div
-                className="fixed inset-0 bg-black/50 z-40"
-                onClick={() => setShowGroupSettings(false)}
-                aria-hidden="true"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-100">
-                  <GroupSettings onClose={() => setShowGroupSettings(false)} />
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div>
+              {filteredMembers.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                    멤버가 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 그룹 설정 모달 */}
+      <AnimatePresence>
+        {showGroupSettings && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setShowGroupSettings(false)}
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-100">
+                <GroupSettings onClose={() => setShowGroupSettings(false)} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
