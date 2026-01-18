@@ -14,7 +14,6 @@ import {
   stopBackgroundLocationTracking
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
-import GroupSelector from '@/app/components/GroupSelector';
 import { useGroup } from '@/app/contexts/GroupContext';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
@@ -7407,10 +7406,6 @@ export default function FamilyHub() {
               updateState('UPDATE_TITLE_STYLE', style);
             }}
           />
-          {/* 그룹 선택기 */}
-          <div style={{ marginBottom: '12px', padding: '0 16px' }}>
-            <GroupSelector />
-          </div>
           <div className="status-indicator">
             <span className="status-dot">
               <span className="status-dot-ping"></span>
