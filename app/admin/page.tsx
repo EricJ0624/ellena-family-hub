@@ -371,7 +371,7 @@ export default function AdminPage() {
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error || '그룹 목록을 불러오는데 실패했습니다.');
-      }
+          }
 
       setGroups(result.data || []);
     } catch (err: any) {
@@ -1047,25 +1047,34 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{
+    <div
+      className="admin-page"
+      style={{
       minHeight: '100vh',
       backgroundColor: '#f5f7fa',
       padding: '20px',
-    }}>
+      }}
+    >
       {/* 헤더 */}
-      <div style={{
+      <div
+        className="admin-header"
+        style={{
         backgroundColor: 'white',
         borderRadius: '12px',
         padding: '24px',
         marginBottom: '24px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      }}>
-        <div style={{
+        }}
+      >
+        <div
+          className="admin-header-top"
+          style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '24px',
-        }}>
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               padding: '12px',
@@ -1115,11 +1124,14 @@ export default function AdminPage() {
         </div>
 
         {/* 탭 메뉴 */}
-        <div style={{
+        <div
+          className="admin-tabs"
+          style={{
           display: 'flex',
           gap: '8px',
           borderBottom: '2px solid #e2e8f0',
-        }}>
+          }}
+        >
           <button
             onClick={() => setActiveTab('dashboard')}
             style={{
@@ -1296,12 +1308,15 @@ export default function AdminPage() {
       </div>
 
       {/* 콘텐츠 영역 */}
-      <div style={{
+      <div
+        className="admin-content"
+        style={{
         backgroundColor: 'white',
         borderRadius: '12px',
         padding: '24px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      }}>
+        }}
+      >
         {error && (
           <div style={{
             padding: '12px 16px',
@@ -1342,11 +1357,14 @@ export default function AdminPage() {
                 }}>
                   시스템 통계
                 </h2>
-                <div style={{
+                <div
+                  className="admin-grid"
+                  style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                   gap: '16px',
-                }}>
+                  }}
+                >
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1532,10 +1550,13 @@ export default function AdminPage() {
                   }}>
                     회원 목록 ({filteredUsers.length}명)
                   </h2>
-                  <div style={{
+                  <div
+                    className="admin-search"
+                    style={{
                     position: 'relative',
                     width: '300px',
-                  }}>
+                    }}
+                  >
                     <Search style={{
                       position: 'absolute',
                       left: '12px',
@@ -1762,10 +1783,13 @@ export default function AdminPage() {
                   }}>
                     그룹 목록 ({filteredGroups.length}개)
                   </h2>
-                  <div style={{
+                  <div
+                    className="admin-search"
+                    style={{
                     position: 'relative',
                     width: '300px',
-                  }}>
+                    }}
+                  >
                     <Search style={{
                       position: 'absolute',
                       left: '12px',
@@ -1791,68 +1815,71 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div style={{
+                <div
+                  className="admin-grid"
+                  style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                   gap: '16px',
-                }}>
+                  }}
+                >
                   {filteredGroups.map((group, index) => {
                     const usedBytes = group.storage_used_bytes || 0;
                     const quotaBytes = group.storage_quota_bytes || 0;
                     const percent = getStoragePercent(usedBytes, quotaBytes);
 
                     return (
-                      <motion.div
-                        key={group.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        style={{
-                          padding: '20px',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '12px',
-                          border: '1px solid #e2e8f0',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#cbd5e1';
-                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '12px',
+                    <motion.div
+                      key={group.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      style={{
+                        padding: '20px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                      }}>
+                        <h3 style={{
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          margin: 0,
                         }}>
-                          <h3 style={{
-                            fontSize: '18px',
-                            fontWeight: '600',
-                            color: '#1e293b',
-                            margin: 0,
-                          }}>
-                            {group.name}
-                          </h3>
-                          <Crown style={{ width: '20px', height: '20px', color: '#f59e0b' }} />
-                        </div>
-                        <div style={{
-                          fontSize: '14px',
-                          color: '#64748b',
+                          {group.name}
+                        </h3>
+                        <Crown style={{ width: '20px', height: '20px', color: '#f59e0b' }} />
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#64748b',
+                        marginBottom: '8px',
+                      }}>
+                        소유자: {group.owner_email || '-'}
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#64748b',
                           marginBottom: '8px',
-                        }}>
-                          소유자: {group.owner_email || '-'}
-                        </div>
-                        <div style={{
-                          fontSize: '14px',
-                          color: '#64748b',
-                          marginBottom: '8px',
-                        }}>
-                          멤버: {group.member_count}명
-                        </div>
+                      }}>
+                        멤버: {group.member_count}명
+                      </div>
                         <div style={{
                           fontSize: '14px',
                           color: '#64748b',
@@ -1874,18 +1901,18 @@ export default function AdminPage() {
                             transition: 'width 0.2s',
                           }} />
                         </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#94a3b8',
-                          marginBottom: '16px',
-                        }}>
-                          생성일: {new Date(group.created_at).toLocaleDateString('ko-KR')}
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        marginBottom: '16px',
+                      }}>
+                        생성일: {new Date(group.created_at).toLocaleDateString('ko-KR')}
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
                           flexWrap: 'wrap',
-                        }}>
+                      }}>
                           <button
                             style={{
                               flex: '1 1 120px',
@@ -2181,11 +2208,14 @@ export default function AdminPage() {
                         }}>
                           그룹 통계
                         </h2>
-                        <div style={{
+                        <div
+                          className="admin-grid"
+                          style={{
                           display: 'grid',
                           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                           gap: '16px',
-                        }}>
+                          }}
+                        >
                           <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -2597,12 +2627,15 @@ export default function AdminPage() {
                         }}>
                           콘텐츠 관리
                         </h2>
-                        <div style={{
+                        <div
+                          className="admin-grid"
+                          style={{
                           display: 'grid',
                           gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                           gap: '16px',
                           marginBottom: '24px',
-                        }}>
+                          }}
+                        >
                           {groupPhotos.slice(0, 20).map((photo, index) => (
                             <motion.div
                               key={photo.id}

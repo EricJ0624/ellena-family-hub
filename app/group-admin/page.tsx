@@ -559,25 +559,34 @@ export default function GroupAdminPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f5f7fa',
-      padding: '20px',
-    }}>
+    <div
+      className="group-admin-page"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f7fa',
+        padding: '20px',
+      }}
+    >
       {/* ???�쎌???*/}
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        marginBottom: '24px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+      <div
+        className="group-admin-header"
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '24px',
           marginBottom: '24px',
-        }}>
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}
+      >
+        <div
+          className="group-admin-header-top"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '24px',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               padding: '12px',
@@ -627,11 +636,14 @@ export default function GroupAdminPage() {
         </div>
 
         {/* ??筌롫?�??*/}
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          borderBottom: '2px solid #e2e8f0',
-        }}>
+        <div
+          className="group-admin-tabs"
+          style={{
+            display: 'flex',
+            gap: '8px',
+            borderBottom: '2px solid #e2e8f0',
+          }}
+        >
           <button
             onClick={() => setActiveTab('dashboard')}
             style={{
@@ -771,12 +783,15 @@ export default function GroupAdminPage() {
       </div>
 
       {/* ??�쎌�??�썲?????�쎌?�占?*/}
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      }}>
+      <div
+        className="group-admin-content"
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}
+      >
         {error && (
           <div style={{
             padding: '12px 16px',
@@ -817,11 +832,14 @@ export default function GroupAdminPage() {
                 }}>
                   그룹 통계
                 </h2>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px',
-                }}>
+                <div
+                  className="group-admin-grid"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '16px',
+                  }}
+                >
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -967,10 +985,13 @@ export default function GroupAdminPage() {
                   }}>
                     콘텐츠 관리
                   </h2>
-                  <div style={{
-                    position: 'relative',
-                    width: '300px',
-                  }}>
+                  <div
+                    className="group-admin-search"
+                    style={{
+                      position: 'relative',
+                      width: '300px',
+                    }}
+                  >
                     <Search style={{
                       position: 'absolute',
                       left: '12px',
@@ -1006,11 +1027,14 @@ export default function GroupAdminPage() {
                   }}>
                     사진 (${filteredPhotos.length}개)
                   </h3>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                    gap: '16px',
-                  }}>
+                  <div
+                    className="group-admin-grid"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '16px',
+                    }}
+                  >
                     {filteredPhotos.map((photo, index) => (
                       <motion.div
                         key={photo.id}
@@ -1099,11 +1123,14 @@ export default function GroupAdminPage() {
                   }}>
                     위치 데이터 (${locations.length}개)
                   </h3>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                    gap: '16px',
-                  }}>
+                  <div
+                    className="group-admin-grid"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                      gap: '16px',
+                    }}
+                  >
                     {locations.map((location, index) => (
                       <motion.div
                         key={location.user_id}
