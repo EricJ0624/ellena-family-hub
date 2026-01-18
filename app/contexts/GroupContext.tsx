@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Group, Membership, MembershipRole } from '@/types/db';
 
@@ -29,11 +29,20 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const prevUserIdRef = useRef<string | null>(null);
 
   // 그룹 목록 로드
   const refreshGroups = useCallback(async () => {
     if (!userId) {
       setGroups([]);
+      setMemberships([]);
+      setCurrentGroupIdState(null);
+      setCurrentGroup(null);
+      setUserRole(null);
+      setIsOwner(false);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('currentGroupId');
+      }
       setLoading(false);
       return;
     }
@@ -66,6 +75,13 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       if (allGroupIds.length === 0) {
         setGroups([]);
         setMemberships([]);
+        setCurrentGroupIdState(null);
+        setCurrentGroup(null);
+        setUserRole(null);
+        setIsOwner(false);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('currentGroupId');
+        }
         setLoading(false);
         return;
       }
@@ -175,6 +191,14 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
   // 초기 로드 및 그룹 ID 복원
   useEffect(() => {
+    if (userId && prevUserIdRef.current && prevUserIdRef.current !== userId) {
+      setCurrentGroupIdState(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('currentGroupId');
+      }
+    }
+    prevUserIdRef.current = userId;
+
     if (userId) {
       // localStorage에서 저장된 그룹 ID 복원
       const savedGroupId = localStorage.getItem('currentGroupId');
