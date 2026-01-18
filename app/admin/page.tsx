@@ -383,7 +383,7 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 시스템 관리자가 소유자이거나 ADMIN인 그룹만 조회 (관리 가능한 그룹)
+  // 시스템 관리자가 소유자이거나 멤버인 그룹 조회 (관리 가능한 그룹)
   const loadManageableGroups = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -403,38 +403,37 @@ export default function AdminPage() {
         console.error('소유 그룹 조회 오류:', ownedError);
       }
 
-      // 2. ADMIN 역할인 그룹 조회
-      const { data: adminMemberships, error: adminError } = await supabase
+      // 2. 멤버로 포함된 그룹 조회 (역할 무관)
+      const { data: memberships, error: memberError } = await supabase
         .from('memberships')
         .select('group_id')
-        .eq('user_id', user.id)
-        .eq('role', 'ADMIN');
+        .eq('user_id', user.id);
 
-      if (adminError) {
-        console.error('ADMIN 멤버십 조회 오류:', adminError);
+      if (memberError) {
+        console.error('멤버십 조회 오류:', memberError);
       }
 
-      const adminGroupIds = adminMemberships?.map(m => m.group_id) || [];
+      const memberGroupIds = memberships?.map(m => m.group_id) || [];
       
-      let adminGroups: any[] = [];
-      if (adminGroupIds.length > 0) {
-        const { data, error: adminGroupsError } = await supabase
+      let memberGroups: any[] = [];
+      if (memberGroupIds.length > 0) {
+        const { data, error: memberGroupsError } = await supabase
           .from('groups')
           .select('id, name, owner_id, created_at')
-          .in('id', adminGroupIds)
+          .in('id', memberGroupIds)
           .order('created_at', { ascending: false });
 
-        if (adminGroupsError) {
-          console.error('ADMIN 그룹 조회 오류:', adminGroupsError);
+        if (memberGroupsError) {
+          console.error('멤버 그룹 조회 오류:', memberGroupsError);
         } else {
-          adminGroups = data || [];
+          memberGroups = data || [];
         }
       }
 
       // 3. 중복 제거 및 병합
       const allManageableGroupsMap = new Map();
       (ownedGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
-      (adminGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
+      (memberGroups || []).forEach(g => allManageableGroupsMap.set(g.id, g));
       const allManageableGroups = Array.from(allManageableGroupsMap.values());
 
       // 4. 상세 정보 추가 (소유자 이메일, 멤버 수)
@@ -506,9 +505,10 @@ export default function AdminPage() {
 
       if (groupError) throw groupError;
 
-      // 권한 확인: 소유자이거나 ADMIN인지 확인
+      // 권한 확인: 소유자이거나 ADMIN/멤버인지 확인
       const isOwner = groupData.owner_id === user.id;
       let isAdmin = false;
+      let isMember = false;
       
       if (!isOwner) {
         const { data: membership } = await supabase
@@ -516,14 +516,14 @@ export default function AdminPage() {
           .select('role')
           .eq('user_id', user.id)
           .eq('group_id', groupId)
-          .eq('role', 'ADMIN')
           .single();
         
-        isAdmin = !!membership;
+        isAdmin = membership?.role === 'ADMIN';
+        isMember = !!membership;
       }
 
       // 권한이 없으면 에러
-      if (!isOwner && !isAdmin) {
+      if (!isOwner && !isAdmin && !isMember) {
         setError('이 그룹에 대한 관리 권한이 없습니다.');
         setSelectedGroup(null);
         setSelectedGroupId(null);
