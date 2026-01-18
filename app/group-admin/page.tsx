@@ -200,8 +200,8 @@ export default function GroupAdminPage() {
         .select('*', { count: 'exact', head: true })
         .eq('group_id', currentGroupId);
 
-      // ?�밸챶占????�쎌????????�쏙????
-      const totalMembers = (memberCount || 0) + 1;
+      // 멤버십에 소유자가 포함되어 있으면 중복 집계 방지
+      const totalMembers = memberCount || 0;
 
       // ?�밸챶占?筌롢?�占?ID 筌뤴뫖占?
       const { data: membersData } = await supabase
