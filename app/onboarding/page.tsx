@@ -43,10 +43,11 @@ export default function OnboardingPage() {
   useEffect(() => {
     const initialize = async () => {
       try {
-        if (typeof window !== 'undefined') {
-          const params = new URLSearchParams(window.location.search);
-          setFromAdmin(params.get('from') === 'admin');
-        }
+        const fromAdminParam =
+          typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('from') === 'admin'
+            : false;
+        setFromAdmin(fromAdminParam);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           router.push('/');
@@ -82,7 +83,7 @@ export default function OnboardingPage() {
 
         // 시스템 관리자이고 그룹이 없으면 관리자 페이지로
         // 단, 관리자 페이지에서 온보딩으로 들어온 경우는 허용
-        if (isAdmin && !fromAdmin) {
+        if (isAdmin && !fromAdminParam) {
           router.push('/admin');
           return;
         }
