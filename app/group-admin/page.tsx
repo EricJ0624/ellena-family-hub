@@ -55,7 +55,7 @@ interface LocationInfo {
   latitude: number;
   longitude: number;
   address: string | null;
-  updated_at: string;
+  last_updated: string;
   email: string | null;
   nickname: string | null;
 }
@@ -343,7 +343,7 @@ export default function GroupAdminPage() {
 
       const { data: locationsData, error: locationsError } = await supabase
         .from('user_locations')
-        .select('user_id, latitude, longitude, address, updated_at')
+        .select('user_id, latitude, longitude, address, last_updated')
         .in('user_id', memberIds);
 
       if (locationsError) throw locationsError;
@@ -1220,7 +1220,7 @@ export default function GroupAdminPage() {
                           fontSize: '11px',
                           color: '#94a3b8',
                         }}>
-                          {new Date(location.updated_at).toLocaleString('ko-KR')}
+                        {new Date(location.last_updated).toLocaleString('ko-KR')}
                         </div>
                       </motion.div>
                     ))}
