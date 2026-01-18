@@ -462,7 +462,7 @@ export default function AdminPage() {
               id: group.id,
               name: group.name,
               owner_email: ownerData?.email || null,
-              member_count: memberCount + 1,
+              member_count: memberCount,
               created_at: group.created_at,
             };
           } catch (err: any) {
