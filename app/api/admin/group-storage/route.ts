@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
           id: group.id,
           name: group.name,
           owner_email: ownerData?.email || null,
-          member_count: memberCount + 1,
+          member_count: memberCount,
           created_at: group.created_at,
           storage_quota_bytes: group.storage_quota_bytes ?? DEFAULT_GROUP_STORAGE_QUOTA_BYTES,
           storage_used_bytes: usedBytes,
