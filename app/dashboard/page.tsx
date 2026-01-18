@@ -147,6 +147,8 @@ export default function FamilyHub() {
   let groupList: any[] = [];
   let groupMemberships: any[] = [];
   let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
+  let refreshGroups: (() => Promise<void>) | null = null;
+  let refreshMemberships: (() => Promise<void>) | null = null;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
@@ -155,6 +157,8 @@ export default function FamilyHub() {
     groupList = groupContext.groups || [];
     groupMemberships = groupContext.memberships || [];
     setCurrentGroupId = groupContext.setCurrentGroupId;
+    refreshGroups = groupContext.refreshGroups;
+    refreshMemberships = groupContext.refreshMemberships;
   } catch (error) {
     // GroupProvider가 없을 때는 null로 처리 (빌드 시점)
     if (process.env.NODE_ENV === 'development') {
@@ -7358,6 +7362,12 @@ export default function FamilyHub() {
                   setCurrentGroupId(selectedGroupId);
                   if (typeof window !== 'undefined') {
                     sessionStorage.setItem('groupSelectionCompleted', 'true');
+                  }
+                  if (refreshGroups) {
+                    refreshGroups().catch(() => undefined);
+                  }
+                  if (refreshMemberships) {
+                    refreshMemberships().catch(() => undefined);
                   }
                   setShowGroupSelectModal(false);
                 }}
