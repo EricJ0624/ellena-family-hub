@@ -7392,26 +7392,6 @@ export default function FamilyHub() {
                 관리자
               </button>
             )}
-            <button
-              onClick={handleDeleteAccount}
-              style={{
-                padding: '6px 10px',
-                backgroundColor: 'rgba(139, 69, 19, 0.9)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-              aria-label="회원탈퇴"
-            >
-              <span style={{ fontSize: '14px' }}>🗑️</span>
-              회원탈퇴
-            </button>
           </div>
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
@@ -8875,6 +8855,53 @@ export default function FamilyHub() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* 하단 고정 회원탈퇴 버튼 */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          zIndex: 1000,
+        }}
+      >
+        <button
+          onClick={handleDeleteAccount}
+          style={{
+            padding: '12px 20px',
+            backgroundColor: 'rgba(139, 69, 19, 0.9)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(139, 69, 19, 0.4)',
+            transition: 'all 0.3s ease',
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 1)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 69, 19, 0.5)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.9)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 69, 19, 0.4)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          aria-label="회원탈퇴"
+        >
+          <span style={{ fontSize: '18px' }}>🗑️</span>
+          회원탈퇴
+        </button>
+      </div>
     </div>
   );
 }
