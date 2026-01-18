@@ -56,6 +56,12 @@ export default function LoginPage() {
       if (error) throw error;
       
       if (data.user) {
+        // 이메일 인증 확인 (미인증이면 로그인 차단)
+        if (!data.user.email_confirmed_at) {
+          await supabase.auth.signOut();
+          setErrorMsg('이메일 인증이 필요합니다. 메일함에서 인증을 완료해주세요.');
+          return;
+        }
         // 이메일 저장 (다음 로그인 시 자동완성용)
         if (email && isMounted) {
           localStorage.setItem(LAST_EMAIL_KEY, email);
@@ -73,6 +79,11 @@ export default function LoginPage() {
         }
         
         if (session && session.user) {
+          if (!session.user.email_confirmed_at) {
+            await supabase.auth.signOut();
+            setErrorMsg('이메일 인증이 필요합니다. 메일함에서 인증을 완료해주세요.');
+            return;
+          }
           // 시스템 관리자 확인
           const { data: isAdmin } = await supabase.rpc('is_system_admin', {
             user_id_param: session.user.id,
