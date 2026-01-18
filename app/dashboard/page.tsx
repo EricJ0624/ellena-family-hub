@@ -7226,6 +7226,9 @@ export default function FamilyHub() {
     const base = rawName.replace(/piggy\s*bank/gi, '').trim();
     return base || rawName;
   })();
+  const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
+  const showAdminButton = isSystemAdmin || isGroupAdmin;
+  const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
 
   return (
     <div className="app-container">
@@ -7366,6 +7369,30 @@ export default function FamilyHub() {
       <div className="main-content">
         {/* Header */}
         <header className="app-header">
+          {showAdminButton && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px' }}>
+              <button
+                onClick={() => router.push(adminPagePath)}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: isSystemAdmin ? '#7e22ce' : '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                aria-label={isSystemAdmin ? "시스템 관리자 페이지" : "그룹 관리자 페이지"}
+              >
+                <span style={{ fontSize: '14px' }}>⚙️</span>
+                관리자
+              </button>
+            </div>
+          )}
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
             photos={state.album || []}
@@ -8231,6 +8258,62 @@ export default function FamilyHub() {
           </div>
           </section>
 
+          {/* Piggy Bank Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">Ellena Piggy Bank</h3>
+              {currentGroupId && (
+                <button
+                  onClick={() => router.push('/piggy-bank')}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#ef4444',
+                    color: '#fff',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>🐷</span>
+                  이동
+                </button>
+              )}
+            </div>
+            <div className="section-body">
+              {!currentGroupId ? (
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  Piggy Bank을 보려면 그룹을 선택해 주세요.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {piggySummaryError && (
+                    <div style={{ fontSize: '12px', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '8px 10px', borderRadius: '8px' }}>
+                      {piggySummaryError}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
+                      <div style={{ fontSize: '12px', color: '#b91c1c' }}>{piggyLabel} 용돈 잔액</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
+                        {piggySummary ? `${piggySummary.walletBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
+                      </div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
+                      <div style={{ fontSize: '12px', color: '#9a3412' }}>{piggyLabel} 저금통 잔액</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
+                        {piggySummary ? `${piggySummary.bankBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Location Section */}
           <section className="content-section">
             <div className="section-header">
@@ -8265,48 +8348,6 @@ export default function FamilyHub() {
                   <p className="location-text" style={{ marginBottom: '12px' }}>
                     내 위치: {extractLocationAddress(state.location.address)}
                   </p>
-                </div>
-              )}
-
-              {currentGroupId && (
-                <div style={{ marginBottom: '16px', display: 'grid', gap: '10px' }}>
-                  {piggySummaryError && (
-                    <div style={{ fontSize: '12px', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '8px 10px', borderRadius: '8px' }}>
-                      {piggySummaryError}
-                    </div>
-                  )}
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
-                      <div style={{ fontSize: '12px', color: '#b91c1c' }}>{piggyLabel} 용돈 잔액</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
-                        {piggySummary ? `${piggySummary.walletBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
-                      </div>
-                    </div>
-                    <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
-                      <div style={{ fontSize: '12px', color: '#9a3412' }}>{piggyLabel} 저금통 잔액</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
-                        {piggySummary ? `${piggySummary.bankBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => router.push('/piggy-bank')}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      backgroundColor: '#ef4444',
-                      color: '#fff',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      width: 'fit-content',
-                    }}
-                  >
-                    <span>🐷</span>
-                    {piggyLabel} Piggy Bank 이동
-                  </button>
                 </div>
               )}
               
