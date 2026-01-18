@@ -356,20 +356,6 @@ export default function FamilyHub() {
     }
   }, [userId, currentGroupId]);
 
-  // 새로고침 직후 currentGroupId가 늦게 설정되는 경우를 대비해 그룹 기준으로 사진 로드 재시도
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!isAuthenticated || !userId || !currentGroupId) return;
-    if (lastLoadedGroupIdRef.current === currentGroupId) return;
-
-    const authKey = getAuthKey(userId);
-    const key = masterKey || sessionStorage.getItem(authKey) ||
-      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-
-    lastLoadedGroupIdRef.current = currentGroupId;
-    loadData(key, userId).catch(() => undefined);
-  }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
-
   const loadData = useCallback(async (key: string, userId: string) => {
     const storageKey = getStorageKey(userId);
     const saved = localStorage.getItem(storageKey);
@@ -507,6 +493,20 @@ export default function FamilyHub() {
     sessionStorage.setItem(authKey, key);
     setIsAuthenticated(true);
   }, []);
+
+  // 새로고침 직후 currentGroupId가 늦게 설정되는 경우를 대비해 그룹 기준으로 사진 로드 재시도
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isAuthenticated || !userId || !currentGroupId) return;
+    if (lastLoadedGroupIdRef.current === currentGroupId) return;
+
+    const authKey = getAuthKey(userId);
+    const key = masterKey || sessionStorage.getItem(authKey) ||
+      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+
+    lastLoadedGroupIdRef.current = currentGroupId;
+    loadData(key, userId).catch(() => undefined);
+  }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
 
   // --- [EFFECTS] ---
   
