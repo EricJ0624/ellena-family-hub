@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield } from 'lucide-react';
+import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import type { MembershipRole } from '@/types/db';
@@ -31,6 +31,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showGroupSettings, setShowGroupSettings] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isAdmin = userRole === 'ADMIN' || isOwner;
 
@@ -248,68 +249,86 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
     );
   }
 
+  const filteredMembers = members.filter((member) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.trim().toLowerCase();
+    return (
+      (member.email || '').toLowerCase().includes(query) ||
+      (member.nickname || '').toLowerCase().includes(query) ||
+      member.user_id.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-        {/* 헤더 */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                {currentGroup?.name || '가족 멤버'}
-              </h2>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span className="text-sm text-gray-500">총 {members.length}명</span>
-                <span className="text-xs font-semibold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">
-                  {isAdmin ? '관리자 권한' : '멤버 권한'}
-                </span>
-              </div>
-            </div>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+          회원 목록 ({filteredMembers.length}명)
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ position: 'relative', width: '280px' }}>
+            <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="이메일, 닉네임, ID로 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 40px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '14px',
+              }}
+            />
           </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <button
-                onClick={() => setShowGroupSettings(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors"
-                aria-label="그룹 설정"
-              >
-                <Settings className="w-4 h-4" />
-                그룹 설정
-              </button>
-            )}
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                aria-label="닫기"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            )}
-          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setShowGroupSettings(true)}
+              style={{
+                padding: '8px 14px',
+                backgroundColor: '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              aria-label="그룹 설정"
+            >
+              <Settings style={{ width: '16px', height: '16px' }} />
+              그룹 설정
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: '#e2e8f0',
+                color: '#475569',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              aria-label="닫기"
+            >
+              <X style={{ width: '16px', height: '16px' }} />
+              닫기
+            </button>
+          )}
         </div>
-
-        {/* 권한 안내 */}
-        <div
-          className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-semibold mb-1">현재 권한: {isAdmin ? '관리자' : '멤버'}</p>
-              <p>
-                {isAdmin
-                  ? '관리자는 멤버를 추방하고 그룹 설정을 변경할 수 있습니다.'
-                  : '멤버는 목록을 조회할 수 있습니다.'}
-              </p>
-            </div>
-          </div>
-        </div>
+      </div>
 
       {/* 로딩 상태 */}
       {loading && (
@@ -353,7 +372,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                 </tr>
               </thead>
               <tbody>
-                {members.map((member, index) => {
+                {filteredMembers.map((member, index) => {
                   const isCurrentUser = currentUserId === member.user_id;
                   const isOwner = member.user_id === currentGroup?.owner_id;
                   const canRemove = isAdmin && !isCurrentUser && !isOwner;
@@ -525,7 +544,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                   );
                 })}
 
-                {members.length === 0 && (
+                {filteredMembers.length === 0 && (
                   <tr>
                     <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
                       멤버가 없습니다.
