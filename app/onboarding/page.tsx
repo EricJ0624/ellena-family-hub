@@ -75,8 +75,8 @@ export default function OnboardingPage() {
 
         const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
 
-        if (hasGroups) {
-          // 그룹이 있으면 대시보드로 이동
+        if (hasGroups && !fromAdminParam) {
+          // 그룹이 있으면 대시보드로 이동 (관리자 온보딩 예외)
           router.push('/dashboard');
           return;
         }
