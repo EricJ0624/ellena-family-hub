@@ -8871,12 +8871,12 @@ export default function FamilyHub() {
         <button
           onClick={handleDeleteAccount}
           style={{
-            padding: '12px 20px',
+            padding: '8px 12px',
             backgroundColor: 'rgba(139, 69, 19, 0.9)',
             color: 'white',
             border: 'none',
             borderRadius: '12px',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: '600',
             cursor: 'pointer',
             boxShadow: '0 4px 12px rgba(139, 69, 19, 0.4)',
@@ -8898,7 +8898,7 @@ export default function FamilyHub() {
           }}
           aria-label="회원탈퇴"
         >
-          <span style={{ fontSize: '18px' }}>🗑️</span>
+          <span style={{ fontSize: '14px' }}>🗑️</span>
           회원탈퇴
         </button>
       </div>
