@@ -688,6 +688,9 @@ export default function GroupAdminPage() {
           style={{
             display: 'flex',
             gap: '8px',
+            rowGap: '8px',
+            flexWrap: 'wrap',
+            overflowX: 'auto',
             borderBottom: '2px solid #e2e8f0',
           }}
         >
@@ -1878,7 +1881,6 @@ export default function GroupAdminPage() {
                         요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
                         {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
                         {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
-                        {request.rejected_at && ` | 椰꾧???? ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
