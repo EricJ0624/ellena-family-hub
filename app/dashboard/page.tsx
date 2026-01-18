@@ -7359,7 +7359,11 @@ export default function FamilyHub() {
               <button
                 onClick={() => {
                   if (!selectedGroupId || !setCurrentGroupId) return;
+                  // 시스템 관리자가 멤버인 그룹도 선택 가능하도록 즉시 전환
                   setCurrentGroupId(selectedGroupId);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('currentGroupId', selectedGroupId);
+                  }
                   if (typeof window !== 'undefined') {
                     sessionStorage.setItem('groupSelectionCompleted', 'true');
                   }
