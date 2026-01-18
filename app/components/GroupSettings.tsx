@@ -102,6 +102,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
           fileName: avatarFile.name,
           mimeType: avatarFile.type,
           originalSize: avatarFile.size,
+          groupId: currentGroupId,
         }),
       });
 
