@@ -276,128 +276,127 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       </div>
 
       <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 기본 정보 */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Settings className="w-4 h-4 text-purple-600" />
-              기본 정보
-            </div>
-
-            {/* 그룹 이름 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                그룹 이름
-              </label>
-              <input
-                type="text"
-                value={groupName}
-                onChange={(e) => {
-                  setGroupName(e.target.value);
-                  setError(null);
-                }}
-                placeholder="그룹 이름을 입력하세요"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={saving}
-              />
-            </div>
-
-            {/* 그룹 아바타 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                그룹 아바타
-              </label>
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="그룹 아바타"
-                      className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
-                      <ImageIcon className="w-12 h-12 text-white" />
-                    </div>
-                  )}
-                  {uploading && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 text-white animate-spin" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
+        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr className="border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 w-40 bg-gray-50">
+                  그룹 이름
+                </th>
+                <td className="px-4 py-3">
                   <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarSelect}
-                    className="hidden"
-                    disabled={saving || uploading}
+                    type="text"
+                    value={groupName}
+                    onChange={(e) => {
+                      setGroupName(e.target.value);
+                      setError(null);
+                    }}
+                    placeholder="그룹 이름을 입력하세요"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={saving}
                   />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={saving || uploading}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {avatarFile ? '파일 변경' : '이미지 선택'}
-                  </button>
-                  {avatarFile && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {avatarFile.name} ({(avatarFile.size / 1024).toFixed(1)}KB)
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 초대 코드 */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Copy className="w-4 h-4 text-blue-600" />
-              초대 코드
-            </div>
-            <p className="text-xs text-gray-500">
-              초대 코드를 복사하여 가족 구성원에게 공유하세요.
-            </p>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-lg text-center tracking-widest">
-              {inviteCode || '---'}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleCopyInviteCode}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                aria-label="초대 코드 복사"
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    복사됨
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    복사
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleRefreshInviteCode}
-                disabled={refreshing}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                aria-label="초대 코드 갱신"
-              >
-                {refreshing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                갱신
-              </button>
-            </div>
-          </div>
+                </td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 bg-gray-50">
+                  그룹 아바타
+                </th>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      {avatarPreview ? (
+                        <img
+                          src={avatarPreview}
+                          alt="그룹 아바타"
+                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center">
+                          <ImageIcon className="w-8 h-8 text-white" />
+                        </div>
+                      )}
+                      {uploading && (
+                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarSelect}
+                        className="hidden"
+                        disabled={saving || uploading}
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={saving || uploading}
+                        className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {avatarFile ? '파일 변경' : '이미지 선택'}
+                      </button>
+                      {avatarFile && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {avatarFile.name} ({(avatarFile.size / 1024).toFixed(1)}KB)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 bg-gray-50">
+                  초대 코드
+                </th>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={inviteCode}
+                      readOnly
+                      className="flex-1 min-w-[240px] px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-center text-lg tracking-wider"
+                    />
+                    <button
+                      onClick={handleCopyInviteCode}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      aria-label="초대 코드 복사"
+                    >
+                      {copied ? (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          복사됨
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          복사
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleRefreshInviteCode}
+                      disabled={refreshing}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      aria-label="초대 코드 갱신"
+                    >
+                      {refreshing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      갱신
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    초대 코드를 복사하여 가족 구성원에게 공유하세요.
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         {/* 에러 메시지 */}

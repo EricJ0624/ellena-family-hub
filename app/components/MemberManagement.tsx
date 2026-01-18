@@ -331,190 +331,161 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
         {/* 멤버 목록 */}
         {!loading && !error && (
-          <div className="space-y-3">
-            <div className="hidden md:grid grid-cols-[minmax(220px,2fr)_minmax(140px,1fr)_minmax(120px,1fr)_minmax(160px,1fr)] gap-4 px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">
-              <div>멤버</div>
-              <div>역할</div>
-              <div>가입일</div>
-              <div className="text-right">관리</div>
-            </div>
-            <AnimatePresence>
-              {members.map((member, index) => {
-                const isCurrentUser = currentUserId === member.user_id;
-                const isOwner = member.user_id === currentGroup?.owner_id;
-                const canRemove = isAdmin && !isCurrentUser && !isOwner;
-                const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
-                const isUpdatingRole = updatingRoleUserId === member.user_id;
-                const roleLabel = isOwner ? '소유자' : member.role === 'ADMIN' ? '관리자' : '멤버';
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b-2 border-gray-200">
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">이메일</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">닉네임</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">역할</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">가입일</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((member, index) => {
+                  const isCurrentUser = currentUserId === member.user_id;
+                  const isOwner = member.user_id === currentGroup?.owner_id;
+                  const canRemove = isAdmin && !isCurrentUser && !isOwner;
+                  const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
+                  const isUpdatingRole = updatingRoleUserId === member.user_id;
+                  const roleLabel = isOwner ? '소유자' : member.role === 'ADMIN' ? '관리자' : '멤버';
 
-                return (
-                  <motion.div
-                    key={member.user_id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,2fr)_minmax(140px,1fr)_minmax(120px,1fr)_minmax(160px,1fr)] gap-4 items-center">
-                      <div className="flex items-center gap-4 min-w-0">
-                        {/* 아바타 */}
-                        <div className="relative">
+                  return (
+                    <motion.tr
+                      key={member.user_id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-800">
+                        <div className="flex items-center gap-3">
                           {member.avatar_url ? (
                             <img
                               src={member.avatar_url}
                               alt={member.nickname || member.email || '멤버'}
-                              className="w-12 h-12 rounded-full object-cover"
+                              className="w-8 h-8 rounded-full object-cover"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xs font-semibold">
                               {(member.nickname || member.email || 'U').charAt(0).toUpperCase()}
                             </div>
                           )}
-                          {member.role === 'ADMIN' && (
-                            <div
-                              className="absolute -top-1 -right-1 p-1 bg-yellow-400 rounded-full"
-                              aria-label="관리자"
-                            >
-                              <Crown className="w-3 h-3 text-yellow-900" />
-                            </div>
-                          )}
+                          <span className="truncate">{member.email || '-'}</span>
                         </div>
-
-                        {/* 정보 */}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-gray-900 truncate">
-                              {member.nickname || member.email || '이름 없음'}
-                              {isCurrentUser && (
-                                <span className="ml-2 text-xs text-gray-500">(나)</span>
-                              )}
-                            </p>
-                            {isOwner && (
-                              <span
-                                className="px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full"
-                                aria-label="그룹 소유자"
-                              >
-                                소유자
-                              </span>
-                            )}
-                            {member.role === 'ADMIN' && !isOwner && (
-                              <span
-                                className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full"
-                                aria-label="관리자"
-                              >
-                                관리자
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-500 truncate">{member.email}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-800">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{member.nickname || '-'}</span>
+                          {isCurrentUser && <span className="text-xs text-gray-500">(나)</span>}
                         </div>
-                      </div>
-
-                      <div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
                         <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
                           {roleLabel}
                         </span>
-                      </div>
-
-                      <div className="text-sm text-gray-500">
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
                         {new Date(member.joined_at).toLocaleDateString('ko-KR')}
-                      </div>
-
-                      {/* 액션 버튼 */}
-                      <div className="flex items-center justify-start md:justify-end gap-2">
-                      {/* 역할 변경 버튼 */}
-                      {canChangeRole && (
-                        <>
-                          {member.role === 'MEMBER' ? (
-                            <button
-                              onClick={() => {
-                                if (confirm(`${member.nickname || member.email}님을 관리자로 승격시키시겠습니까?`)) {
-                                  handleUpdateRole(member.user_id, 'ADMIN');
-                                }
-                              }}
-                              disabled={isUpdatingRole || removingUserId === member.user_id}
-                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              aria-label={`${member.nickname || member.email} 관리자로 승격`}
-                              title="관리자로 승격"
-                            >
-                              {isUpdatingRole ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                              ) : (
-                                <Shield className="w-5 h-5" />
-                              )}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                if (confirm(`${member.nickname || member.email}님의 관리자 권한을 일반 멤버로 변경하시겠습니까?`)) {
-                                  handleUpdateRole(member.user_id, 'MEMBER');
-                                }
-                              }}
-                              disabled={isUpdatingRole || removingUserId === member.user_id}
-                              className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
-                              title="일반 멤버로 변경"
-                            >
-                              {isUpdatingRole ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                              ) : (
-                                <User className="w-5 h-5" />
-                              )}
-                            </button>
-                          )}
-                        </>
-                      )}
-                      {/* 추방 버튼 */}
-                      {canRemove && (
-                        <>
-                          {showConfirmRemove === member.user_id ? (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleRemoveMember(member.user_id)}
-                                disabled={removingUserId === member.user_id || isUpdatingRole}
-                                className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                aria-label={`${member.nickname || member.email} 추방 확인`}
-                              >
-                                {removingUserId === member.user_id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {(canRemove || canChangeRole) && (
+                          <div className="inline-flex items-center gap-2 justify-end">
+                            {canChangeRole && (
+                              <>
+                                {member.role === 'MEMBER' ? (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`${member.nickname || member.email}님을 관리자로 승격시키시겠습니까?`)) {
+                                        handleUpdateRole(member.user_id, 'ADMIN');
+                                      }
+                                    }}
+                                    disabled={isUpdatingRole || removingUserId === member.user_id}
+                                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    aria-label={`${member.nickname || member.email} 관리자로 승격`}
+                                    title="관리자로 승격"
+                                  >
+                                    {isUpdatingRole ? (
+                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                      <Shield className="w-5 h-5" />
+                                    )}
+                                  </button>
                                 ) : (
-                                  '확인'
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`${member.nickname || member.email}님의 관리자 권한을 일반 멤버로 변경하시겠습니까?`)) {
+                                        handleUpdateRole(member.user_id, 'MEMBER');
+                                      }
+                                    }}
+                                    disabled={isUpdatingRole || removingUserId === member.user_id}
+                                    className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
+                                    title="일반 멤버로 변경"
+                                  >
+                                    {isUpdatingRole ? (
+                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                      <User className="w-5 h-5" />
+                                    )}
+                                  </button>
                                 )}
-                              </button>
-                              <button
-                                onClick={() => setShowConfirmRemove(null)}
-                                className="px-3 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                                aria-label="취소"
-                              >
-                                취소
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setShowConfirmRemove(member.user_id)}
-                              disabled={isUpdatingRole}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              aria-label={`${member.nickname || member.email} 추방`}
-                            >
-                              <UserX className="w-5 h-5" />
-                            </button>
-                          )}
-                        </>
-                      )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                              </>
+                            )}
+                            {canRemove && (
+                              <>
+                                {showConfirmRemove === member.user_id ? (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleRemoveMember(member.user_id)}
+                                      disabled={removingUserId === member.user_id || isUpdatingRole}
+                                      className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      aria-label={`${member.nickname || member.email} 추방 확인`}
+                                    >
+                                      {removingUserId === member.user_id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : (
+                                        '확인'
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => setShowConfirmRemove(null)}
+                                      className="px-3 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                      aria-label="취소"
+                                    >
+                                      취소
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setShowConfirmRemove(member.user_id)}
+                                    disabled={isUpdatingRole}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    aria-label={`${member.nickname || member.email} 추방`}
+                                  >
+                                    <UserX className="w-5 h-5" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </motion.tr>
+                  );
+                })}
 
-            {members.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p>멤버가 없습니다.</p>
-              </div>
-            )}
+                {members.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
+                      <Users className="w-10 h-10 mx-auto mb-3 text-gray-400" />
+                      멤버가 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
 
