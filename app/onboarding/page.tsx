@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
@@ -18,6 +18,8 @@ interface GroupPreview {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromAdmin = searchParams.get('from') === 'admin';
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'select' | 'create' | 'join'>('select');
   const [nickname, setNickname] = useState('');
@@ -76,7 +78,8 @@ export default function OnboardingPage() {
         }
 
         // 시스템 관리자이고 그룹이 없으면 관리자 페이지로
-        if (isAdmin) {
+        // 단, 관리자 페이지에서 온보딩으로 들어온 경우는 허용
+        if (isAdmin && !fromAdmin) {
           router.push('/admin');
           return;
         }

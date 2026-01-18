@@ -1501,7 +1501,7 @@ export default function AdminPage() {
                     가족 그룹을 생성하거나 초대 코드로 가입할 수 있습니다.
                   </div>
                   <button
-                    onClick={() => router.push('/onboarding')}
+                    onClick={() => router.push('/onboarding?from=admin')}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
