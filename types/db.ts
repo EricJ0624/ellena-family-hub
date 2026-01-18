@@ -90,6 +90,282 @@ export interface Database {
           }
         ]
       }
+      piggy_bank_accounts: {
+        Row: {
+          id: string
+          group_id: string
+          name: string
+          balance: number
+          currency: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          name?: string
+          balance?: number
+          currency?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          name?: string
+          balance?: number
+          currency?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_bank_accounts_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      piggy_wallets: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string
+          balance: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          user_id: string
+          balance?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          user_id?: string
+          balance?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_wallets_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_wallets_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      piggy_wallet_transactions: {
+        Row: {
+          id: string
+          group_id: string
+          user_id: string
+          actor_id: string
+          amount: number
+          type: 'allowance' | 'spend' | 'child_save' | 'withdraw_to_wallet'
+          memo: string | null
+          request_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          user_id: string
+          actor_id: string
+          amount: number
+          type: 'allowance' | 'spend' | 'child_save' | 'withdraw_to_wallet'
+          memo?: string | null
+          request_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          user_id?: string
+          actor_id?: string
+          amount?: number
+          type?: 'allowance' | 'spend' | 'child_save' | 'withdraw_to_wallet'
+          memo?: string | null
+          request_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_wallet_transactions_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_wallet_transactions_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_wallet_transactions_actor_id_fkey"
+            columns: ["actor_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      piggy_bank_transactions: {
+        Row: {
+          id: string
+          group_id: string
+          actor_id: string
+          related_user_id: string | null
+          amount: number
+          type: 'parent_deposit' | 'child_save' | 'withdraw_cash' | 'withdraw_to_wallet'
+          memo: string | null
+          request_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          actor_id: string
+          related_user_id?: string | null
+          amount: number
+          type: 'parent_deposit' | 'child_save' | 'withdraw_cash' | 'withdraw_to_wallet'
+          memo?: string | null
+          request_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          actor_id?: string
+          related_user_id?: string | null
+          amount?: number
+          type?: 'parent_deposit' | 'child_save' | 'withdraw_cash' | 'withdraw_to_wallet'
+          memo?: string | null
+          request_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_bank_transactions_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_bank_transactions_actor_id_fkey"
+            columns: ["actor_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_bank_transactions_related_user_id_fkey"
+            columns: ["related_user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      piggy_open_requests: {
+        Row: {
+          id: string
+          group_id: string
+          child_id: string
+          amount: number
+          reason: string | null
+          destination: 'wallet' | 'cash'
+          status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+          created_at: string
+          updated_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          child_id: string
+          amount: number
+          reason?: string | null
+          destination: 'wallet' | 'cash'
+          status?: 'pending' | 'approved' | 'rejected' | 'cancelled'
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          child_id?: string
+          amount?: number
+          reason?: string | null
+          destination?: 'wallet' | 'cash'
+          status?: 'pending' | 'approved' | 'rejected' | 'cancelled'
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_open_requests_group_id_fkey"
+            columns: ["group_id"]
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_open_requests_child_id_fkey"
+            columns: ["child_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      piggy_open_approvals: {
+        Row: {
+          id: string
+          request_id: string
+          approver_id: string
+          role: 'parent' | 'child'
+          approved_at: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          approver_id: string
+          role: 'parent' | 'child'
+          approved_at?: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          approver_id?: string
+          role?: 'parent' | 'child'
+          approved_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piggy_open_approvals_request_id_fkey"
+            columns: ["request_id"]
+            referencedRelation: "piggy_open_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piggy_open_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       system_admins: {
         Row: {
           user_id: string
