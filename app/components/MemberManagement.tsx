@@ -249,51 +249,67 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Users className="w-6 h-6 text-purple-600" />
+    <div className="w-full max-w-5xl mx-auto">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+        {/* 헤더 */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Users className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {currentGroup?.name || '가족 멤버'}
+              </h2>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <span className="text-sm text-gray-500">총 {members.length}명</span>
+                <span className="text-xs font-semibold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">
+                  {isAdmin ? '관리자 권한' : '멤버 권한'}
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {currentGroup?.name || '가족 멤버'}
-            </h2>
-            <p className="text-sm text-gray-500">
-              총 {members.length}명의 멤버
-            </p>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setShowGroupSettings(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors"
+                aria-label="그룹 설정"
+              >
+                <Settings className="w-4 h-4" />
+                그룹 설정
+              </button>
+            )}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
           </div>
         </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="닫기"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        )}
-      </div>
 
-      {/* 권한 안내 */}
-      <div
-        className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-blue-800">
-            <p className="font-semibold mb-1">현재 권한: {isAdmin ? '관리자' : '멤버'}</p>
-            <p>
-              {isAdmin
-                ? '관리자는 멤버를 추방하고 그룹 설정을 변경할 수 있습니다.'
-                : '멤버는 목록을 조회할 수 있습니다.'}
-            </p>
+        {/* 권한 안내 */}
+        <div
+          className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-blue-800">
+              <p className="font-semibold mb-1">현재 권한: {isAdmin ? '관리자' : '멤버'}</p>
+              <p>
+                {isAdmin
+                  ? '관리자는 멤버를 추방하고 그룹 설정을 변경할 수 있습니다.'
+                  : '멤버는 목록을 조회할 수 있습니다.'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
       {/* 로딩 상태 */}
       {loading && (
@@ -313,86 +329,100 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
         </div>
       )}
 
-      {/* 멤버 목록 */}
-      {!loading && !error && (
-        <div className="space-y-3">
-          <AnimatePresence>
-            {members.map((member, index) => {
-              const isCurrentUser = currentUserId === member.user_id;
-              const isOwner = member.user_id === currentGroup?.owner_id;
-              const canRemove = isAdmin && !isCurrentUser && !isOwner;
-              const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
-              const isUpdatingRole = updatingRoleUserId === member.user_id;
+        {/* 멤버 목록 */}
+        {!loading && !error && (
+          <div className="space-y-3">
+            <div className="hidden md:grid grid-cols-[minmax(220px,2fr)_minmax(140px,1fr)_minmax(120px,1fr)_minmax(160px,1fr)] gap-4 px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 rounded-lg">
+              <div>멤버</div>
+              <div>역할</div>
+              <div>가입일</div>
+              <div className="text-right">관리</div>
+            </div>
+            <AnimatePresence>
+              {members.map((member, index) => {
+                const isCurrentUser = currentUserId === member.user_id;
+                const isOwner = member.user_id === currentGroup?.owner_id;
+                const canRemove = isAdmin && !isCurrentUser && !isOwner;
+                const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
+                const isUpdatingRole = updatingRoleUserId === member.user_id;
+                const roleLabel = isOwner ? '소유자' : member.role === 'ADMIN' ? '관리자' : '멤버';
 
-              return (
-                <motion.div
-                  key={member.user_id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    {/* 아바타 */}
-                    <div className="relative">
-                      {member.avatar_url ? (
-                        <img
-                          src={member.avatar_url}
-                          alt={member.nickname || member.email || '멤버'}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
-                          {(member.nickname || member.email || 'U').charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      {member.role === 'ADMIN' && (
-                        <div
-                          className="absolute -top-1 -right-1 p-1 bg-yellow-400 rounded-full"
-                          aria-label="관리자"
-                        >
-                          <Crown className="w-3 h-3 text-yellow-900" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 정보 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900 truncate">
-                          {member.nickname || member.email || '이름 없음'}
-                          {isCurrentUser && (
-                            <span className="ml-2 text-xs text-gray-500">(나)</span>
+                return (
+                  <motion.div
+                    key={member.user_id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,2fr)_minmax(140px,1fr)_minmax(120px,1fr)_minmax(160px,1fr)] gap-4 items-center">
+                      <div className="flex items-center gap-4 min-w-0">
+                        {/* 아바타 */}
+                        <div className="relative">
+                          {member.avatar_url ? (
+                            <img
+                              src={member.avatar_url}
+                              alt={member.nickname || member.email || '멤버'}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
+                              {(member.nickname || member.email || 'U').charAt(0).toUpperCase()}
+                            </div>
                           )}
-                        </p>
-                        {member.user_id === currentGroup?.owner_id && (
-                          <span
-                            className="px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full"
-                            aria-label="그룹 소유자"
-                          >
-                            소유자
-                          </span>
-                        )}
-                        {member.role === 'ADMIN' && member.user_id !== currentGroup?.owner_id && (
-                          <span
-                            className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full"
-                            aria-label="관리자"
-                          >
-                            관리자
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 truncate">{member.email}</p>
-                      <p className="text-xs text-gray-400">
-                        가입일: {new Date(member.joined_at).toLocaleDateString('ko-KR')}
-                      </p>
-                    </div>
-                  </div>
+                          {member.role === 'ADMIN' && (
+                            <div
+                              className="absolute -top-1 -right-1 p-1 bg-yellow-400 rounded-full"
+                              aria-label="관리자"
+                            >
+                              <Crown className="w-3 h-3 text-yellow-900" />
+                            </div>
+                          )}
+                        </div>
 
-                  {/* 액션 버튼 */}
-                  {(canRemove || canChangeRole) && (
-                    <div className="flex items-center gap-2">
+                        {/* 정보 */}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-gray-900 truncate">
+                              {member.nickname || member.email || '이름 없음'}
+                              {isCurrentUser && (
+                                <span className="ml-2 text-xs text-gray-500">(나)</span>
+                              )}
+                            </p>
+                            {isOwner && (
+                              <span
+                                className="px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full"
+                                aria-label="그룹 소유자"
+                              >
+                                소유자
+                              </span>
+                            )}
+                            {member.role === 'ADMIN' && !isOwner && (
+                              <span
+                                className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full"
+                                aria-label="관리자"
+                              >
+                                관리자
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 truncate">{member.email}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
+                          {roleLabel}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-gray-500">
+                        {new Date(member.joined_at).toLocaleDateString('ko-KR')}
+                      </div>
+
+                      {/* 액션 버튼 */}
+                      <div className="flex items-center justify-start md:justify-end gap-2">
                       {/* 역할 변경 버튼 */}
                       {canChangeRole && (
                         <>
@@ -472,59 +502,46 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                           )}
                         </>
                       )}
+                      </div>
                     </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
 
-          {members.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p>멤버가 없습니다.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 관리자 액션 버튼 */}
-      {isAdmin && (
-        <div className="mt-6 flex gap-3">
-          <button
-            onClick={() => setShowGroupSettings(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
-            aria-label="그룹 설정"
-          >
-            <Settings className="w-5 h-5" />
-            그룹 설정
-          </button>
-        </div>
-      )}
-
-      {/* 그룹 설정 모달 */}
-      <AnimatePresence>
-        {showGroupSettings && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setShowGroupSettings(false)}
-              aria-hidden="true"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <GroupSettings onClose={() => setShowGroupSettings(false)} />
+            {members.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p>멤버가 없습니다.</p>
               </div>
-            </motion.div>
-          </>
+            )}
+          </div>
         )}
-      </AnimatePresence>
+
+        {/* 그룹 설정 모달 */}
+        <AnimatePresence>
+          {showGroupSettings && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-40"
+                onClick={() => setShowGroupSettings(false)}
+                aria-hidden="true"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-100">
+                  <GroupSettings onClose={() => setShowGroupSettings(false)} />
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
