@@ -1463,7 +1463,7 @@ export default function FamilyHub() {
       return;
     }
     
-    if (!isAuthenticated || !userId) {
+    if (!isAuthenticated || !userId || !currentGroupId) {
       console.log('Realtime 구독 스킵 - 인증되지 않음:', { isAuthenticated, userId });
       return;
     }
@@ -1492,9 +1492,14 @@ export default function FamilyHub() {
         subscriptionsRef.current.presence = null;
       }
 
+      if (!currentGroupId) {
+        setOnlineUsers([]);
+        return;
+      }
+
       console.log('👥 Presence subscription 설정 중...');
       const presenceSubscription = supabase
-      .channel('online_users')
+      .channel(`online_users:${currentGroupId}`)
       .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
         const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
@@ -1514,7 +1519,7 @@ export default function FamilyHub() {
             const presence = state[presenceId];
             if (Array.isArray(presence) && presence.length > 0) {
               const userPresence = presence[0] as any;
-              return userPresence.userId;
+              return userPresence.groupId === currentGroupId ? userPresence.userId : null;
             }
             return null;
           })
@@ -1531,12 +1536,12 @@ export default function FamilyHub() {
             (profilesData || []).map((p: any) => [p.id, p])
           );
 
-          Object.keys(state).forEach((presenceId) => {
+        Object.keys(state).forEach((presenceId) => {
             const presence = state[presenceId];
             if (Array.isArray(presence) && presence.length > 0) {
               const userPresence = presence[0] as any;
               const uid = userPresence.userId;
-              if (uid && uid !== userId) {
+            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
                 // profiles 테이블의 nickname 우선, 없으면 Presence의 userName, 없으면 기본값
                 const profile = profilesMap.get(uid);
                 const displayName = profile?.nickname 
@@ -1558,7 +1563,7 @@ export default function FamilyHub() {
             if (Array.isArray(presence) && presence.length > 0) {
               const userPresence = presence[0] as any;
               const uid = userPresence.userId;
-              if (uid && uid !== userId) {
+              if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
                 const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
                 usersList.push({
                   id: uid,
@@ -1591,7 +1596,7 @@ export default function FamilyHub() {
           if (Array.isArray(presence) && presence.length > 0) {
             const userPresence = presence[0] as any;
             const uid = userPresence.userId;
-            if (uid && uid !== userId) {
+            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
               // Presence에서 userName을 가져오거나, 없으면 기본값 사용
               const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
               usersList.push({
@@ -1623,7 +1628,7 @@ export default function FamilyHub() {
           if (Array.isArray(presence) && presence.length > 0) {
             const userPresence = presence[0] as any;
             const uid = userPresence.userId;
-            if (uid && uid !== userId) {
+            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
               // Presence에서 userName을 가져오거나, 없으면 기본값 사용
               const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
               usersList.push({
@@ -1645,6 +1650,7 @@ export default function FamilyHub() {
           await presenceSubscription.track({
             userId: userId,
             userName: userName || '나',
+            groupId: currentGroupId,
             onlineAt: new Date().toISOString()
           });
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
