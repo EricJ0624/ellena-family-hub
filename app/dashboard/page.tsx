@@ -7369,8 +7369,8 @@ export default function FamilyHub() {
       <div className="main-content">
         {/* Header */}
         <header className="app-header">
-          {showAdminButton && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '0 16px' }}>
+            {showAdminButton && (
               <button
                 onClick={() => router.push(adminPagePath)}
                 style={{
@@ -7391,8 +7391,28 @@ export default function FamilyHub() {
                 <span style={{ fontSize: '14px' }}>⚙️</span>
                 관리자
               </button>
-            </div>
-          )}
+            )}
+            <button
+              onClick={handleDeleteAccount}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: 'rgba(139, 69, 19, 0.9)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              aria-label="회원탈퇴"
+            >
+              <span style={{ fontSize: '14px' }}>🗑️</span>
+              회원탈퇴
+            </button>
+          </div>
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
             photos={state.album || []}
