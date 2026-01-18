@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
@@ -18,8 +18,7 @@ interface GroupPreview {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const fromAdmin = searchParams.get('from') === 'admin';
+  const [fromAdmin, setFromAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'select' | 'create' | 'join'>('select');
   const [nickname, setNickname] = useState('');
@@ -44,6 +43,10 @@ export default function OnboardingPage() {
   useEffect(() => {
     const initialize = async () => {
       try {
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          setFromAdmin(params.get('from') === 'admin');
+        }
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           router.push('/');
