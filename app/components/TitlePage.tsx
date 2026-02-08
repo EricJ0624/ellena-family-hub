@@ -86,54 +86,95 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2 }}
-      className="relative mb-4 z-30"
+      className="relative mb-6 z-30"
       style={{
-        width: '320px',
-        height: '240px',
-        maxWidth: '90%',
+        width: '100%',
+        maxWidth: '380px',
+        margin: '0 auto',
       }}
     >
-      {/* 사진 프레임 */}
+      {/* 우드 프레임 액자 */}
       <div
-        className="relative w-full h-full rounded-lg overflow-hidden"
+        className="relative w-full rounded-lg overflow-visible"
+        style={{
+          aspectRatio: '4/3',
+          background: 'linear-gradient(145deg, #3e2723 0%, #4e342e 25%, #3e2723 50%, #5d4037 75%, #3e2723 100%)',
+          padding: '20px',
+          boxShadow: `
+            0 2px 4px rgba(0,0,0,0.1),
+            0 8px 16px rgba(0,0,0,0.15),
+            0 16px 32px rgba(0,0,0,0.2),
+            inset 0 2px 4px rgba(255,255,255,0.1),
+            inset 0 -2px 4px rgba(0,0,0,0.3)
+          `,
+          backgroundImage: `
+            linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.05) 50%, transparent 100%),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, transparent 2px, transparent 4px, rgba(0,0,0,0.03) 6px)
+          `,
+          backgroundSize: '100% 100%, 8px 100%',
+        }}
       >
-        {/* 사진 또는 Fallback */}
-        <AnimatePresence mode="wait">
-          {selectedPhoto ? (
-            <motion.div
-              key={`${selectedPhoto.id}-${manualSeed || 'default'}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="relative w-full h-full"
-            >
-              <Image
-                src={selectedPhoto.data}
-                alt="오늘의 추억"
-                fill
-                style={{
-                  objectFit: 'contain',
-                }}
-                unoptimized={true}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="fallback"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="w-full h-full flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%)',
-              }}
-            >
-              <div className="text-6xl">📷</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* 내부 매트(Matte) - 크림색 여백 */}
+        <div
+          className="relative w-full h-full rounded-sm overflow-hidden"
+          style={{
+            background: '#f5f5dc',
+            padding: '12px',
+            boxShadow: `
+              inset 0 2px 8px rgba(0,0,0,0.15),
+              inset 0 -1px 4px rgba(0,0,0,0.1)
+            `,
+          }}
+        >
+          {/* 가족 사진 영역 */}
+          <div className="relative w-full h-full rounded-sm overflow-hidden">
+            {/* 사진 또는 Fallback */}
+            <AnimatePresence mode="wait">
+              {selectedPhoto ? (
+                <motion.div
+                  key={`${selectedPhoto.id}-${manualSeed || 'default'}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="relative w-full h-full"
+                >
+                  <Image
+                    src={selectedPhoto.data}
+                    alt="오늘의 추억"
+                    fill
+                    style={{
+                      objectFit: 'contain',
+                    }}
+                    unoptimized={true}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="fallback"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="w-full h-full flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%)',
+                  }}
+                >
+                  <div className="text-6xl">📷</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+        
+        {/* 액자 하이라이트 (입체감 강조) */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-lg"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.2) 100%)',
+          }}
+        />
         
         {/* 새로고침 버튼 (우측 하단) */}
         {selectedPhoto && (
@@ -141,7 +182,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
             whileHover={{ scale: 1.15, rotate: 180 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleShuffle}
-            className="absolute bottom-4 right-4 p-2.5 rounded-full shadow-xl transition-all z-40"
+            className="absolute bottom-6 right-6 p-2.5 rounded-full shadow-xl transition-all z-40"
             style={{
               width: '44px',
               height: '44px',
