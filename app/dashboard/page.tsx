@@ -494,18 +494,54 @@ export default function FamilyHub() {
     setIsAuthenticated(true);
   }, []);
 
-  // 새로고침 직후 currentGroupId가 늦게 설정되는 경우를 대비해 그룹 기준으로 사진 로드 재시도
+  // ✅ SECURITY: 그룹 전환 시 완전한 데이터 격리 보장
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!isAuthenticated || !userId || !currentGroupId) return;
-    if (lastLoadedGroupIdRef.current === currentGroupId) return;
-
-    const authKey = getAuthKey(userId);
-    const key = masterKey || sessionStorage.getItem(authKey) ||
-      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-
-    lastLoadedGroupIdRef.current = currentGroupId;
-    loadData(key, userId).catch(() => undefined);
+    
+    // 그룹이 변경되었는지 확인
+    const isGroupChanged = lastLoadedGroupIdRef.current !== currentGroupId;
+    
+    if (isGroupChanged) {
+      // 🔒 CRITICAL: 그룹 전환 시 이전 그룹의 데이터 완전 초기화
+      console.log('🔄 그룹 전환 감지 - 데이터 초기화 시작:', {
+        previousGroupId: lastLoadedGroupIdRef.current,
+        newGroupId: currentGroupId,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // 1. 모든 상태 초기화 (이전 그룹의 데이터 제거)
+      setState({
+        familyName: INITIAL_STATE.familyName,
+        todos: [],
+        events: [],
+        album: [], // 🔒 가장 중요: 이전 그룹의 사진 완전 제거
+        messages: [],
+        titleStyle: INITIAL_STATE.titleStyle,
+      });
+      
+      // 2. 새 그룹 데이터 로드
+      const authKey = getAuthKey(userId);
+      const key = masterKey || sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+      
+      lastLoadedGroupIdRef.current = currentGroupId;
+      
+      // 3. 새 그룹의 데이터 비동기 로드
+      loadData(key, userId).catch((error) => {
+        console.error('그룹 데이터 로드 실패:', error);
+      });
+      
+      console.log('✅ 그룹 전환 완료 - 데이터 격리 보장됨');
+    } else if (!lastLoadedGroupIdRef.current) {
+      // 초기 로드
+      const authKey = getAuthKey(userId);
+      const key = masterKey || sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+      
+      lastLoadedGroupIdRef.current = currentGroupId;
+      loadData(key, userId).catch(() => undefined);
+    }
   }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
 
   // --- [EFFECTS] ---

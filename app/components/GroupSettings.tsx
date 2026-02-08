@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -32,9 +32,40 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
+  const [checkingPermissions, setCheckingPermissions] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isAdmin = userRole === 'ADMIN' || isOwner;
+  // ✅ SECURITY: 시스템 관리자 권한 확인 (시스템 관리자는 모든 그룹의 ADMIN 권한 자동 상속)
+  useEffect(() => {
+    const checkSystemAdmin = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsSystemAdmin(false);
+          setCheckingPermissions(false);
+          return;
+        }
+
+        const { data, error } = await supabase.rpc('is_system_admin', {
+          user_id_param: user.id,
+        });
+
+        if (!error && data === true) {
+          setIsSystemAdmin(true);
+        }
+      } catch (err) {
+        console.error('시스템 관리자 권한 확인 중 오류:', err);
+      } finally {
+        setCheckingPermissions(false);
+      }
+    };
+
+    checkSystemAdmin();
+  }, []);
+
+  // ✅ SECURITY: 권한 계층 로직 - 시스템 관리자가 그룹 멤버라면 자동으로 GROUP_ADMIN 권한 부여
+  const isAdmin = userRole === 'ADMIN' || isOwner || (isSystemAdmin && currentGroupId !== null);
 
   // 아바타 파일 선택
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

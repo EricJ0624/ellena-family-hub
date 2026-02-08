@@ -32,17 +32,42 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showGroupSettings, setShowGroupSettings] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
+  const [checkingPermissions, setCheckingPermissions] = useState<boolean>(true);
 
-  const isAdmin = userRole === 'ADMIN' || isOwner;
-
-  // 현재 사용자 ID 가져오기
+  // ✅ SECURITY: 시스템 관리자 권한 확인 (시스템 관리자는 모든 그룹의 ADMIN 권한 자동 상속)
   useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id || null);
+    const checkSystemAdmin = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsSystemAdmin(false);
+          setCheckingPermissions(false);
+          setCurrentUserId(null);
+          return;
+        }
+
+        setCurrentUserId(user.id);
+
+        const { data, error } = await supabase.rpc('is_system_admin', {
+          user_id_param: user.id,
+        });
+
+        if (!error && data === true) {
+          setIsSystemAdmin(true);
+        }
+      } catch (err) {
+        console.error('시스템 관리자 권한 확인 중 오류:', err);
+      } finally {
+        setCheckingPermissions(false);
+      }
     };
-    getCurrentUser();
+
+    checkSystemAdmin();
   }, []);
+
+  // ✅ SECURITY: 권한 계층 로직 - 시스템 관리자가 그룹 멤버라면 자동으로 GROUP_ADMIN 권한 부여
+  const isAdmin = userRole === 'ADMIN' || isOwner || (isSystemAdmin && currentGroupId !== null);
 
   // 멤버 목록 로드
   const loadMembers = useCallback(async () => {

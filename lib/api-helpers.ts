@@ -750,3 +750,128 @@ export async function resizeImageBuffer(
       return pipeline.jpeg({ quality, progressive: true }).toBuffer();
   }
 }
+
+// ============================================
+// 🔒 SECURITY: 데이터 격리 및 권한 검증 헬퍼 함수
+// ============================================
+
+/**
+ * ✅ SECURITY: 그룹 소속 및 권한 검증 (통합 헬퍼)
+ * 
+ * 모든 API에서 사용하여 IDOR 공격 방지 및 데이터 격리 보장
+ * 
+ * @param userId - 검증할 사용자 ID
+ * @param groupId - 검증할 그룹 ID
+ * @param requiredRole - 필요한 최소 권한 ('ADMIN' | 'MEMBER' | null)
+ * @returns PermissionResult 또는 NextResponse (권한 없음)
+ * 
+ * @example
+ * ```typescript
+ * const permissionCheck = await verifyGroupAccess(user.id, groupId, 'ADMIN');
+ * if (permissionCheck instanceof NextResponse) {
+ *   return permissionCheck; // 권한 없음 응답 반환
+ * }
+ * // permissionCheck는 PermissionResult 타입
+ * ```
+ */
+export async function verifyGroupAccess(
+  userId: string,
+  groupId: string,
+  requiredRole: 'ADMIN' | 'MEMBER' | null = null
+): Promise<import('@/lib/permissions').PermissionResult | NextResponse> {
+  const { checkPermission } = await import('@/lib/permissions');
+  
+  const permissionResult = await checkPermission(
+    userId,
+    groupId,
+    requiredRole,
+    userId // IDOR 방지
+  );
+
+  if (!permissionResult.success) {
+    return NextResponse.json(
+      { 
+        error: '그룹 접근 권한이 없습니다.',
+        details: permissionResult.error,
+        groupId,
+      },
+      { status: 403 }
+    );
+  }
+
+  return permissionResult;
+}
+
+/**
+ * ✅ SECURITY: 리소스가 특정 그룹에 속하는지 검증
+ * 
+ * IDOR 공격 방지: 사용자가 접근 권한이 없는 그룹의 리소스에 접근하는 것을 차단
+ * 
+ * @param tableName - 테이블 이름 (예: 'memory_vault', 'family_tasks')
+ * @param resourceId - 리소스 ID
+ * @param expectedGroupId - 예상되는 그룹 ID
+ * @returns boolean - 검증 성공 여부
+ */
+export async function verifyResourceBelongsToGroup(
+  tableName: string,
+  resourceId: string,
+  expectedGroupId: string
+): Promise<boolean> {
+  try {
+    const supabase = getSupabaseServerClient();
+    
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('group_id')
+      .eq('id', resourceId)
+      .single();
+
+    if (error || !data) {
+      console.error(`리소스 그룹 검증 실패 (${tableName}):`, error);
+      return false;
+    }
+
+    return data.group_id === expectedGroupId;
+  } catch (error) {
+    console.error('리소스 그룹 검증 중 오류:', error);
+    return false;
+  }
+}
+
+/**
+ * ✅ SECURITY: 시스템 관리자가 특정 그룹에 임시 접근 권한이 있는지 확인
+ * 
+ * 시스템 관리자는 그룹 멤버가 아니더라도 승인된 접근 요청이 있으면 임시로 접근 가능
+ * 
+ * @param adminId - 시스템 관리자 ID
+ * @param groupId - 그룹 ID
+ * @returns boolean - 접근 가능 여부
+ */
+export async function canSystemAdminAccessGroup(
+  adminId: string,
+  groupId: string
+): Promise<boolean> {
+  try {
+    const supabase = getSupabaseServerClient();
+    
+    // 1. 시스템 관리자 여부 확인
+    const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+      user_id_param: adminId,
+    });
+    
+    if (!isAdmin) {
+      return false;
+    }
+    
+    // 2. 접근 권한 확인
+    const { data: canAccess } = await supabase.rpc('can_access_group_dashboard', {
+      group_id_param: groupId,
+      admin_id_param: adminId,
+    });
+    
+    return canAccess === true;
+  } catch (error) {
+    console.error('시스템 관리자 접근 권한 확인 중 오류:', error);
+    return false;
+  }
+}

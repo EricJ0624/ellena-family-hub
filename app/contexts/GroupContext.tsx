@@ -198,18 +198,42 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     }
   }, [userId, currentGroupId]);
 
-  // 그룹 ID 변경 핸들러
+  // 그룹 ID 변경 핸들러 (✅ SECURITY: 그룹 전환 시 완전한 상태 초기화)
   const setCurrentGroupId = useCallback((groupId: string | null) => {
-    setCurrentGroupIdState(groupId);
-    // localStorage에 저장 (브라우저 환경에서만)
-    if (typeof window !== 'undefined') {
-      if (groupId) {
-        localStorage.setItem('currentGroupId', groupId);
-      } else {
-        localStorage.removeItem('currentGroupId');
+    // 이전 그룹 ID 저장
+    const previousGroupId = currentGroupId;
+    
+    // 그룹이 변경되는 경우에만 상태 초기화
+    if (previousGroupId !== groupId) {
+      // 1. 현재 그룹 정보 초기화
+      setCurrentGroup(null);
+      setUserRole(null);
+      setIsOwner(false);
+      
+      // 2. 새 그룹 ID 설정
+      setCurrentGroupIdState(groupId);
+      
+      // 3. localStorage 동기화 (브라우저 환경에서만)
+      if (typeof window !== 'undefined') {
+        if (groupId) {
+          localStorage.setItem('currentGroupId', groupId);
+          console.log('✅ 그룹 전환:', { from: previousGroupId, to: groupId });
+        } else {
+          localStorage.removeItem('currentGroupId');
+          console.log('✅ 그룹 해제');
+        }
+      }
+      
+      // 4. 개발 환경에서 디버깅 정보 출력
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 그룹 전환 완료:', {
+          previousGroupId,
+          newGroupId: groupId,
+          timestamp: new Date().toISOString(),
+        });
       }
     }
-  }, []);
+  }, [currentGroupId]);
 
   // 초기 로드 및 그룹 ID 복원
   useEffect(() => {

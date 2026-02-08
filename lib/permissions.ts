@@ -215,7 +215,9 @@ export async function isGroupMember(
 }
 
 /**
- * 그룹 ADMIN 권한 확인
+ * 그룹 ADMIN 권한 확인 (시스템 관리자 권한 포함)
+ * 
+ * ✅ SECURITY: 시스템 관리자가 그룹에 소속되면 자동으로 GROUP_ADMIN 권한 상속
  * 
  * @param userId - 확인할 사용자 ID
  * @param groupId - 그룹 ID
@@ -225,8 +227,54 @@ export async function isGroupAdmin(
   userId: string,
   groupId: string
 ): Promise<boolean> {
+  // 1. 기본 권한 확인
   const result = await checkPermission(userId, groupId, 'ADMIN');
-  return result.success && result.role === 'ADMIN';
+  if (result.success && result.role === 'ADMIN') {
+    return true;
+  }
+  
+  // 2. 시스템 관리자 확인 - 시스템 관리자는 모든 그룹의 ADMIN 권한 자동 상속
+  try {
+    const supabase = getSupabaseServerClient();
+    
+    // 시스템 관리자 여부 확인
+    const { data: isSystemAdminResult } = await supabase.rpc('is_system_admin', {
+      user_id_param: userId,
+    });
+    
+    if (isSystemAdminResult === true) {
+      // 시스템 관리자가 해당 그룹의 멤버이거나 소유자인지 확인
+      const { data: group } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', groupId)
+        .single();
+        
+      if (!group) return false;
+      
+      // 소유자 확인
+      if (group.owner_id === userId) {
+        return true;
+      }
+      
+      // 멤버십 확인
+      const { data: membership } = await supabase
+        .from('memberships')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('group_id', groupId)
+        .single();
+      
+      // 시스템 관리자가 그룹의 멤버라면 자동으로 GROUP_ADMIN 권한 부여
+      if (membership) {
+        return true;
+      }
+    }
+  } catch (error) {
+    console.error('시스템 관리자 권한 확인 중 오류:', error);
+  }
+  
+  return false;
 }
 
 /**
