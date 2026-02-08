@@ -385,16 +385,99 @@ export default function LoginPage() {
         position: 'relative',
         zIndex: 1
       }}>
-        {/* 로고 영역 */}
+        {/* 로고 영역 - 고급 우드 프레임 액자 */}
         <div style={{ 
           marginBottom: '40px',
           animation: 'fadeInDown 0.6s ease-out'
         }}>
-          <div style={{ 
-            fontSize: '100px', 
-            marginBottom: '20px',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
-          }}>🏠</div>
+          {/* 우드 프레임 액자 */}
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: '380px',
+            margin: '0 auto 30px',
+            aspectRatio: '4/3',
+            // 다크 브라운 우드 프레임 (외곽)
+            background: 'linear-gradient(145deg, #3e2723 0%, #4e342e 25%, #3e2723 50%, #5d4037 75%, #3e2723 100%)',
+            borderRadius: '8px',
+            padding: '20px',
+            // 입체감을 위한 그림자 (액자가 떠있는 느낌)
+            boxShadow: `
+              0 2px 4px rgba(0,0,0,0.1),
+              0 8px 16px rgba(0,0,0,0.15),
+              0 16px 32px rgba(0,0,0,0.2),
+              inset 0 2px 4px rgba(255,255,255,0.1),
+              inset 0 -2px 4px rgba(0,0,0,0.3)
+            `,
+            // 나무 결 느낌의 미세한 텍스처
+            backgroundImage: `
+              linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.05) 50%, transparent 100%),
+              repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, transparent 2px, transparent 4px, rgba(0,0,0,0.03) 6px)
+            `,
+            backgroundSize: '100% 100%, 8px 100%'
+          }}>
+            {/* 내부 매트(Matte) - 크림색 여백 */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              background: '#f5f5dc',
+              borderRadius: '4px',
+              padding: '12px',
+              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.15), inset 0 -1px 4px rgba(0,0,0,0.1)'
+            }}>
+              {/* 가족 사진 영역 */}
+              <div style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '2px',
+                overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                backgroundColor: '#e8e8e8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <img 
+                  src="/family-illustration.png" 
+                  alt="Family" 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                  onError={(e) => {
+                    // 이미지 로드 실패 시 폴백
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).parentElement!.innerHTML = `
+                      <div style="
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 80px;
+                        color: #94a3b8;
+                      ">🏠</div>
+                    `;
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* 액자 하이라이트 (입체감 강조) */}
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '8px',
+              right: '8px',
+              height: '4px',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)',
+              borderRadius: '4px',
+              pointerEvents: 'none'
+            }} />
+          </div>
           
           <h1 style={{ 
             fontSize: '42px', 
@@ -407,7 +490,7 @@ export default function LoginPage() {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
           }}>
-            Family Hub
+            Ellena Family Hub
           </h1>
           
           <p style={{ 
@@ -418,7 +501,7 @@ export default function LoginPage() {
             margin: 0,
             letterSpacing: '0.3px'
           }}>
-            우리 가족만의<br />추억의 공간입니다
+            우리 가족만의<br />안전한 공간
           </p>
         </div>
 
