@@ -492,6 +492,14 @@ export default function GroupAdminPage() {
   }, [currentGroupId]);
 
   // ???�궰????????�쎌?????�≪뮆占?
+  // 공지사항은 페이지 로드 시 항상 로드 (배너 표시용)
+  useEffect(() => {
+    if (!isAuthorized || !currentGroupId) return;
+    loadAnnouncements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthorized, currentGroupId]);
+
+  // 탭별 데이터 로드
   useEffect(() => {
     if (!isAuthorized || !currentGroupId) return;
 
@@ -500,8 +508,6 @@ export default function GroupAdminPage() {
     } else if (activeTab === 'content') {
       loadPhotos();
       loadLocations();
-    } else if (activeTab === 'announcements') {
-      loadAnnouncements();
     } else if (activeTab === 'support-tickets') {
       loadSupportTickets();
     } else if (activeTab === 'dashboard-access-requests') {
