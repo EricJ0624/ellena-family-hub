@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * 멤버 역할 변경 API
@@ -113,8 +114,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // RPC 함수를 사용하여 역할 변경 (SQL 함수에서 모든 권한 검증 수행)
-    const { data, error: rpcError } = await supabase.rpc('update_member_role', {
+    // ✅ SECURITY: 사용자 JWT 토큰으로 Supabase 클라이언트 생성
+    // SQL 함수 내부에서 auth.uid()가 올바르게 작동하도록 사용자 컨텍스트 전달
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '') || '';
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Supabase 설정이 누락되었습니다.' },
+        { status: 500 }
+      );
+    }
+    
+    // 사용자 JWT 토큰을 포함한 Supabase 클라이언트 생성
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    // RPC 함수를 사용하여 역할 변경 (SQL 함수에서 auth.uid()가 올바르게 작동)
+    const { data, error: rpcError } = await supabaseWithAuth.rpc('update_member_role', {
       target_user_id: targetUserId,
       target_group_id: groupId,
       new_role: newRole,
