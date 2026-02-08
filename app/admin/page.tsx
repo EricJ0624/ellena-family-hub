@@ -168,13 +168,18 @@ export default function AdminPage() {
   // 그룹 관리 관련 상태
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupDetailInfo | null>(null);
-  const [groupAdminTab, setGroupAdminTab] = useState<'dashboard' | 'members' | 'settings' | 'content'>('dashboard');
+  const [groupAdminTab, setGroupAdminTab] = useState<'dashboard' | 'members' | 'settings' | 'content' | 'announcements' | 'support-tickets' | 'dashboard-access-requests'>('dashboard');
   const [groupStats, setGroupStats] = useState<GroupStats | null>(null);
   const [groupMembers, setGroupMembers] = useState<MemberInfo[]>([]);
   const [groupPhotos, setGroupPhotos] = useState<PhotoInfo[]>([]);
   const [groupLocations, setGroupLocations] = useState<LocationInfo[]>([]);
   const [showMemberManagement, setShowMemberManagement] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
+  
+  // 그룹별 공지사항, 문의, 접근 요청 상태
+  const [groupAnnouncements, setGroupAnnouncements] = useState<AnnouncementInfo[]>([]);
+  const [groupSupportTickets, setGroupSupportTickets] = useState<SupportTicketInfo[]>([]);
+  const [groupAccessRequests, setGroupAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
 
   // 공지사항, 문의, 접근 요청 관련 상태
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
@@ -807,6 +812,117 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroupId]);
 
+  // 그룹별 공지사항 로드
+  const loadGroupAnnouncements = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch(`/api/group-admin/announcements?group_id=${groupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '그룹 공지사항 로드 실패');
+      }
+
+      setGroupAnnouncements(result.data || []);
+    } catch (err: any) {
+      console.error('그룹 공지사항 로드 오류:', err);
+      setError(err.message || '그룹 공지사항을 불러오는데 실패했습니다.');
+      setGroupAnnouncements([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
+  // 그룹별 문의 로드
+  const loadGroupSupportTickets = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch(`/api/group-admin/support-tickets?group_id=${groupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '그룹 문의 로드 실패');
+      }
+
+      setGroupSupportTickets(result.data || []);
+    } catch (err: any) {
+      console.error('그룹 문의 로드 오류:', err);
+      setError(err.message || '그룹 문의를 불러오는데 실패했습니다.');
+      setGroupSupportTickets([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
+  // 그룹별 접근 요청 로드
+  const loadGroupAccessRequests = useCallback(async (groupId: string) => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch(`/api/group-admin/dashboard-access-requests?group_id=${groupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '그룹 접근 요청 로드 실패');
+      }
+
+      setGroupAccessRequests(result.data || []);
+    } catch (err: any) {
+      console.error('그룹 접근 요청 로드 오류:', err);
+      setError(err.message || '그룹 접근 요청을 불러오는데 실패했습니다.');
+      setGroupAccessRequests([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, []);
+
   // 탭 변경 시 데이터 로드
   useEffect(() => {
     if (!isAuthorized) return;
@@ -827,6 +943,12 @@ export default function AdminPage() {
       } else if (groupAdminTab === 'content') {
         loadGroupPhotos(selectedGroupId);
         loadGroupLocations(selectedGroupId);
+      } else if (groupAdminTab === 'announcements') {
+        loadGroupAnnouncements(selectedGroupId);
+      } else if (groupAdminTab === 'support-tickets') {
+        loadGroupSupportTickets(selectedGroupId);
+      } else if (groupAdminTab === 'dashboard-access-requests') {
+        loadGroupAccessRequests(selectedGroupId);
       }
     } else if (activeTab === 'announcements') {
       loadAnnouncements();
@@ -2195,6 +2317,57 @@ export default function AdminPage() {
                         <ImageIcon style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
                         콘텐츠 관리
                       </button>
+                      <button
+                        onClick={() => setGroupAdminTab('announcements')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'announcements' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'announcements' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'announcements' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <Megaphone style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        공지사항
+                      </button>
+                      <button
+                        onClick={() => setGroupAdminTab('support-tickets')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'support-tickets' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'support-tickets' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'support-tickets' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <MessageSquare style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        문의하기
+                      </button>
+                      <button
+                        onClick={() => setGroupAdminTab('dashboard-access-requests')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'dashboard-access-requests' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'dashboard-access-requests' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'dashboard-access-requests' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <KeyRound style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        접근 요청
+                      </button>
                     </div>
 
                     {/* 대시보드 서브 탭 */}
@@ -2714,6 +2887,335 @@ export default function AdminPage() {
                         )}
                       </div>
                     )}
+
+                    {/* 공지사항 서브 탭 */}
+                    {groupAdminTab === 'announcements' && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          공지사항 ({groupAnnouncements.length}개)
+                        </h2>
+
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                        }}>
+                          {groupAnnouncements.map((announcement) => (
+                            <motion.div
+                              key={announcement.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              style={{
+                                padding: '20px',
+                                backgroundColor: '#f8fafc',
+                                borderRadius: '12px',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'space-between',
+                                marginBottom: '12px',
+                              }}>
+                                <div style={{ flex: 1 }}>
+                                  <h3 style={{
+                                    fontSize: '18px',
+                                    fontWeight: '600',
+                                    color: '#1e293b',
+                                    margin: 0,
+                                  }}>
+                                    {announcement.title}
+                                  </h3>
+                                  <p style={{
+                                    fontSize: '14px',
+                                    color: '#64748b',
+                                    margin: '8px 0 0 0',
+                                    whiteSpace: 'pre-wrap',
+                                  }}>
+                                    {announcement.content}
+                                  </p>
+                                </div>
+                              </div>
+                              <div style={{
+                                fontSize: '12px',
+                                color: '#94a3b8',
+                                marginTop: '12px',
+                              }}>
+                                작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                              </div>
+                            </motion.div>
+                          ))}
+                          {groupAnnouncements.length === 0 && (
+                            <div style={{
+                              padding: '48px',
+                              textAlign: 'center',
+                              color: '#94a3b8',
+                            }}>
+                              <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                              <p>공지사항이 없습니다.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 문의하기 서브 탭 */}
+                    {groupAdminTab === 'support-tickets' && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          문의 목록 ({groupSupportTickets.length}개)
+                        </h2>
+
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                        }}>
+                          {groupSupportTickets.map((ticket) => (
+                            <motion.div
+                              key={ticket.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              style={{
+                                padding: '20px',
+                                backgroundColor: ticket.status === 'pending' ? '#fef3c7' : '#f8fafc',
+                                borderRadius: '12px',
+                                border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
+                              }}
+                            >
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'space-between',
+                                marginBottom: '12px',
+                              }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    marginBottom: '8px',
+                                  }}>
+                                    <h3 style={{
+                                      fontSize: '18px',
+                                      fontWeight: '600',
+                                      color: '#1e293b',
+                                      margin: 0,
+                                    }}>
+                                      {ticket.title}
+                                    </h3>
+                                    <span style={{
+                                      padding: '4px 12px',
+                                      backgroundColor: ticket.status === 'pending' ? '#fbbf24' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
+                                      color: 'white',
+                                      borderRadius: '12px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                    }}>
+                                      {ticket.status === "pending" ? "대기중" : ticket.status === "answered" ? "답변완료" : "종료"}
+                                    </span>
+                                  </div>
+                                  <p style={{
+                                    fontSize: '14px',
+                                    color: '#64748b',
+                                    margin: '0 0 12px 0',
+                                    whiteSpace: 'pre-wrap',
+                                  }}>
+                                    {ticket.content}
+                                  </p>
+                                  {ticket.answer && (
+                                    <div style={{
+                                      marginTop: '16px',
+                                      padding: '16px',
+                                      backgroundColor: '#f0f9ff',
+                                      borderRadius: '8px',
+                                      border: '1px solid #bae6fd',
+                                    }}>
+                                      <div style={{
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        color: '#0369a1',
+                                        marginBottom: '8px',
+                                      }}>
+                                        답변:
+                                      </div>
+                                      <p style={{
+                                        fontSize: '14px',
+                                        color: '#1e293b',
+                                        margin: 0,
+                                        whiteSpace: 'pre-wrap',
+                                      }}>
+                                        {ticket.answer}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={{
+                                fontSize: '12px',
+                                color: '#94a3b8',
+                                marginTop: '12px',
+                              }}>
+                                작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                                {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                              </div>
+                            </motion.div>
+                          ))}
+                          {groupSupportTickets.length === 0 && (
+                            <div style={{
+                              padding: '48px',
+                              textAlign: 'center',
+                              color: '#94a3b8',
+                            }}>
+                              <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                              <p>문의가 없습니다.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 접근 요청 서브 탭 */}
+                    {groupAdminTab === 'dashboard-access-requests' && (
+                      <div>
+                        <h2 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '24px',
+                        }}>
+                          대시보드 접근 요청 ({groupAccessRequests.length}개)
+                        </h2>
+
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                        }}>
+                          {groupAccessRequests.map((request) => (
+                            <motion.div
+                              key={request.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              style={{
+                                padding: '20px',
+                                backgroundColor: request.status === 'pending' ? '#fef3c7' : request.status === 'approved' ? '#d1fae5' : '#f8fafc',
+                                borderRadius: '12px',
+                                border: `1px solid ${request.status === 'pending' ? '#fde68a' : request.status === 'approved' ? '#a7f3d0' : '#e2e8f0'}`,
+                              }}
+                            >
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                justifyContent: 'space-between',
+                                marginBottom: '12px',
+                              }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    marginBottom: '8px',
+                                  }}>
+                                    <span style={{
+                                      padding: '4px 12px',
+                                      backgroundColor: request.status === 'pending' ? '#fbbf24' : request.status === 'approved' ? '#10b981' : request.status === 'rejected' ? '#ef4444' : '#94a3b8',
+                                      color: 'white',
+                                      borderRadius: '12px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                    }}>
+                                      {request.status === 'pending'
+                                        ? "대기중"
+                                        : request.status === 'approved'
+                                          ? "승인됨"
+                                          : request.status === 'rejected'
+                                            ? "거절됨"
+                                            : request.status === 'expired'
+                                              ? "만료됨"
+                                              : "취소됨"}
+                                    </span>
+                                  </div>
+                                  <p style={{
+                                    fontSize: '14px',
+                                    color: '#64748b',
+                                    margin: '0 0 12px 0',
+                                    whiteSpace: 'pre-wrap',
+                                  }}>
+                                    {request.reason}
+                                  </p>
+                                  {request.status === 'approved' && request.expires_at && (
+                                    <div style={{
+                                      fontSize: '14px',
+                                      color: '#059669',
+                                      marginBottom: '8px',
+                                    }}>
+                                      만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
+                                    </div>
+                                  )}
+                                  {request.status === 'rejected' && request.rejection_reason && (
+                                    <div style={{
+                                      marginTop: '12px',
+                                      padding: '12px',
+                                      backgroundColor: '#fee2e2',
+                                      borderRadius: '8px',
+                                      border: '1px solid #fecaca',
+                                    }}>
+                                      <div style={{
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        color: '#991b1b',
+                                        marginBottom: '4px',
+                                      }}>
+                                        거절 사유:
+                                      </div>
+                                      <p style={{
+                                        fontSize: '14px',
+                                        color: '#1e293b',
+                                        margin: 0,
+                                      }}>
+                                        {request.rejection_reason}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={{
+                                fontSize: '12px',
+                                color: '#94a3b8',
+                                marginTop: '12px',
+                              }}>
+                                요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
+                                {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                                {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                              </div>
+                            </motion.div>
+                          ))}
+                          {groupAccessRequests.length === 0 && (
+                            <div style={{
+                              padding: '48px',
+                              textAlign: 'center',
+                              color: '#94a3b8',
+                            }}>
+                              <KeyRound style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                              <p>접근 요청이 없습니다.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                   </>
                 )}
 
