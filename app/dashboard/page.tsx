@@ -3038,7 +3038,17 @@ export default function FamilyHub() {
             subscriptionsRef.current.photos = photosSubscription;
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             console.warn('⚠️ Realtime 사진 subscription 연결 실패:', status);
-            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
+            // 🔄 재연결 시도 (5초 후)
+            setTimeout(() => {
+              if (subscriptionsRef.current.photos) {
+                supabase.removeChannel(subscriptionsRef.current.photos);
+                subscriptionsRef.current.photos = null;
+              }
+              if (currentGroupId && userId) {
+                console.log('🔄 사진 subscription 재연결 시도...');
+                setupPhotosSubscription();
+              }
+            }, 5000);
           }
         });
     };
