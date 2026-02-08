@@ -1884,6 +1884,10 @@ export default function FamilyHub() {
               console.warn('Realtime 메시지 DELETE: deletedId가 없음:', payload);
               return;
             }
+            // Multi-tenant 아키텍처: group_id 필터링 (group_id가 있는 경우에만 검증)
+            if (deletedMessage?.group_id != null && deletedMessage.group_id !== currentGroupId) {
+              return;
+            }
             const deletedIdStr = String(deletedId).trim();
             console.log('Realtime 메시지 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
             setState(prev => {
