@@ -144,6 +144,7 @@ export default function FamilyHub() {
   let currentGroupId: string | null = null;
   let groupUserRole: string | null = null;
   let groupIsOwner = false;
+  let groupLoading = false;
   let groupList: any[] = [];
   let groupMemberships: any[] = [];
   let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
@@ -154,6 +155,7 @@ export default function FamilyHub() {
     currentGroupId = groupContext.currentGroupId;
     groupUserRole = groupContext.userRole;
     groupIsOwner = groupContext.isOwner;
+    groupLoading = groupContext.loading;
     groupList = groupContext.groups || [];
     groupMemberships = groupContext.memberships || [];
     setCurrentGroupId = groupContext.setCurrentGroupId;
@@ -513,6 +515,8 @@ export default function FamilyHub() {
       // 1. 모든 상태 초기화 (이전 그룹의 데이터 제거)
       setState({
         familyName: INITIAL_STATE.familyName,
+        location: INITIAL_STATE.location,
+        familyLocations: [],
         todos: [],
         events: [],
         album: [], // 🔒 가장 중요: 이전 그룹의 사진 완전 제거
