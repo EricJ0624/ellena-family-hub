@@ -2246,6 +2246,9 @@ export default function AdminPage() {
                     <div style={{
                       display: 'flex',
                       gap: '8px',
+                      rowGap: '8px',
+                      flexWrap: 'wrap',
+                      overflowX: 'auto',
                       borderBottom: '2px solid #e2e8f0',
                       marginBottom: '24px',
                     }}>
