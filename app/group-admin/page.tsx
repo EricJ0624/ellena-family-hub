@@ -27,6 +27,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
+import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 
 // ???�쎌??????�쎌???�썲???�쏅�??
 export const dynamic = 'force-dynamic';
@@ -874,11 +875,39 @@ export default function GroupAdminPage() {
             {/* ?????�쎌??????*/}
             {activeTab === 'dashboard' && stats && (
               <div>
+                {/* 공지사항 배너 */}
+                <AnnouncementBanner 
+                  announcements={announcements}
+                  onMarkAsRead={async (announcementId) => {
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session?.access_token) return;
+
+                      await fetch('/api/group-admin/announcements', {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${session.access_token}`,
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          announcement_id: announcementId,
+                          group_id: currentGroupId,
+                        }),
+                      });
+
+                      loadAnnouncements();
+                    } catch (error) {
+                      console.error('읽음 처리 오류:', error);
+                    }
+                  }}
+                />
+
                 <h2 style={{
                   fontSize: '20px',
                   fontWeight: '600',
                   color: '#1e293b',
                   marginBottom: '24px',
+                  marginTop: announcements.filter(a => !a.is_read).length > 0 ? '24px' : '0',
                 }}>
                   그룹 통계
                 </h2>
