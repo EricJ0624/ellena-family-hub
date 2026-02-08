@@ -66,8 +66,9 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
     checkSystemAdmin();
   }, []);
 
-  // ✅ SECURITY: 권한 계층 로직 - 시스템 관리자가 그룹 멤버라면 자동으로 GROUP_ADMIN 권한 부여
-  const isAdmin = userRole === 'ADMIN' || isOwner || (isSystemAdmin && currentGroupId !== null);
+  // ✅ SECURITY: 권한 계층 로직 - 그룹 내 실제 역할에만 의존
+  // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
+  const isAdmin = userRole === 'ADMIN' || isOwner;
 
   // 멤버 목록 로드
   const loadMembers = useCallback(async () => {
