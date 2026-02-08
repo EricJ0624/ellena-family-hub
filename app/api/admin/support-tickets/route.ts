@@ -28,13 +28,7 @@ export async function GET(request: NextRequest) {
     // 문의 목록 조회 (최신순)
     const { data: tickets, error } = await supabase
       .from('support_tickets')
-      .select(`
-        *,
-        groups:group_id (
-          id,
-          name
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -45,9 +39,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const groupIds = Array.from(
+      new Set((tickets || []).map((ticket: any) => ticket.group_id).filter(Boolean))
+    );
+
+    let groupMap = new Map<string, { id: string; name: string }>();
+    if (groupIds.length > 0) {
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('id, name')
+        .in('id', groupIds);
+
+      if (groupsError) {
+        console.warn('그룹 정보 조회 오류:', groupsError);
+      } else {
+        (groups || []).forEach((group: any) => {
+          groupMap.set(group.id, { id: group.id, name: group.name });
+        });
+      }
+    }
+
+    const ticketsWithGroups = (tickets || []).map((ticket: any) => ({
+      ...ticket,
+      groups: ticket.group_id ? groupMap.get(ticket.group_id) || null : null,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: tickets || [],
+      data: ticketsWithGroups,
     });
   } catch (error: any) {
     console.error('문의 조회 오류:', error);

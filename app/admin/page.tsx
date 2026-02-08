@@ -180,7 +180,7 @@ export default function AdminPage() {
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null | undefined>(undefined);
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementContent, setAnnouncementContent] = useState('');
@@ -2905,7 +2905,7 @@ export default function AdminPage() {
                     zIndex: 1000,
                   }}
                   onClick={() => {
-                    setEditingAnnouncement(null);
+                    setEditingAnnouncement(undefined);
                     setAnnouncementTitle('');
                     setAnnouncementContent('');
                   }}
@@ -2966,7 +2966,7 @@ export default function AdminPage() {
                       }}>
                         <button
                           onClick={() => {
-                            setEditingAnnouncement(null);
+                            setEditingAnnouncement(undefined);
                             setAnnouncementTitle('');
                             setAnnouncementContent('');
                           }}
@@ -3045,7 +3045,7 @@ export default function AdminPage() {
                                 alert('공지가 작성되었습니다.');
                               }
 
-                              setEditingAnnouncement(null);
+                              setEditingAnnouncement(undefined);
                               setAnnouncementTitle('');
                               setAnnouncementContent('');
                               loadAnnouncements();
