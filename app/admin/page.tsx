@@ -813,7 +813,7 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroupId]);
 
-  // 그룹별 공지사항 로드
+  // 그룹별 공지사항 로드 (시스템 관리자는 전체 공지사항 조회)
   const loadGroupAnnouncements = useCallback(async (groupId: string) => {
     try {
       setLoadingData(true);
@@ -826,7 +826,8 @@ export default function AdminPage() {
         return;
       }
 
-      const response = await fetch(`/api/group-admin/announcements?group_id=${groupId}`, {
+      // 시스템 관리자는 /api/admin/announcements 사용 (전체 공지사항)
+      const response = await fetch('/api/admin/announcements', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -837,20 +838,20 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '그룹 공지사항 로드 실패');
+        throw new Error(result.error || '공지사항 로드 실패');
       }
 
       setGroupAnnouncements(result.data || []);
     } catch (err: any) {
-      console.error('그룹 공지사항 로드 오류:', err);
-      setError(err.message || '그룹 공지사항을 불러오는데 실패했습니다.');
+      console.error('공지사항 로드 오류:', err);
+      setError(err.message || '공지사항을 불러오는데 실패했습니다.');
       setGroupAnnouncements([]);
     } finally {
       setLoadingData(false);
     }
   }, []);
 
-  // 그룹별 문의 로드
+  // 그룹별 문의 로드 (시스템 관리자는 전체 문의 조회)
   const loadGroupSupportTickets = useCallback(async (groupId: string) => {
     try {
       setLoadingData(true);
@@ -863,7 +864,8 @@ export default function AdminPage() {
         return;
       }
 
-      const response = await fetch(`/api/group-admin/support-tickets?group_id=${groupId}`, {
+      // 시스템 관리자는 /api/admin/support-tickets 사용 (전체 문의)
+      const response = await fetch('/api/admin/support-tickets', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -874,13 +876,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '그룹 문의 로드 실패');
+        throw new Error(result.error || '문의 로드 실패');
       }
 
       setGroupSupportTickets(result.data || []);
     } catch (err: any) {
-      console.error('그룹 문의 로드 오류:', err);
-      setError(err.message || '그룹 문의를 불러오는데 실패했습니다.');
+      console.error('문의 로드 오류:', err);
+      setError(err.message || '문의를 불러오는데 실패했습니다.');
       setGroupSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -900,6 +902,7 @@ export default function AdminPage() {
         return;
       }
 
+      // 그룹 관리자 API 사용 (해당 그룹의 모든 접근 요청)
       const response = await fetch(`/api/group-admin/dashboard-access-requests?group_id=${groupId}`, {
         method: 'GET',
         headers: {
@@ -911,13 +914,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '그룹 접근 요청 로드 실패');
+        throw new Error(result.error || '접근 요청 로드 실패');
       }
 
       setGroupAccessRequests(result.data || []);
     } catch (err: any) {
-      console.error('그룹 접근 요청 로드 오류:', err);
-      setError(err.message || '그룹 접근 요청을 불러오는데 실패했습니다.');
+      console.error('접근 요청 로드 오류:', err);
+      setError(err.message || '접근 요청을 불러오는데 실패했습니다.');
       setGroupAccessRequests([]);
     } finally {
       setLoadingData(false);
