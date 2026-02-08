@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, RefreshCw, Palette, X } from 'lucide-react';
+import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
 import Image from 'next/image';
+import { PhotoFrameSVG, FRAME_CONFIGS, type FrameStyle } from './PhotoFrames';
 
 // 상수 분리 - 텍스트 내용 관리
 const CONSTANTS = {
@@ -56,10 +57,18 @@ interface TitleStyle {
 interface DailyPhotoFrameProps {
   photos: Array<{ id: number; data: string }>;
   onShuffle?: () => void;
+  frameStyle?: FrameStyle;
+  onFrameChange?: (style: FrameStyle) => void;
 }
 
-const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) => {
+const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ 
+  photos, 
+  onShuffle,
+  frameStyle = 'baroque',
+  onFrameChange 
+}) => {
   const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
+  const [showFrameSelector, setShowFrameSelector] = useState(false);
   
   // 오늘의 사진 인덱스 계산 (메모이제이션)
   const photoIndex = useMemo(() => {
@@ -93,27 +102,35 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
         margin: '0 auto',
       }}
     >
-      {/* 우드 프레임 액자 */}
+      {/* SVG 프레임 컨테이너 */}
       <div
         style={{
           position: 'relative',
           width: '100%',
           aspectRatio: '4/3',
-          borderRadius: '8px',
           overflow: 'visible',
-          background: 'linear-gradient(145deg, #3e2723 0%, #4e342e 25%, #3e2723 50%, #5d4037 75%, #3e2723 100%)',
-          padding: '20px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.15), 0 16px 32px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.3)',
-          backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.05) 50%, transparent 100%), repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, transparent 2px, transparent 4px, rgba(0,0,0,0.03) 6px)',
-          backgroundSize: '100% 100%, 8px 100%',
         }}
       >
+        {/* SVG 프레임 (배경) */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))',
+        }}>
+          <PhotoFrameSVG frameStyle={frameStyle} />
+        </div>
+
         {/* 내부 매트(Matte) - 크림색 여백 */}
         <div
           style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            right: '20px',
+            bottom: '20px',
             borderRadius: '4px',
             overflow: 'hidden',
             background: '#f5f5dc',
@@ -177,44 +194,163 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ photos, onShuffle }) 
           </div>
         </div>
         
-        {/* 액자 하이라이트 (입체감 강조) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-            pointerEvents: 'none',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.2) 100%)',
-          }}
-        />
-        
-        {/* 새로고침 버튼 (우측 하단) */}
-        {selectedPhoto && (
+        {/* 버튼 그룹 (우측 하단) */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10px',
+          right: '10px',
+          display: 'flex',
+          gap: '8px',
+          zIndex: 40,
+        }}>
+          {/* 프레임 선택 버튼 */}
           <motion.button
-            whileHover={{ scale: 1.15, rotate: 180 }}
+            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={handleShuffle}
-            className="absolute bottom-6 right-6 p-2.5 rounded-full shadow-xl transition-all z-40"
+            onClick={() => setShowFrameSelector(!showFrameSelector)}
             style={{
               width: '44px',
               height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+              background: showFrameSelector 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
               border: '3px solid #8B4513',
+              borderRadius: '50%',
               boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
               cursor: 'pointer',
             }}
-            aria-label="사진 새로고침"
-            title="사진 새로고침"
+            aria-label="프레임 변경"
+            title="프레임 변경"
           >
-            <RefreshCw className="w-5 h-5 text-[#8B4513]" strokeWidth={2.5} />
+            <FrameIcon 
+              className="w-5 h-5" 
+              style={{ color: showFrameSelector ? '#ffffff' : '#8B4513' }}
+              strokeWidth={2.5} 
+            />
           </motion.button>
-        )}
+
+          {/* 사진 새로고침 버튼 */}
+          {selectedPhoto && (
+            <motion.button
+              whileHover={{ scale: 1.15, rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleShuffle}
+              style={{
+                width: '44px',
+                height: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                border: '3px solid #8B4513',
+                borderRadius: '50%',
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
+                cursor: 'pointer',
+              }}
+              aria-label="사진 새로고침"
+              title="사진 새로고침"
+            >
+              <RefreshCw className="w-5 h-5 text-[#8B4513]" strokeWidth={2.5} />
+            </motion.button>
+          )}
+        </div>
+
+        {/* 프레임 선택 패널 */}
+        <AnimatePresence>
+          {showFrameSelector && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: 'absolute',
+                bottom: '70px',
+                right: '10px',
+                background: 'rgba(255, 255, 255, 0.98)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '12px',
+                padding: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                border: '2px solid rgba(139, 69, 19, 0.3)',
+                zIndex: 50,
+                minWidth: '200px',
+              }}
+            >
+              <div style={{ 
+                fontSize: '12px', 
+                fontWeight: '600', 
+                color: '#5d2a1f',
+                marginBottom: '8px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid rgba(139, 69, 19, 0.2)',
+              }}>
+                프레임 스타일 선택
+              </div>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+              }}>
+                {FRAME_CONFIGS.map((frame) => (
+                  <motion.button
+                    key={frame.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (onFrameChange) {
+                        onFrameChange(frame.id);
+                      }
+                      setShowFrameSelector(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      background: frameStyle === frame.id 
+                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                        : 'transparent',
+                      color: frameStyle === frame.id ? '#ffffff' : '#333',
+                      border: frameStyle === frame.id 
+                        ? '2px solid #667eea'
+                        : '2px solid rgba(139, 69, 19, 0.2)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: frameStyle === frame.id ? '600' : '500',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '4px',
+                        background: frame.color,
+                        border: '1px solid rgba(0,0,0,0.2)',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <div style={{ fontWeight: '600' }}>{frame.name}</div>
+                      <div style={{ 
+                        fontSize: '10px', 
+                        opacity: 0.8,
+                        marginTop: '2px',
+                      }}>
+                        {frame.description}
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -557,6 +693,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
   onTitleStyleChange
 }) => {
   const [showEditor, setShowEditor] = useState(false);
+  const [frameStyle, setFrameStyle] = useState<FrameStyle>('baroque');
   const [internalTitleStyle, setInternalTitleStyle] = useState<TitleStyle>({
     content: title || CONSTANTS.DEFAULT_TITLE,
     color: '#9333ea',
@@ -661,7 +798,11 @@ const TitlePage: React.FC<TitlePageProps> = ({
 
         {/* 오늘의 무작위 사진 액자 */}
         {photos && photos.length > 0 && (
-          <DailyPhotoFrame photos={photos} />
+          <DailyPhotoFrame 
+            photos={photos} 
+            frameStyle={frameStyle}
+            onFrameChange={setFrameStyle}
+          />
         )}
 
         {/* 타이틀 텍스트 */}
