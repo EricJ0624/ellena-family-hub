@@ -851,7 +851,7 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 그룹별 문의 로드 (시스템 관리자는 전체 문의 조회)
+  // 그룹별 문의 로드 (해당 그룹의 모든 문의 조회)
   const loadGroupSupportTickets = useCallback(async (groupId: string) => {
     try {
       setLoadingData(true);
@@ -864,8 +864,8 @@ export default function AdminPage() {
         return;
       }
 
-      // 시스템 관리자는 /api/admin/support-tickets 사용 (전체 문의)
-      const response = await fetch('/api/admin/support-tickets', {
+      // 그룹별 문의 조회 (그룹 관리자 API 사용)
+      const response = await fetch(`/api/group-admin/support-tickets?group_id=${groupId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
