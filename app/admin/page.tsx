@@ -192,6 +192,9 @@ export default function AdminPage() {
   const [announcementContent, setAnnouncementContent] = useState('');
   const [ticketAnswer, setTicketAnswer] = useState('');
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
+  const [showNewAccessRequestModal, setShowNewAccessRequestModal] = useState(false);
+  const [newAccessRequestGroupId, setNewAccessRequestGroupId] = useState('');
+  const [newAccessRequestReason, setNewAccessRequestReason] = useState('');
 
   const formatBytes = (bytes: number | null | undefined): string => {
     if (!bytes || bytes <= 0) return '0GB';
@@ -4389,14 +4392,44 @@ export default function AdminPage() {
             {/* 접근 요청 관리 탭 */}
             {activeTab === 'dashboard-access-requests' && (
               <div>
-                <h2 style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#1e293b',
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   marginBottom: '24px',
                 }}>
-                  대시보드 접근 요청 관리 ({accessRequests.filter(r => r.status === 'pending').length}개 대기중)
-                </h2>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    margin: 0,
+                  }}>
+                    대시보드 접근 요청 관리 ({accessRequests.filter(r => r.status === 'pending').length}개 대기중)
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowNewAccessRequestModal(true);
+                      setNewAccessRequestGroupId('');
+                      setNewAccessRequestReason('');
+                    }}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#9333ea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Plus style={{ width: '18px', height: '18px' }} />
+                    새 접근 요청
+                  </button>
+                </div>
 
                 <div style={{
                   display: 'flex',
@@ -4689,6 +4722,196 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+
+                {/* 새 접근 요청 모달 */}
+                {showNewAccessRequestModal && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                  }}
+                  onClick={() => {
+                    setShowNewAccessRequestModal(false);
+                    setNewAccessRequestGroupId('');
+                    setNewAccessRequestReason('');
+                  }}
+                  >
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '24px',
+                      width: '90%',
+                      maxWidth: '600px',
+                      maxHeight: '80vh',
+                      overflow: 'auto',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 style={{
+                        fontSize: '20px',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        marginBottom: '16px',
+                      }}>
+                        새 접근 요청
+                      </h3>
+                      <div style={{
+                        marginBottom: '16px',
+                      }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '8px',
+                        }}>
+                          그룹 선택
+                        </label>
+                        <select
+                          value={newAccessRequestGroupId}
+                          onChange={(e) => setNewAccessRequestGroupId(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <option value="">그룹을 선택하세요</option>
+                          {groups.map((group) => (
+                            <option key={group.id} value={group.id}>
+                              {group.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{
+                        marginBottom: '16px',
+                      }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '8px',
+                        }}>
+                          요청 이유
+                        </label>
+                        <textarea
+                          value={newAccessRequestReason}
+                          onChange={(e) => setNewAccessRequestReason(e.target.value)}
+                          placeholder="접근이 필요한 이유를 입력하세요..."
+                          style={{
+                            width: '100%',
+                            minHeight: '150px',
+                            padding: '12px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontFamily: 'inherit',
+                            resize: 'vertical',
+                          }}
+                        />
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        justifyContent: 'flex-end',
+                      }}>
+                        <button
+                          onClick={() => {
+                            setShowNewAccessRequestModal(false);
+                            setNewAccessRequestGroupId('');
+                            setNewAccessRequestReason('');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#f1f5f9',
+                            color: '#64748b',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!newAccessRequestGroupId) {
+                              alert('그룹을 선택해주세요.');
+                              return;
+                            }
+                            if (!newAccessRequestReason.trim()) {
+                              alert('요청 이유를 입력해주세요.');
+                              return;
+                            }
+
+                            try {
+                              setLoadingData(true);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert('인증 정보를 가져올 수 없습니다.');
+                                return;
+                              }
+
+                              const response = await fetch('/api/admin/dashboard-access-requests', {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${session.access_token}`,
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  group_id: newAccessRequestGroupId,
+                                  reason: newAccessRequestReason.trim(),
+                                }),
+                              });
+
+                              const result = await response.json();
+
+                              if (!response.ok) {
+                                throw new Error(result.error || '접근 요청 작성에 실패했습니다.');
+                              }
+
+                              alert('접근 요청이 작성되었습니다.');
+                              setShowNewAccessRequestModal(false);
+                              setNewAccessRequestGroupId('');
+                              setNewAccessRequestReason('');
+                              loadAccessRequests();
+                            } catch (error: any) {
+                              console.error('접근 요청 작성 오류:', error);
+                              alert(error.message || '접근 요청 작성 중 오류가 발생했습니다.');
+                            } finally {
+                              setLoadingData(false);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#9333ea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          요청하기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
