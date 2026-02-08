@@ -121,10 +121,19 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       // 현재 그룹이 없거나 삭제된 경우, 첫 번째 그룹으로 설정
       if (!preferredGroupId || !groupsData?.find(g => g.id === preferredGroupId)) {
         if (groupsData && groupsData.length > 0) {
-          setCurrentGroupIdState(groupsData[0].id);
+          const firstGroupId = groupsData[0].id;
+          setCurrentGroupIdState(firstGroupId);
+          // localStorage에도 저장
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('currentGroupId', firstGroupId);
+          }
         }
       } else if (preferredGroupId !== currentGroupId) {
         setCurrentGroupIdState(preferredGroupId);
+        // localStorage에도 저장
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('currentGroupId', preferredGroupId);
+        }
       }
     } catch (err: any) {
       console.error('그룹 목록 로드 실패:', err);
@@ -192,11 +201,13 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
   // 그룹 ID 변경 핸들러
   const setCurrentGroupId = useCallback((groupId: string | null) => {
     setCurrentGroupIdState(groupId);
-    // localStorage에 저장 (선택사항)
-    if (groupId) {
-      localStorage.setItem('currentGroupId', groupId);
-    } else {
-      localStorage.removeItem('currentGroupId');
+    // localStorage에 저장 (브라우저 환경에서만)
+    if (typeof window !== 'undefined') {
+      if (groupId) {
+        localStorage.setItem('currentGroupId', groupId);
+      } else {
+        localStorage.removeItem('currentGroupId');
+      }
     }
   }, []);
 

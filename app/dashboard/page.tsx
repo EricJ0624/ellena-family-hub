@@ -7295,6 +7295,9 @@ export default function FamilyHub() {
   const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
   const showAdminButton = isSystemAdmin || isGroupAdmin;
   const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
+  
+  // 그룹 정보 로딩 중인지 확인
+  const isGroupLoading = groupLoading && !currentGroupId;
 
   return (
     <div className="app-container">
@@ -7558,8 +7561,19 @@ export default function FamilyHub() {
       <div className="main-content">
         {/* Header */}
         <header className="app-header">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '0 16px' }}>
-            {showAdminButton && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '0 16px', minHeight: '32px' }}>
+            {isGroupLoading ? (
+              // 그룹 정보 로딩 중일 때 스켈레톤 UI
+              <div
+                style={{
+                  width: '80px',
+                  height: '28px',
+                  backgroundColor: '#e2e8f0',
+                  borderRadius: '8px',
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                }}
+              />
+            ) : showAdminButton ? (
               <button
                 onClick={() => router.push(adminPagePath)}
                 style={{
@@ -7574,13 +7588,22 @@ export default function FamilyHub() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  transition: 'all 0.2s ease',
                 }}
                 aria-label={isSystemAdmin ? "시스템 관리자 페이지" : "그룹 관리자 페이지"}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 <span style={{ fontSize: '14px' }}>⚙️</span>
                 관리자
               </button>
-            )}
+            ) : null}
           </div>
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
