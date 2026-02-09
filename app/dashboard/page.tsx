@@ -16,7 +16,6 @@ import {
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import { useGroup } from '@/app/contexts/GroupContext';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
-import GroupSelector from '@/app/components/GroupSelector';
 import { Shield } from 'lucide-react';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
@@ -7859,16 +7858,6 @@ ${groupInfo}
               </button>
             ) : null}
           </div>
-
-          {/* 그룹 선택기 */}
-          <div style={{
-            maxWidth: '400px',
-            margin: '0 auto 24px',
-            padding: '0 16px',
-          }}>
-            <GroupSelector />
-          </div>
-
           <TitlePage 
             title={state.familyName || 'Ellena Family Hub'}
             photos={state.album || []}

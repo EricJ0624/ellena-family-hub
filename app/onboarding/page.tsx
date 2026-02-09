@@ -16,11 +16,19 @@ interface GroupPreview {
   invite_code: string;
 }
 
+interface UserGroup {
+  id: string;
+  name: string;
+  invite_code: string;
+  is_owner: boolean;
+  role: 'ADMIN' | 'MEMBER';
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [fromAdmin, setFromAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'select' | 'create' | 'join'>('select');
+  const [step, setStep] = useState<'select' | 'create' | 'join' | 'choose-group'>('select');
   const [nickname, setNickname] = useState('');
   
   // 그룹 생성 관련 상태
@@ -34,6 +42,10 @@ export default function OnboardingPage() {
   const [verifying, setVerifying] = useState(false);
   const [joining, setJoining] = useState(false);
   const [groupPreview, setGroupPreview] = useState<GroupPreview | null>(null);
+  
+  // 사용자 그룹 목록 (로그인 시 선택용)
+  const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   
   // 에러 및 성공 메시지
   const [error, setError] = useState<string | null>(null);
@@ -59,25 +71,67 @@ export default function OnboardingPage() {
           user_id_param: user.id,
         });
 
-        // 이미 그룹이 있는지 확인
+        // 사용자의 모든 그룹 조회
         const { data: memberships } = await supabase
           .from('memberships')
-          .select('group_id')
-          .eq('user_id', user.id)
-          .limit(1);
+          .select('group_id, role, groups(id, name, invite_code, owner_id)')
+          .eq('user_id', user.id);
 
         // 그룹 소유자 확인
         const { data: ownedGroups } = await supabase
           .from('groups')
-          .select('id')
-          .eq('owner_id', user.id)
-          .limit(1);
+          .select('id, name, invite_code, owner_id')
+          .eq('owner_id', user.id);
 
-        const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+        // 모든 그룹 합치기 (중복 제거)
+        const allGroups: UserGroup[] = [];
+        const groupIds = new Set<string>();
 
-        if (hasGroups && !fromAdminParam) {
-          // 그룹이 있으면 대시보드로 이동 (관리자 온보딩 예외)
-          router.push('/dashboard');
+        // 소유한 그룹 추가
+        if (ownedGroups) {
+          ownedGroups.forEach((group: any) => {
+            if (!groupIds.has(group.id)) {
+              groupIds.add(group.id);
+              allGroups.push({
+                id: group.id,
+                name: group.name,
+                invite_code: group.invite_code,
+                is_owner: true,
+                role: 'ADMIN',
+              });
+            }
+          });
+        }
+
+        // 멤버십 그룹 추가
+        if (memberships) {
+          memberships.forEach((membership: any) => {
+            const group = membership.groups;
+            if (group && !groupIds.has(group.id)) {
+              groupIds.add(group.id);
+              allGroups.push({
+                id: group.id,
+                name: group.name,
+                invite_code: group.invite_code,
+                is_owner: group.owner_id === user.id,
+                role: membership.role,
+              });
+            }
+          });
+        }
+
+        if (allGroups.length > 0 && !fromAdminParam) {
+          // 그룹이 1개면 자동 선택하고 대시보드로
+          if (allGroups.length === 1) {
+            localStorage.setItem('currentGroupId', allGroups[0].id);
+            router.push('/dashboard');
+            return;
+          }
+          
+          // 그룹이 여러 개면 선택 화면 표시
+          setUserGroups(allGroups);
+          setStep('choose-group');
+          setLoading(false);
           return;
         }
 
@@ -1119,10 +1173,155 @@ export default function OnboardingPage() {
               </div>
             </motion.div>
           )}
+
+          {/* 그룹 선택 단계 (로그인 시 여러 그룹이 있을 때) */}
+          {step === 'choose-group' && (
+            <motion.div
+              key="choose-group"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '24px',
+                padding: '40px',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
+                maxWidth: '500px',
+                width: '100%',
+              }}
+            >
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '32px',
+              }}>
+                <Users style={{
+                  width: '48px',
+                  height: '48px',
+                  color: '#667eea',
+                  margin: '0 auto 16px',
+                }} />
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  color: '#1e293b',
+                  marginBottom: '8px',
+                }}>
+                  그룹 선택
+                </h2>
+                <p style={{
+                  fontSize: '14px',
+                  color: '#64748b',
+                  margin: 0,
+                }}>
+                  접속할 그룹을 선택해주세요
+                </p>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginBottom: '24px',
+              }}>
+                {userGroups.map((group) => (
+                  <button
+                    key={group.id}
+                    onClick={() => setSelectedGroupId(group.id)}
+                    style={{
+                      padding: '16px',
+                      border: selectedGroupId === group.id ? '2px solid #667eea' : '2px solid #e2e8f0',
+                      borderRadius: '12px',
+                      backgroundColor: selectedGroupId === group.id ? '#f0f4ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedGroupId !== group.id) {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedGroupId !== group.id) {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <div>
+                        <div style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '4px',
+                        }}>
+                          {group.name}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#64748b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}>
+                          <span>{group.is_owner ? '소유자' : group.role === 'ADMIN' ? '관리자' : '멤버'}</span>
+                          <span>•</span>
+                          <span style={{ fontFamily: 'monospace' }}>{group.invite_code}</span>
+                        </div>
+                      </div>
+                      {selectedGroupId === group.id && (
+                        <CheckCircle style={{
+                          width: '24px',
+                          height: '24px',
+                          color: '#667eea',
+                        }} />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  if (selectedGroupId) {
+                    localStorage.setItem('currentGroupId', selectedGroupId);
+                    router.push('/dashboard');
+                  }
+                }}
+                disabled={!selectedGroupId}
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  backgroundColor: selectedGroupId ? '#667eea' : '#94a3b8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: selectedGroupId ? 'pointer' : 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: selectedGroupId ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                선택한 그룹으로 이동
+                <ArrowRight style={{ width: '18px', height: '18px' }} />
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* 진행 표시 */}
-        {step !== 'select' && (
+        {step !== 'select' && step !== 'choose-group' && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
