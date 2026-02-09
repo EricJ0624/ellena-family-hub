@@ -1311,11 +1311,97 @@ export default function OnboardingPage() {
                   gap: '8px',
                   boxShadow: selectedGroupId ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
                   transition: 'all 0.3s ease',
+                  marginBottom: '16px',
                 }}
               >
                 선택한 그룹으로 이동
                 <ArrowRight style={{ width: '18px', height: '18px' }} />
               </button>
+
+              {/* 구분선 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '16px',
+              }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
+                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
+                  또는
+                </span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
+              </div>
+
+              {/* 새 그룹 추가 옵션 */}
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+              }}>
+                <button
+                  onClick={() => {
+                    setStep('create');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 20px',
+                    backgroundColor: 'white',
+                    color: '#667eea',
+                    border: '2px solid #667eea',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f0f4ff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }}
+                >
+                  <Home style={{ width: '16px', height: '16px' }} />
+                  새 그룹 생성
+                </button>
+                <button
+                  onClick={() => {
+                    setStep('join');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 20px',
+                    backgroundColor: 'white',
+                    color: '#10b981',
+                    border: '2px solid #10b981',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f0fdf4';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white';
+                  }}
+                >
+                  <Users style={{ width: '16px', height: '16px' }} />
+                  초대 코드로 가입
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
