@@ -88,15 +88,15 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
             flex: 1,
             overflow: 'hidden',
             position: 'relative',
-            marginLeft: '5px',
-            marginRight: '5px',
+            marginLeft: '3px',
+            marginRight: '3px',
           }}>
             <div
               style={{
                 display: 'flex',
                 gap: '48px',
                 width: 'max-content',
-                animation: isPaused ? 'none' : 'marquee 20s linear infinite',
+                animation: isPaused ? 'none' : 'marquee 15s linear infinite',
                 willChange: 'transform',
               }}
               onMouseEnter={() => setIsPaused(true)}
