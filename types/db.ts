@@ -935,21 +935,21 @@ export interface Database {
           id: string
           group_id: string | null
           sender_id: string
-          message: string
+          message_text: string
           created_at: string
         }
         Insert: {
           id?: string
           group_id: string | null
           sender_id: string
-          message: string
+          message_text: string
           created_at?: string
         }
         Update: {
           id?: string
           group_id?: string | null
           sender_id?: string
-          message?: string
+          message_text?: string
           created_at?: string
         }
         Relationships: [

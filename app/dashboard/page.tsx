@@ -1870,6 +1870,10 @@ export default function FamilyHub() {
               console.error('Realtime 메시지: 잘못된 payload:', payload);
               return;
             }
+            // 그룹별: 현재 그룹 메시지만 state에 반영
+            if (newMessage.group_id != null && newMessage.group_id !== currentGroupId) {
+              return;
+            }
             
             // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
             const messageText = newMessage.message_text || '';
@@ -1963,6 +1967,10 @@ export default function FamilyHub() {
           { event: 'UPDATE', schema: 'public', table: 'family_messages' },
           (payload: any) => {
             const updatedMessage = payload.new;
+            // 그룹별: 현재 그룹 메시지만 state에 반영
+            if (updatedMessage.group_id != null && updatedMessage.group_id !== currentGroupId) {
+              return;
+            }
             
             // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
             const messageText = updatedMessage.message_text || '';
@@ -2127,14 +2135,16 @@ export default function FamilyHub() {
         // localStoragePhotos를 상위 스코프에 저장 (에러 처리에서 사용)
         const savedLocalStoragePhotos = localStoragePhotos;
 
-        // 메시지 로드
-        const { data: messagesData, error: messagesError } = await supabase
-          .from('family_messages')
-          .select('*')
-          .order('created_at', { ascending: true })
-          .limit(50);
+        // 메시지 로드 (그룹별: currentGroupId 있을 때만 해당 그룹 메시지만 로드)
+        if (currentGroupId) {
+          const { data: messagesData, error: messagesError } = await supabase
+            .from('family_messages')
+            .select('*')
+            .eq('group_id', currentGroupId)
+            .order('created_at', { ascending: true })
+            .limit(50);
 
-        if (!messagesError && messagesData) {
+          if (!messagesError && messagesData) {
           const formattedMessages: Message[] = messagesData.map((msg: any) => {
             const createdAt = new Date(msg.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
@@ -2181,6 +2191,7 @@ export default function FamilyHub() {
             }));
           }
           // Supabase에 메시지가 없고 localStorage 데이터도 없으면 초기 상태 유지
+          }
         }
 
         // 할일 로드 (Multi-tenant: group_id 필터링)
@@ -3819,16 +3830,20 @@ export default function FamilyHub() {
 
       switch (action) {
         case 'ADD_MESSAGE': {
+          // 그룹별 채팅: currentGroupId 필수
+          if (!currentGroupId) {
+            console.warn('ADD_MESSAGE: currentGroupId가 없어 메시지를 저장하지 않습니다.');
+            break;
+          }
           // 메시지 암호화
           const encryptedText = CryptoService.encrypt(payload.text, currentKey);
           
           const { error } = await supabase
             .from('family_messages')
             .insert({
+              group_id: currentGroupId,
               sender_id: userId,
               message_text: encryptedText // 암호화된 메시지 저장
-              // sender_name 컬럼이 없을 수 있으므로 제거
-              // created_at은 자동 생성되므로 제거
             });
           
           if (error) {
