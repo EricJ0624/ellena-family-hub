@@ -3,7 +3,7 @@
 // 동적 렌더링 강제 (GroupProvider 의존성 때문에)
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -152,7 +152,7 @@ export default function FamilyHub() {
   let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
   let refreshGroups: (() => Promise<void>) | null = null;
   let refreshMemberships: (() => Promise<void>) | null = null;
-  let currentGroup: { family_name?: string | null } | null = null;
+  let currentGroup: { family_name?: string | null; title_style?: unknown } | null = null;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
@@ -827,6 +827,32 @@ export default function FamilyHub() {
       });
     }
   }, [state.titleStyle, state.familyName]);
+
+  // 그룹에 저장된 title_style이 있으면 우선 사용, 없으면 state/기본값
+  const effectiveTitleStyle = useMemo((): Partial<TitleStyle> => {
+    const raw = currentGroup?.title_style;
+    if (raw && typeof raw === 'object' && 'color' in (raw as object)) {
+      const o = raw as Record<string, unknown>;
+      const content = (typeof o.content === 'string' ? o.content : null)
+        ?? currentGroup?.family_name?.trim()
+        ?? state.familyName
+        ?? titleStyle?.content
+        ?? 'Ellena Family Hub';
+      return {
+        content,
+        color: typeof o.color === 'string' ? o.color : '#9333ea',
+        fontSize: typeof o.fontSize === 'number' ? o.fontSize : 48,
+        fontWeight: typeof o.fontWeight === 'string' ? o.fontWeight : '700',
+        letterSpacing: typeof o.letterSpacing === 'number' ? o.letterSpacing : 0,
+        fontFamily: typeof o.fontFamily === 'string' ? o.fontFamily : 'Inter',
+      };
+    }
+    return {
+      ...INITIAL_STATE.titleStyle,
+      ...titleStyle,
+      content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || 'Ellena Family Hub',
+    };
+  }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
   useEffect(() => {
@@ -7800,7 +7826,7 @@ ${groupInfo}
           <TitlePage 
             title={currentGroup?.family_name?.trim() || state.familyName || 'Ellena Family Hub'}
             photos={state.album || []}
-            titleStyle={{ ...titleStyle, content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || 'Ellena Family Hub' }}
+            titleStyle={effectiveTitleStyle}
             onTitleStyleChange={(style) => {
               setTitleStyle(style);
               updateState('UPDATE_TITLE_STYLE', style);

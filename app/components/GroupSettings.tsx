@@ -11,19 +11,49 @@ import {
   Upload, 
   Image as ImageIcon,
   AlertCircle,
-  Loader2
+  Loader2,
+  Palette
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { DesignEditor, type TitleStyle } from '@/app/components/TitlePage';
 
 interface GroupSettingsProps {
   onClose: () => void;
+}
+
+const DEFAULT_TITLE_STYLE: TitleStyle = {
+  content: 'Ellena Family Hub',
+  color: '#9333ea',
+  fontSize: 48,
+  fontWeight: '700',
+  letterSpacing: 0,
+  fontFamily: 'Inter',
+};
+
+function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
+  if (raw && typeof raw === 'object' && 'content' in (raw as object)) {
+    const o = raw as Record<string, unknown>;
+    return {
+      content: typeof o.content === 'string' ? o.content : fallbackContent,
+      color: typeof o.color === 'string' ? o.color : DEFAULT_TITLE_STYLE.color,
+      fontSize: typeof o.fontSize === 'number' ? o.fontSize : DEFAULT_TITLE_STYLE.fontSize,
+      fontWeight: typeof o.fontWeight === 'string' ? o.fontWeight : DEFAULT_TITLE_STYLE.fontWeight,
+      letterSpacing: typeof o.letterSpacing === 'number' ? o.letterSpacing : DEFAULT_TITLE_STYLE.letterSpacing,
+      fontFamily: typeof o.fontFamily === 'string' ? o.fontFamily : DEFAULT_TITLE_STYLE.fontFamily,
+    };
+  }
+  return { ...DEFAULT_TITLE_STYLE, content: fallbackContent };
 }
 
 const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
   const [groupName, setGroupName] = useState(currentGroup?.name || '');
   const [familyName, setFamilyName] = useState(currentGroup?.family_name ?? '');
+  const [titleStyle, setTitleStyle] = useState<TitleStyle>(() =>
+    parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Ellena Family Hub')
+  );
+  const [showDesignEditor, setShowDesignEditor] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(currentGroup?.avatar_url || null);
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
@@ -69,10 +99,14 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
   const isAdmin = userRole === 'ADMIN' || isOwner;
 
-  // currentGroup 변경 시 familyName 동기화
+  // currentGroup 변경 시 familyName, titleStyle 동기화
   useEffect(() => {
     setFamilyName(currentGroup?.family_name ?? '');
-  }, [currentGroup?.id, currentGroup?.family_name]);
+    setTitleStyle(parseTitleStyle(
+      currentGroup?.title_style,
+      currentGroup?.family_name ?? 'Ellena Family Hub'
+    ));
+  }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style]);
 
   // 아바타 파일 선택
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,6 +234,8 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       if (avatarUrl && avatarUrl !== currentGroup?.avatar_url) {
         updates.avatar_url = avatarUrl;
       }
+
+      updates.title_style = titleStyle;
 
       const { error: updateError } = await supabase
         .from('groups')
@@ -392,6 +428,48 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   />
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
                     멤버 대시보드 상단 타이틀에 표시됩니다. 그룹 관리자/소유자만 수정 가능합니다.
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th
+                  style={{
+                    padding: '12px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    width: '160px',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
+                  타이틀 스타일
+                </th>
+                <td style={{ padding: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowDesignEditor(true)}
+                    disabled={saving}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 16px',
+                      background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.7 : 1,
+                    }}
+                  >
+                    <Palette style={{ width: '18px', height: '18px' }} />
+                    스타일 편집
+                  </button>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                    색상, 글자체, 크기, 자간, 굵기, 문구를 편집한 뒤 저장하면 대시보드에 반영됩니다.
                   </p>
                 </td>
               </tr>
@@ -630,6 +708,42 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* 타이틀 스타일 편집 모달 */}
+      <AnimatePresence>
+        {showDesignEditor && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 50,
+              padding: '24px',
+            }}
+            onClick={() => setShowDesignEditor(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: '480px' }}
+            >
+              <DesignEditor
+                titleStyle={titleStyle}
+                onStyleChange={setTitleStyle}
+                onClose={() => setShowDesignEditor(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

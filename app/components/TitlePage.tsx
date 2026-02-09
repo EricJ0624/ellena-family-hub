@@ -840,5 +840,5 @@ const TitlePage: React.FC<TitlePageProps> = ({
 };
 
 export default TitlePage;
-export { CONSTANTS };
+export { CONSTANTS, DesignEditor };
 export type { TitleStyle };
