@@ -12,6 +12,7 @@
     "@aws-sdk/client-s3": "^3.958.0",
     "@aws-sdk/lib-storage": "^3.958.0",
     "@aws-sdk/s3-request-presigner": "^3.958.0",
+    "@imgly/background-removal": "^1.7.0",
     "@supabase/supabase-js": "^2.89.0",
     "cloudinary": "^2.8.0",
     "crypto-js": "^4.2.0",

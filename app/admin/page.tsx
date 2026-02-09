@@ -113,6 +113,7 @@ interface AnnouncementInfo {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  target?: 'ADMIN_ONLY' | 'ALL_MEMBERS';
 }
 
 interface SupportTicketInfo {
@@ -190,6 +191,7 @@ export default function AdminPage() {
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementContent, setAnnouncementContent] = useState('');
+  const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
   const [ticketAnswer, setTicketAnswer] = useState('');
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
   const [showNewAccessRequestModal, setShowNewAccessRequestModal] = useState(false);
@@ -3649,6 +3651,7 @@ export default function AdminPage() {
                       setEditingAnnouncement(null);
                       setAnnouncementTitle('');
                       setAnnouncementContent('');
+                      setAnnouncementTarget('ADMIN_ONLY');
                     }}
                     style={{
                       padding: '10px 20px',
@@ -3716,6 +3719,16 @@ export default function AdminPage() {
                                 비활성화됨
                               </span>
                             )}
+                            <span style={{
+                              padding: '4px 8px',
+                              backgroundColor: (announcement as any).target === 'ALL_MEMBERS' ? '#dbeafe' : '#f3f4f6',
+                              color: (announcement as any).target === 'ALL_MEMBERS' ? '#1e40af' : '#6b7280',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                            }}>
+                              {(announcement as any).target === 'ALL_MEMBERS' ? '모든 멤버' : '관리자만'}
+                            </span>
                           </div>
                           <p style={{
                             fontSize: '14px',
@@ -3731,6 +3744,26 @@ export default function AdminPage() {
                           gap: '8px',
                           marginLeft: '16px',
                         }}>
+                          <button
+                            onClick={() => {
+                              setEditingAnnouncement(announcement);
+                              setAnnouncementTitle(announcement.title);
+                              setAnnouncementContent(announcement.content);
+                              setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
+                            }}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: '#e0e7ff',
+                              color: '#3730a3',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            수정
+                          </button>
                           {announcement.is_active ? (
                             // 활성화된 공지: 비활성화 버튼
                             <button
@@ -3878,6 +3911,7 @@ export default function AdminPage() {
                     setEditingAnnouncement(undefined);
                     setAnnouncementTitle('');
                     setAnnouncementContent('');
+                    setAnnouncementTarget('ADMIN_ONLY');
                   }}
                   >
                     <div style={{
@@ -3930,6 +3964,90 @@ export default function AdminPage() {
                         }}
                       />
                       <div style={{
+                        marginBottom: '20px',
+                        padding: '16px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                      }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#334155',
+                          marginBottom: '12px',
+                        }}>
+                          공지 대상 선택
+                        </label>
+                        <div style={{
+                          display: 'flex',
+                          gap: '16px',
+                        }}>
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            padding: '8px 12px',
+                            backgroundColor: announcementTarget === 'ADMIN_ONLY' ? '#e0e7ff' : 'transparent',
+                            borderRadius: '6px',
+                            transition: 'background-color 0.2s',
+                          }}>
+                            <input
+                              type="radio"
+                              name="announcementTarget"
+                              value="ADMIN_ONLY"
+                              checked={announcementTarget === 'ADMIN_ONLY'}
+                              onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <span style={{
+                              fontSize: '14px',
+                              color: '#334155',
+                              fontWeight: announcementTarget === 'ADMIN_ONLY' ? '600' : '400',
+                            }}>
+                              관리자만
+                            </span>
+                          </label>
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            padding: '8px 12px',
+                            backgroundColor: announcementTarget === 'ALL_MEMBERS' ? '#e0e7ff' : 'transparent',
+                            borderRadius: '6px',
+                            transition: 'background-color 0.2s',
+                          }}>
+                            <input
+                              type="radio"
+                              name="announcementTarget"
+                              value="ALL_MEMBERS"
+                              checked={announcementTarget === 'ALL_MEMBERS'}
+                              onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <span style={{
+                              fontSize: '14px',
+                              color: '#334155',
+                              fontWeight: announcementTarget === 'ALL_MEMBERS' ? '600' : '400',
+                            }}>
+                              모든 멤버
+                            </span>
+                          </label>
+                        </div>
+                        <p style={{
+                          fontSize: '12px',
+                          color: '#64748b',
+                          marginTop: '8px',
+                          marginBottom: '0',
+                        }}>
+                          {announcementTarget === 'ADMIN_ONLY' 
+                            ? '그룹 관리자와 시스템 관리자만 볼 수 있습니다.' 
+                            : '모든 그룹 멤버가 볼 수 있습니다.'}
+                        </p>
+                      </div>
+                      <div style={{
                         display: 'flex',
                         gap: '8px',
                         justifyContent: 'flex-end',
@@ -3939,6 +4057,7 @@ export default function AdminPage() {
                             setEditingAnnouncement(undefined);
                             setAnnouncementTitle('');
                             setAnnouncementContent('');
+                            setAnnouncementTarget('ADMIN_ONLY');
                           }}
                           style={{
                             padding: '10px 20px',
@@ -3981,6 +4100,7 @@ export default function AdminPage() {
                                     title: announcementTitle,
                                     content: announcementContent,
                                     is_active: true,
+                                    target: announcementTarget,
                                   }),
                                 });
 
@@ -4003,6 +4123,7 @@ export default function AdminPage() {
                                     title: announcementTitle,
                                     content: announcementContent,
                                     is_active: true,
+                                    target: announcementTarget,
                                   }),
                                 });
 
@@ -4018,6 +4139,7 @@ export default function AdminPage() {
                               setEditingAnnouncement(undefined);
                               setAnnouncementTitle('');
                               setAnnouncementContent('');
+                              setAnnouncementTarget('ADMIN_ONLY');
                               loadAnnouncements();
                             } catch (error: any) {
                               console.error('공지 작성/수정 오류:', error);

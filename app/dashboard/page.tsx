@@ -5981,7 +5981,13 @@ ${groupInfo}
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      const response = await fetch(`/api/group-admin/announcements?group_id=${currentGroupId}`, {
+      // 관리자/소유자는 모든 공지, 일반 멤버는 ALL_MEMBERS 공지만
+      const isAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
+      const apiUrl = isAdmin 
+        ? `/api/group-admin/announcements?group_id=${currentGroupId}`
+        : `/api/announcements?group_id=${currentGroupId}`;
+
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -5996,7 +6002,7 @@ ${groupInfo}
     } catch (error) {
       console.error('공지사항 로드 오류:', error);
     }
-  }, [currentGroupId, userId]);
+  }, [currentGroupId, userId, groupUserRole, groupIsOwner]);
 
   // 공지사항 읽음 처리 함수
   const handleMarkAsRead = async (announcementId: string) => {
@@ -6006,7 +6012,11 @@ ${groupInfo}
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      await fetch('/api/group-admin/announcements', {
+      // 관리자/소유자는 관리자 API, 일반 멤버는 일반 API 사용
+      const isAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
+      const apiUrl = isAdmin ? '/api/group-admin/announcements' : '/api/announcements';
+
+      await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -6032,10 +6042,9 @@ ${groupInfo}
     setIsOwner(groupIsOwner);
   }, [currentGroupId, userId, groupUserRole, groupIsOwner]);
 
-  // 공지사항 로드 (관리자/소유자인 경우에만)
+  // 공지사항 로드 (모든 멤버)
   useEffect(() => {
     if (!currentGroupId || !userId) return;
-    if (groupUserRole !== 'ADMIN' && !groupIsOwner) return;
 
     loadAnnouncements();
   }, [currentGroupId, userId, groupUserRole, groupIsOwner, loadAnnouncements]);
@@ -7804,8 +7813,8 @@ ${groupInfo}
 
       {/* Main Content */}
       <div className="main-content">
-        {/* 공지사항 배너 (관리자/소유자만) */}
-        {(userRole === 'ADMIN' || isOwner) && announcements.length > 0 && (
+        {/* 공지사항 배너 (모든 멤버) */}
+        {announcements.length > 0 && (
           <AnnouncementBanner 
             announcements={announcements}
             onMarkAsRead={handleMarkAsRead}

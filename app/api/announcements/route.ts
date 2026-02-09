@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
 
 /**
- * 공지사항 목록 조회 (그룹 관리자용 - 읽음 상태 포함)
+ * 공지사항 목록 조회 (일반 멤버용 - ALL_MEMBERS 공지만)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -24,27 +23,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      'ADMIN',
-      user.id
-    );
+    const supabase = getSupabaseServerClient();
 
-    if (!permissionResult.success) {
+    // 사용자가 해당 그룹의 멤버인지 확인
+    const { data: membership, error: membershipError } = await supabase
+      .from('memberships')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('group_id', groupId)
+      .single();
+
+    if (membershipError || !membership) {
       return NextResponse.json(
-        { error: '그룹 관리자 권한이 필요합니다.' },
+        { error: '해당 그룹의 멤버가 아닙니다.' },
         { status: 403 }
       );
     }
 
-    const supabase = getSupabaseServerClient();
-
-    // 공지사항 목록 조회 (활성 공지만, ADMIN_ONLY와 ALL_MEMBERS 모두 포함)
+    // 공지사항 목록 조회 (활성 + ALL_MEMBERS 공지만)
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')
       .eq('is_active', true)
+      .eq('target', 'ALL_MEMBERS')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * 공지사항 읽음 처리 (그룹 관리자용)
+ * 공지사항 읽음 처리 (일반 멤버용)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -114,21 +115,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const permissionResult = await checkPermission(
-      user.id,
-      group_id,
-      'ADMIN',
-      user.id
-    );
+    const supabase = getSupabaseServerClient();
 
-    if (!permissionResult.success) {
+    // 사용자가 해당 그룹의 멤버인지 확인
+    const { data: membership, error: membershipError } = await supabase
+      .from('memberships')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('group_id', group_id)
+      .single();
+
+    if (membershipError || !membership) {
       return NextResponse.json(
-        { error: '그룹 관리자 권한이 필요합니다.' },
+        { error: '해당 그룹의 멤버가 아닙니다.' },
         { status: 403 }
       );
     }
-
-    const supabase = getSupabaseServerClient();
 
     // 읽음 상태 추가 (중복 방지)
     const { error } = await supabase

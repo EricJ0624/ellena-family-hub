@@ -74,11 +74,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, is_active } = body;
+    const { title, content, is_active, target } = body;
 
     if (!title || !content) {
       return NextResponse.json(
         { error: '제목과 내용은 필수입니다.' },
+        { status: 400 }
+      );
+    }
+
+    // target 유효성 검사
+    if (target && !['ADMIN_ONLY', 'ALL_MEMBERS'].includes(target)) {
+      return NextResponse.json(
+        { error: '유효하지 않은 대상입니다.' },
         { status: 400 }
       );
     }
@@ -93,6 +101,7 @@ export async function POST(request: NextRequest) {
         content: content.trim(),
         created_by: user.id,
         is_active: is_active !== false, // 기본값: true
+        target: target || 'ADMIN_ONLY', // 기본값: ADMIN_ONLY
       })
       .select()
       .single();
@@ -140,7 +149,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, is_active } = body;
+    const { id, title, content, is_active, target } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -156,16 +165,30 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // target 유효성 검사
+    if (target && !['ADMIN_ONLY', 'ALL_MEMBERS'].includes(target)) {
+      return NextResponse.json(
+        { error: '유효하지 않은 대상입니다.' },
+        { status: 400 }
+      );
+    }
+
     const supabase = getSupabaseServerClient();
 
     // 공지사항 수정
+    const updateData: any = {
+      title: title.trim(),
+      content: content.trim(),
+      is_active: is_active !== false,
+    };
+
+    if (target) {
+      updateData.target = target;
+    }
+
     const { data: announcement, error } = await supabase
       .from('announcements')
-      .update({
-        title: title.trim(),
-        content: content.trim(),
-        is_active: is_active !== false,
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
