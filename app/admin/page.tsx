@@ -65,7 +65,6 @@ interface GroupDetailInfo {
   owner_id: string;
   owner_email: string | null;
   created_at: string;
-  avatar_url: string | null;
   invite_code: string | null;
 }
 
@@ -541,7 +540,7 @@ export default function AdminPage() {
       // 그룹 정보 조회
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
-        .select('id, name, owner_id, created_at, avatar_url, invite_code')
+        .select('id, name, owner_id, created_at, invite_code')
         .eq('id', groupId)
         .single();
 
@@ -690,7 +689,7 @@ export default function AdminPage() {
       // 프로필 정보 조회
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, email, nickname, avatar_url')
+        .select('id, email, nickname')
         .in('id', memberIds);
 
       const membersWithProfiles: MemberInfo[] = (membershipsData || []).map(membership => {

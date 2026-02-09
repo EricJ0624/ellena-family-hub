@@ -14,7 +14,6 @@ interface MemberInfo {
   joined_at: string;
   email: string | null;
   nickname: string | null;
-  avatar_url: string | null;
 }
 
 interface MemberManagementProps {
@@ -101,7 +100,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       const userIds = membershipData.map(m => m.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, nickname, avatar_url')
+        .select('id, email, nickname')
         .in('id', userIds);
 
       if (profilesError) {
@@ -117,7 +116,6 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
           joined_at: membership.joined_at,
           email: profile?.email || null,
           nickname: profile?.nickname || null,
-          avatar_url: profile?.avatar_url || null,
         };
       });
 

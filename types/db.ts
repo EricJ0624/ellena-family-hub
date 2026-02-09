@@ -22,7 +22,6 @@ export interface Database {
           name: string
           invite_code: string
           owner_id: string
-          avatar_url: string | null
           created_at: string
           updated_at: string
           storage_quota_bytes: number
@@ -34,7 +33,6 @@ export interface Database {
           name: string
           invite_code: string
           owner_id: string
-          avatar_url?: string | null
           created_at?: string
           updated_at?: string
           storage_quota_bytes?: number
@@ -46,7 +44,6 @@ export interface Database {
           name?: string
           invite_code?: string
           owner_id?: string
-          avatar_url?: string | null
           created_at?: string
           updated_at?: string
           storage_quota_bytes?: number
@@ -420,7 +417,6 @@ export interface Database {
           id: string
           email: string | null
           nickname: string | null
-          avatar_url: string | null
           created_at: string | null
           updated_at: string | null
         }
@@ -428,7 +424,6 @@ export interface Database {
           id: string
           email?: string | null
           nickname?: string | null
-          avatar_url?: string | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -436,7 +431,6 @@ export interface Database {
           id?: string
           email?: string | null
           nickname?: string | null
-          avatar_url?: string | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -978,14 +972,12 @@ export interface Database {
           group_name: string
           invite_code: string
           owner_id: string
-          group_avatar_url: string | null
           group_created_at: string
           user_id: string
           role: 'ADMIN' | 'MEMBER'
           joined_at: string
           email: string | null
           nickname: string | null
-          user_avatar_url: string | null
         }
         Relationships: []
       }

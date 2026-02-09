@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -8,8 +8,6 @@ import {
   Copy, 
   CheckCircle, 
   RefreshCw, 
-  Upload, 
-  Image as ImageIcon,
   AlertCircle,
   Loader2,
   Palette
@@ -53,18 +51,14 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Ellena Family Hub')
   );
   const [showDesignEditor, setShowDesignEditor] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(currentGroup?.avatar_url || null);
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [checkingPermissions, setCheckingPermissions] = useState<boolean>(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ SECURITY: 시스템 관리자 권한 확인 (시스템 관리자는 모든 그룹의 ADMIN 권한 자동 상속)
   useEffect(() => {
@@ -106,93 +100,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     ));
   }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style]);
 
-  // 아바타 파일 선택
-  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // 파일 타입 검증
-    if (!file.type.startsWith('image/')) {
-      setError('이미지 파일만 업로드할 수 있습니다.');
-      return;
-    }
-
-    // 파일 크기 검증 (5MB 제한)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('파일 크기는 5MB 이하여야 합니다.');
-      return;
-    }
-
-    setAvatarFile(file);
-    setError(null);
-
-    // 미리보기 생성
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // 아바타 업로드
-  const handleAvatarUpload = async (): Promise<string | null> => {
-    if (!avatarFile || !currentGroupId) return null;
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      // Base64로 변환
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          // data:image/jpeg;base64, 부분 제거
-          const base64Data = result.split(',')[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(avatarFile);
-      });
-
-      // API로 업로드
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('인증 정보를 가져올 수 없습니다.');
-      }
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          originalData: base64,
-          fileName: avatarFile.name,
-          mimeType: avatarFile.type,
-          originalSize: avatarFile.size,
-          groupId: currentGroupId,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || '아바타 업로드에 실패했습니다.');
-      }
-
-      // Cloudinary URL 사용 (없으면 S3 URL)
-      return result.cloudinaryUrl || result.s3Url || null;
-    } catch (err: any) {
-      console.error('아바타 업로드 오류:', err);
-      setError(err.message || '아바타 업로드에 실패했습니다.');
-      return null;
-    } finally {
-      setUploading(false);
-    }
-  };
-
   // 그룹 설정 저장
   const handleSave = async () => {
     if (!currentGroupId || !isAdmin) return;
@@ -202,19 +109,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     setSuccess(null);
 
     try {
-      let avatarUrl = currentGroup?.avatar_url || null;
-
-      // 아바타 업로드 (새 파일이 있는 경우)
-      if (avatarFile) {
-        const uploadedUrl = await handleAvatarUpload();
-        if (uploadedUrl) {
-          avatarUrl = uploadedUrl;
-        } else {
-          // 업로드 실패 시 저장 중단하지 않고 계속 진행
-          console.warn('아바타 업로드 실패, 기존 아바타 유지');
-        }
-      }
-
       // 그룹 정보 업데이트
       const updates: any = {
         updated_at: new Date().toISOString(),
@@ -227,10 +121,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       // 문구·스타일 통합: title_style.content를 family_name과 동기화
       updates.family_name = titleStyle.content?.trim() || null;
       updates.title_style = titleStyle;
-
-      if (avatarUrl && avatarUrl !== currentGroup?.avatar_url) {
-        updates.avatar_url = avatarUrl;
-      }
 
       const { error: updateError } = await supabase
         .from('groups')
@@ -430,103 +320,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   </p>
                 </td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    backgroundColor: '#f8fafc',
-                  }}
-                >
-                  그룹 아바타
-                </th>
-                <td style={{ padding: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                    <div style={{ position: 'relative' }}>
-                      {avatarPreview ? (
-                        <img
-                          src={avatarPreview}
-                          alt="그룹 아바타"
-                          style={{
-                            width: '64px',
-                            height: '64px',
-                            borderRadius: '999px',
-                            objectFit: 'cover',
-                            border: '2px solid #e2e8f0',
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '64px',
-                            height: '64px',
-                            borderRadius: '999px',
-                            background: 'linear-gradient(135deg, #a78bfa, #f472b6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <ImageIcon style={{ width: '28px', height: '28px', color: 'white' }} />
-                        </div>
-                      )}
-                      {uploading && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            inset: 0,
-                            backgroundColor: 'rgba(0,0,0,0.5)',
-                            borderRadius: '999px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Loader2 style={{ width: '20px', height: '20px', color: 'white', animation: 'spin 1s linear infinite' }} />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarSelect}
-                        style={{ display: 'none' }}
-                        disabled={saving || uploading}
-                      />
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={saving || uploading}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#f1f5f9',
-                          color: '#334155',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <Upload style={{ width: '16px', height: '16px' }} />
-                        {avatarFile ? '파일 변경' : '이미지 선택'}
-                      </button>
-                      {avatarFile && (
-                        <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                          {avatarFile.name} ({(avatarFile.size / 1024).toFixed(1)}KB)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </td>
-              </tr>
               <tr>
                 <th
                   style={{
@@ -651,7 +444,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || uploading || !groupName.trim()}
+            disabled={saving || !groupName.trim()}
             className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {saving ? (

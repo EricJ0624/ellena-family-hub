@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     const userIds = allUsers.map(u => u.id);
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, email, nickname, avatar_url')
+      .select('id, email, nickname')
       .in('id', userIds);
 
     // 각 사용자의 그룹 수 계산 (병렬 처리)
@@ -124,7 +124,6 @@ export async function GET(request: NextRequest) {
             last_sign_in_at: authUser.last_sign_in_at || null,
             groups_count: totalGroups,
             is_active: authUser.banned_at === null && authUser.deleted_at === null,
-            avatar_url: profile?.avatar_url || null,
           };
         } catch (err: any) {
           console.error(`사용자 ${authUser.id} 그룹 수 계산 오류:`, err);
@@ -136,7 +135,6 @@ export async function GET(request: NextRequest) {
             last_sign_in_at: authUser.last_sign_in_at || null,
             groups_count: 0,
             is_active: authUser.banned_at === null && authUser.deleted_at === null,
-            avatar_url: profile?.avatar_url || null,
           };
         }
       })
