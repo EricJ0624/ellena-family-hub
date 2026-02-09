@@ -80,7 +80,7 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 
 // --- [TYPES] 타입 안정성 추가 ---
 type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; supabaseId?: string | number };
-type EventItem = { id: number; month: string; day: string; title: string; desc: string; created_by?: string; supabaseId?: string | number };
+type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number };
 type Message = { id: string | number; user: string; text: string; time: string };
 type Photo = { 
   id: number; 
@@ -177,6 +177,8 @@ export default function FamilyHub() {
   const [masterKey, setMasterKey] = useState('');
   const [showEventModal, setShowEventModal] = useState(false);
   const [eventForm, setEventForm] = useState({ title: '', month: '', day: '', desc: '' });
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
@@ -853,6 +855,43 @@ export default function FamilyHub() {
       content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || 'Ellena Family Hub',
     };
   }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle]);
+
+  // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
+  const calendarGrid = useMemo(() => {
+    const y = calendarMonth.getFullYear();
+    const m = calendarMonth.getMonth();
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const today = new Date();
+    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const eventCountByDate: Record<string, number> = {};
+    state.events.forEach(e => {
+      if (e.event_date) {
+        eventCountByDate[e.event_date] = (eventCountByDate[e.event_date] || 0) + 1;
+      }
+    });
+    const cells: Array<{ type: 'empty' } | { type: 'day'; date: Date; day: number; isCurrentMonth: true; isToday: boolean; eventCount: number }> = [];
+    for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' });
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(y, m, d);
+      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      cells.push({
+        type: 'day',
+        date,
+        day: d,
+        isCurrentMonth: true,
+        isToday: key === todayKey,
+        eventCount: eventCountByDate[key] || 0
+      });
+    }
+    return { cells, year: y, month: m };
+  }, [calendarMonth, state.events]);
+
+  const eventsOnSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    const key = selectedDate.getFullYear() + '-' + String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + String(selectedDate.getDate()).padStart(2, '0');
+    return state.events.filter(e => e.event_date === key);
+  }, [selectedDate, state.events]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
   useEffect(() => {
@@ -2272,7 +2311,10 @@ export default function FamilyHub() {
               month: month,
               day: day,
               title: decryptedTitle,
-              desc: decryptedDesc
+              desc: decryptedDesc,
+              event_date: eventDate.toISOString().slice(0, 10),
+              created_by: event.created_by,
+              created_at: event.created_at
             };
           });
           
@@ -2720,7 +2762,10 @@ export default function FamilyHub() {
                             month: month,
                             day: day,
                             title: decryptedTitle,
-                            desc: decryptedDesc
+                            desc: decryptedDesc,
+                            event_date: eventDateValue ? new Date(eventDateValue).toISOString().slice(0, 10) : '',
+                            created_by: newEvent.created_by,
+                            created_at: newEvent.created_at
                           }
                         : e
                     )
@@ -2740,6 +2785,7 @@ export default function FamilyHub() {
               }
               
               // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
+              const eventDateStr = eventDateValue ? new Date(eventDateValue).toISOString().slice(0, 10) : '';
               return {
                 ...prev,
                 events: [{
@@ -2747,7 +2793,10 @@ export default function FamilyHub() {
                   month: month,
                   day: day,
                   title: decryptedTitle,
-                  desc: decryptedDesc
+                  desc: decryptedDesc,
+                  event_date: eventDateStr,
+                  created_by: newEvent.created_by,
+                  created_at: newEvent.created_at
                 }, ...prev.events]
               };
             });
@@ -2817,6 +2866,7 @@ export default function FamilyHub() {
               decryptedDesc = updatedEventDescField;
             }
             
+            const updatedDateStr = eventDateValue ? new Date(eventDateValue).toISOString().slice(0, 10) : '';
             setState(prev => ({
               ...prev,
               events: prev.events.map(e =>
@@ -2826,7 +2876,10 @@ export default function FamilyHub() {
                       month: month,
                       day: day,
                       title: decryptedTitle,
-                      desc: decryptedDesc
+                      desc: decryptedDesc,
+                      event_date: updatedDateStr,
+                      created_by: updatedEvent.created_by,
+                      created_at: updatedEvent.created_at
                     }
                   : e
               )
@@ -8432,49 +8485,137 @@ ${groupInfo}
             </div>
           </section>
 
-          {/* Family Calendar Section */}
+          {/* Family Calendar Section - 월별 달력 + 날짜별 상세 */}
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">Family Calendar</h3>
-          </div>
-            <div className="section-body">
-              <div className="calendar-events">
-                {state.events.length > 0 ? (
-                  <div className="event-list">
-                    {state.events.map(e => (
-                      <div key={e.id} className="event-item">
-                        <div className="event-date">
-                          <span className="event-month">{e.month}</span>
-                          <span className="event-day">{e.day}</span>
-                  </div>
-                        <div className="event-details">
-                          <h4 className="event-title">{e.title}</h4>
-                          <p className="event-desc">{e.desc}</p>
-                  </div>
-                        {(e.created_by === userId || !e.created_by) && (
-                          <button 
-                            onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_EVENT', e.id)} 
-                            className="btn-delete-event"
-                          >
-                            <svg className="icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                  </button>
-                        )}
-                </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="empty-state">등록된 일정이 없습니다.</p>
-              )}
             </div>
-            <button 
-              onClick={openEventModal} 
+            <div className="section-body">
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+                    {calendarGrid.year}년 {calendarGrid.month + 1}월
+                  </h4>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
+                      style={{ padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}
+                    >
+                      이전 달
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
+                      style={{ padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}
+                    >
+                      다음 달
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', textAlign: 'center', fontSize: '13px' }}>
+                  {['일', '월', '화', '수', '목', '금', '토'].map(w => (
+                    <div key={w} style={{ padding: '8px 4px', fontWeight: '600', color: '#64748b' }}>{w}</div>
+                  ))}
+                  {calendarGrid.cells.map((cell, idx) => {
+                    if (cell.type === 'empty') {
+                      return <div key={'e-' + idx} style={{ padding: '8px 4px', minHeight: '40px' }} />;
+                    }
+                    const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
+                    return (
+                      <button
+                        key={'d-' + idx}
+                        type="button"
+                        onClick={() => setSelectedDate(cell.date)}
+                        style={{
+                          padding: '8px 4px',
+                          minHeight: '40px',
+                          border: isSelected ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          background: isSelected ? '#f3e8ff' : cell.isToday ? '#fef3c7' : '#fff',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '2px'
+                        }}
+                      >
+                        <span>{cell.day}</span>
+                        {cell.eventCount > 0 && (
+                          <span style={{ fontSize: '10px', color: '#8b5cf6', fontWeight: '600' }}>{cell.eventCount}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {selectedDate && (
+                <div style={{ marginTop: '16px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                      {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 일정
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(null)}
+                      style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                      닫기
+                    </button>
+                  </div>
+                  {eventsOnSelectedDate.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {eventsOnSelectedDate.map(e => (
+                        <div
+                          key={e.id}
+                          style={{
+                            padding: '12px',
+                            background: '#fff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <h5 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: '600' }}>{e.title}</h5>
+                              {e.desc && <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap' }}>{e.desc}</p>}
+                              {e.created_at && (
+                                <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                                  등록: {new Date(e.created_at).toLocaleString('ko-KR')}
+                                </p>
+                              )}
+                            </div>
+                            {(e.created_by === userId || !e.created_by) && (
+                              <button
+                                type="button"
+                                onClick={() => confirm('삭제하시겠습니까?') && updateState('DELETE_EVENT', e.id)}
+                                style={{ flexShrink: 0, padding: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444' }}
+                                aria-label="삭제"
+                              >
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>해당 날짜에 등록된 일정이 없습니다.</p>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={openEventModal}
                 className="btn-calendar-add"
-            >
-              + 일정 추가하기
-            </button>
-          </div>
+                style={{ marginTop: '16px' }}
+              >
+                + 일정 추가하기
+              </button>
+            </div>
           </section>
 
           {/* 일정 추가 모달 */}
