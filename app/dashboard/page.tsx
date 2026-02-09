@@ -4063,6 +4063,11 @@ export default function FamilyHub() {
               title: existingEvent.title?.substring(0, 30),
               group_id: existingEvent.group_id
             });
+            // 작성자만 삭제 가능: 서버에서 한 번 더 검증
+            if (existingEvent.created_by != null && String(existingEvent.created_by).trim() !== String(userId).trim()) {
+              console.error('⚠️ 일정 삭제 거부: 작성자가 아님.', { eventId, created_by: existingEvent.created_by, userId });
+              throw new Error('삭제 권한이 없습니다. 이 일정을 삭제할 수 있는 것은 작성자뿐입니다.');
+            }
           } else {
             console.warn('⚠️ 삭제할 이벤트를 찾을 수 없음:', eventId, 'groupId:', currentGroupId);
           }
@@ -4339,8 +4344,15 @@ export default function FamilyHub() {
           const deleteEventId = String(payload).trim();
           console.log('updateState DELETE_EVENT 호출:', { payload, deleteEventId, payloadType: typeof payload });
           
+          const eventToDelete = prev.events.find(e => String(e.id).trim() === deleteEventId);
+          // 작성자만 삭제 가능: created_by가 있고 현재 사용자가 작성자가 아니면 거부
+          if (eventToDelete && eventToDelete.created_by != null && String(eventToDelete.created_by).trim() !== String(userId).trim()) {
+            alert('작성자만 일정을 삭제할 수 있습니다.');
+            return;
+          }
+          
           // 낙관적 업데이트: 먼저 화면에서 제거
-          const deletedEvent = prev.events.find(e => String(e.id).trim() === deleteEventId);
+          const deletedEvent = eventToDelete;
           newState.events = prev.events.filter(e => String(e.id).trim() !== deleteEventId);
           
           // Supabase에 저장 (비동기, 에러 발생 시 복구)
@@ -8742,7 +8754,8 @@ ${groupInfo}
                                   </p>
                                 )}
                               </div>
-                              {(e.created_by === userId || !e.created_by) && (
+                              {/* 삭제 버튼: 작성자만 표시 (created_by가 있을 때만 작성자일 경우 노출) */}
+                              {e.created_by != null && String(e.created_by).trim() === String(userId).trim() && (
                                 <button
                                   type="button"
                                   onClick={() => confirm('삭제하시겠습니까?') && updateState('DELETE_EVENT', e.id)}
