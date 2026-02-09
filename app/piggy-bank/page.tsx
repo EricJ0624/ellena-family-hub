@@ -222,7 +222,9 @@ export default function PiggyBankPage() {
   const hasAccountsList = isAdmin && Array.isArray(summary?.accounts);
 
   if (isAdmin && !selectedChildIdForAdmin && hasAccountsList) {
-    const accountUserIds = new Set((summary!.accounts || []).map((a: PiggyAccount & { user_id?: string }) => a.user_id).filter(Boolean));
+    const accountUserIds = new Set(
+      (summary!.accounts || []).map((a) => a.user_id).filter((id): id is string => Boolean(id))
+    );
     const membersWithoutPiggy = members.filter((m) => m.role === 'MEMBER' && !accountUserIds.has(m.user_id));
 
     return (
@@ -248,7 +250,7 @@ export default function PiggyBankPage() {
             style={{ width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '12px' }}
           >
             <option value="">선택하세요</option>
-            {(summary!.accounts || []).filter((acc: PiggyAccount & { user_id?: string }) => acc.user_id).map((acc: PiggyAccount & { user_id?: string }) => {
+            {(summary!.accounts || []).filter((acc) => acc.user_id).map((acc) => {
               const member = members.find((m) => m.user_id === acc.user_id);
               return (
                 <option key={acc.id} value={acc.user_id || ''}>
@@ -351,13 +353,13 @@ export default function PiggyBankPage() {
         <div style={{ background: '#eff6ff', borderRadius: '14px', padding: '16px', border: '1px solid #bfdbfe' }}>
           <div style={{ fontSize: '13px', color: '#1d4ed8' }}>내 용돈 잔액</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#1d4ed8' }}>
-            {formatAmount(summary.wallet.balance)}
+            {formatAmount(summary?.wallet?.balance ?? 0)}
           </div>
         </div>
         <div style={{ background: '#fff7ed', borderRadius: '14px', padding: '16px', border: '1px solid #fed7aa' }}>
           <div style={{ fontSize: '13px', color: '#9a3412' }}>저금통 잔액</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#9a3412' }}>
-            {formatAmount(summary.account.balance)}
+            {formatAmount(summary?.account?.balance ?? 0)}
           </div>
         </div>
       </div>
