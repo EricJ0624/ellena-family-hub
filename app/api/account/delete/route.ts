@@ -57,11 +57,41 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 2. 소유한 그룹이 있으면 경고 (선택사항: 그룹 삭제 또는 소유권 이전)
+    // 2. 소유한 그룹이 있으면 확인 필요 (프론트엔드에서 confirm_group_deletion 파라미터 필요)
     if (ownedGroups && ownedGroups.length > 0) {
-      // 소유한 그룹이 있으면 삭제 불가 (또는 그룹도 함께 삭제)
-      // 여기서는 그룹도 함께 삭제하는 것으로 처리
-      // 실제로는 프론트엔드에서 확인 후 요청해야 함
+      // 그룹 삭제 확인 여부 체크
+      const body = await request.json().catch(() => ({}));
+      const { confirm_group_deletion } = body;
+
+      if (!confirm_group_deletion) {
+        // 그룹 멤버 수 조회
+        const groupsWithMembers = await Promise.all(
+          ownedGroups.map(async (group) => {
+            const { count } = await supabaseServer
+              .from('memberships')
+              .select('*', { count: 'exact', head: true })
+              .eq('group_id', group.id);
+            
+            return {
+              id: group.id,
+              name: group.name,
+              memberCount: count || 0,
+            };
+          })
+        );
+
+        return NextResponse.json(
+          { 
+            error: 'GROUP_OWNER_CONFIRMATION_REQUIRED',
+            message: '그룹 소유자는 그룹 삭제 확인이 필요합니다.',
+            ownedGroups: groupsWithMembers,
+            requireConfirmation: true
+          },
+          { status: 400 }
+        );
+      }
+
+      // 확인 완료 시 그룹 삭제 진행
       for (const group of ownedGroups) {
         // 그룹 삭제 (CASCADE로 memberships도 자동 삭제)
         const { error: deleteGroupError } = await supabaseServer

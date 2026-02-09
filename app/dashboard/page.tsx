@@ -5801,13 +5801,15 @@ export default function FamilyHub() {
   };
 
   // 회원탈퇴 Handler
-  const handleDeleteAccount = async () => {
-    // 이중 확인
-    const firstConfirm = confirm('⚠️ 정말로 회원탈퇴를 하시겠습니까?\n\n탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.');
-    if (!firstConfirm) return;
+  const handleDeleteAccount = async (confirmGroupDeletion: boolean = false) => {
+    // 첫 번째 확인 (그룹 삭제 확인이 아닌 경우만)
+    if (!confirmGroupDeletion) {
+      const firstConfirm = confirm('⚠️ 정말로 회원탈퇴를 하시겠습니까?\n\n탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.');
+      if (!firstConfirm) return;
 
-    const secondConfirm = confirm('⚠️ 최종 확인\n\n회원탈퇴를 진행하시겠습니까?');
-    if (!secondConfirm) return;
+      const secondConfirm = confirm('⚠️ 최종 확인\n\n회원탈퇴를 진행하시겠습니까?');
+      if (!secondConfirm) return;
+    }
 
     try {
       // 인증 토큰 가져오기
@@ -5824,6 +5826,9 @@ export default function FamilyHub() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ 
+          confirm_group_deletion: confirmGroupDeletion 
+        }),
       });
 
       const result = await response.json();
@@ -5854,6 +5859,39 @@ export default function FamilyHub() {
           }
           return;
         }
+
+        // 그룹 소유자인 경우 경고 모달 표시
+        if (result.error === 'GROUP_OWNER_CONFIRMATION_REQUIRED' && result.requireConfirmation) {
+          const ownedGroups = result.ownedGroups || [];
+          
+          // 그룹 정보 포맷팅
+          const groupInfo = ownedGroups.map((g: any) => 
+            `• ${g.name} (멤버 ${g.memberCount}명)`
+          ).join('\n');
+
+          const warningMessage = `⚠️ 그룹 소유자 탈퇴 경고
+
+회원탈퇴 시 다음 사항이 발생합니다:
+
+📋 소유한 그룹:
+${groupInfo}
+
+⚠️ 삭제되는 내용:
+• 소유한 그룹이 영구적으로 삭제됩니다
+• 그룹의 모든 데이터가 삭제됩니다
+  (사진, 일정, 메모, 저금통 등)
+• 그룹의 모든 멤버가 자동으로 탈퇴됩니다
+• 이 작업은 되돌릴 수 없습니다
+
+정말로 탈퇴하시겠습니까?`;
+
+          if (confirm(warningMessage)) {
+            // 그룹 삭제 확인 후 재시도
+            handleDeleteAccount(true);
+          }
+          return;
+        }
+
         throw new Error(result.error || '회원탈퇴에 실패했습니다.');
       }
 
@@ -9438,7 +9476,7 @@ export default function FamilyHub() {
         }}
       >
         <button
-          onClick={handleDeleteAccount}
+          onClick={() => handleDeleteAccount()}
           style={{
             padding: '8px 12px',
             backgroundColor: 'rgba(139, 69, 19, 0.9)',
