@@ -15,6 +15,7 @@ import {
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import { useGroup } from '@/app/contexts/GroupContext';
+import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -216,6 +217,17 @@ export default function FamilyHub() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
+  
+  // 공지사항 관련 state
+  const [announcements, setAnnouncements] = useState<Array<{
+    id: string;
+    title: string;
+    content: string;
+    created_at: string;
+    is_read?: boolean;
+  }>>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   
   // Realtime subscription 참조 (로그아웃 시 정리용) - 기능별 분리 관리
   const subscriptionsRef = useRef<{
@@ -5835,6 +5847,73 @@ export default function FamilyHub() {
     }
   };
 
+  // 공지사항 로드 함수
+  const loadAnnouncements = useCallback(async () => {
+    if (!currentGroupId || !userId) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch(`/api/group-admin/announcements?group_id=${currentGroupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setAnnouncements(result.data || []);
+      }
+    } catch (error) {
+      console.error('공지사항 로드 오류:', error);
+    }
+  }, [currentGroupId, userId]);
+
+  // 공지사항 읽음 처리 함수
+  const handleMarkAsRead = async (announcementId: string) => {
+    if (!currentGroupId) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      await fetch('/api/group-admin/announcements', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          announcement_id: announcementId,
+          group_id: currentGroupId,
+        }),
+      });
+
+      loadAnnouncements();
+    } catch (error) {
+      console.error('읽음 처리 오류:', error);
+    }
+  };
+
+  // 사용자 역할 및 소유자 확인
+  useEffect(() => {
+    if (!currentGroupId || !userId) return;
+
+    setUserRole(groupUserRole);
+    setIsOwner(groupIsOwner);
+  }, [currentGroupId, userId, groupUserRole, groupIsOwner]);
+
+  // 공지사항 로드 (관리자/소유자인 경우에만)
+  useEffect(() => {
+    if (!currentGroupId || !userId) return;
+    if (groupUserRole !== 'ADMIN' && !groupIsOwner) return;
+
+    loadAnnouncements();
+  }, [currentGroupId, userId, groupUserRole, groupIsOwner, loadAnnouncements]);
+
   // Logout Handler
   const handleLogout = async () => {
     if (confirm('로그아웃 하시겠습니까?')) {
@@ -7599,6 +7678,14 @@ export default function FamilyHub() {
 
       {/* Main Content */}
       <div className="main-content">
+        {/* 공지사항 배너 (관리자/소유자만) */}
+        {(userRole === 'ADMIN' || isOwner) && announcements.length > 0 && (
+          <AnnouncementBanner 
+            announcements={announcements}
+            onMarkAsRead={handleMarkAsRead}
+          />
+        )}
+
         {/* Header */}
         <header className="app-header">
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '0 16px', minHeight: '32px' }}>
