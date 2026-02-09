@@ -893,6 +893,7 @@ export interface Database {
           description: string | null
           event_date: string
           created_at: string
+          repeat_type: 'none' | 'monthly' | 'yearly' | null
         }
         Insert: {
           id?: string
@@ -902,6 +903,7 @@ export interface Database {
           description?: string | null
           event_date: string
           created_at?: string
+          repeat_type?: 'none' | 'monthly' | 'yearly' | null
         }
         Update: {
           id?: string
@@ -911,6 +913,7 @@ export interface Database {
           description?: string | null
           event_date?: string
           created_at?: string
+          repeat_type?: 'none' | 'monthly' | 'yearly' | null
         }
         Relationships: [
           {

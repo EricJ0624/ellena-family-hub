@@ -81,7 +81,7 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 
 // --- [TYPES] 타입 안정성 추가 ---
 type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; supabaseId?: string | number };
-type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number };
+type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
 type Message = { id: string | number; user: string; text: string; time: string };
 type Photo = { 
   id: number; 
@@ -177,7 +177,7 @@ export default function FamilyHub() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [masterKey, setMasterKey] = useState('');
   const [showEventModal, setShowEventModal] = useState(false);
-  const [eventForm, setEventForm] = useState({ title: '', month: '', day: '', desc: '' });
+  const [eventForm, setEventForm] = useState<{ title: string; month: string; day: string; desc: string; repeat_type: 'none' | 'monthly' | 'yearly' }>({ title: '', month: '', day: '', desc: '', repeat_type: 'none' });
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [eventFormDate, setEventFormDate] = useState<Date | null>(null);
@@ -200,6 +200,7 @@ export default function FamilyHub() {
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   const [photoDescription, setPhotoDescription] = useState<string>('');
   const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
+  const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -859,6 +860,21 @@ export default function FamilyHub() {
   }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
+  // 반복 일정 포함해 해당 날짜에 표시될지 여부
+  const eventMatchesDate = useCallback((e: EventItem, dateKey: string): boolean => {
+    if (!e.event_date) return false;
+    const keyParts = dateKey.split('-');
+    if (keyParts.length < 3) return false;
+    const keyMo = keyParts[1];
+    const keyD = keyParts[2];
+    if (!e.repeat_type || e.repeat_type === 'none') return e.event_date === dateKey;
+    const parts = e.event_date.split('-');
+    if (parts.length < 3) return false;
+    if (e.repeat_type === 'yearly') return parts[1] === keyMo && parts[2] === keyD;
+    if (e.repeat_type === 'monthly') return parts[2] === keyD;
+    return false;
+  }, []);
+
   const calendarGrid = useMemo(() => {
     const y = calendarMonth.getFullYear();
     const m = calendarMonth.getMonth();
@@ -867,11 +883,10 @@ export default function FamilyHub() {
     const today = new Date();
     const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     const eventCountByDate: Record<string, number> = {};
-    state.events.forEach(e => {
-      if (e.event_date) {
-        eventCountByDate[e.event_date] = (eventCountByDate[e.event_date] || 0) + 1;
-      }
-    });
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      eventCountByDate[key] = state.events.filter(e => eventMatchesDate(e, key)).length;
+    }
     const cells: Array<{ type: 'empty' } | { type: 'day'; date: Date; day: number; isCurrentMonth: true; isToday: boolean; eventCount: number }> = [];
     for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' });
     for (let d = 1; d <= daysInMonth; d++) {
@@ -887,13 +902,13 @@ export default function FamilyHub() {
       });
     }
     return { cells, year: y, month: m };
-  }, [calendarMonth, state.events]);
+  }, [calendarMonth, state.events, eventMatchesDate]);
 
   const eventsOnSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
     const key = selectedDate.getFullYear() + '-' + String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + String(selectedDate.getDate()).padStart(2, '0');
-    return state.events.filter(e => e.event_date === key);
-  }, [selectedDate, state.events]);
+    return state.events.filter(e => eventMatchesDate(e, key));
+  }, [selectedDate, state.events, eventMatchesDate]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
   useEffect(() => {
@@ -2310,6 +2325,7 @@ export default function FamilyHub() {
             }
             // event_date: 로컬 날짜(YYYY-MM-DD)로 표시해 UTC 저장값도 올바른 날짜에 매칭
             const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+            const repeatType = event.repeat_type === 'monthly' || event.repeat_type === 'yearly' ? event.repeat_type : 'none';
             return {
               id: event.id,
               month: month,
@@ -2318,7 +2334,8 @@ export default function FamilyHub() {
               desc: decryptedDesc,
               event_date: eventDateStr,
               created_by: event.created_by,
-              created_at: event.created_at
+              created_at: event.created_at,
+              repeat_type: repeatType
             };
           });
           
@@ -2769,7 +2786,8 @@ export default function FamilyHub() {
                             desc: decryptedDesc,
                             event_date: eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '',
                             created_by: newEvent.created_by,
-                            created_at: newEvent.created_at
+                            created_at: newEvent.created_at,
+                            repeat_type: (newEvent.repeat_type === 'monthly' || newEvent.repeat_type === 'yearly') ? newEvent.repeat_type : 'none'
                           }
                         : e
                     )
@@ -2790,6 +2808,7 @@ export default function FamilyHub() {
               
               // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
               const eventDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
+              const repeatType = newEvent.repeat_type === 'monthly' || newEvent.repeat_type === 'yearly' ? newEvent.repeat_type : 'none';
               return {
                 ...prev,
                 events: [{
@@ -2800,7 +2819,8 @@ export default function FamilyHub() {
                   desc: decryptedDesc,
                   event_date: eventDateStr,
                   created_by: newEvent.created_by,
-                  created_at: newEvent.created_at
+                  created_at: newEvent.created_at,
+                  repeat_type: repeatType
                 }, ...prev.events]
               };
             });
@@ -2871,6 +2891,7 @@ export default function FamilyHub() {
             }
             
             const updatedDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
+            const updatedRepeatType = (updatedEvent.repeat_type === 'monthly' || updatedEvent.repeat_type === 'yearly') ? updatedEvent.repeat_type : 'none';
             setState(prev => ({
               ...prev,
               events: prev.events.map(e =>
@@ -2883,7 +2904,8 @@ export default function FamilyHub() {
                       desc: decryptedDesc,
                       event_date: updatedDateStr,
                       created_by: updatedEvent.created_by,
-                      created_at: updatedEvent.created_at
+                      created_at: updatedEvent.created_at,
+                      repeat_type: updatedRepeatType
                     }
                   : e
               )
@@ -3544,6 +3566,23 @@ export default function FamilyHub() {
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId, currentGroupId]); // familyId 변경 시 데이터 재로드
 
+  // 일정 작성자 닉네임 로드 (표시용)
+  useEffect(() => {
+    const authorIds = [...new Set(state.events.map(e => e.created_by).filter(Boolean))] as string[];
+    if (authorIds.length === 0) {
+      setEventAuthorNames({});
+      return;
+    }
+    (async () => {
+      const { data } = await supabase.from('profiles').select('id, nickname, email').in('id', authorIds);
+      const map: Record<string, string> = {};
+      (data || []).forEach((p: { id: string; nickname?: string | null; email?: string }) => {
+        map[p.id] = p.nickname || p.email || p.id?.substring(0, 8) || '알 수 없음';
+      });
+      setEventAuthorNames(map);
+    })();
+  }, [state.events]);
+
   // 시스템 관리자 권한 확인
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -3998,13 +4037,15 @@ export default function FamilyHub() {
           }
 
           // event_date: 로컬 날짜(YYYY-MM-DD)로 저장해 타임존에 따라 하루 밀리는 현상 방지
-          const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+          const eventDateStr = payload.event_date || `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+          const repeatType = payload.repeat_type === 'monthly' || payload.repeat_type === 'yearly' ? payload.repeat_type : 'none';
           const eventData: any = {
             group_id: currentGroupId, // Multi-tenant: group_id 필수
             created_by: userId,
             title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
             description: encryptedDesc, // 암호화된 설명 저장
-            event_date: eventDateStr
+            event_date: eventDateStr,
+            repeat_type: repeatType
           };
           
           console.log('ADD_EVENT: family_events 테이블에 저장:', { title: payload.title.substring(0, 20), month: payload.month, day: payload.day, groupId: currentGroupId });
@@ -4348,7 +4389,7 @@ export default function FamilyHub() {
           // 작성자만 삭제 가능: created_by가 있고 현재 사용자가 작성자가 아니면 거부
           if (eventToDelete && eventToDelete.created_by != null && String(eventToDelete.created_by).trim() !== String(userId).trim()) {
             alert('작성자만 일정을 삭제할 수 있습니다.');
-            return;
+            return prev;
           }
           
           // 낙관적 업데이트: 먼저 화면에서 제거
@@ -6315,14 +6356,14 @@ ${groupInfo}
     setEventFormDate(d);
     const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
     const day = d.getDate().toString();
-    setEventForm({ title: '', month, day, desc: '' });
+    setEventForm({ title: '', month, day, desc: '', repeat_type: 'none' });
     setShowEventModal(true);
   };
 
   const closeEventModal = () => {
     setShowEventModal(false);
     setEventFormDate(null);
-    setEventForm({ title: '', month: '', day: '', desc: '' });
+    setEventForm({ title: '', month: '', day: '', desc: '', repeat_type: 'none' });
   };
 
   const handleEventSubmit = () => {
@@ -6345,13 +6386,17 @@ ${groupInfo}
       alert("유효하지 않은 제목입니다.");
       return;
     }
-    
+    const eventDateStr = eventFormDate
+      ? `${eventFormDate.getFullYear()}-${String(eventFormDate.getMonth() + 1).padStart(2, '0')}-${String(eventFormDate.getDate()).padStart(2, '0')}`
+      : '';
     updateState('ADD_EVENT', { 
       id: Date.now(), 
       month: sanitizedMonth, 
       day: sanitizedDay, 
       title: sanitizedTitle, 
-      desc: sanitizedDesc 
+      desc: sanitizedDesc,
+      event_date: eventDateStr,
+      repeat_type: eventForm.repeat_type || 'none'
     });
     
     closeEventModal();
@@ -8747,6 +8792,16 @@ ${groupInfo}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                               <div style={{ flex: 1 }}>
                                 <h5 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{e.title}</h5>
+                                {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
+                                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#7c3aed' }}>
+                                    {e.repeat_type === 'monthly' ? '매월 반복' : '매년 반복'}
+                                  </p>
+                                )}
+                                {e.created_by != null && (
+                                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}>
+                                    작성자: {e.created_by === userId ? '나' : (eventAuthorNames[e.created_by] ?? '알 수 없음')}
+                                  </p>
+                                )}
                                 {e.desc && <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.desc}</p>}
                                 {e.created_at && (
                                   <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
@@ -8893,6 +8948,41 @@ ${groupInfo}
                       fontFamily: 'inherit'
                     }}
                   />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                    반복
+                  </label>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                      <input
+                        type="radio"
+                        name="repeat_type"
+                        checked={eventForm.repeat_type === 'none'}
+                        onChange={() => setEventForm({ ...eventForm, repeat_type: 'none' })}
+                      />
+                      반복 없음
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                      <input
+                        type="radio"
+                        name="repeat_type"
+                        checked={eventForm.repeat_type === 'monthly'}
+                        onChange={() => setEventForm({ ...eventForm, repeat_type: 'monthly' })}
+                      />
+                      매월 반복
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                      <input
+                        type="radio"
+                        name="repeat_type"
+                        checked={eventForm.repeat_type === 'yearly'}
+                        onChange={() => setEventForm({ ...eventForm, repeat_type: 'yearly' })}
+                      />
+                      매년 반복
+                    </label>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
