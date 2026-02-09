@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
  * 후임자 지정 및 본인 권한 해제
@@ -111,6 +112,18 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'TRANSFER',
+      resourceType: 'system_admin',
+      resourceId: successor_user_id,
+      targetUserId: successor_user_id,
+      details: { predecessor_user_id: user.id },
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
  * 시스템 관리자 목록 조회
@@ -176,11 +177,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-      return NextResponse.json({
-        success: true,
-        data: newAdmin,
-        message: `${profile.nickname || profile.email}님을 시스템 관리자로 지정했습니다. (활성 관리자: 1명)`,
-      });
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'GRANT',
+      resourceType: 'system_admin',
+      resourceId: user_id,
+      targetUserId: user_id,
+      ipAddress,
+      userAgent,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: newAdmin,
+      message: `${profile.nickname || profile.email}님을 시스템 관리자로 지정했습니다. (활성 관리자: 1명)`,
+    });
   } catch (error: any) {
     console.error('시스템 관리자 추가 오류:', error);
     return NextResponse.json(
@@ -248,6 +260,17 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'REVOKE',
+      resourceType: 'system_admin',
+      resourceId: target_user_id,
+      targetUserId: target_user_id,
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,

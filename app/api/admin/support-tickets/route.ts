@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
  * 문의 목록 조회 (시스템 관리자용)
@@ -138,6 +139,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'UPDATE',
+      resourceType: 'support_ticket',
+      resourceId: id,
+      groupId: ticket?.group_id ?? null,
+      details: { status: status || 'answered' },
+      ipAddress,
+      userAgent,
+    });
+
     return NextResponse.json({
       success: true,
       data: ticket,
@@ -206,6 +219,18 @@ export async function PUT(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'UPDATE',
+      resourceType: 'support_ticket',
+      resourceId: id,
+      groupId: ticket?.group_id ?? null,
+      details: { status },
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,

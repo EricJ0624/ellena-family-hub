@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
  * 공지사항 목록 조회 (시스템 관리자용)
@@ -287,6 +288,16 @@ export async function DELETE(request: NextRequest) {
         );
       }
 
+      const { ipAddress, userAgent } = getAuditRequestMeta(request);
+      await writeAdminAuditLog(supabase, {
+        adminId: user.id,
+        action: 'DELETE',
+        resourceType: 'announcement',
+        resourceId: id,
+        ipAddress,
+        userAgent,
+      });
+
       return NextResponse.json({
         success: true,
         message: '공지사항이 영구적으로 삭제되었습니다.',
@@ -305,6 +316,17 @@ export async function DELETE(request: NextRequest) {
           { status: 500 }
         );
       }
+
+      const { ipAddress, userAgent } = getAuditRequestMeta(request);
+      await writeAdminAuditLog(supabase, {
+        adminId: user.id,
+        action: 'UPDATE',
+        resourceType: 'announcement',
+        resourceId: id,
+        details: { is_active: false },
+        ipAddress,
+        userAgent,
+      });
 
       return NextResponse.json({
         success: true,

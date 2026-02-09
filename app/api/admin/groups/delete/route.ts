@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -41,6 +42,17 @@ export async function DELETE(request: NextRequest) {
     if (deleteError) {
       throw deleteError;
     }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'DELETE',
+      resourceType: 'group',
+      resourceId: groupId,
+      groupId,
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,

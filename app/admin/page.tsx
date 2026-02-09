@@ -583,6 +583,20 @@ export default function AdminPage() {
         owner_email: ownerData?.email || null,
       });
       setError(null); // 권한 검증 통과 시 에러 초기화
+
+      // 감사: 시스템 관리자 그룹 접근 로그 (API에서 권한 검사 후 기록)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.access_token) {
+          fetch('/api/admin/audit/dashboard-access', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ group_id: groupId }),
+          }).catch(() => {});
+        }
+      });
     } catch (err: any) {
       console.error('그룹 정보 로드 오류:', err);
       setError(err.message || '그룹 정보를 불러오는데 실패했습니다.');

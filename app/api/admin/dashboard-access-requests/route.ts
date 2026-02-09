@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
  * 대시보드 접근 요청 목록 조회 (시스템 관리자용 - 본인이 신청한 요청만)
@@ -230,6 +231,17 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'DELETE',
+      resourceType: 'dashboard_access_request',
+      resourceId: id,
+      groupId: accessRequest.group_id,
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,
