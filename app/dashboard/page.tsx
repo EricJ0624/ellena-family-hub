@@ -2308,13 +2308,15 @@ export default function FamilyHub() {
               decryptedTitle = eventTitleField;
               decryptedDesc = eventDescField;
             }
+            // event_date: 로컬 날짜(YYYY-MM-DD)로 표시해 UTC 저장값도 올바른 날짜에 매칭
+            const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
             return {
               id: event.id,
               month: month,
               day: day,
               title: decryptedTitle,
               desc: decryptedDesc,
-              event_date: eventDate.toISOString().slice(0, 10),
+              event_date: eventDateStr,
               created_by: event.created_by,
               created_at: event.created_at
             };
@@ -2765,7 +2767,7 @@ export default function FamilyHub() {
                             day: day,
                             title: decryptedTitle,
                             desc: decryptedDesc,
-                            event_date: eventDateValue ? new Date(eventDateValue).toISOString().slice(0, 10) : '',
+                            event_date: eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '',
                             created_by: newEvent.created_by,
                             created_at: newEvent.created_at
                           }
@@ -2787,7 +2789,7 @@ export default function FamilyHub() {
               }
               
               // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
-              const eventDateStr = eventDateValue ? new Date(eventDateValue).toISOString().slice(0, 10) : '';
+              const eventDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
               return {
                 ...prev,
                 events: [{
@@ -2868,7 +2870,7 @@ export default function FamilyHub() {
               decryptedDesc = updatedEventDescField;
             }
             
-            const updatedDateStr = eventDateValue ? new Date(eventDateValue).toISOString().slice(0, 10) : '';
+            const updatedDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
             setState(prev => ({
               ...prev,
               events: prev.events.map(e =>
@@ -3995,15 +3997,14 @@ export default function FamilyHub() {
             return;
           }
 
-          // event_date 컬럼이 없을 수 있으므로 선택적으로 처리
+          // event_date: 로컬 날짜(YYYY-MM-DD)로 저장해 타임존에 따라 하루 밀리는 현상 방지
+          const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
           const eventData: any = {
             group_id: currentGroupId, // Multi-tenant: group_id 필수
             created_by: userId,
             title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
             description: encryptedDesc, // 암호화된 설명 저장
-            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
-            event_date: eventDate.toISOString()
-            // created_at은 자동 생성되므로 제거
+            event_date: eventDateStr
           };
           
           console.log('ADD_EVENT: family_events 테이블에 저장:', { title: payload.title.substring(0, 20), month: payload.month, day: payload.day, groupId: currentGroupId });
