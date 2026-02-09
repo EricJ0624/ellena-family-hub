@@ -192,7 +192,9 @@ export async function PUT(request: NextRequest) {
 }
 
 /**
- * 공지사항 삭제 (시스템 관리자용 - 실제로는 is_active = false로 설정)
+ * 공지사항 삭제 (시스템 관리자용)
+ * - permanent=true: 실제 삭제 (비활성화된 공지사항만 가능)
+ * - permanent=false 또는 없음: 비활성화 (is_active = false)
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -214,6 +216,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const permanent = searchParams.get('permanent') === 'true';
 
     if (!id) {
       return NextResponse.json(
@@ -224,23 +227,67 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 공지사항 삭제 (실제로는 is_active = false로 설정)
-    const { error } = await supabase
-      .from('announcements')
-      .update({ is_active: false })
-      .eq('id', id);
+    if (permanent) {
+      // 실제 삭제 (비활성화된 공지사항만 가능)
+      // 먼저 공지사항 상태 확인
+      const { data: announcement } = await supabase
+        .from('announcements')
+        .select('is_active')
+        .eq('id', id)
+        .single();
 
-    if (error) {
-      console.error('공지사항 삭제 오류:', error);
-      return NextResponse.json(
-        { error: '공지사항 삭제에 실패했습니다.' },
-        { status: 500 }
-      );
+      if (!announcement) {
+        return NextResponse.json(
+          { error: '공지사항을 찾을 수 없습니다.' },
+          { status: 404 }
+        );
+      }
+
+      if (announcement.is_active) {
+        return NextResponse.json(
+          { error: '활성화된 공지사항은 삭제할 수 없습니다. 먼저 비활성화해주세요.' },
+          { status: 400 }
+        );
+      }
+
+      // 실제 삭제
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('공지사항 영구 삭제 오류:', error);
+        return NextResponse.json(
+          { error: '공지사항 삭제에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: '공지사항이 영구적으로 삭제되었습니다.',
+      });
+    } else {
+      // 비활성화 (is_active = false)
+      const { error } = await supabase
+        .from('announcements')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) {
+        console.error('공지사항 비활성화 오류:', error);
+        return NextResponse.json(
+          { error: '공지사항 비활성화에 실패했습니다.' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: '공지사항이 비활성화되었습니다.',
+      });
     }
-
-    return NextResponse.json({
-      success: true,
-    });
   } catch (error: any) {
     console.error('공지사항 삭제 오류:', error);
     return NextResponse.json(

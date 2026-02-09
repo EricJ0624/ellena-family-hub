@@ -3682,9 +3682,10 @@ export default function AdminPage() {
                       animate={{ opacity: 1, y: 0 }}
                       style={{
                         padding: '20px',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: announcement.is_active ? '#f8fafc' : '#fef2f2',
                         borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
+                        border: announcement.is_active ? '1px solid #e2e8f0' : '1px solid #fecaca',
+                        opacity: announcement.is_active ? 1 : 0.7,
                       }}
                     >
                       <div style={{
@@ -3694,14 +3695,28 @@ export default function AdminPage() {
                         marginBottom: '12px',
                       }}>
                         <div style={{ flex: 1 }}>
-                          <h3 style={{
-                            fontSize: '18px',
-                            fontWeight: '600',
-                            color: '#1e293b',
-                            margin: '0 0 8px 0',
-                          }}>
-                            {announcement.title}
-                          </h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <h3 style={{
+                              fontSize: '18px',
+                              fontWeight: '600',
+                              color: '#1e293b',
+                              margin: 0,
+                            }}>
+                              {announcement.title}
+                            </h3>
+                            {!announcement.is_active && (
+                              <span style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#fecaca',
+                                color: '#991b1b',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                              }}>
+                                비활성화됨
+                              </span>
+                            )}
+                          </div>
                           <p style={{
                             fontSize: '14px',
                             color: '#64748b',
@@ -3716,52 +3731,111 @@ export default function AdminPage() {
                           gap: '8px',
                           marginLeft: '16px',
                         }}>
-                          <button
-                            onClick={async () => {
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
-                                return;
-                              }
-
-                              try {
-                                setLoadingData(true);
-                                const response = await fetch(`/api/admin/announcements?id=${announcement.id}`, {
-                                  method: 'DELETE',
-                                  headers: {
-                                    'Authorization': `Bearer ${session.access_token}`,
-                                    'Content-Type': 'application/json',
-                                  },
-                                });
-
-                                const result = await response.json();
-
-                                if (!response.ok) {
-                                  throw new Error(result.error || '공지 삭제에 실패했습니다.');
+                          {announcement.is_active ? (
+                            // 활성화된 공지: 비활성화 버튼
+                            <button
+                              onClick={async () => {
+                                if (!confirm('이 공지사항을 비활성화하시겠습니까?\n\n비활성화된 공지는 사용자에게 표시되지 않으며, 나중에 영구 삭제할 수 있습니다.')) {
+                                  return;
                                 }
 
-                                alert('공지가 삭제되었습니다.');
-                                loadAnnouncements();
-                              } catch (error: any) {
-                                console.error('공지 삭제 오류:', error);
-                                alert(error.message || '공지 삭제 중 오류가 발생했습니다.');
-                              } finally {
-                                setLoadingData(false);
-                              }
-                            }}
-                            style={{
-                              padding: '8px 12px',
-                              backgroundColor: '#fee2e2',
-                              color: '#991b1b',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            삭제
-                          </button>
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  return;
+                                }
+
+                                try {
+                                  setLoadingData(true);
+                                  const response = await fetch(`/api/admin/announcements?id=${announcement.id}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                      'Authorization': `Bearer ${session.access_token}`,
+                                      'Content-Type': 'application/json',
+                                    },
+                                  });
+
+                                  const result = await response.json();
+
+                                  if (!response.ok) {
+                                    throw new Error(result.error || '공지 비활성화에 실패했습니다.');
+                                  }
+
+                                  alert(result.message || '공지가 비활성화되었습니다.');
+                                  loadAnnouncements();
+                                } catch (error: any) {
+                                  console.error('공지 비활성화 오류:', error);
+                                  alert(error.message || '공지 비활성화 중 오류가 발생했습니다.');
+                                } finally {
+                                  setLoadingData(false);
+                                }
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#fef3c7',
+                                color: '#92400e',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              비활성화
+                            </button>
+                          ) : (
+                            // 비활성화된 공지: 영구 삭제 버튼
+                            <button
+                              onClick={async () => {
+                                if (!confirm('⚠️ 이 공지사항을 영구적으로 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                                  return;
+                                }
+
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  return;
+                                }
+
+                                try {
+                                  setLoadingData(true);
+                                  const response = await fetch(`/api/admin/announcements?id=${announcement.id}&permanent=true`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                      'Authorization': `Bearer ${session.access_token}`,
+                                      'Content-Type': 'application/json',
+                                    },
+                                  });
+
+                                  const result = await response.json();
+
+                                  if (!response.ok) {
+                                    throw new Error(result.error || '공지 삭제에 실패했습니다.');
+                                  }
+
+                                  alert(result.message || '공지가 영구적으로 삭제되었습니다.');
+                                  loadAnnouncements();
+                                } catch (error: any) {
+                                  console.error('공지 삭제 오류:', error);
+                                  alert(error.message || '공지 삭제 중 오류가 발생했습니다.');
+                                } finally {
+                                  setLoadingData(false);
+                                }
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#fee2e2',
+                                color: '#991b1b',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              영구 삭제
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div style={{
@@ -3771,7 +3845,6 @@ export default function AdminPage() {
                       }}>
                         작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
                         {announcement.updated_at !== announcement.created_at && ` | 수정일: ${new Date(announcement.updated_at).toLocaleString('ko-KR')}`}
-                        {!announcement.is_active && ' | 비활성화됨'}
                       </div>
                     </motion.div>
                   ))}
