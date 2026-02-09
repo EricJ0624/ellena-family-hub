@@ -195,6 +195,10 @@ export default function AdminPage() {
   const [showNewAccessRequestModal, setShowNewAccessRequestModal] = useState(false);
   const [newAccessRequestGroupId, setNewAccessRequestGroupId] = useState('');
   const [newAccessRequestReason, setNewAccessRequestReason] = useState('');
+  
+  // 시스템 관리자 관리 관련 상태
+  const [systemAdmins, setSystemAdmins] = useState<string[]>([]); // 시스템 관리자 user_id 목록
+  const [systemAdminCount, setSystemAdminCount] = useState(0);
 
   const formatBytes = (bytes: number | null | undefined): string => {
     if (!bytes || bytes <= 0) return '0GB';
@@ -295,6 +299,30 @@ export default function AdminPage() {
     }
   }, []);
 
+  // 시스템 관리자 목록 로드
+  const loadSystemAdmins = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch('/api/admin/system-admins', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSystemAdmins(result.data?.map((a: any) => a.user_id) || []);
+        setSystemAdminCount(result.count || 0);
+      }
+    } catch (error) {
+      console.error('시스템 관리자 목록 로드 오류:', error);
+    }
+  }, []);
+
   // 사용자 목록 로드 (시스템 관리자용: auth.users에서 모든 사용자 조회)
   const loadUsers = useCallback(async () => {
     try {
@@ -308,6 +336,9 @@ export default function AdminPage() {
         setLoadingData(false);
         return;
       }
+
+      // 시스템 관리자 목록 먼저 로드
+      await loadSystemAdmins();
 
       // API 호출: 모든 사용자 목록 조회 (auth.users에서 직접 조회)
       const response = await fetch('/api/admin/users/list', {
@@ -1942,6 +1973,15 @@ export default function AdminPage() {
                         </th>
                         <th style={{
                           padding: '12px',
+                          textAlign: 'center',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#475569',
+                        }}>
+                          권한
+                        </th>
+                        <th style={{
+                          padding: '12px',
                           textAlign: 'right',
                           fontSize: '14px',
                           fontWeight: '600',
@@ -1981,8 +2021,188 @@ export default function AdminPage() {
                           <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
                             {user.groups_count}개
                           </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            {systemAdmins.includes(user.id) ? (
+                              <span style={{
+                                padding: '4px 12px',
+                                backgroundColor: '#7e22ce',
+                                color: 'white',
+                                borderRadius: '12px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                              }}>
+                                시스템 관리자
+                              </span>
+                            ) : (
+                              <span style={{
+                                padding: '4px 12px',
+                                backgroundColor: '#f1f5f9',
+                                color: '#64748b',
+                                borderRadius: '12px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                              }}>
+                                일반 사용자
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: '12px', textAlign: 'right' }}>
-                            <button
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                              {/* 시스템 관리자 승격/해제 버튼 */}
+                              {systemAdmins.includes(user.id) ? (
+                                <button
+                                  style={{
+                                    padding: '8px 16px',
+                                    backgroundColor: '#f59e0b',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#d97706';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f59e0b';
+                                  }}
+                                  onClick={async () => {
+                                    const { data: { user: currentUser } } = await supabase.auth.getUser();
+                                    
+                                    if (currentUser?.id === user.id) {
+                                      alert('본인의 관리자 권한은 여기서 해제할 수 없습니다. 회원탈퇴 시 후임자를 지정하거나, 다른 관리자에게 요청하세요.');
+                                      return;
+                                    }
+
+                                    if (systemAdminCount <= 1) {
+                                      alert('마지막 시스템 관리자는 권한을 해제할 수 없습니다.');
+                                      return;
+                                    }
+
+                                    const userDisplayName = user.nickname || user.email || '이 사용자';
+                                    if (!confirm(`"${userDisplayName}"의 시스템 관리자 권한을 해제하시겠습니까?`)) {
+                                      return;
+                                    }
+
+                                    try {
+                                      setLoadingData(true);
+                                      const { data: { session } } = await supabase.auth.getSession();
+                                      if (!session?.access_token) {
+                                        alert('인증 정보를 가져올 수 없습니다.');
+                                        return;
+                                      }
+
+                                      const response = await fetch(`/api/admin/system-admins?user_id=${user.id}`, {
+                                        method: 'DELETE',
+                                        headers: {
+                                          'Authorization': `Bearer ${session.access_token}`,
+                                          'Content-Type': 'application/json',
+                                        },
+                                      });
+
+                                      const result = await response.json();
+
+                                      if (!response.ok) {
+                                        throw new Error(result.error || '권한 해제에 실패했습니다.');
+                                      }
+
+                                      alert(`"${userDisplayName}"의 시스템 관리자 권한이 해제되었습니다.`);
+                                      loadUsers();
+                                    } catch (error: any) {
+                                      console.error('권한 해제 오류:', error);
+                                      alert(error.message || '권한 해제 중 오류가 발생했습니다.');
+                                    } finally {
+                                      setLoadingData(false);
+                                    }
+                                  }}
+                                >
+                                  <Shield style={{ width: '16px', height: '16px' }} />
+                                  권한 해제
+                                </button>
+                              ) : (
+                                <button
+                                  style={{
+                                    padding: '8px 16px',
+                                    backgroundColor: systemAdminCount >= 2 ? '#94a3b8' : '#7e22ce',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: systemAdminCount >= 2 ? 'not-allowed' : 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s',
+                                    opacity: systemAdminCount >= 2 ? 0.6 : 1,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (systemAdminCount < 2) {
+                                      e.currentTarget.style.backgroundColor = '#6b21a8';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (systemAdminCount < 2) {
+                                      e.currentTarget.style.backgroundColor = '#7e22ce';
+                                    }
+                                  }}
+                                  disabled={systemAdminCount >= 2}
+                                  onClick={async () => {
+                                    if (systemAdminCount >= 2) {
+                                      alert('시스템 관리자는 최대 2명까지만 지정할 수 있습니다.');
+                                      return;
+                                    }
+
+                                    const userDisplayName = user.nickname || user.email || '이 사용자';
+                                    if (!confirm(`"${userDisplayName}"을(를) 시스템 관리자로 승격하시겠습니까?`)) {
+                                      return;
+                                    }
+
+                                    try {
+                                      setLoadingData(true);
+                                      const { data: { session } } = await supabase.auth.getSession();
+                                      if (!session?.access_token) {
+                                        alert('인증 정보를 가져올 수 없습니다.');
+                                        return;
+                                      }
+
+                                      const response = await fetch('/api/admin/system-admins', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Authorization': `Bearer ${session.access_token}`,
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ user_id: user.id }),
+                                      });
+
+                                      const result = await response.json();
+
+                                      if (!response.ok) {
+                                        throw new Error(result.error || '관리자 승격에 실패했습니다.');
+                                      }
+
+                                      alert(result.message || `"${userDisplayName}"을(를) 시스템 관리자로 승격했습니다.`);
+                                      loadUsers();
+                                    } catch (error: any) {
+                                      console.error('관리자 승격 오류:', error);
+                                      alert(error.message || '관리자 승격 중 오류가 발생했습니다.');
+                                    } finally {
+                                      setLoadingData(false);
+                                    }
+                                  }}
+                                >
+                                  <Shield style={{ width: '16px', height: '16px' }} />
+                                  관리자 승격
+                                </button>
+                              )}
+                              
+                              {/* 회원 강제 탈퇴 버튼 */}
+                              <button
                               style={{
                                 padding: '8px 16px',
                                 backgroundColor: '#dc2626',
@@ -2056,6 +2276,7 @@ export default function AdminPage() {
                               <UserX style={{ width: '14px', height: '14px' }} />
                               회원 강제 탈퇴
                             </button>
+                            </div>
                           </td>
                         </motion.tr>
                       ))}

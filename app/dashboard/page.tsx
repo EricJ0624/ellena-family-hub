@@ -16,6 +16,7 @@ import {
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import { useGroup } from '@/app/contexts/GroupContext';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
+import { Shield } from 'lucide-react';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -188,6 +189,9 @@ export default function FamilyHub() {
   const [editingPhotoId, setEditingPhotoId] = useState<number | null>(null);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
+  const [showSuccessorModal, setShowSuccessorModal] = useState(false);
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname: string | null }>>([]);
+  const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   const [photoDescription, setPhotoDescription] = useState<string>('');
   const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
@@ -213,7 +217,6 @@ export default function FamilyHub() {
   }>>([]);
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
   const [selectedUserForRequest, setSelectedUserForRequest] = useState<string | null>(null);
-  const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname?: string | null }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
@@ -5826,6 +5829,31 @@ export default function FamilyHub() {
       const result = await response.json();
 
       if (!response.ok) {
+        // 시스템 관리자인 경우 후임자 지정 모달 표시
+        if (result.error === 'ADMIN_ACCOUNT' && result.isSystemAdmin) {
+          alert(result.message);
+          
+          // 모든 사용자 목록 로드
+          const usersResponse = await fetch('/api/admin/users/list', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (usersResponse.ok) {
+            const usersResult = await usersResponse.json();
+            if (usersResult.success && usersResult.data) {
+              // 본인 제외
+              const { data: { user: currentUser } } = await supabase.auth.getUser();
+              const otherUsers = usersResult.data.filter((u: any) => u.id !== currentUser?.id);
+              setAllUsers(otherUsers);
+              setShowSuccessorModal(true);
+            }
+          }
+          return;
+        }
         throw new Error(result.error || '회원탈퇴에 실패했습니다.');
       }
 
@@ -5844,6 +5872,66 @@ export default function FamilyHub() {
     } catch (error: any) {
       console.error('회원탈퇴 오류:', error);
       alert(error.message || '회원탈퇴 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 후임자 지정 후 회원탈퇴 처리
+  const handleTransferAndDelete = async () => {
+    if (!selectedSuccessor) {
+      alert('후임자를 선택해주세요.');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('인증 정보를 가져올 수 없습니다.');
+        return;
+      }
+
+      // 후임자 지정 API 호출
+      const transferResponse = await fetch('/api/admin/system-admins/transfer', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ successor_user_id: selectedSuccessor }),
+      });
+
+      const transferResult = await transferResponse.json();
+
+      if (!transferResponse.ok) {
+        throw new Error(transferResult.error || '후임자 지정에 실패했습니다.');
+      }
+
+      alert(transferResult.message);
+
+      // 후임자 지정 성공 후 회원탈퇴 진행
+      const deleteResponse = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const deleteResult = await deleteResponse.json();
+
+      if (!deleteResponse.ok) {
+        throw new Error(deleteResult.error || '회원탈퇴에 실패했습니다.');
+      }
+
+      // 성공 시 모든 데이터 정리 및 로그아웃
+      alert('회원탈퇴가 완료되었습니다.');
+      
+      localStorage.clear();
+      sessionStorage.clear();
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch (error: any) {
+      console.error('후임자 지정 및 탈퇴 오류:', error);
+      alert(error.message || '처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -9190,6 +9278,152 @@ export default function FamilyHub() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* 후임자 지정 모달 */}
+      {showSuccessorModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10000,
+          }}
+          onClick={() => {
+            setShowSuccessorModal(false);
+            setSelectedSuccessor('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#1e293b',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <Shield style={{ width: '28px', height: '28px', color: '#7e22ce' }} />
+              후임 시스템 관리자 지정
+            </h2>
+            <p
+              style={{
+                fontSize: '14px',
+                color: '#64748b',
+                marginBottom: '24px',
+                lineHeight: '1.6',
+              }}
+            >
+              시스템 관리자는 회원탈퇴 전에 반드시 후임자를 지정해야 합니다.
+              <br />
+              아래 목록에서 후임 시스템 관리자를 선택해주세요.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#475569',
+                  marginBottom: '12px',
+                }}
+              >
+                후임자 선택
+              </label>
+              <select
+                value={selectedSuccessor}
+                onChange={(e) => setSelectedSuccessor(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  color: '#1e293b',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                <option value="">후임자를 선택하세요</option>
+                {allUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.nickname || user.email}
+                    {user.nickname && ` (${user.email})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                onClick={() => {
+                  setShowSuccessorModal(false);
+                  setSelectedSuccessor('');
+                }}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#e2e8f0',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleTransferAndDelete}
+                disabled={!selectedSuccessor}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: selectedSuccessor ? '#7e22ce' : '#94a3b8',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: selectedSuccessor ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s',
+                  opacity: selectedSuccessor ? 1 : 0.6,
+                }}
+              >
+                후임자 지정 및 탈퇴
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 하단 고정 회원탈퇴 버튼 */}
       <div

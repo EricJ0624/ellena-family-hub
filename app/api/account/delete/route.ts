@@ -25,6 +25,24 @@ export async function DELETE(request: NextRequest) {
 
     const supabaseServer = getSupabaseServerClient();
 
+    // 0. 시스템 관리자 여부 확인 (회원탈퇴 방지)
+    const { data: isAdmin } = await supabaseServer
+      .from('system_admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (isAdmin) {
+      return NextResponse.json(
+        { 
+          error: 'ADMIN_ACCOUNT',
+          message: '시스템 관리자는 회원탈퇴할 수 없습니다. 먼저 관리자 권한을 해제하거나 후임자를 지정해주세요.',
+          isSystemAdmin: true
+        },
+        { status: 403 }
+      );
+    }
+
     // 1. 그룹 소유 여부 확인
     const { data: ownedGroups, error: groupsError } = await supabaseServer
       .from('groups')
