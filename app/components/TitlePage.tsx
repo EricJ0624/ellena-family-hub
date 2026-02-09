@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, RefreshCw, Palette, X, Frame as FrameIcon, Loader2 } from 'lucide-react';
+import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
 import Image from 'next/image';
 import { PhotoFrameSVG, FRAME_CONFIGS, type FrameStyle } from './PhotoFrames';
 
@@ -61,9 +61,6 @@ interface DailyPhotoFrameProps {
   onFrameChange?: (style: FrameStyle) => void;
 }
 
-// 패럴랙스 최대 기울기(도)
-const PARALLAX_MAX_TILT = 10;
-
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ 
   photos, 
   onShuffle,
@@ -72,11 +69,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 }) => {
   const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
   const [showFrameSelector, setShowFrameSelector] = useState(false);
-  const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
-  const [bgRemoveLoading, setBgRemoveLoading] = useState(false);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const frameRef = useRef<HTMLDivElement>(null);
-  const bgRemoveCacheRef = useRef<Map<string, string>>(new Map());
   
   // 오늘의 사진 인덱스 계산 (메모이제이션)
   const photoIndex = useMemo(() => {
@@ -84,63 +76,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   }, [photos, manualSeed]);
   
   const selectedPhoto = photoIndex !== null ? photos[photoIndex] : null;
-  
-  // 배경 제거: 선택된 사진에 대해 @imgly/background-removal 적용 (캐시 사용)
-  useEffect(() => {
-    if (!selectedPhoto?.data) {
-      setProcessedImageUrl(null);
-      setBgRemoveLoading(false);
-      return;
-    }
-    const photoKey = `${selectedPhoto.id}-${selectedPhoto.data.slice(0, 60)}`;
-    const cached = bgRemoveCacheRef.current.get(photoKey);
-    if (cached) {
-      setProcessedImageUrl(cached);
-      setBgRemoveLoading(false);
-      return;
-    }
-    setBgRemoveLoading(true);
-    setProcessedImageUrl(null);
-    let cancelled = false;
-    (async () => {
-      try {
-        const { removeBackground } = await import('@imgly/background-removal');
-        const blob = await removeBackground(selectedPhoto.data);
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        bgRemoveCacheRef.current.set(photoKey, url);
-        setProcessedImageUrl(url);
-      } catch (_e) {
-        if (!cancelled) setProcessedImageUrl(null);
-      } finally {
-        if (!cancelled) setBgRemoveLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedPhoto?.id, selectedPhoto?.data]);
-  
-  useEffect(() => {
-    return () => {
-      bgRemoveCacheRef.current.forEach((url) => URL.revokeObjectURL(url));
-      bgRemoveCacheRef.current.clear();
-    };
-  }, []);
-  
-  // 패럴랙스: 마우스/터치에 따른 시점 이동
-  const handleParallaxMove = useCallback((clientX: number, clientY: number) => {
-    const el = frameRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const normX = (clientX - centerX) / (rect.width / 2);
-    const normY = (clientY - centerY) / (rect.height / 2);
-    const clamp = (v: number) => Math.max(-PARALLAX_MAX_TILT, Math.min(PARALLAX_MAX_TILT, v));
-    setTilt({ x: clamp(-normY * PARALLAX_MAX_TILT), y: clamp(normX * PARALLAX_MAX_TILT) });
-  }, []);
-  const handleParallaxLeave = useCallback(() => setTilt({ x: 0, y: 0 }), []);
   
   // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
@@ -150,8 +85,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   useEffect(() => {
     if (onShuffle) onShuffle();
   }, [manualSeed, onShuffle]);
-  
-  const displaySrc = processedImageUrl || selectedPhoto?.data || '';
   
   return (
     <motion.div
@@ -165,15 +98,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         margin: '0 auto',
       }}
     >
-      {/* SVG 프레임 컨테이너 - 패럴랙스 영역 */}
+      {/* SVG 프레임 컨테이너 */}
       <div
-        ref={frameRef}
-        onMouseMove={(e) => handleParallaxMove(e.clientX, e.clientY)}
-        onMouseLeave={handleParallaxLeave}
-        onTouchMove={(e) => {
-          if (e.touches[0]) handleParallaxMove(e.touches[0].clientX, e.touches[0].clientY);
-        }}
-        onTouchEnd={handleParallaxLeave}
         style={{
           position: 'relative',
           width: '100%',
@@ -208,14 +134,13 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.15), inset 0 -1px 4px rgba(0,0,0,0.1)',
           }}
         >
-          {/* 가족 사진 영역 - 패럴랙스 transform 적용 */}
+          {/* 가족 사진 영역 */}
           <div style={{
             position: 'relative',
             width: '100%',
             height: '100%',
             borderRadius: '2px',
             overflow: 'hidden',
-            perspective: '1000px',
           }}>
             {/* 사진 또는 Fallback */}
             <AnimatePresence mode="wait">
@@ -230,37 +155,17 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     position: 'relative',
                     width: '100%',
                     height: '100%',
-                    transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-                    transformStyle: 'preserve-3d',
-                    transition: 'transform 0.15s ease-out',
                   }}
                 >
-                  {displaySrc ? (
-                    <Image
-                      src={displaySrc}
-                      alt="오늘의 추억"
-                      fill
-                      style={{
-                        objectFit: 'contain',
-                      }}
-                      unoptimized={true}
-                    />
-                  ) : null}
-                  {bgRemoveLoading && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'rgba(245, 230, 211, 0.7)',
-                        borderRadius: '2px',
-                      }}
-                    >
-                      <Loader2 className="w-10 h-10 text-amber-800 animate-spin" strokeWidth={2} />
-                    </div>
-                  )}
+                  <Image
+                    src={selectedPhoto.data}
+                    alt="오늘의 추억"
+                    fill
+                    style={{
+                      objectFit: 'contain',
+                    }}
+                    unoptimized={true}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
