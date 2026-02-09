@@ -97,6 +97,7 @@ export interface Database {
         Row: {
           id: string
           group_id: string
+          user_id: string | null
           name: string
           balance: number
           currency: string
@@ -106,6 +107,7 @@ export interface Database {
         Insert: {
           id?: string
           group_id: string
+          user_id?: string | null
           name?: string
           balance?: number
           currency?: string
@@ -115,6 +117,7 @@ export interface Database {
         Update: {
           id?: string
           group_id?: string
+          user_id?: string | null
           name?: string
           balance?: number
           currency?: string

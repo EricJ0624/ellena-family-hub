@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccount } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
 
 function parseAmount(raw: any): number | null {
   const value = typeof raw === 'string' ? Number(raw) : raw;
@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { groupId, amount, memo } = body;
+    const { groupId, childId, amount, memo } = body;
 
-    if (!groupId) {
-      return NextResponse.json({ error: 'groupId가 필요합니다.' }, { status: 400 });
+    if (!groupId || !childId) {
+      return NextResponse.json({ error: 'groupId와 childId가 필요합니다.' }, { status: 400 });
     }
 
     const parsedAmount = parseAmount(amount);
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
-    const account = await ensurePiggyAccount(groupId);
+    const account = await ensurePiggyAccountForUser(groupId, childId);
 
     const newBalance = account.balance + parsedAmount;
     const now = new Date().toISOString();
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       .insert({
         group_id: groupId,
         actor_id: user.id,
+        related_user_id: childId,
         amount: parsedAmount,
         type: 'parent_deposit',
         memo: memo ? String(memo).trim().slice(0, 200) : null,

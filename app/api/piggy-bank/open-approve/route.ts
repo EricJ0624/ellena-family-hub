@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccount, ensurePiggyWallet } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, ensurePiggyWallet } from '@/lib/piggy-bank';
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, data: { status: 'pending' } });
     }
 
-    const account = await ensurePiggyAccount(groupId);
+    const account = await ensurePiggyAccountForUser(groupId, requestData.child_id);
     if (account.balance < requestData.amount) {
       return NextResponse.json({ error: '저금통 잔액이 부족합니다.' }, { status: 400 });
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccount } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { groupId, name } = body;
+    const { groupId, name, childId } = body;
 
     if (!groupId || !name) {
       return NextResponse.json({ error: 'groupId와 name이 필요합니다.' }, { status: 400 });
@@ -23,13 +23,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: '이름은 2자 이상이어야 합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
+    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
     if (!permissionResult.success) {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
     }
 
+    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const targetUserId = childId && isAdmin ? childId : user.id;
+
     const supabase = getSupabaseServerClient();
-    const account = await ensurePiggyAccount(groupId);
+    const account = await ensurePiggyAccountForUser(groupId, targetUserId);
     const now = new Date().toISOString();
 
     const { error } = await supabase

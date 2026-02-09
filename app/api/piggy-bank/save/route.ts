@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccount, ensurePiggyWallet } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, ensurePiggyWallet } from '@/lib/piggy-bank';
 
 function parseAmount(raw: any): number | null {
   const value = typeof raw === 'string' ? Number(raw) : raw;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const wallet = await ensurePiggyWallet(groupId, user.id);
-    const account = await ensurePiggyAccount(groupId);
+    const account = await ensurePiggyAccountForUser(groupId, user.id);
 
     if (wallet.balance < parsedAmount) {
       return NextResponse.json({ error: '용돈 잔액이 부족합니다.' }, { status: 400 });

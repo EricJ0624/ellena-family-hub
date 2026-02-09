@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from './api-helpers';
 export type PiggyAccount = {
   id: string;
   group_id: string;
+  user_id: string | null;
   name: string;
   balance: number;
   currency: string;
@@ -18,12 +19,14 @@ export type PiggyWallet = {
 const DEFAULT_PIGGY_NAME = 'Ellena Piggy Bank';
 const DEFAULT_CURRENCY = 'KRW';
 
+/** 기존 공용 저금통 (user_id NULL). 호환용. */
 export async function ensurePiggyAccount(groupId: string): Promise<PiggyAccount> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('piggy_bank_accounts')
-    .select('id, group_id, name, balance, currency')
+    .select('id, group_id, user_id, name, balance, currency')
     .eq('group_id', groupId)
+    .is('user_id', null)
     .maybeSingle();
 
   if (error) {
@@ -38,11 +41,12 @@ export async function ensurePiggyAccount(groupId: string): Promise<PiggyAccount>
     .from('piggy_bank_accounts')
     .insert({
       group_id: groupId,
+      user_id: null,
       name: DEFAULT_PIGGY_NAME,
       balance: 0,
       currency: DEFAULT_CURRENCY,
     })
-    .select('id, group_id, name, balance, currency')
+    .select('id, group_id, user_id, name, balance, currency')
     .single();
 
   if (createError || !created) {
@@ -50,6 +54,58 @@ export async function ensurePiggyAccount(groupId: string): Promise<PiggyAccount>
   }
 
   return created as PiggyAccount;
+}
+
+/** 아이별 저금통 (group_id, user_id) 조회 또는 생성. */
+export async function ensurePiggyAccountForUser(groupId: string, userId: string): Promise<PiggyAccount> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('piggy_bank_accounts')
+    .select('id, group_id, user_id, name, balance, currency')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (data) {
+    return data as PiggyAccount;
+  }
+
+  const { data: created, error: createError } = await supabase
+    .from('piggy_bank_accounts')
+    .insert({
+      group_id: groupId,
+      user_id: userId,
+      name: DEFAULT_PIGGY_NAME,
+      balance: 0,
+      currency: DEFAULT_CURRENCY,
+    })
+    .select('id, group_id, user_id, name, balance, currency')
+    .single();
+
+  if (createError || !created) {
+    throw createError || new Error('저금통 생성에 실패했습니다.');
+  }
+
+  return created as PiggyAccount;
+}
+
+/** 그룹 내 모든 저금통 목록 (관리자용). */
+export async function getPiggyAccountsForGroup(groupId: string): Promise<PiggyAccount[]> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('piggy_bank_accounts')
+    .select('id, group_id, user_id, name, balance, currency')
+    .eq('group_id', groupId)
+    .order('user_id', { ascending: true, nullsFirst: true });
+
+  if (error) {
+    throw error;
+  }
+  return (data || []) as PiggyAccount[];
 }
 
 export async function ensurePiggyWallet(groupId: string, userId: string): Promise<PiggyWallet> {

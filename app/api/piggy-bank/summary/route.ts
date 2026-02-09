@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccount, ensurePiggyWallet } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountsForGroup } from '@/lib/piggy-bank';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('group_id');
+    const childId = searchParams.get('child_id');
 
     if (!groupId) {
       return NextResponse.json({ error: 'group_id가 필요합니다.' }, { status: 400 });
@@ -24,13 +25,57 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
-    const account = await ensurePiggyAccount(groupId);
-    const wallet = await ensurePiggyWallet(groupId, user.id);
+    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
 
+    if (isAdmin && childId) {
+      const account = await ensurePiggyAccountForUser(groupId, childId);
+      const wallet = await ensurePiggyWallet(groupId, childId);
+      const { data: pendingRequests } = await supabase
+        .from('piggy_open_requests')
+        .select('id, child_id, amount, reason, destination, status, created_at')
+        .eq('group_id', groupId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return NextResponse.json({
+        success: true,
+        data: {
+          role: permissionResult.role,
+          isOwner: permissionResult.isOwner,
+          account,
+          wallet,
+          pendingRequests: pendingRequests || [],
+        },
+      });
+    }
+
+    if (isAdmin && !childId) {
+      const accounts = await getPiggyAccountsForGroup(groupId);
+      const { data: pendingRequests } = await supabase
+        .from('piggy_open_requests')
+        .select('id, child_id, amount, reason, destination, status, created_at')
+        .eq('group_id', groupId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return NextResponse.json({
+        success: true,
+        data: {
+          role: permissionResult.role,
+          isOwner: permissionResult.isOwner,
+          accounts,
+          pendingRequests: pendingRequests || [],
+        },
+      });
+    }
+
+    const account = await ensurePiggyAccountForUser(groupId, user.id);
+    const wallet = await ensurePiggyWallet(groupId, user.id);
     const { data: pendingRequests } = await supabase
       .from('piggy_open_requests')
       .select('id, child_id, amount, reason, destination, status, created_at')
       .eq('group_id', groupId)
+      .eq('child_id', user.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(20);
