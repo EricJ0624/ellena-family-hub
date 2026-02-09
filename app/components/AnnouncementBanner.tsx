@@ -95,6 +95,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
               style={{
                 display: 'flex',
                 gap: '48px',
+                width: 'max-content',
                 animation: isPaused ? 'none' : 'marquee 40s linear infinite',
                 willChange: 'transform',
               }}
@@ -275,17 +276,6 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
         </div>
       )}
 
-      {/* CSS 애니메이션 - global로 키프레임 노출해 인라인 animation: marquee와 이름 일치 */}
-      <style jsx global>{`
-        @keyframes marquee {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-      `}</style>
     </>
   );
 }

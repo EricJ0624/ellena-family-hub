@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 공지 배너 마퀴 슬라이딩 (AnnouncementBanner에서 animation: marquee 참조) */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 :root {
   --glass-bg: rgba(255, 255, 255, 0.7);
   --spacing-xs: 0.5rem;
