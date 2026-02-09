@@ -97,6 +97,12 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       setGroups(groupsData || []);
 
+      // 현재 선택된 그룹 정보를 새로 고친 목록과 동기화 (대시보드 타이틀/스타일 등 즉시 반영)
+      if (groupsData && currentGroupId) {
+        const updated = groupsData.find((g) => g.id === currentGroupId);
+        if (updated) setCurrentGroup(updated);
+      }
+
       // 5. 멤버십 정보 매핑 (소유자인 경우 ADMIN 역할 부여)
       setMemberships(allGroupIds.map(groupId => {
         const membership = membershipData?.find(m => m.group_id === groupId);
