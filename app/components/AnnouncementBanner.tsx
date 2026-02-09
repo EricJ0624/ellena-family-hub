@@ -66,7 +66,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            minWidth: '120px',
+            minWidth: '80px',
           }}>
             <Megaphone style={{ 
               width: '20px', 
