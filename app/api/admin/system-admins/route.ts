@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * 신규 시스템 관리자 추가
- * 최대 2명 제한
+ * 1명 제한 (후임자 지정 시에만 일시적으로 2명 허용)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -117,14 +117,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 1. 현재 시스템 관리자 수 확인
+    // 1. 현재 시스템 관리자 수 확인 (1명 제한)
     const { count } = await supabase
       .from('system_admins')
       .select('*', { count: 'exact', head: true });
 
-    if (count && count >= 2) {
+    if (count && count >= 1) {
       return NextResponse.json(
-        { error: '시스템 관리자는 최대 2명까지만 지정할 수 있습니다.' },
+        { error: '시스템 관리자는 1명만 지정할 수 있습니다. 기존 관리자의 권한을 먼저 해제해주세요.' },
         { status: 400 }
       );
     }
@@ -176,11 +176,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: newAdmin,
-      message: `${profile.nickname || profile.email}님을 시스템 관리자로 지정했습니다.`,
-    });
+      return NextResponse.json({
+        success: true,
+        data: newAdmin,
+        message: `${profile.nickname || profile.email}님을 시스템 관리자로 지정했습니다. (활성 관리자: 1명)`,
+      });
   } catch (error: any) {
     console.error('시스템 관리자 추가 오류:', error);
     return NextResponse.json(

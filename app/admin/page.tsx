@@ -2128,33 +2128,33 @@ export default function AdminPage() {
                                 <button
                                   style={{
                                     padding: '8px 16px',
-                                    backgroundColor: systemAdminCount >= 2 ? '#94a3b8' : '#7e22ce',
+                                    backgroundColor: systemAdminCount >= 1 ? '#94a3b8' : '#7e22ce',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
                                     fontSize: '13px',
                                     fontWeight: '600',
-                                    cursor: systemAdminCount >= 2 ? 'not-allowed' : 'pointer',
+                                    cursor: systemAdminCount >= 1 ? 'not-allowed' : 'pointer',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '6px',
                                     transition: 'all 0.2s',
-                                    opacity: systemAdminCount >= 2 ? 0.6 : 1,
+                                    opacity: systemAdminCount >= 1 ? 0.6 : 1,
                                   }}
                                   onMouseEnter={(e) => {
-                                    if (systemAdminCount < 2) {
+                                    if (systemAdminCount < 1) {
                                       e.currentTarget.style.backgroundColor = '#6b21a8';
                                     }
                                   }}
                                   onMouseLeave={(e) => {
-                                    if (systemAdminCount < 2) {
+                                    if (systemAdminCount < 1) {
                                       e.currentTarget.style.backgroundColor = '#7e22ce';
                                     }
                                   }}
-                                  disabled={systemAdminCount >= 2}
+                                  disabled={systemAdminCount >= 1}
                                   onClick={async () => {
-                                    if (systemAdminCount >= 2) {
-                                      alert('시스템 관리자는 최대 2명까지만 지정할 수 있습니다.');
+                                    if (systemAdminCount >= 1) {
+                                      alert('시스템 관리자는 1명만 지정할 수 있습니다. 기존 관리자의 권한을 먼저 해제해주세요.');
                                       return;
                                     }
 

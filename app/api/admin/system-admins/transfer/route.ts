@@ -71,18 +71,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. 현재 시스템 관리자 수 확인
-    const { count } = await supabase
-      .from('system_admins')
-      .select('*', { count: 'exact', head: true });
-
-    if (count && count >= 2) {
-      return NextResponse.json(
-        { error: '시스템 관리자는 최대 2명까지만 지정할 수 있습니다.' },
-        { status: 400 }
-      );
-    }
-
+    // 3. 후임자 지정은 탈퇴를 위한 것이므로 일시적으로 2명 허용
+    // (후임자 추가 후 즉시 본인 제거하므로 최종적으로 1명 유지)
+    
     // 4. 트랜잭션: 후임자 추가 + 본인 제거
     // 후임자 추가
     const { error: insertError } = await supabase
@@ -123,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${successorProfile.nickname || successorProfile.email}님을 후임 시스템 관리자로 지정했습니다.`,
+      message: `${successorProfile.nickname || successorProfile.email}님을 후임 시스템 관리자로 지정했습니다. 이제 회원탈퇴가 진행됩니다.`,
     });
   } catch (error: any) {
     console.error('후임자 지정 오류:', error);
