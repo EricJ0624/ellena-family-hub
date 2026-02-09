@@ -25,7 +25,9 @@ import {
   Edit,
   Check,
   XCircle,
-  Clock
+  Clock,
+  FileText,
+  Download
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import GroupSettings from '@/app/components/GroupSettings';
@@ -157,7 +159,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
@@ -200,6 +202,32 @@ export default function AdminPage() {
   // 시스템 관리자 관리 관련 상태
   const [systemAdmins, setSystemAdmins] = useState<string[]>([]); // 시스템 관리자 user_id 목록
   const [systemAdminCount, setSystemAdminCount] = useState(0);
+
+  // 감사 로그 조회 상태
+  const [auditLogs, setAuditLogs] = useState<Array<{
+    id: string;
+    admin_id: string;
+    action: string;
+    resource_type: string;
+    resource_id: string | null;
+    group_id: string | null;
+    target_user_id: string | null;
+    details: Record<string, unknown> | null;
+    ip_address: string | null;
+    user_agent: string | null;
+    created_at: string;
+  }>>([]);
+  const [auditLogTotal, setAuditLogTotal] = useState(0);
+  const [auditLogPage, setAuditLogPage] = useState(1);
+  const [auditLogLoading, setAuditLogLoading] = useState(false);
+  const [auditLogFilters, setAuditLogFilters] = useState({
+    from: '',
+    to: '',
+    resource_type: '',
+    admin_id: '',
+    group_id: '',
+  });
+  const auditLogLimit = 50;
 
   const formatBytes = (bytes: number | null | undefined): string => {
     if (!bytes || bytes <= 0) return '0GB';
@@ -1012,6 +1040,8 @@ export default function AdminPage() {
       loadSupportTickets();
     } else if (activeTab === 'dashboard-access-requests') {
       loadAccessRequests();
+    } else if (activeTab === 'audit-log') {
+      loadAuditLogs(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthorized, groupAdminTab, selectedGroupId]);
@@ -1164,6 +1194,115 @@ export default function AdminPage() {
       setLoadingData(false);
     }
   }, []);
+
+  const loadAuditLogs = useCallback(async (pageNum: number = 1) => {
+    try {
+      setAuditLogLoading(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setAuditLogLoading(false);
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set('page', String(pageNum));
+      params.set('limit', String(auditLogLimit));
+      if (auditLogFilters.from) params.set('from', auditLogFilters.from);
+      if (auditLogFilters.to) params.set('to', auditLogFilters.to);
+      if (auditLogFilters.resource_type) params.set('resource_type', auditLogFilters.resource_type);
+      if (auditLogFilters.admin_id) params.set('admin_id', auditLogFilters.admin_id);
+      if (auditLogFilters.group_id) params.set('group_id', auditLogFilters.group_id);
+
+      const response = await fetch(`/api/admin/audit/logs?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || '감사 로그 조회에 실패했습니다.');
+      }
+
+      setAuditLogs(result.data || []);
+      setAuditLogTotal(result.total ?? 0);
+      setAuditLogPage(result.page ?? 1);
+    } catch (err: any) {
+      console.error('감사 로그 로드 오류:', err);
+      setError(err.message || '감사 로그를 불러오는데 실패했습니다.');
+      setAuditLogs([]);
+      setAuditLogTotal(0);
+    } finally {
+      setAuditLogLoading(false);
+    }
+  }, [auditLogFilters]);
+
+  const exportAuditLogsCsv = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '1000');
+      if (auditLogFilters.from) params.set('from', auditLogFilters.from);
+      if (auditLogFilters.to) params.set('to', auditLogFilters.to);
+      if (auditLogFilters.resource_type) params.set('resource_type', auditLogFilters.resource_type);
+      if (auditLogFilters.admin_id) params.set('admin_id', auditLogFilters.admin_id);
+      if (auditLogFilters.group_id) params.set('group_id', auditLogFilters.group_id);
+
+      const response = await fetch(`/api/admin/audit/logs?${params.toString()}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.data) return;
+
+      const rows = result.data as Array<{
+        id: string;
+        admin_id: string;
+        action: string;
+        resource_type: string;
+        resource_id: string | null;
+        group_id: string | null;
+        target_user_id: string | null;
+        details: unknown;
+        ip_address: string | null;
+        user_agent: string | null;
+        created_at: string;
+      }>;
+      const headers = ['일시', '작업자(admin_id)', '작업', '리소스 유형', '리소스 ID', '그룹 ID', '대상 사용자', '상세', 'IP', 'User-Agent'];
+      const csvRows = [
+        headers.join(','),
+        ...rows.map((r) => [
+          r.created_at,
+          r.admin_id,
+          `"${(r.action || '').replace(/"/g, '""')}"`,
+          r.resource_type,
+          r.resource_id || '',
+          r.group_id || '',
+          r.target_user_id || '',
+          `"${(JSON.stringify(r.details) || '').replace(/"/g, '""')}"`,
+          r.ip_address || '',
+          `"${(r.user_agent || '').replace(/"/g, '""')}"`,
+        ].join(',')),
+      ];
+      const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('CSV 내보내기 오류:', e);
+    }
+  }, [auditLogFilters]);
 
   // 검색 필터링
   const filteredUsers = users.filter((user) => {
@@ -1502,7 +1641,7 @@ export default function AdminPage() {
               position: 'relative',
             }}
           >
-            <KeyRound style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <            KeyRound style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             접근 요청 관리
             {accessRequests.filter(r => r.status === 'pending').length > 0 && (
               <span style={{
@@ -1519,6 +1658,23 @@ export default function AdminPage() {
                 {accessRequests.filter(r => r.status === 'pending').length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('audit-log')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'audit-log' ? '3px solid #9333ea' : '3px solid transparent',
+              color: activeTab === 'audit-log' ? '#9333ea' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'audit-log' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <FileText style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            감사 로그
           </button>
         </div>
       </div>
@@ -5338,6 +5494,201 @@ export default function AdminPage() {
                           요청하기
                         </button>
                       </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 감사 로그 탭 */}
+            {activeTab === 'audit-log' && (
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px' }}>
+                  관리자 감사 로그
+                </h2>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  padding: '16px',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                }}>
+                  <label style={{ fontSize: '13px', color: '#475569' }}>기간</label>
+                  <input
+                    type="date"
+                    value={auditLogFilters.from}
+                    onChange={(e) => setAuditLogFilters((f) => ({ ...f, from: e.target.value }))}
+                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                  <span style={{ color: '#94a3b8' }}>~</span>
+                  <input
+                    type="date"
+                    value={auditLogFilters.to}
+                    onChange={(e) => setAuditLogFilters((f) => ({ ...f, to: e.target.value }))}
+                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                  />
+                  <select
+                    value={auditLogFilters.resource_type}
+                    onChange={(e) => setAuditLogFilters((f) => ({ ...f, resource_type: e.target.value }))}
+                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', minWidth: '140px' }}
+                  >
+                    <option value="">전체 유형</option>
+                    <option value="group">그룹</option>
+                    <option value="user">사용자</option>
+                    <option value="announcement">공지</option>
+                    <option value="dashboard_access_request">접근 요청</option>
+                    <option value="support_ticket">문의</option>
+                    <option value="system_admin">시스템 관리자</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="작업자 ID (admin_id)"
+                    value={auditLogFilters.admin_id}
+                    onChange={(e) => setAuditLogFilters((f) => ({ ...f, admin_id: e.target.value.trim() }))}
+                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="그룹 ID"
+                    value={auditLogFilters.group_id}
+                    onChange={(e) => setAuditLogFilters((f) => ({ ...f, group_id: e.target.value.trim() }))}
+                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}
+                  />
+                  <button
+                    onClick={() => loadAuditLogs(1)}
+                    disabled={auditLogLoading}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#9333ea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: auditLogLoading ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    {auditLogLoading ? <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} /> : null}
+                    조회
+                  </button>
+                  <button
+                    onClick={exportAuditLogsCsv}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0ea5e9',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Download style={{ width: '16px', height: '16px' }} />
+                    CSV 내보내기
+                  </button>
+                </div>
+                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f1f5f9' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>일시</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>작업</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>리소스 유형</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>리소스 ID</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>작업자 ID</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>그룹 ID</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>대상 사용자</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>상세</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogLoading && auditLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                            <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                            로딩 중...
+                          </td>
+                        </tr>
+                      ) : auditLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                            조건에 맞는 감사 로그가 없습니다.
+                          </td>
+                        </tr>
+                      ) : (
+                        auditLogs.map((log) => (
+                          <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString('ko-KR')}</td>
+                            <td style={{ padding: '10px 12px' }}>{log.action}</td>
+                            <td style={{ padding: '10px 12px' }}>{log.resource_type}</td>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.resource_id || '-'}</td>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.admin_id}</td>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.group_id || '-'}</td>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.target_user_id || '-'}</td>
+                            <td style={{ padding: '10px 12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {log.details ? JSON.stringify(log.details) : '-'}
+                            </td>
+                            <td style={{ padding: '10px 12px' }}>{log.ip_address || '-'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {auditLogTotal > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '16px',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#64748b' }}>
+                      총 {auditLogTotal.toLocaleString()}건 ({(auditLogPage - 1) * auditLogLimit + 1}–{Math.min(auditLogPage * auditLogLimit, auditLogTotal)})
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => loadAuditLogs(auditLogPage - 1)}
+                        disabled={auditLogPage <= 1 || auditLogLoading}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          backgroundColor: 'white',
+                          cursor: auditLogPage <= 1 || auditLogLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                        }}
+                      >
+                        이전
+                      </button>
+                      <span style={{ alignSelf: 'center', fontSize: '13px', color: '#475569' }}>{auditLogPage} / {Math.ceil(auditLogTotal / auditLogLimit) || 1}</span>
+                      <button
+                        onClick={() => loadAuditLogs(auditLogPage + 1)}
+                        disabled={auditLogPage >= Math.ceil(auditLogTotal / auditLogLimit) || auditLogLoading}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          backgroundColor: 'white',
+                          cursor: auditLogPage >= Math.ceil(auditLogTotal / auditLogLimit) || auditLogLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                        }}
+                      >
+                        다음
+                      </button>
                     </div>
                   </div>
                 )}
