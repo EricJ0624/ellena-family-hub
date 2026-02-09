@@ -88,8 +88,8 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
             flex: 1,
             overflow: 'hidden',
             position: 'relative',
-            marginLeft: '3px',
-            marginRight: '3px',
+            marginLeft: '2px',
+            marginRight: '2px',
           }}>
             <div
               style={{
