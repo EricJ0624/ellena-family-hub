@@ -4075,9 +4075,9 @@ export default function FamilyHub() {
             if (process.env.NODE_ENV === 'development') {
               console.error('에러 상세:', JSON.stringify(error, null, 2));
             }
-          } else {
-            console.log('ADD_EVENT: family_events 테이블 저장 성공:', data);
+            throw error; // 호출부에서 복구 및 사용자 알림 가능하도록
           }
+          console.log('ADD_EVENT: family_events 테이블 저장 성공:', data);
           break;
         }
         case 'DELETE_EVENT': {
@@ -4391,8 +4391,16 @@ export default function FamilyHub() {
           }
           
           newState.events = [payload, ...prev.events];
-          // Supabase에 저장
-          saveToSupabase('ADD_EVENT', payload, userId, currentKey);
+          // Supabase에 저장 (실패 시 낙관적 업데이트 복구 및 알림)
+          saveToSupabase('ADD_EVENT', payload, userId, currentKey)
+            .catch((error) => {
+              console.error('일정 저장 실패, 복구 중:', error);
+              setState(prevState => ({
+                ...prevState,
+                events: prevState.events.filter(e => e.id !== payload.id)
+              }));
+              alert('일정 저장에 실패했습니다. 다시 시도해 주세요.');
+            });
           break;
         }
         case 'DELETE_EVENT': {
