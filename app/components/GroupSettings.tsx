@@ -49,7 +49,6 @@ function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
 const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
   const [groupName, setGroupName] = useState(currentGroup?.name || '');
-  const [familyName, setFamilyName] = useState(currentGroup?.family_name ?? '');
   const [titleStyle, setTitleStyle] = useState<TitleStyle>(() =>
     parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Ellena Family Hub')
   );
@@ -99,9 +98,8 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
   const isAdmin = userRole === 'ADMIN' || isOwner;
 
-  // currentGroup 변경 시 familyName, titleStyle 동기화
+  // currentGroup 변경 시 titleStyle 동기화 (문구·스타일 통합)
   useEffect(() => {
-    setFamilyName(currentGroup?.family_name ?? '');
     setTitleStyle(parseTitleStyle(
       currentGroup?.title_style,
       currentGroup?.family_name ?? 'Ellena Family Hub'
@@ -226,16 +224,13 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
         updates.name = groupName.trim();
       }
 
-      const currentFamilyName = currentGroup?.family_name ?? '';
-      if (familyName.trim() !== currentFamilyName) {
-        updates.family_name = familyName.trim() || null;
-      }
+      // 문구·스타일 통합: title_style.content를 family_name과 동기화
+      updates.family_name = titleStyle.content?.trim() || null;
+      updates.title_style = titleStyle;
 
       if (avatarUrl && avatarUrl !== currentGroup?.avatar_url) {
         updates.avatar_url = avatarUrl;
       }
-
-      updates.title_style = titleStyle;
 
       const { error: updateError } = await supabase
         .from('groups')
@@ -408,44 +403,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   대시보드 타이틀
                 </th>
                 <td style={{ padding: '12px' }}>
-                  <input
-                    type="text"
-                    value={familyName}
-                    onChange={(e) => {
-                      setFamilyName(e.target.value);
-                      setError(null);
-                    }}
-                    placeholder="대시보드 상단에 표시될 가족 이름 (비우면 기본값)"
-                    maxLength={50}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
-                    disabled={saving}
-                  />
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                    멤버 대시보드 상단 타이틀에 표시됩니다. 그룹 관리자/소유자만 수정 가능합니다.
-                  </p>
-                </td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
-                >
-                  타이틀 스타일
-                </th>
-                <td style={{ padding: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setShowDesignEditor(true)}
@@ -466,10 +423,10 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     }}
                   >
                     <Palette style={{ width: '18px', height: '18px' }} />
-                    스타일 편집
+                    타이틀 편집
                   </button>
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                    색상, 글자체, 크기, 자간, 굵기, 문구를 편집한 뒤 저장하면 대시보드에 반영됩니다.
+                    문구, 색상, 글자체, 크기, 자간, 굵기를 한 곳에서 편집한 뒤 저장하면 대시보드에 반영됩니다.
                   </p>
                 </td>
               </tr>
