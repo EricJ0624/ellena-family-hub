@@ -26,6 +26,7 @@ export interface Database {
           created_at: string
           updated_at: string
           storage_quota_bytes: number
+          family_name: string | null
         }
         Insert: {
           id?: string
@@ -36,6 +37,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           storage_quota_bytes?: number
+          family_name?: string | null
         }
         Update: {
           id?: string
@@ -46,6 +48,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           storage_quota_bytes?: number
+          family_name?: string | null
         }
         Relationships: [
           {

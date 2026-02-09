@@ -366,7 +366,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
       onClick={onTitleClick}
-      className="text-center cursor-pointer select-none mb-6 relative z-30"
+      className={`text-center select-none mb-6 relative z-30 ${onTitleClick ? 'cursor-pointer' : 'cursor-default'}`}
       style={{
         color: titleStyle.color,
         fontSize: `${titleStyle.fontSize}px`,
@@ -679,6 +679,8 @@ interface TitlePageProps {
   photos?: Array<{ id: number; data: string }>;
   titleStyle?: Partial<TitleStyle>;
   onTitleStyleChange?: (style: TitleStyle) => void;
+  /** false면 타이틀 클릭 시 디자인 에디터 미표시 (읽기 전용) */
+  editable?: boolean;
 }
 
 const TitlePage: React.FC<TitlePageProps> = ({ 
@@ -686,7 +688,8 @@ const TitlePage: React.FC<TitlePageProps> = ({
   onTitleClick,
   photos = [],
   titleStyle: externalTitleStyle,
-  onTitleStyleChange
+  onTitleStyleChange,
+  editable = true,
 }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [frameStyle, setFrameStyle] = useState<FrameStyle>('baroque');
@@ -712,12 +715,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
     }
   }, [onTitleStyleChange]);
   
-  // 타이틀 클릭 핸들러 (디자인 에디터 표시)
+  // 타이틀 클릭 핸들러 (editable일 때만 디자인 에디터 표시)
   const handleTitleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    // 타이틀 클릭 시 디자인 에디터 표시
-    setShowEditor(!showEditor);
-  }, [showEditor]);
+    if (!editable) return;
+    setShowEditor((prev) => !prev);
+  }, [editable]);
   
   return (
     <div 
@@ -805,11 +808,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
         <TitleText 
           title={title || CONSTANTS.TITLE} 
           titleStyle={titleStyle}
-          onTitleClick={handleTitleClick} 
+          onTitleClick={editable ? handleTitleClick : undefined} 
         />
       </div>
       
-      {/* 디자인 에디터 (타이틀 클릭 시 표시) - 모달 오버레이와 함께 */}
+      {/* 디자인 에디터 (editable일 때만, 타이틀 클릭 시 표시) */}
+      {editable && (
       <AnimatePresence>
         {showEditor && (
           <>
@@ -830,6 +834,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
           </>
         )}
       </AnimatePresence>
+      )}
     </div>
   );
 };

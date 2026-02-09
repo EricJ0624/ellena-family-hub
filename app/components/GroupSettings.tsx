@@ -23,6 +23,7 @@ interface GroupSettingsProps {
 const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
   const [groupName, setGroupName] = useState(currentGroup?.name || '');
+  const [familyName, setFamilyName] = useState(currentGroup?.family_name ?? '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(currentGroup?.avatar_url || null);
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
@@ -67,6 +68,11 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   // ✅ SECURITY: 권한 계층 로직 - 그룹 내 실제 역할에만 의존
   // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
   const isAdmin = userRole === 'ADMIN' || isOwner;
+
+  // currentGroup 변경 시 familyName 동기화
+  useEffect(() => {
+    setFamilyName(currentGroup?.family_name ?? '');
+  }, [currentGroup?.id, currentGroup?.family_name]);
 
   // 아바타 파일 선택
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,6 +190,11 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
       if (groupName.trim() !== currentGroup?.name) {
         updates.name = groupName.trim();
+      }
+
+      const currentFamilyName = currentGroup?.family_name ?? '';
+      if (familyName.trim() !== currentFamilyName) {
+        updates.family_name = familyName.trim() || null;
       }
 
       if (avatarUrl && avatarUrl !== currentGroup?.avatar_url) {
@@ -344,6 +355,44 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     }}
                     disabled={saving}
                   />
+                </td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th
+                  style={{
+                    padding: '12px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    width: '160px',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
+                  대시보드 타이틀
+                </th>
+                <td style={{ padding: '12px' }}>
+                  <input
+                    type="text"
+                    value={familyName}
+                    onChange={(e) => {
+                      setFamilyName(e.target.value);
+                      setError(null);
+                    }}
+                    placeholder="대시보드 상단에 표시될 가족 이름 (비우면 기본값)"
+                    maxLength={50}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                    }}
+                    disabled={saving}
+                  />
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                    멤버 대시보드 상단 타이틀에 표시됩니다. 그룹 관리자/소유자만 수정 가능합니다.
+                  </p>
                 </td>
               </tr>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
