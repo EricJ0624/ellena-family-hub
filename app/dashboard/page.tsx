@@ -180,6 +180,7 @@ export default function FamilyHub() {
   const [eventForm, setEventForm] = useState({ title: '', month: '', day: '', desc: '' });
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [eventFormDate, setEventFormDate] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
@@ -6297,12 +6298,17 @@ ${groupInfo}
 
   // Event Handlers
   const openEventModal = () => {
-    setEventForm({ title: '', month: '', day: '', desc: '' });
+    const d = selectedDate || new Date();
+    setEventFormDate(d);
+    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const day = d.getDate().toString();
+    setEventForm({ title: '', month, day, desc: '' });
     setShowEventModal(true);
   };
 
   const closeEventModal = () => {
     setShowEventModal(false);
+    setEventFormDate(null);
     setEventForm({ title: '', month: '', day: '', desc: '' });
   };
 
@@ -6311,20 +6317,12 @@ ${groupInfo}
       alert("일정 제목을 입력해주세요.");
       return;
     }
-    
-    if (!eventForm.month || !eventForm.day) {
-      alert("날짜를 선택해주세요.");
-      return;
-    }
-    
-    // day가 숫자인지 확인
-    const dayNum = parseInt(eventForm.day);
+    // 날짜는 openEventModal에서 달력 선택일(또는 오늘)로 설정됨
+    const dayNum = parseInt(eventForm.day, 10);
     if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
-      alert("일(day)은 1-31 사이의 숫자여야 합니다.");
+      alert("날짜가 올바르지 않습니다.");
       return;
     }
-    
-    // 보안: 입력 검증
     const sanitizedTitle = sanitizeInput(eventForm.title, 100);
     const sanitizedMonth = sanitizeInput(eventForm.month, 10);
     const sanitizedDay = dayNum.toString();
@@ -8639,7 +8637,10 @@ ${groupInfo}
                           e.currentTarget.style.borderColor = '#e2e8f0';
                         }}
                       >
-                        <span>{cell.day}{cell.isToday ? ' 오늘' : ''}</span>
+                        <span>{cell.day}</span>
+                        {cell.isToday && (
+                          <span style={{ fontSize: '10px', fontWeight: '600', color: '#b45309' }}>오늘</span>
+                        )}
                         {cell.eventCount > 0 && (
                           <span style={{ display: 'flex', gap: '2px', justifyContent: 'center', flexWrap: 'wrap' }}>
                             {Array.from({ length: Math.min(cell.eventCount, 3) }).map((_, i) => (
@@ -8829,9 +8830,14 @@ ${groupInfo}
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '20px', fontWeight: '600' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '20px', fontWeight: '600' }}>
                   일정 추가
                 </h3>
+                {eventFormDate && (
+                  <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b' }}>
+                    {eventFormDate.getFullYear()}년 {eventFormDate.getMonth() + 1}월 {eventFormDate.getDate()}일
+                  </p>
+                )}
                 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
@@ -8851,62 +8857,6 @@ ${groupInfo}
                       boxSizing: 'border-box'
                     }}
                   />
-        </div>
-
-                <div style={{ marginBottom: '16px', display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                      월 *
-                    </label>
-                    <select
-                      value={eventForm.month}
-                      onChange={(e) => setEventForm({ ...eventForm, month: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '15px',
-                        boxSizing: 'border-box'
-                      }}
-                    >
-                      <option value="">선택</option>
-                      <option value="JAN">JAN</option>
-                      <option value="FEB">FEB</option>
-                      <option value="MAR">MAR</option>
-                      <option value="APR">APR</option>
-                      <option value="MAY">MAY</option>
-                      <option value="JUN">JUN</option>
-                      <option value="JUL">JUL</option>
-                      <option value="AUG">AUG</option>
-                      <option value="SEP">SEP</option>
-                      <option value="OCT">OCT</option>
-                      <option value="NOV">NOV</option>
-                      <option value="DEC">DEC</option>
-                    </select>
-          </div>
-                  
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                      일 *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="31"
-                      value={eventForm.day}
-                      onChange={(e) => setEventForm({ ...eventForm, day: e.target.value })}
-                      placeholder="일"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '15px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
