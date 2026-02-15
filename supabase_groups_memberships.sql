@@ -124,74 +124,43 @@ CREATE POLICY "그룹 삭제 - 소유자만" ON public.groups
 -- ============================================
 -- 7. memberships 보안 규칙 (RLS)
 -- ============================================
+-- 정책에서 memberships를 직접 읽으면 RLS 무한 재귀가 발생하므로,
+-- SECURITY DEFINER 헬퍼로 멤버/ADMIN 여부만 검사합니다.
+
+CREATE OR REPLACE FUNCTION public.is_member_of_group(gid UUID)
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE
+AS $$ SELECT EXISTS (SELECT 1 FROM public.memberships WHERE group_id = gid AND user_id = auth.uid()); $$;
+
+CREATE OR REPLACE FUNCTION public.is_admin_of_group(gid UUID)
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE
+AS $$ SELECT EXISTS (SELECT 1 FROM public.memberships WHERE group_id = gid AND user_id = auth.uid() AND role = 'ADMIN'); $$;
 
 DROP POLICY IF EXISTS "멤버십 읽기 - 그룹 멤버만" ON public.memberships;
 CREATE POLICY "멤버십 읽기 - 그룹 멤버만" ON public.memberships
   FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.memberships m
-      WHERE m.group_id = memberships.group_id
-      AND m.user_id = auth.uid()
-    )
-  );
+  USING (public.is_member_of_group(memberships.group_id));
 
 -- 작성: ADMIN 권한을 가진 사용자만 멤버 초대 가능 (또는 초대 코드를 통한 자동 가입)
--- 초대 코드를 통한 가입은 별도 함수로 처리하는 것을 권장
 DROP POLICY IF EXISTS "멤버십 작성 - ADMIN만" ON public.memberships;
 CREATE POLICY "멤버십 작성 - ADMIN만" ON public.memberships
   FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.memberships m
-      WHERE m.group_id = memberships.group_id
-      AND m.user_id = auth.uid()
-      AND m.role = 'ADMIN'
-    )
-    OR
-    -- 자기 자신을 추가하는 경우 (초대 코드를 통한 가입)
-    auth.uid() = memberships.user_id
+    public.is_admin_of_group(memberships.group_id)
+    OR auth.uid() = memberships.user_id
   );
 
 DROP POLICY IF EXISTS "멤버십 수정 - ADMIN만" ON public.memberships;
 CREATE POLICY "멤버십 수정 - ADMIN만" ON public.memberships
   FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.memberships m
-      WHERE m.group_id = memberships.group_id
-      AND m.user_id = auth.uid()
-      AND m.role = 'ADMIN'
-    )
-    AND auth.uid() != memberships.user_id  -- 자신의 역할은 변경 불가
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.memberships m
-      WHERE m.group_id = memberships.group_id
-      AND m.user_id = auth.uid()
-      AND m.role = 'ADMIN'
-    )
-    AND auth.uid() != memberships.user_id  -- 자신의 역할은 변경 불가
-  );
+  USING (public.is_admin_of_group(memberships.group_id) AND auth.uid() != memberships.user_id)
+  WITH CHECK (public.is_admin_of_group(memberships.group_id) AND auth.uid() != memberships.user_id);
 
 DROP POLICY IF EXISTS "멤버십 삭제 - ADMIN 또는 본인" ON public.memberships;
 CREATE POLICY "멤버십 삭제 - ADMIN 또는 본인" ON public.memberships
   FOR DELETE
   USING (
-    -- ADMIN이 다른 멤버를 추방하는 경우
-    (
-      EXISTS (
-        SELECT 1 FROM public.memberships m
-        WHERE m.group_id = memberships.group_id
-        AND m.user_id = auth.uid()
-        AND m.role = 'ADMIN'
-      )
-      AND auth.uid() != memberships.user_id
-    )
-    OR
-    -- 본인이 그룹을 나가는 경우
-    auth.uid() = memberships.user_id
+    (public.is_admin_of_group(memberships.group_id) AND auth.uid() != memberships.user_id)
+    OR auth.uid() = memberships.user_id
   );
 
 -- ============================================
