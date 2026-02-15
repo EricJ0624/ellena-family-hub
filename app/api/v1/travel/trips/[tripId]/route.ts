@@ -29,6 +29,7 @@ export async function GET(
       .select('*')
       .eq('id', tripId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .single();
 
     if (error || !data) {
@@ -65,12 +66,14 @@ export async function PATCH(
     }
 
     const supabase = getSupabaseServerClient();
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    };
     if (body.title !== undefined) updatePayload.title = String(body.title).trim();
     if (body.destination !== undefined) updatePayload.destination = body.destination ? String(body.destination).trim() : null;
     if (body.start_date !== undefined) updatePayload.start_date = body.start_date;
     if (body.end_date !== undefined) updatePayload.end_date = body.end_date;
-    updatePayload.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
       .from('travel_trips')
@@ -92,7 +95,7 @@ export async function PATCH(
   }
 }
 
-/** DELETE: 여행 삭제 */
+/** DELETE: 여행 소프트 삭제 (deleted_at, deleted_by 기록) + 하위 일정/경비 동일 처리 */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
@@ -114,16 +117,29 @@ export async function DELETE(
     }
 
     const supabase = getSupabaseServerClient();
-    const { error } = await supabase
+    const now = new Date().toISOString();
+
+    const { error: tripError } = await supabase
       .from('travel_trips')
-      .delete()
+      .update({ deleted_at: now, deleted_by: user.id })
       .eq('id', tripId)
       .eq('group_id', groupId);
 
-    if (error) {
-      console.error('travel_trips DELETE:', error);
+    if (tripError) {
+      console.error('travel_trips DELETE:', tripError);
       return NextResponse.json({ error: '여행 삭제에 실패했습니다.' }, { status: 500 });
     }
+
+    await supabase
+      .from('travel_itineraries')
+      .update({ deleted_at: now, deleted_by: user.id })
+      .eq('trip_id', tripId)
+      .eq('group_id', groupId);
+    await supabase
+      .from('travel_expenses')
+      .update({ deleted_at: now, deleted_by: user.id })
+      .eq('trip_id', tripId)
+      .eq('group_id', groupId);
 
     return NextResponse.json({ success: true });
   } catch (e: any) {

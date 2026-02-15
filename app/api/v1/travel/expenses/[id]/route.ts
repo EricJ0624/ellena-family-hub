@@ -25,7 +25,10 @@ export async function PATCH(
     }
 
     const supabase = getSupabaseServerClient();
-    const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    };
     if (body.category !== undefined) updatePayload.category = body.category ? String(body.category).trim() : null;
     if (body.amount !== undefined) updatePayload.amount = Number(body.amount);
     if (body.currency !== undefined) updatePayload.currency = String(body.currency).trim();
@@ -38,6 +41,7 @@ export async function PATCH(
       .update(updatePayload)
       .eq('id', id)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -75,9 +79,10 @@ export async function DELETE(
     }
 
     const supabase = getSupabaseServerClient();
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from('travel_expenses')
-      .delete()
+      .update({ deleted_at: now, deleted_by: user.id })
       .eq('id', id)
       .eq('group_id', groupId);
 

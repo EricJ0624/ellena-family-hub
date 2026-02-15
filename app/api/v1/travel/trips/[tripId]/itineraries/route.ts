@@ -29,6 +29,7 @@ export async function GET(
       .select('id')
       .eq('id', tripId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .single();
     if (!trip) {
       return NextResponse.json({ error: '여행을 찾을 수 없습니다.' }, { status: 404 });
@@ -39,6 +40,7 @@ export async function GET(
       .select('*')
       .eq('trip_id', tripId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .order('day_date', { ascending: true })
       .order('sort_order', { ascending: true });
 
@@ -92,6 +94,7 @@ export async function POST(
       .select('id')
       .eq('id', tripId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .single();
     if (!trip) {
       return NextResponse.json({ error: '여행을 찾을 수 없습니다.' }, { status: 404 });
@@ -106,6 +109,7 @@ export async function POST(
         title: String(title).trim(),
         description: description ? String(description).trim() : null,
         sort_order: typeof sort_order === 'number' ? sort_order : 0,
+        created_by: user.id,
       })
       .select()
       .single();

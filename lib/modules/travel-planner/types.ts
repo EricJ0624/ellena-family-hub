@@ -13,6 +13,9 @@ export interface TravelTrip {
   created_by: string;
   created_at: string;
   updated_at: string;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export interface TravelItinerary {
@@ -25,6 +28,10 @@ export interface TravelItinerary {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export interface TravelExpense {
@@ -39,6 +46,10 @@ export interface TravelExpense {
   expense_date: string;
   created_at: string;
   updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export type TravelTripInsert = Omit<TravelTrip, 'id' | 'created_at' | 'updated_at'> & {

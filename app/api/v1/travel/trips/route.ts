@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       .from('travel_trips')
       .select('*')
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .order('start_date', { ascending: false });
 
     if (error) {

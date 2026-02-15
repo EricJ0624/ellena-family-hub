@@ -36,6 +36,9 @@ export function TravelPlannerContent() {
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
 
+  /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
+  const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
+
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -98,6 +101,46 @@ export function TravelPlannerContent() {
       setTrips([]);
     }
   }, [currentGroupId, fetchTrips]);
+
+  /** 그룹 멤버 표시명 맵 로드 (memberships + profiles) */
+  useEffect(() => {
+    if (!currentGroupId) {
+      setMemberDisplayNames(new Map());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: memberships } = await supabase
+          .from('memberships')
+          .select('user_id')
+          .eq('group_id', currentGroupId);
+        const userIds = [...new Set((memberships ?? []).map((m) => m.user_id))];
+        if (userIds.length === 0) {
+          if (!cancelled) setMemberDisplayNames(new Map());
+          return;
+        }
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, nickname, email')
+          .in('id', userIds);
+        const map = new Map<string, string>();
+        (profiles ?? []).forEach((p) => {
+          const name = (p.nickname && String(p.nickname).trim()) || p.email || '멤버';
+          map.set(p.id, name);
+        });
+        if (!cancelled) setMemberDisplayNames(map);
+      } catch {
+        if (!cancelled) setMemberDisplayNames(new Map());
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentGroupId]);
+
+  const getDisplayName = useCallback((userId: string | null | undefined): string => {
+    if (!userId) return '-';
+    return memberDisplayNames.get(userId) ?? '-';
+  }, [memberDisplayNames]);
 
   useEffect(() => {
     if (selectedTrip) {
@@ -289,6 +332,10 @@ export function TravelPlannerContent() {
                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
                       {t.start_date} ~ {t.end_date}
                     </div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                      등록: {getDisplayName(t.created_by)}
+                      {t.updated_by != null && ` · 수정: ${getDisplayName(t.updated_by)}`}
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -327,6 +374,10 @@ export function TravelPlannerContent() {
                 <Calendar style={{ width: 14, height: 14, display: 'inline', marginRight: 4 }} />
                 {selectedTrip.start_date} ~ {selectedTrip.end_date}
               </p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                등록: {getDisplayName(selectedTrip.created_by)}
+                {selectedTrip.updated_by != null && ` · 수정: ${getDisplayName(selectedTrip.updated_by)}`}
+              </p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -354,6 +405,10 @@ export function TravelPlannerContent() {
                         <div style={{ fontWeight: 600, color: '#1e293b' }}>{i.title}</div>
                         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{i.day_date}</div>
                         {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                          등록: {getDisplayName(i.created_by)}
+                          {i.updated_by != null && ` · 수정: ${getDisplayName(i.updated_by)}`}
+                        </div>
                       </li>
                     ))
                   )}
@@ -385,8 +440,14 @@ export function TravelPlannerContent() {
                           justifyContent: 'space-between',
                         }}
                       >
-                        <span>{e.category || '기타'}</span>
-                        <span style={{ fontWeight: 600 }}>{Number(e.amount).toLocaleString('ko-KR')}원</span>
+                        <div>
+                          <span>{e.category || '기타'}</span>
+                          <span style={{ fontWeight: 600, marginLeft: 8 }}>{Number(e.amount).toLocaleString('ko-KR')}원</span>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                            등록: {getDisplayName(e.created_by)}
+                            {e.updated_by != null && ` · 수정: ${getDisplayName(e.updated_by)}`}
+                          </div>
+                        </div>
                       </li>
                     ))
                   )}
