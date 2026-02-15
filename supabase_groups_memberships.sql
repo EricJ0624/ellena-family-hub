@@ -261,10 +261,11 @@ LEFT JOIN public.profiles p ON m.user_id = p.id;
 ALTER VIEW public.group_members_view SET (security_invoker = true);
 
 -- ============================================
--- 11. 초대 코드 생성 함수 (12자: 대문자+소문자+숫자)
+-- 11. 초대 코드 생성 함수 (12자: 대문자+소문자+숫자, 각 함수가 자체 완결)
 -- ============================================
 
-CREATE OR REPLACE FUNCTION public.generate_invite_code_12()
+-- 최초 그룹 생성 시 사용 (온보딩 RPC)
+CREATE OR REPLACE FUNCTION public.generate_invite_code()
 RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
@@ -288,23 +289,28 @@ BEGIN
 END;
 $$;
 
--- 최초 그룹 생성 시 사용 (온보딩 RPC)
-CREATE OR REPLACE FUNCTION public.generate_invite_code()
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RETURN public.generate_invite_code_12();
-END;
-$$;
-
 -- 갱신 시 사용 (refresh_invite_code에서 호출)
 CREATE OR REPLACE FUNCTION public.generate_secure_invite_code()
 RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
+DECLARE
+  code TEXT;
+  exists_check BOOLEAN;
+  alphabet TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  i INTEGER;
+  random_char TEXT;
 BEGIN
-  RETURN public.generate_invite_code_12();
+  LOOP
+    code := '';
+    FOR i IN 1..12 LOOP
+      random_char := substr(alphabet, floor(random() * length(alphabet) + 1)::integer, 1);
+      code := code || random_char;
+    END LOOP;
+    SELECT EXISTS(SELECT 1 FROM public.groups WHERE invite_code = code) INTO exists_check;
+    EXIT WHEN NOT exists_check;
+  END LOOP;
+  RETURN code;
 END;
 $$;
 
