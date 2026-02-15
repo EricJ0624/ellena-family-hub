@@ -30,39 +30,45 @@ export default function AuthCallbackPage() {
 
           if (sessionError) throw sessionError;
 
-          // 세션이 설정되면 사용자 정보 확인
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (user) {
-            // 시스템 관리자 확인
-            const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-              user_id_param: user.id,
-            });
-
-            // 그룹이 있는지 확인
-            const { data: memberships } = await supabase
-              .from('memberships')
-              .select('group_id')
-              .eq('user_id', user.id)
-              .limit(1);
-
-            const { data: ownedGroups } = await supabase
-              .from('groups')
-              .select('id')
-              .eq('owner_id', user.id)
-              .limit(1);
-
-            const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
-
-            if (isAdmin) {
-              // 시스템 관리자: 그룹이 있으면 대시보드, 없으면 관리자 페이지
-              router.push(hasGroups ? '/dashboard' : '/admin');
-            } else {
-              // 일반 사용자: 그룹이 없으면 온보딩으로, 있으면 대시보드로
-              router.push(hasGroups ? '/dashboard' : '/onboarding');
-            }
-          } else {
+          // 실제로 요청에 붙을 세션(access_token)이 있는지 확인 후 리다이렉트
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) {
             router.push('/');
+            return;
+          }
+
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            router.push('/');
+            return;
+          }
+
+          // 시스템 관리자 확인
+          const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+            user_id_param: user.id,
+          });
+
+          // 그룹이 있는지 확인
+          const { data: memberships } = await supabase
+            .from('memberships')
+            .select('group_id')
+            .eq('user_id', user.id)
+            .limit(1);
+
+          const { data: ownedGroups } = await supabase
+            .from('groups')
+            .select('id')
+            .eq('owner_id', user.id)
+            .limit(1);
+
+          const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+
+          if (isAdmin) {
+            // 시스템 관리자: 그룹이 있으면 대시보드, 없으면 관리자 페이지
+            router.push(hasGroups ? '/dashboard' : '/admin');
+          } else {
+            // 일반 사용자: 그룹이 없으면 온보딩으로, 있으면 대시보드로
+            router.push(hasGroups ? '/dashboard' : '/onboarding');
           }
         } else {
           // 토큰이 없으면 로그인 페이지로 리다이렉트

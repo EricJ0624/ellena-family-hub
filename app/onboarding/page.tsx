@@ -181,6 +181,11 @@ export default function OnboardingPage() {
     setSuccess(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        router.push('/');
+        return;
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('로그인이 필요합니다.');

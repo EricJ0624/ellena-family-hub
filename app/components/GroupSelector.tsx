@@ -30,17 +30,29 @@ const GroupSelector: React.FC = () => {
     setSuccess(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('세션이 없습니다. 다시 로그인해 주세요.');
+        setCreating(false);
+        return;
+      }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('로그인이 필요합니다.');
       }
 
-      // 그룹 생성 (초대 코드는 트리거에서 자동 생성)
+      // 초대 코드 생성 (RPC)
+      const { data: inviteCodeData, error: codeError } = await supabase.rpc('generate_invite_code');
+      if (codeError || !inviteCodeData) {
+        throw new Error('초대 코드 생성에 실패했습니다.');
+      }
+
       const { data, error: createError } = await supabase
         .from('groups')
         .insert({
           name: groupName.trim(),
           owner_id: user.id,
+          invite_code: inviteCodeData,
         })
         .select()
         .single();

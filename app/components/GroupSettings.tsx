@@ -168,6 +168,12 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     setSuccess(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('세션이 없습니다. 다시 로그인해 주세요.');
+        setRefreshing(false);
+        return;
+      }
       const { data, error: refreshError } = await supabase.rpc('refresh_invite_code', {
         group_id_param: currentGroupId,
         expires_in_days: 30, // 30일 후 만료
