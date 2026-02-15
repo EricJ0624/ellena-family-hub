@@ -268,6 +268,7 @@ ALTER VIEW public.group_members_view SET (security_invoker = true);
 CREATE OR REPLACE FUNCTION public.generate_invite_code()
 RETURNS TEXT
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 DECLARE
   code TEXT;
@@ -293,6 +294,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.generate_secure_invite_code()
 RETURNS TEXT
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 DECLARE
   code TEXT;
