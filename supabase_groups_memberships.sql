@@ -314,6 +314,12 @@ BEGIN
 END;
 $$;
 
+-- RPC 호출 권한 (앱에서 로그인 사용자가 호출할 수 있도록)
+GRANT EXECUTE ON FUNCTION public.generate_invite_code() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.generate_invite_code() TO anon;
+GRANT EXECUTE ON FUNCTION public.generate_secure_invite_code() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.generate_secure_invite_code() TO anon;
+
 -- 초대 코드 만료 확인 함수
 CREATE OR REPLACE FUNCTION public.is_invite_code_valid(invite_code_param TEXT)
 RETURNS BOOLEAN
