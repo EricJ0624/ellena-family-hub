@@ -158,6 +158,9 @@ export default function LoginPage() {
     }
 
     try {
+      // 이전 사용자 세션이 남아 있으면 새 가입 후 getSession()이 이전 사용자를 반환할 수 있음 → 가입 직전 세션 제거
+      await supabase.auth.signOut();
+
       const signupNickname = nickname || email.split('@')[0];
       
       // SSR 안전성: window 객체가 있을 때만 origin 사용
@@ -214,17 +217,14 @@ export default function LoginPage() {
           return;
         }
 
-        // 세션이 저장되도록 약간의 지연 후 온보딩 페이지로 리다이렉트
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // 세션 확인
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          // 온보딩 페이지로 리다이렉트
+        // signUp 응답의 세션만 사용 (getSession()은 이전 사용자 세션을 반환할 수 있음)
+        const session = data.session;
+        const isNewUserSession = session?.user?.id === data.user?.id;
+        if (session && isNewUserSession) {
+          await new Promise(resolve => setTimeout(resolve, 100));
           router.push('/onboarding');
         } else {
           setSuccessMsg('가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)');
-          // 3초 후 로그인 모드로 전환
           setTimeout(() => {
             setMode('login');
             setEmail('');
