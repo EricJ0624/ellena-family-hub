@@ -257,7 +257,7 @@ export default function OnboardingPage() {
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
         .select('id, name, invite_code')
-        .eq('invite_code', inviteCode.trim().toUpperCase())
+        .eq('invite_code', inviteCode.trim())
         .single();
 
       if (groupError || !groupData) {
@@ -928,7 +928,7 @@ export default function OnboardingPage() {
                           type="text"
                           value={inviteCode}
                           onChange={(e) => {
-                            setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                            setInviteCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12));
                             setError(null);
                           }}
                           placeholder="예: ABC123"

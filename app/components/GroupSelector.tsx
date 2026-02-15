@@ -324,7 +324,7 @@ const GroupSelector: React.FC = () => {
                         type="text"
                         value={inviteCode}
                         onChange={(e) => {
-                          setInviteCode(e.target.value.toUpperCase());
+                          setInviteCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12));
                           setError(null);
                         }}
                         placeholder="초대 코드를 입력하세요"
@@ -647,7 +647,7 @@ const GroupSelector: React.FC = () => {
                         type="text"
                         value={inviteCode}
                         onChange={(e) => {
-                          setInviteCode(e.target.value.toUpperCase());
+                          setInviteCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12));
                           setError(null);
                         }}
                         placeholder="초대 코드를 입력하세요"

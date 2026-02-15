@@ -411,6 +411,9 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
                     초대 코드를 복사하여 가족 구성원에게 공유하세요.
                   </p>
+                  <p style={{ fontSize: '12px', color: '#9333ea', marginTop: '6px', fontWeight: 500 }}>
+                    가입이 끝난 후 &apos;초대코드 갱신&apos;을 눌러 이전 코드를 무효화하세요. 새 코드를 모르는 사람은 가입할 수 없습니다.
+                  </p>
                 </td>
               </tr>
             </tbody>

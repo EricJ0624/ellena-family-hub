@@ -60,6 +60,7 @@ $$;
 -- 4. 트리거 생성
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_groups_updated_at ON public.groups;
 CREATE TRIGGER update_groups_updated_at 
   BEFORE UPDATE ON public.groups
   FOR EACH ROW 
@@ -76,7 +77,7 @@ ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
 -- 6. groups 보안 규칙 (RLS)
 -- ============================================
 
--- 읽기: 자신이 속한 그룹의 데이터만 조회 가능
+DROP POLICY IF EXISTS "그룹 읽기 - 멤버만" ON public.groups;
 CREATE POLICY "그룹 읽기 - 멤버만" ON public.groups
   FOR SELECT
   USING (
@@ -87,7 +88,7 @@ CREATE POLICY "그룹 읽기 - 멤버만" ON public.groups
     )
   );
 
--- 작성: 인증된 사용자는 누구나 그룹 생성 가능 (생성자는 자동으로 ADMIN으로 추가됨)
+DROP POLICY IF EXISTS "그룹 작성 - 인증된 사용자" ON public.groups;
 CREATE POLICY "그룹 작성 - 인증된 사용자" ON public.groups
   FOR INSERT
   WITH CHECK (
@@ -95,7 +96,7 @@ CREATE POLICY "그룹 작성 - 인증된 사용자" ON public.groups
     auth.uid() = owner_id
   );
 
--- 수정: ADMIN 권한을 가진 사용자만 그룹 정보 수정 가능
+DROP POLICY IF EXISTS "그룹 수정 - ADMIN만" ON public.groups;
 CREATE POLICY "그룹 수정 - ADMIN만" ON public.groups
   FOR UPDATE
   USING (
@@ -115,7 +116,7 @@ CREATE POLICY "그룹 수정 - ADMIN만" ON public.groups
     )
   );
 
--- 삭제: 그룹 소유자(owner)만 그룹 삭제 가능
+DROP POLICY IF EXISTS "그룹 삭제 - 소유자만" ON public.groups;
 CREATE POLICY "그룹 삭제 - 소유자만" ON public.groups
   FOR DELETE
   USING (auth.uid() = owner_id);
@@ -124,7 +125,7 @@ CREATE POLICY "그룹 삭제 - 소유자만" ON public.groups
 -- 7. memberships 보안 규칙 (RLS)
 -- ============================================
 
--- 읽기: 자신이 속한 그룹의 멤버십 정보만 조회 가능
+DROP POLICY IF EXISTS "멤버십 읽기 - 그룹 멤버만" ON public.memberships;
 CREATE POLICY "멤버십 읽기 - 그룹 멤버만" ON public.memberships
   FOR SELECT
   USING (
@@ -137,6 +138,7 @@ CREATE POLICY "멤버십 읽기 - 그룹 멤버만" ON public.memberships
 
 -- 작성: ADMIN 권한을 가진 사용자만 멤버 초대 가능 (또는 초대 코드를 통한 자동 가입)
 -- 초대 코드를 통한 가입은 별도 함수로 처리하는 것을 권장
+DROP POLICY IF EXISTS "멤버십 작성 - ADMIN만" ON public.memberships;
 CREATE POLICY "멤버십 작성 - ADMIN만" ON public.memberships
   FOR INSERT
   WITH CHECK (
@@ -151,7 +153,7 @@ CREATE POLICY "멤버십 작성 - ADMIN만" ON public.memberships
     auth.uid() = memberships.user_id
   );
 
--- 수정: ADMIN 권한을 가진 사용자만 멤버 역할 변경 가능 (자신의 역할은 변경 불가)
+DROP POLICY IF EXISTS "멤버십 수정 - ADMIN만" ON public.memberships;
 CREATE POLICY "멤버십 수정 - ADMIN만" ON public.memberships
   FOR UPDATE
   USING (
@@ -173,7 +175,7 @@ CREATE POLICY "멤버십 수정 - ADMIN만" ON public.memberships
     AND auth.uid() != memberships.user_id  -- 자신의 역할은 변경 불가
   );
 
--- 삭제: ADMIN 권한을 가진 사용자만 멤버 추방 가능 (자신은 추방 불가, 단 그룹 나가기는 가능)
+DROP POLICY IF EXISTS "멤버십 삭제 - ADMIN 또는 본인" ON public.memberships;
 CREATE POLICY "멤버십 삭제 - ADMIN 또는 본인" ON public.memberships
   FOR DELETE
   USING (
@@ -211,7 +213,7 @@ BEGIN
 END;
 $$;
 
--- 트리거 생성
+DROP TRIGGER IF EXISTS add_group_owner_as_admin_trigger ON public.groups;
 CREATE TRIGGER add_group_owner_as_admin_trigger
   AFTER INSERT ON public.groups
   FOR EACH ROW
@@ -221,9 +223,16 @@ CREATE TRIGGER add_group_owner_as_admin_trigger
 -- 9. Realtime 활성화 (선택사항)
 -- ============================================
 
--- 그룹 및 멤버십 변경사항을 실시간으로 감지하려면 활성화
-ALTER PUBLICATION supabase_realtime ADD TABLE groups;
-ALTER PUBLICATION supabase_realtime ADD TABLE memberships;
+-- 그룹 및 멤버십 변경사항을 실시간으로 감지하려면 활성화 (이미 추가된 경우 스킵)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'groups') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.groups;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'memberships') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.memberships;
+  END IF;
+END $$;
 
 -- ============================================
 -- 10. 유용한 뷰 생성 (선택사항)
@@ -252,62 +261,50 @@ LEFT JOIN public.profiles p ON m.user_id = p.id;
 ALTER VIEW public.group_members_view SET (security_invoker = true);
 
 -- ============================================
--- 11. 초대 코드 생성 함수 (보안 강화: nanoid 스타일)
+-- 11. 초대 코드 생성 함수 (12자: 대문자+소문자+숫자)
 -- ============================================
 
--- 기존 함수는 유지하되, 새로운 보안 강화 함수 추가
-CREATE OR REPLACE FUNCTION public.generate_invite_code()
+CREATE OR REPLACE FUNCTION public.generate_invite_code_12()
 RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
 DECLARE
   code TEXT;
   exists_check BOOLEAN;
-BEGIN
-  LOOP
-    -- 8자리 랜덤 코드 생성 (대문자와 숫자) - 기존 호환성 유지
-    code := upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8));
-    
-    -- 중복 확인
-    SELECT EXISTS(SELECT 1 FROM public.groups WHERE invite_code = code) INTO exists_check;
-    
-    -- 중복이 없으면 반환
-    EXIT WHEN NOT exists_check;
-  END LOOP;
-  
-  RETURN code;
-END;
-$$;
-
--- 보안 강화된 초대 코드 생성 함수 (nanoid 스타일, 21자리)
-CREATE OR REPLACE FUNCTION public.generate_secure_invite_code()
-RETURNS TEXT
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  code TEXT;
-  exists_check BOOLEAN;
-  -- nanoid 스타일: URL-safe, 21자리 (더 안전)
   alphabet TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   i INTEGER;
   random_char TEXT;
 BEGIN
   LOOP
     code := '';
-    -- 21자리 랜덤 코드 생성 (nanoid 스타일)
-    FOR i IN 1..21 LOOP
+    FOR i IN 1..12 LOOP
       random_char := substr(alphabet, floor(random() * length(alphabet) + 1)::integer, 1);
       code := code || random_char;
     END LOOP;
-    
-    -- 중복 확인
     SELECT EXISTS(SELECT 1 FROM public.groups WHERE invite_code = code) INTO exists_check;
-    
-    -- 중복이 없으면 반환
     EXIT WHEN NOT exists_check;
   END LOOP;
-  
   RETURN code;
+END;
+$$;
+
+-- 최초 그룹 생성 시 사용 (온보딩 RPC)
+CREATE OR REPLACE FUNCTION public.generate_invite_code()
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN public.generate_invite_code_12();
+END;
+$$;
+
+-- 갱신 시 사용 (refresh_invite_code에서 호출)
+CREATE OR REPLACE FUNCTION public.generate_secure_invite_code()
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN public.generate_invite_code_12();
 END;
 $$;
 
