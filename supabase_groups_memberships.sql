@@ -91,10 +91,7 @@ CREATE POLICY "그룹 읽기 - 멤버만" ON public.groups
 DROP POLICY IF EXISTS "그룹 작성 - 인증된 사용자" ON public.groups;
 CREATE POLICY "그룹 작성 - 인증된 사용자" ON public.groups
   FOR INSERT
-  WITH CHECK (
-    auth.role() = 'authenticated' AND
-    auth.uid() = owner_id
-  );
+  WITH CHECK (auth.uid() IS NOT NULL AND auth.uid() = owner_id);
 
 DROP POLICY IF EXISTS "그룹 수정 - ADMIN만" ON public.groups;
 CREATE POLICY "그룹 수정 - ADMIN만" ON public.groups
@@ -237,7 +234,6 @@ ALTER VIEW public.group_members_view SET (security_invoker = true);
 CREATE OR REPLACE FUNCTION public.generate_invite_code()
 RETURNS TEXT
 LANGUAGE plpgsql
-SECURITY DEFINER
 AS $$
 DECLARE
   code TEXT;
@@ -263,7 +259,6 @@ $$;
 CREATE OR REPLACE FUNCTION public.generate_secure_invite_code()
 RETURNS TEXT
 LANGUAGE plpgsql
-SECURITY DEFINER
 AS $$
 DECLARE
   code TEXT;
@@ -284,12 +279,6 @@ BEGIN
   RETURN code;
 END;
 $$;
-
--- RPC 호출 권한 (앱에서 로그인 사용자가 호출할 수 있도록)
-GRANT EXECUTE ON FUNCTION public.generate_invite_code() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.generate_invite_code() TO anon;
-GRANT EXECUTE ON FUNCTION public.generate_secure_invite_code() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.generate_secure_invite_code() TO anon;
 
 -- 초대 코드 만료 확인 함수
 CREATE OR REPLACE FUNCTION public.is_invite_code_valid(invite_code_param TEXT)
