@@ -22,8 +22,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
 
-// 사용자별 저장소 키 생성 함수 (기존 구조 유지, 사용자별 분리만 추가)
-const getStorageKey = (userId: string) => `${CONFIG.STORAGE}_${userId}`;
+// 사용자·그룹별 저장소 키 (그룹 전환 시 이전 그룹 캐시 복원 방지)
+const getStorageKey = (userId: string, groupId?: string | null) =>
+  groupId ? `${CONFIG.STORAGE}_${userId}_${groupId}` : `${CONFIG.STORAGE}_${userId}`;
 const getAuthKey = (userId: string) => `${CONFIG.AUTH}_${userId}`;
 
 const CryptoService = {
@@ -378,7 +379,7 @@ export default function FamilyHub() {
   }, [userId, currentGroupId]);
 
   const loadData = useCallback(async (key: string, userId: string) => {
-    const storageKey = getStorageKey(userId);
+    const storageKey = getStorageKey(userId, currentGroupId);
     const saved = localStorage.getItem(storageKey);
     
     let localState: AppState | null = null;
@@ -442,7 +443,7 @@ export default function FamilyHub() {
         // localStorage가 있으면 병합, 없으면 Supabase 사진만 사용
         setState(prev => {
           // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
-          const storageKey = getStorageKey(userId);
+          const storageKey = getStorageKey(userId, currentGroupId);
           const saved = localStorage.getItem(storageKey);
           let localStoragePhotos: Photo[] = [];
           
@@ -513,7 +514,7 @@ export default function FamilyHub() {
     const authKey = getAuthKey(userId);
     sessionStorage.setItem(authKey, key);
     setIsAuthenticated(true);
-  }, []);
+  }, [currentGroupId]);
 
   // ✅ SECURITY: 그룹 전환 시 완전한 데이터 격리 보장
   useEffect(() => {
@@ -2108,7 +2109,7 @@ export default function FamilyHub() {
                                     state.album.length > 0;
         
         // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
-        const storageKey = getStorageKey(userId);
+        const storageKey = getStorageKey(userId, currentGroupId);
         const saved = localStorage.getItem(storageKey);
         let localStoragePhotos: Photo[] = [];
         if (saved && currentKey) {
@@ -3761,7 +3762,7 @@ export default function FamilyHub() {
     }
     
     try {
-      const storageKey = getStorageKey(userId);
+      const storageKey = getStorageKey(userId, currentGroupId);
       // originalData 제거 (localStorage 공간 절약)
       const stateForStorage: AppState = {
         ...newState,
@@ -3781,7 +3782,7 @@ export default function FamilyHub() {
         // 오래된 사진 자동 삭제 시도
         const cleanedState = checkAndCleanStorage(newState);
         try {
-          const storageKey = getStorageKey(userId);
+          const storageKey = getStorageKey(userId, currentGroupId);
           const stateForStorage: AppState = {
             ...cleanedState,
             album: cleanedState.album.map(photo => {
@@ -6249,11 +6250,16 @@ ${groupInfo}
           console.error('Logout error:', error);
         }
         
-        // 사용자별 localStorage 및 sessionStorage 데이터 정리
+        // 사용자별 localStorage 및 sessionStorage 데이터 정리 (그룹별 키 포함 전부 삭제)
         if (userId) {
-          const storageKey = getStorageKey(userId);
+          const prefix = `${CONFIG.STORAGE}_${userId}`;
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k === prefix || k.startsWith(prefix + '_'))) keysToRemove.push(k);
+          }
+          keysToRemove.forEach(k => localStorage.removeItem(k));
           const authKey = getAuthKey(userId);
-          localStorage.removeItem(storageKey);
           sessionStorage.removeItem(authKey);
         }
         
@@ -9079,6 +9085,44 @@ ${groupInfo}
               </button>
             </div>
           </div>
+          </section>
+
+          {/* 가족 여행 플래너 Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">가족 여행 플래너</h3>
+              {currentGroupId && (
+                <button
+                  onClick={() => router.push('/travel')}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#9333ea',
+                    color: '#fff',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>✈️</span>
+                  이동
+                </button>
+              )}
+            </div>
+            <div className="section-body">
+              {!currentGroupId ? (
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  여행 플래너를 보려면 그룹을 선택해 주세요.
+                </div>
+              ) : (
+                <div style={{ fontSize: '13px', color: '#475569' }}>
+                  여행 일정과 경비를 함께 관리해 보세요.
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Piggy Bank Section */}

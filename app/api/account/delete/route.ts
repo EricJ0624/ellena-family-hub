@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  authenticateUser, 
+import {
+  authenticateUser,
   getSupabaseServerClient,
   deleteFromCloudinary,
-  deleteFromS3
+  deleteFromS3,
+  generateAppS3KeyFromMasterKey,
 } from '@/lib/api-helpers';
 
 /**
@@ -91,9 +92,28 @@ export async function DELETE(request: NextRequest) {
         );
       }
 
-      // 확인 완료 시 그룹 삭제 진행
+      // 확인 완료 시 그룹 삭제 진행 (각 그룹의 S3/Cloudinary 파일 삭제 후 DB 삭제)
       for (const group of ownedGroups) {
-        // 그룹 삭제 (CASCADE로 memberships도 자동 삭제)
+        const { data: groupPhotos } = await supabaseServer
+          .from('memory_vault')
+          .select('id, cloudinary_public_id, s3_key')
+          .eq('group_id', group.id);
+
+        if (groupPhotos && groupPhotos.length > 0) {
+          const deletePromises: Promise<boolean>[] = [];
+          for (const photo of groupPhotos) {
+            if (photo.cloudinary_public_id) {
+              deletePromises.push(deleteFromCloudinary(photo.cloudinary_public_id));
+            }
+            if (photo.s3_key) {
+              deletePromises.push(deleteFromS3(photo.s3_key));
+              const appKey = generateAppS3KeyFromMasterKey(photo.s3_key);
+              deletePromises.push(deleteFromS3(appKey));
+            }
+          }
+          await Promise.all(deletePromises);
+        }
+
         const { error: deleteGroupError } = await supabaseServer
           .from('groups')
           .delete()
