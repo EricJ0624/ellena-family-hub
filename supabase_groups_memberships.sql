@@ -56,9 +56,26 @@ BEGIN
 END;
 $$;
 
+-- groups INSERT 시 owner_id를 auth.uid()로 고정 (RLS WITH CHECK 통과 보장)
+CREATE OR REPLACE FUNCTION public.set_groups_owner_id()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.owner_id := auth.uid();
+  RETURN NEW;
+END;
+$$;
+
 -- ============================================
 -- 4. 트리거 생성
 -- ============================================
+
+DROP TRIGGER IF EXISTS set_groups_owner_id_trigger ON public.groups;
+CREATE TRIGGER set_groups_owner_id_trigger
+  BEFORE INSERT ON public.groups
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_groups_owner_id();
 
 DROP TRIGGER IF EXISTS update_groups_updated_at ON public.groups;
 CREATE TRIGGER update_groups_updated_at 
