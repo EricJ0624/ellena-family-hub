@@ -47,17 +47,22 @@ const GroupSelector: React.FC = () => {
         throw new Error('초대 코드 생성에 실패했습니다.');
       }
 
-      // owner_id는 트리거가 자동으로 설정하므로 제거
-      const { data, error: createError } = await supabase
-        .from('groups')
-        .insert({
-          name: groupName.trim(),
-          invite_code: inviteCodeData,
-        })
-        .select()
-        .single();
+      // 그룹 생성 (RPC 함수 사용 - RLS 우회)
+      const { data: groupId, error: createError } = await supabase.rpc('create_group', {
+        group_name: groupName.trim(),
+        invite_code_param: inviteCodeData,
+      });
 
       if (createError) throw createError;
+      
+      // 생성된 그룹 정보 조회
+      const { data, error: fetchError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single();
+      
+      if (fetchError) throw fetchError;
 
       // 소유자를 ADMIN으로 추가 (트리거에서 자동 추가되지만 명시적으로 추가)
       const { error: membershipError } = await supabase

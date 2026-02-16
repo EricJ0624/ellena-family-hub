@@ -421,7 +421,37 @@ AS $$
 $$;
 
 -- ============================================
--- 14. 기존 그룹의 invite_code_expires_at 컬럼 마이그레이션 (NULL로 유지 = 영구 유효)
+-- 14. 그룹 생성 RPC 함수 (RLS 우회, SECURITY DEFINER 사용)
+-- ============================================
+
+CREATE OR REPLACE FUNCTION public.create_group(
+  group_name TEXT,
+  invite_code_param TEXT
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_group_id UUID;
+  current_uid UUID;
+BEGIN
+  current_uid := auth.uid();
+  
+  IF current_uid IS NULL THEN
+    RAISE EXCEPTION 'User must be authenticated';
+  END IF;
+  
+  INSERT INTO public.groups (name, invite_code, owner_id)
+  VALUES (group_name, invite_code_param, current_uid)
+  RETURNING id INTO new_group_id;
+  
+  RETURN new_group_id;
+END;
+$$;
+
+-- ============================================
+-- 15. 기존 그룹의 invite_code_expires_at 컬럼 마이그레이션 (NULL로 유지 = 영구 유효)
 -- ============================================
 
 -- 기존 그룹은 invite_code_expires_at이 NULL이므로 영구 유효로 유지됨
