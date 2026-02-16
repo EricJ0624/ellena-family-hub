@@ -108,8 +108,7 @@ CREATE POLICY "그룹 읽기 - 멤버만" ON public.groups
 DROP POLICY IF EXISTS "그룹 작성 - 인증된 사용자" ON public.groups;
 CREATE POLICY "그룹 작성 - 인증된 사용자" ON public.groups
   FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK ((select auth.uid()) = owner_id);
 
 DROP POLICY IF EXISTS "그룹 수정 - ADMIN만" ON public.groups;
 CREATE POLICY "그룹 수정 - ADMIN만" ON public.groups
@@ -426,7 +425,8 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.create_group(
   group_name TEXT,
-  invite_code_param TEXT
+  invite_code_param TEXT,
+  owner_id_param UUID DEFAULT NULL
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -435,6 +435,7 @@ AS $$
 DECLARE
   new_group_id UUID;
   current_uid UUID;
+  final_owner_id UUID;
 BEGIN
   current_uid := auth.uid();
   
@@ -442,9 +443,25 @@ BEGIN
     RAISE EXCEPTION 'User must be authenticated';
   END IF;
   
+  -- owner_id_param이 제공된 경우 검증
+  IF owner_id_param IS NOT NULL THEN
+    IF owner_id_param != current_uid THEN
+      RAISE EXCEPTION 'owner_id must match authenticated user';
+    END IF;
+    final_owner_id := owner_id_param;
+  ELSE
+    final_owner_id := current_uid;
+  END IF;
+  
+  -- 그룹 생성
   INSERT INTO public.groups (name, invite_code, owner_id)
-  VALUES (group_name, invite_code_param, current_uid)
+  VALUES (group_name, invite_code_param, final_owner_id)
   RETURNING id INTO new_group_id;
+  
+  -- 소유자를 ADMIN으로 추가 (트리거가 실행되지 않을 수 있으므로 직접 추가)
+  INSERT INTO public.memberships (user_id, group_id, role)
+  VALUES (final_owner_id, new_group_id, 'ADMIN')
+  ON CONFLICT (user_id, group_id) DO NOTHING;
   
   RETURN new_group_id;
 END;

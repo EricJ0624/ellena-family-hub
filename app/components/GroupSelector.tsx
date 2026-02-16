@@ -47,36 +47,23 @@ const GroupSelector: React.FC = () => {
         throw new Error('초대 코드 생성에 실패했습니다.');
       }
 
-      // 그룹 생성 (RPC 함수 사용 - RLS 우회)
+      // 그룹 생성 (RPC 함수 사용)
       const { data: groupId, error: createError } = await supabase.rpc('create_group', {
         group_name: groupName.trim(),
         invite_code_param: inviteCodeData,
+        owner_id_param: user.id,
       });
 
       if (createError) throw createError;
-      
+
       // 생성된 그룹 정보 조회
       const { data, error: fetchError } = await supabase
         .from('groups')
         .select('*')
         .eq('id', groupId)
         .single();
-      
+
       if (fetchError) throw fetchError;
-
-      // 소유자를 ADMIN으로 추가 (트리거에서 자동 추가되지만 명시적으로 추가)
-      const { error: membershipError } = await supabase
-        .from('memberships')
-        .insert({
-          user_id: user.id,
-          group_id: data.id,
-          role: 'ADMIN',
-        });
-
-      if (membershipError && membershipError.code !== '23505') {
-        // 중복 오류는 무시 (트리거에서 이미 추가됨)
-        throw membershipError;
-      }
 
       setSuccess('그룹이 생성되었습니다!');
       setGroupName('');
