@@ -191,6 +191,17 @@ export default function OnboardingPage() {
         throw new Error('로그인이 필요합니다.');
       }
 
+      // 디버깅: PostgreSQL 세션에서 auth.uid() 값 확인
+      const { data: debugUid, error: debugError } = await supabase.rpc('debug_get_auth_uid');
+      console.log('🔍 [DEBUG] PostgreSQL 세션에서 auth.uid():', debugUid);
+      console.log('🔍 [DEBUG] 클라이언트에서 user.id:', user.id);
+      if (debugError) {
+        console.error('🔍 [DEBUG] auth.uid() 조회 오류:', debugError);
+      }
+      if (!debugUid) {
+        console.error('🔍 [DEBUG] ⚠️ auth.uid()가 NULL입니다! 이것이 RLS 실패의 원인일 수 있습니다.');
+      }
+
       // 초대 코드 생성 (RPC 함수 호출)
       const { data: inviteCodeData, error: codeError } = await supabase.rpc('generate_invite_code');
       if (codeError) {

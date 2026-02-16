@@ -408,7 +408,19 @@ END;
 $$;
 
 -- ============================================
--- 13. 기존 그룹의 invite_code_expires_at 컬럼 마이그레이션 (NULL로 유지 = 영구 유효)
+-- 13. 디버깅 함수: PostgreSQL 세션에서 auth.uid() 값 확인
+-- ============================================
+
+CREATE OR REPLACE FUNCTION public.debug_get_auth_uid()
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT auth.uid();
+$$;
+
+-- ============================================
+-- 14. 기존 그룹의 invite_code_expires_at 컬럼 마이그레이션 (NULL로 유지 = 영구 유효)
 -- ============================================
 
 -- 기존 그룹은 invite_code_expires_at이 NULL이므로 영구 유효로 유지됨
