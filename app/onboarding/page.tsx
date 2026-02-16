@@ -36,6 +36,7 @@ export default function OnboardingPage() {
   const [creating, setCreating] = useState(false);
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
+  const [inviteCodeConfirmed, setInviteCodeConfirmed] = useState(false);
   
   // 초대 코드 가입 관련 상태
   const [inviteCode, setInviteCode] = useState('');
@@ -317,7 +318,7 @@ export default function OnboardingPage() {
 
       setSuccess('그룹에 가입되었습니다!');
       
-      // 1.5초 후 대시보드로 이동
+      // 초대코드를 이미 알고 있는 상황이므로 바로 대시보드로 이동
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
@@ -340,6 +341,14 @@ export default function OnboardingPage() {
         setError('복사에 실패했습니다.');
       }
     }
+  };
+
+  // 초대코드 확인 완료 처리 (그룹 생성 후)
+  const handleConfirmInviteCode = () => {
+    setInviteCodeConfirmed(true);
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 300);
   };
 
   // 대시보드로 이동 (그룹 생성 완료 후)
@@ -636,7 +645,7 @@ export default function OnboardingPage() {
                     </h3>
                     
                     {/* 초대 코드 표시 */}
-                    {createdInviteCode && (
+                    {createdInviteCode && !inviteCodeConfirmed && (
                       <div style={{
                         padding: '20px',
                         backgroundColor: '#f8fafc',
@@ -688,44 +697,83 @@ export default function OnboardingPage() {
                         <p style={{
                           fontSize: '12px',
                           color: '#94a3b8',
-                          margin: '12px 0 0 0',
+                          margin: '12px 0 8px 0',
                         }}>
                           이 코드를 가족에게 공유하세요
                         </p>
+                        <p style={{
+                          fontSize: '11px',
+                          color: '#64748b',
+                          margin: '8px 0 16px 0',
+                          fontStyle: 'italic',
+                        }}>
+                          💡 초대코드는 관리자 페이지의 그룹설정에서 확인 가능합니다
+                        </p>
+                        <button
+                          onClick={handleConfirmInviteCode}
+                          style={{
+                            width: '100%',
+                            padding: '10px 20px',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            transition: 'all 0.3s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#059669';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#10b981';
+                          }}
+                        >
+                          <CheckCircle style={{ width: '16px', height: '16px' }} />
+                          확인했습니다
+                        </button>
                       </div>
                     )}
 
-                    <button
-                      onClick={handleGoToDashboard}
-                      style={{
-                        width: '100%',
-                        padding: '14px 24px',
-                        backgroundColor: '#667eea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '12px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                        transition: 'all 0.3s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#5568d3';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#667eea';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-                      }}
-                    >
-                      가족 페이지로 이동
-                      <ArrowRight style={{ width: '18px', height: '18px' }} />
-                    </button>
+                    {/* 초대코드를 확인한 경우에만 대시보드로 이동 버튼 표시 */}
+                    {inviteCodeConfirmed && (
+                      <button
+                        onClick={handleGoToDashboard}
+                        style={{
+                          width: '100%',
+                          padding: '14px 24px',
+                          backgroundColor: '#667eea',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                          transition: 'all 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#5568d3';
+                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#667eea';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+                        }}
+                      >
+                        가족 페이지로 이동
+                        <ArrowRight style={{ width: '18px', height: '18px' }} />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <>

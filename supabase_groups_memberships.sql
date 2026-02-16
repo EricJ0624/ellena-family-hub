@@ -348,7 +348,7 @@ BEGIN
   
   -- 새로운 보안 강화 코드 생성
   new_code := public.generate_secure_invite_code();
-  new_expires_at := NOW() + (expires_in_days || INTERVAL '1 day');
+  new_expires_at := NOW() + (expires_in_days * INTERVAL '1 day');
   
   -- 그룹의 초대 코드 및 만료 시간 업데이트
   UPDATE public.groups
