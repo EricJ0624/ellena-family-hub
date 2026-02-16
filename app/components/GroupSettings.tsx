@@ -100,6 +100,14 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     ));
   }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style]);
 
+  // currentGroup 변경 시 groupName과 inviteCode 동기화
+  useEffect(() => {
+    if (currentGroup) {
+      setGroupName(currentGroup.name || '');
+      setInviteCode(currentGroup.invite_code || '');
+    }
+  }, [currentGroup?.id, currentGroup?.name, currentGroup?.invite_code]);
+
   // 그룹 설정 저장
   const handleSave = async () => {
     if (!currentGroupId || !isAdmin) return;
