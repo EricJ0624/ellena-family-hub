@@ -108,7 +108,8 @@ CREATE POLICY "그룹 읽기 - 멤버만" ON public.groups
 DROP POLICY IF EXISTS "그룹 작성 - 인증된 사용자" ON public.groups;
 CREATE POLICY "그룹 작성 - 인증된 사용자" ON public.groups
   FOR INSERT
-  WITH CHECK ((select auth.uid()) = owner_id);
+  TO authenticated
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 DROP POLICY IF EXISTS "그룹 수정 - ADMIN만" ON public.groups;
 CREATE POLICY "그룹 수정 - ADMIN만" ON public.groups

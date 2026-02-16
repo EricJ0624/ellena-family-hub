@@ -47,11 +47,11 @@ const GroupSelector: React.FC = () => {
         throw new Error('초대 코드 생성에 실패했습니다.');
       }
 
+      // owner_id는 트리거가 자동으로 설정하므로 제거
       const { data, error: createError } = await supabase
         .from('groups')
         .insert({
           name: groupName.trim(),
-          owner_id: user.id,
           invite_code: inviteCodeData,
         })
         .select()
