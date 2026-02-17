@@ -247,7 +247,7 @@ export default function OnboardingPage() {
     }
   };
 
-  // 초대 코드 검증
+  // 초대 코드 검증 (비멤버는 groups RLS로 읽을 수 없으므로 RPC 사용)
   const handleVerifyInviteCode = async () => {
     if (!inviteCode.trim()) {
       setError('초대 코드를 입력해주세요.');
@@ -259,29 +259,18 @@ export default function OnboardingPage() {
     setGroupPreview(null);
 
     try {
-      const { data: groupData, error: groupError } = await supabase
-        .from('groups')
-        .select('id, name, invite_code')
-        .eq('invite_code', inviteCode.trim())
-        .single();
+      const { data: groupData, error: groupError } = await supabase.rpc('get_group_preview_by_invite_code', {
+        invite_code_param: inviteCode.trim(),
+      });
 
-      if (groupError || !groupData) {
+      if (groupError || !groupData || !groupData.id) {
         throw new Error('올바른 초대 코드를 입력해주세요.');
       }
-
-      // 멤버 수 조회 (memberships 테이블만 사용)
-      // 소유자는 memberships 테이블에 ADMIN 역할로 포함되어 있으므로 별도 계산 불필요
-      const { count: memberCount } = await supabase
-        .from('memberships')
-        .select('*', { count: 'exact', head: true })
-        .eq('group_id', groupData.id);
-
-      const totalMembers = memberCount || 0;
 
       setGroupPreview({
         id: groupData.id,
         name: groupData.name,
-        member_count: totalMembers,
+        member_count: groupData.member_count ?? 0,
         invite_code: groupData.invite_code,
       });
 

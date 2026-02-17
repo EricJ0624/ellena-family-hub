@@ -361,6 +361,40 @@ END;
 $$;
 
 -- ============================================
+-- 11-2. 초대 코드로 그룹 미리보기 조회 (비멤버용, RLS 우회)
+-- ============================================
+-- 초대코드를 아는 사람만 그룹 기본 정보(id, name, invite_code, member_count) 조회 가능.
+
+CREATE OR REPLACE FUNCTION public.get_group_preview_by_invite_code(invite_code_param TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  gid UUID;
+  gname TEXT;
+  gcode TEXT;
+  mcount BIGINT;
+BEGIN
+  IF NOT public.is_invite_code_valid(invite_code_param) THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT g.id, g.name, g.invite_code INTO gid, gname, gcode
+  FROM public.groups g
+  WHERE g.invite_code = invite_code_param;
+
+  IF gid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT COUNT(*)::BIGINT INTO mcount FROM public.memberships WHERE group_id = gid;
+
+  RETURN json_build_object('id', gid, 'name', gname, 'invite_code', gcode, 'member_count', mcount);
+END;
+$$;
+
+-- ============================================
 -- 12. 초대 코드로 그룹 가입 함수 (보안 강화: 만료 확인 추가)
 -- ============================================
 
