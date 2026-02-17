@@ -7532,8 +7532,94 @@ ${groupInfo}
             clearTimeout(uploadTimeout);
 
             if (!uploadResponse.ok) {
-              const uploadResult = await uploadResponse.json().catch(() => ({ error: '업로드 실패' }));
-              throw new Error(uploadResult.error || `업로드 실패: ${uploadResponse.status}`);
+              // 응답 본문 읽기 시도
+              let responseText = '';
+              let uploadResult: any = { error: '업로드 실패' };
+              
+              try {
+                responseText = await uploadResponse.text();
+                if (responseText) {
+                  try {
+                    uploadResult = JSON.parse(responseText);
+                  } catch (jsonError) {
+                    // JSON 파싱 실패 시 텍스트를 에러 메시지로 사용
+                    uploadResult = { error: responseText.substring(0, 500) || '업로드 실패' };
+                  }
+                }
+              } catch (textError) {
+                // 응답 본문 읽기 실패
+                console.error('응답 본문 읽기 실패:', textError);
+              }
+              
+              // 상세한 에러 로깅
+              console.error('❌ HTTP 업로드 응답 실패:', {
+                status: uploadResponse.status,
+                statusText: uploadResponse.statusText,
+                fileName: uploadFileName,
+                fileSize: uploadFileSize,
+                mimeType: uploadMimeType,
+                responseText: responseText.substring(0, 500),
+                parsedError: uploadResult.error || uploadResult.message || '알 수 없는 오류'
+              });
+              
+              // 에러 메시지 생성
+              let errorMsg = uploadResult.error || uploadResult.message || '';
+              
+              // 기본값 "업로드 실패"만 있거나, 응답이 HTML인 경우 → HTTP 상태 코드 기반 메시지로 개선
+              const isGenericError = errorMsg === '업로드 실패' || errorMsg === '';
+              const isHtmlResponse = responseText && responseText.trim().startsWith('<');
+              
+              if (isGenericError || isHtmlResponse) {
+                const status = uploadResponse.status;
+                let statusMessage = '';
+                let actionHint = '파일 크기를 줄이거나 Wi‑Fi 연결을 확인한 뒤 다시 시도해 보세요.';
+                
+                // HTTP 상태 코드별 메시지
+                switch (status) {
+                  case 400:
+                    statusMessage = '잘못된 요청 (HTTP 400)';
+                    actionHint = '파일 형식이나 요청 데이터를 확인해 주세요.';
+                    break;
+                  case 401:
+                    statusMessage = '인증 오류 (HTTP 401)';
+                    actionHint = '로그인 상태를 확인한 뒤 다시 시도해 주세요.';
+                    break;
+                  case 403:
+                    statusMessage = '권한 없음 (HTTP 403)';
+                    actionHint = '그룹 접근 권한을 확인해 주세요.';
+                    break;
+                  case 413:
+                    statusMessage = '파일 크기 초과 (HTTP 413)';
+                    actionHint = '파일 크기를 줄이거나 Presigned URL 방식을 사용해 주세요.';
+                    break;
+                  case 500:
+                    statusMessage = '서버 내부 오류 (HTTP 500)';
+                    actionHint = '잠시 후 다시 시도해 보세요.';
+                    break;
+                  case 502:
+                    statusMessage = '서버 일시 오류 (HTTP 502)';
+                    actionHint = '파일 크기를 줄이거나 Wi‑Fi 연결을 확인한 뒤 다시 시도해 보세요.';
+                    break;
+                  case 503:
+                    statusMessage = '서비스 일시 중단 (HTTP 503)';
+                    actionHint = '잠시 후 다시 시도해 보세요.';
+                    break;
+                  case 504:
+                    statusMessage = '요청 시간 초과 (HTTP 504)';
+                    actionHint = '파일 크기를 줄이거나 Wi‑Fi 연결을 확인한 뒤 다시 시도해 보세요.';
+                    break;
+                  default:
+                    statusMessage = `HTTP ${status}`;
+                    actionHint = '파일 크기를 줄이거나 Wi‑Fi 연결을 확인한 뒤 다시 시도해 보세요.';
+                }
+                
+                errorMsg = `서버가 일시적으로 오류를 반환했습니다. (${statusMessage}) ${actionHint}`;
+              } else if (!errorMsg) {
+                // errorMsg가 비어있고 위 조건에도 해당 안 되는 경우
+                errorMsg = `서버가 일시적으로 오류를 반환했습니다. (HTTP ${uploadResponse.status}) 파일 크기를 줄이거나 Wi‑Fi 연결을 확인한 뒤 다시 시도해 보세요.`;
+              }
+              
+              throw new Error(errorMsg);
             }
 
             const uploadResult = await uploadResponse.json();
@@ -7565,9 +7651,29 @@ ${groupInfo}
             }
           } catch (fetchError: any) {
             clearTimeout(uploadTimeout);
+            
+            // 상세한 에러 로깅
+            console.error('❌ 업로드 fetch 에러:', {
+              name: fetchError.name,
+              message: fetchError.message,
+              stack: fetchError.stack?.substring(0, 500),
+              fileName: uploadFileName,
+              fileSize: uploadFileSize,
+              mimeType: uploadMimeType,
+              error: fetchError
+            });
+            
             if (fetchError.name === 'AbortError') {
               throw new Error('업로드 타임아웃 (60초 초과)');
             }
+            
+            // 네트워크 에러 감지
+            if (fetchError.message?.includes('Failed to fetch') || 
+                fetchError.message?.includes('NetworkError') ||
+                fetchError.name === 'TypeError') {
+              throw new Error(`네트워크 오류: ${fetchError.message || '서버에 연결할 수 없습니다.'}`);
+            }
+            
             throw fetchError;
           }
         }
@@ -7586,13 +7692,16 @@ ${groupInfo}
           ? `${fileSizeMB}MB` 
           : `${fileSizeKB}KB`;
         
-        // 파일 정보 로그 기록
-        console.error('❌ 사진 업로드 실패:', {
+        // 에러 객체 전체를 로그에 기록
+        console.error('❌ 사진 업로드 실패 (상세):', {
           fileName: uploadFileName,
           fileSize: `${fileSizeDisplay} (${uploadFileSize} bytes)`,
           mimeType: uploadMimeType,
+          photoId: photoId,
+          errorName: uploadError.name,
           errorMessage: errorMessage,
-          photoId: photoId
+          errorStack: uploadError.stack?.substring(0, 1000),
+          fullError: uploadError
         });
         
         // localStorage에서 사진 제거
