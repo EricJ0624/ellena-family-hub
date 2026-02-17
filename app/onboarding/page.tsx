@@ -247,7 +247,7 @@ export default function OnboardingPage() {
     }
   };
 
-  // 초대 코드 검증 (비멤버는 groups RLS로 읽을 수 없으므로 RPC 사용)
+  // 초대 코드 검증 (비멤버는 groups RLS로 읽을 수 없으므로 서버 API 사용, service role로 RLS 우회)
   const handleVerifyInviteCode = async () => {
     if (!inviteCode.trim()) {
       setError('초대 코드를 입력해주세요.');
@@ -259,19 +259,33 @@ export default function OnboardingPage() {
     setGroupPreview(null);
 
     try {
-      const { data: groupData, error: groupError } = await supabase.rpc('get_group_preview_by_invite_code', {
-        invite_code_param: inviteCode.trim(),
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('로그인이 필요합니다.');
+        setVerifying(false);
+        return;
+      }
+
+      const res = await fetch('/api/group/preview-by-invite-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ invite_code: inviteCode.trim() }),
       });
 
-      if (groupError || !groupData || !groupData.id) {
-        throw new Error('올바른 초대 코드를 입력해주세요.');
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.id) {
+        throw new Error(data.error || '올바른 초대 코드를 입력해주세요.');
       }
 
       setGroupPreview({
-        id: groupData.id,
-        name: groupData.name,
-        member_count: groupData.member_count ?? 0,
-        invite_code: groupData.invite_code,
+        id: data.id,
+        name: data.name,
+        member_count: data.member_count ?? 0,
+        invite_code: data.invite_code,
       });
 
       setSuccess('그룹을 찾았습니다!');
