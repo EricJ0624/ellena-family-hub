@@ -7576,39 +7576,49 @@ ${groupInfo}
         // localStorage의 데이터는 그대로 유지하고, 필요시 Supabase에서 최신 데이터를 가져올 수 있음
         
       } catch (uploadError: any) {
-        // 업로드 실패해도 localStorage 저장은 유지 (오프라인 지원)
-        console.error('Cloudinary/S3 업로드 오류 (localStorage는 저장됨):', uploadError);
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('업로드 실패했지만 로컬 저장은 완료되었습니다.');
-        }
+        // 업로드 실패 시 localStorage에서도 사진 제거
+        const errorMessage = uploadError.message || '업로드 중 오류가 발생했습니다.';
         
-        // 업로드 실패 시 isUploading 플래그 해제 (재시도 가능하도록)
-        updateState('UPDATE_PHOTO_ID', {
-          oldId: photoId,
-          newId: photoId, // ID는 변경하지 않음
-          cloudinaryUrl: null,
-          s3Url: null,
-          uploadFailed: true // 실패 플래그
+        // 파일 정보 포맷팅
+        const fileSizeMB = (uploadFileSize / (1024 * 1024)).toFixed(2);
+        const fileSizeKB = (uploadFileSize / 1024).toFixed(2);
+        const fileSizeDisplay = uploadFileSize >= 1024 * 1024 
+          ? `${fileSizeMB}MB` 
+          : `${fileSizeKB}KB`;
+        
+        // 파일 정보 로그 기록
+        console.error('❌ 사진 업로드 실패:', {
+          fileName: uploadFileName,
+          fileSize: `${fileSizeDisplay} (${uploadFileSize} bytes)`,
+          mimeType: uploadMimeType,
+          errorMessage: errorMessage,
+          photoId: photoId
         });
         
-        // 사용자에게 에러 알림 (환경 변수 정보 포함)
-        const errorMessage = uploadError.message || '업로드 중 오류가 발생했습니다.';
-        let userMessage = '';
-        
-        if (errorMessage.includes('Cloudinary 환경 변수') || errorMessage.includes('CLOUDINARY')) {
-          userMessage = 'Cloudinary 환경 변수가 설정되지 않았습니다.\n\n로컬 저장은 완료되었습니다.\n\n필요한 환경 변수:\n- CLOUDINARY_CLOUD_NAME\n- CLOUDINARY_API_KEY\n- CLOUDINARY_API_SECRET\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
-        } else if (errorMessage.includes('AWS_S3_BUCKET_NAME') || errorMessage.includes('S3 환경 변수')) {
-          userMessage = 'S3 환경 변수가 설정되지 않았습니다.\n\n로컬 저장은 완료되었습니다. S3 환경 변수를 설정하면 원본 파일도 저장됩니다.\n\n필요한 환경 변수:\n- AWS_S3_BUCKET_NAME\n- AWS_ACCESS_KEY_ID\n- AWS_SECRET_ACCESS_KEY\n- AWS_REGION\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
-        } else if (errorMessage.includes('Cloudinary와 S3 업로드가 모두 실패')) {
-          userMessage = 'Cloudinary와 S3 업로드가 모두 실패했습니다.\n\n로컬 저장은 완료되었습니다.\n\n환경 변수를 확인해주세요:\n- Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET\n- S3: AWS_S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION';
-        } else if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
-          userMessage = '업로드 실패: S3 버킷 CORS 설정이 필요합니다.\n\n로컬 저장은 완료되었습니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
-        } else if (errorMessage.includes('타임아웃')) {
-          userMessage = '업로드 타임아웃: 파일이 너무 크거나 네트워크 연결이 불안정합니다.\n\n로컬 저장은 완료되었습니다.';
-        } else {
-          userMessage = `업로드 실패: ${errorMessage}\n\n로컬 저장은 완료되었습니다.`;
+        // localStorage에서 사진 제거
+        if (photoId !== null) {
+          updateState('DELETE_PHOTO', photoId);
         }
         
+        // 사용자에게 에러 알림 (파일 정보와 실패 이유 포함)
+        const fileInfo = `파일: ${uploadFileName}\n크기: ${fileSizeDisplay}\n형식: ${uploadMimeType}`;
+        let failureReason = '';
+        
+        if (errorMessage.includes('Cloudinary 환경 변수') || errorMessage.includes('CLOUDINARY')) {
+          failureReason = 'Cloudinary 환경 변수가 설정되지 않았습니다.\n\n필요한 환경 변수:\n- CLOUDINARY_CLOUD_NAME\n- CLOUDINARY_API_KEY\n- CLOUDINARY_API_SECRET\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
+        } else if (errorMessage.includes('AWS_S3_BUCKET_NAME') || errorMessage.includes('S3 환경 변수')) {
+          failureReason = 'S3 환경 변수가 설정되지 않았습니다.\n\n필요한 환경 변수:\n- AWS_S3_BUCKET_NAME\n- AWS_ACCESS_KEY_ID\n- AWS_SECRET_ACCESS_KEY\n- AWS_REGION\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
+        } else if (errorMessage.includes('Cloudinary와 S3 업로드가 모두 실패')) {
+          failureReason = 'Cloudinary와 S3 업로드가 모두 실패했습니다.\n\n환경 변수를 확인해주세요:\n- Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET\n- S3: AWS_S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION';
+        } else if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
+          failureReason = 'S3 버킷 CORS 설정이 필요합니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
+        } else if (errorMessage.includes('타임아웃')) {
+          failureReason = '파일이 너무 크거나 네트워크 연결이 불안정합니다.';
+        } else {
+          failureReason = errorMessage;
+        }
+        
+        const userMessage = `사진 업로드 실패\n\n${fileInfo}\n\n실패 이유:\n${failureReason}`;
         alert(userMessage);
       } finally {
         // 업로드가 완료되지 않았고 플래그가 아직 true인 경우 강제로 해제
