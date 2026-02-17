@@ -115,12 +115,8 @@ export default function LoginPage() {
             return;
           }
 
-          // 일반 사용자: 그룹이 없으면 온보딩으로, 있으면 대시보드로
-          if (!hasGroups) {
-            router.push('/onboarding');
-          } else {
-            router.push('/dashboard');
-          }
+          // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
+          router.push('/onboarding');
         } else {
           setErrorMsg('세션 저장에 실패했습니다. 다시 시도해주세요.');
         }

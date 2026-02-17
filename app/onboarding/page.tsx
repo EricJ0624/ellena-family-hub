@@ -122,14 +122,7 @@ export default function OnboardingPage() {
         }
 
         if (allGroups.length > 0 && !fromAdminParam) {
-          // 그룹이 1개면 자동 선택하고 대시보드로
-          if (allGroups.length === 1) {
-            localStorage.setItem('currentGroupId', allGroups[0].id);
-            router.push('/dashboard');
-            return;
-          }
-          
-          // 그룹이 여러 개면 선택 화면 표시
+          // 그룹이 있으면 선택 화면 표시 (1개여도 선택 화면 표시)
           setUserGroups(allGroups);
           setStep('choose-group');
           setLoading(false);
