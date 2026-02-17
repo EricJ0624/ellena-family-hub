@@ -987,7 +987,7 @@ export default function OnboardingPage() {
                             setError(null);
                           }}
                           placeholder="예: ABC123"
-                          maxLength={10}
+                          maxLength={12}
                           style={{
                             flex: 1,
                             padding: '14px 16px',
