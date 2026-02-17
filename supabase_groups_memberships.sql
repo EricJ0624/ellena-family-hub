@@ -154,14 +154,12 @@ CREATE POLICY "멤버십 읽기 - 그룹 멤버만" ON public.memberships
   FOR SELECT
   USING (public.is_member_of_group(memberships.group_id));
 
--- 작성: ADMIN 권한을 가진 사용자만 멤버 초대 가능 (또는 초대 코드를 통한 자동 가입)
+-- 작성: 해당 그룹 ADMIN만 멤버 초대 가능. 자가 가입(초대코드 없이 본인 INSERT)은 차단.
+-- 초대코드 가입은 join_group_by_invite_code RPC(SECURITY DEFINER)로만 가능.
 DROP POLICY IF EXISTS "멤버십 작성 - ADMIN만" ON public.memberships;
 CREATE POLICY "멤버십 작성 - ADMIN만" ON public.memberships
   FOR INSERT
-  WITH CHECK (
-    public.is_admin_of_group(memberships.group_id)
-    OR auth.uid() = memberships.user_id
-  );
+  WITH CHECK (public.is_admin_of_group(memberships.group_id));
 
 DROP POLICY IF EXISTS "멤버십 수정 - ADMIN만" ON public.memberships;
 CREATE POLICY "멤버십 수정 - ADMIN만" ON public.memberships
