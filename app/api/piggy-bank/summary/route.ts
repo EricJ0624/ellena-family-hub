@@ -30,6 +30,18 @@ export async function GET(request: NextRequest) {
     if (isAdmin && childId) {
       const account = await ensurePiggyAccountForUser(groupId, childId);
       const wallet = await ensurePiggyWallet(groupId, childId);
+      
+      // 소유자 닉네임 조회
+      let ownerNickname: string | null = null;
+      if (account.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nickname')
+          .eq('id', account.user_id)
+          .single();
+        ownerNickname = profile?.nickname || null;
+      }
+      
       const { data: pendingRequests } = await supabase
         .from('piggy_open_requests')
         .select('id, child_id, amount, reason, destination, status, created_at')
@@ -42,7 +54,7 @@ export async function GET(request: NextRequest) {
         data: {
           role: permissionResult.role,
           isOwner: permissionResult.isOwner,
-          account,
+          account: { ...account, ownerNickname },
           wallet,
           pendingRequests: pendingRequests || [],
         },
@@ -71,6 +83,18 @@ export async function GET(request: NextRequest) {
 
     const account = await ensurePiggyAccountForUser(groupId, user.id);
     const wallet = await ensurePiggyWallet(groupId, user.id);
+    
+    // 소유자 닉네임 조회
+    let ownerNickname: string | null = null;
+    if (account.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('nickname')
+        .eq('id', account.user_id)
+        .single();
+      ownerNickname = profile?.nickname || null;
+    }
+    
     const { data: pendingRequests } = await supabase
       .from('piggy_open_requests')
       .select('id, child_id, amount, reason, destination, status, created_at')
@@ -85,7 +109,7 @@ export async function GET(request: NextRequest) {
       data: {
         role: permissionResult.role,
         isOwner: permissionResult.isOwner,
-        account,
+        account: { ...account, ownerNickname },
         wallet,
         pendingRequests: pendingRequests || [],
       },

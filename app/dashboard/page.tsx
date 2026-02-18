@@ -209,6 +209,7 @@ export default function FamilyHub() {
     name: string;
     walletBalance: number;
     bankBalance: number;
+    ownerNickname?: string | null;
   } | null>(null);
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const [showGroupSelectModal, setShowGroupSelectModal] = useState(false);
@@ -789,6 +790,7 @@ export default function FamilyHub() {
           name: result.data?.account?.name || 'Ellena Piggy Bank',
           walletBalance: result.data?.wallet?.balance ?? 0,
           bankBalance: result.data?.account?.balance ?? 0,
+          ownerNickname: result.data?.account?.ownerNickname || null,
         });
       } catch (err: any) {
         if (cancelled) return;
@@ -9241,7 +9243,7 @@ ${groupInfo}
           {/* Piggy Bank Section */}
           <section className="content-section">
             <div className="section-header">
-              <h3 className="section-title">Ellena Piggy Bank</h3>
+              <h3 className="section-title">{piggySummary?.ownerNickname || 'Ellena'} Piggy Bank</h3>
               {currentGroupId && (
                 <button
                   onClick={() => router.push('/piggy-bank')}
