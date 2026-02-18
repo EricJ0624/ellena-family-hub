@@ -37,6 +37,17 @@ type OpenRequest = {
   created_at: string;
 };
 
+type Transaction = {
+  id: string;
+  amount: number;
+  type: string;
+  typeLabel: string;
+  memo: string | null;
+  created_at: string;
+  dateLabel: string;
+  actor_nickname: string;
+};
+
 const formatAmount = (value: number) => `${value.toLocaleString('ko-KR')}원`;
 
 export default function PiggyBankPage() {
@@ -64,6 +75,8 @@ export default function PiggyBankPage() {
   } | null>(null);
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [requests, setRequests] = useState<OpenRequest[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<Transaction[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedChildIdForAdmin, setSelectedChildIdForAdmin] = useState('');
 
@@ -141,13 +154,29 @@ export default function PiggyBankPage() {
     setRequests(result.data || []);
   };
 
+  const fetchTransactions = async () => {
+    if (!currentGroupId) return;
+    const headers = await getAuthHeader();
+    const targetUserId = isAdmin && selectedChildIdForAdmin ? selectedChildIdForAdmin : undefined;
+    const url = targetUserId
+      ? `/api/piggy-bank/transactions?group_id=${currentGroupId}&child_id=${targetUserId}&limit=50`
+      : `/api/piggy-bank/transactions?group_id=${currentGroupId}&limit=50`;
+    const response = await fetch(url, { headers });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '거래 내역을 불러오지 못했습니다.');
+    }
+    setWalletTransactions(result.data?.walletTransactions || []);
+    setBankTransactions(result.data?.bankTransactions || []);
+  };
+
   useEffect(() => {
     if (!currentGroupId) {
       return;
     }
     setLoading(true);
     setError(null);
-    Promise.all([fetchSummary(), fetchRequests(), fetchMembers()])
+    Promise.all([fetchSummary(), fetchRequests(), fetchMembers(), fetchTransactions()])
       .catch((err) => setError(err.message || '데이터 로드 오류'))
       .finally(() => setLoading(false));
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
@@ -164,7 +193,7 @@ export default function PiggyBankPage() {
     if (!response.ok) {
       throw new Error(result.error || '요청 처리에 실패했습니다.');
     }
-    await Promise.all([fetchSummary(), fetchRequests()]);
+    await Promise.all([fetchSummary(), fetchRequests(), fetchTransactions()]);
   };
 
   const handleRename = async () => {
@@ -181,7 +210,7 @@ export default function PiggyBankPage() {
     if (!response.ok) {
       throw new Error(result.error || '이름 변경에 실패했습니다.');
     }
-    await fetchSummary();
+    await Promise.all([fetchSummary(), fetchTransactions()]);
   };
 
   const handleAddPiggyForChild = async (childId: string) => {
@@ -197,7 +226,7 @@ export default function PiggyBankPage() {
       throw new Error(result.error || '저금통 추가에 실패했습니다.');
     }
     setSelectedChildIdForAdmin(childId);
-    await fetchSummary();
+    await Promise.all([fetchSummary(), fetchTransactions()]);
   };
 
   const resolveMemberName = (userId: string) => {
@@ -366,6 +395,108 @@ export default function PiggyBankPage() {
             {formatAmount(summary?.account?.balance ?? 0)}
           </div>
         </div>
+      </div>
+
+      {/* 용돈 거래 내역 */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>용돈 내역</h2>
+        {walletTransactions.length === 0 ? (
+          <p style={{ color: '#94a3b8', fontSize: '14px' }}>용돈 거래 내역이 없습니다.</p>
+        ) : (
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {walletTransactions.map((tx) => {
+              const isNegative = tx.type === 'spend' || tx.type === 'child_save';
+              return (
+                <div
+                  key={tx.id}
+                  style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
+                    </div>
+                    {tx.actor_nickname && tx.type === 'allowance' && (
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                        {tx.actor_nickname}가 지급
+                      </div>
+                    )}
+                    {tx.memo && (
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: isNegative ? '#b91c1c' : '#16a34a',
+                    }}
+                  >
+                    {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 저금통 거래 내역 */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>저금통 내역</h2>
+        {bankTransactions.length === 0 ? (
+          <p style={{ color: '#94a3b8', fontSize: '14px' }}>저금통 거래 내역이 없습니다.</p>
+        ) : (
+          <div style={{ display: 'grid', gap: '8px' }}>
+            {bankTransactions.map((tx) => {
+              const isNegative = tx.type === 'withdraw_cash' || tx.type === 'withdraw_to_wallet';
+              return (
+                <div
+                  key={tx.id}
+                  style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
+                    </div>
+                    {tx.actor_nickname && tx.type === 'parent_deposit' && (
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                        {tx.actor_nickname}가 입금
+                      </div>
+                    )}
+                    {tx.memo && (
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: isNegative ? '#b91c1c' : '#16a34a',
+                    }}
+                  >
+                    {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {isAdmin && (
