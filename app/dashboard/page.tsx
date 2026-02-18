@@ -8817,7 +8817,9 @@ ${groupInfo}
                             ? 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
                             : cell.isToday
                               ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
-                              : '#fff',
+                              : cell.eventCount > 0
+                                ? 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
+                                : '#fff',
                           cursor: 'pointer',
                           fontSize: '14px',
                           fontWeight: cell.isToday ? '700' : '500',
@@ -8846,14 +8848,6 @@ ${groupInfo}
                         <span>{cell.day}</span>
                         {cell.isToday && (
                           <span style={{ fontSize: '10px', fontWeight: '600', color: '#b45309' }}>오늘</span>
-                        )}
-                        {cell.eventCount > 0 && (
-                          <span style={{ display: 'flex', gap: '2px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                            {Array.from({ length: Math.min(cell.eventCount, 3) }).map((_, i) => (
-                              <span key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#7c3aed' }} />
-                            ))}
-                            {cell.eventCount > 3 && <span style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '600' }}>+{cell.eventCount - 3}</span>}
-                          </span>
                         )}
                       </button>
                     );
