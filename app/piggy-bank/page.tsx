@@ -403,7 +403,7 @@ export default function PiggyBankPage() {
         {walletTransactions.length === 0 ? (
           <p style={{ color: '#94a3b8', fontSize: '14px' }}>용돈 거래 내역이 없습니다.</p>
         ) : (
-          <div style={{ display: 'grid', gap: '8px' }}>
+          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {walletTransactions.map((tx) => {
               const isNegative = tx.type === 'spend' || tx.type === 'child_save';
               return (
@@ -454,7 +454,7 @@ export default function PiggyBankPage() {
         {bankTransactions.length === 0 ? (
           <p style={{ color: '#94a3b8', fontSize: '14px' }}>저금통 거래 내역이 없습니다.</p>
         ) : (
-          <div style={{ display: 'grid', gap: '8px' }}>
+          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {bankTransactions.map((tx) => {
               const isNegative = tx.type === 'withdraw_cash' || tx.type === 'withdraw_to_wallet';
               return (
