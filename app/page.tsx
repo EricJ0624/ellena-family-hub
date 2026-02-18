@@ -153,11 +153,24 @@ export default function LoginPage() {
       return;
     }
 
+    // 닉네임 필수 검증
+    const trimmedNickname = nickname.trim();
+    if (!trimmedNickname) {
+      setErrorMsg('닉네임을 입력해 주세요.');
+      setLoading(false);
+      return;
+    }
+    if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
+      setErrorMsg('닉네임은 2자 이상 20자 이하로 입력해 주세요.');
+      setLoading(false);
+      return;
+    }
+
     try {
       // 이전 사용자 세션이 남아 있으면 새 가입 후 getSession()이 이전 사용자를 반환할 수 있음 → 가입 직전 세션 제거
       await supabase.auth.signOut();
 
-      const signupNickname = nickname || email.split('@')[0];
+      const signupNickname = trimmedNickname;
       
       // SSR 안전성: window 객체가 있을 때만 origin 사용
       const redirectTo = typeof window !== 'undefined' 
@@ -507,9 +520,10 @@ export default function LoginPage() {
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
-                placeholder="닉네임 (선택사항)"
+                placeholder="닉네임 (필수, 2~20자)"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
+                maxLength={20}
                 style={inputStyle}
                 onFocus={(e) => {
                   e.target.style.borderColor = '#667eea';
