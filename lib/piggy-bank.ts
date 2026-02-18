@@ -19,43 +19,6 @@ export type PiggyWallet = {
 const DEFAULT_PIGGY_NAME = 'Ellena Piggy Bank';
 const DEFAULT_CURRENCY = 'KRW';
 
-/** 기존 공용 저금통 (user_id NULL). 호환용. */
-export async function ensurePiggyAccount(groupId: string): Promise<PiggyAccount> {
-  const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('piggy_bank_accounts')
-    .select('id, group_id, user_id, name, balance, currency')
-    .eq('group_id', groupId)
-    .is('user_id', null)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  if (data) {
-    return data as PiggyAccount;
-  }
-
-  const { data: created, error: createError } = await supabase
-    .from('piggy_bank_accounts')
-    .insert({
-      group_id: groupId,
-      user_id: null,
-      name: DEFAULT_PIGGY_NAME,
-      balance: 0,
-      currency: DEFAULT_CURRENCY,
-    })
-    .select('id, group_id, user_id, name, balance, currency')
-    .single();
-
-  if (createError || !created) {
-    throw createError || new Error('저금통 생성에 실패했습니다.');
-  }
-
-  return created as PiggyAccount;
-}
-
 /** 아이별 저금통 (group_id, user_id) 조회 또는 생성. */
 export async function ensurePiggyAccountForUser(groupId: string, userId: string): Promise<PiggyAccount> {
   const supabase = getSupabaseServerClient();
