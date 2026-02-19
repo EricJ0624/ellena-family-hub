@@ -11,7 +11,7 @@ const WALLET_TYPE_LABELS: Record<string, string> = {
 };
 
 const BANK_TYPE_LABELS: Record<string, string> = {
-  parent_deposit: '저축 입금',
+  parent_deposit: '저금통 입금',
   child_save: '저금통 저축',
   withdraw_to_wallet: '개봉(용돈 적립)',
   withdraw_cash: '개봉(현금 인출)',

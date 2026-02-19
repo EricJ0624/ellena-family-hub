@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Piggy save 오류:', error);
     return NextResponse.json(
-      { error: error.message || '저축 처리에 실패했습니다.' },
+      { error: error.message || '저금통 저축 처리에 실패했습니다.' },
       { status: 500 }
     );
   }

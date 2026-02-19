@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Piggy parent deposit 오류:', error);
     return NextResponse.json(
-      { error: error.message || '저축 입금에 실패했습니다.' },
+      { error: error.message || '저금통 입금에 실패했습니다.' },
       { status: 500 }
     );
   }

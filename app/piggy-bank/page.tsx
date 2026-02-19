@@ -322,7 +322,7 @@ export default function PiggyBankPage() {
           )}
         </div>
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>개봉 요청 승인</h2>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
           <div style={{ marginTop: '12px' }}>
             {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
             {requests.map((req) => (
@@ -602,7 +602,7 @@ export default function PiggyBankPage() {
                     setDepositAmount('');
                     setDepositMemo('');
                   } catch (err: any) {
-                    setError(err.message || '저축 입금 실패');
+                    setError(err.message || '저금통 입금 실패');
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700 }}
@@ -613,7 +613,7 @@ export default function PiggyBankPage() {
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>개봉 요청 승인</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
             <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
               {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
               {requests.map((req) => (
@@ -701,13 +701,13 @@ export default function PiggyBankPage() {
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>저축하기</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 저축하기</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <input
                 type="number"
                 value={saveAmount}
                 onChange={(e) => setSaveAmount(e.target.value)}
-                placeholder="저축 금액"
+                placeholder="저금통 저축 금액"
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <input
@@ -723,7 +723,7 @@ export default function PiggyBankPage() {
                     setSaveAmount('');
                     setSaveMemo('');
                   } catch (err: any) {
-                    setError(err.message || '저축 실패');
+                    setError(err.message || '저금통 저축 실패');
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#f97316', color: '#fff', fontWeight: 700 }}
