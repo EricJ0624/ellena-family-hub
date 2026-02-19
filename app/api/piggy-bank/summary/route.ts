@@ -63,6 +63,40 @@ export async function GET(request: NextRequest) {
 
     if (isAdmin && !childId) {
       const accounts = await getPiggyAccountsForGroup(groupId);
+      
+      // 각 계정의 ownerNickname과 wallet 정보 조회
+      const accountsWithDetails = await Promise.all(
+        accounts.map(async (account) => {
+          let ownerNickname: string | null = null;
+          let walletBalance = 0;
+          
+          if (account.user_id) {
+            // 닉네임 조회
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('nickname')
+              .eq('id', account.user_id)
+              .single();
+            ownerNickname = profile?.nickname || null;
+            
+            // 지갑 잔액 조회
+            try {
+              const wallet = await ensurePiggyWallet(groupId, account.user_id);
+              walletBalance = wallet.balance;
+            } catch (error) {
+              // 지갑이 없으면 0으로 설정
+              walletBalance = 0;
+            }
+          }
+          
+          return {
+            ...account,
+            ownerNickname,
+            walletBalance,
+          };
+        })
+      );
+      
       const { data: pendingRequests } = await supabase
         .from('piggy_open_requests')
         .select('id, child_id, amount, reason, destination, status, created_at')
@@ -75,7 +109,7 @@ export async function GET(request: NextRequest) {
         data: {
           role: permissionResult.role,
           isOwner: permissionResult.isOwner,
-          accounts,
+          accounts: accountsWithDetails,
           pendingRequests: pendingRequests || [],
         },
       });
