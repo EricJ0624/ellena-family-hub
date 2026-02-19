@@ -1318,7 +1318,7 @@ export default function OnboardingPage() {
                           alignItems: 'center',
                           gap: '8px',
                         }}>
-                          <span>{group.is_owner ? '소유자' : group.role === 'ADMIN' ? '관리자' : '멤버'}</span>
+                          <span>{group.is_owner ? '소유자 (부모)' : group.role === 'ADMIN' ? '관리자 (부모)' : '멤버 (아이 또는 가족 구성원)'}</span>
                           <span>•</span>
                           <span style={{ fontFamily: 'monospace' }}>{group.invite_code}</span>
                         </div>

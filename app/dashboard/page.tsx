@@ -7899,7 +7899,7 @@ ${groupInfo}
                         {group.name}
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        {isAdminRole ? '관리자' : '멤버'}
+                        {isAdminRole ? '관리자 (부모)' : '멤버 (아이 또는 가족 구성원)'}
                       </div>
                     </div>
                   </label>

@@ -421,7 +421,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                 const canRemove = isAdmin && !isCurrentUser && !isOwner;
                 const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
                 const isUpdatingRole = updatingRoleUserId === member.user_id;
-                const roleLabel = isOwner ? '소유자' : member.role === 'ADMIN' ? '관리자' : '멤버';
+                const roleLabel = isOwner ? '소유자 (부모)' : member.role === 'ADMIN' ? '관리자 (부모)' : '멤버 (아이 또는 가족 구성원)';
 
                 return (
                   <motion.tr

@@ -138,7 +138,7 @@ export default function PiggyBankPage() {
     });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '멤버 목록을 불러오지 못했습니다.');
+      throw new Error(result.error || '아이 목록을 불러오지 못했습니다.');
     }
     setMembers(result.data || []);
   };
@@ -233,8 +233,8 @@ export default function PiggyBankPage() {
 
   const resolveMemberName = (userId: string) => {
     const member = members.find((m) => m.user_id === userId);
-    if (!member) return '멤버';
-    return member.nickname || '멤버';
+    if (!member) return '아이';
+    return member.nickname || '아이';
   };
 
   if (loading) {
@@ -315,7 +315,7 @@ export default function PiggyBankPage() {
                   }}
                   style={{ padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }}
                 >
-                  + {m.nickname || '멤버'} 저금통 만들기
+                  + {m.nickname || '아이'} 저금통 만들기
                 </button>
               ))}
             </div>
@@ -367,7 +367,7 @@ export default function PiggyBankPage() {
             >
               <option value="">전체 목록으로</option>
               {members.filter((m) => m.role === 'MEMBER').map((m) => (
-                <option key={m.user_id} value={m.user_id}>{m.nickname || '멤버'}</option>
+                <option key={m.user_id} value={m.user_id}>{m.nickname || '아이'}</option>
               ))}
             </select>
           )}
@@ -533,7 +533,7 @@ export default function PiggyBankPage() {
                 <option value="">지급 대상 선택</option>
                 {members.filter((m) => m.role === 'MEMBER').map((member) => (
                   <option key={member.user_id} value={member.user_id}>
-                    {member.nickname || '멤버'}
+                    {member.nickname || '아이'}
                   </option>
                 ))}
               </select>
