@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountsForGroup } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountsForGroup, getGroupMembers } from '@/lib/piggy-bank';
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,9 +64,20 @@ export async function GET(request: NextRequest) {
     if (isAdmin && !childId) {
       const accounts = await getPiggyAccountsForGroup(groupId);
       
+      // 일반 멤버(MEMBER 역할)만 필터링
+      const members = await getGroupMembers(groupId);
+      const memberUserIds = new Set(
+        members.filter(m => m.role === 'MEMBER').map(m => m.user_id)
+      );
+      
+      // MEMBER 역할인 계정만 필터링
+      const memberAccounts = accounts.filter(account => 
+        account.user_id && memberUserIds.has(account.user_id)
+      );
+      
       // 각 계정의 ownerNickname과 wallet 정보 조회
       const accountsWithDetails = await Promise.all(
-        accounts.map(async (account) => {
+        memberAccounts.map(async (account) => {
           let ownerNickname: string | null = null;
           let walletBalance = 0;
           
