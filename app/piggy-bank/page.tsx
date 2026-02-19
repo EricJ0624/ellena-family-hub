@@ -13,6 +13,7 @@ type PiggyAccount = {
   balance: number;
   currency: string;
   user_id?: string | null;
+  ownerNickname?: string | null;
 };
 
 type PiggyWallet = {
@@ -124,7 +125,8 @@ export default function PiggyBankPage() {
       accounts: result.data.accounts,
     });
     if (result.data.account) {
-      setPiggyName(result.data.account.name);
+      // ownerNickname을 우선 사용, 없으면 name 사용
+      setPiggyName(result.data.account.ownerNickname || result.data.account.name);
     }
   };
 
@@ -369,7 +371,7 @@ export default function PiggyBankPage() {
               ))}
             </select>
           )}
-          <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{summary!.account!.name}</h1>
+          <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{summary!.account!.ownerNickname || summary!.account!.name}</h1>
           <p style={{ margin: '4px 0 0', color: '#64748b' }}>
             {currentGroup?.name || '그룹'} {isAdmin && selectedChildIdForAdmin ? `· ${resolveMemberName(selectedChildIdForAdmin)} 저금통` : '저금통'}
           </p>

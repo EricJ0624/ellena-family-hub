@@ -759,50 +759,45 @@ export default function FamilyHub() {
     };
   }, [isMounted, router, loadData, isAuthenticated]);
 
-  // Piggy Bank 요약 정보 로드 (그룹 선택 시)
-  useEffect(() => {
+  // Piggy Bank 요약 정보 로드 함수 (재사용 가능하도록 useCallback으로 분리)
+  const loadPiggySummary = useCallback(async () => {
     if (!isAuthenticated || !currentGroupId) {
       setPiggySummary(null);
       return;
     }
 
-    let cancelled = false;
-    const loadPiggySummary = async () => {
-      try {
-        setPiggySummaryError(null);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          return;
-        }
-
-        const response = await fetch(`/api/piggy-bank/summary?group_id=${currentGroupId}`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.error || 'Piggy Bank 요약 정보를 불러오지 못했습니다.');
-        }
-
-        if (cancelled) return;
-        setPiggySummary({
-          name: result.data?.account?.name || 'Ellena Piggy Bank',
-          walletBalance: result.data?.wallet?.balance ?? 0,
-          bankBalance: result.data?.account?.balance ?? 0,
-          ownerNickname: result.data?.account?.ownerNickname || null,
-        });
-      } catch (err: any) {
-        if (cancelled) return;
-        setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+    try {
+      setPiggySummaryError(null);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        return;
       }
-    };
 
-    loadPiggySummary();
-    return () => {
-      cancelled = true;
-    };
+      const response = await fetch(`/api/piggy-bank/summary?group_id=${currentGroupId}`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Piggy Bank 요약 정보를 불러오지 못했습니다.');
+      }
+
+      setPiggySummary({
+        name: result.data?.account?.name || 'Ellena Piggy Bank',
+        walletBalance: result.data?.wallet?.balance ?? 0,
+        bankBalance: result.data?.account?.balance ?? 0,
+        ownerNickname: result.data?.account?.ownerNickname || null,
+      });
+    } catch (err: any) {
+      setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+    }
   }, [isAuthenticated, currentGroupId]);
+
+  // Piggy Bank 요약 정보 로드 (그룹 선택 시)
+  useEffect(() => {
+    loadPiggySummary();
+  }, [loadPiggySummary]);
 
   // 로그인 후 그룹 선택 모달 (일반 사용자)
   useEffect(() => {
@@ -6343,6 +6338,11 @@ ${groupInfo}
 
       // 4. 사용자 목록 새로고침 (다른 사용자에게 변경사항 반영)
       await loadAllUsers();
+
+      // 5. Piggy Bank 요약 정보 새로고침 (닉네임 변경 반영)
+      if (currentGroupId) {
+        await loadPiggySummary();
+      }
 
       alert("닉네임이 업데이트되었습니다.");
     } catch (error: any) {
