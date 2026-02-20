@@ -322,35 +322,45 @@ export default function PiggyBankPage() {
           )}
         </div>
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청</h2>
           <div style={{ marginTop: '12px' }}>
-            {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
-            {requests.map((req) => {
-              const isInactive = req.status !== 'pending';
+            {(() => {
+              const pendingRequests = requests.filter((req) => req.status === 'pending');
+              if (pendingRequests.length === 0) {
+                return <p style={{ color: '#94a3b8' }}>대기 중인 개봉요청이 없습니다.</p>;
+              }
+              const byChild = pendingRequests.reduce<Record<string, number>>((acc, req) => {
+                const id = req.child_id || '';
+                acc[id] = (acc[id] || 0) + 1;
+                return acc;
+              }, {});
+              const total = pendingRequests.length;
               return (
                 <div
-                  key={req.id}
                   style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
                     padding: '12px',
-                    marginBottom: '8px',
-                    opacity: isInactive ? 0.6 : 1,
-                    textDecoration: isInactive ? 'line-through' : undefined,
+                    borderRadius: '10px',
+                    background: '#fef3c7',
+                    border: '1px solid #fcd34d',
+                    color: '#92400e',
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
-                  <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
-                  {isInactive && <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{req.status === 'approved' ? '승인됨' : req.status === 'rejected' ? '거절됨' : req.status}</div>}
-                  {!isInactive && (
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                      <button onClick={async () => { try { await handleAction('/api/piggy-bank/open-approve', { requestId: req.id }); } catch (err: any) { setError(err.message); } }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}>승인</button>
-                      <button onClick={async () => { try { await handleAction('/api/piggy-bank/open-reject', { requestId: req.id }); } catch (err: any) { setError(err.message); } }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}>거절</button>
-                    </div>
-                  )}
+                  <div style={{ fontWeight: 600, marginBottom: '8px' }}>
+                    대기 중인 개봉요청 {total}건
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#78350f' }}>
+                    {Object.entries(byChild).map(([childId, count]) => (
+                      <li key={childId} style={{ marginBottom: '4px' }}>
+                        {resolveMemberName(childId)} {count}건
+                      </li>
+                    ))}
+                  </ul>
+                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#78350f' }}>
+                    아이를 선택하면 해당 아이의 개봉요청을 승인할 수 있습니다.
+                  </p>
                 </div>
               );
-            })}
+            })()}
           </div>
         </div>
         <button onClick={() => router.push('/dashboard')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>돌아가기</button>
