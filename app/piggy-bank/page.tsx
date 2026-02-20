@@ -289,7 +289,7 @@ export default function PiggyBankPage() {
               const member = members.find((m) => m.user_id === acc.user_id);
               return (
                 <option key={acc.id} value={acc.user_id || ''}>
-                  {member ? (member.nickname || '멤버') : '저금통'} · {formatAmount(acc.balance)}
+                  {member ? (member.nickname || '멤버') : '저금통'} · 용돈 {formatAmount((acc as { walletBalance?: number }).walletBalance ?? 0)} / 저금통 {formatAmount(acc.balance)}
                 </option>
               );
             })}
