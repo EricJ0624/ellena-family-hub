@@ -40,21 +40,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이미 처리된 요청입니다.' }, { status: 400 });
     }
 
-    const isChild = requestData.child_id === user.id;
+    const isRequester = requestData.child_id === user.id;
     const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
 
-    if (!isChild && !isAdmin) {
+    if (isRequester) {
+      return NextResponse.json({ error: '아이는 승인할 수 없습니다.' }, { status: 403 });
+    }
+    if (!isAdmin) {
       return NextResponse.json({ error: '승인 권한이 없습니다.' }, { status: 403 });
     }
-
-    const role = isChild ? 'child' : 'parent';
 
     const { error: approvalError } = await supabase
       .from('piggy_open_approvals')
       .insert({
         request_id: requestData.id,
         approver_id: user.id,
-        role,
+        role: 'parent',
       });
 
     if (approvalError) {
@@ -62,19 +63,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '이미 승인했습니다.' }, { status: 400 });
       }
       throw approvalError;
-    }
-
-    const { data: approvals } = await supabase
-      .from('piggy_open_approvals')
-      .select('role')
-      .eq('request_id', requestData.id);
-
-    const roles = new Set((approvals || []).map((a) => a.role));
-    const hasParent = roles.has('parent');
-    const hasChild = roles.has('child');
-
-    if (!hasParent || !hasChild) {
-      return NextResponse.json({ success: true, data: { status: 'pending' } });
     }
 
     const account = await ensurePiggyAccountForUser(groupId, requestData.child_id);

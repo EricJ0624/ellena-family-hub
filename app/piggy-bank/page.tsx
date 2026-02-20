@@ -325,16 +325,32 @@ export default function PiggyBankPage() {
           <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
           <div style={{ marginTop: '12px' }}>
             {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
-            {requests.map((req) => (
-              <div key={req.id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
-                <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
-                <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                  <button onClick={async () => { try { await handleAction('/api/piggy-bank/open-approve', { requestId: req.id }); } catch (err: any) { setError(err.message); } }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}>승인</button>
-                  <button onClick={async () => { try { await handleAction('/api/piggy-bank/open-reject', { requestId: req.id }); } catch (err: any) { setError(err.message); } }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}>거절</button>
+            {requests.map((req) => {
+              const isInactive = req.status !== 'pending';
+              return (
+                <div
+                  key={req.id}
+                  style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    marginBottom: '8px',
+                    opacity: isInactive ? 0.6 : 1,
+                    textDecoration: isInactive ? 'line-through' : undefined,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
+                  <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
+                  {isInactive && <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{req.status === 'approved' ? '승인됨' : req.status === 'rejected' ? '거절됨' : req.status}</div>}
+                  {!isInactive && (
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                      <button onClick={async () => { try { await handleAction('/api/piggy-bank/open-approve', { requestId: req.id }); } catch (err: any) { setError(err.message); } }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}>승인</button>
+                      <button onClick={async () => { try { await handleAction('/api/piggy-bank/open-reject', { requestId: req.id }); } catch (err: any) { setError(err.message); } }} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}>거절</button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         <button onClick={() => router.push('/dashboard')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>돌아가기</button>
@@ -616,41 +632,56 @@ export default function PiggyBankPage() {
             <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
             <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
               {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
-              {requests.map((req) => (
-                <div key={req.id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px' }}>
-                  <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
-                  <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px' }}>
-                    {req.destination === 'wallet' ? '용돈으로 적립' : '현금 인출'} · {req.reason || '사유 없음'}
+              {requests.map((req) => {
+                const isInactive = req.status !== 'pending';
+                return (
+                  <div
+                    key={req.id}
+                    style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      opacity: isInactive ? 0.6 : 1,
+                      textDecoration: isInactive ? 'line-through' : undefined,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
+                    <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px' }}>
+                      {req.destination === 'wallet' ? '용돈으로 적립' : '현금 인출'} · {req.reason || '사유 없음'}
+                    </div>
+                    {isInactive && <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{req.status === 'approved' ? '승인됨' : req.status === 'rejected' ? '거절됨' : req.status}</div>}
+                    {!isInactive && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
+                            } catch (err: any) {
+                              setError(err.message || '승인 실패');
+                            }
+                          }}
+                          style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}
+                        >
+                          승인
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await handleAction('/api/piggy-bank/open-reject', { requestId: req.id });
+                            } catch (err: any) {
+                              setError(err.message || '거절 실패');
+                            }
+                          }}
+                          style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}
+                        >
+                          거절
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
-                        } catch (err: any) {
-                          setError(err.message || '승인 실패');
-                        }
-                      }}
-                      style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}
-                    >
-                      승인
-                    </button>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await handleAction('/api/piggy-bank/open-reject', { requestId: req.id });
-                        } catch (err: any) {
-                          setError(err.message || '거절 실패');
-                        }
-                      }}
-                      style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}
-                    >
-                      거절
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>
@@ -779,29 +810,27 @@ export default function PiggyBankPage() {
 
             <div style={{ marginTop: '16px', display: 'grid', gap: '10px' }}>
               {requests.length === 0 && <p style={{ color: '#94a3b8' }}>요청 내역이 없습니다.</p>}
-              {requests.map((req) => (
-                <div key={req.id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px' }}>
-                  <div style={{ fontWeight: 600 }}>{formatAmount(req.amount)}</div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-                    {req.destination === 'wallet' ? '용돈 적립' : '현금 인출'} · {req.status}
+              {requests.map((req) => {
+                const isInactive = req.status !== 'pending';
+                return (
+                  <div
+                    key={req.id}
+                    style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '12px',
+                      opacity: isInactive ? 0.6 : 1,
+                      textDecoration: isInactive ? 'line-through' : undefined,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{formatAmount(req.amount)}</div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                      {req.destination === 'wallet' ? '용돈 적립' : '현금 인출'} · {req.status === 'approved' ? '승인됨' : req.status === 'rejected' ? '거절됨' : req.status}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{req.reason || '사유 없음'}</div>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>{req.reason || '사유 없음'}</div>
-                  {req.status === 'pending' && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
-                        } catch (err: any) {
-                          setError(err.message || '동의 처리 실패');
-                        }
-                      }}
-                      style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}
-                    >
-                      동의
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>
