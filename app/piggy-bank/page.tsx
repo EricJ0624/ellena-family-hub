@@ -588,7 +588,7 @@ export default function PiggyBankPage() {
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>저축 입금 (용돈과 별개)</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 입금 (용돈과 별개)</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <input
                 type="number"
