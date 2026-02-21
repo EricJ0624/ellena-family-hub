@@ -220,6 +220,8 @@ export default function FamilyHub() {
     walletBalance: number;
   }> | null>(null);
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
+  const [travelTrips, setTravelTrips] = useState<Array<{ id: string; title: string; start_date: string; end_date: string }>>([]);
+  const [travelTripsLoading, setTravelTripsLoading] = useState(false);
   const [showGroupSelectModal, setShowGroupSelectModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [locationRequests, setLocationRequests] = useState<Array<{
@@ -815,6 +817,36 @@ export default function FamilyHub() {
   useEffect(() => {
     loadPiggySummary();
   }, [loadPiggySummary]);
+
+  // 가족 여행 목록 로드 (그룹 선택 시)
+  const loadTravelTrips = useCallback(async () => {
+    if (!isAuthenticated || !currentGroupId) {
+      setTravelTrips([]);
+      return;
+    }
+    try {
+      setTravelTripsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setTravelTrips([]);
+        return;
+      }
+      const response = await fetch(`/api/v1/travel/trips?groupId=${currentGroupId}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '여행 목록 조회 실패');
+      setTravelTrips(Array.isArray(result.data) ? result.data : []);
+    } catch {
+      setTravelTrips([]);
+    } finally {
+      setTravelTripsLoading(false);
+    }
+  }, [isAuthenticated, currentGroupId]);
+
+  useEffect(() => {
+    loadTravelTrips();
+  }, [loadTravelTrips]);
 
   // 로그인 후 그룹 선택 모달 (일반 사용자)
   useEffect(() => {
@@ -9225,7 +9257,7 @@ ${groupInfo}
               <h3 className="section-title">가족 여행 플래너</h3>
               {currentGroupId && (
                 <button
-                  onClick={() => router.push('/travel')}
+                  onClick={() => router.push('/travel?openAdd=1')}
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
@@ -9239,8 +9271,8 @@ ${groupInfo}
                     cursor: 'pointer',
                   }}
                 >
-                  <span>✈️</span>
-                  이동
+                  <Plus style={{ width: 16, height: 16 }} />
+                  여행추가
                 </button>
               )}
             </div>
@@ -9249,10 +9281,33 @@ ${groupInfo}
                 <div style={{ fontSize: '13px', color: '#64748b' }}>
                   여행 플래너를 보려면 그룹을 선택해 주세요.
                 </div>
-              ) : (
+              ) : travelTripsLoading ? (
+                <div style={{ fontSize: '13px', color: '#64748b' }}>여행 목록 불러오는 중...</div>
+              ) : travelTrips.length === 0 ? (
                 <div style={{ fontSize: '13px', color: '#475569' }}>
-                  여행 일정과 경비를 함께 관리해 보세요.
+                  여행 일정과 경비를 함께 관리해 보세요. 여행을 추가해 보세요.
                 </div>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {travelTrips.map((t) => (
+                    <li
+                      key={t.id}
+                      onClick={() => router.push(`/travel?tripId=${t.id}`)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        marginBottom: '6px',
+                        border: '1px solid #e2e8f0',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        color: '#1e293b',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{t.title}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{t.start_date} ~ {t.end_date}</div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </section>

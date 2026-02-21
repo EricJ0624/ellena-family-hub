@@ -1,13 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import type { TravelTrip, TravelItinerary, TravelExpense } from '@/lib/modules/travel-planner/types';
 import {
   MapPin,
-  Plus,
   ChevronLeft,
   Calendar,
   ListOrdered,
@@ -21,6 +20,7 @@ const API_BASE = '/api/v1/travel';
 
 export function TravelPlannerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentGroupId, currentGroup } = useGroup();
   const [loading, setLoading] = useState(true);
   const [trips, setTrips] = useState<TravelTrip[]>([]);
@@ -101,6 +101,19 @@ export function TravelPlannerContent() {
       setTrips([]);
     }
   }, [currentGroupId, fetchTrips]);
+
+  const urlTripId = searchParams.get('tripId');
+  const urlOpenAdd = searchParams.get('openAdd') === '1';
+
+  useEffect(() => {
+    if (urlOpenAdd) setShowTripForm(true);
+  }, [urlOpenAdd]);
+
+  useEffect(() => {
+    if (!urlTripId || trips.length === 0) return;
+    const trip = trips.find((t) => t.id === urlTripId);
+    if (trip) setSelectedTrip(trip);
+  }, [urlTripId, trips]);
 
   /** 그룹 멤버 표시명 맵 로드 (memberships + profiles) */
   useEffect(() => {
@@ -184,6 +197,7 @@ export function TravelPlannerContent() {
       setFormEndDate('');
       setShowTripForm(false);
       await fetchTrips();
+      if (json.data?.id) router.replace(`/travel?tripId=${json.data.id}`);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : '생성 실패');
     } finally {
@@ -240,49 +254,27 @@ export function TravelPlannerContent() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            type="button"
-            onClick={() => router.push('/dashboard')}
-            style={{
-              padding: 8,
-              background: '#fff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 8,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ChevronLeft style={{ width: 20, height: 20, color: '#475569' }} />
-          </button>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>가족 여행 플래너</h1>
-            <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>{currentGroup?.name ?? '그룹'}</p>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <button
           type="button"
-          onClick={() => setShowTripForm(true)}
+          onClick={() => router.push('/dashboard')}
           style={{
-            padding: '10px 20px',
-            backgroundColor: '#9333ea',
-            color: 'white',
-            border: 'none',
+            padding: 8,
+            background: '#fff',
+            border: '1px solid #e2e8f0',
             borderRadius: 8,
-            fontSize: 14,
-            fontWeight: 600,
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 8,
+            justifyContent: 'center',
           }}
         >
-          <Plus style={{ width: 18, height: 18 }} />
-          여행 추가
+          <ChevronLeft style={{ width: 20, height: 20, color: '#475569' }} />
         </button>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>가족 여행 플래너</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>{currentGroup?.name ?? '그룹'}</p>
+        </div>
       </div>
 
       {error && (
@@ -298,69 +290,7 @@ export function TravelPlannerContent() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedTrip ? '280px 1fr' : '1fr', gap: 24, alignItems: 'start' }}>
-        <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
-          <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600, color: '#475569' }}>여행 목록</h2>
-          {loading ? (
-            <div style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-              <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-              로딩 중...
-            </div>
-          ) : trips.length === 0 ? (
-            <p style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>등록된 여행이 없습니다.</p>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {trips.map((t) => (
-                <li
-                  key={t.id}
-                  style={{
-                    padding: '12px 10px',
-                    borderRadius: 8,
-                    marginBottom: 6,
-                    backgroundColor: selectedTrip?.id === t.id ? '#f3e8ff' : 'transparent',
-                    border: selectedTrip?.id === t.id ? '1px solid #e9d5ff' : '1px solid transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                  onClick={() => setSelectedTrip(t)}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 14 }}>{t.title}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                      {t.start_date} ~ {t.end_date}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                      등록: {getDisplayName(t.created_by)}
-                      {t.updated_by != null && ` · 수정: ${getDisplayName(t.updated_by)}`}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(ev) => {
-                      ev.stopPropagation();
-                      handleDeleteTrip(t);
-                    }}
-                    style={{
-                      padding: 6,
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#94a3b8',
-                    }}
-                    aria-label="삭제"
-                  >
-                    <Trash2 style={{ width: 16, height: 16 }} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {selectedTrip && (
+      {selectedTrip ? (
           <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
             <div style={{ marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{selectedTrip.title}</h2>
@@ -458,8 +388,38 @@ export function TravelPlannerContent() {
               </div>
             </div>
           </div>
+        ) : (
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+            {loading && urlTripId ? (
+              <div style={{ color: '#64748b' }}>
+                <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                여행 정보를 불러오는 중...
+              </div>
+            ) : (
+              <>
+                <MapPin style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.6, color: '#94a3b8' }} />
+                <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>대시보드에서 여행을 선택하거나 여행을 추가해 주세요.</p>
+                <button
+                  type="button"
+                  onClick={() => router.push('/dashboard')}
+                  style={{
+                    marginTop: 16,
+                    padding: '10px 20px',
+                    backgroundColor: '#9333ea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  대시보드로 이동
+                </button>
+              </>
+            )}
+          </div>
         )}
-      </div>
 
       {showTripForm && (
         <div
