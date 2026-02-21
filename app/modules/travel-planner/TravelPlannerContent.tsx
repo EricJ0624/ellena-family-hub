@@ -702,7 +702,7 @@ export function TravelPlannerContent() {
     }
   };
 
-  const openExpenseForm = (item: TravelExpense | null) => {
+  const openExpenseForm = (item: TravelExpense | null, defaultEntryType?: 'addition' | 'expense') => {
     if (item) {
       setEditingExpense(item);
       setExpenseEntryType(item.entry_type === 'addition' ? 'addition' : 'expense');
@@ -712,7 +712,7 @@ export function TravelPlannerContent() {
       setExpenseMemo(item.memo ?? '');
     } else {
       setEditingExpense(null);
-      setExpenseEntryType('expense');
+      setExpenseEntryType(defaultEntryType ?? 'expense');
       setExpenseCategory('');
       setExpenseAmount('');
       setExpenseDate('');
@@ -1072,10 +1072,11 @@ export function TravelPlannerContent() {
     );
   }
 
-  const budget = Number(selectedTrip?.budget) || 0;
+  const initialBudget = Number(selectedTrip?.budget) || 0;
   const additionSum = expenses.filter((e) => e.entry_type === 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
   const expenseSum = expenses.filter((e) => e.entry_type !== 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
-  const balance = budget + additionSum - expenseSum;
+  const totalBudget = initialBudget + additionSum;
+  const balance = totalBudget - expenseSum;
   const additionList = expenses.filter((e) => e.entry_type === 'addition');
   const expenseList = expenses.filter((e) => e.entry_type !== 'addition');
 
@@ -1195,12 +1196,13 @@ export function TravelPlannerContent() {
                   <Wallet style={{ width: 18, height: 18 }} />
                   경비
                 </h3>
-                <button
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
                     type="button"
-                    onClick={() => openExpenseForm(null)}
+                    onClick={() => openExpenseForm(null, 'addition')}
                     style={{
                       padding: '6px 10px',
-                      background: '#9333ea',
+                      background: '#16a34a',
                       color: 'white',
                       border: 'none',
                       borderRadius: 6,
@@ -1209,11 +1211,28 @@ export function TravelPlannerContent() {
                       cursor: 'pointer',
                     }}
                   >
-                    + 경비 추가
+                    + 추가
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openExpenseForm(null, 'expense')}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + 지출 추가
                   </button>
                 </div>
+                </div>
                 <div style={{ marginBottom: 8, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, color: '#64748b' }}>총 예산 <strong style={{ color: '#1e293b' }}>{budget.toLocaleString('ko-KR')}원</strong></span>
+                  <span style={{ fontSize: 15, color: '#64748b' }}>총 예산 <strong style={{ color: '#1e293b' }}>{totalBudget.toLocaleString('ko-KR')}원</strong></span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: balance >= 0 ? '#9333ea' : '#dc2626' }}>
                     잔액 {balance.toLocaleString('ko-KR')}원
                   </span>
