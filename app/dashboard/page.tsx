@@ -917,16 +917,19 @@ export default function FamilyHub() {
   const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const isGroupLoadingForTitleFit = groupLoading && !currentGroupId;
   // 한 줄 맞춤: 기본 타이틀일 때 컨테이너 너비에 맞춰 폰트 크기 자동 축소 (비율 유지)
+  // 3번: ref null이면 다음 프레임에 재시도 / 2번: 폰트 로드 후 재계산
   useEffect(() => {
     if (!isDefaultDashboardTitle) {
       setFittedTitleFontSize(null);
       return;
     }
-    const el = dashboardTitleRef.current;
-    if (!el) return;
     const MAX_FS = 68;
     const MIN_FS = 12;
-    const fit = () => {
+    const cancelled = { current: false };
+    let ro: ResizeObserver | null = null;
+    let rafId: number = 0;
+
+    const fit = (el: HTMLHeadingElement) => {
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
       void el.offsetHeight; // 강제 reflow: 폰트 변경 후 레이아웃 반영
@@ -937,16 +940,36 @@ export default function FamilyHub() {
       }
       setFittedTitleFontSize(fs);
     };
-    let ro: ResizeObserver | null = null;
-    const cancelled = { current: false };
-    const rafId = requestAnimationFrame(() => {
+
+    const run = (el: HTMLHeadingElement) => {
+      fit(el);
+      ro = new ResizeObserver(() => fit(el));
+      ro.observe(el);
+      // 2번: 폰트 로드 후 재계산
+      document.fonts.ready.then(() => {
+        if (!cancelled.current) fit(el);
+      });
+    };
+
+    const tryRun = (retryCount: number) => {
+      const el = dashboardTitleRef.current;
+      if (el) {
+        run(el);
+        return;
+      }
+      // 3번: ref null이면 다음 프레임에 재시도 (최대 10프레임)
+      if (retryCount < 10) {
+        rafId = requestAnimationFrame(() => tryRun(retryCount + 1));
+      }
+    };
+
+    rafId = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (cancelled.current) return;
-        fit();
-        ro = new ResizeObserver(fit);
-        ro.observe(el);
+        tryRun(0);
       });
     });
+
     return () => {
       cancelled.current = true;
       cancelAnimationFrame(rafId);
