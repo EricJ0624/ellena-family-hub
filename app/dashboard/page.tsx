@@ -930,6 +930,9 @@ export default function FamilyHub() {
       : { color: effectiveTitleStyle?.color || '#1e293b' }),
   };
 
+  // 타이틀 오른쪽 레이아웃 영향 — effect 선언 위치에서 사용 가능한 값
+  const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
+  const isGroupLoadingForTitleFit = groupLoading && !currentGroupId;
   // 한 줄 맞춤: 기본 타이틀일 때 컨테이너 너비에 맞춰 폰트 크기 자동 축소 (비율 유지)
   useEffect(() => {
     if (!isDefaultDashboardTitle) {
@@ -943,25 +946,30 @@ export default function FamilyHub() {
     const fit = () => {
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
+      void el.offsetHeight; // 강제 reflow: 폰트 변경 후 레이아웃 반영
       while (el.scrollWidth > el.clientWidth && fs > MIN_FS) {
         fs -= 2;
         el.style.fontSize = `${fs}px`;
+        void el.offsetHeight;
       }
       setFittedTitleFontSize(fs);
     };
     let ro: ResizeObserver | null = null;
-    // 레이아웃 확정 후 측정 (관리자 버튼 등 반영)
+    const cancelled = { current: false };
     const rafId = requestAnimationFrame(() => {
-      fit();
-      // h1 자체 너비 변경 시 재계산 (버튼 표시/숨김 등)
-      ro = new ResizeObserver(fit);
-      ro.observe(el);
+      requestAnimationFrame(() => {
+        if (cancelled.current) return;
+        fit();
+        ro = new ResizeObserver(fit);
+        ro.observe(el);
+      });
     });
     return () => {
+      cancelled.current = true;
       cancelAnimationFrame(rafId);
       ro?.disconnect();
     };
-  }, [isDefaultDashboardTitle]);
+  }, [isDefaultDashboardTitle, showAdminForTitleFit, isGroupLoadingForTitleFit]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
