@@ -416,7 +416,7 @@ export default function LoginPage() {
             marginBottom: '12px',
             letterSpacing: '-0.5px'
           }}>
-            Family Hub
+            Hearth: <span style={{ fontSize: '24px' }}>Family Haven</span>
           </h1>
           <p style={{
             fontSize: '16px',
