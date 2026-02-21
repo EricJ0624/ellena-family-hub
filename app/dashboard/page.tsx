@@ -915,7 +915,7 @@ export default function FamilyHub() {
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    fontSize: isDefaultDashboardTitle ? 'clamp(22px, 5.5vw, 34px)' : 'clamp(18px, 4.5vw, 28px)',
+    fontSize: isDefaultDashboardTitle ? 'clamp(44px, 11vw, 68px)' : 'clamp(18px, 4.5vw, 28px)',
     fontWeight: effectiveTitleStyle?.fontWeight || '800',
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
     fontFamily: effectiveTitleStyle?.fontFamily || 'inherit',
