@@ -106,9 +106,9 @@ export default function LoginPage() {
           const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
 
           if (isAdmin) {
-            // 시스템 관리자: 그룹이 있으면 대시보드, 없으면 관리자 페이지
+            // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
             if (hasGroups) {
-              router.push('/dashboard');
+              router.push('/onboarding');
             } else {
               router.push('/admin');
             }

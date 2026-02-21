@@ -64,8 +64,8 @@ export default function AuthCallbackPage() {
           const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
 
           if (isAdmin) {
-            // 시스템 관리자: 그룹이 있으면 대시보드, 없으면 관리자 페이지
-            router.push(hasGroups ? '/dashboard' : '/admin');
+            // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
+            router.push(hasGroups ? '/onboarding' : '/admin');
           } else {
             // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
             router.push('/onboarding');
