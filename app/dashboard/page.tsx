@@ -284,6 +284,7 @@ export default function FamilyHub() {
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
+  const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
   
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -294,7 +295,7 @@ export default function FamilyHub() {
     letterSpacing: 0,
     fontFamily: 'Inter',
   });
-  
+  const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null); // 한 줄 맞춤 시 적용할 폰트 크기(px)
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -928,6 +929,34 @@ export default function FamilyHub() {
         }
       : { color: effectiveTitleStyle?.color || '#1e293b' }),
   };
+
+  // 한 줄 맞춤: 기본 타이틀일 때 컨테이너 너비에 맞춰 폰트 크기 자동 축소
+  useEffect(() => {
+    if (!isDefaultDashboardTitle) {
+      setFittedTitleFontSize(null);
+      return;
+    }
+    const el = dashboardTitleRef.current;
+    if (!el) return;
+    const MAX_FS = 68;
+    const MIN_FS = 12;
+    const fit = () => {
+      let fs = MAX_FS;
+      el.style.fontSize = `${fs}px`;
+      while (el.scrollWidth > el.clientWidth && fs > MIN_FS) {
+        fs -= 2;
+        el.style.fontSize = `${fs}px`;
+      }
+      setFittedTitleFontSize(fs);
+    };
+    fit();
+    const parent = el.parentElement;
+    if (parent) {
+      const ro = new ResizeObserver(fit);
+      ro.observe(parent);
+      return () => ro.disconnect();
+    }
+  }, [isDefaultDashboardTitle]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
@@ -8111,7 +8140,13 @@ ${groupInfo}
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '48px' }}>
-          <h1 style={dashboardTitleStyle}>
+          <h1
+            ref={dashboardTitleRef}
+            style={{
+              ...dashboardTitleStyle,
+              ...(isDefaultDashboardTitle && fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
+            }}
+          >
             {isDefaultDashboardTitle ? (
               <>Hearth: <span style={{ fontSize: '0.5em', verticalAlign: 'middle' }}>Family Haven</span></>
             ) : (
