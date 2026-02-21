@@ -86,6 +86,9 @@ export function TravelPlannerContent() {
   const travelMapRef = useRef<{ setCenter: (c: { lat: number; lng: number }) => void; fitBounds: (b: unknown) => void } | null>(null);
   const travelMapMarkersRef = useRef<unknown[]>([]);
   const travelMapScriptLoadedRef = useRef(false);
+  const accAddressInputRef = useRef<HTMLInputElement>(null);
+  const diningAddressInputRef = useRef<HTMLInputElement>(null);
+  const itineraryAddressInputRef = useRef<HTMLInputElement>(null);
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -95,6 +98,13 @@ export function TravelPlannerContent() {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
+  }, []);
+
+  /** 좌표 우선, 없으면 주소로 구글맵 URL 생성 */
+  const getGoogleMapsUrl = useCallback((item: { address?: string | null; latitude?: number | null; longitude?: number | null }) => {
+    if (item.latitude != null && item.longitude != null) return `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
+    if (item.address?.trim()) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address.trim())}`;
+    return null;
   }, []);
 
   const fetchTrips = useCallback(async () => {
@@ -278,7 +288,7 @@ export function TravelPlannerContent() {
     }
     const script = document.createElement('script');
     script.id = 'google-maps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
@@ -294,6 +304,75 @@ export function TravelPlannerContent() {
     };
     document.head.appendChild(script);
   }, [selectedTrip, accommodations, dining, itineraries]);
+
+  // Places Autocomplete: 숙소 폼 주소 필드
+  useEffect(() => {
+    if (!showAccommodationForm) return;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+    if (!apiKey) return;
+    const g = (window as any).google;
+    if (!g?.maps?.places?.Autocomplete) return;
+    const timer = setTimeout(() => {
+      const el = accAddressInputRef.current;
+      if (!el) return;
+      const autocomplete = new g.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address) setAccAddress(place.formatted_address);
+        if (place.geometry?.location) {
+          setAccLatitude(String(place.geometry.location.lat()));
+          setAccLongitude(String(place.geometry.location.lng()));
+        }
+      });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [showAccommodationForm]);
+
+  // Places Autocomplete: 먹거리 폼 주소 필드
+  useEffect(() => {
+    if (!showDiningForm) return;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+    if (!apiKey) return;
+    const g = (window as any).google;
+    if (!g?.maps?.places?.Autocomplete) return;
+    const timer = setTimeout(() => {
+      const el = diningAddressInputRef.current;
+      if (!el) return;
+      const autocomplete = new g.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address) setDiningAddress(place.formatted_address);
+        if (place.geometry?.location) {
+          setDiningLatitude(String(place.geometry.location.lat()));
+          setDiningLongitude(String(place.geometry.location.lng()));
+        }
+      });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [showDiningForm]);
+
+  // Places Autocomplete: 일정(관광지) 폼 주소 필드
+  useEffect(() => {
+    if (!showItineraryForm) return;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+    if (!apiKey) return;
+    const g = (window as any).google;
+    if (!g?.maps?.places?.Autocomplete) return;
+    const timer = setTimeout(() => {
+      const el = itineraryAddressInputRef.current;
+      if (!el) return;
+      const autocomplete = new g.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address) setItineraryAddress(place.formatted_address);
+        if (place.geometry?.location) {
+          setItineraryLatitude(String(place.geometry.location.lat()));
+          setItineraryLongitude(String(place.geometry.location.lng()));
+        }
+      });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [showItineraryForm]);
 
   /** 그룹 멤버 표시명 맵 로드 (memberships + profiles) */
   useEffect(() => {
@@ -1158,7 +1237,12 @@ export function TravelPlannerContent() {
                             {i.updated_by != null && ` · 수정: ${getDisplayName(i.updated_by)}`}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                          {getGoogleMapsUrl(i) && (
+                            <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기">
+                              <MapPin style={{ width: 14, height: 14 }} />
+                            </a>
+                          )}
                           <button
                             type="button"
                             onClick={() => openItineraryForm(i)}
@@ -1314,7 +1398,12 @@ export function TravelPlannerContent() {
                             {a.updated_by != null && ` · 수정: ${getDisplayName(a.updated_by)}`}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                          {getGoogleMapsUrl(a) && (
+                            <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기">
+                              <MapPin style={{ width: 14, height: 14 }} />
+                            </a>
+                          )}
                           <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정">
                             <Pencil style={{ width: 14, height: 14 }} />
                           </button>
@@ -1382,7 +1471,12 @@ export function TravelPlannerContent() {
                             {d.updated_by != null && ` · 수정: ${getDisplayName(d.updated_by)}`}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                          {getGoogleMapsUrl(d) && (
+                            <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기">
+                              <MapPin style={{ width: 14, height: 14 }} />
+                            </a>
+                          )}
                           <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정">
                             <Pencil style={{ width: 14, height: 14 }} />
                           </button>
@@ -1891,11 +1985,12 @@ export function TravelPlannerContent() {
                   resize: 'vertical',
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (관광지 위치·지도용)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (구글 검색 또는 직접 입력)</label>
               <input
+                ref={itineraryAddressInputRef}
                 value={itineraryAddress}
                 onChange={(e) => setItineraryAddress(e.target.value)}
-                placeholder="선택 입력"
+                placeholder="장소 검색 또는 주소·위도/경도 직접 입력"
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
@@ -2181,11 +2276,12 @@ export function TravelPlannerContent() {
                   style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (구글 검색 또는 직접 입력)</label>
               <input
+                ref={accAddressInputRef}
                 value={accAddress}
                 onChange={(e) => setAccAddress(e.target.value)}
-                placeholder="선택 입력"
+                placeholder="장소 검색 또는 주소·위도/경도 직접 입력"
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -2300,11 +2396,12 @@ export function TravelPlannerContent() {
                 placeholder="선택"
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (지도 표시용)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (구글 검색 또는 직접 입력)</label>
               <input
+                ref={diningAddressInputRef}
                 value={diningAddress}
                 onChange={(e) => setDiningAddress(e.target.value)}
-                placeholder="선택 입력"
+                placeholder="장소 검색 또는 주소·위도/경도 직접 입력"
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
