@@ -535,7 +535,7 @@ export function TravelPlannerContent() {
                 }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>출발일 *</label>
-              <div style={{ overflow: 'hidden', marginBottom: 12 }}>
+              <div style={{ overflow: 'hidden', borderRadius: 8, marginBottom: 12 }}>
                 <input
                   type="date"
                   value={formStartDate}
@@ -556,7 +556,7 @@ export function TravelPlannerContent() {
                 />
               </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료일 *</label>
-              <div style={{ overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ overflow: 'hidden', borderRadius: 8, marginBottom: 20 }}>
                 <input
                   type="date"
                   value={formEndDate}
