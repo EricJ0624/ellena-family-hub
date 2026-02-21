@@ -808,14 +808,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
           </motion.div>
         )}
 
-        {/* 오늘의 무작위 사진 액자 */}
-        {photos && photos.length > 0 && (
-          <DailyPhotoFrame 
-            photos={photos} 
-            frameStyle={frameStyle}
-            onFrameChange={setFrameStyle}
-          />
-        )}
+        {/* 오늘의 무작위 사진 액자 (사진 없어도 액자 표시, 추후 기본 디자인 추가 예정) */}
+        <DailyPhotoFrame 
+          photos={photos || []} 
+          frameStyle={frameStyle}
+          onFrameChange={setFrameStyle}
+        />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}
         {showTitle && (

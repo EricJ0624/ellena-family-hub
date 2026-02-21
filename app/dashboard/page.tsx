@@ -906,6 +906,29 @@ export default function FamilyHub() {
     };
   }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle]);
 
+  const dashboardTitleText = effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven';
+  const isDefaultDashboardTitle = dashboardTitleText === 'Hearth: Family Haven';
+  const dashboardTitleStyle: React.CSSProperties = {
+    margin: 0,
+    flex: 1,
+    minWidth: 0,
+    whiteSpace: 'nowrap' as const,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontSize: isDefaultDashboardTitle ? 'clamp(22px, 5.5vw, 34px)' : 'clamp(18px, 4.5vw, 28px)',
+    fontWeight: effectiveTitleStyle?.fontWeight || '800',
+    letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
+    fontFamily: effectiveTitleStyle?.fontFamily || 'inherit',
+    ...(isDefaultDashboardTitle
+      ? {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }
+      : { color: effectiveTitleStyle?.color || '#1e293b' }),
+  };
+
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
   const eventMatchesDate = useCallback((e: EventItem, dateKey: string): boolean => {
@@ -8087,23 +8110,13 @@ ${groupInfo}
         )}
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '40px' }}>
-          <h1
-            style={{
-              margin: 0,
-              flex: 1,
-              minWidth: 0,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              fontSize: 'clamp(14px, 4vw, 22px)',
-              fontWeight: effectiveTitleStyle?.fontWeight || '700',
-              letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? 0}px`,
-              fontFamily: effectiveTitleStyle?.fontFamily || 'inherit',
-              color: effectiveTitleStyle?.color || '#1e293b',
-            }}
-          >
-            {effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '48px' }}>
+          <h1 style={dashboardTitleStyle}>
+            {isDefaultDashboardTitle ? (
+              <>Hearth: <span style={{ fontSize: '0.5em', verticalAlign: 'middle' }}>Family Haven</span></>
+            ) : (
+              dashboardTitleText
+            )}
           </h1>
           {isGroupLoading ? (
             <div
@@ -8150,22 +8163,20 @@ ${groupInfo}
           ) : null}
         </div>
 
-        {/* Header (사진 있을 때만 사진 액자 표시, 타이틀/배경 제거) */}
+        {/* Header (사진 액자 항상 표시, 타이틀/배경 제거) */}
         <header className="app-header">
-          {(state.album?.length ?? 0) > 0 && (
-            <TitlePage 
-              title={currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven'}
-              photos={state.album || []}
-              titleStyle={effectiveTitleStyle}
-              onTitleStyleChange={(style) => {
-                setTitleStyle(style);
-                updateState('UPDATE_TITLE_STYLE', style);
-              }}
-              editable={false}
-              showTitle={false}
-              noBackground
-            />
-          )}
+          <TitlePage 
+            title={currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven'}
+            photos={state.album || []}
+            titleStyle={effectiveTitleStyle}
+            onTitleStyleChange={(style) => {
+              setTitleStyle(style);
+              updateState('UPDATE_TITLE_STYLE', style);
+            }}
+            editable={false}
+            showTitle={false}
+            noBackground
+          />
           <div className="status-indicator">
             <span className="status-dot">
               <span className="status-dot-ping"></span>
