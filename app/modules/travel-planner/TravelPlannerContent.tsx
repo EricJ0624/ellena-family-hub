@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -71,6 +71,10 @@ export function TravelPlannerContent() {
 
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
+
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const selectedTripIdRef = useRef<string | null>(null);
+  selectedTripIdRef.current = selectedTrip?.id ?? null;
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -227,6 +231,68 @@ export function TravelPlannerContent() {
       setDining([]);
     }
   }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining]);
+
+  /** 실시간 반영: 동일 그룹 사용자의 변경 사항 구독 */
+  useEffect(() => {
+    if (!currentGroupId) return;
+
+    const groupId = currentGroupId;
+    const channel = supabase
+      .channel(`travel_planner_${groupId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'travel_trips', filter: `group_id=eq.${groupId}` },
+        (payload: { eventType?: string; type?: string; old?: { id?: string }; new?: unknown }) => {
+          fetchTrips();
+          const isDelete = payload?.eventType === 'DELETE' || payload?.type === 'DELETE' || (payload?.old?.id != null && payload?.new == null);
+          if (isDelete && payload?.old?.id === selectedTripIdRef.current) {
+            setSelectedTrip(null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'travel_itineraries', filter: `group_id=eq.${groupId}` },
+        () => {
+          const tripId = selectedTripIdRef.current;
+          if (tripId) fetchItineraries(tripId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'travel_expenses', filter: `group_id=eq.${groupId}` },
+        () => {
+          const tripId = selectedTripIdRef.current;
+          if (tripId) fetchExpenses(tripId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'travel_accommodations', filter: `group_id=eq.${groupId}` },
+        () => {
+          const tripId = selectedTripIdRef.current;
+          if (tripId) fetchAccommodations(tripId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'travel_dining', filter: `group_id=eq.${groupId}` },
+        () => {
+          const tripId = selectedTripIdRef.current;
+          if (tripId) fetchDining(tripId);
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [currentGroupId, fetchTrips, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining]);
 
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
