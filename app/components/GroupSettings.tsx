@@ -21,7 +21,7 @@ interface GroupSettingsProps {
 }
 
 const DEFAULT_TITLE_STYLE: TitleStyle = {
-  content: 'Ellena Family Hub',
+  content: 'Hearth: Family Haven',
   color: '#9333ea',
   fontSize: 48,
   fontWeight: '700',
@@ -48,7 +48,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
   const [groupName, setGroupName] = useState(currentGroup?.name || '');
   const [titleStyle, setTitleStyle] = useState<TitleStyle>(() =>
-    parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Ellena Family Hub')
+    parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Hearth: Family Haven')
   );
   const [showDesignEditor, setShowDesignEditor] = useState(false);
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
@@ -96,7 +96,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   useEffect(() => {
     setTitleStyle(parseTitleStyle(
       currentGroup?.title_style,
-      currentGroup?.family_name ?? 'Ellena Family Hub'
+      currentGroup?.family_name ?? 'Hearth: Family Haven'
     ));
   }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style]);
 

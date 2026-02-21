@@ -125,7 +125,7 @@ interface AppState {
 }
 
 const INITIAL_STATE: AppState = {
-  familyName: "Ellena Family Hub",
+  familyName: "Hearth: Family Haven",
   location: { address: "", latitude: 0, longitude: 0, userId: "", updatedAt: "" },
   familyLocations: [],
   todos: [],
@@ -133,7 +133,7 @@ const INITIAL_STATE: AppState = {
   events: [],
   messages: [],
   titleStyle: {
-    content: "Ellena Family Hub",
+    content: "Hearth: Family Haven",
     color: '#9333ea',
     fontSize: 48,
     fontWeight: '700',
@@ -889,7 +889,7 @@ export default function FamilyHub() {
         ?? currentGroup?.family_name?.trim()
         ?? state.familyName
         ?? titleStyle?.content
-        ?? 'Ellena Family Hub';
+        ?? 'Hearth: Family Haven';
       return {
         content,
         color: typeof o.color === 'string' ? o.color : '#9333ea',
@@ -902,7 +902,7 @@ export default function FamilyHub() {
     return {
       ...INITIAL_STATE.titleStyle,
       ...titleStyle,
-      content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || 'Ellena Family Hub',
+      content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || 'Hearth: Family Haven',
     };
   }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle]);
 
@@ -8103,7 +8103,7 @@ ${groupInfo}
               color: effectiveTitleStyle?.color || '#1e293b',
             }}
           >
-            {effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Ellena Family Hub'}
+            {effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven'}
           </h1>
           {isGroupLoading ? (
             <div
@@ -8154,7 +8154,7 @@ ${groupInfo}
         <header className="app-header">
           {(state.album?.length ?? 0) > 0 && (
             <TitlePage 
-              title={currentGroup?.family_name?.trim() || state.familyName || 'Ellena Family Hub'}
+              title={currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven'}
               photos={state.album || []}
               titleStyle={effectiveTitleStyle}
               onTitleStyleChange={(style) => {

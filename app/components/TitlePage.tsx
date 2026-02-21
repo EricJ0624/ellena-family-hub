@@ -8,8 +8,8 @@ import { PhotoFrameSVG, FRAME_CONFIGS, type FrameStyle } from './PhotoFrames';
 
 // 상수 분리 - 텍스트 내용 관리
 const CONSTANTS = {
-  TITLE: 'Ellena Family Hub',
-  DEFAULT_TITLE: 'Ellena Family Hub',
+  TITLE: 'Hearth: Family Haven',
+  DEFAULT_TITLE: 'Hearth: Family Haven',
 } as const;
 
 // 날짜 기반 해시 시드 생성 함수

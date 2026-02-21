@@ -3,7 +3,7 @@ import "./globals.css";
 import { GroupProviderWrapper } from "./providers/GroupProviderWrapper";
 
 export const metadata: Metadata = {
-  title: "Ellena Family Hub",
+  title: "Hearth: Family Haven",
   description: "우리 가족만의 안전한 공간",
 };
 
