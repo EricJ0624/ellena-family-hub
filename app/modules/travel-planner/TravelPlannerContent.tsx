@@ -254,7 +254,7 @@ export function TravelPlannerContent() {
         if (i.latitude != null && i.longitude != null) addMarker(i.latitude, i.longitude, i.title, i.source_type ? undefined : '관');
       });
 
-      if (hasAny) map.fitBounds(bounds);
+      if (hasAny && map) map.fitBounds(bounds);
     };
 
     if ((window as any).google?.maps?.Map) {
