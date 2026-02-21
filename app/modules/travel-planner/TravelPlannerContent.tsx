@@ -1211,7 +1211,7 @@ export function TravelPlannerContent() {
                       cursor: 'pointer',
                     }}
                   >
-                    + 추가
+                    + 경비추가
                   </button>
                   <button
                     type="button"
@@ -1227,7 +1227,7 @@ export function TravelPlannerContent() {
                       cursor: 'pointer',
                     }}
                   >
-                    + 지출 추가
+                    - 지출추가
                   </button>
                 </div>
                 </div>
@@ -2112,17 +2112,6 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>유형 *</label>
-              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
-                  <input type="radio" name="expenseEntryType" checked={expenseEntryType === 'addition'} onChange={() => setExpenseEntryType('addition')} />
-                  추가 (입금)
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
-                  <input type="radio" name="expenseEntryType" checked={expenseEntryType === 'expense'} onChange={() => setExpenseEntryType('expense')} />
-                  지출
-                </label>
-              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>분류</label>
               <input
                 value={expenseCategory}
