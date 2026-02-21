@@ -481,6 +481,8 @@ export function TravelPlannerContent() {
               padding: 24,
               width: '90%',
               maxWidth: 400,
+              minWidth: 0,
+              overflow: 'hidden',
               boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -538,6 +540,7 @@ export function TravelPlannerContent() {
                 required
                 style={{
                   width: '100%',
+                  maxWidth: '100%',
                   boxSizing: 'border-box',
                   minHeight: 40,
                   padding: '10px 12px',
@@ -555,6 +558,7 @@ export function TravelPlannerContent() {
                 required
                 style={{
                   width: '100%',
+                  maxWidth: '100%',
                   boxSizing: 'border-box',
                   minHeight: 40,
                   padding: '10px 12px',
