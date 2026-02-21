@@ -1562,56 +1562,61 @@ export function TravelPlannerContent() {
             </div>
             <form onSubmit={editingItinerary ? handleUpdateItinerary : handleCreateItinerary} style={{ overflow: 'hidden', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
-              <input
-                type="date"
-                value={itineraryDayDate}
-                onChange={(e) => setItineraryDayDate(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
+              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="date"
+                  value={itineraryDayDate}
+                  onChange={(e) => setItineraryDayDate(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: 40,
+                    padding: '10px 12px',
+                    border: 'none',
+                    fontSize: 14,
+                    outline: 'none',
+                  }}
+                />
+              </div>
               <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시작 시간</label>
-                  <input
-                    type="time"
-                    value={itineraryStartTime}
-                    onChange={(e) => setItineraryStartTime(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                    }}
-                  />
+                  <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    <input
+                      type="time"
+                      value={itineraryStartTime}
+                      onChange={(e) => setItineraryStartTime(e.target.value)}
+                      style={{
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        minHeight: 40,
+                        padding: '10px 12px',
+                        border: 'none',
+                        fontSize: 14,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료 시간</label>
-                  <input
-                    type="time"
-                    value={itineraryEndTime}
-                    onChange={(e) => setItineraryEndTime(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                    }}
-                  />
+                  <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    <input
+                      type="time"
+                      value={itineraryEndTime}
+                      onChange={(e) => setItineraryEndTime(e.target.value)}
+                      style={{
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        minHeight: 40,
+                        padding: '10px 12px',
+                        border: 'none',
+                        fontSize: 14,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>제목 *</label>
@@ -1888,21 +1893,25 @@ export function TravelPlannerContent() {
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>체크인 *</label>
-              <input
-                type="date"
-                value={accCheckIn}
-                onChange={(e) => setAccCheckIn(e.target.value)}
-                required
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
-              />
+              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="date"
+                  value={accCheckIn}
+                  onChange={(e) => setAccCheckIn(e.target.value)}
+                  required
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                />
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>체크아웃 *</label>
-              <input
-                type="date"
-                value={accCheckOut}
-                onChange={(e) => setAccCheckOut(e.target.value)}
-                required
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
-              />
+              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="date"
+                  value={accCheckOut}
+                  onChange={(e) => setAccCheckOut(e.target.value)}
+                  required
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                />
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소</label>
               <input
                 value={accAddress}
@@ -1973,20 +1982,24 @@ export function TravelPlannerContent() {
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
-              <input
-                type="date"
-                value={diningDayDate}
-                onChange={(e) => setDiningDayDate(e.target.value)}
-                required
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
-              />
+              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="date"
+                  value={diningDayDate}
+                  onChange={(e) => setDiningDayDate(e.target.value)}
+                  required
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                />
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시간</label>
-              <input
-                type="time"
-                value={diningTime}
-                onChange={(e) => setDiningTime(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
-              />
+              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="time"
+                  value={diningTime}
+                  onChange={(e) => setDiningTime(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                />
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>구분 (아침/점심/저녁/카페 등)</label>
               <input
                 value={diningCategory}
