@@ -26,6 +26,10 @@ export interface TravelItinerary {
   title: string;
   description: string | null;
   sort_order: number;
+  /** 시작 시간 'HH:mm' (선택) */
+  start_time?: string | null;
+  /** 종료 시간 'HH:mm' (선택) */
+  end_time?: string | null;
   created_at: string;
   updated_at: string;
   created_by?: string | null;
@@ -63,6 +67,40 @@ export type TravelItineraryInsert = Omit<TravelItinerary, 'id' | 'created_at' | 
   created_at?: string;
   updated_at?: string;
 };
+
+export interface TravelAccommodation {
+  id: string;
+  trip_id: string;
+  group_id: string;
+  name: string;
+  check_in_date: string;
+  check_out_date: string;
+  address: string | null;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export interface TravelDining {
+  id: string;
+  trip_id: string;
+  group_id: string;
+  name: string;
+  day_date: string;
+  time_at: string | null;
+  category: string | null;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
 
 export type TravelExpenseInsert = Omit<TravelExpense, 'id' | 'created_at' | 'updated_at'> & {
   id?: string;

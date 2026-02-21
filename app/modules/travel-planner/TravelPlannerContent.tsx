@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
-import type { TravelTrip, TravelItinerary, TravelExpense } from '@/lib/modules/travel-planner/types';
+import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining } from '@/lib/modules/travel-planner/types';
 import {
   MapPin,
   ChevronLeft,
@@ -15,6 +15,8 @@ import {
   Loader2,
   X,
   Pencil,
+  Home,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 const API_BASE = '/api/v1/travel';
@@ -28,6 +30,8 @@ export function TravelPlannerContent() {
   const [selectedTrip, setSelectedTrip] = useState<TravelTrip | null>(null);
   const [itineraries, setItineraries] = useState<TravelItinerary[]>([]);
   const [expenses, setExpenses] = useState<TravelExpense[]>([]);
+  const [accommodations, setAccommodations] = useState<TravelAccommodation[]>([]);
+  const [dining, setDining] = useState<TravelDining[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showTripForm, setShowTripForm] = useState(false);
   const [showTripEditForm, setShowTripEditForm] = useState(false);
@@ -36,12 +40,28 @@ export function TravelPlannerContent() {
   const [itineraryDayDate, setItineraryDayDate] = useState('');
   const [itineraryTitle, setItineraryTitle] = useState('');
   const [itineraryDescription, setItineraryDescription] = useState('');
+  const [itineraryStartTime, setItineraryStartTime] = useState('');
+  const [itineraryEndTime, setItineraryEndTime] = useState('');
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<TravelExpense | null>(null);
   const [expenseCategory, setExpenseCategory] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState('');
   const [expenseMemo, setExpenseMemo] = useState('');
+  const [showAccommodationForm, setShowAccommodationForm] = useState(false);
+  const [editingAccommodation, setEditingAccommodation] = useState<TravelAccommodation | null>(null);
+  const [accName, setAccName] = useState('');
+  const [accCheckIn, setAccCheckIn] = useState('');
+  const [accCheckOut, setAccCheckOut] = useState('');
+  const [accAddress, setAccAddress] = useState('');
+  const [accMemo, setAccMemo] = useState('');
+  const [showDiningForm, setShowDiningForm] = useState(false);
+  const [editingDining, setEditingDining] = useState<TravelDining | null>(null);
+  const [diningName, setDiningName] = useState('');
+  const [diningDayDate, setDiningDayDate] = useState('');
+  const [diningTime, setDiningTime] = useState('');
+  const [diningCategory, setDiningCategory] = useState('');
+  const [diningMemo, setDiningMemo] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const [formTitle, setFormTitle] = useState('');
@@ -103,6 +123,32 @@ export function TravelPlannerContent() {
       setExpenses(json.data ?? []);
     } catch {
       setExpenses([]);
+    }
+  }, [currentGroupId, getAuthHeaders]);
+
+  const fetchAccommodations = useCallback(async (tripId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${tripId}/accommodations?groupId=${currentGroupId}`, { headers });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '숙소 조회 실패');
+      setAccommodations(json.data ?? []);
+    } catch {
+      setAccommodations([]);
+    }
+  }, [currentGroupId, getAuthHeaders]);
+
+  const fetchDining = useCallback(async (tripId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${tripId}/dining?groupId=${currentGroupId}`, { headers });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '먹거리 조회 실패');
+      setDining(json.data ?? []);
+    } catch {
+      setDining([]);
     }
   }, [currentGroupId, getAuthHeaders]);
 
@@ -172,11 +218,15 @@ export function TravelPlannerContent() {
     if (selectedTrip) {
       fetchItineraries(selectedTrip.id);
       fetchExpenses(selectedTrip.id);
+      fetchAccommodations(selectedTrip.id);
+      fetchDining(selectedTrip.id);
     } else {
       setItineraries([]);
       setExpenses([]);
+      setAccommodations([]);
+      setDining([]);
     }
-  }, [selectedTrip, fetchItineraries, fetchExpenses]);
+  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining]);
 
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,11 +329,15 @@ export function TravelPlannerContent() {
       setItineraryDayDate(item.day_date);
       setItineraryTitle(item.title);
       setItineraryDescription(item.description ?? '');
+      setItineraryStartTime(item.start_time ?? '');
+      setItineraryEndTime(item.end_time ?? '');
     } else {
       setEditingItinerary(null);
       setItineraryDayDate('');
       setItineraryTitle('');
       setItineraryDescription('');
+      setItineraryStartTime('');
+      setItineraryEndTime('');
     }
     setShowItineraryForm(true);
   };
@@ -305,6 +359,8 @@ export function TravelPlannerContent() {
           day_date: itineraryDayDate,
           title: itineraryTitle.trim(),
           description: itineraryDescription.trim() || undefined,
+          start_time: itineraryStartTime.trim() || undefined,
+          end_time: itineraryEndTime.trim() || undefined,
         }),
       });
       const json = await res.json();
@@ -335,6 +391,8 @@ export function TravelPlannerContent() {
           day_date: itineraryDayDate,
           title: itineraryTitle.trim(),
           description: itineraryDescription.trim() || null,
+          start_time: itineraryStartTime.trim() || null,
+          end_time: itineraryEndTime.trim() || null,
         }),
       });
       const json = await res.json();
@@ -464,6 +522,218 @@ export function TravelPlannerContent() {
       await fetchExpenses(selectedTrip.id);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : '경비 삭제 실패');
+    }
+  };
+
+  const openAccommodationForm = (item: TravelAccommodation | null) => {
+    if (item) {
+      setEditingAccommodation(item);
+      setAccName(item.name);
+      setAccCheckIn(item.check_in_date);
+      setAccCheckOut(item.check_out_date);
+      setAccAddress(item.address ?? '');
+      setAccMemo(item.memo ?? '');
+    } else {
+      setEditingAccommodation(null);
+      setAccName('');
+      setAccCheckIn('');
+      setAccCheckOut('');
+      setAccAddress('');
+      setAccMemo('');
+    }
+    setShowAccommodationForm(true);
+  };
+
+  const handleCreateAccommodation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentGroupId || !selectedTrip || !accName.trim() || !accCheckIn || !accCheckOut) {
+      alert('숙소명, 체크인/체크아웃 날짜를 입력해주세요.');
+      return;
+    }
+    if (new Date(accCheckOut) < new Date(accCheckIn)) {
+      alert('체크아웃은 체크인 이후여야 합니다.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/accommodations`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          name: accName.trim(),
+          check_in_date: accCheckIn,
+          check_out_date: accCheckOut,
+          address: accAddress.trim() || undefined,
+          memo: accMemo.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '숙소 추가 실패');
+      await fetchAccommodations(selectedTrip.id);
+      setShowAccommodationForm(false);
+      setEditingAccommodation(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : '숙소 추가 실패');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateAccommodation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccommodation || !currentGroupId || !accName.trim() || !accCheckIn || !accCheckOut) {
+      alert('숙소명, 체크인/체크아웃 날짜를 입력해주세요.');
+      return;
+    }
+    if (new Date(accCheckOut) < new Date(accCheckIn)) {
+      alert('체크아웃은 체크인 이후여야 합니다.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/accommodations/${editingAccommodation.id}?groupId=${currentGroupId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          name: accName.trim(),
+          check_in_date: accCheckIn,
+          check_out_date: accCheckOut,
+          address: accAddress.trim() || null,
+          memo: accMemo.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '숙소 수정 실패');
+      await fetchAccommodations(selectedTrip!.id);
+      setShowAccommodationForm(false);
+      setEditingAccommodation(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : '숙소 수정 실패');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccommodation = async (item: TravelAccommodation) => {
+    if (!currentGroupId || !selectedTrip || !confirm(`"${item.name}" 숙소를 삭제할까요?`)) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/accommodations/${item.id}?groupId=${currentGroupId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || '숙소 삭제 실패');
+      }
+      await fetchAccommodations(selectedTrip.id);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : '숙소 삭제 실패');
+    }
+  };
+
+  const openDiningForm = (item: TravelDining | null) => {
+    if (item) {
+      setEditingDining(item);
+      setDiningName(item.name);
+      setDiningDayDate(item.day_date);
+      setDiningTime(item.time_at ?? '');
+      setDiningCategory(item.category ?? '');
+      setDiningMemo(item.memo ?? '');
+    } else {
+      setEditingDining(null);
+      setDiningName('');
+      setDiningDayDate('');
+      setDiningTime('');
+      setDiningCategory('');
+      setDiningMemo('');
+    }
+    setShowDiningForm(true);
+  };
+
+  const handleCreateDining = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentGroupId || !selectedTrip || !diningName.trim() || !diningDayDate) {
+      alert('이름과 날짜를 입력해주세요.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/dining`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          name: diningName.trim(),
+          day_date: diningDayDate,
+          time_at: diningTime.trim() || undefined,
+          category: diningCategory.trim() || undefined,
+          memo: diningMemo.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '먹거리 추가 실패');
+      await fetchDining(selectedTrip.id);
+      setShowDiningForm(false);
+      setEditingDining(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : '먹거리 추가 실패');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateDining = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDining || !currentGroupId || !diningName.trim() || !diningDayDate) {
+      alert('이름과 날짜를 입력해주세요.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/dining/${editingDining.id}?groupId=${currentGroupId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          name: diningName.trim(),
+          day_date: diningDayDate,
+          time_at: diningTime.trim() || null,
+          category: diningCategory.trim() || null,
+          memo: diningMemo.trim() || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '먹거리 수정 실패');
+      await fetchDining(selectedTrip!.id);
+      setShowDiningForm(false);
+      setEditingDining(null);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : '먹거리 수정 실패');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteDining = async (item: TravelDining) => {
+    if (!currentGroupId || !selectedTrip || !confirm(`"${item.name}" 먹거리를 삭제할까요?`)) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/dining/${item.id}?groupId=${currentGroupId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || '먹거리 삭제 실패');
+      }
+      await fetchDining(selectedTrip.id);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : '먹거리 삭제 실패');
     }
   };
 
@@ -653,7 +923,14 @@ export function TravelPlannerContent() {
                       >
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 600, color: '#1e293b' }}>{i.title}</div>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{i.day_date}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                            {i.day_date}
+                            {(i.start_time || i.end_time) && (
+                              <span style={{ marginLeft: 6 }}>
+                                · {(i.start_time || '--')} ~ {(i.end_time || '--')}
+                              </span>
+                            )}
+                          </div>
                           {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
                             등록: {getDisplayName(i.created_by)}
@@ -753,6 +1030,142 @@ export function TravelPlannerContent() {
                             style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
                             title="삭제"
                           >
+                            <Trash2 style={{ width: 14, height: 14 }} />
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Home style={{ width: 18, height: 18 }} />
+                    숙소
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => openAccommodationForm(null)}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#9333ea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + 숙소 추가
+                  </button>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {accommodations.length === 0 ? (
+                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 숙소가 없습니다.</li>
+                  ) : (
+                    accommodations.map((a) => (
+                      <li
+                        key={a.id}
+                        style={{
+                          padding: '10px 12px',
+                          marginBottom: 6,
+                          background: '#f8fafc',
+                          borderRadius: 8,
+                          border: '1px solid #e2e8f0',
+                          fontSize: 14,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{a.name}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{a.check_in_date} ~ {a.check_out_date}</div>
+                          {a.address && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.address}</div>}
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                            등록: {getDisplayName(a.created_by)}
+                            {a.updated_by != null && ` · 수정: ${getDisplayName(a.updated_by)}`}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정">
+                            <Pencil style={{ width: 14, height: 14 }} />
+                          </button>
+                          <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제">
+                            <Trash2 style={{ width: 14, height: 14 }} />
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <UtensilsCrossed style={{ width: 18, height: 18 }} />
+                    먹거리
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => openDiningForm(null)}
+                    style={{
+                      padding: '6px 10px',
+                      background: '#9333ea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + 먹거리 추가
+                  </button>
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {dining.length === 0 ? (
+                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 먹거리가 없습니다.</li>
+                  ) : (
+                    dining.map((d) => (
+                      <li
+                        key={d.id}
+                        style={{
+                          padding: '10px 12px',
+                          marginBottom: 6,
+                          background: '#f8fafc',
+                          borderRadius: 8,
+                          border: '1px solid #e2e8f0',
+                          fontSize: 14,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{d.name}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                            {d.day_date}
+                            {d.time_at && <span style={{ marginLeft: 6 }}>{d.time_at}</span>}
+                            {d.category && <span style={{ marginLeft: 6, color: '#64748b' }}>{d.category}</span>}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                            등록: {getDisplayName(d.created_by)}
+                            {d.updated_by != null && ` · 수정: ${getDisplayName(d.updated_by)}`}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정">
+                            <Pencil style={{ width: 14, height: 14 }} />
+                          </button>
+                          <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제">
                             <Trash2 style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
@@ -1165,6 +1578,42 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시작 시간</label>
+                  <input
+                    type="time"
+                    value={itineraryStartTime}
+                    onChange={(e) => setItineraryStartTime(e.target.value)}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료 시간</label>
+                  <input
+                    type="time"
+                    value={itineraryEndTime}
+                    onChange={(e) => setItineraryEndTime(e.target.value)}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>제목 *</label>
               <input
                 value={itineraryTitle}
@@ -1388,6 +1837,175 @@ export function TravelPlannerContent() {
                 >
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
                   {editingExpense ? '저장' : '추가'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAccommodationForm && selectedTrip && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: 16,
+            boxSizing: 'border-box',
+          }}
+          onClick={() => !submitting && setShowAccommodationForm(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: 24,
+              width: '90%',
+              maxWidth: 400,
+              minWidth: 0,
+              overflow: 'hidden',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingAccommodation ? '숙소 수정' : '숙소 추가'}</h3>
+              <button type="button" disabled={submitting} onClick={() => setShowAccommodationForm(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X style={{ width: 20, height: 20 }} />
+              </button>
+            </div>
+            <form onSubmit={editingAccommodation ? handleUpdateAccommodation : handleCreateAccommodation} style={{ overflow: 'hidden', minWidth: 0 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>숙소명 *</label>
+              <input
+                value={accName}
+                onChange={(e) => setAccName(e.target.value)}
+                required
+                placeholder="예: 제주 호텔"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>체크인 *</label>
+              <input
+                type="date"
+                value={accCheckIn}
+                onChange={(e) => setAccCheckIn(e.target.value)}
+                required
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>체크아웃 *</label>
+              <input
+                type="date"
+                value={accCheckOut}
+                onChange={(e) => setAccCheckOut(e.target.value)}
+                required
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소</label>
+              <input
+                value={accAddress}
+                onChange={(e) => setAccAddress(e.target.value)}
+                placeholder="선택 입력"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
+              <input
+                value={accMemo}
+                onChange={(e) => setAccMemo(e.target.value)}
+                placeholder="선택 입력"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setShowAccommodationForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>취소</button>
+                <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  {editingAccommodation ? '저장' : '추가'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDiningForm && selectedTrip && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: 16,
+            boxSizing: 'border-box',
+          }}
+          onClick={() => !submitting && setShowDiningForm(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: 24,
+              width: '90%',
+              maxWidth: 400,
+              minWidth: 0,
+              overflow: 'hidden',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingDining ? '먹거리 수정' : '먹거리 추가'}</h3>
+              <button type="button" disabled={submitting} onClick={() => setShowDiningForm(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X style={{ width: 20, height: 20 }} />
+              </button>
+            </div>
+            <form onSubmit={editingDining ? handleUpdateDining : handleCreateDining} style={{ overflow: 'hidden', minWidth: 0 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>이름 *</label>
+              <input
+                value={diningName}
+                onChange={(e) => setDiningName(e.target.value)}
+                required
+                placeholder="예: 맛집 이름"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
+              <input
+                type="date"
+                value={diningDayDate}
+                onChange={(e) => setDiningDayDate(e.target.value)}
+                required
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시간</label>
+              <input
+                type="time"
+                value={diningTime}
+                onChange={(e) => setDiningTime(e.target.value)}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>구분 (아침/점심/저녁/카페 등)</label>
+              <input
+                value={diningCategory}
+                onChange={(e) => setDiningCategory(e.target.value)}
+                placeholder="선택"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
+              <input
+                value={diningMemo}
+                onChange={(e) => setDiningMemo(e.target.value)}
+                placeholder="선택 입력"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setShowDiningForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>취소</button>
+                <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  {editingDining ? '저장' : '추가'}
                 </button>
               </div>
             </form>

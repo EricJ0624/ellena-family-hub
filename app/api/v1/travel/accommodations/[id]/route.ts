@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 
-/** PATCH: 일정 수정 */
+/** PATCH: 숙소 수정 */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -29,15 +29,14 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
       updated_by: user.id,
     };
-    if (body.day_date !== undefined) updatePayload.day_date = body.day_date;
-    if (body.title !== undefined) updatePayload.title = String(body.title).trim();
-    if (body.description !== undefined) updatePayload.description = body.description ? String(body.description).trim() : null;
-    if (body.sort_order !== undefined) updatePayload.sort_order = Number(body.sort_order);
-    if (body.start_time !== undefined) updatePayload.start_time = body.start_time ? String(body.start_time).trim().substring(0, 5) : null;
-    if (body.end_time !== undefined) updatePayload.end_time = body.end_time ? String(body.end_time).trim().substring(0, 5) : null;
+    if (body.name !== undefined) updatePayload.name = String(body.name).trim();
+    if (body.check_in_date !== undefined) updatePayload.check_in_date = body.check_in_date;
+    if (body.check_out_date !== undefined) updatePayload.check_out_date = body.check_out_date;
+    if (body.address !== undefined) updatePayload.address = body.address ? String(body.address).trim() : null;
+    if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
 
     const { data, error } = await supabase
-      .from('travel_itineraries')
+      .from('travel_accommodations')
       .update(updatePayload)
       .eq('id', id)
       .eq('group_id', groupId)
@@ -46,18 +45,18 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error('travel_itineraries PATCH:', error);
-      return NextResponse.json({ error: '일정 수정에 실패했습니다.' }, { status: 500 });
+      console.error('travel_accommodations PATCH:', error);
+      return NextResponse.json({ error: '숙소 수정에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
-    console.error('PATCH /api/v1/travel/itineraries/[id]:', e);
+    console.error('PATCH /api/v1/travel/accommodations/[id]:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });
   }
 }
 
-/** DELETE: 일정 삭제 */
+/** DELETE: 숙소 삭제 */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,19 +80,19 @@ export async function DELETE(
     const supabase = getSupabaseServerClient();
     const now = new Date().toISOString();
     const { error } = await supabase
-      .from('travel_itineraries')
+      .from('travel_accommodations')
       .update({ deleted_at: now, deleted_by: user.id })
       .eq('id', id)
       .eq('group_id', groupId);
 
     if (error) {
-      console.error('travel_itineraries DELETE:', error);
-      return NextResponse.json({ error: '일정 삭제에 실패했습니다.' }, { status: 500 });
+      console.error('travel_accommodations DELETE:', error);
+      return NextResponse.json({ error: '숙소 삭제에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (e: any) {
-    console.error('DELETE /api/v1/travel/itineraries/[id]:', e);
+    console.error('DELETE /api/v1/travel/accommodations/[id]:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });
   }
 }
