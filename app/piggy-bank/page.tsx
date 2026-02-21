@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -98,6 +98,8 @@ export default function PiggyBankPage() {
   const [openReason, setOpenReason] = useState('');
   const [openDestination, setOpenDestination] = useState<'wallet' | 'cash'>('wallet');
 
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   const getAuthHeader = async () => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -181,6 +183,62 @@ export default function PiggyBankPage() {
     Promise.all([fetchSummary(), fetchRequests(), fetchMembers(), fetchTransactions()])
       .catch((err) => setError(err.message || '데이터 로드 오류'))
       .finally(() => setLoading(false));
+  }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
+
+  /** 실시간 반영: 동일 그룹 저금통 변경 구독 */
+  useEffect(() => {
+    if (!currentGroupId) return;
+
+    const groupId = currentGroupId;
+    const channel = supabase
+      .channel(`piggy_bank_${groupId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_bank_accounts', filter: `group_id=eq.${groupId}` },
+        () => {
+          fetchSummary();
+          fetchTransactions();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_wallets', filter: `group_id=eq.${groupId}` },
+        () => {
+          fetchSummary();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_open_requests', filter: `group_id=eq.${groupId}` },
+        () => {
+          fetchSummary();
+          fetchRequests();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_wallet_transactions', filter: `group_id=eq.${groupId}` },
+        () => {
+          fetchTransactions();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_bank_transactions', filter: `group_id=eq.${groupId}` },
+        () => {
+          fetchTransactions();
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
 
   const handleAction = async (url: string, payload: any) => {
