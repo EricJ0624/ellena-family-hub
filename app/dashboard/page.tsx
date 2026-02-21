@@ -8086,62 +8086,86 @@ ${groupInfo}
           />
         )}
 
-        {/* Header */}
-        <header className="app-header">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '0 16px', minHeight: '32px' }}>
-            {isGroupLoading ? (
-              // 그룹 정보 로딩 중일 때 스켈레톤 UI
-              <div
-                style={{
-                  width: '80px',
-                  height: '28px',
-                  backgroundColor: '#e2e8f0',
-                  borderRadius: '8px',
-                  animation: 'pulse 1.5s ease-in-out infinite',
-                }}
-              />
-            ) : showAdminButton ? (
-              <button
-                onClick={() => router.push(adminPagePath)}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: isSystemAdmin ? '#7e22ce' : '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease',
-                }}
-                aria-label={isSystemAdmin ? "시스템 관리자 페이지" : "그룹 관리자 페이지"}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <span style={{ fontSize: '14px' }}>⚙️</span>
-                관리자
-              </button>
-            ) : null}
-          </div>
-          <TitlePage 
-            title={currentGroup?.family_name?.trim() || state.familyName || 'Ellena Family Hub'}
-            photos={state.album || []}
-            titleStyle={effectiveTitleStyle}
-            onTitleStyleChange={(style) => {
-              setTitleStyle(style);
-              updateState('UPDATE_TITLE_STYLE', style);
+        {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '40px' }}>
+          <h1
+            style={{
+              margin: 0,
+              flex: 1,
+              minWidth: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontSize: 'clamp(14px, 4vw, 22px)',
+              fontWeight: effectiveTitleStyle?.fontWeight || '700',
+              letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? 0}px`,
+              fontFamily: effectiveTitleStyle?.fontFamily || 'inherit',
+              color: effectiveTitleStyle?.color || '#1e293b',
             }}
-            editable={false}
-          />
+          >
+            {effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Ellena Family Hub'}
+          </h1>
+          {isGroupLoading ? (
+            <div
+              style={{
+                width: '80px',
+                height: '28px',
+                backgroundColor: '#e2e8f0',
+                borderRadius: '8px',
+                animation: 'pulse 1.5s ease-in-out infinite',
+                flexShrink: 0,
+              }}
+            />
+          ) : showAdminButton ? (
+            <button
+              onClick={() => router.push(adminPagePath)}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isSystemAdmin ? '#7e22ce' : '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+              aria-label={isSystemAdmin ? "시스템 관리자 페이지" : "그룹 관리자 페이지"}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>⚙️</span>
+              관리자
+            </button>
+          ) : null}
+        </div>
+
+        {/* Header (사진 있을 때만 사진 액자 표시, 타이틀/배경 제거) */}
+        <header className="app-header">
+          {(state.album?.length ?? 0) > 0 && (
+            <TitlePage 
+              title={currentGroup?.family_name?.trim() || state.familyName || 'Ellena Family Hub'}
+              photos={state.album || []}
+              titleStyle={effectiveTitleStyle}
+              onTitleStyleChange={(style) => {
+                setTitleStyle(style);
+                updateState('UPDATE_TITLE_STYLE', style);
+              }}
+              editable={false}
+              showTitle={false}
+              noBackground
+            />
+          )}
           <div className="status-indicator">
             <span className="status-dot">
               <span className="status-dot-ping"></span>

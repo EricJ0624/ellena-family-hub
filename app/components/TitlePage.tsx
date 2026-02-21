@@ -681,6 +681,10 @@ interface TitlePageProps {
   onTitleStyleChange?: (style: TitleStyle) => void;
   /** false면 타이틀 클릭 시 디자인 에디터 미표시 (읽기 전용) */
   editable?: boolean;
+  /** false면 타이틀 텍스트 미표시 (대시보드에서 한 줄 타이틀을 별도 사용할 때) */
+  showTitle?: boolean;
+  /** true면 배경 그라데이션/패턴 제거 (투명) */
+  noBackground?: boolean;
 }
 
 const TitlePage: React.FC<TitlePageProps> = ({ 
@@ -690,6 +694,8 @@ const TitlePage: React.FC<TitlePageProps> = ({
   titleStyle: externalTitleStyle,
   onTitleStyleChange,
   editable = true,
+  showTitle = true,
+  noBackground = false,
 }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [frameStyle, setFrameStyle] = useState<FrameStyle>('baroque');
@@ -726,22 +732,26 @@ const TitlePage: React.FC<TitlePageProps> = ({
     <div 
       className="relative w-full min-h-[240px] md:min-h-[280px] flex flex-col items-center justify-center overflow-visible rounded-2xl mb-4"
       style={{
-        background: 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
+        background: noBackground ? 'transparent' : 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
         paddingTop: '8px'
       }}
     >
-      {/* 배경 그라데이션 */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
-        }}
-      />
-      
-      {/* 떠다니는 꽃잎 */}
-      <FloatingPetals />
+      {!noBackground && (
+        <>
+          {/* 배경 그라데이션 */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
+            }}
+          />
+          {/* 떠다니는 꽃잎 */}
+          <FloatingPetals />
+        </>
+      )}
       
       {/* 네트워크 패턴 배경 */}
+      {!noBackground && (
       <div className="absolute inset-0 opacity-20 z-0">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -775,25 +785,28 @@ const TitlePage: React.FC<TitlePageProps> = ({
           <rect width="100%" height="100%" fill="url(#network)" />
         </svg>
       </div>
+      )}
 
       {/* 컨텐츠 영역 */}
       <div className="relative z-20 flex flex-col items-center justify-center px-4 pt-4 pb-4 w-full min-h-[240px]">
-        {/* 배경 하트 아이콘 (투명) */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.15 }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
-        >
-          <Heart 
-            className="w-64 h-64 md:w-80 md:h-80" 
-            style={{ 
-              color: '#ec4899', 
-              fill: '#ec4899',
-              opacity: 0.1
-            }}
-          />
-        </motion.div>
+        {!noBackground && (
+          /* 배경 하트 아이콘 (투명) */
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.15 }}
+            transition={{ duration: 1, delay: 0.2 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+          >
+            <Heart 
+              className="w-64 h-64 md:w-80 md:h-80" 
+              style={{ 
+                color: '#ec4899', 
+                fill: '#ec4899',
+                opacity: 0.1
+              }}
+            />
+          </motion.div>
+        )}
 
         {/* 오늘의 무작위 사진 액자 */}
         {photos && photos.length > 0 && (
@@ -804,12 +817,14 @@ const TitlePage: React.FC<TitlePageProps> = ({
           />
         )}
 
-        {/* 타이틀 텍스트 */}
-        <TitleText 
-          title={title || CONSTANTS.TITLE} 
-          titleStyle={titleStyle}
-          onTitleClick={editable ? handleTitleClick : undefined} 
-        />
+        {/* 타이틀 텍스트 (showTitle이 true일 때만) */}
+        {showTitle && (
+          <TitleText 
+            title={title || CONSTANTS.TITLE} 
+            titleStyle={titleStyle}
+            onTitleClick={editable ? handleTitleClick : undefined} 
+          />
+        )}
       </div>
       
       {/* 디자인 에디터 (editable일 때만, 타이틀 클릭 시 표시) */}
