@@ -222,8 +222,6 @@ export default function FamilyHub() {
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const [travelTrips, setTravelTrips] = useState<Array<{ id: string; title: string; start_date: string; end_date: string }>>([]);
   const [travelTripsLoading, setTravelTripsLoading] = useState(false);
-  const [showGroupSelectModal, setShowGroupSelectModal] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [locationRequests, setLocationRequests] = useState<Array<{
     id: string;
     requester_id: string;
@@ -848,21 +846,6 @@ export default function FamilyHub() {
   useEffect(() => {
     loadTravelTrips();
   }, [loadTravelTrips]);
-
-  // 로그인 후 그룹 선택 모달 (일반 사용자)
-  useEffect(() => {
-    if (!isAuthenticated || !userId) return;
-    if (!adminStatusResolved) return;
-    if (!groupList || groupList.length <= 1) {
-      setShowGroupSelectModal(false);
-      return;
-    }
-    if (typeof window === 'undefined') return;
-    const completed = sessionStorage.getItem('groupSelectionCompleted');
-    if (completed === 'true') return;
-    setSelectedGroupId(currentGroupId || groupList[0]?.id || null);
-    setShowGroupSelectModal(true);
-  }, [isAuthenticated, userId, isSystemAdmin, adminStatusResolved, groupList, currentGroupId]);
 
   // 2.4.5. state가 로드되면 titleStyle 동기화
   useEffect(() => {
@@ -7932,130 +7915,6 @@ ${groupInfo}
 
   return (
     <div className="app-container">
-      {showGroupSelectModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            padding: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '420px',
-              backgroundColor: '#ffffff',
-              borderRadius: '16px',
-              padding: '20px',
-              boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#111827' }}>
-              그룹 선택
-            </h3>
-            <p style={{ margin: '8px 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-              여러 그룹에 가입되어 있습니다. 접속할 그룹을 선택하세요.
-              {(isSystemAdmin || isGroupAdmin)
-                ? ' 관리자 계정은 관리자 페이지에서 관리 가능한 그룹으로 바로 이동할 수 있습니다.'
-                : ' 다른 그룹으로 이동하려면 로그아웃 후 다시 로그인해야 합니다.'}
-            </p>
-            <div style={{ display: 'grid', gap: '10px', marginBottom: '16px' }}>
-              {groupList.map((group: any) => {
-                const membership = groupMemberships.find((m: any) => m.group_id === group.id);
-                const isAdminRole = membership?.role === 'ADMIN' || group.owner_id === userId;
-                return (
-                  <label
-                    key={group.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      border: selectedGroupId === group.id ? '2px solid #6366f1' : '1px solid #e2e8f0',
-                      backgroundColor: selectedGroupId === group.id ? '#eef2ff' : '#f8fafc',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="group-select"
-                      checked={selectedGroupId === group.id}
-                      onChange={() => setSelectedGroupId(group.id)}
-                    />
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
-                        {group.name}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        {isAdminRole ? '관리자 (부모)' : '멤버 (아이 또는 가족 구성원)'}
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#e2e8f0',
-                  color: '#475569',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                로그아웃
-              </button>
-              <button
-                onClick={() => {
-                  if (!selectedGroupId || !setCurrentGroupId) return;
-                  // 시스템 관리자가 멤버인 그룹도 선택 가능하도록 즉시 전환
-                  setCurrentGroupId(selectedGroupId);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('currentGroupId', selectedGroupId);
-                  }
-                  if (typeof window !== 'undefined') {
-                    sessionStorage.setItem('groupSelectionCompleted', 'true');
-                  }
-                  if (refreshGroups) {
-                    refreshGroups().catch(() => undefined);
-                  }
-                  if (refreshMemberships) {
-                    refreshMemberships().catch(() => undefined);
-                  }
-                  setShowGroupSelectModal(false);
-                }}
-                style={{
-                  padding: '8px 14px',
-                  backgroundColor: '#6366f1',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                접속하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Todo Modal - Chalkboard Style */}
       {isTodoModalOpen && (
         <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
