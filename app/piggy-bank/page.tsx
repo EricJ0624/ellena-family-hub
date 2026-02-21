@@ -431,7 +431,7 @@ export default function PiggyBankPage() {
         {walletTransactions.length === 0 ? (
           <p style={{ color: '#94a3b8', fontSize: '14px' }}>용돈 거래 내역이 없습니다.</p>
         ) : (
-          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
+          <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {walletTransactions.map((tx) => {
               const isNegative = tx.type === 'spend' || tx.type === 'child_save';
               return (
@@ -482,7 +482,7 @@ export default function PiggyBankPage() {
         {bankTransactions.length === 0 ? (
           <p style={{ color: '#94a3b8', fontSize: '14px' }}>저금통 거래 내역이 없습니다.</p>
         ) : (
-          <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
+          <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {bankTransactions.map((tx) => {
               const isNegative = tx.type === 'withdraw_cash' || tx.type === 'withdraw_to_wallet';
               return (
@@ -640,7 +640,7 @@ export default function PiggyBankPage() {
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
-            <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'grid', gap: '12px', marginTop: '12px', paddingRight: '4px' }}>
               {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
               {requests.map((req) => {
                 const isInactive = req.status !== 'pending';
