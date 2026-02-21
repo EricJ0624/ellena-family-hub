@@ -471,6 +471,8 @@ export function TravelPlannerContent() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 50,
+            padding: 16,
+            boxSizing: 'border-box',
           }}
           onClick={() => !submitting && setShowTripForm(false)}
         >
@@ -498,7 +500,7 @@ export function TravelPlannerContent() {
                 <X style={{ width: 20, height: 20 }} />
               </button>
             </div>
-            <form onSubmit={handleCreateTrip}>
+            <form onSubmit={handleCreateTrip} style={{ overflow: 'hidden', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>제목 *</label>
               <input
                 value={formTitle}
@@ -533,41 +535,47 @@ export function TravelPlannerContent() {
                 }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>출발일 *</label>
-              <input
-                type="date"
-                value={formStartDate}
-                onChange={(e) => setFormStartDate(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
+              <div style={{ overflow: 'hidden', marginBottom: 12 }}>
+                <input
+                  type="date"
+                  value={formStartDate}
+                  onChange={(e) => setFormStartDate(e.target.value)}
+                  required
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
+                    minHeight: 40,
+                    padding: '10px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    fontSize: 14,
+                  }}
+                />
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료일 *</label>
-              <input
-                type="date"
-                value={formEndDate}
-                onChange={(e) => setFormEndDate(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 20,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
+              <div style={{ overflow: 'hidden', marginBottom: 20 }}>
+                <input
+                  type="date"
+                  value={formEndDate}
+                  onChange={(e) => setFormEndDate(e.target.value)}
+                  required
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
+                    minHeight: 40,
+                    padding: '10px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    fontSize: 14,
+                  }}
+                />
+              </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
