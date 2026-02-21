@@ -69,13 +69,18 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { day_date, title, description, sort_order, start_time, end_time } = body as {
+    const { day_date, title, description, sort_order, start_time, end_time, source_type, source_id, address, latitude, longitude } = body as {
       day_date?: string;
       title?: string;
       description?: string;
       sort_order?: number;
       start_time?: string;
       end_time?: string;
+      source_type?: string;
+      source_id?: string;
+      address?: string;
+      latitude?: number;
+      longitude?: number;
     };
 
     if (!groupId || !tripId || !day_date || !title) {
@@ -113,6 +118,11 @@ export async function POST(
     };
     if (start_time != null && String(start_time).trim()) insertPayload.start_time = String(start_time).trim().substring(0, 5);
     if (end_time != null && String(end_time).trim()) insertPayload.end_time = String(end_time).trim().substring(0, 5);
+    if (source_type != null && String(source_type).trim()) insertPayload.source_type = String(source_type).trim();
+    if (source_id != null && String(source_id).trim()) insertPayload.source_id = String(source_id).trim();
+    if (address != null) insertPayload.address = address ? String(address).trim() : null;
+    if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
+    if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
 
     const { data, error } = await supabase
       .from('travel_itineraries')

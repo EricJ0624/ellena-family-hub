@@ -69,12 +69,15 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, day_date, time_at, category, memo } = body as {
+    const { name, day_date, time_at, category, memo, address, latitude, longitude } = body as {
       name?: string;
       day_date?: string;
       time_at?: string;
       category?: string;
       memo?: string;
+      address?: string;
+      latitude?: number;
+      longitude?: number;
     };
 
     if (!groupId || !tripId || !name || !day_date) {
@@ -111,6 +114,9 @@ export async function POST(
     if (time_at != null && String(time_at).trim()) insertPayload.time_at = String(time_at).trim().substring(0, 5);
     if (category != null && String(category).trim()) insertPayload.category = String(category).trim();
     if (memo != null && String(memo).trim()) insertPayload.memo = String(memo).trim();
+    if (address != null) insertPayload.address = address ? String(address).trim() : null;
+    if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
+    if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
 
     const { data, error } = await supabase
       .from('travel_dining')
@@ -122,6 +128,26 @@ export async function POST(
       console.error('travel_dining POST:', error);
       return NextResponse.json({ error: '먹거리 추가에 실패했습니다.' }, { status: 500 });
     }
+
+    // 먹거리 추가 시 일정 1건 자동 생성
+    const desc = [category, memo].filter(Boolean).join(' · ') || null;
+    const itineraryPayload: Record<string, unknown> = {
+      trip_id: tripId,
+      group_id: groupId,
+      day_date,
+      title: `식당: ${String(name).trim()}`,
+      description: desc,
+      sort_order: 0,
+      created_by: user.id,
+      source_type: 'dining',
+      source_id: data.id,
+    };
+    if (time_at != null && String(time_at).trim()) itineraryPayload.start_time = String(time_at).trim().substring(0, 5);
+    if (address) itineraryPayload.address = String(address).trim();
+    if (latitude != null && typeof latitude === 'number') itineraryPayload.latitude = latitude;
+    if (longitude != null && typeof longitude === 'number') itineraryPayload.longitude = longitude;
+    const { error: itineraryError } = await supabase.from('travel_itineraries').insert(itineraryPayload);
+    if (itineraryError) console.error('travel_itineraries sync (dining):', itineraryError);
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {

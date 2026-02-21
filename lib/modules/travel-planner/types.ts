@@ -30,6 +30,14 @@ export interface TravelItinerary {
   start_time?: string | null;
   /** 종료 시간 'HH:mm' (선택) */
   end_time?: string | null;
+  /** accommodation | dining (숙소/먹거리에서 자동 생성된 일정) */
+  source_type?: string | null;
+  /** 연결된 travel_accommodations.id 또는 travel_dining.id */
+  source_id?: string | null;
+  /** 주소 (지도 표시용) */
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at: string;
   updated_at: string;
   created_by?: string | null;
@@ -77,6 +85,8 @@ export interface TravelAccommodation {
   check_out_date: string;
   address: string | null;
   memo: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at: string;
   updated_at: string;
   created_by?: string | null;
@@ -94,6 +104,9 @@ export interface TravelDining {
   time_at: string | null;
   category: string | null;
   memo: string | null;
+  address: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   created_at: string;
   updated_at: string;
   created_by?: string | null;

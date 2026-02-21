@@ -68,12 +68,14 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, check_in_date, check_out_date, address, memo } = body as {
+    const { name, check_in_date, check_out_date, address, memo, latitude, longitude } = body as {
       name?: string;
       check_in_date?: string;
       check_out_date?: string;
       address?: string;
       memo?: string;
+      latitude?: number;
+      longitude?: number;
     };
 
     if (!groupId || !tripId || !name || !check_in_date || !check_out_date) {
@@ -100,18 +102,22 @@ export async function POST(
       return NextResponse.json({ error: '여행을 찾을 수 없습니다.' }, { status: 404 });
     }
 
+    const insertPayload: Record<string, unknown> = {
+      trip_id: tripId,
+      group_id: groupId,
+      name: String(name).trim(),
+      check_in_date,
+      check_out_date,
+      address: address ? String(address).trim() : null,
+      memo: memo ? String(memo).trim() : null,
+      created_by: user.id,
+    };
+    if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
+    if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
+
     const { data, error } = await supabase
       .from('travel_accommodations')
-      .insert({
-        trip_id: tripId,
-        group_id: groupId,
-        name: String(name).trim(),
-        check_in_date,
-        check_out_date,
-        address: address ? String(address).trim() : null,
-        memo: memo ? String(memo).trim() : null,
-        created_by: user.id,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -119,6 +125,25 @@ export async function POST(
       console.error('travel_accommodations POST:', error);
       return NextResponse.json({ error: '숙소 추가에 실패했습니다.' }, { status: 500 });
     }
+
+    // 숙소 추가 시 일정 1건 자동 생성 (체크인 날짜, 제목 '숙소: 이름')
+    const desc = [address, memo].filter(Boolean).join(' · ') || null;
+    const itineraryPayload: Record<string, unknown> = {
+      trip_id: tripId,
+      group_id: groupId,
+      day_date: check_in_date,
+      title: `숙소: ${String(name).trim()}`,
+      description: desc,
+      sort_order: 0,
+      created_by: user.id,
+      source_type: 'accommodation',
+      source_id: data.id,
+    };
+    if (address) itineraryPayload.address = String(address).trim();
+    if (latitude != null && typeof latitude === 'number') itineraryPayload.latitude = latitude;
+    if (longitude != null && typeof longitude === 'number') itineraryPayload.longitude = longitude;
+    const { error: itineraryError } = await supabase.from('travel_itineraries').insert(itineraryPayload);
+    if (itineraryError) console.error('travel_itineraries sync (accommodation):', itineraryError);
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {

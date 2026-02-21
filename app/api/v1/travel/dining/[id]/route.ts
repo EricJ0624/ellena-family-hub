@@ -34,6 +34,9 @@ export async function PATCH(
     if (body.time_at !== undefined) updatePayload.time_at = body.time_at ? String(body.time_at).trim().substring(0, 5) : null;
     if (body.category !== undefined) updatePayload.category = body.category ? String(body.category).trim() : null;
     if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
+    if (body.address !== undefined) updatePayload.address = body.address ? String(body.address).trim() : null;
+    if (body.latitude !== undefined) updatePayload.latitude = body.latitude == null ? null : Number(body.latitude);
+    if (body.longitude !== undefined) updatePayload.longitude = body.longitude == null ? null : Number(body.longitude);
 
     const { data, error } = await supabase
       .from('travel_dining')
@@ -48,6 +51,28 @@ export async function PATCH(
       console.error('travel_dining PATCH:', error);
       return NextResponse.json({ error: '먹거리 수정에 실패했습니다.' }, { status: 500 });
     }
+
+    // 연동 일정 동기화
+    const desc = [data.category, data.memo].filter(Boolean).join(' · ') || null;
+    const itineraryUpdate: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+      day_date: data.day_date,
+      title: `식당: ${data.name}`,
+      description: desc,
+      start_time: data.time_at || null,
+      address: data.address || null,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+    };
+    await supabase
+      .from('travel_itineraries')
+      .update(itineraryUpdate)
+      .eq('trip_id', data.trip_id)
+      .eq('group_id', groupId)
+      .eq('source_type', 'dining')
+      .eq('source_id', id)
+      .is('deleted_at', null);
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
@@ -79,6 +104,13 @@ export async function DELETE(
 
     const supabase = getSupabaseServerClient();
     const now = new Date().toISOString();
+    await supabase
+      .from('travel_itineraries')
+      .update({ deleted_at: now, deleted_by: user.id })
+      .eq('source_type', 'dining')
+      .eq('source_id', id)
+      .eq('group_id', groupId)
+      .is('deleted_at', null);
     const { error } = await supabase
       .from('travel_dining')
       .update({ deleted_at: now, deleted_by: user.id })

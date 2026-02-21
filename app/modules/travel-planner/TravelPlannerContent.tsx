@@ -55,6 +55,8 @@ export function TravelPlannerContent() {
   const [accCheckOut, setAccCheckOut] = useState('');
   const [accAddress, setAccAddress] = useState('');
   const [accMemo, setAccMemo] = useState('');
+  const [accLatitude, setAccLatitude] = useState('');
+  const [accLongitude, setAccLongitude] = useState('');
   const [showDiningForm, setShowDiningForm] = useState(false);
   const [editingDining, setEditingDining] = useState<TravelDining | null>(null);
   const [diningName, setDiningName] = useState('');
@@ -62,7 +64,13 @@ export function TravelPlannerContent() {
   const [diningTime, setDiningTime] = useState('');
   const [diningCategory, setDiningCategory] = useState('');
   const [diningMemo, setDiningMemo] = useState('');
+  const [diningAddress, setDiningAddress] = useState('');
+  const [diningLatitude, setDiningLatitude] = useState('');
+  const [diningLongitude, setDiningLongitude] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [itineraryAddress, setItineraryAddress] = useState('');
+  const [itineraryLatitude, setItineraryLatitude] = useState('');
+  const [itineraryLongitude, setItineraryLongitude] = useState('');
 
   const [formTitle, setFormTitle] = useState('');
   const [formDestination, setFormDestination] = useState('');
@@ -75,6 +83,9 @@ export function TravelPlannerContent() {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const selectedTripIdRef = useRef<string | null>(null);
   selectedTripIdRef.current = selectedTrip?.id ?? null;
+  const travelMapRef = useRef<{ setCenter: (c: { lat: number; lng: number }) => void; fitBounds: (b: unknown) => void } | null>(null);
+  const travelMapMarkersRef = useRef<unknown[]>([]);
+  const travelMapScriptLoadedRef = useRef(false);
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -177,6 +188,112 @@ export function TravelPlannerContent() {
     const trip = trips.find((t) => t.id === urlTripId);
     if (trip) setSelectedTrip(trip);
   }, [urlTripId, trips]);
+
+  // 여행 플래너 지도: 숙소·먹거리·일정(관광지) 위치 표시
+  useEffect(() => {
+    if (typeof window === 'undefined' || !selectedTrip) {
+      travelMapMarkersRef.current.forEach((m: any) => m?.setMap?.(null));
+      travelMapMarkersRef.current = [];
+      travelMapRef.current = null;
+      return;
+    }
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
+    if (!apiKey) return;
+
+    const mapEl = document.getElementById('travel-planner-map');
+    if (!mapEl) return;
+
+    const initMapAndMarkers = () => {
+      const g = (window as any).google;
+      if (!g?.maps?.Map) return;
+
+      if (!travelMapRef.current) {
+        const center = { lat: 37.5665, lng: 126.978 };
+        travelMapRef.current = new g.maps.Map(mapEl, {
+          center,
+          zoom: 11,
+          mapTypeControl: true,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+      }
+
+      const map = travelMapRef.current;
+      travelMapMarkersRef.current.forEach((m: any) => m?.setMap?.(null));
+      travelMapMarkersRef.current = [];
+
+      const bounds = new g.maps.LatLngBounds();
+      let hasAny = false;
+
+      const addMarker = (lat: number, lng: number, title: string, label?: string) => {
+        const pos = { lat, lng };
+        bounds.extend(pos);
+        hasAny = true;
+        const marker = new g.maps.Marker({
+          map,
+          position: pos,
+          title,
+          label: label ? { text: label, color: 'white', fontSize: '11px' } : undefined,
+          icon: label
+            ? undefined
+            : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+        });
+        if (label === '숙') marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
+        else if (label === '식') marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+        else if (label === '관') marker.setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
+        travelMapMarkersRef.current.push(marker);
+      };
+
+      accommodations.forEach((a) => {
+        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, '숙');
+      });
+      dining.forEach((d) => {
+        if (d.latitude != null && d.longitude != null) addMarker(d.latitude, d.longitude, d.name, '식');
+      });
+      itineraries.forEach((i) => {
+        if (i.latitude != null && i.longitude != null) addMarker(i.latitude, i.longitude, i.title, i.source_type ? undefined : '관');
+      });
+
+      if (hasAny) map.fitBounds(bounds);
+    };
+
+    if ((window as any).google?.maps?.Map) {
+      initMapAndMarkers();
+      return;
+    }
+    if (travelMapScriptLoadedRef.current) {
+      initMapAndMarkers();
+      return;
+    }
+    const existing = document.getElementById('google-maps-script');
+    if (existing) {
+      travelMapScriptLoadedRef.current = true;
+      const t = setInterval(() => {
+        if ((window as any).google?.maps?.Map) {
+          clearInterval(t);
+          initMapAndMarkers();
+        }
+      }, 100);
+      return () => clearInterval(t);
+    }
+    const script = document.createElement('script');
+    script.id = 'google-maps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      travelMapScriptLoadedRef.current = true;
+      let count = 0;
+      const iv = setInterval(() => {
+        count++;
+        if ((window as any).google?.maps?.Map) {
+          clearInterval(iv);
+          initMapAndMarkers();
+        } else if (count >= 80) clearInterval(iv);
+      }, 100);
+    };
+    document.head.appendChild(script);
+  }, [selectedTrip, accommodations, dining, itineraries]);
 
   /** 그룹 멤버 표시명 맵 로드 (memberships + profiles) */
   useEffect(() => {
@@ -397,6 +514,9 @@ export function TravelPlannerContent() {
       setItineraryDescription(item.description ?? '');
       setItineraryStartTime(item.start_time ?? '');
       setItineraryEndTime(item.end_time ?? '');
+      setItineraryAddress(item.address ?? '');
+      setItineraryLatitude(item.latitude != null ? String(item.latitude) : '');
+      setItineraryLongitude(item.longitude != null ? String(item.longitude) : '');
     } else {
       setEditingItinerary(null);
       setItineraryDayDate('');
@@ -404,6 +524,9 @@ export function TravelPlannerContent() {
       setItineraryDescription('');
       setItineraryStartTime('');
       setItineraryEndTime('');
+      setItineraryAddress('');
+      setItineraryLatitude('');
+      setItineraryLongitude('');
     }
     setShowItineraryForm(true);
   };
@@ -427,6 +550,9 @@ export function TravelPlannerContent() {
           description: itineraryDescription.trim() || undefined,
           start_time: itineraryStartTime.trim() || undefined,
           end_time: itineraryEndTime.trim() || undefined,
+          address: itineraryAddress.trim() || undefined,
+          latitude: itineraryLatitude.trim() ? Number(itineraryLatitude) : undefined,
+          longitude: itineraryLongitude.trim() ? Number(itineraryLongitude) : undefined,
         }),
       });
       const json = await res.json();
@@ -459,6 +585,9 @@ export function TravelPlannerContent() {
           description: itineraryDescription.trim() || null,
           start_time: itineraryStartTime.trim() || null,
           end_time: itineraryEndTime.trim() || null,
+          address: itineraryAddress.trim() || null,
+          latitude: itineraryLatitude.trim() ? Number(itineraryLatitude) : null,
+          longitude: itineraryLongitude.trim() ? Number(itineraryLongitude) : null,
         }),
       });
       const json = await res.json();
@@ -599,6 +728,8 @@ export function TravelPlannerContent() {
       setAccCheckOut(item.check_out_date);
       setAccAddress(item.address ?? '');
       setAccMemo(item.memo ?? '');
+      setAccLatitude(item.latitude != null ? String(item.latitude) : '');
+      setAccLongitude(item.longitude != null ? String(item.longitude) : '');
     } else {
       setEditingAccommodation(null);
       setAccName('');
@@ -606,6 +737,8 @@ export function TravelPlannerContent() {
       setAccCheckOut('');
       setAccAddress('');
       setAccMemo('');
+      setAccLatitude('');
+      setAccLongitude('');
     }
     setShowAccommodationForm(true);
   };
@@ -633,11 +766,14 @@ export function TravelPlannerContent() {
           check_out_date: accCheckOut,
           address: accAddress.trim() || undefined,
           memo: accMemo.trim() || undefined,
+          latitude: accLatitude.trim() ? Number(accLatitude) : undefined,
+          longitude: accLongitude.trim() ? Number(accLongitude) : undefined,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '숙소 추가 실패');
       await fetchAccommodations(selectedTrip.id);
+      await fetchItineraries(selectedTrip.id);
       setShowAccommodationForm(false);
       setEditingAccommodation(null);
     } catch (e: unknown) {
@@ -669,11 +805,14 @@ export function TravelPlannerContent() {
           check_out_date: accCheckOut,
           address: accAddress.trim() || null,
           memo: accMemo.trim() || null,
+          latitude: accLatitude.trim() ? Number(accLatitude) : null,
+          longitude: accLongitude.trim() ? Number(accLongitude) : null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '숙소 수정 실패');
       await fetchAccommodations(selectedTrip!.id);
+      await fetchItineraries(selectedTrip!.id);
       setShowAccommodationForm(false);
       setEditingAccommodation(null);
     } catch (e: unknown) {
@@ -696,6 +835,7 @@ export function TravelPlannerContent() {
         throw new Error(json.error || '숙소 삭제 실패');
       }
       await fetchAccommodations(selectedTrip.id);
+      await fetchItineraries(selectedTrip.id);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : '숙소 삭제 실패');
     }
@@ -709,6 +849,9 @@ export function TravelPlannerContent() {
       setDiningTime(item.time_at ?? '');
       setDiningCategory(item.category ?? '');
       setDiningMemo(item.memo ?? '');
+      setDiningAddress(item.address ?? '');
+      setDiningLatitude(item.latitude != null ? String(item.latitude) : '');
+      setDiningLongitude(item.longitude != null ? String(item.longitude) : '');
     } else {
       setEditingDining(null);
       setDiningName('');
@@ -716,6 +859,9 @@ export function TravelPlannerContent() {
       setDiningTime('');
       setDiningCategory('');
       setDiningMemo('');
+      setDiningAddress('');
+      setDiningLatitude('');
+      setDiningLongitude('');
     }
     setShowDiningForm(true);
   };
@@ -739,11 +885,15 @@ export function TravelPlannerContent() {
           time_at: diningTime.trim() || undefined,
           category: diningCategory.trim() || undefined,
           memo: diningMemo.trim() || undefined,
+          address: diningAddress.trim() || undefined,
+          latitude: diningLatitude.trim() ? Number(diningLatitude) : undefined,
+          longitude: diningLongitude.trim() ? Number(diningLongitude) : undefined,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '먹거리 추가 실패');
       await fetchDining(selectedTrip.id);
+      await fetchItineraries(selectedTrip.id);
       setShowDiningForm(false);
       setEditingDining(null);
     } catch (e: unknown) {
@@ -771,11 +921,15 @@ export function TravelPlannerContent() {
           time_at: diningTime.trim() || null,
           category: diningCategory.trim() || null,
           memo: diningMemo.trim() || null,
+          address: diningAddress.trim() || null,
+          latitude: diningLatitude.trim() ? Number(diningLatitude) : null,
+          longitude: diningLongitude.trim() ? Number(diningLongitude) : null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || '먹거리 수정 실패');
       await fetchDining(selectedTrip!.id);
+      await fetchItineraries(selectedTrip!.id);
       setShowDiningForm(false);
       setEditingDining(null);
     } catch (e: unknown) {
@@ -798,6 +952,7 @@ export function TravelPlannerContent() {
         throw new Error(json.error || '먹거리 삭제 실패');
       }
       await fetchDining(selectedTrip.id);
+      await fetchItineraries(selectedTrip.id);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : '먹거리 삭제 실패');
     }
@@ -1241,6 +1396,23 @@ export function TravelPlannerContent() {
                 </ul>
               </div>
             </div>
+
+            {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY && (
+              <div style={{ marginTop: 24 }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <MapPin style={{ width: 18, height: 18 }} />
+                  위치 지도 (숙소·먹거리·관광지)
+                </h3>
+                <div
+                  id="travel-planner-map"
+                  style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid #e2e8f0', background: '#f1f5f9' }}
+                />
+                <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                  숙소·먹거리·일정에 위도/경도를 입력하면 지도에 표시됩니다. 파란색: 숙소, 초록색: 먹거리, 빨간색: 관광지
+                </p>
+              </div>
+            )}
+
           </div>
         ) : (
           <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
@@ -1712,13 +1884,44 @@ export function TravelPlannerContent() {
                   width: '100%',
                   boxSizing: 'border-box',
                   padding: '10px 12px',
-                  marginBottom: 20,
+                  marginBottom: 12,
                   border: '1px solid #e2e8f0',
                   borderRadius: 8,
                   fontSize: 14,
                   resize: 'vertical',
                 }}
               />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (관광지 위치·지도용)</label>
+              <input
+                value={itineraryAddress}
+                onChange={(e) => setItineraryAddress(e.target.value)}
+                placeholder="선택 입력"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={itineraryLatitude}
+                    onChange={(e) => setItineraryLatitude(e.target.value)}
+                    placeholder="예: 33.4996"
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>경도</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={itineraryLongitude}
+                    onChange={(e) => setItineraryLongitude(e.target.value)}
+                    placeholder="예: 126.5312"
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
@@ -1985,6 +2188,30 @@ export function TravelPlannerContent() {
                 placeholder="선택 입력"
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도 (지도용)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={accLatitude}
+                    onChange={(e) => setAccLatitude(e.target.value)}
+                    placeholder="예: 33.4996"
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>경도 (지도용)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={accLongitude}
+                    onChange={(e) => setAccLongitude(e.target.value)}
+                    placeholder="예: 126.5312"
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
               <input
                 value={accMemo}
@@ -2073,6 +2300,37 @@ export function TravelPlannerContent() {
                 placeholder="선택"
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (지도 표시용)</label>
+              <input
+                value={diningAddress}
+                onChange={(e) => setDiningAddress(e.target.value)}
+                placeholder="선택 입력"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={diningLatitude}
+                    onChange={(e) => setDiningLatitude(e.target.value)}
+                    placeholder="예: 33.4996"
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>경도</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={diningLongitude}
+                    onChange={(e) => setDiningLongitude(e.target.value)}
+                    placeholder="예: 126.5312"
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
               <input
                 value={diningMemo}
