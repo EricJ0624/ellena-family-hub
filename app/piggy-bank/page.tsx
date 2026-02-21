@@ -298,7 +298,7 @@ export default function PiggyBankPage() {
         </div>
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
           <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 추가</h2>
-          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>아직 저금통이 없는 아이에게 저금통을 만들어 주세요.</p>
+          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>아이를 위해 실물 저금통을 준비한 뒤, 아래에서 저금통을 만들어 주세요.</p>
           {membersWithoutPiggy.length === 0 ? (
             <p style={{ color: '#94a3b8' }}>저금통이 없는 아이가 없습니다.</p>
           ) : (
