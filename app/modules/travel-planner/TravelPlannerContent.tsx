@@ -2137,22 +2137,23 @@ export function TravelPlannerContent() {
                 }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
-              <input
-                type="date"
-                value={expenseDate}
-                onChange={(e) => setExpenseDate(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
+              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <input
+                  type="date"
+                  value={expenseDate}
+                  onChange={(e) => setExpenseDate(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: 40,
+                    padding: '10px 12px',
+                    border: 'none',
+                    fontSize: 14,
+                    outline: 'none',
+                  }}
+                />
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
               <input
                 value={expenseMemo}
