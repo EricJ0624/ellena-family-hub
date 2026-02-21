@@ -505,6 +505,8 @@ export function TravelPlannerContent() {
                 placeholder="예: 제주도 가족여행"
                 style={{
                   width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
                   padding: '10px 12px',
                   marginBottom: 12,
                   border: '1px solid #e2e8f0',
@@ -519,6 +521,8 @@ export function TravelPlannerContent() {
                 placeholder="예: 제주시"
                 style={{
                   width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
                   padding: '10px 12px',
                   marginBottom: 12,
                   border: '1px solid #e2e8f0',
@@ -534,6 +538,8 @@ export function TravelPlannerContent() {
                 required
                 style={{
                   width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
                   padding: '10px 12px',
                   marginBottom: 12,
                   border: '1px solid #e2e8f0',
@@ -549,6 +555,8 @@ export function TravelPlannerContent() {
                 required
                 style={{
                   width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
                   padding: '10px 12px',
                   marginBottom: 20,
                   border: '1px solid #e2e8f0',
