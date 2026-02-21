@@ -930,7 +930,7 @@ export default function FamilyHub() {
       : { color: effectiveTitleStyle?.color || '#1e293b' }),
   };
 
-  // 한 줄 맞춤: 기본 타이틀일 때 컨테이너 너비에 맞춰 폰트 크기 자동 축소
+  // 한 줄 맞춤: 기본 타이틀일 때 컨테이너 너비에 맞춰 폰트 크기 자동 축소 (비율 유지)
   useEffect(() => {
     if (!isDefaultDashboardTitle) {
       setFittedTitleFontSize(null);
@@ -949,13 +949,18 @@ export default function FamilyHub() {
       }
       setFittedTitleFontSize(fs);
     };
-    fit();
-    const parent = el.parentElement;
-    if (parent) {
-      const ro = new ResizeObserver(fit);
-      ro.observe(parent);
-      return () => ro.disconnect();
-    }
+    let ro: ResizeObserver | null = null;
+    // 레이아웃 확정 후 측정 (관리자 버튼 등 반영)
+    const rafId = requestAnimationFrame(() => {
+      fit();
+      // h1 자체 너비 변경 시 재계산 (버튼 표시/숨김 등)
+      ro = new ResizeObserver(fit);
+      ro.observe(el);
+    });
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro?.disconnect();
+    };
   }, [isDefaultDashboardTitle]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
