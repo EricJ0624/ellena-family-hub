@@ -424,7 +424,7 @@ export default function LoginPage() {
             fontWeight: '500',
             lineHeight: '1.6'
           }}>
-            우리 가족 추억의 공간
+            우리가족 추억의 공간
           </p>
         </div>
 
