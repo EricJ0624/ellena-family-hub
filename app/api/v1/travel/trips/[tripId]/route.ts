@@ -74,6 +74,7 @@ export async function PATCH(
     if (body.destination !== undefined) updatePayload.destination = body.destination ? String(body.destination).trim() : null;
     if (body.start_date !== undefined) updatePayload.start_date = body.start_date;
     if (body.end_date !== undefined) updatePayload.end_date = body.end_date;
+    if (body.budget !== undefined) updatePayload.budget = body.budget == null ? null : Number(body.budget);
 
     const { data, error } = await supabase
       .from('travel_trips')

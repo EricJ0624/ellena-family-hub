@@ -68,13 +68,14 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { category, amount, currency, paid_by, memo, expense_date } = body as {
+    const { category, amount, currency, paid_by, memo, expense_date, entry_type } = body as {
       category?: string;
       amount?: number;
       currency?: string;
       paid_by?: string;
       memo?: string;
       expense_date?: string;
+      entry_type?: 'addition' | 'expense';
     };
 
     if (!groupId || !tripId || amount == null || amount < 0 || !expense_date) {
@@ -83,6 +84,7 @@ export async function POST(
         { status: 400 }
       );
     }
+    const resolvedEntryType = entry_type === 'addition' ? 'addition' : 'expense';
 
     const perm = await checkPermission(user.id, groupId, null, user.id);
     if (!perm.success) {
@@ -106,6 +108,7 @@ export async function POST(
       .insert({
         trip_id: tripId,
         group_id: groupId,
+        entry_type: resolvedEntryType,
         category: category ? String(category).trim() : null,
         amount: Number(amount),
         currency: currency ? String(currency).trim() : 'KRW',

@@ -10,6 +10,8 @@ export interface TravelTrip {
   destination: string | null;
   start_date: string;
   end_date: string;
+  /** 여행 총 예산 (원). 잔액 = budget + 추가합계 - 지출합계 */
+  budget?: number | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -50,6 +52,8 @@ export interface TravelExpense {
   id: string;
   trip_id: string;
   group_id: string;
+  /** addition: 추가(입금), expense: 지출 */
+  entry_type?: 'addition' | 'expense' | null;
   category: string | null;
   amount: number;
   currency: string;

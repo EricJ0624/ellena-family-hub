@@ -30,6 +30,7 @@ export async function PATCH(
       updated_by: user.id,
     };
     if (body.category !== undefined) updatePayload.category = body.category ? String(body.category).trim() : null;
+    if (body.entry_type !== undefined) updatePayload.entry_type = body.entry_type === 'addition' ? 'addition' : 'expense';
     if (body.amount !== undefined) updatePayload.amount = Number(body.amount);
     if (body.currency !== undefined) updatePayload.currency = String(body.currency).trim();
     if (body.paid_by !== undefined) updatePayload.paid_by = body.paid_by || null;

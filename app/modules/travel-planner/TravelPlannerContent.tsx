@@ -48,6 +48,7 @@ export function TravelPlannerContent() {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState('');
   const [expenseMemo, setExpenseMemo] = useState('');
+  const [expenseEntryType, setExpenseEntryType] = useState<'addition' | 'expense'>('expense');
   const [showAccommodationForm, setShowAccommodationForm] = useState(false);
   const [editingAccommodation, setEditingAccommodation] = useState<TravelAccommodation | null>(null);
   const [accName, setAccName] = useState('');
@@ -76,6 +77,7 @@ export function TravelPlannerContent() {
   const [formDestination, setFormDestination] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
+  const [formBudget, setFormBudget] = useState('');
 
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
@@ -552,6 +554,7 @@ export function TravelPlannerContent() {
           destination: formDestination.trim() || null,
           start_date: formStartDate,
           end_date: formEndDate,
+          budget: formBudget.trim() ? Number(formBudget) : null,
         }),
       });
       const json = await res.json();
@@ -702,12 +705,14 @@ export function TravelPlannerContent() {
   const openExpenseForm = (item: TravelExpense | null) => {
     if (item) {
       setEditingExpense(item);
+      setExpenseEntryType(item.entry_type === 'addition' ? 'addition' : 'expense');
       setExpenseCategory(item.category ?? '');
       setExpenseAmount(String(item.amount));
       setExpenseDate(item.expense_date);
       setExpenseMemo(item.memo ?? '');
     } else {
       setEditingExpense(null);
+      setExpenseEntryType('expense');
       setExpenseCategory('');
       setExpenseAmount('');
       setExpenseDate('');
@@ -731,6 +736,7 @@ export function TravelPlannerContent() {
         headers,
         body: JSON.stringify({
           groupId: currentGroupId,
+          entry_type: expenseEntryType,
           amount,
           expense_date: expenseDate,
           category: expenseCategory.trim() || undefined,
@@ -763,6 +769,7 @@ export function TravelPlannerContent() {
         method: 'PATCH',
         headers,
         body: JSON.stringify({
+          entry_type: expenseEntryType,
           category: expenseCategory.trim() || null,
           amount,
           expense_date: expenseDate,
@@ -1065,7 +1072,12 @@ export function TravelPlannerContent() {
     );
   }
 
-  const totalExpense = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const budget = Number(selectedTrip?.budget) || 0;
+  const additionSum = expenses.filter((e) => e.entry_type === 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
+  const expenseSum = expenses.filter((e) => e.entry_type !== 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
+  const balance = budget + additionSum - expenseSum;
+  const additionList = expenses.filter((e) => e.entry_type === 'addition');
+  const expenseList = expenses.filter((e) => e.entry_type !== 'addition');
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: 20 }}>
@@ -1134,6 +1146,7 @@ export function TravelPlannerContent() {
                       setFormDestination(selectedTrip.destination ?? '');
                       setFormStartDate(selectedTrip.start_date);
                       setFormEndDate(selectedTrip.end_date);
+                      setFormBudget(selectedTrip.budget != null ? String(selectedTrip.budget) : '');
                       setShowTripEditForm(true);
                     }}
                     style={{
@@ -1175,103 +1188,14 @@ export function TravelPlannerContent() {
                   </button>
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ListOrdered style={{ width: 18, height: 18 }} />
-                    일정
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => openItineraryForm(null)}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#9333ea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    + 일정 추가
-                  </button>
-                </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {itineraries.length === 0 ? (
-                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 일정이 없습니다.</li>
-                  ) : (
-                    itineraries.map((i) => (
-                      <li
-                        key={i.id}
-                        style={{
-                          padding: '10px 12px',
-                          marginBottom: 6,
-                          background: '#f8fafc',
-                          borderRadius: 8,
-                          border: '1px solid #e2e8f0',
-                          fontSize: 14,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{i.title}</div>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                            {i.day_date}
-                            {(i.start_time || i.end_time) && (
-                              <span style={{ marginLeft: 6 }}>
-                                · {(i.start_time || '--')} ~ {(i.end_time || '--')}
-                              </span>
-                            )}
-                          </div>
-                          {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                            등록: {getDisplayName(i.created_by)}
-                            {i.updated_by != null && ` · 수정: ${getDisplayName(i.updated_by)}`}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                          {getGoogleMapsUrl(i) && (
-                            <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기">
-                              <MapPin style={{ width: 14, height: 14 }} />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openItineraryForm(i)}
-                            style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }}
-                            title="수정"
-                          >
-                            <Pencil style={{ width: 14, height: 14 }} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteItinerary(i)}
-                            style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
-                            title="삭제"
-                          >
-                            <Trash2 style={{ width: 14, height: 14 }} />
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Wallet style={{ width: 18, height: 18 }} />
-                    경비
-                  </h3>
-                  <button
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Wallet style={{ width: 18, height: 18 }} />
+                  경비
+                </h3>
+                <button
                     type="button"
                     onClick={() => openExpenseForm(null)}
                     style={{
@@ -1288,70 +1212,118 @@ export function TravelPlannerContent() {
                     + 경비 추가
                   </button>
                 </div>
-                <div style={{ marginBottom: 8, fontSize: 18, fontWeight: 700, color: '#9333ea' }}>
-                  총 {totalExpense.toLocaleString('ko-KR')}원
+                <div style={{ marginBottom: 8, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 15, color: '#64748b' }}>총 예산 <strong style={{ color: '#1e293b' }}>{budget.toLocaleString('ko-KR')}원</strong></span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: balance >= 0 ? '#9333ea' : '#dc2626' }}>
+                    잔액 {balance.toLocaleString('ko-KR')}원
+                  </span>
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {expenses.length === 0 ? (
-                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 경비가 없습니다.</li>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>추가 목록</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: 16 }}>
+                  {additionList.length === 0 ? (
+                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>추가 내역 없음</li>
                   ) : (
-                    expenses.map((e) => (
-                      <li
-                        key={e.id}
-                        style={{
-                          padding: '8px 12px',
-                          marginBottom: 4,
-                          background: '#f8fafc',
-                          borderRadius: 6,
-                          border: '1px solid #e2e8f0',
-                          fontSize: 13,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: 8,
-                        }}
-                      >
+                    additionList.map((e) => (
+                      <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#f0fdf4', borderRadius: 6, border: '1px solid #bbf7d0', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span>{e.category || '기타'}</span>
-                          <span style={{ fontWeight: 600, marginLeft: 8 }}>{Number(e.amount).toLocaleString('ko-KR')}원</span>
+                          <span>{e.category || '추가'}</span>
+                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#15803d' }}>+{Number(e.amount).toLocaleString('ko-KR')}원</span>
                           {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                            등록: {getDisplayName(e.created_by)}
-                            {e.updated_by != null && ` · 수정: ${getDisplayName(e.updated_by)}`}
-                          </div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>등록: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button
-                            type="button"
-                            onClick={() => openExpenseForm(e)}
-                            style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }}
-                            title="수정"
-                          >
-                            <Pencil style={{ width: 14, height: 14 }} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteExpense(e)}
-                            style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
-                            title="삭제"
-                          >
-                            <Trash2 style={{ width: 14, height: 14 }} />
-                          </button>
+                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정"><Pencil style={{ width: 14, height: 14 }} /></button>
+                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제"><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
                       </li>
                     ))
                   )}
                 </ul>
-              </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>지출 목록</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {expenseList.length === 0 ? (
+                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>지출 내역 없음</li>
+                  ) : (
+                    expenseList.map((e) => (
+                      <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#fef2f2', borderRadius: 6, border: '1px solid #fecaca', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span>{e.category || '기타'}</span>
+                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#b91c1c' }}>-{Number(e.amount).toLocaleString('ko-KR')}원</span>
+                          {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>등록: {getDisplayName(e.created_by)}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정"><Pencil style={{ width: 14, height: 14 }} /></button>
+                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제"><Trash2 style={{ width: 14, height: 14 }} /></button>
+                        </div>
+                      </li>
+                    ))
+                  )}
+                </ul>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 20 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Home style={{ width: 18, height: 18 }} />
-                    숙소
-                  </h3>
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ListOrdered style={{ width: 18, height: 18 }} />
+                  일정
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => openItineraryForm(null)}
+                  style={{ padding: '6px 10px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  + 일정 추가
+                </button>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {itineraries.length === 0 ? (
+                  <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 일정이 없습니다.</li>
+                ) : (
+                  itineraries.map((i) => (
+                    <li
+                      key={i.id}
+                      style={{
+                        padding: '10px 12px',
+                        marginBottom: 6,
+                        background: '#f8fafc',
+                        borderRadius: 8,
+                        border: '1px solid #e2e8f0',
+                        fontSize: 14,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{i.title}</div>
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                          {i.day_date}
+                          {(i.start_time || i.end_time) && <span style={{ marginLeft: 6 }}>· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
+                        </div>
+                        {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>등록: {getDisplayName(i.created_by)}{i.updated_by != null && ` · 수정: ${getDisplayName(i.updated_by)}`}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                        {getGoogleMapsUrl(i) && (
+                          <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기"><MapPin style={{ width: 14, height: 14 }} /></a>
+                        )}
+                        <button type="button" onClick={() => openItineraryForm(i)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정"><Pencil style={{ width: 14, height: 14 }} /></button>
+                        <button type="button" onClick={() => handleDeleteItinerary(i)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제"><Trash2 style={{ width: 14, height: 14 }} /></button>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Home style={{ width: 18, height: 18 }} />
+                  숙소
+                </h3>
                   <button
                     type="button"
                     onClick={() => openAccommodationForm(null)}
@@ -1415,8 +1387,9 @@ export function TravelPlannerContent() {
                     ))
                   )}
                 </ul>
-              </div>
-              <div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <UtensilsCrossed style={{ width: 18, height: 18 }} />
@@ -1803,6 +1776,25 @@ export function TravelPlannerContent() {
                   boxSizing: 'border-box',
                   minHeight: 40,
                   padding: '10px 12px',
+                  marginBottom: 12,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  fontSize: 14,
+                }}
+              />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>총 예산 (원)</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={formBudget}
+                onChange={(e) => setFormBudget(e.target.value)}
+                placeholder="예: 1000000"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
+                  padding: '10px 12px',
                   marginBottom: 20,
                   border: '1px solid #e2e8f0',
                   borderRadius: 8,
@@ -2101,6 +2093,17 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense} style={{ overflow: 'hidden', minWidth: 0 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>유형 *</label>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                  <input type="radio" name="expenseEntryType" checked={expenseEntryType === 'addition'} onChange={() => setExpenseEntryType('addition')} />
+                  추가 (입금)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
+                  <input type="radio" name="expenseEntryType" checked={expenseEntryType === 'expense'} onChange={() => setExpenseEntryType('expense')} />
+                  지출
+                </label>
+              </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>분류</label>
               <input
                 value={expenseCategory}
