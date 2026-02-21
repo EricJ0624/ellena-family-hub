@@ -434,7 +434,7 @@ export function TravelPlannerContent() {
             padding: 16,
             boxSizing: 'border-box',
           }}
-          onClick={() => !submitting && setShowTripForm(false)}
+          onClick={() => !submitting && router.push('/dashboard')}
         >
           <div
             style={{
@@ -454,7 +454,7 @@ export function TravelPlannerContent() {
               <button
                 type="button"
                 disabled={submitting}
-                onClick={() => setShowTripForm(false)}
+                onClick={() => router.push('/dashboard')}
                 style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
               >
                 <X style={{ width: 20, height: 20 }} />
@@ -539,7 +539,7 @@ export function TravelPlannerContent() {
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  onClick={() => setShowTripForm(false)}
+                  onClick={() => router.push('/dashboard')}
                   disabled={submitting}
                   style={{
                     padding: '10px 18px',
