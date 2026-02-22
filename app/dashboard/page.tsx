@@ -233,6 +233,7 @@ export default function FamilyHub() {
     noAccount: false;
   }> | null>(null);
   const [piggyLoaded, setPiggyLoaded] = useState(false);
+  const [pendingAccountRequests, setPendingAccountRequests] = useState<Array<{ id: string; user_id: string; nickname: string | null }>>([]);
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const [travelTrips, setTravelTrips] = useState<Array<{ id: string; title: string; start_date: string; end_date: string }>>([]);
   const [travelTripsLoading, setTravelTripsLoading] = useState(false);
@@ -814,6 +815,7 @@ export default function FamilyHub() {
       setPiggyLoaded(true);
       if (result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)) {
         setPiggyMemberPiggies(result.data.memberPiggies);
+        setPendingAccountRequests(Array.isArray(result.data.pendingAccountRequests) ? result.data.pendingAccountRequests : []);
         setPiggyAccounts(null);
         setPiggySummary(null);
       } else if (result.data?.account) {
@@ -825,10 +827,12 @@ export default function FamilyHub() {
         });
         setPiggyAccounts(null);
         setPiggyMemberPiggies(null);
+        setPendingAccountRequests([]);
       } else {
         setPiggySummary(null);
         setPiggyAccounts(null);
         setPiggyMemberPiggies(null);
+        setPendingAccountRequests([]);
       }
     } catch (err: any) {
       setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
@@ -857,6 +861,79 @@ export default function FamilyHub() {
       await loadPiggySummary();
     } catch (err: any) {
       setPiggySummaryError(err.message || '저금통 추가에 실패했습니다.');
+    }
+  }, [currentGroupId, loadPiggySummary]);
+
+  // 멤버: 저금통 생성 요청
+  const handlePiggyRequestAccount = useCallback(async () => {
+    if (!currentGroupId) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch('/api/piggy-bank/request-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: currentGroupId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '요청에 실패했습니다.');
+      alert(result.message || '요청이 전달되었습니다.');
+    } catch (err: any) {
+      setPiggySummaryError(err.message || '요청에 실패했습니다.');
+    }
+  }, [currentGroupId]);
+
+  // 관리자: 저금통 생성 요청 승인
+  const handleApproveAccountRequest = useCallback(async (requestId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch('/api/piggy-bank/request-account/approve', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '승인에 실패했습니다.');
+      await loadPiggySummary();
+    } catch (err: any) {
+      setPiggySummaryError(err.message || '승인에 실패했습니다.');
+    }
+  }, [loadPiggySummary]);
+
+  // 관리자: 저금통 생성 요청 거절
+  const handleRejectAccountRequest = useCallback(async (requestId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch('/api/piggy-bank/request-account/reject', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '거절에 실패했습니다.');
+      await loadPiggySummary();
+    } catch (err: any) {
+      setPiggySummaryError(err.message || '거절에 실패했습니다.');
+    }
+  }, [loadPiggySummary]);
+
+  // 관리자: 저금통 삭제
+  const handleDashboardDeletePiggy = useCallback(async (childId: string) => {
+    if (!currentGroupId || !confirm('이 사용자의 저금통을 삭제하시겠습니까? 잔액 데이터가 삭제됩니다.')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch(`/api/piggy-bank/accounts?groupId=${encodeURIComponent(currentGroupId)}&childId=${encodeURIComponent(childId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '삭제에 실패했습니다.');
+      await loadPiggySummary();
+    } catch (err: any) {
+      setPiggySummaryError(err.message || '삭제에 실패했습니다.');
     }
   }, [currentGroupId, loadPiggySummary]);
 
@@ -9376,6 +9453,20 @@ ${groupInfo}
                       }
                       return (
                         <div style={{ display: 'grid', gap: '12px' }}>
+                          {pendingAccountRequests.length > 0 && (
+                            <div style={{ backgroundColor: '#fef3c7', borderRadius: '12px', padding: '12px', border: '1px solid #fcd34d', marginBottom: '4px' }}>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>저금통 생성 요청 {pendingAccountRequests.length}건</div>
+                              {pendingAccountRequests.map((req) => (
+                                <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #fde68a' }}>
+                                  <span style={{ fontSize: '13px', color: '#78350f' }}>{req.nickname || '멤버'}</span>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleRejectAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>거절</button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleApproveAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>승인</button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {piggyMemberPiggies.map((p) =>
                             p.noAccount ? (
                               <div
@@ -9436,11 +9527,14 @@ ${groupInfo}
                                   if (p.user_id) router.push(`/piggy-bank?child_id=${p.user_id}`);
                                 }}
                               >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                                   <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
                                     {p.ownerNickname || 'Ellena'} Piggy Bank
                                   </h4>
-                                  <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                                    <button type="button" onClick={() => p.user_id && handleDashboardDeletePiggy(p.user_id)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>저금통 삭제</button>
+                                    <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
+                                  </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                   <div style={{ backgroundColor: '#fef2f2', borderRadius: '8px', padding: '10px', border: '1px solid #fecaca' }}>
@@ -9486,7 +9580,7 @@ ${groupInfo}
                       </div>
                       <button
                         type="button"
-                        onClick={() => router.push('/piggy-bank')}
+                        onClick={handlePiggyRequestAccount}
                         style={{
                           padding: '10px 16px',
                           borderRadius: '8px',

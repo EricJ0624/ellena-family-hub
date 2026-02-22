@@ -304,6 +304,40 @@ export default function PiggyBankPage() {
     await Promise.all([fetchSummary(), fetchTransactions()]);
   };
 
+  const handleRequestAccount = async () => {
+    if (!currentGroupId) return;
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch('/api/piggy-bank/request-account', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: currentGroupId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '요청에 실패했습니다.');
+      alert(result.message || '요청이 전달되었습니다.');
+    } catch (err: any) {
+      setError(err.message || '요청에 실패했습니다.');
+    }
+  };
+
+  const handleDeletePiggy = async (childId: string) => {
+    if (!currentGroupId || !confirm('이 사용자의 저금통을 삭제하시겠습니까? 잔액 데이터가 삭제됩니다.')) return;
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(
+        `/api/piggy-bank/accounts?groupId=${encodeURIComponent(currentGroupId)}&childId=${encodeURIComponent(childId)}`,
+        { method: 'DELETE', headers }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '삭제에 실패했습니다.');
+      setSelectedChildIdForAdmin('');
+      await Promise.all([fetchSummary(), fetchMembers(), fetchTransactions()]);
+    } catch (err: any) {
+      setError(err.message || '삭제에 실패했습니다.');
+    }
+  };
+
   const resolveMemberName = (userId: string) => {
     const member = members.find((m) => m.user_id === userId);
     if (!member) return '아이';
@@ -444,7 +478,7 @@ export default function PiggyBankPage() {
           </p>
           <button
             type="button"
-            onClick={() => router.push('/piggy-bank')}
+            onClick={handleRequestAccount}
             style={{
               padding: '12px 20px',
               borderRadius: '10px',
@@ -527,6 +561,15 @@ export default function PiggyBankPage() {
           <p style={{ margin: '4px 0 0', color: '#64748b' }}>
             {currentGroup?.name || '그룹'} {isAdmin && selectedChildIdForAdmin ? `· ${resolveMemberName(selectedChildIdForAdmin)} 저금통` : '저금통'}
           </p>
+          {isAdmin && selectedChildIdForAdmin && (
+            <button
+              type="button"
+              onClick={() => handleDeletePiggy(selectedChildIdForAdmin)}
+              style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              저금통 삭제
+            </button>
+          )}
         </div>
       </div>
 

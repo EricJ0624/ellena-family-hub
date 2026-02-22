@@ -93,6 +93,35 @@ export async function GET(request: NextRequest) {
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(20);
+
+      let pendingAccountRequestsWithNick: Array<{ id: string; user_id: string; status: string; created_at: string; nickname: string | null }> = [];
+      try {
+        const { data: pendingAccountRequests } = await supabase
+          .from('piggy_account_requests')
+          .select('id, user_id, status, created_at')
+          .eq('group_id', groupId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+
+        const accountRequestNicknames: Record<string, string | null> = {};
+        if (pendingAccountRequests?.length) {
+          const userIds = [...new Set(pendingAccountRequests.map((r: { user_id: string }) => r.user_id))];
+          const { data: profiles } = await supabase.from('profiles').select('id, nickname').in('id', userIds);
+          profiles?.forEach((p: { id: string; nickname: string | null }) => {
+            accountRequestNicknames[p.id] = p.nickname ?? null;
+          });
+        }
+        pendingAccountRequestsWithNick = (pendingAccountRequests || []).map((r: { id: string; user_id: string; status: string; created_at: string }) => ({
+          id: r.id,
+          user_id: r.user_id,
+          status: r.status,
+          created_at: r.created_at,
+          nickname: accountRequestNicknames[r.user_id] ?? null,
+        }));
+      } catch (_) {
+        // piggy_account_requests 테이블이 없을 수 있음
+      }
+
       return NextResponse.json({
         success: true,
         data: {
@@ -100,6 +129,7 @@ export async function GET(request: NextRequest) {
           isOwner: permissionResult.isOwner,
           memberPiggies,
           pendingRequests: pendingRequests || [],
+          pendingAccountRequests: pendingAccountRequestsWithNick,
         },
       });
     }
