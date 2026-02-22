@@ -9440,17 +9440,10 @@ ${groupInfo}
                   )}
                   {!piggyLoaded ? (
                     <div style={{ fontSize: '13px', color: '#64748b' }}>불러오는 중...</div>
-                  ) : piggyMemberPiggies && piggyMemberPiggies.length > 0 ? (
-                    /* 관리자: 멤버별 카드 (소유자 있음) 또는 저금통 없음 + 저금통 추가 */
+                  ) : piggyMemberPiggies !== null ? (
+                    /* 관리자: 저금통 요청 리스트 + 멤버별 카드 (또는 저금통 없음 안내) */
                     (() => {
                       const hasAnyAccount = piggyMemberPiggies.some((p) => !p.noAccount);
-                      if (!hasAnyAccount) {
-                        return (
-                          <div style={{ fontSize: '14px', color: '#64748b', padding: '12px', textAlign: 'center' }}>
-                            저금통을 소유한 사용자가 없습니다.
-                          </div>
-                        );
-                      }
                       return (
                         <div style={{ display: 'grid', gap: '12px' }}>
                           {pendingAccountRequests.length > 0 && (
@@ -9465,6 +9458,11 @@ ${groupInfo}
                                   </div>
                                 </div>
                               ))}
+                            </div>
+                          )}
+                          {!hasAnyAccount && piggyMemberPiggies.length === 0 && (
+                            <div style={{ fontSize: '14px', color: '#64748b', padding: '12px', textAlign: 'center' }}>
+                              저금통을 소유한 사용자가 없습니다.
                             </div>
                           )}
                           {piggyMemberPiggies.map((p) =>

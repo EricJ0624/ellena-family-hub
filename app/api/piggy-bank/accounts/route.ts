@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, getGroupMembers } from '@/lib/piggy-bank';
 
 /** 관리자 전용: 아이별 저금통 삭제 (해당 user의 piggy_wallets, piggy_bank_accounts 삭제) */
 export async function DELETE(request: NextRequest) {
@@ -68,6 +68,15 @@ export async function POST(request: NextRequest) {
     const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
     if (!permissionResult.success) {
       return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
+    const members = await getGroupMembers(groupId);
+    const target = members.find((m) => m.user_id === childId);
+    if (!target || target.role !== 'MEMBER') {
+      return NextResponse.json(
+        { error: '저금통은 그룹의 멤버(아이)에게만 생성할 수 있습니다.' },
+        { status: 403 }
+      );
     }
 
     const account = await ensurePiggyAccountForUser(groupId, childId);

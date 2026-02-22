@@ -87,6 +87,7 @@ export default function PiggyBankPage() {
     wallet?: PiggyWallet | null;
     accounts?: PiggyAccount[];
     memberPiggies?: MemberPiggy[];
+    pendingAccountRequest?: boolean;
   } | null>(null);
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [requests, setRequests] = useState<OpenRequest[]>([]);
@@ -140,6 +141,7 @@ export default function PiggyBankPage() {
       wallet: result.data.wallet,
       accounts: result.data.accounts,
       memberPiggies: result.data.memberPiggies,
+      pendingAccountRequest: !!result.data.pendingAccountRequest,
     });
     if (result.data.account) {
       // ownerNickname을 우선 사용, 없으면 name 사용
@@ -470,27 +472,36 @@ export default function PiggyBankPage() {
 
   if (!hasAccountView) {
     if (summary !== null && summary.account == null && !isAdmin) {
+      const pendingRequest = summary.pendingAccountRequest === true;
       return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
           <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '80px', height: '80px' }} />
-          <p style={{ fontSize: '16px', color: '#475569', textAlign: 'center', margin: 0 }}>
-            저금통이 없습니다. 관리자에게 요청하세요.
-          </p>
-          <button
-            type="button"
-            onClick={handleRequestAccount}
-            style={{
-              padding: '12px 20px',
-              borderRadius: '10px',
-              border: '1px solid #94a3b8',
-              backgroundColor: '#f1f5f9',
-              color: '#475569',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            저금통 요청
-          </button>
+          {pendingRequest ? (
+            <p style={{ fontSize: '16px', color: '#92400e', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+              저금통 승인 대기중
+            </p>
+          ) : (
+            <p style={{ fontSize: '16px', color: '#475569', textAlign: 'center', margin: 0 }}>
+              저금통이 없습니다. 관리자에게 요청하세요.
+            </p>
+          )}
+          {!pendingRequest && (
+            <button
+              type="button"
+              onClick={handleRequestAccount}
+              style={{
+                padding: '12px 20px',
+                borderRadius: '10px',
+                border: '1px solid #94a3b8',
+                backgroundColor: '#f1f5f9',
+                color: '#475569',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              저금통 요청
+            </button>
+          )}
           <button onClick={() => router.push('/dashboard')} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>대시보드로</button>
         </div>
       );

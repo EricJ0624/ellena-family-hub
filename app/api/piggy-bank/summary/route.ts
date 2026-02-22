@@ -157,6 +157,18 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(20);
 
+    let pendingAccountRequest = false;
+    try {
+      const { data: myRequest } = await supabase
+        .from('piggy_account_requests')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .maybeSingle();
+      pendingAccountRequest = !!myRequest;
+    } catch (_) {}
+
     return NextResponse.json({
       success: true,
       data: {
@@ -165,6 +177,7 @@ export async function GET(request: NextRequest) {
         account: account ? { ...account, ownerNickname } : null,
         wallet: wallet ?? null,
         pendingRequests: pendingRequests || [],
+        pendingAccountRequest,
       },
     });
   } catch (error: any) {
