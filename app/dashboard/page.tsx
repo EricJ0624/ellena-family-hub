@@ -1012,6 +1012,10 @@ export default function FamilyHub() {
 
   const dashboardTitleText = effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven';
   const isDefaultDashboardTitle = dashboardTitleText === 'Hearth: Family Haven';
+  // 사용자가 지정한 폰트 크기가 있으면 그 값을 상한으로, 없으면 기본/커스텀별 기본 상한 사용
+  const titleFitMaxFontSize = typeof effectiveTitleStyle?.fontSize === 'number'
+    ? effectiveTitleStyle.fontSize
+    : (isDefaultDashboardTitle ? 68 : 28);
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     flex: 1,
@@ -1036,14 +1040,9 @@ export default function FamilyHub() {
   // 타이틀 오른쪽 레이아웃 영향 — effect 선언 위치에서 사용 가능한 값
   const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const isGroupLoadingForTitleFit = groupLoading && !currentGroupId;
-  // 한 줄 맞춤: 기본 타이틀일 때 컨테이너 너비에 맞춰 폰트 크기 자동 축소 (비율 유지)
-  // 3번: ref null이면 다음 프레임에 재시도 / 2번: 폰트 로드 후 재계산
+  // 한 줄 맞춤: 넘칠 때만 폰트 자동 축소. 사용자 지정 크기는 상한으로 유지(그보다 크게 하지 않음)
   useEffect(() => {
-    if (!isDefaultDashboardTitle) {
-      setFittedTitleFontSize(null);
-      return;
-    }
-    const MAX_FS = 68;
+    const MAX_FS = Math.max(12, Math.min(120, titleFitMaxFontSize));
     const MIN_FS = 12;
     const cancelled = { current: false };
     let ro: ResizeObserver | null = null;
@@ -1052,7 +1051,7 @@ export default function FamilyHub() {
     const fit = (el: HTMLHeadingElement) => {
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
-      void el.offsetHeight; // 강제 reflow: 폰트 변경 후 레이아웃 반영
+      void el.offsetHeight; // 강제 reflow
       while (el.scrollWidth > el.clientWidth && fs > MIN_FS) {
         fs -= 2;
         el.style.fontSize = `${fs}px`;
@@ -1065,7 +1064,6 @@ export default function FamilyHub() {
       fit(el);
       ro = new ResizeObserver(() => fit(el));
       ro.observe(el);
-      // 2번: 폰트 로드 후 재계산
       document.fonts.ready.then(() => {
         if (!cancelled.current) fit(el);
       });
@@ -1077,7 +1075,6 @@ export default function FamilyHub() {
         run(el);
         return;
       }
-      // 3번: ref null이면 다음 프레임에 재시도 (최대 10프레임)
       if (retryCount < 10) {
         rafId = requestAnimationFrame(() => tryRun(retryCount + 1));
       }
@@ -1095,7 +1092,7 @@ export default function FamilyHub() {
       cancelAnimationFrame(rafId);
       ro?.disconnect();
     };
-  }, [isDefaultDashboardTitle, showAdminForTitleFit, isGroupLoadingForTitleFit]);
+  }, [titleFitMaxFontSize, dashboardTitleText, showAdminForTitleFit, isGroupLoadingForTitleFit]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
@@ -8159,7 +8156,7 @@ ${groupInfo}
             ref={dashboardTitleRef}
             style={{
               ...dashboardTitleStyle,
-              ...(isDefaultDashboardTitle && fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
+              ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
             }}
           >
             {isDefaultDashboardTitle ? (
