@@ -69,10 +69,24 @@ export default function PiggyBankPage() {
     }
   }
   const [loading, setLoading] = useState(true);
+  type MemberPiggy = {
+    user_id: string;
+    ownerNickname: string | null;
+    noAccount: true;
+  } | {
+    id: string;
+    user_id: string | null;
+    ownerNickname: string | null;
+    name: string;
+    balance: number;
+    walletBalance: number;
+    noAccount: false;
+  };
   const [summary, setSummary] = useState<{
-    account?: PiggyAccount;
-    wallet?: PiggyWallet;
+    account?: PiggyAccount | null;
+    wallet?: PiggyWallet | null;
     accounts?: PiggyAccount[];
+    memberPiggies?: MemberPiggy[];
   } | null>(null);
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [requests, setRequests] = useState<OpenRequest[]>([]);
@@ -125,6 +139,7 @@ export default function PiggyBankPage() {
       account: result.data.account,
       wallet: result.data.wallet,
       accounts: result.data.accounts,
+      memberPiggies: result.data.memberPiggies,
     });
     if (result.data.account) {
       // ownerNickname을 우선 사용, 없으면 name 사용
@@ -308,13 +323,13 @@ export default function PiggyBankPage() {
   }
 
   const hasAccountView = summary?.account && summary?.wallet;
-  const hasAccountsList = isAdmin && Array.isArray(summary?.accounts);
+  const memberPiggies = summary?.memberPiggies;
+  const hasAccountsList = isAdmin && Array.isArray(memberPiggies);
 
   if (isAdmin && !selectedChildIdForAdmin && hasAccountsList) {
-    const accountUserIds = new Set(
-      (summary!.accounts || []).map((a) => a.user_id).filter((id): id is string => Boolean(id))
-    );
-    const membersWithoutPiggy = members.filter((m) => m.role === 'MEMBER' && !accountUserIds.has(m.user_id));
+    const list = memberPiggies!;
+    const accountsForSelect = list.filter((p): p is MemberPiggy & { noAccount: false } => !p.noAccount);
+    const membersWithoutPiggy = list.filter((p) => p.noAccount);
 
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
@@ -339,18 +354,11 @@ export default function PiggyBankPage() {
             style={{ width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '12px' }}
           >
             <option value="">선택하세요</option>
-            {(summary!.accounts || []).filter((acc) => {
-              if (!acc.user_id) return false;
-              const member = members.find((m) => m.user_id === acc.user_id);
-              return member && member.role === 'MEMBER';
-            }).map((acc) => {
-              const member = members.find((m) => m.user_id === acc.user_id);
-              return (
-                <option key={acc.id} value={acc.user_id || ''}>
-                  {member ? (member.nickname || '멤버') : '저금통'} · 용돈 {formatAmount((acc as { walletBalance?: number }).walletBalance ?? 0)} / 저금통 {formatAmount(acc.balance)}
-                </option>
-              );
-            })}
+            {accountsForSelect.map((acc) => (
+              <option key={acc.id} value={acc.user_id || ''}>
+                {acc.ownerNickname || '저금통'} · 용돈 {formatAmount(acc.walletBalance ?? 0)} / 저금통 {formatAmount(acc.balance)}
+              </option>
+            ))}
           </select>
           <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>아이를 선택하면 해당 저금통 화면으로 이동합니다.</p>
         </div>
@@ -361,19 +369,19 @@ export default function PiggyBankPage() {
             <p style={{ color: '#94a3b8' }}>저금통이 없는 아이가 없습니다.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {membersWithoutPiggy.map((m) => (
+              {membersWithoutPiggy.map((p) => (
                 <button
-                  key={m.user_id}
+                  key={p.user_id}
                   onClick={async () => {
                     try {
-                      await handleAddPiggyForChild(m.user_id);
+                      await handleAddPiggyForChild(p.user_id);
                     } catch (err: any) {
                       setError(err.message || '저금통 추가 실패');
                     }
                   }}
                   style={{ padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }}
                 >
-                  + {m.nickname || '아이'} 저금통 만들기
+                  + {p.ownerNickname || '아이'} 저금통 만들기
                 </button>
               ))}
             </div>
@@ -427,6 +435,66 @@ export default function PiggyBankPage() {
   }
 
   if (!hasAccountView) {
+    if (summary !== null && summary.account == null && !isAdmin) {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '80px', height: '80px' }} />
+          <p style={{ fontSize: '16px', color: '#475569', textAlign: 'center', margin: 0 }}>
+            저금통이 없습니다. 관리자에게 요청하세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/piggy-bank')}
+            style={{
+              padding: '12px 20px',
+              borderRadius: '10px',
+              border: '1px solid #94a3b8',
+              backgroundColor: '#f1f5f9',
+              color: '#475569',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            저금통 요청
+          </button>
+          <button onClick={() => router.push('/dashboard')} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>대시보드로</button>
+        </div>
+      );
+    }
+    if (summary !== null && summary.account == null && isAdmin && selectedChildIdForAdmin) {
+      const childName = members.find((m) => m.user_id === selectedChildIdForAdmin)?.nickname || '아이';
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+            <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '90px', height: '90px' }} />
+            <div>
+              <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>Piggy Bank 관리</h1>
+              <p style={{ margin: '4px 0 0', color: '#64748b' }}>{childName} · 저금통 없음</p>
+            </div>
+          </div>
+          {error && (
+            <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '12px', borderRadius: '10px', color: '#991b1b', marginBottom: '16px' }}>{error}</div>
+          )}
+          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+            <p style={{ fontSize: '15px', color: '#475569', marginBottom: '16px' }}>이 아이는 저금통을 소유하지 않았습니다. 아래 버튼으로 저금통을 추가하세요.</p>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await handleAddPiggyForChild(selectedChildIdForAdmin);
+                } catch (err: any) {
+                  setError(err.message || '저금통 추가 실패');
+                }
+              }}
+              style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: '#22c55e', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+            >
+              저금통 추가
+            </button>
+          </div>
+          <button onClick={() => router.push('/piggy-bank')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>전체 목록으로</button>
+        </div>
+      );
+    }
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#64748b' }}>불러오는 중...</span>

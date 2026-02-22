@@ -56,6 +56,34 @@ export async function ensurePiggyAccountForUser(groupId: string, userId: string)
   return created as PiggyAccount;
 }
 
+/** 아이별 저금통이 있으면 반환, 없으면 null (생성하지 않음). */
+export async function getPiggyAccountForUserIfExists(groupId: string, userId: string): Promise<PiggyAccount | null> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('piggy_bank_accounts')
+    .select('id, group_id, user_id, name, balance, currency')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? (data as PiggyAccount) : null;
+}
+
+/** 용돈 지갑이 있으면 반환, 없으면 null (생성하지 않음). */
+export async function getPiggyWalletForUserIfExists(groupId: string, userId: string): Promise<PiggyWallet | null> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('piggy_wallets')
+    .select('id, group_id, user_id, balance')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? (data as PiggyWallet) : null;
+}
+
 /** 그룹 내 모든 저금통 목록 (관리자용). */
 export async function getPiggyAccountsForGroup(groupId: string): Promise<PiggyAccount[]> {
   const supabase = getSupabaseServerClient();

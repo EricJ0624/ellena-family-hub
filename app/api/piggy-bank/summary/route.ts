@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
-import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountsForGroup, getGroupMembers } from '@/lib/piggy-bank';
+import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountForUserIfExists, getPiggyWalletForUserIfExists, getGroupMembers } from '@/lib/piggy-bank';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,12 +28,12 @@ export async function GET(request: NextRequest) {
     const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
 
     if (isAdmin && childId) {
-      const account = await ensurePiggyAccountForUser(groupId, childId);
-      const wallet = await ensurePiggyWallet(groupId, childId);
+      // 관리자가 특정 아이 조회 시: 있으면 반환(잔고 0 포함), 없으면 null (저금통 추가 버튼용)
+      const account = await getPiggyAccountForUserIfExists(groupId, childId);
+      const wallet = account ? await ensurePiggyWallet(groupId, childId) : null;
       
-      // 소유자 닉네임 조회
       let ownerNickname: string | null = null;
-      if (account.user_id) {
+      if (account?.user_id) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('nickname')
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         data: {
           role: permissionResult.role,
           isOwner: permissionResult.isOwner,
-          account: { ...account, ownerNickname },
+          account: account ? { ...account, ownerNickname } : null,
           wallet,
           pendingRequests: pendingRequests || [],
         },
@@ -62,48 +62,26 @@ export async function GET(request: NextRequest) {
     }
 
     if (isAdmin && !childId) {
-      const accounts = await getPiggyAccountsForGroup(groupId);
-      
-      // 일반 멤버(MEMBER 역할)만 필터링
+      // 관리자 대시보드: 모든 MEMBER 멤버 목록 + 각자 저금통 유무/잔고 (생성하지 않음)
       const members = await getGroupMembers(groupId);
-      const memberUserIds = new Set(
-        members.filter(m => m.role === 'MEMBER').map(m => m.user_id)
-      );
+      const memberList = members.filter(m => m.role === 'MEMBER');
       
-      // MEMBER 역할인 계정만 필터링
-      const memberAccounts = accounts.filter(account => 
-        account.user_id && memberUserIds.has(account.user_id)
-      );
-      
-      // 각 계정의 ownerNickname과 wallet 정보 조회
-      const accountsWithDetails = await Promise.all(
-        memberAccounts.map(async (account) => {
-          let ownerNickname: string | null = null;
-          let walletBalance = 0;
-          
-          if (account.user_id) {
-            // 닉네임 조회
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('nickname')
-              .eq('id', account.user_id)
-              .single();
-            ownerNickname = profile?.nickname || null;
-            
-            // 지갑 잔액 조회
-            try {
-              const wallet = await ensurePiggyWallet(groupId, account.user_id);
-              walletBalance = wallet.balance;
-            } catch (error) {
-              // 지갑이 없으면 0으로 설정
-              walletBalance = 0;
-            }
+      const memberPiggies = await Promise.all(
+        memberList.map(async (member) => {
+          const account = await getPiggyAccountForUserIfExists(groupId, member.user_id);
+          if (!account) {
+            return { user_id: member.user_id, ownerNickname: member.nickname || null, noAccount: true as const };
           }
-          
+          const wallet = await ensurePiggyWallet(groupId, member.user_id);
           return {
-            ...account,
-            ownerNickname,
-            walletBalance,
+            id: account.id,
+            user_id: account.user_id,
+            ownerNickname: member.nickname || null,
+            name: account.name,
+            balance: account.balance,
+            currency: account.currency,
+            walletBalance: wallet.balance,
+            noAccount: false as const,
           };
         })
       );
@@ -120,18 +98,18 @@ export async function GET(request: NextRequest) {
         data: {
           role: permissionResult.role,
           isOwner: permissionResult.isOwner,
-          accounts: accountsWithDetails,
+          memberPiggies,
           pendingRequests: pendingRequests || [],
         },
       });
     }
 
-    const account = await ensurePiggyAccountForUser(groupId, user.id);
-    const wallet = await ensurePiggyWallet(groupId, user.id);
+    // 일반 멤버: 저금통은 관리자가 생성해야 함. 있으면 반환(용돈 지갑은 있으면 0으로 생성), 없으면 null
+    const account = await getPiggyAccountForUserIfExists(groupId, user.id);
+    const wallet = account ? await ensurePiggyWallet(groupId, user.id) : null;
     
-    // 소유자 닉네임 조회
     let ownerNickname: string | null = null;
-    if (account.user_id) {
+    if (account?.user_id) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('nickname')
@@ -154,8 +132,8 @@ export async function GET(request: NextRequest) {
       data: {
         role: permissionResult.role,
         isOwner: permissionResult.isOwner,
-        account: { ...account, ownerNickname },
-        wallet,
+        account: account ? { ...account, ownerNickname } : null,
+        wallet: wallet ?? null,
         pendingRequests: pendingRequests || [],
       },
     });

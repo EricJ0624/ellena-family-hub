@@ -219,6 +219,20 @@ export default function FamilyHub() {
     ownerNickname: string | null;
     walletBalance: number;
   }> | null>(null);
+  const [piggyMemberPiggies, setPiggyMemberPiggies] = useState<Array<{
+    user_id: string;
+    ownerNickname: string | null;
+    noAccount: true;
+  } | {
+    id: string;
+    user_id: string | null;
+    ownerNickname: string | null;
+    name: string;
+    balance: number;
+    walletBalance: number;
+    noAccount: false;
+  }> | null>(null);
+  const [piggyLoaded, setPiggyLoaded] = useState(false);
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const [travelTrips, setTravelTrips] = useState<Array<{ id: string; title: string; start_date: string; end_date: string }>>([]);
   const [travelTripsLoading, setTravelTripsLoading] = useState(false);
@@ -773,13 +787,17 @@ export default function FamilyHub() {
     if (!isAuthenticated || !currentGroupId) {
       setPiggySummary(null);
       setPiggyAccounts(null);
+      setPiggyMemberPiggies(null);
+      setPiggyLoaded(false);
       return;
     }
 
     try {
       setPiggySummaryError(null);
+      setPiggyLoaded(false);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
+        setPiggyLoaded(true);
         return;
       }
 
@@ -793,22 +811,28 @@ export default function FamilyHub() {
         throw new Error(result.error || 'Piggy Bank 요약 정보를 불러오지 못했습니다.');
       }
 
-      // 관리자이고 accounts 배열이 있으면 여러 계정 처리
-      if (result.data?.accounts && Array.isArray(result.data.accounts)) {
-        setPiggyAccounts(result.data.accounts);
+      setPiggyLoaded(true);
+      if (result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)) {
+        setPiggyMemberPiggies(result.data.memberPiggies);
+        setPiggyAccounts(null);
         setPiggySummary(null);
       } else if (result.data?.account) {
-        // 일반 사용자 또는 특정 아이 선택 시 단일 계정 처리
         setPiggySummary({
-          name: result.data?.account?.name || 'Ellena Piggy Bank',
-          walletBalance: result.data?.wallet?.balance ?? 0,
-          bankBalance: result.data?.account?.balance ?? 0,
-          ownerNickname: result.data?.account?.ownerNickname || null,
+          name: result.data.account.name || 'Ellena Piggy Bank',
+          walletBalance: result.data.wallet?.balance ?? 0,
+          bankBalance: result.data.account.balance ?? 0,
+          ownerNickname: result.data.account.ownerNickname || null,
         });
         setPiggyAccounts(null);
+        setPiggyMemberPiggies(null);
+      } else {
+        setPiggySummary(null);
+        setPiggyAccounts(null);
+        setPiggyMemberPiggies(null);
       }
     } catch (err: any) {
       setPiggySummaryError(err.message || 'Piggy Bank 정보를 불러오지 못했습니다.');
+      setPiggyLoaded(true);
     }
   }, [isAuthenticated, currentGroupId]);
 
@@ -816,6 +840,25 @@ export default function FamilyHub() {
   useEffect(() => {
     loadPiggySummary();
   }, [loadPiggySummary]);
+
+  // 관리자: 대시보드에서 멤버에게 저금통 추가
+  const handleDashboardAddPiggy = useCallback(async (childId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch('/api/piggy-bank/accounts', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: currentGroupId, childId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '저금통 추가에 실패했습니다.');
+      await loadPiggySummary();
+    } catch (err: any) {
+      setPiggySummaryError(err.message || '저금통 추가에 실패했습니다.');
+    }
+  }, [currentGroupId, loadPiggySummary]);
 
   // 가족 여행 목록 로드 (그룹 선택 시)
   const loadTravelTrips = useCallback(async () => {
@@ -9281,8 +9324,8 @@ ${groupInfo}
           <section className="content-section">
             <div className="section-header">
               <h3 className="section-title">
-                {piggyAccounts && piggyAccounts.length > 0 
-                  ? 'Piggy Bank 관리' 
+                {piggyMemberPiggies !== null
+                  ? 'Piggy Bank 관리'
                   : `${piggySummary?.ownerNickname || 'Ellena'} Piggy Bank`}
               </h3>
               {currentGroupId && (
@@ -9302,7 +9345,7 @@ ${groupInfo}
                   }}
                 >
                   <span>🐷</span>
-                  {piggyAccounts && piggyAccounts.length > 0 ? '전체 관리' : '이동'}
+                  {piggyMemberPiggies !== null ? '전체 관리' : '이동'}
                 </button>
               )}
             </div>
@@ -9318,74 +9361,144 @@ ${groupInfo}
                       {piggySummaryError}
                     </div>
                   )}
-                  
-                  {/* 관리자: 여러 계정 카드 표시 */}
-                  {piggyAccounts && piggyAccounts.length > 0 ? (
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                      {piggyAccounts.map((account) => (
-                        <div 
-                          key={account.id}
-                          style={{
-                            backgroundColor: '#ffffff',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            border: '1px solid #e2e8f0',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#cbd5e1';
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-                          }}
-                          onClick={() => {
-                            if (account.user_id) {
-                              router.push(`/piggy-bank?child_id=${account.user_id}`);
-                            }
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
-                              {account.ownerNickname || 'Ellena'} Piggy Bank
-                            </h4>
-                            <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
+                  {!piggyLoaded ? (
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>불러오는 중...</div>
+                  ) : piggyMemberPiggies && piggyMemberPiggies.length > 0 ? (
+                    /* 관리자: 멤버별 카드 (소유자 있음) 또는 저금통 없음 + 저금통 추가 */
+                    (() => {
+                      const hasAnyAccount = piggyMemberPiggies.some((p) => !p.noAccount);
+                      if (!hasAnyAccount) {
+                        return (
+                          <div style={{ fontSize: '14px', color: '#64748b', padding: '12px', textAlign: 'center' }}>
+                            저금통을 소유한 사용자가 없습니다.
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <div style={{ backgroundColor: '#fef2f2', borderRadius: '8px', padding: '10px', border: '1px solid #fecaca' }}>
-                              <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>용돈 잔액</div>
-                              <div style={{ fontSize: '16px', fontWeight: 700, color: '#b91c1c' }}>
-                                {account.walletBalance.toLocaleString('ko-KR')}원
+                        );
+                      }
+                      return (
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          {piggyMemberPiggies.map((p) =>
+                            p.noAccount ? (
+                              <div
+                                key={p.user_id}
+                                style={{
+                                  backgroundColor: '#f8fafc',
+                                  borderRadius: '12px',
+                                  padding: '16px',
+                                  border: '1px solid #e2e8f0',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '10px',
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>{p.ownerNickname || '멤버'}</div>
+                                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>저금통을 소유하지 않았습니다</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleDashboardAddPiggy(p.user_id); }}
+                                  style={{
+                                    padding: '8px 14px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    backgroundColor: '#22c55e',
+                                    color: '#fff',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  저금통 추가
+                                </button>
                               </div>
-                            </div>
-                            <div style={{ backgroundColor: '#fff7ed', borderRadius: '8px', padding: '10px', border: '1px solid #fed7aa' }}>
-                              <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>저금통 잔액</div>
-                              <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>
-                                {account.balance.toLocaleString('ko-KR')}원
+                            ) : (
+                              <div
+                                key={p.id}
+                                style={{
+                                  backgroundColor: '#ffffff',
+                                  borderRadius: '12px',
+                                  padding: '16px',
+                                  border: '1px solid #e2e8f0',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.borderColor = '#cbd5e1';
+                                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.borderColor = '#e2e8f0';
+                                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                                }}
+                                onClick={() => {
+                                  if (p.user_id) router.push(`/piggy-bank?child_id=${p.user_id}`);
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
+                                    {p.ownerNickname || 'Ellena'} Piggy Bank
+                                  </h4>
+                                  <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                  <div style={{ backgroundColor: '#fef2f2', borderRadius: '8px', padding: '10px', border: '1px solid #fecaca' }}>
+                                    <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>용돈 잔액</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#b91c1c' }}>
+                                      {(p.walletBalance ?? 0).toLocaleString('ko-KR')}원
+                                    </div>
+                                  </div>
+                                  <div style={{ backgroundColor: '#fff7ed', borderRadius: '8px', padding: '10px', border: '1px solid #fed7aa' }}>
+                                    <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>저금통 잔액</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>
+                                      {(p.balance ?? 0).toLocaleString('ko-KR')}원
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            )
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    /* 일반 사용자: 단일 계정 표시 */
+                      );
+                    })()
+                  ) : piggySummary ? (
+                    /* 일반 사용자: 저금통 있음 — 잔고 표시 (0 포함) */
                     <div style={{ display: 'grid', gap: '10px' }}>
                       <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
                         <div style={{ fontSize: '12px', color: '#b91c1c' }}>{piggyLabel} 용돈 잔액</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
-                          {piggySummary ? `${piggySummary.walletBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
+                          {piggySummary.walletBalance.toLocaleString('ko-KR')}원
                         </div>
                       </div>
                       <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
                         <div style={{ fontSize: '12px', color: '#9a3412' }}>{piggyLabel} 저금통 잔액</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
-                          {piggySummary ? `${piggySummary.bankBalance.toLocaleString('ko-KR')}원` : '불러오는 중...'}
+                          {piggySummary.bankBalance.toLocaleString('ko-KR')}원
                         </div>
                       </div>
+                    </div>
+                  ) : (
+                    /* 일반 사용자: 저금통 없음 */
+                    <div style={{ padding: '16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
+                        저금통이 없습니다. 관리자에게 요청하세요.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push('/piggy-bank')}
+                        style={{
+                          padding: '10px 16px',
+                          borderRadius: '8px',
+                          border: '1px solid #94a3b8',
+                          backgroundColor: '#f1f5f9',
+                          color: '#475569',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        저금통 요청
+                      </button>
                     </div>
                   )}
                 </div>
