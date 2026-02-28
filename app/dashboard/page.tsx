@@ -9625,7 +9625,7 @@ if (confirm(dt('photo_delete_confirm'))) {
         </div>
             </div>
             <div className="section-body">
-              {state.location.latitude && state.location.longitude && state.location.address && (
+              {state.location.address && (state.location.latitude !== 0 || state.location.longitude !== 0) && (
                 <div style={{ marginBottom: '16px' }}>
                   <p className="location-text" style={{ marginBottom: '12px' }}>
                     내 위치: {extractLocationAddress(state.location.address)}
@@ -9676,7 +9676,7 @@ if (confirm(dt('photo_delete_confirm'))) {
                           💡 참고: 무료 크레딧은 매월 자동으로 충전되며, 사용하지 않으면 소멸됩니다.
                         </p>
           </div>
-                      {state.location.latitude && state.location.longitude && (
+                      {(state.location.latitude !== 0 || state.location.longitude !== 0) && (
                         <a 
                           href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} 
                           target="_blank" 
@@ -9738,7 +9738,7 @@ if (confirm(dt('photo_delete_confirm'))) {
                         💡 API 키 발급: <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google Cloud Console</a> → Maps JavaScript API 활성화
                       </p>
                     </div>
-                    {state.location.latitude && state.location.longitude && (
+                    {(state.location.latitude !== 0 || state.location.longitude !== 0) && (
                       <p style={{ fontSize: '12px', marginTop: '8px' }}>
                         또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Google 지도에서 보기</a>
                       </p>
