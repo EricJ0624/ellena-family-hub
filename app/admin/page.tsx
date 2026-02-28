@@ -2443,7 +2443,7 @@ export default function AdminPage() {
                                   alert(at('force_leave_done').replace(/\$\{name\}/g, userDisplayName));
                                   loadUsers(); // 목록 새로고침
                                 } catch (error: any) {
-                                  console.error('{at('force_leave_btn')} 오류:', error);
+                                  console.error(`${at('force_leave_btn')} 오류:`, error);
                                   alert(error.message || at('error_force_leave_msg'));
                                 } finally {
                                   setLoadingData(false);
@@ -3324,7 +3324,7 @@ export default function AdminPage() {
                                               loadGroupStats(selectedGroupId);
                                             }
                                           } catch (error: any) {
-                                            console.error('{at('force_leave_btn')} 오류:', error);
+                                            console.error(`${at('force_leave_btn')} 오류:`, error);
                                             alert(error.message || at('error_force_leave_msg'));
                                           } finally {
                                             setLoadingData(false);

@@ -27,6 +27,7 @@ export interface Database {
           storage_quota_bytes: number
           family_name: string | null
           title_style: Json | null
+          preferred_language: string | null
         }
         Insert: {
           id?: string
@@ -38,6 +39,7 @@ export interface Database {
           storage_quota_bytes?: number
           family_name?: string | null
           title_style?: Json | null
+          preferred_language?: string | null
         }
         Update: {
           id?: string
@@ -49,6 +51,7 @@ export interface Database {
           storage_quota_bytes?: number
           family_name?: string | null
           title_style?: Json | null
+          preferred_language?: string | null
         }
         Relationships: [
           {

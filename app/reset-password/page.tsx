@@ -319,7 +319,7 @@ export default function ResetPasswordPage() {
                 }} />
               </span>
             ) : (
-              {rpt('btn_submit')}
+              <>{rpt('btn_submit')}</>
             )}
           </button>
         </form>
