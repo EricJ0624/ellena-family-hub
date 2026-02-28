@@ -190,7 +190,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('세션이 없습니다. 다시 로그인해 주세요.');
+        setError(gst('session_error'));
         setRefreshing(false);
         return;
       }

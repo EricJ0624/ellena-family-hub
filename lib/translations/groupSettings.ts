@@ -25,6 +25,7 @@ export type GroupSettingsTranslations = {
   refresh_success: string;
   invite_refresh_hint: string;
   saving: string;
+  session_error: string;
 };
 
 const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
@@ -53,6 +54,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     refresh_success: '초대 코드가 갱신되었습니다.',
     invite_refresh_hint: "가입이 끝난 후 '초대코드 갱신'을 눌러 이전 코드를 무효화하세요. 새 코드를 모르는 사람은 가입할 수 없습니다.",
     saving: '저장 중...',
+    session_error: '세션이 없습니다. 다시 로그인해 주세요.',
   },
   en: {
     select_group_first: 'Please select a group.',
@@ -79,6 +81,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     refresh_success: 'Invite code has been refreshed.',
     invite_refresh_hint: "After everyone has joined, click 'Refresh' to invalidate the old code. Only people with the new code can join.",
     saving: 'Saving...',
+    session_error: 'No session. Please log in again.',
   },
   ja: {
     select_group_first: 'グループを選択してください。',
@@ -105,6 +108,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     refresh_success: '招待コードを再発行しました。',
     invite_refresh_hint: '参加者が揃ったら「再発行」を押して古いコードを無効にしてください。新しいコードを知らない人は参加できません。',
     saving: '保存中...',
+    session_error: 'セッションがありません。再度ログインしてください。',
   },
   'zh-CN': {
     select_group_first: '请先选择群组。',
@@ -131,6 +135,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     refresh_success: '邀请码已重新生成。',
     invite_refresh_hint: '所有人加入后，点击「重新生成」使旧邀请码失效。只有持有新码的人可以加入。',
     saving: '保存中...',
+    session_error: '无会话，请重新登录。',
   },
   'zh-TW': {
     select_group_first: '請先選擇群組。',
@@ -157,6 +162,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     refresh_success: '邀請碼已重新產生。',
     invite_refresh_hint: '所有人加入後，點擊「重新產生」使舊邀請碼失效。僅持有新碼的人可加入。',
     saving: '儲存中...',
+    session_error: '無工作階段，請重新登入。',
   },
 };
 

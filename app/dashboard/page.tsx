@@ -131,7 +131,7 @@ interface AppState {
 }
 
 const INITIAL_STATE: AppState = {
-  familyName: "Hearth: Family Haven",
+  familyName: "",
   location: { address: "", latitude: 0, longitude: 0, userId: "", updatedAt: "" },
   familyLocations: [],
   todos: [],
@@ -139,7 +139,7 @@ const INITIAL_STATE: AppState = {
   events: [],
   messages: [],
   titleStyle: {
-    content: "Hearth: Family Haven",
+    content: "",
     color: '#9333ea',
     fontSize: 48,
     fontWeight: '700',
@@ -1004,7 +1004,7 @@ export default function FamilyHub() {
         ?? currentGroup?.family_name?.trim()
         ?? state.familyName
         ?? titleStyle?.content
-        ?? 'Hearth: Family Haven';
+        ?? ct('app_title');
       return {
         content,
         color: typeof o.color === 'string' ? o.color : '#9333ea',
@@ -1017,12 +1017,12 @@ export default function FamilyHub() {
     return {
       ...INITIAL_STATE.titleStyle,
       ...titleStyle,
-      content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || 'Hearth: Family Haven',
+      content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || ct('app_title'),
     };
-  }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle]);
+  }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle, ct]);
 
-  const dashboardTitleText = effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven';
-  const isDefaultDashboardTitle = dashboardTitleText === 'Hearth: Family Haven';
+  const dashboardTitleText = effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || ct('app_title');
+  const isDefaultDashboardTitle = dashboardTitleText === ct('app_title');
   // 사용자가 지정한 폰트 크기가 있으면 그 값을 상한으로, 없으면 기본/커스텀별 기본 상한 사용
   const titleFitMaxFontSize = typeof effectiveTitleStyle?.fontSize === 'number'
     ? effectiveTitleStyle.fontSize
@@ -4277,14 +4277,14 @@ export default function FamilyHub() {
           // month가 유효한지 확인
           if (month === undefined) {
             console.error('유효하지 않은 월:', payload.month);
-            alert('유효하지 않은 월 형식입니다. JAN, FEB, MAR 등을 사용해주세요.');
+            alert(dt('event_invalid_month'));
             return;
           }
           
           const day = parseInt(payload.day);
           if (isNaN(day) || day < 1 || day > 31) {
             console.error('유효하지 않은 일:', payload.day);
-            alert('일(day)은 1-31 사이의 숫자여야 합니다.');
+            alert(dt('event_invalid_day'));
             return;
           }
           
@@ -4532,7 +4532,7 @@ export default function FamilyHub() {
                 }));
               }
               // 사용자에게 알림
-              alert('삭제에 실패했습니다. 다시 시도해주세요.');
+              alert(dt('delete_failed_retry'));
             });
           break;
         }
@@ -4645,7 +4645,7 @@ export default function FamilyHub() {
                 ...prevState,
                 events: prevState.events.filter(e => e.id !== payload.id)
               }));
-              alert('일정 저장에 실패했습니다. 다시 시도해 주세요.');
+              alert(dt('event_save_failed'));
             });
           break;
         }
@@ -4657,7 +4657,7 @@ export default function FamilyHub() {
           const eventToDelete = prev.events.find(e => String(e.id).trim() === deleteEventId);
           // 작성자만 삭제 가능: created_by가 있고 현재 사용자가 작성자가 아니면 거부
           if (eventToDelete && eventToDelete.created_by != null && String(eventToDelete.created_by).trim() !== String(userId).trim()) {
-            alert('작성자만 일정을 삭제할 수 있습니다.');
+            alert(dt('event_delete_author_only'));
             return prev;
           }
           
@@ -4686,7 +4686,7 @@ export default function FamilyHub() {
                 }));
               }
               // 사용자에게 알림
-              alert('삭제에 실패했습니다. 다시 시도해주세요.');
+              alert(dt('delete_failed_retry'));
             });
           break;
         }
@@ -4951,19 +4951,19 @@ export default function FamilyHub() {
   // 위치 공유 기능 (스트림 방식 - watchPosition 사용)
   const updateLocation = async () => {
     if (!userId || !isAuthenticated) {
-      alert('로그인이 필요합니다.');
+      alert(dt('login_required'));
       return;
     }
 
     if (!navigator.geolocation) {
-      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+      alert(dt('location_geolocation_unsupported'));
       return;
     }
 
     // 이미 추적 중이면 중지
     if (geolocationWatchIdRef.current !== null) {
       stopLocationTracking();
-      alert('위치 추적이 중지되었습니다.');
+      alert(dt('location_tracking_stopped'));
       return;
     }
 
@@ -4976,7 +4976,7 @@ export default function FamilyHub() {
       // 권한 확인
       const permissionResult = await navigator.permissions?.query({ name: 'geolocation' }).catch(() => null);
       if (permissionResult?.state === 'denied') {
-        alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+        alert(dt('location_permission_denied'));
         setIsLocationSharing(false);
         return;
       }
@@ -5198,7 +5198,7 @@ export default function FamilyHub() {
 
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
+              errorMessage = dt('location_permission_denied');
               shouldStop = true;
               break;
             case error.POSITION_UNAVAILABLE:
@@ -5239,7 +5239,7 @@ export default function FamilyHub() {
       let shouldAlert = true;
 
       if (error.code === 1) {
-        errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
+        errorMessage = dt('location_permission_denied');
       } else if (error.code === 2) {
         errorMessage = '위치를 가져올 수 없습니다. GPS가 켜져 있는지 확인해주세요.';
       } else if (error.code === 3 || error.message === 'TIMEOUT') {
@@ -5666,7 +5666,7 @@ export default function FamilyHub() {
   const endLocationSharing = async (requestId: string, silent: boolean = false, skipReload: boolean = false) => {
     if (!userId || !isAuthenticated) {
       if (!silent) {
-        alert('로그인이 필요합니다.');
+        alert(dt('login_required'));
       }
       return;
     }
@@ -5676,7 +5676,7 @@ export default function FamilyHub() {
     }
 
     // silent 모드가 아닐 때만 확인 창 표시
-    if (!silent && !confirm('위치 공유를 종료하시겠습니까?')) {
+    if (!silent && !confirm(dt('location_share_stop_confirm'))) {
       return;
     }
 
@@ -5684,7 +5684,7 @@ export default function FamilyHub() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         if (!silent) {
-          alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+          alert(dt('auth_session_expired'));
         }
         return;
       }
@@ -5720,7 +5720,7 @@ export default function FamilyHub() {
         }));
         
         if (!silent) {
-          alert('위치 공유가 종료되었습니다.');
+          alert(dt('location_share_stopped'));
         }
         
         // skipReload가 false일 때만 재로드 (무한 루프 방지)
@@ -5740,7 +5740,7 @@ export default function FamilyHub() {
     } catch (error) {
       console.error('위치 공유 종료 오류:', error);
       if (!silent) {
-        alert('위치 공유 종료 중 오류가 발생했습니다.');
+        alert(dt('location_share_stop_error'));
       }
     }
   };
@@ -5769,7 +5769,7 @@ export default function FamilyHub() {
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        throw new Error(dt('auth_session_expired'));
       }
 
       // API를 통해 서버 사이드에서 모든 사용자 조회 (profiles가 비어있으면 auth.users에서 조회)
@@ -5831,12 +5831,12 @@ export default function FamilyHub() {
   // "여기야" 버튼 클릭 시 현재 위치 공유
   const handleShareMyLocation = async () => {
     if (!userId || !isAuthenticated) {
-      alert('로그인이 필요합니다.');
+      alert(dt('login_required'));
       return;
     }
 
     if (!navigator.geolocation) {
-      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
+      alert(dt('location_geolocation_unsupported'));
       return;
     }
 
@@ -5960,13 +5960,13 @@ export default function FamilyHub() {
       // 위치 목록 다시 로드 (승인된 요청이 반영된 후)
       await loadFamilyLocations();
 
-      alert('위치를 공유했습니다!');
+      alert(dt('location_shared_success'));
     } catch (error: any) {
       console.error('위치 공유 오류:', error);
       if (error.code === 1) {
-        alert('위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
+        alert(dt('location_permission_denied'));
       } else {
-        alert('위치를 가져오는데 실패했습니다. 다시 시도해주세요.');
+        alert(dt('location_fetch_failed'));
       }
     }
   };
@@ -5974,11 +5974,11 @@ export default function FamilyHub() {
   // 위치 요청 보내기
   const sendLocationRequest = async (targetUserId: string) => {
     if (!userId || !isAuthenticated) {
-      alert('로그인이 필요합니다.');
+      alert(dt('login_required'));
       return;
     }
     if (!currentGroupId) {
-      alert('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
+      alert(dt('group_info_missing'));
       return;
     }
 
@@ -6005,7 +6005,7 @@ export default function FamilyHub() {
       const result = await response.json();
 
       if (result.success) {
-        alert('위치 요청을 보냈습니다.');
+        alert(dt('location_request_sent'));
         await loadLocationRequests();
         setShowLocationRequestModal(false);
         setSelectedUserForRequest(null);
@@ -6019,18 +6019,18 @@ export default function FamilyHub() {
       }
     } catch (error) {
       console.error('위치 요청 전송 오류:', error);
-      alert('위치 요청 전송 중 오류가 발생했습니다.');
+      alert(dt('location_request_send_error'));
     }
   };
 
   // 위치 요청 승인/거부/취소
   const handleLocationRequestAction = async (requestId: string, action: 'accept' | 'reject' | 'cancel') => {
     if (!userId || !isAuthenticated) {
-      alert('로그인이 필요합니다.');
+      alert(dt('login_required'));
       return;
     }
     if (!currentGroupId) {
-      alert('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
+      alert(dt('group_info_missing'));
       return;
     }
 
@@ -6127,9 +6127,9 @@ export default function FamilyHub() {
             // 위치 가져오기 실패해도 승인은 완료되었으므로 계속 진행
           }
           
-          alert('위치 공유가 승인되었습니다.');
+          alert(dt('location_share_approved'));
         } else if (action === 'reject') {
-          alert('위치 요청을 거부했습니다.');
+          alert(dt('location_request_rejected'));
         } else {
           // ✅ 위치 요청 취소 시 state.location 초기화
           setState(prev => ({
@@ -6146,7 +6146,7 @@ export default function FamilyHub() {
           // 위치 추적 중지
           stopLocationTracking();
           
-          alert('위치 요청을 취소했습니다.');
+          alert(dt('location_request_cancelled'));
         }
         
         await loadLocationRequests();
@@ -6174,7 +6174,7 @@ export default function FamilyHub() {
       }
     } catch (error) {
       console.error('위치 요청 처리 오류:', error);
-      alert('요청 처리 중 오류가 발생했습니다.');
+      alert(dt('request_processing_error'));
     } finally {
       // 처리 완료 표시 제거
       processingRequestsRef.current.delete(requestKey);
@@ -6196,7 +6196,7 @@ export default function FamilyHub() {
       // 인증 토큰 가져오기
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        alert('인증 정보를 가져올 수 없습니다. 다시 로그인해주세요.');
+        alert(dt('auth_fetch_failed'));
         return;
       }
 
@@ -6419,7 +6419,7 @@ export default function FamilyHub() {
 
   // Logout Handler
   const handleLogout = async () => {
-    if (confirm('로그아웃 하시겠습니까?')) {
+    if (confirm(dt('logout_confirm'))) {
       // Push 토큰 삭제 (백그라운드 알림 방지)
       if (userId) {
         try {
@@ -6513,19 +6513,19 @@ export default function FamilyHub() {
   const handleUpdateNickname = async () => {
     const nickname = nicknameInputRef.current?.value;
     if (!nickname?.trim()) {
-      alert("닉네임을 입력해주세요.");
+      alert(dt('nickname_required'));
       return;
     }
 
     // 보안: 입력 검증
     const sanitizedNickname = sanitizeInput(nickname, 20);
     if (!sanitizedNickname || sanitizedNickname.length < 2) {
-      alert("닉네임은 2자 이상 20자 이하로 입력해주세요.");
+      alert(dt('nickname_length_invalid'));
       return;
     }
 
     if (!userId || !isAuthenticated) {
-      alert("로그인이 필요합니다.");
+      alert(dt('login_required'));
       return;
     }
 
@@ -6579,7 +6579,7 @@ export default function FamilyHub() {
         await loadPiggySummary();
       }
 
-      alert("닉네임이 업데이트되었습니다.");
+      alert(dt('nickname_updated'));
     } catch (error: any) {
       console.error('닉네임 업데이트 오류:', error);
       alert(dt('nickname_update_failed') + (error.message || ct('error_unknown')));
@@ -6590,13 +6590,13 @@ export default function FamilyHub() {
   const submitNewTodo = () => {
     const text = todoTextRef.current?.value;
     const who = todoWhoRef.current?.value;
-    if (!text?.trim()) return alert("할 일을 입력해주세요.");
+    if (!text?.trim()) return alert(dt('todo_required'));
     
     // 보안: 입력 검증
     const sanitizedText = sanitizeInput(text, 100);
     const sanitizedWho = sanitizeInput(who, 20);
     
-    if (!sanitizedText) return alert("유효하지 않은 입력입니다.");
+    if (!sanitizedText) return alert(dt('invalid_input'));
     
     // assignee를 텍스트에 포함시켜서 저장 (Realtime 핸들러에서 추출)
     const textWithAssignee = sanitizedWho && sanitizedWho !== "누구나" 
@@ -6634,13 +6634,13 @@ export default function FamilyHub() {
 
   const handleEventSubmit = () => {
     if (!eventForm.title.trim()) {
-      alert("일정 제목을 입력해주세요.");
+      alert(dt('event_title_required'));
       return;
     }
     // 날짜는 openEventModal에서 달력 선택일(또는 오늘)로 설정됨
     const dayNum = parseInt(eventForm.day, 10);
     if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
-      alert("날짜가 올바르지 않습니다.");
+      alert(dt('event_date_invalid'));
       return;
     }
     const sanitizedTitle = sanitizeInput(eventForm.title, 100);
@@ -6649,7 +6649,7 @@ export default function FamilyHub() {
     const sanitizedDesc = sanitizeInput(eventForm.desc, 200);
     
     if (!sanitizedTitle) {
-      alert("유효하지 않은 제목입니다.");
+      alert(dt('event_title_invalid'));
       return;
     }
     const eventDateStr = eventFormDate
@@ -6879,7 +6879,7 @@ export default function FamilyHub() {
                         (file.type === '' && allowedExtensions.includes(fileExtension));
     
     if (!isValidType) {
-      alert('지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF, HEIC/HEIF, RAW 형식만 가능)');
+      alert(dt('unsupported_file_format'));
       e.target.value = "";
       return;
     }
@@ -6887,7 +6887,7 @@ export default function FamilyHub() {
     // 보안: 파일 이름 검증 (악성 파일명 방지)
     const fileName = file.name;
     if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
-      alert('유효하지 않은 파일명입니다.');
+      alert(dt('invalid_filename'));
       e.target.value = "";
       return;
     }
@@ -7127,7 +7127,7 @@ export default function FamilyHub() {
           // Presigned URL 방식 (큰 파일)
           try {
             if (!currentGroupId) {
-              throw new Error('그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.');
+              throw new Error(dt('group_info_missing'));
             }
             const uploadDebugPayload = {
               fileName: uploadFileName,
@@ -7992,7 +7992,7 @@ export default function FamilyHub() {
           uploadFailed: true
         });
       }
-      alert('이미지 처리 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
+      alert(dt('image_processing_error') + (error.message || ct('error_unknown')));
     }
     
     // Reset file input
@@ -8021,7 +8021,7 @@ export default function FamilyHub() {
             fileInputRef.current.click();
           } else {
             console.error('fileInputRef is still null after retry');
-            alert('파일 입력을 초기화할 수 없습니다. 페이지를 새로고침해주세요.');
+            alert(dt('file_input_reset_error'));
           }
         }, 100);
       }
@@ -8214,7 +8214,7 @@ export default function FamilyHub() {
         {/* Header (사진 액자 항상 표시, 타이틀/배경 제거) */}
         <header className="app-header">
           <TitlePage 
-            title={currentGroup?.family_name?.trim() || state.familyName || 'Hearth: Family Haven'}
+            title={currentGroup?.family_name?.trim() || state.familyName || ct('app_title')}
             photos={state.album || []}
             titleStyle={effectiveTitleStyle}
             onTitleStyleChange={(style) => {
@@ -8293,9 +8293,9 @@ export default function FamilyHub() {
           {/* Family Memories Section */}
           <section className="content-section memory-vault">
             <div className="section-header">
-              <h2 className="section-title-large">Family Memories</h2>
+              <h2 className="section-title-large">{dt('section_title_memories')}</h2>
               <label htmlFor="file-upload-input" className="btn-upload" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                Upload
+                {dt('photo_upload_btn')}
               </label>
               <input 
                 id="file-upload-input"
@@ -8981,7 +8981,7 @@ if (confirm(dt('photo_delete_confirm'))) {
                       >
                         <span>{cell.day}</span>
                         {cell.isToday && (
-                          <span style={{ fontSize: '10px', fontWeight: '600', color: '#b45309' }}>오늘</span>
+                          <span style={{ fontSize: '10px', fontWeight: '600', color: '#b45309' }}>{dt('event_today')}</span>
                         )}
                       </button>
                     );
@@ -9300,7 +9300,7 @@ if (confirm(dt('photo_delete_confirm'))) {
           {/* Family Chat Section */}
           <section className="content-section">
             <div className="section-header">
-              <h3 className="section-title">Family Chat</h3>
+              <h3 className="section-title">{dt('section_title_chat')}</h3>
           </div>
             <div className="section-body">
               <div ref={chatBoxRef} className="chat-messages">
@@ -9451,8 +9451,8 @@ if (confirm(dt('photo_delete_confirm'))) {
                                 <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #fde68a' }}>
                                   <span style={{ fontSize: '13px', color: '#78350f' }}>{req.nickname || ct('member')}</span>
                                   <div style={{ display: 'flex', gap: '6px' }}>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleRejectAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>거절</button>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleApproveAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>승인</button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleRejectAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{dt('piggy_reject_btn')}</button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleApproveAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{dt('piggy_approve_btn')}</button>
                                   </div>
                                 </div>
                               ))}
@@ -9599,7 +9599,7 @@ if (confirm(dt('photo_delete_confirm'))) {
           {/* Location Section */}
           <section className="content-section">
             <div className="section-header">
-              <h3 className="section-title">Family Location</h3>
+              <h3 className="section-title">{dt('section_title_location')}</h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => {
@@ -9620,7 +9620,7 @@ if (confirm(dt('photo_delete_confirm'))) {
                   }}
                 >
                   <span>📍</span>
-                  <span>어디야</span>
+                  <span>{dt('location_where_btn')}</span>
                 </button>
         </div>
             </div>
@@ -9831,7 +9831,7 @@ if (confirm(dt('photo_delete_confirm'))) {
                                     }}
                                   >
                                     <span>📍</span>
-                                    <span>여기야</span>
+                                    <span>{dt('location_share_btn')}</span>
                                   </button>
                                   <button
                                     onClick={() => handleLocationRequestAction(req.id, 'reject')}
@@ -10031,12 +10031,12 @@ if (confirm(dt('photo_delete_confirm'))) {
                               )}
                               {hasAcceptedRequest && (
                                 <div style={{ fontSize: '12px', color: '#059669' }}>
-                                  ✓ 이미 승인됨
+                                  {dt('location_already_approved')}
                                 </div>
                               )}
                               {hasPendingRequest && (
                                 <div style={{ fontSize: '12px', color: '#f59e0b' }}>
-                                  ⏳ 요청 대기 중
+                                  {dt('location_request_pending')}
                                 </div>
                               )}
                             </div>

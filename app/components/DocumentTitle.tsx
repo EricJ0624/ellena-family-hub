@@ -13,10 +13,11 @@ export function DocumentTitle() {
   const title = getCommonTranslation(lang, 'app_title');
 
   useEffect(() => {
-    if (typeof document !== 'undefined' && title) {
-      document.title = title;
+    if (typeof document !== 'undefined') {
+      if (title) document.title = title;
+      document.documentElement.lang = lang;
     }
-  }, [title]);
+  }, [title, lang]);
 
   return null;
 }

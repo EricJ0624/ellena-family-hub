@@ -3263,7 +3263,7 @@ export default function AdminPage() {
                                       fontSize: '12px',
                                       fontWeight: '600',
                                     }}>
-                                      {selectedGroup.owner_id === member.user_id ? '소유자' : (member.role === 'ADMIN' ? '관리자' : '멤버')}
+                                      {selectedGroup.owner_id === member.user_id ? at('role_owner') : (member.role === 'ADMIN' ? at('role_admin') : at('role_member'))}
                                     </span>
                                   </td>
                                   <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
@@ -3587,7 +3587,7 @@ export default function AdminPage() {
                                 color: '#94a3b8',
                                 marginTop: '12px',
                               }}>
-                                작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                                {at('written_at')} {new Date(announcement.created_at).toLocaleString('ko-KR')}
                               </div>
                             </motion.div>
                           ))}
@@ -3598,7 +3598,7 @@ export default function AdminPage() {
                               color: '#94a3b8',
                             }}>
                               <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                              <p>공지사항이 없습니다.</p>
+                              <p>{at('no_announcements')}</p>
                             </div>
                           )}
                         </div>
@@ -3707,8 +3707,8 @@ export default function AdminPage() {
                                 color: '#94a3b8',
                                 marginTop: '12px',
                               }}>
-                                작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                                {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                                {at('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                                {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                               </div>
                             </motion.div>
                           ))}
@@ -3779,12 +3779,12 @@ export default function AdminPage() {
                                       {request.status === 'pending'
                                         ? "대기중"
                                         : request.status === 'approved'
-                                          ? "승인됨"
+                                          ? at('status_approved')
                                           : request.status === 'rejected'
-                                            ? "거절됨"
+                                            ? at('status_rejected')
                                             : request.status === 'expired'
-                                              ? "만료됨"
-                                              : "취소됨"}
+                                              ? at('status_expired')
+                                              : at('status_revoked')}
                                     </span>
                                   </div>
                                   <p style={{
@@ -3801,7 +3801,7 @@ export default function AdminPage() {
                                       color: '#059669',
                                       marginBottom: '8px',
                                     }}>
-                                      만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
+                                      {at('expires_at_label')} {new Date(request.expires_at).toLocaleString('ko-KR')}
                                     </div>
                                   )}
                                   {request.status === 'rejected' && request.rejection_reason && (
@@ -3818,7 +3818,7 @@ export default function AdminPage() {
                                         color: '#991b1b',
                                         marginBottom: '4px',
                                       }}>
-                                        거절 사유:
+                                        {at('rejection_reason_label')}
                                       </div>
                                       <p style={{
                                         fontSize: '14px',
@@ -3837,8 +3837,8 @@ export default function AdminPage() {
                                 marginTop: '12px',
                               }}>
                                 요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
-                                {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
-                                {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                                {request.approved_at && ` | ${at('approved_at_label')} ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                                {request.rejected_at && ` | ${at('rejected_at_label')} ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
                               </div>
                             </motion.div>
                           ))}
@@ -3866,7 +3866,7 @@ export default function AdminPage() {
                     color: '#94a3b8',
                   }}>
                     <Shield style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                    <p>관리할 그룹을 선택해주세요.</p>
+                    <p>{at('select_group_prompt')}</p>
                   </div>
                 )}
               </div>
@@ -3887,7 +3887,7 @@ export default function AdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    공지사항 관리
+                    {at('announcement_manage_title')}
                   </h2>
                   <button
                     onClick={() => {
@@ -3912,7 +3912,7 @@ export default function AdminPage() {
                     }}
                   >
                     <Plus style={{ width: '18px', height: '18px' }} />
-                    새 공지 작성
+                    {at('new_announcement_btn')}
                   </button>
                 </div>
 
@@ -3960,7 +3960,7 @@ export default function AdminPage() {
                                 fontSize: '11px',
                                 fontWeight: '600',
                               }}>
-                                비활성화됨
+                                {at('disabled_label')}
                               </span>
                             )}
                             <span style={{
@@ -3971,7 +3971,7 @@ export default function AdminPage() {
                               fontSize: '11px',
                               fontWeight: '600',
                             }}>
-                              {(announcement as any).target === 'ALL_MEMBERS' ? '모든 멤버' : '관리자만'}
+                              {(announcement as any).target === 'ALL_MEMBERS' ? at('target_all_members') : at('target_admin_only')}
                             </span>
                           </div>
                           <p style={{
@@ -4009,13 +4009,13 @@ export default function AdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            수정
+                            {at('edit_btn')}
                           </button>
                           {announcement.is_active ? (
                             // 활성화된 공지: 비활성화 버튼
                             <button
                               onClick={async () => {
-                                if (!confirm('이 공지사항을 비활성화하시겠습니까?\n\n비활성화된 공지는 사용자에게 표시되지 않으며, 나중에 영구 삭제할 수 있습니다.')) {
+                                if (!confirm(at('deactivate_confirm'))) {
                                   return;
                                 }
 
@@ -4038,14 +4038,14 @@ export default function AdminPage() {
                                   const result = await response.json();
 
                                   if (!response.ok) {
-                                    throw new Error(result.error || '공지 비활성화에 실패했습니다.');
+                                    throw new Error(result.error || at('deactivate_failed'));
                                   }
 
-                                  alert(result.message || '공지가 비활성화되었습니다.');
+                                  alert(result.message || at('deactivate_success'));
                                   loadAnnouncements();
                                 } catch (error: any) {
-                                  console.error('공지 비활성화 오류:', error);
-                                  alert(error.message || '공지 비활성화 중 오류가 발생했습니다.');
+                                  console.error(at('deactivate_failed'), error);
+                                  alert(error.message || at('deactivate_failed'));
                                 } finally {
                                   setLoadingData(false);
                                 }
@@ -4061,13 +4061,13 @@ export default function AdminPage() {
                                 cursor: 'pointer',
                               }}
                             >
-                              비활성화
+                              {at('deactivate_btn')}
                             </button>
                           ) : (
                             // 비활성화된 공지: 영구 삭제 버튼
                             <button
                               onClick={async () => {
-                                if (!confirm('⚠️ 이 공지사항을 영구적으로 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                                if (!confirm('⚠️ ' + at('confirm_permanent_delete'))) {
                                   return;
                                 }
 
@@ -4090,14 +4090,14 @@ export default function AdminPage() {
                                   const result = await response.json();
 
                                   if (!response.ok) {
-                                    throw new Error(result.error || '공지 삭제에 실패했습니다.');
+                                    throw new Error(result.error || at('deactivate_failed'));
                                   }
 
-                                  alert(result.message || '공지가 영구적으로 삭제되었습니다.');
+                                  alert(result.message || at('deactivate_success'));
                                   loadAnnouncements();
                                 } catch (error: any) {
-                                  console.error('공지 삭제 오류:', error);
-                                  alert(error.message || '공지 삭제 중 오류가 발생했습니다.');
+                                  console.error(at('deactivate_failed'), error);
+                                  alert(error.message || at('deactivate_failed'));
                                 } finally {
                                   setLoadingData(false);
                                 }
@@ -4113,7 +4113,7 @@ export default function AdminPage() {
                                 cursor: 'pointer',
                               }}
                             >
-                              영구 삭제
+                              {at('permanent_delete_btn')}
                             </button>
                           )}
                         </div>
@@ -4123,8 +4123,8 @@ export default function AdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
-                        {announcement.updated_at !== announcement.created_at && ` | 수정일: ${new Date(announcement.updated_at).toLocaleString('ko-KR')}`}
+                        {at('written_at')} {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                        {announcement.updated_at !== announcement.created_at && ` | ${at('updated_at_label')} ${new Date(announcement.updated_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -4135,7 +4135,7 @@ export default function AdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>공지사항이 없습니다.</p>
+                      <p>{at('no_announcements')}</p>
                     </div>
                   )}
                 </div>
@@ -4178,7 +4178,7 @@ export default function AdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        {editingAnnouncement ? at('tab_announcements') + ' ' + (adminLang === 'ko' ? '수정' : 'Edit') : (adminLang === 'ko' ? '새 공지 작성' : 'New announcement')}
+                        {editingAnnouncement ? at('edit_announcement_modal_title') : at('new_announcement_modal_title')}
                       </h3>
                       <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
                         {ANNOUNCEMENT_LANGS.map((l) => (
@@ -4205,7 +4205,7 @@ export default function AdminPage() {
                         type="text"
                         value={announcementTitleI18n[announcementLangTab] ?? ''}
                         onChange={(e) => setAnnouncementTitleI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))}
-                        placeholder={adminLang === 'ko' ? '제목을 입력하세요...' : 'Enter title...'}
+                        placeholder={at('placeholder_title')}
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -4219,7 +4219,7 @@ export default function AdminPage() {
                       <textarea
                         value={announcementContentI18n[announcementLangTab] ?? ''}
                         onChange={(e) => setAnnouncementContentI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))}
-                        placeholder={adminLang === 'ko' ? '내용을 입력하세요...' : 'Enter content...'}
+                        placeholder={at('placeholder_content')}
                         style={{
                           width: '100%',
                           minHeight: '280px',
@@ -4385,10 +4385,10 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || (adminLang === 'ko' ? '공지 수정에 실패했습니다.' : 'Failed to update announcement.'));
+                                  throw new Error(result.error || at('error_announcement_update_failed'));
                                 }
 
-                                alert(adminLang === 'ko' ? '공지가 수정되었습니다.' : 'Announcement updated.');
+                                alert(at('success_announcement_updated'));
                               } else {
                                 const response = await fetch('/api/admin/announcements', {
                                   method: 'POST',
@@ -4407,10 +4407,10 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || (adminLang === 'ko' ? '공지 작성에 실패했습니다.' : 'Failed to create announcement.'));
+                                  throw new Error(result.error || at('error_announcement_create_failed'));
                                 }
 
-                                alert(adminLang === 'ko' ? '공지가 작성되었습니다.' : 'Announcement created.');
+                                alert(at('success_announcement_created'));
                               }
 
                               setEditingAnnouncement(undefined);
@@ -4419,8 +4419,8 @@ export default function AdminPage() {
                               setAnnouncementTarget('ADMIN_ONLY');
                               loadAnnouncements();
                             } catch (error: any) {
-                              console.error('공지 작성/수정 오류:', error);
-                              alert(error.message || '공지 작성/수정 중 오류가 발생했습니다.');
+                              console.error(at('error_announcement_update_failed'), error);
+                              alert(error.message || at('error_announcement_update_failed'));
                             } finally {
                               setLoadingData(false);
                             }
@@ -4436,7 +4436,7 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          {editingAnnouncement ? '수정' : '작성'}
+                          {editingAnnouncement ? at('edit_btn') : at('write_btn')}
                         </button>
                       </div>
                     </div>
@@ -4536,7 +4536,7 @@ export default function AdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '닫힘'}
+                              {ticket.status === 'pending' ? at('status_pending') : ticket.status === 'answered' ? at('status_answered') : at('status_closed')}
                             </span>
                             {ticket.groups && (
                               <span style={{
@@ -4618,8 +4618,8 @@ export default function AdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        {at('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -4668,7 +4668,7 @@ export default function AdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        답변 작성
+                        {at('submit_answer_btn')}
                       </h3>
                       <div style={{
                         marginBottom: '16px',
@@ -4694,7 +4694,7 @@ export default function AdminPage() {
                       <textarea
                         value={ticketAnswer}
                         onChange={(e) => setTicketAnswer(e.target.value)}
-                        placeholder="답변을 입력하세요..."
+                        placeholder={at('placeholder_answer')}
                         style={{
                           width: '100%',
                           minHeight: '200px',
@@ -4728,7 +4728,7 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          취소
+                          {at('cancel_btn')}
                         </button>
                         <button
                           onClick={async () => {
@@ -4740,7 +4740,7 @@ export default function AdminPage() {
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+                                alert(at('error_session_expired'));
                                 return;
                               }
 
@@ -4849,7 +4849,7 @@ export default function AdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '닫힘'}
+                              {ticket.status === 'pending' ? at('status_pending') : ticket.status === 'answered' ? at('status_answered') : at('status_closed')}
                             </span>
                             {ticket.groups && (
                               <span style={{
@@ -4927,8 +4927,8 @@ export default function AdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        {at('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -4977,12 +4977,12 @@ export default function AdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        답변 작성
+                        {at('submit_answer_btn')}
                       </h3>
                       <textarea
                         value={ticketAnswer}
                         onChange={(e) => setTicketAnswer(e.target.value)}
-                        placeholder="답변을 입력하세요..."
+                        placeholder={at('placeholder_answer')}
                         style={{
                           width: '100%',
                           minHeight: '200px',
@@ -5015,7 +5015,7 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          취소
+                          {at('cancel_btn')}
                         </button>
                         <button
                           onClick={async () => {
@@ -5048,16 +5048,16 @@ export default function AdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '답변 작성에 실패했습니다.');
+                                throw new Error(result.error || at('error_answer_failed'));
                               }
 
-                              alert('답변이 작성되었습니다.');
+                              alert(at('success_answer_submitted'));
                               setEditingTicket(null);
                               setTicketAnswer('');
                               loadSupportTickets();
                             } catch (error: any) {
-                              console.error('답변 작성 오류:', error);
-                              alert(error.message || '답변 작성 중 오류가 발생했습니다.');
+                              console.error(at('error_answer_failed'), error);
+                              alert(error.message || at('error_answer_failed'));
                             } finally {
                               setLoadingData(false);
                             }
@@ -5073,7 +5073,7 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          답변 작성
+                          {at('submit_answer_btn')}
                         </button>
                       </div>
                     </div>
@@ -5172,7 +5172,7 @@ export default function AdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-                              {request.status === 'pending' ? '대기중' : request.status === 'approved' ? '승인됨' : request.status === 'rejected' ? '거절됨' : request.status === 'expired' ? '만료됨' : '취소됨'}
+                              {request.status === 'pending' ? at('status_pending') : request.status === 'approved' ? at('status_approved') : request.status === 'rejected' ? at('status_rejected') : request.status === 'expired' ? at('status_expired') : at('status_revoked')}
                             </span>
                           </div>
                           <p style={{
@@ -5189,7 +5189,7 @@ export default function AdminPage() {
                               color: '#059669',
                               marginBottom: '8px',
                             }}>
-                              만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
+                              {at('expires_at_label')} {new Date(request.expires_at).toLocaleString('ko-KR')}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
@@ -5206,7 +5206,7 @@ export default function AdminPage() {
                                 color: '#991b1b',
                                 marginBottom: '4px',
                               }}>
-                                거절 사유:
+                                {at('rejection_reason_label')}
                               </div>
                               <p style={{
                                 fontSize: '14px',
@@ -5251,14 +5251,14 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '승인에 실패했습니다.');
+                                  throw new Error(result.error || at('error_approve_failed'));
                                 }
 
-                                alert('접근 요청이 승인되었습니다.');
+                                alert(at('success_request_approved'));
                                 loadAccessRequests();
                               } catch (error: any) {
-                                console.error('승인 오류:', error);
-                                alert(error.message || '승인 중 오류가 발생했습니다.');
+                                console.error(at('error_approve_failed'), error);
+                                alert(error.message || at('error_approve_failed'));
                               } finally {
                                 setLoadingData(false);
                               }
@@ -5274,11 +5274,11 @@ export default function AdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            승인
-                          </button>
+{at('approve_btn')}
+                            </button>
                           <button
                             onClick={async () => {
-                              const reason = prompt('거절 사유를 입력하세요:');
+                              const reason = prompt(at('prompt_reject_reason'));
                               if (!reason) return;
 
                               try {
@@ -5305,14 +5305,14 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '거절에 실패했습니다.');
+                                  throw new Error(result.error || at('error_reject_failed'));
                                 }
 
-                                alert('접근 요청이 거절되었습니다.');
+                                alert(at('success_request_rejected'));
                                 loadAccessRequests();
                               } catch (error: any) {
-                                console.error('거절 오류:', error);
-                                alert(error.message || '거절 중 오류가 발생했습니다.');
+                                console.error(at('error_reject_failed'), error);
+                                alert(error.message || at('error_reject_failed'));
                               } finally {
                                 setLoadingData(false);
                               }
@@ -5328,8 +5328,8 @@ export default function AdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            거절
-                          </button>
+{at('reject_btn')}
+                            </button>
                         </div>
                       )}
                       {request.status === 'approved' && request.expires_at && new Date(request.expires_at) > new Date() && (
@@ -5340,7 +5340,7 @@ export default function AdminPage() {
                         }}>
                           <button
                             onClick={async () => {
-                              if (!confirm('정말로 이 접근 권한을 취소하시겠습니까?')) {
+                              if (!confirm(at('confirm_revoke_request'))) {
                                 return;
                               }
 
@@ -5366,14 +5366,14 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '취소에 실패했습니다.');
+                                  throw new Error(result.error || at('error_revoke_failed'));
                                 }
 
-                                alert('접근 권한이 취소되었습니다.');
+                                alert(at('success_request_revoked'));
                                 loadAccessRequests();
                               } catch (error: any) {
-                                console.error('취소 오류:', error);
-                                alert(error.message || '취소 중 오류가 발생했습니다.');
+console.error(at('error_revoke_failed'), error);
+                                  alert(error.message || at('error_revoke_failed'));
                               } finally {
                                 setLoadingData(false);
                               }
@@ -5389,7 +5389,7 @@ export default function AdminPage() {
                               cursor: 'pointer',
                             }}
                           >
-                            권한 취소
+                            {at('revoke_btn')}
                           </button>
                         </div>
                       )}
@@ -5399,8 +5399,8 @@ export default function AdminPage() {
                         marginTop: '12px',
                       }}>
                         요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
-                        {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
-                        {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                        {request.approved_at && ` | ${at('approved_at_label')} ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
+                        {request.rejected_at && ` | ${at('rejected_at_label')} ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -5502,7 +5502,7 @@ export default function AdminPage() {
                         <textarea
                           value={newAccessRequestReason}
                           onChange={(e) => setNewAccessRequestReason(e.target.value)}
-                          placeholder="접근이 필요한 이유를 입력하세요..."
+                          placeholder={at('placeholder_reason')}
                           style={{
                             width: '100%',
                             minHeight: '150px',
@@ -5537,16 +5537,16 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          취소
+                          {at('cancel_btn')}
                         </button>
                         <button
                           onClick={async () => {
                             if (!newAccessRequestGroupId) {
-                              alert('그룹을 선택해주세요.');
+                              alert(at('select_group_prompt'));
                               return;
                             }
                             if (!newAccessRequestReason.trim()) {
-                              alert('요청 이유를 입력해주세요.');
+                              alert(at('placeholder_reason'));
                               return;
                             }
 
@@ -5573,17 +5573,17 @@ export default function AdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '접근 요청 작성에 실패했습니다.');
+                                throw new Error(result.error || at('error_create_request_failed'));
                               }
 
-                              alert('접근 요청이 작성되었습니다.');
+                              alert(at('success_request_created'));
                               setShowNewAccessRequestModal(false);
                               setNewAccessRequestGroupId('');
                               setNewAccessRequestReason('');
                               loadAccessRequests();
                             } catch (error: any) {
-                              console.error('접근 요청 작성 오류:', error);
-                              alert(error.message || '접근 요청 작성 중 오류가 발생했습니다.');
+                              console.error(at('error_create_request_failed'), error);
+                              alert(error.message || at('error_create_request_failed'));
                             } finally {
                               setLoadingData(false);
                             }
@@ -5654,14 +5654,14 @@ export default function AdminPage() {
                   </select>
                   <input
                     type="text"
-                    placeholder="작업자 ID (admin_id)"
+                    placeholder={at('placeholder_admin_id')}
                     value={auditLogFilters.admin_id}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, admin_id: e.target.value.trim() }))}
                     style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}
                   />
                   <input
                     type="text"
-                    placeholder="그룹 ID"
+                    placeholder={at('placeholder_group_id')}
                     value={auditLogFilters.group_id}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, group_id: e.target.value.trim() }))}
                     style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}

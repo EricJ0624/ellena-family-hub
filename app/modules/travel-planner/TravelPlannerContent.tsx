@@ -1498,7 +1498,7 @@ export function TravelPlannerContent() {
                   style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid #e2e8f0', background: '#f1f5f9' }}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                  숙소·먹거리·일정에 위도/경도를 입력하면 지도에 표시됩니다. 파란색: 숙소, 초록색: 먹거리, 빨간색: 관광지
+                  {tt('map_hint')}
                 </p>
               </div>
             )}

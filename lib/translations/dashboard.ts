@@ -97,6 +97,54 @@ export type DashboardTranslations = {
   delete_warning_owner_groups: string;
   delete_warning_owner_deleted: string;
   delete_warning_owner_final: string;
+  section_title_memories: string;
+  section_title_chat: string;
+  section_title_location: string;
+  // UI buttons/labels (report)
+  photo_upload_btn: string;
+  event_today: string;
+  location_where_btn: string;
+  piggy_reject_btn: string;
+  piggy_approve_btn: string;
+  location_already_approved: string;
+  location_request_pending: string;
+  // Alerts / confirms
+  event_invalid_month: string;
+  event_invalid_day: string;
+  delete_failed_retry: string;
+  event_save_failed: string;
+  event_delete_author_only: string;
+  login_required: string;
+  location_geolocation_unsupported: string;
+  location_tracking_stopped: string;
+  location_permission_denied: string;
+  location_share_stop_confirm: string;
+  auth_session_expired: string;
+  location_share_stopped: string;
+  location_share_stop_error: string;
+  location_shared_success: string;
+  location_fetch_failed: string;
+  group_info_missing: string;
+  location_request_sent: string;
+  location_request_send_error: string;
+  location_share_approved: string;
+  location_request_rejected: string;
+  location_request_cancelled: string;
+  request_processing_error: string;
+  auth_fetch_failed: string;
+  logout_confirm: string;
+  nickname_required: string;
+  nickname_length_invalid: string;
+  nickname_updated: string;
+  todo_required: string;
+  invalid_input: string;
+  event_title_required: string;
+  event_date_invalid: string;
+  event_title_invalid: string;
+  unsupported_file_format: string;
+  invalid_filename: string;
+  image_processing_error: string;
+  file_input_reset_error: string;
 };
 
 const dashboard: Record<LangCode, DashboardTranslations> = {
@@ -186,6 +234,52 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_groups: '📋 소유한 그룹:',
     delete_warning_owner_deleted: '⚠️ 삭제되는 내용:\n• 소유한 그룹이 영구적으로 삭제됩니다\n• 그룹의 모든 데이터가 삭제됩니다 (사진, 일정, 메모, 저금통 등)\n• 그룹의 모든 멤버가 자동으로 탈퇴됩니다\n• 이 작업은 되돌릴 수 없습니다',
     delete_warning_owner_final: '정말로 탈퇴하시겠습니까?',
+    section_title_memories: '가족 추억',
+    section_title_chat: '가족 채팅',
+    section_title_location: '가족 위치',
+    photo_upload_btn: 'Upload',
+    event_today: '오늘',
+    location_where_btn: '어디야',
+    piggy_reject_btn: '거절',
+    piggy_approve_btn: '승인',
+    location_already_approved: '✓ 이미 승인됨',
+    location_request_pending: '⏳ 요청 대기 중',
+    event_invalid_month: '유효하지 않은 월 형식입니다. JAN, FEB, MAR 등을 사용해주세요.',
+    event_invalid_day: '일(day)은 1-31 사이의 숫자여야 합니다.',
+    delete_failed_retry: '삭제에 실패했습니다. 다시 시도해주세요.',
+    event_save_failed: '일정 저장에 실패했습니다. 다시 시도해 주세요.',
+    event_delete_author_only: '작성자만 일정을 삭제할 수 있습니다.',
+    login_required: '로그인이 필요합니다.',
+    location_geolocation_unsupported: '이 브라우저는 위치 서비스를 지원하지 않습니다.',
+    location_tracking_stopped: '위치 추적이 중지되었습니다.',
+    location_permission_denied: '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.',
+    location_share_stop_confirm: '위치 공유를 종료하시겠습니까?',
+    auth_session_expired: '인증 세션이 만료되었습니다. 다시 로그인해주세요.',
+    location_share_stopped: '위치 공유가 종료되었습니다.',
+    location_share_stop_error: '위치 공유 종료 중 오류가 발생했습니다.',
+    location_shared_success: '위치를 공유했습니다!',
+    location_fetch_failed: '위치를 가져오는데 실패했습니다. 다시 시도해주세요.',
+    group_info_missing: '그룹 정보가 없습니다. 그룹을 선택한 후 다시 시도해주세요.',
+    location_request_sent: '위치 요청을 보냈습니다.',
+    location_request_send_error: '위치 요청 전송 중 오류가 발생했습니다.',
+    location_share_approved: '위치 공유가 승인되었습니다.',
+    location_request_rejected: '위치 요청을 거부했습니다.',
+    location_request_cancelled: '위치 요청을 취소했습니다.',
+    request_processing_error: '요청 처리 중 오류가 발생했습니다.',
+    auth_fetch_failed: '인증 정보를 가져올 수 없습니다. 다시 로그인해주세요.',
+    logout_confirm: '로그아웃 하시겠습니까?',
+    nickname_required: '닉네임을 입력해주세요.',
+    nickname_length_invalid: '닉네임은 2자 이상 20자 이하로 입력해주세요.',
+    nickname_updated: '닉네임이 업데이트되었습니다.',
+    todo_required: '할 일을 입력해주세요.',
+    invalid_input: '유효하지 않은 입력입니다.',
+    event_title_required: '일정 제목을 입력해주세요.',
+    event_date_invalid: '날짜가 올바르지 않습니다.',
+    event_title_invalid: '유효하지 않은 제목입니다.',
+    unsupported_file_format: '지원하지 않는 파일 형식입니다. (JPEG, PNG, WebP, GIF, HEIC/HEIF, RAW 형식만 가능)',
+    invalid_filename: '유효하지 않은 파일명입니다.',
+    image_processing_error: '이미지 처리 중 오류가 발생했습니다: ',
+    file_input_reset_error: '파일 입력을 초기화할 수 없습니다. 페이지를 새로고침해주세요.',
   },
   en: {
     todo_modal_title: 'New task',
@@ -273,6 +367,52 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_groups: '📋 Groups you own:',
     delete_warning_owner_deleted: '⚠️ What will be deleted:\n• Groups you own will be permanently deleted\n• All group data will be deleted (photos, events, notes, piggy bank, etc.)\n• All group members will be removed\n• This cannot be undone',
     delete_warning_owner_final: 'Do you really want to delete your account?',
+    section_title_memories: 'Family Memories',
+    section_title_chat: 'Family Chat',
+    section_title_location: 'Family Location',
+    photo_upload_btn: 'Upload',
+    event_today: 'Today',
+    location_where_btn: 'Where are you?',
+    piggy_reject_btn: 'Reject',
+    piggy_approve_btn: 'Approve',
+    location_already_approved: '✓ Already approved',
+    location_request_pending: '⏳ Request pending',
+    event_invalid_month: 'Invalid month format. Use JAN, FEB, MAR, etc.',
+    event_invalid_day: 'Day must be a number between 1 and 31.',
+    delete_failed_retry: 'Delete failed. Please try again.',
+    event_save_failed: 'Failed to save the event. Please try again.',
+    event_delete_author_only: 'Only the author can delete this event.',
+    login_required: 'Please log in.',
+    location_geolocation_unsupported: 'This browser does not support location services.',
+    location_tracking_stopped: 'Location tracking has been stopped.',
+    location_permission_denied: 'Location permission was denied. Please allow location access in your browser settings.',
+    location_share_stop_confirm: 'Stop sharing your location?',
+    auth_session_expired: 'Your session has expired. Please log in again.',
+    location_share_stopped: 'Location sharing has been stopped.',
+    location_share_stop_error: 'An error occurred while stopping location sharing.',
+    location_shared_success: 'Location shared!',
+    location_fetch_failed: 'Failed to get location. Please try again.',
+    group_info_missing: 'No group selected. Please select a group and try again.',
+    location_request_sent: 'Location request sent.',
+    location_request_send_error: 'An error occurred while sending the location request.',
+    location_share_approved: 'Location sharing has been approved.',
+    location_request_rejected: 'Location request was rejected.',
+    location_request_cancelled: 'Location request was cancelled.',
+    request_processing_error: 'An error occurred while processing your request.',
+    auth_fetch_failed: 'Could not retrieve authentication. Please log in again.',
+    logout_confirm: 'Do you want to log out?',
+    nickname_required: 'Please enter a nickname.',
+    nickname_length_invalid: 'Nickname must be 2–20 characters.',
+    nickname_updated: 'Nickname has been updated.',
+    todo_required: 'Please enter a task.',
+    invalid_input: 'Invalid input.',
+    event_title_required: 'Please enter an event title.',
+    event_date_invalid: 'Invalid date.',
+    event_title_invalid: 'Invalid title.',
+    unsupported_file_format: 'Unsupported file format. (JPEG, PNG, WebP, GIF, HEIC/HEIF, RAW only)',
+    invalid_filename: 'Invalid filename.',
+    image_processing_error: 'An error occurred while processing the image: ',
+    file_input_reset_error: 'Could not reset file input. Please refresh the page.',
   },
   ja: {
     todo_modal_title: '新しいタスク',
@@ -360,6 +500,52 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_groups: '📋 所有しているグループ：',
     delete_warning_owner_deleted: '⚠️ 削除される内容：\n• 所有しているグループは完全に削除されます\n• グループのすべてのデータが削除されます（写真、予定、メモ、貯金箱など）\n• グループの全メンバーが自動的に退会します\n• この操作は元に戻せません',
     delete_warning_owner_final: '本当に退会しますか？',
+    section_title_memories: '家族の思い出',
+    section_title_chat: '家族チャット',
+    section_title_location: '家族の位置',
+    photo_upload_btn: 'アップロード',
+    event_today: '今日',
+    location_where_btn: 'どこ？',
+    piggy_reject_btn: '拒否',
+    piggy_approve_btn: '承認',
+    location_already_approved: '✓ 承認済み',
+    location_request_pending: '⏳ リクエスト待ち',
+    event_invalid_month: '月の形式が無効です。JAN、FEB、MARなどを使用してください。',
+    event_invalid_day: '日は1〜31の数字で入力してください。',
+    delete_failed_retry: '削除に失敗しました。もう一度お試しください。',
+    event_save_failed: '予定の保存に失敗しました。もう一度お試しください。',
+    event_delete_author_only: '作成者のみ予定を削除できます。',
+    login_required: 'ログインしてください。',
+    location_geolocation_unsupported: 'このブラウザは位置情報に対応していません。',
+    location_tracking_stopped: '位置情報の共有を停止しました。',
+    location_permission_denied: '位置情報の利用が拒否されました。ブラウザの設定で位置情報を許可してください。',
+    location_share_stop_confirm: '位置情報の共有を終了しますか？',
+    auth_session_expired: 'セッションの有効期限が切れました。再度ログインしてください。',
+    location_share_stopped: '位置情報の共有を終了しました。',
+    location_share_stop_error: '位置情報の共有終了中にエラーが発生しました。',
+    location_shared_success: '位置情報を共有しました！',
+    location_fetch_failed: '位置情報の取得に失敗しました。もう一度お試しください。',
+    group_info_missing: 'グループが選択されていません。グループを選択して再度お試しください。',
+    location_request_sent: '位置情報のリクエストを送信しました。',
+    location_request_send_error: '位置情報リクエストの送信中にエラーが発生しました。',
+    location_share_approved: '位置情報の共有が承認されました。',
+    location_request_rejected: '位置情報のリクエストを拒否しました。',
+    location_request_cancelled: '位置情報のリクエストをキャンセルしました。',
+    request_processing_error: 'リクエストの処理中にエラーが発生しました。',
+    auth_fetch_failed: '認証情報を取得できません。再度ログインしてください。',
+    logout_confirm: 'ログアウトしますか？',
+    nickname_required: 'ニックネームを入力してください。',
+    nickname_length_invalid: 'ニックネームは2〜20文字で入力してください。',
+    nickname_updated: 'ニックネームを更新しました。',
+    todo_required: 'タスクを入力してください。',
+    invalid_input: '無効な入力です。',
+    event_title_required: '予定のタイトルを入力してください。',
+    event_date_invalid: '日付が正しくありません。',
+    event_title_invalid: '無効なタイトルです。',
+    unsupported_file_format: '対応していないファイル形式です。（JPEG、PNG、WebP、GIF、HEIC/HEIF、RAWのみ）',
+    invalid_filename: '無効なファイル名です。',
+    image_processing_error: '画像の処理中にエラーが発生しました: ',
+    file_input_reset_error: 'ファイル入力をリセットできません。ページを再読み込みしてください。',
   },
   'zh-CN': {
     todo_modal_title: '新建任务',
@@ -447,6 +633,52 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_groups: '📋 您拥有的群组：',
     delete_warning_owner_deleted: '⚠️ 将被删除的内容：\n• 您拥有的群组将被永久删除\n• 群组所有数据将被删除（照片、日程、笔记、存钱罐等）\n• 群组所有成员将被移除\n• 此操作无法撤销',
     delete_warning_owner_final: '确定要注销账户吗？',
+    section_title_memories: '家庭回忆',
+    section_title_chat: '家庭聊天',
+    section_title_location: '家庭位置',
+    photo_upload_btn: '上传',
+    event_today: '今天',
+    location_where_btn: '你在哪？',
+    piggy_reject_btn: '拒绝',
+    piggy_approve_btn: '批准',
+    location_already_approved: '✓ 已批准',
+    location_request_pending: '⏳ 请求待处理',
+    event_invalid_month: '月份格式无效。请使用 JAN、FEB、MAR 等。',
+    event_invalid_day: '日期须为 1–31 之间的数字。',
+    delete_failed_retry: '删除失败，请重试。',
+    event_save_failed: '日程保存失败，请重试。',
+    event_delete_author_only: '仅作者可删除该日程。',
+    login_required: '请先登录。',
+    location_geolocation_unsupported: '此浏览器不支持定位服务。',
+    location_tracking_stopped: '位置共享已停止。',
+    location_permission_denied: '已拒绝位置权限。请在浏览器设置中允许位置访问。',
+    location_share_stop_confirm: '确定要停止共享位置吗？',
+    auth_session_expired: '登录已过期，请重新登录。',
+    location_share_stopped: '已停止共享位置。',
+    location_share_stop_error: '停止共享位置时发生错误。',
+    location_shared_success: '已共享位置！',
+    location_fetch_failed: '获取位置失败，请重试。',
+    group_info_missing: '未选择群组。请选择群组后重试。',
+    location_request_sent: '已发送位置请求。',
+    location_request_send_error: '发送位置请求时发生错误。',
+    location_share_approved: '位置共享已批准。',
+    location_request_rejected: '已拒绝位置请求。',
+    location_request_cancelled: '已取消位置请求。',
+    request_processing_error: '处理请求时发生错误。',
+    auth_fetch_failed: '无法获取认证信息，请重新登录。',
+    logout_confirm: '确定要退出登录吗？',
+    nickname_required: '请输入昵称。',
+    nickname_length_invalid: '昵称须为 2–20 个字符。',
+    nickname_updated: '昵称已更新。',
+    todo_required: '请输入待办内容。',
+    invalid_input: '输入无效。',
+    event_title_required: '请输入日程标题。',
+    event_date_invalid: '日期不正确。',
+    event_title_invalid: '标题无效。',
+    unsupported_file_format: '不支持该文件格式。（仅支持 JPEG、PNG、WebP、GIF、HEIC/HEIF、RAW）',
+    invalid_filename: '文件名无效。',
+    image_processing_error: '处理图片时发生错误：',
+    file_input_reset_error: '无法重置文件输入，请刷新页面。',
   },
   'zh-TW': {
     todo_modal_title: '新任務',
@@ -534,6 +766,52 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_groups: '📋 您擁有的群組：',
     delete_warning_owner_deleted: '⚠️ 將被刪除的內容：\n• 您擁有的群組將被永久刪除\n• 群組所有資料將被刪除（照片、日程、筆記、存錢筒等）\n• 群組所有成員將被移除\n• 此操作無法復原',
     delete_warning_owner_final: '確定要刪除帳戶嗎？',
+    section_title_memories: '家庭回憶',
+    section_title_chat: '家庭聊天',
+    section_title_location: '家庭位置',
+    photo_upload_btn: '上傳',
+    event_today: '今天',
+    location_where_btn: '你在哪？',
+    piggy_reject_btn: '拒絕',
+    piggy_approve_btn: '核准',
+    location_already_approved: '✓ 已核准',
+    location_request_pending: '⏳ 請求待處理',
+    event_invalid_month: '月份格式無效。請使用 JAN、FEB、MAR 等。',
+    event_invalid_day: '日期須為 1–31 之間的數字。',
+    delete_failed_retry: '刪除失敗，請重試。',
+    event_save_failed: '日程儲存失敗，請重試。',
+    event_delete_author_only: '僅作者可刪除該日程。',
+    login_required: '請先登入。',
+    location_geolocation_unsupported: '此瀏覽器不支援定位服務。',
+    location_tracking_stopped: '位置分享已停止。',
+    location_permission_denied: '已拒絕位置權限。請在瀏覽器設定中允許位置存取。',
+    location_share_stop_confirm: '確定要停止分享位置嗎？',
+    auth_session_expired: '登入已過期，請重新登入。',
+    location_share_stopped: '已停止分享位置。',
+    location_share_stop_error: '停止分享位置時發生錯誤。',
+    location_shared_success: '已分享位置！',
+    location_fetch_failed: '取得位置失敗，請重試。',
+    group_info_missing: '未選擇群組。請選擇群組後重試。',
+    location_request_sent: '已發送位置請求。',
+    location_request_send_error: '發送位置請求時發生錯誤。',
+    location_share_approved: '位置分享已核准。',
+    location_request_rejected: '已拒絕位置請求。',
+    location_request_cancelled: '已取消位置請求。',
+    request_processing_error: '處理請求時發生錯誤。',
+    auth_fetch_failed: '無法取得認證資訊，請重新登入。',
+    logout_confirm: '確定要登出嗎？',
+    nickname_required: '請輸入暱稱。',
+    nickname_length_invalid: '暱稱須為 2–20 個字元。',
+    nickname_updated: '暱稱已更新。',
+    todo_required: '請輸入待辦內容。',
+    invalid_input: '輸入無效。',
+    event_title_required: '請輸入日程標題。',
+    event_date_invalid: '日期不正確。',
+    event_title_invalid: '標題無效。',
+    unsupported_file_format: '不支援該檔案格式。（僅支援 JPEG、PNG、WebP、GIF、HEIC/HEIF、RAW）',
+    invalid_filename: '檔案名稱無效。',
+    image_processing_error: '處理圖片時發生錯誤：',
+    file_input_reset_error: '無法重設檔案輸入，請重新整理頁面。',
   },
 };
 

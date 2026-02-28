@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
 import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
+import { getCommonTranslation } from '@/lib/translations/common';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { lang } = useLanguage();
   const t = (key: keyof LoginTranslations) => getLoginTranslation(lang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -422,7 +424,7 @@ export default function LoginPage() {
             marginBottom: '12px',
             letterSpacing: '-0.5px'
           }}>
-            Hearth: <span style={{ fontSize: '24px' }}>Family Haven</span>
+            {ct('app_title')}
           </h1>
           <p style={{
             fontSize: '16px',

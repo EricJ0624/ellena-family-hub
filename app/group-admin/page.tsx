@@ -1393,7 +1393,7 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        작성일: {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                        {gat('written_at')} {new Date(announcement.created_at).toLocaleString('ko-KR')}
                       </div>
                     </motion.div>
                   ))}
@@ -1544,8 +1544,8 @@ export default function GroupAdminPage() {
                         color: '#94a3b8',
                         marginTop: '12px',
                       }}>
-                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        {gat('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | ${gat('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
@@ -1802,14 +1802,14 @@ export default function GroupAdminPage() {
                               fontWeight: '600',
                             }}>
                               {request.status === 'pending'
-                                ? "대기중"
+                                ? gat('status_pending')
                                 : request.status === 'approved'
-                                  ? "승인됨"
+                                  ? gat('status_approved')
                                   : request.status === 'rejected'
-                                    ? "거절됨"
+                                    ? gat('status_rejected')
                                     : request.status === 'expired'
-                                      ? "만료됨"
-                                      : "취소됨"}
+                                      ? gat('status_expired')
+                                      : gat('status_cancelled')}
                             </span>
                           </div>
                           <p style={{

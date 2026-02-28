@@ -9,11 +9,6 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTitlePageTranslation } from '@/lib/translations/titlePage';
 import { getCommonTranslation } from '@/lib/translations/common';
 
-// 상수 분리 - 텍스트 내용 관리
-const CONSTANTS = {
-  TITLE: 'Hearth: Family Haven',
-  DEFAULT_TITLE: 'Hearth: Family Haven',
-} as const;
 
 // 날짜 기반 해시 시드 생성 함수
 const getDateHashSeed = (date: Date): string => {
@@ -165,7 +160,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                 >
                   <Image
                     src={selectedPhoto.data}
-                    alt="오늘의 추억"
+                    alt={tp('photo_alt_today_memory')}
                     fill
                     style={{
                       objectFit: 'contain',
@@ -290,7 +285,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                 paddingBottom: '8px',
                 borderBottom: '1px solid rgba(139, 69, 19, 0.2)',
               }}>
-                프레임 스타일 선택
+                {tp('frame_style_select')}
               </div>
               <div style={{
                 display: 'flex',
@@ -338,13 +333,13 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                       }}
                     />
                     <div style={{ flex: 1, textAlign: 'left' }}>
-                      <div style={{ fontWeight: '600' }}>{frame.name}</div>
+                      <div style={{ fontWeight: '600' }}>{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
                       <div style={{ 
                         fontSize: '10px', 
                         opacity: 0.8,
                         marginTop: '2px',
                       }}>
-                        {frame.description}
+                        {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
                       </div>
                     </div>
                   </motion.button>
@@ -383,7 +378,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
         textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
       }}
     >
-      {titleStyle.content || title || CONSTANTS.DEFAULT_TITLE}
+      {titleStyle.content || title}
     </motion.h1>
   );
 };
@@ -401,20 +396,34 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [localStyle, setLocalStyle] = useState<TitleStyle>(titleStyle);
   
-  // 인기 있는 웹 폰트 목록 (메모이제이션)
+  // 인기 있는 웹 폰트 목록 (메모이제이션) — 라벨은 tp('font_*')로 표시
+  const fontOptionKeys: Record<string, keyof import('@/lib/translations/titlePage').TitlePageTranslations> = {
+    'Inter': 'font_inter',
+    'Roboto': 'font_roboto',
+    'Poppins': 'font_poppins',
+    'Montserrat': 'font_montserrat',
+    'Playfair Display': 'font_playfair_display',
+    'Merriweather': 'font_merriweather',
+    'Lora': 'font_lora',
+    'Dancing Script': 'font_dancing_script',
+    'Pacifico': 'font_pacifico',
+    'Arial': 'font_arial',
+    'Georgia': 'font_georgia',
+    'Times New Roman': 'font_times_new_roman',
+  };
   const fontFamilies = useMemo(() => [
-    { value: 'Inter', label: 'Inter (모던)', category: 'Sans-serif' },
-    { value: 'Roboto', label: 'Roboto (깔끔)', category: 'Sans-serif' },
-    { value: 'Poppins', label: 'Poppins (세련)', category: 'Sans-serif' },
-    { value: 'Montserrat', label: 'Montserrat (강렬)', category: 'Sans-serif' },
-    { value: 'Playfair Display', label: 'Playfair Display (우아)', category: 'Serif' },
-    { value: 'Merriweather', label: 'Merriweather (전통)', category: 'Serif' },
-    { value: 'Lora', label: 'Lora (읽기 좋음)', category: 'Serif' },
-    { value: 'Dancing Script', label: 'Dancing Script (손글씨)', category: 'Script' },
-    { value: 'Pacifico', label: 'Pacifico (캐주얼)', category: 'Script' },
-    { value: 'Arial', label: 'Arial (기본)', category: 'Sans-serif' },
-    { value: 'Georgia', label: 'Georgia (클래식)', category: 'Serif' },
-    { value: 'Times New Roman', label: 'Times New Roman (전통)', category: 'Serif' },
+    { value: 'Inter', category: 'Sans-serif' },
+    { value: 'Roboto', category: 'Sans-serif' },
+    { value: 'Poppins', category: 'Sans-serif' },
+    { value: 'Montserrat', category: 'Sans-serif' },
+    { value: 'Playfair Display', category: 'Serif' },
+    { value: 'Merriweather', category: 'Serif' },
+    { value: 'Lora', category: 'Serif' },
+    { value: 'Dancing Script', category: 'Script' },
+    { value: 'Pacifico', category: 'Script' },
+    { value: 'Arial', category: 'Sans-serif' },
+    { value: 'Georgia', category: 'Serif' },
+    { value: 'Times New Roman', category: 'Serif' },
   ], []);
   
   // titleStyle prop이 변경될 때 localStyle 업데이트
@@ -512,7 +521,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
           >
             {fontFamilies.map((font) => (
               <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
-                {font.label}
+                {tp(fontOptionKeys[font.value])}
               </option>
             ))}
           </select>
@@ -706,10 +715,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
   showTitle = true,
   noBackground = false,
 }) => {
+  const { lang } = useLanguage();
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [showEditor, setShowEditor] = useState(false);
   const [frameStyle, setFrameStyle] = useState<FrameStyle>('baroque');
   const [internalTitleStyle, setInternalTitleStyle] = useState<TitleStyle>({
-    content: title || CONSTANTS.DEFAULT_TITLE,
+    content: title || ct('app_title'),
     color: '#9333ea',
     fontSize: 48,
     fontWeight: '700',
@@ -827,7 +838,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}
         {showTitle && (
           <TitleText 
-            title={title || CONSTANTS.TITLE} 
+            title={title || ct('app_title')} 
             titleStyle={titleStyle}
             onTitleClick={editable ? handleTitleClick : undefined} 
           />
@@ -862,5 +873,5 @@ const TitlePage: React.FC<TitlePageProps> = ({
 };
 
 export default TitlePage;
-export { CONSTANTS, DesignEditor };
+export { DesignEditor };
 export type { TitleStyle };

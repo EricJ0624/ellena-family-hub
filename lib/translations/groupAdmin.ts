@@ -38,6 +38,8 @@ export type GroupAdminTranslations = {
   confirm_delete_photo: string;
   photo_deleted: string;
   error_delete_photo: string;
+  written_at: string;
+  answered_at: string;
 }
 
 const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
@@ -79,6 +81,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     confirm_delete_photo: '정말로 이 사진을 삭제하시겠습니까?',
     photo_deleted: '사진이 삭제되었습니다.',
     error_delete_photo: '사진 삭제 중 오류가 발생했습니다.',
+    written_at: '작성일:',
+    answered_at: '답변일:',
   },
   en: {
     checking_permission: 'Checking permission...',
@@ -118,6 +122,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     confirm_delete_photo: 'Delete this photo?',
     photo_deleted: 'Photo deleted.',
     error_delete_photo: 'Failed to delete photo.',
+    written_at: 'Written:',
+    answered_at: 'Answered:',
   },
   ja: {
     checking_permission: '権限確認中...',
@@ -157,6 +163,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     confirm_delete_photo: 'この写真を削除しますか？',
     photo_deleted: '写真を削除しました。',
     error_delete_photo: '削除に失敗しました。',
+    written_at: '作成日：',
+    answered_at: '返信日：',
   },
   'zh-CN': {
     checking_permission: '正在验证权限...',
@@ -196,6 +204,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     confirm_delete_photo: '确定删除此照片？',
     photo_deleted: '照片已删除。',
     error_delete_photo: '删除失败。',
+    written_at: '创建日：',
+    answered_at: '回复日：',
   },
   'zh-TW': {
     checking_permission: '正在驗證權限...',
@@ -235,6 +245,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     confirm_delete_photo: '確定要刪除此照片？',
     photo_deleted: '照片已刪除。',
     error_delete_photo: '刪除失敗。',
+    written_at: '建立日：',
+    answered_at: '回覆日：',
   },
 };
 
