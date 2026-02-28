@@ -57,13 +57,15 @@ interface DailyPhotoFrameProps {
   onShuffle?: () => void;
   frameStyle?: FrameStyle;
   onFrameChange?: (style: FrameStyle) => void;
+  onFrameClick?: () => void;
 }
 
-const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({ 
-  photos, 
+const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
+  photos,
   onShuffle,
   frameStyle = 'baroque',
-  onFrameChange 
+  onFrameChange,
+  onFrameClick,
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
@@ -99,13 +101,18 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         margin: '0 auto',
       }}
     >
-      {/* SVG 프레임 컨테이너 */}
+      {/* SVG 프레임 컨테이너 (클릭 시 가족 추억 페이지로 이동) */}
       <div
+        role={onFrameClick ? 'button' : undefined}
+        tabIndex={onFrameClick ? 0 : undefined}
+        onClick={onFrameClick}
+        onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
         style={{
           position: 'relative',
           width: '100%',
           aspectRatio: '4/3',
           overflow: 'visible',
+          cursor: onFrameClick ? 'pointer' : undefined,
         }}
       >
         {/* SVG 프레임 (배경) */}
@@ -191,15 +198,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
           </div>
         </div>
         
-        {/* 버튼 그룹 (우측 하단) */}
-        <div style={{
-          position: 'absolute',
-          bottom: '10px',
-          right: '10px',
-          display: 'flex',
-          gap: '8px',
-          zIndex: 40,
-        }}>
+        {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '10px',
+            right: '10px',
+            display: 'flex',
+            gap: '8px',
+            zIndex: 40,
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
           {/* 프레임 선택 버튼 */}
           <motion.button
             whileHover={{ scale: 1.1 }}
@@ -255,10 +266,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
           )}
         </div>
 
-        {/* 프레임 선택 패널 */}
+        {/* 프레임 선택 패널 - 클릭 시 액자 클릭(이동) 방지 */}
         <AnimatePresence>
           {showFrameSelector && (
             <motion.div
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
@@ -703,10 +716,12 @@ interface TitlePageProps {
   showTitle?: boolean;
   /** true면 배경 그라데이션/패턴 제거 (투명) */
   noBackground?: boolean;
+  /** 액자 클릭 시 호출 (예: 가족 추억 페이지로 이동) */
+  onFrameClick?: () => void;
 }
 
-const TitlePage: React.FC<TitlePageProps> = ({ 
-  title, 
+const TitlePage: React.FC<TitlePageProps> = ({
+  title,
   onTitleClick,
   photos = [],
   titleStyle: externalTitleStyle,
@@ -714,6 +729,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
   editable = true,
   showTitle = true,
   noBackground = false,
+  onFrameClick,
 }) => {
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
@@ -829,10 +845,11 @@ const TitlePage: React.FC<TitlePageProps> = ({
         )}
 
         {/* 오늘의 무작위 사진 액자 (사진 없어도 액자 표시, 추후 기본 디자인 추가 예정) */}
-        <DailyPhotoFrame 
-          photos={photos || []} 
+        <DailyPhotoFrame
+          photos={photos || []}
           frameStyle={frameStyle}
           onFrameChange={setFrameStyle}
+          onFrameClick={onFrameClick}
         />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}

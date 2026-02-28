@@ -4,6 +4,7 @@ import {
   base64ToBlob,
   checkCloudinaryConfig,
   checkS3Config,
+  deleteFromCloudinary,
   downloadFromUrl,
   generateAppS3KeyFromMasterKey,
   getImageMetadata,
@@ -210,6 +211,17 @@ export async function POST(request: NextRequest) {
         { error: 'S3 upload failed.', details: s3Error || 'Unknown error' },
         { status: 500 }
       );
+    }
+
+    // Cloudinary는 변환만 사용: S3 저장 후 Cloudinary 자산 삭제, DB에는 저장하지 않음(옵션 A)
+    if (cloudinaryPublicId) {
+      try {
+        await deleteFromCloudinary(cloudinaryPublicId);
+      } catch (e) {
+        console.warn('Cloudinary destroy after transform failed (non-fatal):', e);
+      }
+      cloudinaryUrl = '';
+      cloudinaryPublicId = '';
     }
 
     let appUrl: string | null = null;

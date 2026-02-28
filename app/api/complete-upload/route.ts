@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateUser,
   checkCloudinaryConfig,
+  deleteFromCloudinary,
   deleteFromS3,
   downloadFromS3,
   downloadFromUrl,
@@ -159,6 +160,17 @@ export async function POST(request: NextRequest) {
       } catch (appResizeError: any) {
         console.warn('App image generation failed:', appResizeError.message);
       }
+    }
+
+    // Cloudinary는 변환만 사용: S3 저장 후 Cloudinary 자산 삭제, DB에는 저장하지 않음(옵션 A)
+    if (cloudinaryPublicId) {
+      try {
+        await deleteFromCloudinary(cloudinaryPublicId);
+      } catch (e) {
+        console.warn('Cloudinary destroy after transform failed (non-fatal):', e);
+      }
+      cloudinaryUrl = '';
+      cloudinaryPublicId = '';
     }
 
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GroupProvider } from '@/app/contexts/GroupContext';
+import { AlbumProvider } from '@/app/contexts/AlbumContext';
 
 export function GroupProviderWrapper({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
@@ -24,7 +25,10 @@ export function GroupProviderWrapper({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  // Always wrap with GroupProvider so LanguageProvider and useGroup/useLanguage are available during SSR/prerender.
-  return <GroupProvider userId={userId}>{children}</GroupProvider>;
+  return (
+    <GroupProvider userId={userId}>
+      <AlbumProvider>{children}</AlbumProvider>
+    </GroupProvider>
+  );
 }
 
