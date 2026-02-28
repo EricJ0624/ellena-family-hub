@@ -1,6 +1,7 @@
 import type { LangCode } from '@/lib/language-fonts';
 
 export type CommonTranslations = {
+  app_title: string; // 브라우저 탭 제목
   user: string;
   me: string;
   me_suffix: string; // " (나)"
@@ -21,6 +22,7 @@ export type CommonTranslations = {
 
 const common: Record<LangCode, CommonTranslations> = {
   ko: {
+    app_title: 'Hearth: 가족의 공간',
     user: '사용자',
     me: '나',
     me_suffix: ' (나)',
@@ -39,6 +41,7 @@ const common: Record<LangCode, CommonTranslations> = {
     error_unknown: '알 수 없는 오류',
   },
   en: {
+    app_title: 'Hearth: Family Haven',
     user: 'User',
     me: 'Me',
     me_suffix: ' (me)',
@@ -57,6 +60,7 @@ const common: Record<LangCode, CommonTranslations> = {
     error_unknown: 'Unknown error',
   },
   ja: {
+    app_title: 'Hearth: 家族の空間',
     user: 'ユーザー',
     me: '自分',
     me_suffix: ' (自分)',
@@ -75,6 +79,7 @@ const common: Record<LangCode, CommonTranslations> = {
     error_unknown: '不明なエラー',
   },
   'zh-CN': {
+    app_title: 'Hearth: 家庭的空间',
     user: '用户',
     me: '我',
     me_suffix: ' (我)',
@@ -93,6 +98,7 @@ const common: Record<LangCode, CommonTranslations> = {
     error_unknown: '未知错误',
   },
   'zh-TW': {
+    app_title: 'Hearth: 家庭的空間',
     user: '使用者',
     me: '我',
     me_suffix: ' (我)',

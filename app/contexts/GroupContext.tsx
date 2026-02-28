@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { supabase } from '@/lib/supabase';
 import type { Group, Membership, MembershipRole } from '@/types/db';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
+import { DocumentTitle } from '@/app/components/DocumentTitle';
 
 interface GroupContextType {
   currentGroupId: string | null;
@@ -310,6 +311,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         isGroupAdmin={isGroupAdmin}
         refreshGroups={refreshGroups}
       >
+        <DocumentTitle />
         {children}
       </LanguageProvider>
     </GroupContext.Provider>
