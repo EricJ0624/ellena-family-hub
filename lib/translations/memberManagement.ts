@@ -30,6 +30,15 @@ export type MemberManagementTranslations = {
   role_owner: string;
   role_admin: string;
   role_member: string;
+  family_role_label: string;
+  family_role_none: string;
+  family_role_mom: string;
+  family_role_dad: string;
+  family_role_son: string;
+  family_role_daughter: string;
+  family_role_other: string;
+  family_role_saved: string;
+  family_role_save_failed: string;
 };
 
 const memberManagement: Record<LangCode, MemberManagementTranslations> = {
@@ -63,6 +72,15 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     role_owner: '소유자 (부모)',
     role_admin: '관리자 (부모)',
     role_member: '멤버 (아이 또는 가족 구성원)',
+    family_role_label: '가족 표시',
+    family_role_none: '미설정',
+    family_role_mom: '엄마',
+    family_role_dad: '아빠',
+    family_role_son: '아들',
+    family_role_daughter: '딸',
+    family_role_other: '기타',
+    family_role_saved: '가족 표시가 저장되었습니다.',
+    family_role_save_failed: '저장에 실패했습니다.',
   },
   en: {
     select_group_first: 'Please select a group.',
@@ -94,6 +112,15 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     role_owner: 'Owner (parent)',
     role_admin: 'Admin (parent)',
     role_member: 'Member (child or family)',
+    family_role_label: 'Family role',
+    family_role_none: 'Not set',
+    family_role_mom: 'Mom',
+    family_role_dad: 'Dad',
+    family_role_son: 'Son',
+    family_role_daughter: 'Daughter',
+    family_role_other: 'Other',
+    family_role_saved: 'Family role saved.',
+    family_role_save_failed: 'Failed to save.',
   },
   ja: {
     select_group_first: 'グループを選択してください。',
@@ -125,6 +152,15 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     role_owner: 'オーナー（保護者）',
     role_admin: '管理者（保護者）',
     role_member: 'メンバー（子どもまたは家族）',
+    family_role_label: '家族の表示',
+    family_role_none: '未設定',
+    family_role_mom: 'ママ',
+    family_role_dad: 'パパ',
+    family_role_son: '息子',
+    family_role_daughter: '娘',
+    family_role_other: 'その他',
+    family_role_saved: '家族の表示を保存しました。',
+    family_role_save_failed: '保存に失敗しました。',
   },
   'zh-CN': {
     select_group_first: '请先选择群组。',
@@ -156,6 +192,15 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     role_owner: '所有者（家长）',
     role_admin: '管理员（家长）',
     role_member: '成员（孩子或家人）',
+    family_role_label: '家庭显示',
+    family_role_none: '未设置',
+    family_role_mom: '妈妈',
+    family_role_dad: '爸爸',
+    family_role_son: '儿子',
+    family_role_daughter: '女儿',
+    family_role_other: '其他',
+    family_role_saved: '家庭显示已保存。',
+    family_role_save_failed: '保存失败。',
   },
   'zh-TW': {
     select_group_first: '請先選擇群組。',
@@ -187,6 +232,15 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     role_owner: '擁有者（家長）',
     role_admin: '管理員（家長）',
     role_member: '成員（孩子或家人）',
+    family_role_label: '家庭顯示',
+    family_role_none: '未設定',
+    family_role_mom: '媽媽',
+    family_role_dad: '爸爸',
+    family_role_son: '兒子',
+    family_role_daughter: '女兒',
+    family_role_other: '其他',
+    family_role_saved: '家庭顯示已儲存。',
+    family_role_save_failed: '儲存失敗。',
   },
 };
 

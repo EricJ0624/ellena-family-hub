@@ -8,7 +8,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
-import type { MembershipRole } from '@/types/db';
+import type { MembershipRole, FamilyRole } from '@/types/db';
 import GroupSettings from './GroupSettings';
 
 const DATE_LOCALE: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
@@ -19,6 +19,7 @@ interface MemberInfo {
   joined_at: string;
   email: string | null;
   nickname: string | null;
+  family_role: FamilyRole | null;
 }
 
 interface MemberManagementProps {
@@ -37,6 +38,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [showConfirmRemove, setShowConfirmRemove] = useState<string | null>(null);
   const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null);
+  const [updatingFamilyRoleUserId, setUpdatingFamilyRoleUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showGroupSettings, setShowGroupSettings] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,7 +95,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       // 그룹 멤버 조회 (뷰 사용 또는 직접 조인)
       const { data: membershipData, error: membershipError } = await supabase
         .from('memberships')
-        .select('user_id, role, joined_at')
+        .select('user_id, role, joined_at, family_role')
         .eq('group_id', currentGroupId)
         .order('joined_at', { ascending: true });
 
@@ -125,6 +127,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
           joined_at: membership.joined_at,
           email: profile?.email || null,
           nickname: profile?.nickname || null,
+          family_role: (membership as { family_role?: FamilyRole | null }).family_role ?? null,
         };
       });
 
@@ -242,6 +245,53 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       setUpdatingRoleUserId(null);
     }
   }, [currentGroupId, isAdmin, currentGroup, currentUserId, loadMembers, refreshMemberships]);
+
+  // 가족 표시 역할 변경 (선택사항)
+  const handleFamilyRoleChange = useCallback(async (memberUserId: string, newFamilyRole: FamilyRole | null) => {
+    if (!currentGroupId) return;
+
+    try {
+      setUpdatingFamilyRoleUserId(memberUserId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert(mmt('session_expired'));
+        setUpdatingFamilyRoleUserId(null);
+        return;
+      }
+
+      const response = await fetch('/api/groups/members/family-role', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: memberUserId,
+          groupId: currentGroupId,
+          familyRole: newFamilyRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || mmt('family_role_save_failed'));
+      }
+
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.user_id === memberUserId ? { ...m, family_role: newFamilyRole } : m
+        )
+      );
+      await refreshMemberships();
+    } catch (err: any) {
+      console.error('가족 표시 저장 실패:', err);
+      alert(err.message || mmt('family_role_save_failed'));
+    } finally {
+      setUpdatingFamilyRoleUserId(null);
+    }
+  }, [currentGroupId, loadMembers, refreshMemberships]);
 
   useEffect(() => {
     loadMembers();
@@ -416,6 +466,9 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                   {mmt('role')}
                 </th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                  {mmt('family_role_label')}
+                </th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
                   {mmt('joined_at')}
                 </th>
                 <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
@@ -426,11 +479,25 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
             <tbody>
               {filteredMembers.map((member, index) => {
                 const isCurrentUser = currentUserId === member.user_id;
-                const isOwner = member.user_id === currentGroup?.owner_id;
-                const canRemove = isAdmin && !isCurrentUser && !isOwner;
-                const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
+                const isOwnerMember = member.user_id === currentGroup?.owner_id;
+                const canRemove = isAdmin && !isCurrentUser && !isOwnerMember;
+                const canChangeRole = isAdmin && !isCurrentUser && !isOwnerMember;
                 const isUpdatingRole = updatingRoleUserId === member.user_id;
-                const roleLabel = isOwner ? mmt('role_owner') : member.role === 'ADMIN' ? mmt('role_admin') : mmt('role_member');
+                const isUpdatingFamilyRole = updatingFamilyRoleUserId === member.user_id;
+                const roleLabel = isOwnerMember ? mmt('role_owner') : member.role === 'ADMIN' ? mmt('role_admin') : mmt('role_member');
+                const isOwnerOrAdmin = isOwnerMember || member.role === 'ADMIN';
+                const familyRoleOptions: { value: FamilyRole | ''; label: string }[] = isOwnerOrAdmin
+                  ? [
+                      { value: '', label: mmt('family_role_none') },
+                      { value: 'mom', label: mmt('family_role_mom') },
+                      { value: 'dad', label: mmt('family_role_dad') },
+                    ]
+                  : [
+                      { value: '', label: mmt('family_role_none') },
+                      { value: 'son', label: mmt('family_role_son') },
+                      { value: 'daughter', label: mmt('family_role_daughter') },
+                      { value: 'other', label: mmt('family_role_other') },
+                    ];
 
                 return (
                   <motion.tr
@@ -454,6 +521,34 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                       </div>
                     </td>
                     <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>{roleLabel}</td>
+                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                      <select
+                        value={member.family_role ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value as FamilyRole | '';
+                          handleFamilyRoleChange(member.user_id, v === '' ? null : v);
+                        }}
+                        disabled={isUpdatingFamilyRole}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          fontSize: '13px',
+                          minWidth: '90px',
+                          backgroundColor: '#fff',
+                        }}
+                        aria-label={mmt('family_role_label')}
+                      >
+                        {familyRoleOptions.map((opt) => (
+                          <option key={opt.value || 'none'} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      {isUpdatingFamilyRole && (
+                        <Loader2 style={{ width: '14px', height: '14px', marginLeft: '6px', verticalAlign: 'middle', animation: 'spin 1s linear infinite' }} />
+                      )}
+                    </td>
                     <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
                       {new Date(member.joined_at).toLocaleDateString(DATE_LOCALE[lang] || 'en-US')}
                     </td>

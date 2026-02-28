@@ -122,6 +122,7 @@ interface AppState {
     latitude: number;
     longitude: number;
     updatedAt: string;
+    familyRole?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null;
   }>;
   todos: Todo[];
   album: Photo[];
@@ -1468,9 +1469,25 @@ export default function FamilyHub() {
         }
       }
 
+      // 가족 표시 역할별 마커 색/크기: 엄마=빨강 성인, 아빠=파랑 성인, 딸=빨강 아이, 아들=파랑 아이, 기타=회색
+      const getFamilyMarkerStyle = (role: string | null | undefined) => {
+        switch (role) {
+          case 'mom': return { background: '#EA4335', scale: 1.2 };
+          case 'dad': return { background: '#4285F4', scale: 1.2 };
+          case 'daughter': return { background: '#EA4335', scale: 0.95 };
+          case 'son': return { background: '#4285F4', scale: 0.95 };
+          default: return { background: '#9E9E9E', scale: 1.0 };
+        }
+      };
+      const getFamilyMarkerIconUrl = (role: string | null | undefined) => {
+        if (role === 'dad' || role === 'son') return 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+        return 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
+      };
+
       // 승인된 사용자들의 위치 마커 업데이트 또는 생성
       state.familyLocations.forEach((loc) => {
         if (loc.latitude && loc.longitude && loc.userId && loc.userId !== userId) {
+          const style = getFamilyMarkerStyle(loc.familyRole);
           const existingMarker = markersRef.current.get(loc.userId);
           if (existingMarker) {
             // 기존 마커 위치 및 label 업데이트
@@ -1482,10 +1499,10 @@ export default function FamilyHub() {
             // AdvancedMarkerElement는 content를 업데이트해야 함
             if (useAdvancedMarker && existingMarker.content) {
               const pinElement = new PinElement({
-                background: '#EA4335',
+                background: style.background,
                 borderColor: '#ffffff',
                 glyphColor: '#ffffff',
-                scale: 1.2
+                scale: style.scale
               });
               const labelDiv = document.createElement('div');
               labelDiv.textContent = loc.userName || ct('user');
@@ -1505,16 +1522,19 @@ export default function FamilyHub() {
                 fontSize: '12px',
                 fontWeight: 'bold'
               });
+              if (existingMarker.setIcon) {
+                existingMarker.setIcon({ url: getFamilyMarkerIconUrl(loc.familyRole) });
+              }
             }
           } else {
             // 새 마커 생성
             let marker;
             if (useAdvancedMarker) {
               const pinElement = new PinElement({
-                background: '#EA4335',
+                background: style.background,
                 borderColor: '#ffffff',
                 glyphColor: '#ffffff',
-                scale: 1.2
+                scale: style.scale
               });
               const labelDiv = document.createElement('div');
               labelDiv.textContent = loc.userName || ct('user');
@@ -1545,7 +1565,7 @@ export default function FamilyHub() {
                   fontWeight: 'bold'
                 },
                 icon: {
-                  url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                  url: getFamilyMarkerIconUrl(loc.familyRole)
                 }
               });
             }
@@ -5429,6 +5449,18 @@ export default function FamilyHub() {
       }
 
       if (data && data.length > 0) {
+        // 가족 표시 역할(family_role) 조회 (지도 마커용)
+        const otherUserIds = [...new Set((data as any[]).map((loc: any) => loc.user_id).filter((id: string) => id !== userId))];
+        let familyRoleMap = new Map<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null>();
+        if (currentGroupId && otherUserIds.length > 0) {
+          const { data: membershipData } = await supabase
+            .from('memberships')
+            .select('user_id, family_role')
+            .eq('group_id', currentGroupId)
+            .in('user_id', otherUserIds);
+          (membershipData || []).forEach((m: any) => familyRoleMap.set(m.user_id, m.family_role ?? null));
+        }
+
         // ✅ 승인된 다른 사용자 위치만 표시 (본인 위치는 제외)
         const locations = data
           .filter((loc: any) => {
@@ -5459,6 +5491,7 @@ export default function FamilyHub() {
           .map((loc: any) => {
             const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
             const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
+            const familyRole = familyRoleMap.get(loc.user_id) ?? null;
             
             // 저장된 주소 확인 및 변환 (좌표 형식인 경우 다시 변환)
             let locationAddress = loc.address || '';
@@ -5540,7 +5573,8 @@ export default function FamilyHub() {
               address: locationAddress || '', // 시/도, 구/군, 도로이름 저장
               latitude: loc.latitude,
               longitude: loc.longitude,
-              updatedAt: loc.last_updated
+              updatedAt: loc.last_updated,
+              familyRole: familyRole ?? undefined,
             };
           });
 

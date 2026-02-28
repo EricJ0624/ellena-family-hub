@@ -68,18 +68,21 @@ export interface Database {
           group_id: string
           role: 'ADMIN' | 'MEMBER'
           joined_at: string
+          family_role: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
         }
         Insert: {
           user_id: string
           group_id: string
           role?: 'ADMIN' | 'MEMBER'
           joined_at?: string
+          family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
         }
         Update: {
           user_id?: string
           group_id?: string
           role?: 'ADMIN' | 'MEMBER'
           joined_at?: string
+          family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
         }
         Relationships: [
           {
@@ -1122,6 +1125,7 @@ export interface Database {
     Enums: {
       membership_role: 'ADMIN' | 'MEMBER'
       location_request_status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+      family_role: 'mom' | 'dad' | 'son' | 'daughter' | 'other'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1222,6 +1226,7 @@ export type MembershipUpdate = Database["public"]["Tables"]["memberships"]["Upda
 export type GroupMemberView = Database["public"]["Views"]["group_members_view"]["Row"]
 
 export type MembershipRole = Database["public"]["Enums"]["membership_role"]
+export type FamilyRole = Database["public"]["Enums"]["family_role"]
 
 export type SystemAdmin = Database["public"]["Tables"]["system_admins"]["Row"]
 export type SystemAdminInsert = Database["public"]["Tables"]["system_admins"]["Insert"]
