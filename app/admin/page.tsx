@@ -158,11 +158,29 @@ interface DashboardAccessRequestInfo {
   };
 }
 
+const ADMIN_LANG_STORAGE_KEY = 'admin_preferred_language';
+type AdminLang = 'ko' | 'en';
+
+function getStoredAdminLang(): AdminLang {
+  if (typeof window === 'undefined') return 'ko';
+  const s = localStorage.getItem(ADMIN_LANG_STORAGE_KEY);
+  return s === 'en' ? 'en' : 'ko';
+}
+
 export default function AdminPage() {
   const router = useRouter();
-  const { lang } = useLanguage();
-  const at = (key: keyof import('@/lib/translations/admin').AdminTranslations) => getAdminTranslation(lang, key);
-  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
+  const [adminLang, setAdminLangState] = useState<AdminLang>('ko');
+  useLanguage(); // ensure provider is present; we use adminLang for this page
+  useEffect(() => {
+    setAdminLangState(getStoredAdminLang());
+  }, []);
+  const at = (key: keyof import('@/lib/translations/admin').AdminTranslations) => getAdminTranslation(adminLang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(adminLang, key);
+
+  const setAdminLang = useCallback((lang: AdminLang) => {
+    setAdminLangState(lang);
+    if (typeof window !== 'undefined') localStorage.setItem(ADMIN_LANG_STORAGE_KEY, lang);
+  }, []);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
@@ -1282,7 +1300,7 @@ export default function AdminPage() {
         user_agent: string | null;
         created_at: string;
       }>;
-      const headers = getAdminAuditHeaders(lang);
+      const headers = getAdminAuditHeaders(adminLang);
       const csvRows = [
         headers.join(','),
         ...rows.map((r) => [
@@ -1463,25 +1481,67 @@ export default function AdminPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => router.push('/dashboard')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#e2e8f0',
-              color: '#475569',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <X style={{ width: '16px', height: '16px' }} />
-            {ct('close')}
-          </button>
+              backgroundColor: '#f1f5f9',
+              borderRadius: '8px',
+              padding: '2px',
+              border: '1px solid #e2e8f0',
+            }}>
+              <button
+                type="button"
+                onClick={() => setAdminLang('ko')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  backgroundColor: adminLang === 'ko' ? '#9333ea' : 'transparent',
+                  color: adminLang === 'ko' ? 'white' : '#64748b',
+                }}
+              >
+                한국어
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdminLang('en')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  backgroundColor: adminLang === 'en' ? '#9333ea' : 'transparent',
+                  color: adminLang === 'en' ? 'white' : '#64748b',
+                }}
+              >
+                English
+              </button>
+            </div>
+            <button
+              onClick={() => router.push('/dashboard')}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#e2e8f0',
+                color: '#475569',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <X style={{ width: '16px', height: '16px' }} />
+              {ct('close')}
+            </button>
+          </div>
         </div>
 
         {/* 탭 메뉴 */}
@@ -2614,7 +2674,7 @@ export default function AdminPage() {
                         color: '#94a3b8',
                         marginBottom: '16px',
                       }}>
-                        {at('created_at')}: {new Date(group.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : 'en-US')}
+                        {at('created_at')}: {new Date(group.created_at).toLocaleDateString(adminLang === 'ko' ? 'ko-KR' : 'en-US')}
                       </div>
                       <div style={{
                         display: 'flex',
@@ -5608,7 +5668,7 @@ export default function AdminPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#f1f5f9' }}>
-                        {getAdminAuditHeaders(lang).slice(0, 9).map((h, i) => (
+                        {getAdminAuditHeaders(adminLang).slice(0, 9).map((h, i) => (
                           <th key={i} style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
                         ))}
                       </tr>
