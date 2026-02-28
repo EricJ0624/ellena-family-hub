@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getAdminTranslation, getAdminAuditHeaders } from '@/lib/translations/admin';
+import { getCommonTranslation } from '@/lib/translations/common';
 import { 
   Users, 
   UserPlus, 
@@ -157,6 +160,9 @@ interface DashboardAccessRequestInfo {
 
 export default function AdminPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
+  const at = (key: keyof import('@/lib/translations/admin').AdminTranslations) => getAdminTranslation(lang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
@@ -322,7 +328,7 @@ export default function AdminPage() {
       });
     } catch (err: any) {
       console.error('통계 로드 오류:', err);
-      setError(err.message || '통계를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_stats'));
     } finally {
       setLoadingData(false);
     }
@@ -361,7 +367,7 @@ export default function AdminPage() {
       // 현재 사용자 인증 토큰 가져오기
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -381,7 +387,7 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '사용자 목록 조회에 실패했습니다.');
+        throw new Error(result.error || at('error_users'));
       }
 
       if (!result.success || !result.data) {
@@ -410,7 +416,7 @@ export default function AdminPage() {
       setUsers(usersWithGroups);
     } catch (err: any) {
       console.error('사용자 목록 로드 오류:', err);
-      setError(err.message || '사용자 목록을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_users'));
       setUsers([]);
     } finally {
       setLoadingData(false);
@@ -425,7 +431,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 정보를 가져올 수 없습니다.');
+        setError(at('error_auth'));
         setLoadingData(false);
         return;
       }
@@ -439,13 +445,13 @@ export default function AdminPage() {
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || '그룹 목록을 불러오는데 실패했습니다.');
+        throw new Error(result.error || at('error_groups'));
           }
 
       setGroups(result.data || []);
     } catch (err: any) {
       console.error('그룹 목록 로드 오류:', err);
-      setError(err.message || '그룹 목록을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_groups'));
       setGroups([]);
     } finally {
       setLoadingData(false);
@@ -559,7 +565,7 @@ export default function AdminPage() {
       // 현재 사용자 확인
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError('인증 정보를 가져올 수 없습니다.');
+        setError(at('error_auth'));
         setSelectedGroup(null);
         setSelectedGroupId(null);
         return;
@@ -593,7 +599,7 @@ export default function AdminPage() {
 
       // 권한이 없으면 에러
       if (!isOwner && !isAdmin && !isMember) {
-        setError('이 그룹에 대한 관리 권한이 없습니다.');
+        setError(at('error_no_permission'));
         setSelectedGroup(null);
         setSelectedGroupId(null);
         return;
@@ -627,7 +633,7 @@ export default function AdminPage() {
       });
     } catch (err: any) {
       console.error('그룹 정보 로드 오류:', err);
-      setError(err.message || '그룹 정보를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_group_detail'));
       setSelectedGroup(null);
       setSelectedGroupId(null);
     }
@@ -696,7 +702,7 @@ export default function AdminPage() {
       });
     } catch (err: any) {
       console.error('그룹 통계 로드 오류:', err);
-      setError(err.message || '통계를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_stats'));
     } finally {
       setLoadingData(false);
     }
@@ -762,7 +768,7 @@ export default function AdminPage() {
       setGroupMembers(membersWithProfiles);
     } catch (err: any) {
       console.error('그룹 멤버 로드 오류:', err);
-      setError(err.message || '멤버 목록을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_members'));
     } finally {
       setLoadingData(false);
     }
@@ -811,7 +817,7 @@ export default function AdminPage() {
       setGroupPhotos(photosData || []);
     } catch (err: any) {
       console.error('사진 목록 로드 오류:', err);
-      setError(err.message || '사진 목록을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_photos'));
     } finally {
       setLoadingData(false);
     }
@@ -874,7 +880,7 @@ export default function AdminPage() {
       setGroupLocations(locationsWithProfiles);
     } catch (err: any) {
       console.error('위치 데이터 로드 오류:', err);
-      setError(err.message || '위치 데이터를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_locations'));
     } finally {
       setLoadingData(false);
     }
@@ -898,7 +904,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -915,13 +921,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '공지사항 로드 실패');
+        throw new Error(result.error || at('error_announcements'));
       }
 
       setGroupAnnouncements(result.data || []);
     } catch (err: any) {
       console.error('공지사항 로드 오류:', err);
-      setError(err.message || '공지사항을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_announcements'));
       setGroupAnnouncements([]);
     } finally {
       setLoadingData(false);
@@ -936,7 +942,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -953,13 +959,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '문의 로드 실패');
+        throw new Error(result.error || at('error_support'));
       }
 
       setGroupSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('문의 로드 오류:', err);
-      setError(err.message || '문의를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_support'));
       setGroupSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -974,7 +980,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -991,13 +997,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '접근 요청 로드 실패');
+        throw new Error(result.error || at('error_access_requests'));
       }
 
       setGroupAccessRequests(result.data || []);
     } catch (err: any) {
       console.error('접근 요청 로드 오류:', err);
-      setError(err.message || '접근 요청을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_access_requests'));
       setGroupAccessRequests([]);
     } finally {
       setLoadingData(false);
@@ -1054,7 +1060,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -1071,13 +1077,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '문의 로드 실패');
+        throw new Error(result.error || at('error_support'));
       }
 
       setSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('문의 로드 오류:', err);
-      setError(err.message || '문의를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_support'));
       setSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -1092,7 +1098,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -1108,13 +1114,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '공지사항 조회에 실패했습니다.');
+        throw new Error(result.error || at('error_announcements'));
       }
 
       setAnnouncements(result.data || []);
     } catch (err: any) {
       console.error('공지사항 로드 오류:', err);
-      setError(err.message || '공지사항을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_announcements'));
       setAnnouncements([]);
     } finally {
       setLoadingData(false);
@@ -1129,7 +1135,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -1145,13 +1151,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '문의 조회에 실패했습니다.');
+        throw new Error(result.error || at('error_support'));
       }
 
       setSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('문의 로드 오류:', err);
-      setError(err.message || '문의를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_support'));
       setSupportTickets([]);
     } finally {
       setLoadingData(false);
@@ -1166,7 +1172,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setLoadingData(false);
         return;
       }
@@ -1182,13 +1188,13 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '접근 요청 조회에 실패했습니다.');
+        throw new Error(result.error || at('error_access_requests'));
       }
 
       setAccessRequests(result.data || []);
     } catch (err: any) {
       console.error('접근 요청 로드 오류:', err);
-      setError(err.message || '접근 요청을 불러오는데 실패했습니다.');
+      setError(err.message || at('error_access_requests'));
       setAccessRequests([]);
     } finally {
       setLoadingData(false);
@@ -1202,7 +1208,7 @@ export default function AdminPage() {
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setError(at('error_session_expired'));
         setAuditLogLoading(false);
         return;
       }
@@ -1226,7 +1232,7 @@ export default function AdminPage() {
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || '감사 로그 조회에 실패했습니다.');
+        throw new Error(result.error || at('error_audit_log'));
       }
 
       setAuditLogs(result.data || []);
@@ -1234,7 +1240,7 @@ export default function AdminPage() {
       setAuditLogPage(result.page ?? 1);
     } catch (err: any) {
       console.error('감사 로그 로드 오류:', err);
-      setError(err.message || '감사 로그를 불러오는데 실패했습니다.');
+      setError(err.message || at('error_audit_log'));
       setAuditLogs([]);
       setAuditLogTotal(0);
     } finally {
@@ -1276,7 +1282,7 @@ export default function AdminPage() {
         user_agent: string | null;
         created_at: string;
       }>;
-      const headers = ['일시', '작업자(admin_id)', '작업', '리소스 유형', '리소스 ID', '그룹 ID', '대상 사용자', '상세', 'IP', 'User-Agent'];
+      const headers = getAdminAuditHeaders(lang);
       const csvRows = [
         headers.join(','),
         ...rows.map((r) => [
@@ -1327,7 +1333,7 @@ export default function AdminPage() {
 
   // 사진 삭제
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('정말로 이 사진을 삭제하시겠습니까?')) {
+    if (!confirm(at('confirm_delete_photo'))) {
       return;
     }
 
@@ -1340,14 +1346,14 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      alert('사진이 삭제되었습니다.');
+      alert(at('photo_deleted'));
       if (selectedGroupId) {
         loadGroupPhotos(selectedGroupId);
         loadGroupStats(selectedGroupId);
       }
     } catch (err: any) {
       console.error('사진 삭제 오류:', err);
-      alert(err.message || '사진 삭제 중 오류가 발생했습니다.');
+      alert(err.message || at('error_delete_photo'));
     } finally {
       setLoadingData(false);
     }
@@ -1358,7 +1364,7 @@ export default function AdminPage() {
     // 관리 가능한 그룹인지 확인
     const isManageable = manageableGroups.some(mg => mg.id === groupId);
     if (!isManageable) {
-      alert('이 그룹에 대한 관리 권한이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.');
+      alert(at('error_no_permission'));
       return;
     }
     
@@ -1391,7 +1397,7 @@ export default function AdminPage() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>권한 확인 중...</p>
+          <p style={{ color: '#64748b', fontSize: '16px' }}>{at('checking_permission')}</p>
         </div>
       </div>
     );
@@ -1446,14 +1452,14 @@ export default function AdminPage() {
                 color: '#1e293b',
                 margin: 0,
               }}>
-                관리자 페이지
+                {at('page_title')}
               </h1>
               <p style={{
                 fontSize: '14px',
                 color: '#64748b',
                 margin: '4px 0 0 0',
               }}>
-                시스템 관리 및 모니터링
+                {at('page_subtitle')}
               </p>
             </div>
           </div>
@@ -1474,7 +1480,7 @@ export default function AdminPage() {
             }}
           >
             <X style={{ width: '16px', height: '16px' }} />
-            닫기
+            {ct('close')}
           </button>
         </div>
 
@@ -1502,7 +1508,7 @@ export default function AdminPage() {
             }}
           >
             <BarChart3 style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            대시보드
+            {at('tab_dashboard')}
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -1519,7 +1525,7 @@ export default function AdminPage() {
             }}
           >
             <Users style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            회원 관리
+            {at('tab_users')}
           </button>
           <button
             onClick={() => setActiveTab('groups')}
@@ -1536,13 +1542,13 @@ export default function AdminPage() {
             }}
           >
             <Settings style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            그룹 목록
+            {at('tab_groups')}
           </button>
           <button
             onClick={() => {
               // 관리 가능한 그룹이 있는지 확인
               if (manageableGroups.length === 0) {
-                alert('관리할 수 있는 그룹이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.');
+                alert(at('no_manageable_groups'));
                 return;
               }
               
@@ -1554,7 +1560,7 @@ export default function AdminPage() {
                   setSelectedGroupId(manageableGroups[0].id);
                   setActiveTab('group-admin');
                 } else {
-                  alert('그룹 목록에서 그룹을 선택하고 "관리하기" 버튼을 클릭해주세요.');
+                  alert(at('select_group_first'));
                 }
               }
             }}
@@ -1574,7 +1580,7 @@ export default function AdminPage() {
             }}
           >
             <Shield style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            그룹 관리 {manageableGroups.length > 0 && `(${manageableGroups.length})`}
+            {at('tab_group_admin')} {manageableGroups.length > 0 && `(${manageableGroups.length})`}
           </button>
           <button
             onClick={() => setActiveTab('announcements')}
@@ -1591,7 +1597,7 @@ export default function AdminPage() {
             }}
           >
             <Megaphone style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            공지 관리
+            {at('tab_announcements')}
           </button>
           <button
             onClick={() => setActiveTab('all-support-tickets')}
@@ -1609,7 +1615,7 @@ export default function AdminPage() {
             }}
           >
             <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            전체 문의
+            {at('tab_support')}
             {supportTickets.filter(t => t.status === 'pending').length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -1641,8 +1647,8 @@ export default function AdminPage() {
               position: 'relative',
             }}
           >
-            <            KeyRound style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            접근 요청 관리
+            <KeyRound style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            {at('tab_access_requests')}
             {accessRequests.filter(r => r.status === 'pending').length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -1674,7 +1680,7 @@ export default function AdminPage() {
             }}
           >
             <FileText style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            감사 로그
+            {at('tab_audit_log')}
           </button>
         </div>
       </div>
@@ -1714,7 +1720,7 @@ export default function AdminPage() {
             padding: '48px',
           }}>
             <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#9333ea' }} />
-            <span style={{ marginLeft: '12px', color: '#64748b' }}>로딩 중...</span>
+            <span style={{ marginLeft: '12px', color: '#64748b' }}>{at('loading')}</span>
           </div>
         ) : (
           <>
@@ -1727,7 +1733,7 @@ export default function AdminPage() {
                   color: '#1e293b',
                   marginBottom: '24px',
                 }}>
-                  시스템 통계
+                  {at('system_stats')}
                 </h2>
                 <div
                   className="admin-grid"
@@ -1753,7 +1759,7 @@ export default function AdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      전체 사용자
+                      {at('total_users')}
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -1781,7 +1787,7 @@ export default function AdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      활성 사용자 (30일)
+                      {at('active_users')}
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -1809,7 +1815,7 @@ export default function AdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      전체 그룹
+                      {at('total_groups')}
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -1837,7 +1843,7 @@ export default function AdminPage() {
                       fontWeight: '500',
                       marginBottom: '8px',
                     }}>
-                      시스템 관리자
+                      {at('system_admins')}
                     </div>
                     <div style={{
                       fontSize: '32px',
@@ -1962,7 +1968,7 @@ export default function AdminPage() {
                               backgroundColor: ticket.status === 'pending' ? '#fee2e2' : ticket.status === 'answered' ? '#dbeafe' : '#f3f4f6',
                               color: ticket.status === 'pending' ? '#991b1b' : ticket.status === 'answered' ? '#1e40af' : '#4b5563',
                             }}>
-                              {ticket.status === 'pending' ? '미답변' : ticket.status === 'answered' ? '답변완료' : '종료'}
+                              {ticket.status === 'pending' ? at('status_pending') : ticket.status === 'answered' ? at('status_answered') : at('status_closed')}
                             </span>
                           </div>
                           <div style={{
@@ -1978,7 +1984,7 @@ export default function AdminPage() {
                               borderRadius: '4px',
                               fontSize: '11px',
                             }}>
-                              {ticket.groups?.name || '알 수 없음'}
+                              {ticket.groups?.name || ct('unknown')}
                             </span>
                             <span>•</span>
                             <span>{new Date(ticket.created_at).toLocaleDateString('ko-KR')}</span>
@@ -2080,7 +2086,7 @@ export default function AdminPage() {
                     }} />
                     <input
                       type="text"
-                      placeholder="이메일, 닉네임, ID로 검색..."
+                      placeholder={at('search_user_placeholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
@@ -2246,17 +2252,17 @@ export default function AdminPage() {
                                     const { data: { user: currentUser } } = await supabase.auth.getUser();
                                     
                                     if (currentUser?.id === user.id) {
-                                      alert('본인의 관리자 권한은 여기서 해제할 수 없습니다. 회원탈퇴 시 후임자를 지정하거나, 다른 관리자에게 요청하세요.');
+                                      alert(at('no_self_revoke'));
                                       return;
                                     }
 
                                     if (systemAdminCount <= 1) {
-                                      alert('마지막 시스템 관리자는 권한을 해제할 수 없습니다.');
+                                      alert(at('no_last_admin_revoke'));
                                       return;
                                     }
 
-                                    const userDisplayName = user.nickname || user.email || '이 사용자';
-                                    if (!confirm(`"${userDisplayName}"의 시스템 관리자 권한을 해제하시겠습니까?`)) {
+                                    const userDisplayName = user.nickname || user.email || at('user_fallback');
+                                    if (!confirm(at('confirm_revoke').replace(/\$\{name\}/g, userDisplayName))) {
                                       return;
                                     }
 
@@ -2264,7 +2270,7 @@ export default function AdminPage() {
                                       setLoadingData(true);
                                       const { data: { session } } = await supabase.auth.getSession();
                                       if (!session?.access_token) {
-                                        alert('인증 정보를 가져올 수 없습니다.');
+                                        alert(at('error_auth'));
                                         return;
                                       }
 
@@ -2279,14 +2285,14 @@ export default function AdminPage() {
                                       const result = await response.json();
 
                                       if (!response.ok) {
-                                        throw new Error(result.error || '권한 해제에 실패했습니다.');
+                                        throw new Error(result.error || at('error_revoke'));
                                       }
 
-                                      alert(`"${userDisplayName}"의 시스템 관리자 권한이 해제되었습니다.`);
+                                      alert(at('revoked').replace(/\$\{name\}/g, userDisplayName));
                                       loadUsers();
                                     } catch (error: any) {
                                       console.error('권한 해제 오류:', error);
-                                      alert(error.message || '권한 해제 중 오류가 발생했습니다.');
+                                      alert(error.message || at('error_revoke'));
                                     } finally {
                                       setLoadingData(false);
                                     }
@@ -2325,12 +2331,12 @@ export default function AdminPage() {
                                   disabled={systemAdminCount >= 1}
                                   onClick={async () => {
                                     if (systemAdminCount >= 1) {
-                                      alert('시스템 관리자는 1명만 지정할 수 있습니다. 기존 관리자의 권한을 먼저 해제해주세요.');
+                                      alert(at('only_one_sys_admin'));
                                       return;
                                     }
 
-                                    const userDisplayName = user.nickname || user.email || '이 사용자';
-                                    if (!confirm(`"${userDisplayName}"을(를) 시스템 관리자로 승격하시겠습니까?`)) {
+                                    const userDisplayName = user.nickname || user.email || at('user_fallback');
+                                    if (!confirm(at('confirm_promote').replace(/\$\{name\}/g, userDisplayName))) {
                                       return;
                                     }
 
@@ -2338,7 +2344,7 @@ export default function AdminPage() {
                                       setLoadingData(true);
                                       const { data: { session } } = await supabase.auth.getSession();
                                       if (!session?.access_token) {
-                                        alert('인증 정보를 가져올 수 없습니다.');
+                                        alert(at('error_auth'));
                                         return;
                                       }
 
@@ -2354,14 +2360,14 @@ export default function AdminPage() {
                                       const result = await response.json();
 
                                       if (!response.ok) {
-                                        throw new Error(result.error || '관리자 승격에 실패했습니다.');
+                                        throw new Error(result.error || at('error_promote'));
                                       }
 
-                                      alert(result.message || `"${userDisplayName}"을(를) 시스템 관리자로 승격했습니다.`);
+                                      alert(result.message || at('promoted').replace(/\$\{name\}/g, userDisplayName));
                                       loadUsers();
                                     } catch (error: any) {
                                       console.error('관리자 승격 오류:', error);
-                                      alert(error.message || '관리자 승격 중 오류가 발생했습니다.');
+                                      alert(error.message || at('error_promote'));
                                     } finally {
                                       setLoadingData(false);
                                     }
@@ -2372,7 +2378,7 @@ export default function AdminPage() {
                                 </button>
                               )}
                               
-                              {/* 회원 강제 탈퇴 버튼 */}
+                              {/* {at('force_leave_btn')} 버튼 */}
                               <button
                               style={{
                                 padding: '8px 16px',
@@ -2400,12 +2406,12 @@ export default function AdminPage() {
                                 
                                 // 시스템 관리자 본인은 삭제 불가
                                 if (currentUser?.id === user.id) {
-                                  alert('본인의 계정은 삭제할 수 없습니다.');
+                                  alert(at('no_self_delete'));
                                   return;
                                 }
 
-                                const userDisplayName = user.email || user.nickname || '이 사용자';
-                                const confirmMessage = `정말로 "${userDisplayName}" 회원을 강제 탈퇴 처리하시겠습니까?\n\n⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n- 사용자 계정이 영구적으로 삭제됩니다.\n- 관련된 모든 데이터가 삭제됩니다.\n- 모든 그룹에서 자동으로 제거됩니다.`;
+                                const userDisplayName = user.email || user.nickname || at('user_fallback');
+                                const confirmMessage = at('confirm_force_leave_warning').replace(/\$\{name\}/g, userDisplayName);
                                 
                                 if (!confirm(confirmMessage)) {
                                   return;
@@ -2415,7 +2421,7 @@ export default function AdminPage() {
                                   setLoadingData(true);
                                   const { data: { session } } = await supabase.auth.getSession();
                                   if (!session?.access_token) {
-                                    alert('인증 정보를 가져올 수 없습니다.');
+                                    alert(at('error_auth'));
                                     return;
                                   }
 
@@ -2431,21 +2437,21 @@ export default function AdminPage() {
                                   const result = await response.json();
 
                                   if (!response.ok) {
-                                    throw new Error(result.error || '회원 강제 탈퇴에 실패했습니다.');
+                                    throw new Error(result.error || at('error_force_leave'));
                                   }
 
-                                  alert(`"${userDisplayName}" 회원이 강제 탈퇴 처리되었습니다.`);
+                                  alert(at('force_leave_done').replace(/\$\{name\}/g, userDisplayName));
                                   loadUsers(); // 목록 새로고침
                                 } catch (error: any) {
-                                  console.error('회원 강제 탈퇴 오류:', error);
-                                  alert(error.message || '회원 강제 탈퇴 중 오류가 발생했습니다.');
+                                  console.error('{at('force_leave_btn')} 오류:', error);
+                                  alert(error.message || at('error_force_leave_msg'));
                                 } finally {
                                   setLoadingData(false);
                                 }
                               }}
                             >
                               <UserX style={{ width: '14px', height: '14px' }} />
-                              회원 강제 탈퇴
+                              {at('force_leave_btn')}
                             </button>
                             </div>
                           </td>
@@ -2461,7 +2467,7 @@ export default function AdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Users style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>사용자가 없습니다.</p>
+                      <p>{at('no_users')}</p>
                     </div>
                   )}
                 </div>
@@ -2483,7 +2489,7 @@ export default function AdminPage() {
                     color: '#1e293b',
                     margin: 0,
                   }}>
-                    그룹 목록 ({filteredGroups.length}개)
+                    {at('tab_groups')} ({filteredGroups.length})
                   </h2>
                   <div
                     className="admin-search"
@@ -2503,7 +2509,7 @@ export default function AdminPage() {
                     }} />
                     <input
                       type="text"
-                      placeholder="그룹명, 소유자 이메일로 검색..."
+                      placeholder={at('search_group_placeholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
@@ -2573,21 +2579,21 @@ export default function AdminPage() {
                         color: '#64748b',
                         marginBottom: '8px',
                       }}>
-                        소유자: {group.owner_email || '-'}
+                        {at('owner')}: {group.owner_email || '-'}
                       </div>
                       <div style={{
                         fontSize: '14px',
                         color: '#64748b',
                           marginBottom: '8px',
                       }}>
-                        멤버: {group.member_count}명
+                        {at('members_count')}: {group.member_count}
                       </div>
                         <div style={{
                           fontSize: '14px',
                           color: '#64748b',
                           marginBottom: '12px',
                         }}>
-                          용량: {formatBytes(usedBytes)} / {formatBytes(quotaBytes)} ({percent.toFixed(0)}%)
+                          {at('storage')}: {formatBytes(usedBytes)} / {formatBytes(quotaBytes)} ({percent.toFixed(0)}%)
                         </div>
                         <div style={{
                           height: '6px',
@@ -2608,7 +2614,7 @@ export default function AdminPage() {
                         color: '#94a3b8',
                         marginBottom: '16px',
                       }}>
-                        생성일: {new Date(group.created_at).toLocaleDateString('ko-KR')}
+                        {at('created_at')}: {new Date(group.created_at).toLocaleDateString(lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : 'en-US')}
                       </div>
                       <div style={{
                         display: 'flex',
@@ -2629,18 +2635,18 @@ export default function AdminPage() {
                             }}
                             onClick={async () => {
                               const currentGb = quotaBytes ? (quotaBytes / 1024 / 1024 / 1024).toFixed(2) : '5';
-                              const input = prompt('그룹 용량(GB)을 입력하세요.', currentGb);
+                              const input = prompt(at('prompt_quota_gb'), currentGb);
                               if (!input) return;
                               const nextGb = Number(input);
                               if (!Number.isFinite(nextGb) || nextGb <= 0) {
-                                alert('유효한 GB 값을 입력해주세요.');
+                                alert(at('alert_invalid_gb'));
                                 return;
                               }
 
                               try {
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(at('error_auth'));
                                   return;
                                 }
 
@@ -2658,16 +2664,16 @@ export default function AdminPage() {
 
                                 const result = await response.json();
                                 if (!response.ok) {
-                                  throw new Error(result.error || '용량 변경에 실패했습니다.');
+                                  throw new Error(result.error || at('error_quota_change'));
                                 }
 
                                 await loadGroups();
                               } catch (error: any) {
-                                alert(error.message || '용량 변경 중 오류가 발생했습니다.');
+                                alert(error.message || at('error_quota_change'));
                               }
                             }}
                           >
-                            용량 설정
+                            {at('set_quota')}
                           </button>
                         {/* 관리 가능한 그룹에만 "관리하기" 버튼 표시 */}
                         {manageableGroups.some(mg => mg.id === group.id) && (
@@ -2685,8 +2691,8 @@ export default function AdminPage() {
                             }}
                             onClick={() => handleSelectGroupForAdmin(group.id)}
                           >
-                            관리하기
-                          </button>
+{at('manage_btn')}
+                            </button>
                         )}
                         <button
                           style={{
@@ -2709,7 +2715,7 @@ export default function AdminPage() {
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
+                                alert(at('error_auth'));
                                 return;
                               }
 
@@ -3278,12 +3284,12 @@ export default function AdminPage() {
                                           
                                           // 시스템 관리자 본인은 삭제 불가
                                           if (currentUser?.id === member.user_id) {
-                                            alert('본인의 계정은 삭제할 수 없습니다.');
+                                            alert(at('no_self_delete'));
                                             return;
                                           }
 
-                                          const userDisplayName = member.email || member.nickname || '이 사용자';
-                                          const confirmMessage = `정말로 "${userDisplayName}" 회원을 강제 탈퇴 처리하시겠습니까?\n\n⚠️ 경고: 이 작업은 되돌릴 수 없습니다.\n- 사용자 계정이 영구적으로 삭제됩니다.\n- 관련된 모든 데이터가 삭제됩니다.\n- 모든 그룹에서 자동으로 제거됩니다.`;
+                                          const userDisplayName = member.email || member.nickname || at('user_fallback');
+                                          const confirmMessage = at('confirm_force_leave_warning').replace(/\$\{name\}/g, userDisplayName);
                                           
                                           if (!confirm(confirmMessage)) {
                                             return;
@@ -3293,7 +3299,7 @@ export default function AdminPage() {
                                             setLoadingData(true);
                                             const { data: { session } } = await supabase.auth.getSession();
                                             if (!session?.access_token) {
-                                              alert('인증 정보를 가져올 수 없습니다.');
+                                              alert(at('error_auth'));
                                               return;
                                             }
 
@@ -3309,24 +3315,24 @@ export default function AdminPage() {
                                             const result = await response.json();
 
                                             if (!response.ok) {
-                                              throw new Error(result.error || '회원 강제 탈퇴에 실패했습니다.');
+                                              throw new Error(result.error || at('error_force_leave'));
                                             }
 
-                                            alert(`"${userDisplayName}" 회원이 강제 탈퇴 처리되었습니다.`);
+                                            alert(at('force_leave_done').replace(/\$\{name\}/g, userDisplayName));
                                             if (selectedGroupId) {
                                               loadGroupMembers(selectedGroupId);
                                               loadGroupStats(selectedGroupId);
                                             }
                                           } catch (error: any) {
-                                            console.error('회원 강제 탈퇴 오류:', error);
-                                            alert(error.message || '회원 강제 탈퇴 중 오류가 발생했습니다.');
+                                            console.error('{at('force_leave_btn')} 오류:', error);
+                                            alert(error.message || at('error_force_leave_msg'));
                                           } finally {
                                             setLoadingData(false);
                                           }
                                         }}
                                       >
                                         <UserX style={{ width: '14px', height: '14px' }} />
-                                        회원 강제 탈퇴
+                                        {at('force_leave_btn')}
                                       </button>
                                     </div>
                                   </td>
@@ -3943,7 +3949,7 @@ export default function AdminPage() {
 
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(at('error_auth'));
                                   return;
                                 }
 
@@ -3995,7 +4001,7 @@ export default function AdminPage() {
 
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(at('error_auth'));
                                   return;
                                 }
 
@@ -4252,7 +4258,7 @@ export default function AdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
+                                alert(at('error_auth'));
                                 return;
                               }
 
@@ -4920,7 +4926,7 @@ export default function AdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
+                                alert(at('error_auth'));
                                 return;
                               }
 
@@ -5123,7 +5129,7 @@ export default function AdminPage() {
                                 setLoadingData(true);
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(at('error_auth'));
                                   return;
                                 }
 
@@ -5177,7 +5183,7 @@ export default function AdminPage() {
                                 setLoadingData(true);
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(at('error_auth'));
                                   return;
                                 }
 
@@ -5240,7 +5246,7 @@ export default function AdminPage() {
                                 setLoadingData(true);
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(at('error_auth'));
                                   return;
                                 }
 
@@ -5446,7 +5452,7 @@ export default function AdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
+                                alert(at('error_auth'));
                                 return;
                               }
 
@@ -5602,15 +5608,9 @@ export default function AdminPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>일시</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>작업</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>리소스 유형</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>리소스 ID</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>작업자 ID</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>그룹 ID</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>대상 사용자</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>상세</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>IP</th>
+                        {getAdminAuditHeaders(lang).slice(0, 9).map((h, i) => (
+                          <th key={i} style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
@@ -5618,13 +5618,13 @@ export default function AdminPage() {
                         <tr>
                           <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                             <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-                            로딩 중...
+                            {at('loading')}
                           </td>
                         </tr>
                       ) : auditLogs.length === 0 ? (
                         <tr>
                           <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                            조건에 맞는 감사 로그가 없습니다.
+                            {at('no_audit_log')}
                           </td>
                         </tr>
                       ) : (

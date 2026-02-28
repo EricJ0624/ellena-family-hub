@@ -1,0 +1,485 @@
+import type { LangCode } from '@/lib/language-fonts';
+
+export type AdminTranslations = {
+  page_title: string;
+  page_subtitle: string;
+  checking_permission: string;
+  loading: string;
+  tab_dashboard: string;
+  tab_users: string;
+  tab_groups: string;
+  tab_group_admin: string;
+  tab_announcements: string;
+  tab_support: string;
+  tab_access_requests: string;
+  tab_audit_log: string;
+  error_stats: string;
+  error_session_expired: string;
+  error_auth: string;
+  error_no_permission: string;
+  error_users: string;
+  error_groups: string;
+  error_group_detail: string;
+  error_group_stats: string;
+  error_members: string;
+  error_photos: string;
+  error_locations: string;
+  error_announcements: string;
+  error_support: string;
+  error_access_requests: string;
+  error_audit_log: string;
+  error_revoke: string;
+  error_promote: string;
+  error_force_leave: string;
+  system_stats: string;
+  total_users: string;
+  active_users: string;
+  total_groups: string;
+  system_admins: string;
+  no_users: string;
+  search_user_placeholder: string;
+  search_group_placeholder: string;
+  email: string;
+  nickname: string;
+  role: string;
+  created_at: string;
+  actions: string;
+  status_pending: string;
+  status_answered: string;
+  status_closed: string;
+  group_name: string;
+  owner: string;
+  members_count: string;
+  storage: string;
+  set_quota: string;
+  manage_btn: string;
+  prompt_quota_gb: string;
+  alert_invalid_gb: string;
+  error_quota_change: string;
+  no_manageable_groups: string;
+  select_group_first: string;
+  confirm_delete_photo: string;
+  photo_deleted: string;
+  error_delete_photo: string;
+  no_self_revoke: string;
+  no_last_admin_revoke: string;
+  confirm_revoke: string;
+  revoked: string;
+  confirm_promote: string;
+  promoted: string;
+  only_one_sys_admin: string;
+  no_self_delete: string;
+  confirm_force_leave: string;
+  confirm_force_leave_warning: string;
+  force_leave_done: string;
+  error_force_leave_msg: string;
+  user_fallback: string;
+  force_leave_btn: string;
+  no_audit_log: string;
+  audit_headers: string[];
+}
+
+const auditHeadersKo = ['일시', '작업자(admin_id)', '작업', '리소스 유형', '리소스 ID', '그룹 ID', '대상 사용자', '상세', 'IP', 'User-Agent'];
+
+const admin: Record<LangCode, AdminTranslations> = {
+  ko: {
+    page_title: '관리자 페이지',
+    page_subtitle: '시스템 관리 및 모니터링',
+    checking_permission: '권한 확인 중...',
+    loading: '로딩 중...',
+    tab_dashboard: '대시보드',
+    tab_users: '회원 관리',
+    tab_groups: '그룹 목록',
+    tab_group_admin: '그룹 관리',
+    tab_announcements: '공지 관리',
+    tab_support: '전체 문의',
+    tab_access_requests: '접근 요청 관리',
+    tab_audit_log: '감사 로그',
+    error_stats: '통계를 불러오는데 실패했습니다.',
+    error_session_expired: '인증 세션이 만료되었습니다. 다시 로그인해주세요.',
+    error_auth: '인증 정보를 가져올 수 없습니다.',
+    error_no_permission: '이 그룹에 대한 관리 권한이 없습니다.',
+    error_users: '사용자 목록을 불러오는데 실패했습니다.',
+    error_groups: '그룹 목록을 불러오는데 실패했습니다.',
+    error_group_detail: '그룹 정보를 불러오는데 실패했습니다.',
+    error_group_stats: '통계를 불러오는데 실패했습니다.',
+    error_members: '멤버 목록을 불러오는데 실패했습니다.',
+    error_photos: '사진 목록을 불러오는데 실패했습니다.',
+    error_locations: '위치 데이터를 불러오는데 실패했습니다.',
+    error_announcements: '공지사항을 불러오는데 실패했습니다.',
+    error_support: '문의를 불러오는데 실패했습니다.',
+    error_access_requests: '접근 요청을 불러오는데 실패했습니다.',
+    error_audit_log: '감사 로그를 불러오는데 실패했습니다.',
+    error_revoke: '권한 해제에 실패했습니다.',
+    error_promote: '관리자 승격에 실패했습니다.',
+    error_force_leave: '회원 강제 탈퇴에 실패했습니다.',
+    system_stats: '시스템 통계',
+    total_users: '전체 사용자',
+    active_users: '활성 사용자 (30일)',
+    total_groups: '전체 그룹',
+    system_admins: '시스템 관리자',
+    no_users: '사용자가 없습니다.',
+    search_user_placeholder: '이메일, 닉네임, ID로 검색...',
+    search_group_placeholder: '그룹명, 소유자 이메일로 검색...',
+    email: '이메일',
+    nickname: '닉네임',
+    role: '역할',
+    created_at: '생성일',
+    actions: '관리',
+    status_pending: '미답변',
+    status_answered: '답변완료',
+    status_closed: '종료',
+    group_name: '그룹명',
+    owner: '소유자',
+    members_count: '멤버',
+    storage: '용량',
+    set_quota: '용량 설정',
+    manage_btn: '관리하기',
+    prompt_quota_gb: '그룹 용량(GB)을 입력하세요.',
+    alert_invalid_gb: '유효한 GB 값을 입력해주세요.',
+    error_quota_change: '용량 변경에 실패했습니다.',
+    no_manageable_groups: '관리할 수 있는 그룹이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.',
+    select_group_first: '그룹 목록에서 그룹을 선택하고 "관리하기" 버튼을 클릭해주세요.',
+    confirm_delete_photo: '정말로 이 사진을 삭제하시겠습니까?',
+    photo_deleted: '사진이 삭제되었습니다.',
+    error_delete_photo: '사진 삭제 중 오류가 발생했습니다.',
+    no_self_revoke: '본인의 관리자 권한은 여기서 해제할 수 없습니다. 회원탈퇴 시 후임자를 지정하거나, 다른 관리자에게 요청하세요.',
+    no_last_admin_revoke: '마지막 시스템 관리자는 권한을 해제할 수 없습니다.',
+    confirm_revoke: '"${name}"의 시스템 관리자 권한을 해제하시겠습니까?',
+    revoked: '"${name}"의 시스템 관리자 권한이 해제되었습니다.',
+    confirm_promote: '"${name}"을(를) 시스템 관리자로 승격하시겠습니까?',
+    promoted: '"${name}"을(를) 시스템 관리자로 승격했습니다.',
+    only_one_sys_admin: '시스템 관리자는 1명만 지정할 수 있습니다. 기존 관리자의 권한을 먼저 해제해주세요.',
+    no_self_delete: '본인의 계정은 삭제할 수 없습니다.',
+    confirm_force_leave: '"${name}" 회원을 강제 탈퇴시키겠습니까?',
+    confirm_force_leave_warning: '정말로 "${name}" 회원을 강제 탈퇴 처리하시겠습니까? 되돌릴 수 없습니다.',
+    force_leave_done: '"${name}" 회원이 강제 탈퇴 처리되었습니다.',
+    error_force_leave_msg: '회원 강제 탈퇴 중 오류가 발생했습니다.',
+    user_fallback: '이 사용자',
+    force_leave_btn: '회원 강제 탈퇴',
+    no_audit_log: '조건에 맞는 감사 로그가 없습니다.',
+    audit_headers: auditHeadersKo,
+  },
+  en: {
+    page_title: 'Admin',
+    page_subtitle: 'System administration and monitoring',
+    checking_permission: 'Checking permission...',
+    loading: 'Loading...',
+    tab_dashboard: 'Dashboard',
+    tab_users: 'Users',
+    tab_groups: 'Groups',
+    tab_group_admin: 'Group admin',
+    tab_announcements: 'Announcements',
+    tab_support: 'Support',
+    tab_access_requests: 'Access requests',
+    tab_audit_log: 'Audit log',
+    error_stats: 'Failed to load stats.',
+    error_session_expired: 'Session expired. Please log in again.',
+    error_auth: 'Could not get auth.',
+    error_no_permission: 'You do not have permission to manage this group.',
+    error_users: 'Failed to load users.',
+    error_groups: 'Failed to load groups.',
+    error_group_detail: 'Failed to load group.',
+    error_group_stats: 'Failed to load stats.',
+    error_members: 'Failed to load members.',
+    error_photos: 'Failed to load photos.',
+    error_locations: 'Failed to load locations.',
+    error_announcements: 'Failed to load announcements.',
+    error_support: 'Failed to load support tickets.',
+    error_access_requests: 'Failed to load access requests.',
+    error_audit_log: 'Failed to load audit log.',
+    error_revoke: 'Failed to revoke.',
+    error_promote: 'Failed to promote.',
+    error_force_leave: 'Failed to remove user.',
+    system_stats: 'System stats',
+    total_users: 'Total users',
+    active_users: 'Active users (30d)',
+    total_groups: 'Total groups',
+    system_admins: 'System admins',
+    no_users: 'No users.',
+    search_user_placeholder: 'Search by email, nickname, ID...',
+    search_group_placeholder: 'Search by group name, owner email...',
+    email: 'Email',
+    nickname: 'Nickname',
+    role: 'Role',
+    created_at: 'Created',
+    actions: 'Actions',
+    status_pending: 'Pending',
+    status_answered: 'Answered',
+    status_closed: 'Closed',
+    group_name: 'Group',
+    owner: 'Owner',
+    members_count: 'Members',
+    storage: 'Storage',
+    set_quota: 'Set quota',
+    manage_btn: 'Manage',
+    prompt_quota_gb: 'Enter storage quota (GB).',
+    alert_invalid_gb: 'Please enter a valid GB value.',
+    error_quota_change: 'Failed to update quota.',
+    no_manageable_groups: 'No groups to manage. Only group owners or admins can manage.',
+    select_group_first: 'Select a group from the list and click "Manage".',
+    confirm_delete_photo: 'Delete this photo?',
+    photo_deleted: 'Photo deleted.',
+    error_delete_photo: 'Failed to delete photo.',
+    no_self_revoke: 'You cannot revoke your own admin role here. Use account deletion with successor, or ask another admin.',
+    no_last_admin_revoke: 'The last system admin cannot be revoked.',
+    confirm_revoke: 'Revoke system admin for "${name}"?',
+    revoked: 'System admin revoked for "${name}".',
+    confirm_promote: 'Promote "${name}" to system admin?',
+    promoted: '"${name}" has been promoted to system admin.',
+    only_one_sys_admin: 'Only one system admin can be set. Revoke the existing one first.',
+    no_self_delete: 'You cannot delete your own account.',
+    confirm_force_leave: 'Remove "${name}" from the system?',
+    confirm_force_leave_warning: 'Really remove "${name}"? This cannot be undone.',
+    force_leave_done: '"${name}" has been removed.',
+    error_force_leave_msg: 'Failed to remove user.',
+    user_fallback: 'This user',
+    force_leave_btn: 'Remove user',
+    no_audit_log: 'No audit log matching the criteria.',
+    audit_headers: ['Time', 'Admin', 'Action', 'Resource type', 'Resource ID', 'Group ID', 'Target user', 'Details', 'IP', 'User-Agent'],
+  },
+  ja: {
+    page_title: '管理画面',
+    page_subtitle: 'システム管理・モニタリング',
+    checking_permission: '権限確認中...',
+    loading: '読み込み中...',
+    tab_dashboard: 'ダッシュボード',
+    tab_users: '会員管理',
+    tab_groups: 'グループ一覧',
+    tab_group_admin: 'グループ管理',
+    tab_announcements: 'お知らせ',
+    tab_support: 'お問い合わせ',
+    tab_access_requests: 'アクセス申請',
+    tab_audit_log: '監査ログ',
+    error_stats: '統計の読み込みに失敗しました。',
+    error_session_expired: 'セッションの有効期限が切れました。再度ログインしてください。',
+    error_auth: '認証情報を取得できません。',
+    error_no_permission: 'このグループの管理権限がありません。',
+    error_users: 'ユーザー一覧の読み込みに失敗しました。',
+    error_groups: 'グループ一覧の読み込みに失敗しました。',
+    error_group_detail: 'グループ情報の読み込みに失敗しました。',
+    error_group_stats: '統計の読み込みに失敗しました。',
+    error_members: 'メンバー一覧の読み込みに失敗しました。',
+    error_photos: '写真一覧の読み込みに失敗しました。',
+    error_locations: '位置データの読み込みに失敗しました。',
+    error_announcements: 'お知らせの読み込みに失敗しました。',
+    error_support: 'お問い合わせの読み込みに失敗しました。',
+    error_access_requests: 'アクセス申請の読み込みに失敗しました。',
+    error_audit_log: '監査ログの読み込みに失敗しました。',
+    error_revoke: '権限の解除に失敗しました。',
+    error_promote: '管理者の昇格に失敗しました。',
+    error_force_leave: '強制退会に失敗しました。',
+    system_stats: 'システム統計',
+    total_users: '全ユーザー',
+    active_users: 'アクティブ (30日)',
+    total_groups: '全グループ',
+    system_admins: 'システム管理者',
+    no_users: 'ユーザーがいません。',
+    search_user_placeholder: 'メール、ニックネーム、IDで検索...',
+    search_group_placeholder: 'グループ名、オーナーメールで検索...',
+    email: 'メール',
+    nickname: 'ニックネーム',
+    role: '役割',
+    created_at: '作成日',
+    actions: '操作',
+    status_pending: '未返答',
+    status_answered: '回答済み',
+    status_closed: '終了',
+    group_name: 'グループ',
+    owner: 'オーナー',
+    members_count: 'メンバー',
+    storage: '容量',
+    set_quota: '容量設定',
+    manage_btn: '管理',
+    prompt_quota_gb: 'グループ容量(GB)を入力してください。',
+    alert_invalid_gb: '有効なGB値を入力してください。',
+    error_quota_change: '容量の変更に失敗しました。',
+    no_manageable_groups: '管理できるグループがありません。オーナーまたは管理者のグループのみ管理できます。',
+    select_group_first: 'グループ一覧でグループを選択し「管理」をクリックしてください。',
+    confirm_delete_photo: 'この写真を削除しますか？',
+    photo_deleted: '写真を削除しました。',
+    error_delete_photo: '写真の削除に失敗しました。',
+    no_self_revoke: '自分の管理者権限はここでは解除できません。退会時に後任を指定するか、他の管理者に依頼してください。',
+    no_last_admin_revoke: '最後のシステム管理者は解除できません。',
+    confirm_revoke: '"${name}"のシステム管理者権限を解除しますか？',
+    revoked: '"${name}"のシステム管理者権限を解除しました。',
+    confirm_promote: '"${name}"をシステム管理者に昇格しますか？',
+    promoted: '"${name}"をシステム管理者に昇格しました。',
+    only_one_sys_admin: 'システム管理者は1名のみ指定できます。既存の管理者の権限を先に解除してください。',
+    no_self_delete: '自分のアカウントは削除できません。',
+    confirm_force_leave: '"${name}"を強制退会させますか？',
+    confirm_force_leave_warning: '本当に"${name}"を削除しますか？取り消せません。',
+    force_leave_done: '"${name}"を削除しました。',
+    error_force_leave_msg: '強制退会に失敗しました。',
+    user_fallback: 'このユーザー',
+    force_leave_btn: '強制退会',
+    no_audit_log: '条件に一致する監査ログがありません。',
+    audit_headers: ['日時', '管理者', '操作', 'リソース種別', 'リソースID', 'グループID', '対象ユーザー', '詳細', 'IP', 'User-Agent'],
+  },
+  'zh-CN': {
+    page_title: '管理后台',
+    page_subtitle: '系统管理与监控',
+    checking_permission: '正在验证权限...',
+    loading: '加载中...',
+    tab_dashboard: '仪表盘',
+    tab_users: '用户管理',
+    tab_groups: '群组列表',
+    tab_group_admin: '群组管理',
+    tab_announcements: '公告',
+    tab_support: '工单',
+    tab_access_requests: '访问请求',
+    tab_audit_log: '审计日志',
+    error_stats: '加载统计失败。',
+    error_session_expired: '登录已过期，请重新登录。',
+    error_auth: '无法获取认证信息。',
+    error_no_permission: '您没有管理此群组的权限。',
+    error_users: '加载用户列表失败。',
+    error_groups: '加载群组列表失败。',
+    error_group_detail: '加载群组信息失败。',
+    error_group_stats: '加载统计失败。',
+    error_members: '加载成员列表失败。',
+    error_photos: '加载照片失败。',
+    error_locations: '加载位置数据失败。',
+    error_announcements: '加载公告失败。',
+    error_support: '加载工单失败。',
+    error_access_requests: '加载访问请求失败。',
+    error_audit_log: '加载审计日志失败。',
+    error_revoke: '解除权限失败。',
+    error_promote: '提升管理员失败。',
+    error_force_leave: '强制退会失败。',
+    system_stats: '系统统计',
+    total_users: '总用户数',
+    active_users: '活跃用户 (30天)',
+    total_groups: '总群组数',
+    system_admins: '系统管理员',
+    no_users: '暂无用户。',
+    search_user_placeholder: '按邮箱、昵称、ID 搜索...',
+    search_group_placeholder: '按群组名、所有者邮箱搜索...',
+    email: '邮箱',
+    nickname: '昵称',
+    role: '角色',
+    created_at: '创建日期',
+    actions: '操作',
+    status_pending: '待回复',
+    status_answered: '已回复',
+    status_closed: '已关闭',
+    group_name: '群组',
+    owner: '所有者',
+    members_count: '成员',
+    storage: '容量',
+    set_quota: '设置容量',
+    manage_btn: '管理',
+    prompt_quota_gb: '请输入群组容量(GB)。',
+    alert_invalid_gb: '请输入有效的 GB 值。',
+    error_quota_change: '容量变更失败。',
+    no_manageable_groups: '没有可管理的群组。仅群组所有者或管理员可管理。',
+    select_group_first: '请从列表选择群组并点击「管理」。',
+    confirm_delete_photo: '确定删除此照片？',
+    photo_deleted: '照片已删除。',
+    error_delete_photo: '删除照片失败。',
+    no_self_revoke: '无法在此解除自己的管理员权限。请通过账户注销指定继任者，或联系其他管理员。',
+    no_last_admin_revoke: '最后一位系统管理员无法解除。',
+    confirm_revoke: '解除「${name}」的系统管理员权限？',
+    revoked: '已解除「${name}」的系统管理员权限。',
+    confirm_promote: '将「${name}」提升为系统管理员？',
+    promoted: '已将「${name}」提升为系统管理员。',
+    only_one_sys_admin: '系统管理员仅可指定一人。请先解除现有管理员权限。',
+    no_self_delete: '无法删除自己的账户。',
+    confirm_force_leave: '强制「${name}」退会？',
+    confirm_force_leave_warning: '确定要移除「${name}」？此操作无法撤销。',
+    force_leave_done: '已移除「${name}」。',
+    error_force_leave_msg: '强制退会失败。',
+    user_fallback: '该用户',
+    force_leave_btn: '强制退会',
+    no_audit_log: '没有符合条件的审计日志。',
+    audit_headers: ['时间', '操作者', '操作', '资源类型', '资源ID', '群组ID', '目标用户', '详情', 'IP', 'User-Agent'],
+  },
+  'zh-TW': {
+    page_title: '管理後台',
+    page_subtitle: '系統管理與監控',
+    checking_permission: '正在驗證權限...',
+    loading: '載入中...',
+    tab_dashboard: '儀表板',
+    tab_users: '用戶管理',
+    tab_groups: '群組列表',
+    tab_group_admin: '群組管理',
+    tab_announcements: '公告',
+    tab_support: '工單',
+    tab_access_requests: '存取請求',
+    tab_audit_log: '稽核紀錄',
+    error_stats: '載入統計失敗。',
+    error_session_expired: '登入已過期，請重新登入。',
+    error_auth: '無法取得認證資訊。',
+    error_no_permission: '您沒有管理此群組的權限。',
+    error_users: '載入用戶列表失敗。',
+    error_groups: '載入群組列表失敗。',
+    error_group_detail: '載入群組資訊失敗。',
+    error_group_stats: '載入統計失敗。',
+    error_members: '載入成員列表失敗。',
+    error_photos: '載入照片失敗。',
+    error_locations: '載入位置資料失敗。',
+    error_announcements: '載入公告失敗。',
+    error_support: '載入工單失敗。',
+    error_access_requests: '載入存取請求失敗。',
+    error_audit_log: '載入稽核紀錄失敗。',
+    error_revoke: '解除權限失敗。',
+    error_promote: '提升管理員失敗。',
+    error_force_leave: '強制退會失敗。',
+    system_stats: '系統統計',
+    total_users: '總用戶數',
+    active_users: '活躍用戶 (30天)',
+    total_groups: '總群組數',
+    system_admins: '系統管理員',
+    no_users: '尚無用戶。',
+    search_user_placeholder: '以電子郵件、暱稱、ID 搜尋...',
+    search_group_placeholder: '以群組名稱、擁有者電子郵件搜尋...',
+    email: '電子郵件',
+    nickname: '暱稱',
+    role: '角色',
+    created_at: '建立日期',
+    actions: '操作',
+    status_pending: '待回覆',
+    status_answered: '已回覆',
+    status_closed: '已關閉',
+    group_name: '群組',
+    owner: '擁有者',
+    members_count: '成員',
+    storage: '容量',
+    set_quota: '設定容量',
+    manage_btn: '管理',
+    prompt_quota_gb: '請輸入群組容量(GB)。',
+    alert_invalid_gb: '請輸入有效的 GB 值。',
+    error_quota_change: '容量變更失敗。',
+    no_manageable_groups: '沒有可管理的群組。僅群組擁有者或管理員可管理。',
+    select_group_first: '請從列表選擇群組並點擊「管理」。',
+    confirm_delete_photo: '確定要刪除此照片？',
+    photo_deleted: '照片已刪除。',
+    error_delete_photo: '刪除照片失敗。',
+    no_self_revoke: '無法在此解除自己的管理員權限。請透過帳戶註銷指定繼任者，或聯絡其他管理員。',
+    no_last_admin_revoke: '最後一位系統管理員無法解除。',
+    confirm_revoke: '解除「${name}」的系統管理員權限？',
+    revoked: '已解除「${name}」的系統管理員權限。',
+    confirm_promote: '將「${name}」提升為系統管理員？',
+    promoted: '已將「${name}」提升為系統管理員。',
+    only_one_sys_admin: '系統管理員僅可指定一人。請先解除現有管理員權限。',
+    no_self_delete: '無法刪除自己的帳戶。',
+    confirm_force_leave: '強制「${name}」退會？',
+    confirm_force_leave_warning: '確定要移除「${name}」？此操作無法復原。',
+    force_leave_done: '已移除「${name}」。',
+    error_force_leave_msg: '強制退會失敗。',
+    user_fallback: '該用戶',
+    force_leave_btn: '強制退會',
+    no_audit_log: '沒有符合條件的稽核紀錄。',
+    audit_headers: ['時間', '操作者', '操作', '資源類型', '資源ID', '群組ID', '目標用戶', '詳情', 'IP', 'User-Agent'],
+  },
+};
+
+export function getAdminTranslation(lang: LangCode, key: keyof AdminTranslations): string {
+  const val = admin[lang]?.[key] ?? admin.en[key] ?? (admin.ko[key] as string);
+  if (Array.isArray(val)) return (val as string[]).join(','); // caller should use audit_headers separately
+  return (val as string) ?? key;
+}
+
+export function getAdminAuditHeaders(lang: LangCode): string[] {
+  return admin[lang]?.audit_headers ?? admin.en.audit_headers ?? admin.ko.audit_headers;
+}

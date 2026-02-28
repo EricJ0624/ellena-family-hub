@@ -12,7 +12,11 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getGroupSettingsTranslation, type GroupSettingsTranslations } from '@/lib/translations/groupSettings';
+import { getCommonTranslation } from '@/lib/translations/common';
 import type { TitleStyle } from '@/app/components/TitlePage';
+import type { LangCode } from '@/lib/language-fonts';
 
 interface GroupSettingsProps {
   onClose: () => void;
@@ -44,10 +48,18 @@ function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
 
 const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
+  const { lang } = useLanguage();
+  const gst = (key: keyof GroupSettingsTranslations) => getGroupSettingsTranslation(lang, key);
+  const ct = (key: 'close') => getCommonTranslation(lang, key);
   const [groupName, setGroupName] = useState(currentGroup?.name || '');
   const [titleStyle, setTitleStyle] = useState<TitleStyle>(() =>
     parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Hearth: Family Haven')
   );
+  const [preferredLanguage, setPreferredLanguage] = useState<LangCode>(() => {
+    const v = (currentGroup as { preferred_language?: string } | null)?.preferred_language;
+    if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') return v;
+    return 'ko';
+  });
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,13 +109,15 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     ));
   }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style]);
 
-  // currentGroup 변경 시 groupName과 inviteCode 동기화
+  // currentGroup 변경 시 groupName, inviteCode, preferredLanguage 동기화
   useEffect(() => {
     if (currentGroup) {
       setGroupName(currentGroup.name || '');
       setInviteCode(currentGroup.invite_code || '');
+      const v = (currentGroup as { preferred_language?: string }).preferred_language;
+      if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') setPreferredLanguage(v);
     }
-  }, [currentGroup?.id, currentGroup?.name, currentGroup?.invite_code]);
+  }, [currentGroup]);
 
   // 그룹 설정 저장
   const handleSave = async () => {
@@ -126,6 +140,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       // 문구·스타일 통합: title_style.content를 family_name과 동기화
       updates.family_name = titleStyle.content?.trim() || null;
       updates.title_style = titleStyle;
+      updates.preferred_language = preferredLanguage;
 
       const { error: updateError } = await supabase
         .from('groups')
@@ -134,7 +149,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
       if (updateError) throw updateError;
 
-      setSuccess('그룹 설정이 저장되었습니다.');
+      setSuccess(gst('save_success'));
       
       // 그룹 목록 새로고침
       await refreshGroups();
@@ -144,7 +159,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       }, 2000);
     } catch (err: any) {
       console.error('그룹 설정 저장 오류:', err);
-      setError(err.message || '그룹 설정 저장에 실패했습니다.');
+      setError(err.message || gst('save_failed'));
     } finally {
       setSaving(false);
     }
@@ -160,7 +175,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('클립보드 복사 실패:', err);
-      setError('초대 코드 복사에 실패했습니다.');
+      setError(gst('copy_failed'));
     }
   };
 
@@ -187,7 +202,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       if (refreshError) throw refreshError;
 
       setInviteCode(data);
-      setSuccess('초대 코드가 갱신되었습니다.');
+      setSuccess(gst('refresh_success'));
       
       // 그룹 목록 새로고침
       await refreshGroups();
@@ -197,7 +212,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       }, 2000);
     } catch (err: any) {
       console.error('초대 코드 갱신 오류:', err);
-      setError(err.message || '초대 코드 갱신에 실패했습니다.');
+      setError(err.message || gst('refresh_failed'));
     } finally {
       setRefreshing(false);
     }
@@ -207,7 +222,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     return (
       <div className="p-6 text-center text-gray-500">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p>그룹을 선택해주세요.</p>
+        <p>{gst('select_group_first')}</p>
       </div>
     );
   }
@@ -216,12 +231,12 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
     return (
       <div className="p-6 text-center text-gray-500">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p>그룹 설정은 관리자만 변경할 수 있습니다.</p>
+        <p>{gst('admin_only')}</p>
         <button
           onClick={onClose}
           className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
         >
-          닫기
+          {ct('close')}
         </button>
       </div>
     );
@@ -236,16 +251,16 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
             <Settings className="w-6 h-6 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">그룹 설정</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{gst('group_settings_title')}</h2>
             <p className="text-sm text-gray-500">
-              {currentGroup?.name || '그룹 설정'}
+              {currentGroup?.name || gst('group_settings_title')}
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="닫기"
+          aria-label={ct('close')}
         >
           <X className="w-5 h-5 text-gray-500" />
         </button>
@@ -267,7 +282,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     backgroundColor: '#f8fafc',
                   }}
                 >
-                  그룹 이름
+                  {gst('group_name')}
                 </th>
                 <td style={{ padding: '12px' }}>
                   <input
@@ -277,7 +292,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                       setGroupName(e.target.value);
                       setError(null);
                     }}
-                    placeholder="그룹 이름을 입력하세요"
+                    placeholder={gst('group_name_placeholder')}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -301,7 +316,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     backgroundColor: '#f8fafc',
                   }}
                 >
-                  대시보드 타이틀
+                  {gst('dashboard_title_label')}
                 </th>
                 <td style={{ padding: '12px' }}>
                   <input
@@ -309,7 +324,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     value={titleStyle.content ?? ''}
                     onChange={(e) => setTitleStyle((prev) => ({ ...prev, content: e.target.value }))}
                     disabled={saving}
-                    placeholder="예: Hearth: Family Haven"
+                    placeholder={gst('dashboard_title_placeholder')}
                     style={{
                       width: '100%',
                       maxWidth: '320px',
@@ -321,7 +336,45 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     }}
                   />
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                    대시보드 상단에 표시되는 문구입니다. 글자 크기는 화면에 맞게 자동 조정됩니다.
+                    {gst('dashboard_title_hint')}
+                  </p>
+                </td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th
+                  style={{
+                    padding: '12px',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#475569',
+                    width: '160px',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
+                  {gst('display_language')}
+                </th>
+                <td style={{ padding: '12px' }}>
+                  <select
+                    value={preferredLanguage}
+                    onChange={(e) => setPreferredLanguage(e.target.value as LangCode)}
+                    disabled={saving}
+                    style={{
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      minWidth: '160px',
+                    }}
+                  >
+                    <option value="ko">한국어</option>
+                    <option value="en">English</option>
+                    <option value="ja">日本語</option>
+                    <option value="zh-CN">简体中文</option>
+                    <option value="zh-TW">繁體中文</option>
+                  </select>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                    {gst('language_hint')}
                   </p>
                 </td>
               </tr>
@@ -336,7 +389,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     backgroundColor: '#f8fafc',
                   }}
                 >
-                  초대 코드
+                  {gst('invite_code')}
                 </th>
                 <td style={{ padding: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -372,17 +425,17 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                         alignItems: 'center',
                         gap: '6px',
                       }}
-                      aria-label="초대 코드 복사"
+                      aria-label={gst('invite_copy_aria')}
                     >
                       {copied ? (
                         <>
                           <CheckCircle style={{ width: '16px', height: '16px' }} />
-                          복사됨
+                          {gst('copied')}
                         </>
                       ) : (
                         <>
                           <Copy style={{ width: '16px', height: '16px' }} />
-                          복사
+                          {gst('copy_btn')}
                         </>
                       )}
                     </button>
@@ -403,21 +456,21 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                         gap: '6px',
                         opacity: refreshing ? 0.6 : 1,
                       }}
-                      aria-label="초대 코드 갱신"
+                      aria-label={gst('invite_refresh_aria')}
                     >
                       {refreshing ? (
                         <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
                       ) : (
                         <RefreshCw style={{ width: '16px', height: '16px' }} />
                       )}
-                      갱신
+                      {gst('refresh_btn')}
                     </button>
                   </div>
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
                     초대 코드를 복사하여 가족 구성원에게 공유하세요.
                   </p>
                   <p style={{ fontSize: '12px', color: '#9333ea', marginTop: '6px', fontWeight: 500 }}>
-                    가입이 끝난 후 &apos;초대코드 갱신&apos;을 눌러 이전 코드를 무효화하세요. 새 코드를 모르는 사람은 가입할 수 없습니다.
+                    {gst('invite_refresh_hint')}
                   </p>
                 </td>
               </tr>
@@ -458,11 +511,11 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                저장 중...
-              </>
-            ) : (
-              '저장'
-            )}
+{gst('saving')}
+                        </>
+                      ) : (
+                        gst('save_btn')
+                      )}
           </button>
         </div>
       </div>

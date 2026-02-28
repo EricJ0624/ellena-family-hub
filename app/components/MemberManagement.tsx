@@ -5,8 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
+import { getCommonTranslation } from '@/lib/translations/common';
 import type { MembershipRole } from '@/types/db';
 import GroupSettings from './GroupSettings';
+
+const DATE_LOCALE: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
 
 interface MemberInfo {
   user_id: string;
@@ -21,6 +26,10 @@ interface MemberManagementProps {
 }
 
 const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
+  const { lang } = useLanguage();
+  const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
+    getMemberManagementTranslation(lang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const { currentGroupId, currentGroup, userRole, isOwner, refreshMemberships } = useGroup();
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -122,7 +131,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       setMembers(memberList);
     } catch (err: any) {
       console.error('멤버 목록 로드 실패:', err);
-      setError(err.message || '멤버 목록을 불러오는데 실패했습니다.');
+      setError(err.message || mmt('load_failed'));
     } finally {
       setLoading(false);
     }
@@ -137,7 +146,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
       // 본인은 추방 불가
       if (currentUserId && currentUserId === memberUserId) {
-        alert('자신을 추방할 수 없습니다.');
+        alert(mmt('cannot_remove_self'));
         setRemovingUserId(null);
         setShowConfirmRemove(null);
         return;
@@ -145,7 +154,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
       // 소유자는 추방 불가
       if (currentGroup?.owner_id === memberUserId) {
-        alert('그룹 소유자는 추방할 수 없습니다.');
+        alert(mmt('cannot_remove_owner'));
         setRemovingUserId(null);
         setShowConfirmRemove(null);
         return;
@@ -166,7 +175,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       setShowConfirmRemove(null);
     } catch (err: any) {
       console.error('멤버 추방 실패:', err);
-      alert(err.message || '멤버 추방에 실패했습니다.');
+      alert(err.message || mmt('remove_failed'));
     } finally {
       setRemovingUserId(null);
     }
@@ -181,14 +190,14 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
       // 본인은 역할 변경 불가
       if (currentUserId && currentUserId === memberUserId) {
-        alert('자기 자신의 역할은 변경할 수 없습니다.');
+        alert(mmt('cannot_change_self_role'));
         setUpdatingRoleUserId(null);
         return;
       }
 
       // 소유자는 역할 변경 불가
       if (currentGroup?.owner_id === memberUserId) {
-        alert('그룹 소유자의 역할은 변경할 수 없습니다.');
+        alert(mmt('cannot_change_owner_role'));
         setUpdatingRoleUserId(null);
         return;
       }
@@ -196,7 +205,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       // 현재 사용자 인증 토큰 가져오기
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        alert(mmt('session_expired'));
         setUpdatingRoleUserId(null);
         return;
       }
@@ -218,17 +227,17 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || '역할 변경에 실패했습니다.');
+        throw new Error(data.error || mmt('role_change_failed'));
       }
 
-      alert(data.message || `멤버 역할이 ${newRole === 'ADMIN' ? '관리자' : '멤버'}로 변경되었습니다.`);
+      alert(data.message || (newRole === 'ADMIN' ? mmt('role_changed_to_admin') : mmt('role_changed_to_member')));
 
       // 멤버 목록 새로고침
       await loadMembers();
       await refreshMemberships();
     } catch (err: any) {
       console.error('역할 변경 실패:', err);
-      alert(err.message || '역할 변경에 실패했습니다.');
+      alert(err.message || mmt('role_change_failed'));
     } finally {
       setUpdatingRoleUserId(null);
     }
@@ -268,7 +277,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
     return (
       <div className="p-6 text-center text-gray-500">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p>그룹을 선택해주세요.</p>
+        <p>{mmt('select_group_first')}</p>
       </div>
     );
   }
@@ -314,7 +323,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
             />
             <input
               type="text"
-              placeholder="이메일, 닉네임, ID로 검색..."
+              placeholder={mmt('search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -342,10 +351,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                 alignItems: 'center',
                 gap: '6px',
               }}
-              aria-label="그룹 설정"
+              aria-label={mmt('group_settings_btn')}
             >
               <Settings style={{ width: '16px', height: '16px' }} />
-              그룹 설정
+              {mmt('group_settings_btn')}
             </button>
           )}
           {onClose && (
@@ -364,10 +373,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                 alignItems: 'center',
                 gap: '6px',
               }}
-              aria-label="닫기"
+              aria-label={ct('close')}
             >
               <X style={{ width: '16px', height: '16px' }} />
-              닫기
+              {ct('close')}
             </button>
           )}
         </div>
@@ -377,7 +386,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
-          <span className="ml-3 text-gray-600">멤버 목록을 불러오는 중...</span>
+          <span className="ml-3 text-gray-600">{mmt('loading_members')}</span>
         </div>
       )}
 
@@ -398,19 +407,19 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                  이메일
+                  {mmt('email')}
                 </th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                  닉네임
+                  {mmt('nickname')}
                 </th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                  역할
+                  {mmt('role')}
                 </th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                  가입일
+                  {mmt('joined_at')}
                 </th>
                 <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                  관리
+                  {mmt('manage')}
                 </th>
               </tr>
             </thead>
@@ -421,7 +430,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                 const canRemove = isAdmin && !isCurrentUser && !isOwner;
                 const canChangeRole = isAdmin && !isCurrentUser && !isOwner;
                 const isUpdatingRole = updatingRoleUserId === member.user_id;
-                const roleLabel = isOwner ? '소유자 (부모)' : member.role === 'ADMIN' ? '관리자 (부모)' : '멤버 (아이 또는 가족 구성원)';
+                const roleLabel = isOwner ? mmt('role_owner') : member.role === 'ADMIN' ? mmt('role_admin') : mmt('role_member');
 
                 return (
                   <motion.tr
@@ -441,12 +450,12 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                     <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span>{member.nickname || '-'}</span>
-                        {isCurrentUser && <span style={{ fontSize: '12px', color: '#64748b' }}>(나)</span>}
+                        {isCurrentUser && <span style={{ fontSize: '12px', color: '#64748b' }}>{ct('me_suffix')}</span>}
                       </div>
                     </td>
                     <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>{roleLabel}</td>
                     <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
-                      {new Date(member.joined_at).toLocaleDateString('ko-KR')}
+                      {new Date(member.joined_at).toLocaleDateString(DATE_LOCALE[lang] || 'en-US')}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'right' }}>
                       {(canRemove || canChangeRole) && (
@@ -456,7 +465,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                               {member.role === 'MEMBER' ? (
                                 <button
                                   onClick={() => {
-                                    if (confirm(`${member.nickname || member.email}님을 관리자로 승격시키시겠습니까?`)) {
+                                    if (confirm(`${member.nickname || member.email}${mmt('promote_confirm')}`)) {
                                       handleUpdateRole(member.user_id, 'ADMIN');
                                     }
                                   }}
@@ -472,8 +481,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                   }}
-                                  aria-label={`${member.nickname || member.email} 관리자로 승격`}
-                                  title="관리자로 승격"
+                                  aria-label={`${member.nickname || member.email} ${mmt('promote_title')}`}
+                                  title={mmt('promote_title')}
                                 >
                                   {isUpdatingRole ? (
                                     <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
@@ -484,7 +493,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                               ) : (
                                 <button
                                   onClick={() => {
-                                    if (confirm(`${member.nickname || member.email}님의 관리자 권한을 일반 멤버로 변경하시겠습니까?`)) {
+                                    if (confirm(`${member.nickname || member.email}${mmt('demote_confirm')}`)) {
                                       handleUpdateRole(member.user_id, 'MEMBER');
                                     }
                                   }}
@@ -500,8 +509,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                   }}
-                                  aria-label={`${member.nickname || member.email} 일반 멤버로 변경`}
-                                  title="일반 멤버로 변경"
+                                  aria-label={`${member.nickname || member.email} ${mmt('demote_title')}`}
+                                  title={mmt('demote_title')}
                                 >
                                   {isUpdatingRole ? (
                                     <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
@@ -529,12 +538,12 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                       fontWeight: 600,
                                       cursor: 'pointer',
                                     }}
-                                    aria-label={`${member.nickname || member.email} 추방 확인`}
+                                    aria-label={`${member.nickname || member.email} ${mmt('remove_confirm')}`}
                                   >
                                     {removingUserId === member.user_id ? (
                                       <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
                                     ) : (
-                                      '확인'
+                                      mmt('confirm_btn')
                                     )}
                                   </button>
                                   <button
@@ -549,9 +558,9 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                       fontWeight: 600,
                                       cursor: 'pointer',
                                     }}
-                                    aria-label="취소"
+                                    aria-label={ct('cancel')}
                                   >
-                                    취소
+                                    {ct('cancel')}
                                   </button>
                                 </div>
                               ) : (
@@ -569,7 +578,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                   }}
-                                  aria-label={`${member.nickname || member.email} 추방`}
+                                  aria-label={`${member.nickname || member.email} ${mmt('remove_confirm')}`}
                                 >
                                   <UserX style={{ width: '18px', height: '18px' }} />
                                 </button>
@@ -586,7 +595,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
               {filteredMembers.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                    멤버가 없습니다.
+                    {mmt('no_members')}
                   </td>
                 </tr>
               )}

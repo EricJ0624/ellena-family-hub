@@ -23,11 +23,30 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* Google Fonts - 타이틀 디자인 에디터용 */}
+        {/* CDN: Pretendard (한국어) */}
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+        />
+        {/* CDN: Pretendard JP (일본어) */}
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-jp.min.css"
+        />
+        {/* Google Fonts - Inter, Noto Sans SC/TC/JP (영어·중국어·일본어 본문) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;700;900&family=Merriweather:wght@300;400;700;900&family=Lora:wght@400;700&family=Dancing+Script:wght@400;700&family=Pacifico&display=swap" 
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+TC:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
+        {/* Google Fonts - 타이틀 디자인 에디터용 (기존) */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;700;900&family=Merriweather:wght@300;400;700;900&family=Lora:wght@400;700&family=Dancing+Script:wght@400;700&family=Pacifico&display=swap"
           rel="stylesheet"
         />
         {/* 모바일 앱 느낌을 주기 위한 설정 */}

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining } from '@/lib/modules/travel-planner/types';
 import {
   MapPin,
@@ -24,6 +26,8 @@ const API_BASE = '/api/v1/travel';
 export function TravelPlannerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { lang } = useLanguage();
+  const tt = (key: keyof import('@/lib/translations/travel').TravelTranslations) => getTravelTranslation(lang, key);
   const { currentGroupId, currentGroup } = useGroup();
   const [loading, setLoading] = useState(true);
   const [trips, setTrips] = useState<TravelTrip[]>([]);
@@ -95,7 +99,7 @@ export function TravelPlannerContent() {
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) throw new Error('인증이 필요합니다.');
+    if (!token) throw new Error(tt('auth_required'));
     return {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -117,10 +121,10 @@ export function TravelPlannerContent() {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips?groupId=${currentGroupId}`, { headers });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '여행 목록 조회 실패');
+      if (!res.ok) throw new Error(json.error || tt('load_trips_failed'));
       setTrips(json.data ?? []);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '로드 실패');
+      setError(e instanceof Error ? e.message : tt('load_failed'));
       setTrips([]);
     } finally {
       setLoading(false);
@@ -133,7 +137,7 @@ export function TravelPlannerContent() {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${tripId}/itineraries?groupId=${currentGroupId}`, { headers });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '일정 조회 실패');
+      if (!res.ok) throw new Error(json.error || tt('load_itinerary_failed'));
       setItineraries(json.data ?? []);
     } catch {
       setItineraries([]);
@@ -146,7 +150,7 @@ export function TravelPlannerContent() {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${tripId}/expenses?groupId=${currentGroupId}`, { headers });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '경비 조회 실패');
+      if (!res.ok) throw new Error(json.error || tt('load_expense_failed'));
       setExpenses(json.data ?? []);
     } catch {
       setExpenses([]);
@@ -159,7 +163,7 @@ export function TravelPlannerContent() {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${tripId}/accommodations?groupId=${currentGroupId}`, { headers });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '숙소 조회 실패');
+      if (!res.ok) throw new Error(json.error || tt('load_accommodation_failed'));
       setAccommodations(json.data ?? []);
     } catch {
       setAccommodations([]);
@@ -172,7 +176,7 @@ export function TravelPlannerContent() {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${tripId}/dining?groupId=${currentGroupId}`, { headers });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '먹거리 조회 실패');
+      if (!res.ok) throw new Error(json.error || tt('load_dining_failed'));
       setDining(json.data ?? []);
     } catch {
       setDining([]);
@@ -250,20 +254,20 @@ export function TravelPlannerContent() {
             ? undefined
             : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
         });
-        if (label === '숙') marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
-        else if (label === '식') marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
-        else if (label === '관') marker.setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
+        if (label === tt('marker_accommodation')) marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
+        else if (label === tt('marker_dining')) marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
+        else if (label === tt('marker_place')) marker.setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
         travelMapMarkersRef.current.push(marker);
       };
 
       accommodations.forEach((a) => {
-        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, '숙');
+        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, tt('marker_accommodation'));
       });
       dining.forEach((d) => {
-        if (d.latitude != null && d.longitude != null) addMarker(d.latitude, d.longitude, d.name, '식');
+        if (d.latitude != null && d.longitude != null) addMarker(d.latitude, d.longitude, d.name, tt('marker_dining'));
       });
       itineraries.forEach((i) => {
-        if (i.latitude != null && i.longitude != null) addMarker(i.latitude, i.longitude, i.title, i.source_type ? undefined : '관');
+        if (i.latitude != null && i.longitude != null) addMarker(i.latitude, i.longitude, i.title, i.source_type ? undefined : tt('marker_place'));
       });
 
       if (hasAny && map) map.fitBounds(bounds);
@@ -400,7 +404,7 @@ export function TravelPlannerContent() {
           .in('id', userIds);
         const map = new Map<string, string>();
         (profiles ?? []).forEach((p) => {
-          const name = (p.nickname && String(p.nickname).trim()) || p.email || '멤버';
+          const name = (p.nickname && String(p.nickname).trim()) || p.email || tt('member_fallback');
           map.set(p.id, name);
         });
         if (!cancelled) setMemberDisplayNames(map);
@@ -495,11 +499,11 @@ export function TravelPlannerContent() {
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentGroupId || !formTitle.trim() || !formStartDate || !formEndDate) {
-      alert('제목, 출발일, 종료일을 입력해주세요.');
+      alert(tt('alert_trip_required'));
       return;
     }
     if (new Date(formEndDate) < new Date(formStartDate)) {
-      alert('종료일은 출발일 이후여야 합니다.');
+      alert(tt('alert_end_after_start'));
       return;
     }
     try {
@@ -517,7 +521,7 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '여행 생성 실패');
+      if (!res.ok) throw new Error(json.error || tt('create_failed'));
       setFormTitle('');
       setFormDestination('');
       setFormStartDate('');
@@ -526,7 +530,7 @@ export function TravelPlannerContent() {
       await fetchTrips();
       if (json.data?.id) router.replace(`/travel?tripId=${json.data.id}`);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '생성 실패');
+      alert(e instanceof Error ? e.message : tt('create_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -535,11 +539,11 @@ export function TravelPlannerContent() {
   const handleUpdateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !formTitle.trim() || !formStartDate || !formEndDate) {
-      alert('제목, 출발일, 종료일을 입력해주세요.');
+      alert(tt('alert_trip_required'));
       return;
     }
     if (new Date(formEndDate) < new Date(formStartDate)) {
-      alert('종료일은 출발일 이후여야 합니다.');
+      alert(tt('alert_end_after_start'));
       return;
     }
     try {
@@ -558,12 +562,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '여행 수정 실패');
+      if (!res.ok) throw new Error(json.error || tt('update_failed'));
       if (json.data) setSelectedTrip(json.data);
       await fetchTrips();
       setShowTripEditForm(false);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '수정 실패');
+      alert(e instanceof Error ? e.message : tt('update_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -578,13 +582,13 @@ export function TravelPlannerContent() {
         headers,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '삭제 실패');
+      if (!res.ok) throw new Error(json.error || tt('delete_failed'));
       const wasCurrent = selectedTrip?.id === trip.id;
       if (wasCurrent) setSelectedTrip(null);
       await fetchTrips();
       if (wasCurrent) router.push('/dashboard');
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '삭제 실패');
+      alert(e instanceof Error ? e.message : tt('delete_failed'));
     }
   };
 
@@ -616,7 +620,7 @@ export function TravelPlannerContent() {
   const handleCreateItinerary = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !itineraryDayDate || !itineraryTitle.trim()) {
-      alert('날짜와 제목을 입력해주세요.');
+      alert(tt('alert_itinerary_required'));
       return;
     }
     try {
@@ -638,12 +642,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '일정 추가 실패');
+      if (!res.ok) throw new Error(json.error || tt('itinerary_add_failed'));
       await fetchItineraries(selectedTrip.id);
       setShowItineraryForm(false);
       setEditingItinerary(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '일정 추가 실패');
+      alert(e instanceof Error ? e.message : tt('itinerary_add_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -652,7 +656,7 @@ export function TravelPlannerContent() {
   const handleUpdateItinerary = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItinerary || !currentGroupId || !itineraryDayDate || !itineraryTitle.trim()) {
-      alert('날짜와 제목을 입력해주세요.');
+      alert(tt('alert_itinerary_required'));
       return;
     }
     try {
@@ -673,12 +677,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '일정 수정 실패');
+      if (!res.ok) throw new Error(json.error || tt('itinerary_update_failed'));
       await fetchItineraries(selectedTrip!.id);
       setShowItineraryForm(false);
       setEditingItinerary(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '일정 수정 실패');
+      alert(e instanceof Error ? e.message : tt('itinerary_update_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -694,11 +698,11 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || '일정 삭제 실패');
+        throw new Error(json.error || tt('itinerary_delete_failed'));
       }
       await fetchItineraries(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '일정 삭제 실패');
+      alert(e instanceof Error ? e.message : tt('itinerary_delete_failed'));
     }
   };
 
@@ -725,7 +729,7 @@ export function TravelPlannerContent() {
     e.preventDefault();
     const amount = Number(expenseAmount);
     if (!currentGroupId || !selectedTrip || expenseDate === '' || Number.isNaN(amount) || amount < 0) {
-      alert('날짜와 금액(0 이상)을 입력해주세요.');
+      alert(tt('alert_expense_required'));
       return;
     }
     try {
@@ -744,12 +748,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '경비 추가 실패');
+      if (!res.ok) throw new Error(json.error || tt('expense_add_failed'));
       await fetchExpenses(selectedTrip.id);
       setShowExpenseForm(false);
       setEditingExpense(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '경비 추가 실패');
+      alert(e instanceof Error ? e.message : tt('expense_add_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -759,7 +763,7 @@ export function TravelPlannerContent() {
     e.preventDefault();
     const amount = Number(expenseAmount);
     if (!editingExpense || !currentGroupId || expenseDate === '' || Number.isNaN(amount) || amount < 0) {
-      alert('날짜와 금액(0 이상)을 입력해주세요.');
+      alert(tt('alert_expense_required'));
       return;
     }
     try {
@@ -777,12 +781,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '경비 수정 실패');
+      if (!res.ok) throw new Error(json.error || tt('expense_update_failed'));
       await fetchExpenses(selectedTrip!.id);
       setShowExpenseForm(false);
       setEditingExpense(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '경비 수정 실패');
+      alert(e instanceof Error ? e.message : tt('expense_update_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -798,11 +802,11 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || '경비 삭제 실패');
+        throw new Error(json.error || tt('expense_delete_failed'));
       }
       await fetchExpenses(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '경비 삭제 실패');
+      alert(e instanceof Error ? e.message : tt('expense_delete_failed'));
     }
   };
 
@@ -832,11 +836,11 @@ export function TravelPlannerContent() {
   const handleCreateAccommodation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !accName.trim() || !accCheckIn || !accCheckOut) {
-      alert('숙소명, 체크인/체크아웃 날짜를 입력해주세요.');
+      alert(tt('alert_acc_required'));
       return;
     }
     if (new Date(accCheckOut) < new Date(accCheckIn)) {
-      alert('체크아웃은 체크인 이후여야 합니다.');
+      alert(tt('alert_checkout_after_checkin'));
       return;
     }
     try {
@@ -857,13 +861,13 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '숙소 추가 실패');
+      if (!res.ok) throw new Error(json.error || tt('accommodation_add_failed'));
       await fetchAccommodations(selectedTrip.id);
       await fetchItineraries(selectedTrip.id);
       setShowAccommodationForm(false);
       setEditingAccommodation(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '숙소 추가 실패');
+      alert(e instanceof Error ? e.message : tt('accommodation_add_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -872,11 +876,11 @@ export function TravelPlannerContent() {
   const handleUpdateAccommodation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAccommodation || !currentGroupId || !accName.trim() || !accCheckIn || !accCheckOut) {
-      alert('숙소명, 체크인/체크아웃 날짜를 입력해주세요.');
+      alert(tt('alert_acc_required'));
       return;
     }
     if (new Date(accCheckOut) < new Date(accCheckIn)) {
-      alert('체크아웃은 체크인 이후여야 합니다.');
+      alert(tt('alert_checkout_after_checkin'));
       return;
     }
     try {
@@ -896,13 +900,13 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '숙소 수정 실패');
+      if (!res.ok) throw new Error(json.error || tt('accommodation_update_failed'));
       await fetchAccommodations(selectedTrip!.id);
       await fetchItineraries(selectedTrip!.id);
       setShowAccommodationForm(false);
       setEditingAccommodation(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '숙소 수정 실패');
+      alert(e instanceof Error ? e.message : tt('accommodation_update_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -918,12 +922,12 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || '숙소 삭제 실패');
+        throw new Error(json.error || tt('accommodation_delete_failed'));
       }
       await fetchAccommodations(selectedTrip.id);
       await fetchItineraries(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '숙소 삭제 실패');
+      alert(e instanceof Error ? e.message : tt('accommodation_delete_failed'));
     }
   };
 
@@ -955,7 +959,7 @@ export function TravelPlannerContent() {
   const handleCreateDining = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !diningName.trim() || !diningDayDate) {
-      alert('이름과 날짜를 입력해주세요.');
+      alert(tt('alert_dining_required'));
       return;
     }
     try {
@@ -977,13 +981,13 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '먹거리 추가 실패');
+      if (!res.ok) throw new Error(json.error || tt('dining_add_failed'));
       await fetchDining(selectedTrip.id);
       await fetchItineraries(selectedTrip.id);
       setShowDiningForm(false);
       setEditingDining(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '먹거리 추가 실패');
+      alert(e instanceof Error ? e.message : tt('dining_add_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -992,7 +996,7 @@ export function TravelPlannerContent() {
   const handleUpdateDining = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingDining || !currentGroupId || !diningName.trim() || !diningDayDate) {
-      alert('이름과 날짜를 입력해주세요.');
+      alert(tt('alert_dining_required'));
       return;
     }
     try {
@@ -1013,13 +1017,13 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '먹거리 수정 실패');
+      if (!res.ok) throw new Error(json.error || tt('dining_update_failed'));
       await fetchDining(selectedTrip!.id);
       await fetchItineraries(selectedTrip!.id);
       setShowDiningForm(false);
       setEditingDining(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '먹거리 수정 실패');
+      alert(e instanceof Error ? e.message : tt('dining_update_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -1035,12 +1039,12 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || '먹거리 삭제 실패');
+        throw new Error(json.error || tt('dining_delete_failed'));
       }
       await fetchDining(selectedTrip.id);
       await fetchItineraries(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '먹거리 삭제 실패');
+      alert(e instanceof Error ? e.message : tt('dining_delete_failed'));
     }
   };
 
@@ -1049,7 +1053,7 @@ export function TravelPlannerContent() {
       <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: '#64748b' }}>
           <MapPin style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.6 }} />
-          <p>그룹을 선택한 후 이용해주세요.</p>
+          <p>{tt('select_group_first')}</p>
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
@@ -1100,8 +1104,8 @@ export function TravelPlannerContent() {
           <ChevronLeft style={{ width: 20, height: 20, color: '#475569' }} />
         </button>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>가족 여행 플래너</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>{currentGroup?.name ?? '그룹'}</p>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>{tt('title')}</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>{currentGroup?.name ?? tt('group_label')}</p>
         </div>
       </div>
 
@@ -1232,48 +1236,48 @@ export function TravelPlannerContent() {
                 </div>
                 </div>
                 <div style={{ marginBottom: 8, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, color: '#64748b' }}>총 예산 <strong style={{ color: '#1e293b' }}>{totalBudget.toLocaleString('ko-KR')}원</strong></span>
+                  <span style={{ fontSize: 15, color: '#64748b' }}>{tt('total_budget')} <strong style={{ color: '#1e293b' }}>{totalBudget.toLocaleString(lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : 'en-US')}{lang === 'ko' ? '원' : lang === 'ja' ? '円' : ''}</strong></span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: balance >= 0 ? '#9333ea' : '#dc2626' }}>
                     잔액 {balance.toLocaleString('ko-KR')}원
                   </span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>추가 목록</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>{tt('add_list')}</div>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: 16 }}>
                   {additionList.length === 0 ? (
-                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>추가 내역 없음</li>
+                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>{tt('no_additions')}</li>
                   ) : (
                     additionList.map((e) => (
                       <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#f0fdf4', borderRadius: 6, border: '1px solid #bbf7d0', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span>{e.category || '추가'}</span>
+                          <span>{e.category || tt('addition')}</span>
                           <span style={{ fontWeight: 600, marginLeft: 8, color: '#15803d' }}>+{Number(e.amount).toLocaleString('ko-KR')}원</span>
                           {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>등록: {getDisplayName(e.created_by)}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정"><Pencil style={{ width: 14, height: 14 }} /></button>
-                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제"><Trash2 style={{ width: 14, height: 14 }} /></button>
+                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
                       </li>
                     ))
                   )}
                 </ul>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>지출 목록</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>{tt('expense_list')}</div>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {expenseList.length === 0 ? (
-                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>지출 내역 없음</li>
+                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>{tt('no_expenses')}</li>
                   ) : (
                     expenseList.map((e) => (
                       <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#fef2f2', borderRadius: 6, border: '1px solid #fecaca', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span>{e.category || '기타'}</span>
+                          <span>{e.category || tt('other')}</span>
                           <span style={{ fontWeight: 600, marginLeft: 8, color: '#b91c1c' }}>-{Number(e.amount).toLocaleString('ko-KR')}원</span>
                           {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>등록: {getDisplayName(e.created_by)}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정"><Pencil style={{ width: 14, height: 14 }} /></button>
-                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제"><Trash2 style={{ width: 14, height: 14 }} /></button>
+                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
                       </li>
                     ))
@@ -1297,7 +1301,7 @@ export function TravelPlannerContent() {
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {itineraries.length === 0 ? (
-                  <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 일정이 없습니다.</li>
+                  <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_itinerary')}</li>
                 ) : (
                   itineraries.map((i) => (
                     <li
@@ -1322,14 +1326,14 @@ export function TravelPlannerContent() {
                           {(i.start_time || i.end_time) && <span style={{ marginLeft: 6 }}>· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
                         </div>
                         {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
-                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>등록: {getDisplayName(i.created_by)}{i.updated_by != null && ` · 수정: ${getDisplayName(i.updated_by)}`}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(i.created_by)}{i.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(i.updated_by)}`}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                         {getGoogleMapsUrl(i) && (
-                          <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기"><MapPin style={{ width: 14, height: 14 }} /></a>
+                          <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
                         )}
-                        <button type="button" onClick={() => openItineraryForm(i)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정"><Pencil style={{ width: 14, height: 14 }} /></button>
-                        <button type="button" onClick={() => handleDeleteItinerary(i)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제"><Trash2 style={{ width: 14, height: 14 }} /></button>
+                        <button type="button" onClick={() => openItineraryForm(i)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                        <button type="button" onClick={() => handleDeleteItinerary(i)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                       </div>
                     </li>
                   ))
@@ -1362,7 +1366,7 @@ export function TravelPlannerContent() {
                 </div>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {accommodations.length === 0 ? (
-                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 숙소가 없습니다.</li>
+                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_accommodation')}</li>
                   ) : (
                     accommodations.map((a) => (
                       <li
@@ -1391,14 +1395,14 @@ export function TravelPlannerContent() {
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                           {getGoogleMapsUrl(a) && (
-                            <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기">
+                            <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
                               <MapPin style={{ width: 14, height: 14 }} />
                             </a>
                           )}
-                          <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정">
+                          <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
                             <Pencil style={{ width: 14, height: 14 }} />
                           </button>
-                          <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제">
+                          <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
                             <Trash2 style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
@@ -1433,7 +1437,7 @@ export function TravelPlannerContent() {
                 </div>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {dining.length === 0 ? (
-                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 먹거리가 없습니다.</li>
+                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_dining')}</li>
                   ) : (
                     dining.map((d) => (
                       <li
@@ -1465,14 +1469,14 @@ export function TravelPlannerContent() {
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                           {getGoogleMapsUrl(d) && (
-                            <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title="지도에서 보기">
+                            <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
                               <MapPin style={{ width: 14, height: 14 }} />
                             </a>
                           )}
-                          <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title="수정">
+                          <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
                             <Pencil style={{ width: 14, height: 14 }} />
                           </button>
-                          <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="삭제">
+                          <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
                             <Trash2 style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
@@ -1510,7 +1514,7 @@ export function TravelPlannerContent() {
             ) : (
               <>
                 <MapPin style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.6, color: '#94a3b8' }} />
-                <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>대시보드에서 여행을 선택하거나 여행을 추가해 주세요.</p>
+                <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>{tt('select_or_add_trip')}</p>
                 <button
                   type="button"
                   onClick={() => router.push('/dashboard')}
@@ -1562,7 +1566,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>여행 추가</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{tt('add_trip')}</h3>
               <button
                 type="button"
                 disabled={submitting}
@@ -1573,12 +1577,12 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form onSubmit={handleCreateTrip} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>제목 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_title')}</label>
               <input
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 required
-                placeholder="예: 제주도 가족여행"
+                placeholder={tt('placeholder_trip_title')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -1590,11 +1594,11 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>목적지</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_destination')}</label>
               <input
                 value={formDestination}
                 onChange={(e) => setFormDestination(e.target.value)}
-                placeholder="예: 제주시"
+                placeholder={tt('placeholder_destination')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -1606,7 +1610,7 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>출발일 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_date')}</label>
               <div style={{ overflow: 'hidden', borderRadius: 8, marginBottom: 12 }}>
                 <input
                   type="date"
@@ -1627,7 +1631,7 @@ export function TravelPlannerContent() {
                   }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료일 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_date')}</label>
               <div style={{ overflow: 'hidden', borderRadius: 8, marginBottom: 20 }}>
                 <input
                   type="date"
@@ -1721,7 +1725,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>여행 수정</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{tt('edit_trip')}</h3>
               <button
                 type="button"
                 disabled={submitting}
@@ -1732,12 +1736,12 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form onSubmit={handleUpdateTrip} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>제목 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_title')}</label>
               <input
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 required
-                placeholder="예: 제주도 가족여행"
+                placeholder={tt('placeholder_trip_title')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -1749,11 +1753,11 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>목적지</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_destination')}</label>
               <input
                 value={formDestination}
                 onChange={(e) => setFormDestination(e.target.value)}
-                placeholder="예: 제주시"
+                placeholder={tt('placeholder_destination')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -1765,7 +1769,7 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>출발일 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_date')}</label>
               <input
                 type="date"
                 value={formStartDate}
@@ -1783,7 +1787,7 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료일 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_date')}</label>
               <input
                 type="date"
                 value={formEndDate}
@@ -1801,14 +1805,14 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>총 예산 (원)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_budget')}</label>
               <input
                 type="number"
                 min={0}
                 step={1}
                 value={formBudget}
                 onChange={(e) => setFormBudget(e.target.value)}
-                placeholder="예: 1000000"
+                placeholder={tt('placeholder_budget')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -1893,7 +1897,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingItinerary ? '일정 수정' : '일정 추가'}</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingItinerary ? tt('edit_itinerary') : tt('add_itinerary')}</h3>
               <button
                 type="button"
                 disabled={submitting}
@@ -1904,7 +1908,7 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form onSubmit={editingItinerary ? handleUpdateItinerary : handleCreateItinerary} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
                   type="date"
@@ -1924,7 +1928,7 @@ export function TravelPlannerContent() {
               </div>
               <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시작 시간</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_time')}</label>
                   <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                     <input
                       type="time"
@@ -1943,7 +1947,7 @@ export function TravelPlannerContent() {
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료 시간</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_time')}</label>
                   <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                     <input
                       type="time"
@@ -1962,12 +1966,12 @@ export function TravelPlannerContent() {
                   </div>
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>제목 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_title')}</label>
               <input
                 value={itineraryTitle}
                 onChange={(e) => setItineraryTitle(e.target.value)}
                 required
-                placeholder="예: 제주공항 도착"
+                placeholder={tt('placeholder_itinerary_title')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -1979,11 +1983,11 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>설명</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_description')}</label>
               <textarea
                 value={itineraryDescription}
                 onChange={(e) => setItineraryDescription(e.target.value)}
-                placeholder="선택 입력"
+                placeholder={tt('placeholder_optional')}
                 rows={3}
                 style={{
                   width: '100%',
@@ -1996,34 +2000,34 @@ export function TravelPlannerContent() {
                   resize: 'vertical',
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (구글 검색 또는 직접 입력)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
                 ref={itineraryAddressInputRef}
                 value={itineraryAddress}
                 onChange={(e) => setItineraryAddress(e.target.value)}
-                placeholder="장소 검색 또는 주소·위도/경도 직접 입력"
+                placeholder={tt('placeholder_search_address')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
                   <input
                     type="number"
                     step="any"
                     value={itineraryLatitude}
                     onChange={(e) => setItineraryLatitude(e.target.value)}
-                    placeholder="예: 33.4996"
+                    placeholder={tt('placeholder_lat')}
                     style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>경도</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lng_map')}</label>
                   <input
                     type="number"
                     step="any"
                     value={itineraryLongitude}
                     onChange={(e) => setItineraryLongitude(e.target.value)}
-                    placeholder="예: 126.5312"
+                    placeholder={tt('placeholder_lng')}
                     style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
                   />
                 </div>
@@ -2064,7 +2068,7 @@ export function TravelPlannerContent() {
                   }}
                 >
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  {editingItinerary ? '저장' : '추가'}
+                  {editingItinerary ? tt('save') : tt('add')}
                 </button>
               </div>
             </form>
@@ -2101,7 +2105,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingExpense ? '경비 수정' : '경비 추가'}</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingExpense ? tt('edit_expense') : tt('add_expense')}</h3>
               <button
                 type="button"
                 disabled={submitting}
@@ -2112,11 +2116,11 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>분류</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_category')}</label>
               <input
                 value={expenseCategory}
                 onChange={(e) => setExpenseCategory(e.target.value)}
-                placeholder="예: 교통, 숙박, 식비"
+                placeholder={tt('placeholder_category')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -2128,7 +2132,7 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>금액(원) *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_amount')}</label>
               <input
                 type="number"
                 min={0}
@@ -2147,7 +2151,7 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
                   type="date"
@@ -2165,11 +2169,11 @@ export function TravelPlannerContent() {
                   }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
               <input
                 value={expenseMemo}
                 onChange={(e) => setExpenseMemo(e.target.value)}
-                placeholder="선택 입력"
+                placeholder={tt('placeholder_optional')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -2217,7 +2221,7 @@ export function TravelPlannerContent() {
                   }}
                 >
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  {editingExpense ? '저장' : '추가'}
+                  {editingExpense ? tt('save') : tt('add')}
                 </button>
               </div>
             </form>
@@ -2254,21 +2258,21 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingAccommodation ? '숙소 수정' : '숙소 추가'}</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingAccommodation ? tt('edit_accommodation') : tt('add_accommodation')}</h3>
               <button type="button" disabled={submitting} onClick={() => setShowAccommodationForm(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
                 <X style={{ width: 20, height: 20 }} />
               </button>
             </div>
             <form onSubmit={editingAccommodation ? handleUpdateAccommodation : handleCreateAccommodation} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>숙소명 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_acc_name')}</label>
               <input
                 value={accName}
                 onChange={(e) => setAccName(e.target.value)}
                 required
-                placeholder="예: 제주 호텔"
+                placeholder={tt('placeholder_acc_name')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>체크인 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_checkin')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
                   type="date"
@@ -2278,7 +2282,7 @@ export function TravelPlannerContent() {
                   style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>체크아웃 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_checkout')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
                   type="date"
@@ -2288,50 +2292,50 @@ export function TravelPlannerContent() {
                   style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (구글 검색 또는 직접 입력)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
                 ref={accAddressInputRef}
                 value={accAddress}
                 onChange={(e) => setAccAddress(e.target.value)}
-                placeholder="장소 검색 또는 주소·위도/경도 직접 입력"
+                placeholder={tt('placeholder_search_address')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도 (지도용)</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
                   <input
                     type="number"
                     step="any"
                     value={accLatitude}
                     onChange={(e) => setAccLatitude(e.target.value)}
-                    placeholder="예: 33.4996"
+                    placeholder={tt('placeholder_lat')}
                     style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>경도 (지도용)</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lng_map')}</label>
                   <input
                     type="number"
                     step="any"
                     value={accLongitude}
                     onChange={(e) => setAccLongitude(e.target.value)}
-                    placeholder="예: 126.5312"
+                    placeholder={tt('placeholder_lng')}
                     style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
                   />
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
               <input
                 value={accMemo}
                 onChange={(e) => setAccMemo(e.target.value)}
-                placeholder="선택 입력"
+                placeholder={tt('placeholder_optional')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowAccommodationForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>취소</button>
+                <button type="button" onClick={() => setShowAccommodationForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>{tt('cancel')}</button>
                 <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  {editingAccommodation ? '저장' : '추가'}
+                  {editingAccommodation ? tt('save') : tt('add')}
                 </button>
               </div>
             </form>
@@ -2368,21 +2372,21 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingDining ? '먹거리 수정' : '먹거리 추가'}</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingDining ? tt('edit_dining') : tt('add_dining')}</h3>
               <button type="button" disabled={submitting} onClick={() => setShowDiningForm(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
                 <X style={{ width: 20, height: 20 }} />
               </button>
             </div>
             <form onSubmit={editingDining ? handleUpdateDining : handleCreateDining} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>이름 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_name')}</label>
               <input
                 value={diningName}
                 onChange={(e) => setDiningName(e.target.value)}
                 required
-                placeholder="예: 맛집 이름"
+                placeholder={tt('placeholder_dining_name')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜 *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
                   type="date"
@@ -2392,7 +2396,7 @@ export function TravelPlannerContent() {
                   style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시간</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_time')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
                   type="time"
@@ -2401,19 +2405,19 @@ export function TravelPlannerContent() {
                   style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>구분 (아침/점심/저녁/카페 등)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_dining_category')}</label>
               <input
                 value={diningCategory}
                 onChange={(e) => setDiningCategory(e.target.value)}
-                placeholder="선택"
+                placeholder={tt('placeholder_select')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소 (구글 검색 또는 직접 입력)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
                 ref={diningAddressInputRef}
                 value={diningAddress}
                 onChange={(e) => setDiningAddress(e.target.value)}
-                placeholder="장소 검색 또는 주소·위도/경도 직접 입력"
+                placeholder={tt('placeholder_search_address')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -2424,7 +2428,7 @@ export function TravelPlannerContent() {
                     step="any"
                     value={diningLatitude}
                     onChange={(e) => setDiningLatitude(e.target.value)}
-                    placeholder="예: 33.4996"
+                    placeholder={tt('placeholder_lat')}
                     style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
                   />
                 </div>
@@ -2435,23 +2439,23 @@ export function TravelPlannerContent() {
                     step="any"
                     value={diningLongitude}
                     onChange={(e) => setDiningLongitude(e.target.value)}
-                    placeholder="예: 126.5312"
+                    placeholder={tt('placeholder_lng')}
                     style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
                   />
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
               <input
                 value={diningMemo}
                 onChange={(e) => setDiningMemo(e.target.value)}
-                placeholder="선택 입력"
+                placeholder={tt('placeholder_optional')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowDiningForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>취소</button>
+                <button type="button" onClick={() => setShowDiningForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>{tt('cancel')}</button>
                 <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  {editingDining ? '저장' : '추가'}
+                  {editingDining ? tt('save') : tt('add')}
                 </button>
               </div>
             </form>

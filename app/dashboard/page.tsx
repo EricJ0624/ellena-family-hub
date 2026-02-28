@@ -15,6 +15,11 @@ import {
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getFontStyle } from '@/lib/language-fonts';
+import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
+import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
+import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -173,6 +178,11 @@ export default function FamilyHub() {
       console.warn('GroupProvider가 없습니다. 그룹 필터링이 비활성화됩니다.');
     }
   }
+  const { lang } = useLanguage();
+  const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
+  const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
+  const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
+  const bodyFont = useMemo(() => getFontStyle(lang, 'body'), [lang]);
   // --- [STATE] ---
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -411,7 +421,7 @@ export default function FamilyHub() {
     if (saved) {
       const decrypted = CryptoService.decrypt(saved, key);
       if (!decrypted) {
-        alert("보안 키가 일치하지 않습니다.");
+        alert(dt('auth_key_mismatch'));
         return;
       }
       localState = decrypted;
@@ -857,10 +867,10 @@ export default function FamilyHub() {
         body: JSON.stringify({ groupId: currentGroupId, childId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '저금통 추가에 실패했습니다.');
+      if (!response.ok) throw new Error(result.error || dt('piggy_add_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || '저금통 추가에 실패했습니다.');
+      setPiggySummaryError(err.message || dt('piggy_add_failed'));
     }
   }, [currentGroupId, loadPiggySummary]);
 
@@ -876,10 +886,10 @@ export default function FamilyHub() {
         body: JSON.stringify({ groupId: currentGroupId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '요청에 실패했습니다.');
-      alert(result.message || '요청이 전달되었습니다.');
+      if (!response.ok) throw new Error(result.error || dt('piggy_request_failed'));
+      alert(result.message || dt('piggy_request_delivered'));
     } catch (err: any) {
-      setPiggySummaryError(err.message || '요청에 실패했습니다.');
+      setPiggySummaryError(err.message || dt('piggy_request_failed'));
     }
   }, [currentGroupId]);
 
@@ -894,10 +904,10 @@ export default function FamilyHub() {
         body: JSON.stringify({ requestId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '승인에 실패했습니다.');
+      if (!response.ok) throw new Error(result.error || dt('piggy_approve_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || '승인에 실패했습니다.');
+      setPiggySummaryError(err.message || dt('piggy_approve_failed'));
     }
   }, [loadPiggySummary]);
 
@@ -912,16 +922,16 @@ export default function FamilyHub() {
         body: JSON.stringify({ requestId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '거절에 실패했습니다.');
+      if (!response.ok) throw new Error(result.error || dt('piggy_reject_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || '거절에 실패했습니다.');
+      setPiggySummaryError(err.message || dt('piggy_reject_failed'));
     }
   }, [loadPiggySummary]);
 
   // 관리자: 저금통 삭제
   const handleDashboardDeletePiggy = useCallback(async (childId: string) => {
-    if (!currentGroupId || !confirm('이 사용자의 저금통을 삭제하시겠습니까? 잔액 데이터가 삭제됩니다.')) return;
+    if (!currentGroupId || !confirm(dt('piggy_delete_confirm'))) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
@@ -930,10 +940,10 @@ export default function FamilyHub() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '삭제에 실패했습니다.');
+      if (!response.ok) throw new Error(result.error || dt('piggy_delete_failed'));
       await loadPiggySummary();
     } catch (err: any) {
-      setPiggySummaryError(err.message || '삭제에 실패했습니다.');
+      setPiggySummaryError(err.message || dt('piggy_delete_failed'));
     }
   }, [currentGroupId, loadPiggySummary]);
 
@@ -954,7 +964,7 @@ export default function FamilyHub() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '여행 목록 조회 실패');
+      if (!response.ok) throw new Error(result.error || dt('piggy_travel_fetch_failed'));
       setTravelTrips(Array.isArray(result.data) ? result.data : []);
     } catch {
       setTravelTrips([]);
@@ -1024,9 +1034,9 @@ export default function FamilyHub() {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     fontSize: isDefaultDashboardTitle ? 'clamp(44px, 11vw, 68px)' : 'clamp(18px, 4.5vw, 28px)',
-    fontWeight: effectiveTitleStyle?.fontWeight || '800',
+    fontWeight: titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
-    fontFamily: effectiveTitleStyle?.fontFamily || 'inherit',
+    fontFamily: titleFont.fontFamily,
     ...(isDefaultDashboardTitle
       ? {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1381,7 +1391,7 @@ export default function FamilyHub() {
               scale: 1.2
             });
             const labelDiv = document.createElement('div');
-            labelDiv.textContent = userName || '나';
+            labelDiv.textContent = userName || ct('me');
             labelDiv.style.color = '#ffffff';
             labelDiv.style.fontSize = '12px';
             labelDiv.style.fontWeight = 'bold';
@@ -1393,7 +1403,7 @@ export default function FamilyHub() {
             existingMyMarker.content = container;
           } else if (existingMyMarker.setLabel) {
             existingMyMarker.setLabel({
-              text: userName || '나',
+              text: userName || ct('me'),
               color: '#ffffff',
               fontSize: '12px',
               fontWeight: 'bold'
@@ -1410,7 +1420,7 @@ export default function FamilyHub() {
               scale: 1.2
             });
             const labelDiv = document.createElement('div');
-            labelDiv.textContent = userName || '나';
+            labelDiv.textContent = userName || ct('me');
             labelDiv.style.color = '#ffffff';
             labelDiv.style.fontSize = '12px';
             labelDiv.style.fontWeight = 'bold';
@@ -1422,7 +1432,7 @@ export default function FamilyHub() {
             myMarker = new AdvancedMarkerElement({
               map: mapRef.current,
               position: { lat: state.location.latitude, lng: state.location.longitude },
-              title: `${userName || '내'} 위치`,
+              title: `${userName || dt('location_my')} ${dt('location_word')}`,
               content: container
             });
           } else {
@@ -1430,9 +1440,9 @@ export default function FamilyHub() {
             myMarker = new google.maps.Marker({
               position: { lat: state.location.latitude, lng: state.location.longitude },
               map: mapRef.current,
-              title: `${userName || '내'} 위치`,
+              title: `${userName || dt('location_my')} ${dt('location_word')}`,
               label: {
-                text: userName || '나',
+                text: userName || ct('me'),
                 color: '#ffffff',
                 fontSize: '12px',
                 fontWeight: 'bold'
@@ -1477,7 +1487,7 @@ export default function FamilyHub() {
                 scale: 1.2
               });
               const labelDiv = document.createElement('div');
-              labelDiv.textContent = loc.userName || '사용자';
+              labelDiv.textContent = loc.userName || ct('user');
               labelDiv.style.color = '#ffffff';
               labelDiv.style.fontSize = '12px';
               labelDiv.style.fontWeight = 'bold';
@@ -1489,7 +1499,7 @@ export default function FamilyHub() {
               existingMarker.content = container;
             } else if (existingMarker.setLabel) {
               existingMarker.setLabel({
-                text: loc.userName || '사용자',
+                text: loc.userName || ct('user'),
                 color: '#ffffff',
                 fontSize: '12px',
                 fontWeight: 'bold'
@@ -1506,7 +1516,7 @@ export default function FamilyHub() {
                 scale: 1.2
               });
               const labelDiv = document.createElement('div');
-              labelDiv.textContent = loc.userName || '사용자';
+              labelDiv.textContent = loc.userName || ct('user');
               labelDiv.style.color = '#ffffff';
               labelDiv.style.fontSize = '12px';
               labelDiv.style.fontWeight = 'bold';
@@ -1518,7 +1528,7 @@ export default function FamilyHub() {
               marker = new AdvancedMarkerElement({
                 map: mapRef.current,
                 position: { lat: loc.latitude, lng: loc.longitude },
-                title: `${loc.userName}의 위치`,
+                title: `${loc.userName}${dt('location_of')}`,
                 content: container
               });
             } else {
@@ -1526,9 +1536,9 @@ export default function FamilyHub() {
               marker = new google.maps.Marker({
                 position: { lat: loc.latitude, lng: loc.longitude },
                 map: mapRef.current,
-                title: `${loc.userName}의 위치`,
+                title: `${loc.userName}${dt('location_of')}`,
                 label: {
-                  text: loc.userName || '사용자',
+                  text: loc.userName || ct('user'),
                   color: '#ffffff',
                   fontSize: '12px',
                   fontWeight: 'bold'
@@ -1558,14 +1568,14 @@ export default function FamilyHub() {
     } catch (error) {
       console.error('지도 마커 업데이트 오류:', error);
     }
-  }, [state.location, state.familyLocations, userName, userId]);
+  }, [state.location, state.familyLocations, userName, userId, lang]);
 
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
     if (!googleMapApiKey) {
       console.error('Google Maps API 키가 설정되지 않았습니다. NEXT_PUBLIC_GOOGLE_MAP_API_KEY 환경 변수를 확인해주세요.');
-      setMapError('Google Maps API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.');
+      setMapError(dt('map_error_no_key'));
       setMapLoaded(false);
       return;
     }
@@ -1738,12 +1748,12 @@ export default function FamilyHub() {
             } else if (errorMessage.includes('InvalidKey') || 
                        errorMessage.includes('API key') ||
                        errorMessage.includes('RefererNotAllowedMapError')) {
-              setMapError('Google Maps API 키 설정 오류: Google Cloud Console에서 API 키의 도메인 제한 설정을 확인하고, Maps JavaScript API가 활성화되어 있는지 확인해주세요.');
+              setMapError(dt('map_error_check_env'));
             } else if (errorMessage.includes('Referer') || 
                        errorMessage.includes('domain')) {
-              setMapError('현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 API 키의 HTTP 리퍼러(웹사이트) 제한에 Vercel 도메인을 추가해주세요.');
+              setMapError(dt('map_error_domain'));
             } else {
-              setMapError('Google Maps를 불러오는데 실패했습니다. Google Cloud Console에서 Maps JavaScript API 활성화 및 결제 계정 연결을 확인해주세요.');
+              setMapError(dt('map_error_load_failed'));
             }
             setMapLoaded(false);
             return;
@@ -1780,12 +1790,12 @@ export default function FamilyHub() {
           setMapError('Google Maps API를 사용하려면 Google Cloud 프로젝트에 결제 계정을 연결해야 합니다. 월 $200 무료 크레딧이 제공됩니다.');
         } else if (error?.message?.includes('InvalidKey') || 
                    error?.message?.includes('API key')) {
-          setMapError('Google Maps API 키가 유효하지 않습니다. API 키와 도메인 제한 설정을 확인해주세요.');
+          setMapError(dt('map_error_invalid_key'));
         } else if (error?.message?.includes('RefererNotAllowedMapError') ||
                    error?.message?.includes('Referer')) {
-          setMapError('현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console에서 API 키의 도메인 제한을 확인해주세요.');
+          setMapError(dt('map_error_domain'));
         } else {
-          setMapError('Google Maps를 불러오는데 실패했습니다. API 키와 설정을 확인해주세요.');
+          setMapError(dt('map_error_load_failed'));
         }
         setMapLoaded(false);
       }
@@ -1813,7 +1823,7 @@ export default function FamilyHub() {
           } else if (checkCount >= maxChecks) {
           clearInterval(checkGoogleMaps);
             console.warn('Google Maps API 로드 타임아웃');
-            setMapError('Google Maps API 스크립트를 불러오는데 시간이 오래 걸립니다. API 키와 설정을 확인해주세요.');
+            setMapError(dt('map_error_script_timeout'));
             setMapLoaded(false);
           }
         }, 100);
@@ -1842,7 +1852,7 @@ export default function FamilyHub() {
             } else if (checkCount >= maxChecks) {
               clearInterval(checkGoogleMapsReady);
               console.error('Google Maps API 초기화 실패 - google.maps.Map을 찾을 수 없습니다.');
-              setMapError('Google Maps API를 초기화하는데 실패했습니다. API 키와 설정을 확인해주세요.');
+              setMapError(dt('map_error_init_failed'));
               setMapLoaded(false);
               googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
             }
@@ -1861,7 +1871,7 @@ export default function FamilyHub() {
           console.error('2. API 및 서비스 → 사용 설정된 API 및 서비스 → Maps JavaScript API → 사용량 탭');
           console.error('3. 결제 → 결제 계정 연결 확인');
           
-          setMapError('Google Maps API 스크립트를 불러오는데 실패했습니다. 브라우저 콘솔과 Google Cloud Console의 로그 탐색기를 확인해주세요.');
+          setMapError(dt('map_error_console'));
           setMapLoaded(false);
         };
         
@@ -4025,12 +4035,12 @@ export default function FamilyHub() {
             })
           };
           localStorage.setItem(storageKey, CryptoService.encrypt(stateForStorage, key));
-          alert("저장 공간이 부족하여 오래된 사진이 자동으로 삭제되었습니다.");
+          alert(dt('storage_photo_cleanup'));
         } catch (retryError) {
-          alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 수동으로 삭제해 주세요.");
+          alert(dt('storage_full_auto'));
         }
       } else {
-      alert("브라우저 저장 공간이 가득 찼습니다. 오래된 사진을 삭제해 주세요.");
+      alert(dt('storage_full'));
       }
     }
   };
@@ -6174,10 +6184,10 @@ export default function FamilyHub() {
   const handleDeleteAccount = async (confirmGroupDeletion: boolean = false) => {
     // 첫 번째 확인 (그룹 삭제 확인이 아닌 경우만)
     if (!confirmGroupDeletion) {
-      const firstConfirm = confirm('⚠️ 정말로 회원탈퇴를 하시겠습니까?\n\n탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.');
+      const firstConfirm = confirm(dt('delete_confirm_1'));
       if (!firstConfirm) return;
 
-      const secondConfirm = confirm('⚠️ 최종 확인\n\n회원탈퇴를 진행하시겠습니까?');
+      const secondConfirm = confirm(dt('delete_confirm_2'));
       if (!secondConfirm) return;
     }
 
@@ -6235,25 +6245,12 @@ export default function FamilyHub() {
           const ownedGroups = result.ownedGroups || [];
           
           // 그룹 정보 포맷팅
+          const memberSuffix = getOnboardingTranslation(lang, 'member_count_suffix');
           const groupInfo = ownedGroups.map((g: any) => 
-            `• ${g.name} (멤버 ${g.memberCount}명)`
+            `• ${g.name} (${ct('member')} ${g.memberCount}${memberSuffix})`
           ).join('\n');
 
-          const warningMessage = `⚠️ 그룹 소유자 탈퇴 경고
-
-회원탈퇴 시 다음 사항이 발생합니다:
-
-📋 소유한 그룹:
-${groupInfo}
-
-⚠️ 삭제되는 내용:
-• 소유한 그룹이 영구적으로 삭제됩니다
-• 그룹의 모든 데이터가 삭제됩니다
-  (사진, 일정, 메모, 저금통 등)
-• 그룹의 모든 멤버가 자동으로 탈퇴됩니다
-• 이 작업은 되돌릴 수 없습니다
-
-정말로 탈퇴하시겠습니까?`;
+          const warningMessage = `${dt('delete_warning_owner_title')}\n\n${dt('delete_warning_owner_groups')}\n${groupInfo}\n\n${dt('delete_warning_owner_deleted')}\n\n${dt('delete_warning_owner_final')}`;
 
           if (confirm(warningMessage)) {
             // 그룹 삭제 확인 후 재시도
@@ -6262,11 +6259,11 @@ ${groupInfo}
           return;
         }
 
-        throw new Error(result.error || '회원탈퇴에 실패했습니다.');
+        throw new Error(result.error || dt('delete_failed'));
       }
 
       // 성공 시 모든 데이터 정리 및 로그아웃
-      alert('회원탈퇴가 완료되었습니다.');
+      alert(dt('delete_success'));
       
       // 모든 localStorage 및 sessionStorage 데이터 정리
       localStorage.clear();
@@ -6279,21 +6276,21 @@ ${groupInfo}
       router.push('/');
     } catch (error: any) {
       console.error('회원탈퇴 오류:', error);
-      alert(error.message || '회원탈퇴 처리 중 오류가 발생했습니다.');
+      alert(error.message || dt('delete_error'));
     }
   };
 
   // 후임자 지정 후 회원탈퇴 처리
   const handleTransferAndDelete = async () => {
     if (!selectedSuccessor) {
-      alert('후임자를 선택해주세요.');
+      alert(dt('delete_transfer_select_successor'));
       return;
     }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        alert('인증 정보를 가져올 수 없습니다.');
+        alert(dt('delete_transfer_auth_failed'));
         return;
       }
 
@@ -6310,7 +6307,7 @@ ${groupInfo}
       const transferResult = await transferResponse.json();
 
       if (!transferResponse.ok) {
-        throw new Error(transferResult.error || '후임자 지정에 실패했습니다.');
+        throw new Error(transferResult.error || dt('delete_transfer_failed'));
       }
 
       alert(transferResult.message);
@@ -6331,7 +6328,7 @@ ${groupInfo}
       }
 
       // 성공 시 모든 데이터 정리 및 로그아웃
-      alert('회원탈퇴가 완료되었습니다.');
+      alert(dt('delete_success'));
       
       localStorage.clear();
       sessionStorage.clear();
@@ -6584,7 +6581,7 @@ ${groupInfo}
       alert("닉네임이 업데이트되었습니다.");
     } catch (error: any) {
       console.error('닉네임 업데이트 오류:', error);
-      alert("닉네임 업데이트 실패: " + (error.message || "알 수 없는 오류"));
+      alert(dt('nickname_update_failed') + (error.message || ct('error_unknown')));
     }
   };
 
@@ -8061,25 +8058,25 @@ ${groupInfo}
           <div className="chalkboard-modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="chalkboard-modal-title">
               <span className="chalkboard-modal-icon">📝</span>
-              새 할 일 등록
+              {dt('todo_modal_title')}
           </h3>
             <div className="chalkboard-modal-form">
               <div className="chalkboard-form-field">
-                <label className="chalkboard-form-label">무엇을 할까요?</label>
+                <label className="chalkboard-form-label">{dt('todo_what_label')}</label>
               <input 
                 ref={todoTextRef}
                 type="text" 
                   className="chalkboard-form-input" 
-                placeholder="할 일 내용 입력"
+                placeholder={dt('todo_what_placeholder')}
               />
             </div>
               <div className="chalkboard-form-field">
-                <label className="chalkboard-form-label">누가 할까요?</label>
+                <label className="chalkboard-form-label">{dt('todo_who_label')}</label>
               <input 
                 ref={todoWhoRef}
                 type="text" 
                   className="chalkboard-form-input" 
-                placeholder="이름 입력 (비워두면 누구나)"
+                placeholder={dt('todo_who_placeholder')}
               />
             </div>
           </div>
@@ -8088,13 +8085,13 @@ ${groupInfo}
                 onClick={() => setIsTodoModalOpen(false)} 
                 className="chalkboard-btn-secondary"
               >
-                취소
+                {ct('cancel')}
               </button>
             <button 
               onClick={submitNewTodo} 
                 className="chalkboard-btn-primary"
             >
-              등록하기
+              {dt('todo_register_btn')}
             </button>
           </div>
         </div>
@@ -8107,16 +8104,16 @@ ${groupInfo}
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal-title">
               <span className="modal-icon">✏️</span>
-              닉네임 설정
+              {dt('nickname_modal_title')}
             </h3>
             <div className="modal-form">
               <div className="form-field">
-                <label className="form-label">닉네임 (2-20자)</label>
+                <label className="form-label">{dt('nickname_label')}</label>
                 <input 
                   ref={nicknameInputRef}
                   type="text" 
                   className="form-input" 
-                  placeholder="닉네임을 입력하세요"
+                  placeholder={dt('nickname_placeholder')}
                   maxLength={20}
                   defaultValue={userName}
                 />
@@ -8127,21 +8124,21 @@ ${groupInfo}
                 onClick={() => setIsNicknameModalOpen(false)} 
                 className="btn-secondary"
               >
-                취소
+                {ct('cancel')}
               </button>
               <button 
                 onClick={handleUpdateNickname} 
                 className="btn-primary"
               >
-                저장하기
+                {dt('nickname_save_btn')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="main-content">
+      {/* Main Content - 본문 폰트 상속 */}
+      <div className="main-content" style={{ fontFamily: bodyFont.fontFamily }}>
         {/* 공지사항 배너 (모든 멤버) */}
         {announcements.length > 0 && (
           <AnnouncementBanner 
@@ -8194,7 +8191,7 @@ ${groupInfo}
                 transition: 'all 0.2s ease',
                 flexShrink: 0,
               }}
-              aria-label={isSystemAdmin ? "시스템 관리자 페이지" : "그룹 관리자 페이지"}
+              aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
                 e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
@@ -8205,7 +8202,7 @@ ${groupInfo}
               }}
             >
               <span style={{ fontSize: '14px' }}>⚙️</span>
-              관리자
+              {ct('admin')}
             </button>
           ) : null}
         </div>
@@ -8246,14 +8243,14 @@ ${groupInfo}
                   <span className="user-icon" style={{ fontSize: '12px' }}>👤</span>
                   <p className="user-name" style={{ margin: 0, fontSize: '12px', fontWeight: user.isCurrentUser ? '600' : '500' }}>
                     {user.name}
-                    {user.isCurrentUser && ' (나)'}
+                    {user.isCurrentUser && ct('me_suffix')}
                   </p>
                 </div>
               ))}
               {onlineUsers.length === 0 && (
                 <div className="user-info" onClick={() => setIsNicknameModalOpen(true)} style={{ cursor: 'pointer' }}>
                   <span className="user-icon">👤</span>
-                  <p className="user-name">{userName || '로딩 중...'}</p>
+                  <p className="user-name">{userName || ct('loading')}</p>
                 </div>
               )}
             </div>
@@ -8281,7 +8278,7 @@ ${groupInfo}
                 e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
               }}
             >
-              로그아웃
+              {ct('logout')}
             </button>
           </div>
         </header>
@@ -8381,9 +8378,9 @@ ${groupInfo}
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm("사진을 삭제하시겠습니까?")) {
-                                updateState('DELETE_PHOTO', p.id);
-                              }
+if (confirm(dt('photo_delete_confirm'))) {
+                              updateState('DELETE_PHOTO', p.id);
+                            }
                             }} 
                             style={{
                               position: 'absolute',
@@ -8434,7 +8431,7 @@ ${groupInfo}
                               type="text"
                               value={photoDescription}
                               onChange={(e) => setPhotoDescription(e.target.value)}
-                              placeholder="사진 설명을 입력하세요"
+                              placeholder={dt('photo_description_placeholder')}
                               style={{
                                 width: '100%',
                                 padding: '8px',
@@ -8476,12 +8473,12 @@ ${groupInfo}
                                   fontWeight: '600'
                                 }}
                               >
-                                저장
+                                {ct('save')}
                               </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (confirm("사진을 삭제하시겠습니까?")) {
+                                  if (confirm(dt('photo_delete_confirm'))) {
                                     updateState('DELETE_PHOTO', p.id);
                                     setEditingPhotoId(null);
                                     setPhotoDescription('');
@@ -8499,7 +8496,7 @@ ${groupInfo}
                                   fontWeight: '600'
                                 }}
                               >
-                                삭제
+                                {ct('delete')}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -8518,7 +8515,7 @@ ${groupInfo}
                                   fontWeight: '600'
                                 }}
                               >
-                                취소
+                                {ct('cancel')}
                               </button>
                             </div>
                           </div>
@@ -8532,7 +8529,7 @@ ${groupInfo}
                               lineHeight: '1.5'
                             }}
                           >
-                            {p.description || '설명 추가하기 (클릭)'}
+                            {p.description || dt('photo_description_hint')}
                           </span>
                         )}
                       </div>
@@ -8551,7 +8548,7 @@ ${groupInfo}
                       }} onClick={() => document.getElementById('file-upload-input')?.click()}>
                         <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
                           <div style={{ fontSize: '32px', marginBottom: '8px' }}>+</div>
-                          <div>사진 추가</div>
+                          <div>{dt('photo_add')}</div>
                         </div>
                       </div>
                     </div>
@@ -8570,7 +8567,7 @@ ${groupInfo}
                   }} onClick={() => document.getElementById('file-upload-input')?.click()}>
                     <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
                       <div style={{ fontSize: '48px', marginBottom: '12px' }}>📷</div>
-                      <div>사진을 업로드해보세요</div>
+                      <div>{dt('photo_upload_prompt')}</div>
                     </div>
                   </div>
                 </div>
@@ -8771,12 +8768,12 @@ ${groupInfo}
             </div>
 
             <div className="chalkboard-header">
-              <h3 className="chalkboard-title">Family Tasks</h3>
+              <h3 className="chalkboard-title">{dt('todo_section_title')}</h3>
             <button 
               onClick={() => setIsTodoModalOpen(true)} 
                 className="chalkboard-btn-add"
             >
-              + ADD
+              {dt('todo_add_btn')}
             </button>
           </div>
             <div className="section-body">
@@ -8800,13 +8797,13 @@ ${groupInfo}
                             {t.text}
                           </span>
                           {t.assignee && (
-                            <span className="todo-assignee">{t.assignee}</span>
+                            <span className="todo-assignee">{t.assignee === '누구나' ? ct('anyone') : t.assignee}</span>
                           )}
                   </div>
                 </div>
                       {(t.created_by === userId || !t.created_by) && (
                         <button 
-                          onClick={() => confirm("삭제하시겠습니까?") && updateState('DELETE_TODO', t.id)} 
+                          onClick={() => confirm(ct('delete_confirm')) && updateState('DELETE_TODO', t.id)} 
                           className="chalkboard-btn-delete"
                         >
                           <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -8818,7 +8815,7 @@ ${groupInfo}
                   ))}
         </div>
               ) : (
-                <p className="chalkboard-empty-state">할 일을 모두 완료했습니다! 🎉</p>
+                <p className="chalkboard-empty-state">{dt('todo_empty_state')}</p>
               )}
             </div>
           </section>
@@ -9035,7 +9032,7 @@ ${groupInfo}
                         }}
                       >
                         <X style={{ width: '16px', height: '16px' }} />
-                        닫기
+                        {ct('close')}
                       </button>
                     </div>
                     {eventsOnSelectedDate.length > 0 ? (
@@ -9069,12 +9066,12 @@ ${groupInfo}
                                 <h5 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{e.title}</h5>
                                 {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
                                   <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#7c3aed' }}>
-                                    {e.repeat_type === 'monthly' ? '매월 반복' : '매년 반복'}
+                                    {e.repeat_type === 'monthly' ? dt('event_repeat_monthly') : dt('event_repeat_yearly')}
                                   </p>
                                 )}
                                 {e.created_by != null && (
                                   <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}>
-                                    작성자: {e.created_by === userId ? '나' : (eventAuthorNames[e.created_by] ?? '알 수 없음')}
+                                    {dt('event_author')}: {e.created_by === userId ? ct('me') : (eventAuthorNames[e.created_by] ?? ct('unknown'))}
                                   </p>
                                 )}
                                 {e.desc && <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.desc}</p>}
@@ -9088,9 +9085,9 @@ ${groupInfo}
                               {e.created_by != null && String(e.created_by).trim() === String(userId).trim() && (
                                 <button
                                   type="button"
-                                  onClick={() => confirm('삭제하시겠습니까?') && updateState('DELETE_EVENT', e.id)}
+                                  onClick={() => confirm(ct('delete_confirm')) && updateState('DELETE_EVENT', e.id)}
                                   style={{ flexShrink: 0, padding: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444', borderRadius: '6px' }}
-                                  aria-label="삭제"
+                                  aria-label={ct('delete')}
                                   onMouseEnter={(el) => { el.currentTarget.style.background = '#fef2f2'; }}
                                   onMouseLeave={(el) => { el.currentTarget.style.background = 'transparent'; }}
                                 >
@@ -9104,8 +9101,8 @@ ${groupInfo}
                     ) : (
                       <div style={{ textAlign: 'center', padding: '24px 16px' }}>
                         <Calendar style={{ width: '48px', height: '48px', color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
-                        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>해당 날짜에 등록된 일정이 없습니다.</p>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>아래 버튼으로 일정을 추가해 보세요.</p>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{dt('event_no_events')}</p>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>{dt('event_add_hint')}</p>
                       </div>
                     )}
                   </motion.div>
@@ -9141,7 +9138,7 @@ ${groupInfo}
                 }}
               >
                 <Plus style={{ width: '20px', height: '20px' }} />
-                일정 추가하기
+                {dt('event_add_btn')}
               </button>
             </div>
           </section>
@@ -9175,7 +9172,7 @@ ${groupInfo}
                 onClick={(e) => e.stopPropagation()}
               >
                 <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '20px', fontWeight: '600' }}>
-                  일정 추가
+                  {dt('event_add_title')}
                 </h3>
                 {eventFormDate && (
                   <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b' }}>
@@ -9185,13 +9182,13 @@ ${groupInfo}
                 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                    제목 *
+                    {dt('event_title_label')}
                   </label>
                   <input
                     type="text"
                     value={eventForm.title}
                     onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                    placeholder="일정 제목을 입력하세요"
+                    placeholder={dt('event_title_placeholder')}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -9205,12 +9202,12 @@ ${groupInfo}
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                    설명 (선택)
+                    {dt('event_desc_label')}
                   </label>
                   <textarea
                     value={eventForm.desc}
                     onChange={(e) => setEventForm({ ...eventForm, desc: e.target.value })}
-                    placeholder="일정 설명을 입력하세요"
+                    placeholder={dt('event_desc_placeholder')}
                     rows={3}
                     style={{
                       width: '100%',
@@ -9227,7 +9224,7 @@ ${groupInfo}
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                    반복
+                    {dt('event_repeat_label')}
                   </label>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
@@ -9237,7 +9234,7 @@ ${groupInfo}
                         checked={eventForm.repeat_type === 'none'}
                         onChange={() => setEventForm({ ...eventForm, repeat_type: 'none' })}
                       />
-                      반복 없음
+                      {dt('event_repeat_none')}
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
                       <input
@@ -9246,7 +9243,7 @@ ${groupInfo}
                         checked={eventForm.repeat_type === 'monthly'}
                         onChange={() => setEventForm({ ...eventForm, repeat_type: 'monthly' })}
                       />
-                      매월 반복
+                      {dt('event_repeat_monthly')}
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
                       <input
@@ -9255,7 +9252,7 @@ ${groupInfo}
                         checked={eventForm.repeat_type === 'yearly'}
                         onChange={() => setEventForm({ ...eventForm, repeat_type: 'yearly' })}
                       />
-                      매년 반복
+                      {dt('event_repeat_yearly')}
                     </label>
                   </div>
                 </div>
@@ -9274,7 +9271,7 @@ ${groupInfo}
                       fontWeight: '500'
                     }}
                   >
-                    취소
+                    {ct('cancel')}
                   </button>
                   <button
                     onClick={handleEventSubmit}
@@ -9289,7 +9286,7 @@ ${groupInfo}
                       fontWeight: '500'
                     }}
                   >
-                    추가
+                    {dt('event_submit_btn')}
                   </button>
                 </div>
               </div>
@@ -9306,7 +9303,7 @@ ${groupInfo}
               {(state.messages || []).map((m, idx) => (
                   <div key={idx} className="message-item">
                     <div className="message-header">
-                      <span className="message-user">{m.user}</span>
+                      <span className="message-user">{m.user === '사용자' ? ct('user') : m.user}</span>
                       <span className="message-time">{m.time}</span>
                   </div>
                     <div className="message-bubble">
@@ -9321,13 +9318,13 @@ ${groupInfo}
                 type="text" 
                 onKeyPress={(e) => e.key === 'Enter' && sendChat()}
                   className="chat-input" 
-                placeholder="메시지 입력..."
+                placeholder={dt('chat_placeholder')}
               />
               <button 
                 onClick={sendChat}
                   className="btn-send"
               >
-                전송
+                {dt('chat_send')}
               </button>
             </div>
           </div>
@@ -9419,7 +9416,7 @@ ${groupInfo}
                   }}
                 >
                   <span>🐷</span>
-                  {piggyMemberPiggies !== null ? '전체 관리' : '이동'}
+                  {piggyMemberPiggies !== null ? dt('piggy_manage_all') : dt('piggy_go')}
                 </button>
               )}
             </div>
@@ -9448,7 +9445,7 @@ ${groupInfo}
                               <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>저금통 생성 요청 {pendingAccountRequests.length}건</div>
                               {pendingAccountRequests.map((req) => (
                                 <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #fde68a' }}>
-                                  <span style={{ fontSize: '13px', color: '#78350f' }}>{req.nickname || '멤버'}</span>
+                                  <span style={{ fontSize: '13px', color: '#78350f' }}>{req.nickname || ct('member')}</span>
                                   <div style={{ display: 'flex', gap: '6px' }}>
                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleRejectAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>거절</button>
                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleApproveAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>승인</button>
@@ -9479,7 +9476,7 @@ ${groupInfo}
                                 }}
                               >
                                 <div>
-                                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>{p.ownerNickname || '멤버'}</div>
+                                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>{p.ownerNickname || ct('member')}</div>
                                   <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>저금통을 소유하지 않았습니다</div>
                                 </div>
                                 <button
@@ -9784,7 +9781,7 @@ ${groupInfo}
                                 {isRequester ? `→ ${otherUserName}` : `← ${otherUserName}`}
           </div>
                               <div style={{ fontSize: '12px', color: '#64748b' }}>
-                                {isRequester ? '요청 보냄' : '요청 받음'}
+                                {isRequester ? dt('piggy_request_sent') : dt('piggy_request_received')}
                                 {!isExpired && timeLeft > 0 && (
                                   <span style={{ marginLeft: '8px'}}>
                                     · {Math.floor(timeLeft / 60)}시간 {timeLeft % 60}분 남음
@@ -10192,7 +10189,7 @@ ${groupInfo}
                 lineHeight: '1.6',
               }}
             >
-              시스템 관리자는 회원탈퇴 전에 반드시 후임자를 지정해야 합니다.
+              {dt('delete_transfer_warning')}
               <br />
               아래 목록에서 후임 시스템 관리자를 선택해주세요.
             </p>
@@ -10323,10 +10320,10 @@ ${groupInfo}
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 69, 19, 0.4)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
-          aria-label="회원탈퇴"
+          aria-label={dt('delete_account_aria')}
         >
           <span style={{ fontSize: '14px' }}>🗑️</span>
-          회원탈퇴
+          {dt('delete_account_btn')}
         </button>
       </div>
     </div>

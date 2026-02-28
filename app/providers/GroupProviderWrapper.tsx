@@ -9,7 +9,6 @@ export function GroupProviderWrapper({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 현재 사용자 ID 가져오기
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id || null);
@@ -18,7 +17,6 @@ export function GroupProviderWrapper({ children }: { children: React.ReactNode }
 
     getUser();
 
-    // 인증 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id || null);
     });

@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase'; 
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getFontStyle } from '@/lib/language-fonts';
+import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -10,6 +13,8 @@ const LAST_EMAIL_KEY = 'SFH_LAST_EMAIL';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
+  const t = (key: keyof LoginTranslations) => getLoginTranslation(lang, key);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,7 +64,7 @@ export default function LoginPage() {
         // 이메일 인증 확인 (미인증이면 로그인 차단)
         if (!data.user.email_confirmed_at) {
           await supabase.auth.signOut();
-          setErrorMsg('이메일 인증이 필요합니다. 메일함에서 인증을 완료해주세요.');
+          setErrorMsg(t('error_email_verification'));
           return;
         }
         // 이메일 저장 (다음 로그인 시 자동완성용)
@@ -81,7 +86,7 @@ export default function LoginPage() {
         if (session && session.user) {
           if (!session.user.email_confirmed_at) {
             await supabase.auth.signOut();
-            setErrorMsg('이메일 인증이 필요합니다. 메일함에서 인증을 완료해주세요.');
+            setErrorMsg(t('error_email_verification'));
             return;
           }
           // 시스템 관리자 확인
@@ -118,7 +123,7 @@ export default function LoginPage() {
           // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
           router.push('/onboarding');
         } else {
-          setErrorMsg('세션 저장에 실패했습니다. 다시 시도해주세요.');
+          setErrorMsg(t('error_session_failed'));
         }
       }
     } catch (error: any) {
@@ -126,7 +131,7 @@ export default function LoginPage() {
       if (process.env.NODE_ENV === 'development') {
         console.error('Login error:', error);
       }
-      setErrorMsg('로그인 실패: 정보를 확인해주세요.');
+      setErrorMsg(t('error_login_failed'));
     } finally {
       setLoading(false);
     }
@@ -141,14 +146,14 @@ export default function LoginPage() {
 
     // 비밀번호 확인
     if (password !== confirmPassword) {
-      setErrorMsg('비밀번호가 일치하지 않습니다.');
+      setErrorMsg(t('error_password_mismatch'));
       setLoading(false);
       return;
     }
 
     // 비밀번호 강도 검증 (최소 8자)
     if (password.length < 8) {
-      setErrorMsg('비밀번호는 최소 8자 이상이어야 합니다.');
+      setErrorMsg(t('error_password_min'));
       setLoading(false);
       return;
     }
@@ -156,12 +161,12 @@ export default function LoginPage() {
     // 닉네임 필수 검증
     const trimmedNickname = nickname.trim();
     if (!trimmedNickname) {
-      setErrorMsg('닉네임을 입력해 주세요.');
+      setErrorMsg(t('error_nickname_required'));
       setLoading(false);
       return;
     }
     if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
-      setErrorMsg('닉네임은 2자 이상 20자 이하로 입력해 주세요.');
+      setErrorMsg(t('error_nickname_length'));
       setLoading(false);
       return;
     }
@@ -213,7 +218,7 @@ export default function LoginPage() {
 
         // 이메일 인증이 필요하고 아직 인증되지 않은 경우
         if (!isEmailConfirmed) {
-          setSuccessMsg('가입이 완료되었습니다! 이메일을 확인하고 인증을 완료해주세요.');
+          setSuccessMsg(t('success_signup_check_email'));
           // 3초 후 로그인 모드로 전환
           setTimeout(() => {
             setMode('login');
@@ -233,7 +238,7 @@ export default function LoginPage() {
           await new Promise(resolve => setTimeout(resolve, 100));
           router.push('/onboarding');
         } else {
-          setSuccessMsg('가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)');
+          setSuccessMsg(t('success_signup_done'));
           setTimeout(() => {
             setMode('login');
             setEmail('');
@@ -250,9 +255,9 @@ export default function LoginPage() {
         console.error('Signup error:', error);
       }
       if (error.message?.includes('already registered')) {
-        setErrorMsg('이미 등록된 이메일입니다.');
+        setErrorMsg(t('error_email_taken'));
       } else {
-        setErrorMsg('가입 실패: 정보를 확인해주세요.');
+        setErrorMsg(t('error_signup_failed'));
       }
     } finally {
       setLoading(false);
@@ -278,7 +283,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      setSuccessMsg('비밀번호 재설정 링크를 이메일로 발송했습니다. 이메일을 확인해주세요.');
+      setSuccessMsg(t('success_reset_sent'));
       // 3초 후 로그인 모드로 전환
       setTimeout(() => {
         setMode('login');
@@ -290,7 +295,7 @@ export default function LoginPage() {
       if (process.env.NODE_ENV === 'development') {
         console.error('Forgot password error:', error);
       }
-      setErrorMsg('이메일 발송 실패: 이메일을 확인해주세요.');
+      setErrorMsg(t('error_send_failed'));
     } finally {
       setLoading(false);
     }
@@ -361,7 +366,7 @@ export default function LoginPage() {
       backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
       padding: '20px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      fontFamily: getFontStyle(lang, 'body').fontFamily,
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -408,7 +413,8 @@ export default function LoginPage() {
           </div>
           <h1 style={{
             fontSize: '48px',
-            fontWeight: '800',
+            fontFamily: getFontStyle(lang, 'title').fontFamily,
+            fontWeight: getFontStyle(lang, 'title').fontWeight,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -420,11 +426,12 @@ export default function LoginPage() {
           </h1>
           <p style={{
             fontSize: '16px',
+            fontFamily: getFontStyle(lang, 'body').fontFamily,
             color: '#64748b',
             fontWeight: '500',
             lineHeight: '1.6'
           }}>
-            우리가족 추억의 공간
+            {t('subtitle')}
           </p>
         </div>
 
@@ -455,7 +462,7 @@ export default function LoginPage() {
                 : '0 2px 8px rgba(0,0,0,0.08)'
             }}
           >
-            로그인
+            {t('tab_login')}
           </button>
           <button
             type="button"
@@ -477,7 +484,7 @@ export default function LoginPage() {
                 : '0 2px 8px rgba(0,0,0,0.08)'
             }}
           >
-            가입하기
+            {t('tab_signup')}
           </button>
           <button
             type="button"
@@ -499,7 +506,7 @@ export default function LoginPage() {
                 : '0 2px 8px rgba(0,0,0,0.08)'
             }}
           >
-            비밀번호 찾기
+            {t('tab_forgot')}
           </button>
         </div>
 
@@ -519,7 +526,7 @@ export default function LoginPage() {
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
-                placeholder="닉네임 (필수, 2~20자)"
+                placeholder={t('placeholder_nickname')}
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 maxLength={20}
@@ -540,7 +547,7 @@ export default function LoginPage() {
           <div style={{ position: 'relative' }}>
             <input
               type="email"
-              placeholder="이메일 주소"
+              placeholder={t('placeholder_email')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -579,7 +586,7 @@ export default function LoginPage() {
             <div style={{ position: 'relative' }}>
               <input
                 type="password"
-                placeholder="비밀번호"
+                placeholder={t('placeholder_password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -604,7 +611,7 @@ export default function LoginPage() {
             <div style={{ position: 'relative' }}>
               <input
                 type="password"
-                placeholder="비밀번호 확인"
+                placeholder={t('placeholder_confirm_password')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -678,7 +685,7 @@ export default function LoginPage() {
           >
             {loading ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>{mode === 'login' ? '접속 중' : mode === 'signup' ? '가입 중' : '발송 중'}</span>
+                <span>{mode === 'login' ? t('btn_loading_login') : mode === 'signup' ? t('btn_loading_signup') : t('btn_loading_send')}</span>
                 <span style={{
                   width: '16px',
                   height: '16px',
@@ -690,7 +697,7 @@ export default function LoginPage() {
                 }} />
               </span>
             ) : (
-              mode === 'login' ? '접속하기' : mode === 'signup' ? '가입하기' : '재설정 링크 발송'
+              mode === 'login' ? t('btn_submit_login') : mode === 'signup' ? t('btn_submit_signup') : t('btn_submit_reset')
             )}
           </button>
         </form>

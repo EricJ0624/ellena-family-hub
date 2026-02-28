@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Group, Membership, MembershipRole } from '@/types/db';
+import { LanguageProvider } from '@/app/contexts/LanguageContext';
 
 interface GroupContextType {
   currentGroupId: string | null;
@@ -299,7 +300,20 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     refreshMemberships,
   };
 
-  return <GroupContext.Provider value={value}>{children}</GroupContext.Provider>;
+  const isGroupAdmin = userRole === 'ADMIN' || isOwner;
+
+  return (
+    <GroupContext.Provider value={value}>
+      <LanguageProvider
+        currentGroup={currentGroup}
+        currentGroupId={currentGroupId}
+        isGroupAdmin={isGroupAdmin}
+        refreshGroups={refreshGroups}
+      >
+        {children}
+      </LanguageProvider>
+    </GroupContext.Provider>
+  );
 }
 
 export function useGroup() {

@@ -3,9 +3,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getLoginTranslation } from '@/lib/translations/login';
+import { getResetPasswordTranslation, type ResetPasswordTranslations } from '@/lib/translations/resetPassword';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
+  const rpt = (key: keyof ResetPasswordTranslations) => getResetPasswordTranslation(lang, key);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,14 +44,14 @@ export default function ResetPasswordPage() {
 
     // 비밀번호 확인
     if (password !== confirmPassword) {
-      setErrorMsg('비밀번호가 일치하지 않습니다.');
+      setErrorMsg(getLoginTranslation(lang, 'error_password_mismatch'));
       setLoading(false);
       return;
     }
 
     // 비밀번호 강도 검증 (최소 8자)
     if (password.length < 8) {
-      setErrorMsg('비밀번호는 최소 8자 이상이어야 합니다.');
+      setErrorMsg(getLoginTranslation(lang, 'error_password_min'));
       setLoading(false);
       return;
     }
@@ -58,7 +63,7 @@ export default function ResetPasswordPage() {
 
       if (error) throw error;
 
-      setSuccessMsg('비밀번호가 성공적으로 변경되었습니다!');
+      setSuccessMsg(rpt('success_reset'));
       // 2초 후 로그인 페이지로 이동
       setTimeout(() => {
         router.push('/');
@@ -68,7 +73,7 @@ export default function ResetPasswordPage() {
       if (process.env.NODE_ENV === 'development') {
         console.error('Reset password error:', error);
       }
-      setErrorMsg('비밀번호 변경 실패: 다시 시도해주세요.');
+      setErrorMsg(rpt('error_reset_failed'));
     } finally {
       setLoading(false);
     }
@@ -174,7 +179,7 @@ export default function ResetPasswordPage() {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
           }}>
-            비밀번호 재설정
+            {rpt('title')}
           </h1>
           
           <p style={{ 
@@ -185,7 +190,9 @@ export default function ResetPasswordPage() {
             margin: 0,
             letterSpacing: '0.3px'
           }}>
-            새로운 비밀번호를<br />입력해주세요
+            {rpt('subtitle').split('\n').map((line, i, arr) => (
+              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+            ))}
           </p>
         </div>
 
@@ -204,7 +211,7 @@ export default function ResetPasswordPage() {
           <div style={{ position: 'relative' }}>
             <input
               type="password"
-              placeholder="새 비밀번호"
+              placeholder={rpt('placeholder_new_password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -227,7 +234,7 @@ export default function ResetPasswordPage() {
           <div style={{ position: 'relative' }}>
             <input
               type="password"
-              placeholder="비밀번호 확인"
+              placeholder={rpt('placeholder_confirm')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
@@ -300,7 +307,7 @@ export default function ResetPasswordPage() {
           >
             {loading ? (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>변경 중</span>
+                <span>{rpt('btn_loading')}</span>
                 <span style={{
                   width: '16px',
                   height: '16px',
@@ -312,7 +319,7 @@ export default function ResetPasswordPage() {
                 }} />
               </span>
             ) : (
-              '비밀번호 변경'
+              {rpt('btn_submit')}
             )}
           </button>
         </form>

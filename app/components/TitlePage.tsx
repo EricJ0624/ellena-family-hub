@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
 import Image from 'next/image';
 import { PhotoFrameSVG, FRAME_CONFIGS, type FrameStyle } from './PhotoFrames';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getTitlePageTranslation } from '@/lib/translations/titlePage';
+import { getCommonTranslation } from '@/lib/translations/common';
 
 // 상수 분리 - 텍스트 내용 관리
 const CONSTANTS = {
@@ -67,6 +70,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   frameStyle = 'baroque',
   onFrameChange 
 }) => {
+  const { lang } = useLanguage();
+  const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
   const [showFrameSelector, setShowFrameSelector] = useState(false);
   
@@ -218,8 +224,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
               boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
               cursor: 'pointer',
             }}
-            aria-label="프레임 변경"
-            title="프레임 변경"
+            aria-label={tp('frame_change')}
+            title={tp('frame_change')}
           >
             <FrameIcon 
               className="w-5 h-5" 
@@ -246,8 +252,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                 boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
                 cursor: 'pointer',
               }}
-              aria-label="사진 새로고침"
-              title="사진 새로고침"
+              aria-label={tp('photo_refresh')}
+              title={tp('photo_refresh')}
             >
               <RefreshCw className="w-5 h-5 text-[#8B4513]" strokeWidth={2.5} />
             </motion.button>
@@ -390,6 +396,9 @@ interface DesignEditorProps {
 }
 
 const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, onClose }) => {
+  const { lang } = useLanguage();
+  const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [localStyle, setLocalStyle] = useState<TitleStyle>(titleStyle);
   
   // 인기 있는 웹 폰트 목록 (메모이제이션)
@@ -463,7 +472,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
           <button
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-white/20 transition-colors"
-            aria-label="닫기"
+            aria-label={ct('close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -483,7 +492,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
             value={localStyle.content}
             onChange={(e) => handleChange('content', e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-            placeholder="타이틀 텍스트를 입력하세요"
+            placeholder={tp('title_placeholder')}
           />
         </div>
         

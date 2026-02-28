@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
+import type { LangCode } from '@/lib/language-fonts';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -26,6 +29,8 @@ interface UserGroup {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
+  const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
   const [fromAdmin, setFromAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'select' | 'create' | 'join' | 'choose-group'>('select');
@@ -33,6 +38,7 @@ export default function OnboardingPage() {
   
   // 그룹 생성 관련 상태
   const [groupName, setGroupName] = useState('');
+  const [groupPreferredLanguage, setGroupPreferredLanguage] = useState<LangCode>('ko');
   const [creating, setCreating] = useState(false);
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
@@ -155,7 +161,7 @@ export default function OnboardingPage() {
         setLoading(false);
       } catch (err: any) {
         console.error('온보딩 초기화 오류:', err);
-        setError('초기화 중 오류가 발생했습니다.');
+        setError(ot('error_init'));
         setLoading(false);
       }
     };
@@ -166,7 +172,7 @@ export default function OnboardingPage() {
   // 그룹 생성
   const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      setError('그룹 이름을 입력해주세요.');
+      setError(ot('error_group_name_required'));
       return;
     }
 
@@ -182,7 +188,7 @@ export default function OnboardingPage() {
       }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('로그인이 필요합니다.');
+        throw new Error(ot('error_login_required'));
       }
 
       // 디버깅: PostgreSQL 세션에서 auth.uid() 값 확인
@@ -200,12 +206,12 @@ export default function OnboardingPage() {
       const { data: inviteCodeData, error: codeError } = await supabase.rpc('generate_invite_code');
       if (codeError) {
         console.error('초대 코드 생성 오류:', codeError);
-        throw new Error('초대 코드 생성에 실패했습니다.');
+        throw new Error(ot('error_invite_code_failed'));
       }
 
       const inviteCode = inviteCodeData || '';
       if (!inviteCode) {
-        throw new Error('초대 코드 생성에 실패했습니다.');
+        throw new Error(ot('error_invite_code_failed'));
       }
 
       // 그룹 생성 (RPC 함수 사용)
@@ -226,15 +232,18 @@ export default function OnboardingPage() {
 
       if (fetchError) throw fetchError;
 
+      // 그룹 표시 언어 설정
+      await supabase.from('groups').update({ preferred_language: groupPreferredLanguage }).eq('id', data.id);
+
       // 생성된 그룹 정보 설정
       setCreatedGroupId(data.id);
       setCreatedInviteCode(inviteCode); // 생성된 초대 코드 사용
-      setSuccess('그룹이 생성되었습니다!');
+      setSuccess(ot('success_created'));
       
       // 초대코드를 확인한 후에만 대시보드로 이동하도록 함
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
-      setError(err.message || '그룹 생성에 실패했습니다.');
+      setError(err.message || ot('error_create_failed'));
     } finally {
       setCreating(false);
     }
@@ -243,7 +252,7 @@ export default function OnboardingPage() {
   // 초대 코드 검증 (비멤버는 groups RLS로 읽을 수 없으므로 서버 API 사용, service role로 RLS 우회)
   const handleVerifyInviteCode = async () => {
     if (!inviteCode.trim()) {
-      setError('초대 코드를 입력해주세요.');
+      setError(ot('error_invite_required'));
       return;
     }
 
@@ -254,7 +263,7 @@ export default function OnboardingPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('로그인이 필요합니다.');
+        setError(ot('error_login_required'));
         setVerifying(false);
         return;
       }
@@ -271,7 +280,7 @@ export default function OnboardingPage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.id) {
-        throw new Error(data.error || '올바른 초대 코드를 입력해주세요.');
+        throw new Error(data.error || ot('error_invalid_invite'));
       }
 
       setGroupPreview({
@@ -281,10 +290,10 @@ export default function OnboardingPage() {
         invite_code: data.invite_code,
       });
 
-      setSuccess('그룹을 찾았습니다!');
+      setSuccess(ot('success_found'));
     } catch (err: any) {
       console.error('초대 코드 검증 오류:', err);
-      setError(err.message || '초대 코드 검증에 실패했습니다.');
+      setError(err.message || ot('error_verify_failed'));
       setGroupPreview(null);
     } finally {
       setVerifying(false);
@@ -294,7 +303,7 @@ export default function OnboardingPage() {
   // 초대 코드로 가입
   const handleJoinGroup = async () => {
     if (!groupPreview) {
-      setError('그룹 정보를 확인해주세요.');
+      setError(ot('error_group_check'));
       return;
     }
 
@@ -309,7 +318,7 @@ export default function OnboardingPage() {
 
       if (joinError) throw joinError;
 
-      setSuccess('그룹에 가입되었습니다!');
+      setSuccess(ot('success_joined'));
       
       // 초대코드를 이미 알고 있는 상황이므로 바로 대시보드로 이동
       setTimeout(() => {
@@ -317,7 +326,7 @@ export default function OnboardingPage() {
       }, 1500);
     } catch (err: any) {
       console.error('그룹 가입 오류:', err);
-      setError(err.message || '그룹 가입에 실패했습니다.');
+      setError(err.message || ot('error_join_failed'));
     } finally {
       setJoining(false);
     }
@@ -328,10 +337,10 @@ export default function OnboardingPage() {
     if (createdInviteCode) {
       try {
         await navigator.clipboard.writeText(createdInviteCode);
-        setSuccess('초대 코드가 복사되었습니다!');
+        setSuccess(ot('success_copied'));
         setTimeout(() => setSuccess(null), 2000);
       } catch (err) {
-        setError('복사에 실패했습니다.');
+        setError(ot('error_copy_failed'));
       }
     }
   };
@@ -361,7 +370,7 @@ export default function OnboardingPage() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite', color: '#667eea' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>로딩 중...</p>
+          <p style={{ color: '#64748b', fontSize: '16px' }}>{ot('loading')}</p>
         </div>
       </div>
     );
@@ -429,7 +438,7 @@ export default function OnboardingPage() {
                   margin: '0 0 12px 0',
                   letterSpacing: '-1px',
                 }}>
-                  가족 그룹 설정
+                  {ot('title')}
                 </h1>
                 <p style={{
                   fontSize: '16px',
@@ -438,7 +447,7 @@ export default function OnboardingPage() {
                   lineHeight: '1.6',
                   margin: 0,
                 }}>
-                  시작하기 전에 가족 그룹을 만들어주세요
+                  {ot('subtitle')}
                 </p>
               </div>
 
@@ -480,7 +489,7 @@ export default function OnboardingPage() {
                     color: '#1a202c',
                     margin: '0 0 8px 0',
                   }}>
-                    새 그룹 만들기
+                    {ot('create_group')}
                   </h3>
                   <p style={{
                     fontSize: '14px',
@@ -488,7 +497,7 @@ export default function OnboardingPage() {
                     margin: 0,
                     lineHeight: '1.5',
                   }}>
-                    첫 가족 구성원이 되시나요?
+                    {ot('first_member')}
                   </p>
                 </motion.button>
 
@@ -523,7 +532,7 @@ export default function OnboardingPage() {
                     color: '#1a202c',
                     margin: '0 0 8px 0',
                   }}>
-                    초대 코드로 가입
+                    {ot('join_invite')}
                   </h3>
                   <p style={{
                     fontSize: '14px',
@@ -531,7 +540,7 @@ export default function OnboardingPage() {
                     margin: 0,
                     lineHeight: '1.5',
                   }}>
-                    이미 가족이 있으신가요?
+                    {ot('already_family')}
                   </p>
                 </motion.button>
               </div>
@@ -605,7 +614,7 @@ export default function OnboardingPage() {
                     }}
                   >
                     <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
-                    돌아가기
+                    {ot('back')}
                   </button>
                   <h2 style={{
                     fontSize: '24px',
@@ -613,7 +622,7 @@ export default function OnboardingPage() {
                     color: '#1a202c',
                     margin: '0 0 8px 0',
                   }}>
-                    새 그룹 만들기
+                    {ot('create_group')}
                   </h2>
                   <p style={{
                     fontSize: '14px',
@@ -652,7 +661,7 @@ export default function OnboardingPage() {
                           margin: '0 0 12px 0',
                           fontWeight: '600',
                         }}>
-                          초대 코드
+                          {ot('invite_code')}
                         </p>
                         <div style={{
                           display: 'flex',
@@ -682,7 +691,7 @@ export default function OnboardingPage() {
                               alignItems: 'center',
                               justifyContent: 'center',
                             }}
-                            title="복사"
+                            title={ot('copy_title')}
                           >
                             <Copy style={{ width: '16px', height: '16px' }} />
                           </button>
@@ -692,7 +701,7 @@ export default function OnboardingPage() {
                           color: '#94a3b8',
                           margin: '12px 0 8px 0',
                         }}>
-                          이 코드를 가족에게 공유하세요
+                          {ot('share_code_hint')}
                         </p>
                         <p style={{
                           fontSize: '11px',
@@ -700,7 +709,7 @@ export default function OnboardingPage() {
                           margin: '8px 0 16px 0',
                           fontStyle: 'italic',
                         }}>
-                          💡 초대코드는 관리자 페이지의 그룹설정에서 확인 가능합니다
+                          {ot('confirm_invite_hint')}
                         </p>
                         <button
                           onClick={handleConfirmInviteCode}
@@ -728,7 +737,7 @@ export default function OnboardingPage() {
                           }}
                         >
                           <CheckCircle style={{ width: '16px', height: '16px' }} />
-                          확인했습니다
+                          {ot('confirmed_btn')}
                         </button>
                       </div>
                     )}
@@ -763,7 +772,7 @@ export default function OnboardingPage() {
                           e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
                         }}
                       >
-                        가족 페이지로 이동
+                        {ot('go_to_dashboard')}
                         <ArrowRight style={{ width: '18px', height: '18px' }} />
                       </button>
                     )}
@@ -779,7 +788,7 @@ export default function OnboardingPage() {
                         color: '#475569',
                         marginBottom: '8px',
                       }}>
-                        그룹 이름
+                        {ot('group_name')}
                       </label>
                       <input
                         type="text"
@@ -788,7 +797,7 @@ export default function OnboardingPage() {
                           setGroupName(e.target.value);
                           setError(null);
                         }}
-                        placeholder="예: 우리 가족"
+                        placeholder={ot('group_name_placeholder')}
                         style={{
                           width: '100%',
                           padding: '14px 16px',
@@ -813,6 +822,32 @@ export default function OnboardingPage() {
                         }}
                         disabled={creating}
                       />
+                    </div>
+
+                    {/* 표시 언어 선택 */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                        {ot('display_language')}
+                      </label>
+                      <select
+                        value={groupPreferredLanguage}
+                        onChange={(e) => setGroupPreferredLanguage(e.target.value as LangCode)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          fontSize: '15px',
+                          color: '#1e293b',
+                          backgroundColor: '#fff',
+                        }}
+                      >
+                        <option value="ko">한국어</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh-CN">简体中文</option>
+                        <option value="zh-TW">繁體中文</option>
+                      </select>
                     </div>
 
                     {/* 에러 메시지 */}
@@ -882,7 +917,7 @@ export default function OnboardingPage() {
                         </>
                       ) : (
                         <>
-                          그룹 만들기
+                          {ot('create_btn')}
                           <ArrowRight style={{ width: '18px', height: '18px' }} />
                         </>
                       )}
@@ -939,7 +974,7 @@ export default function OnboardingPage() {
                     }}
                   >
                     <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
-                    돌아가기
+                    {ot('back')}
                   </button>
                   <h2 style={{
                     fontSize: '24px',
@@ -947,14 +982,14 @@ export default function OnboardingPage() {
                     color: '#1a202c',
                     margin: '0 0 8px 0',
                   }}>
-                    초대 코드로 가입
+                    {ot('join_invite')}
                   </h2>
                   <p style={{
                     fontSize: '14px',
                     color: '#64748b',
                     margin: 0,
                   }}>
-                    가족으로부터 받은 초대 코드를 입력해주세요
+                    {ot('invite_join_subtitle')}
                   </p>
                 </div>
 
@@ -969,7 +1004,7 @@ export default function OnboardingPage() {
                         color: '#475569',
                         marginBottom: '8px',
                       }}>
-                        초대 코드
+                        {ot('invite_code')}
                       </label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <input
@@ -979,7 +1014,7 @@ export default function OnboardingPage() {
                             setInviteCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12));
                             setError(null);
                           }}
-                          placeholder="예: ABC123"
+                          placeholder={ot('invite_placeholder')}
                           maxLength={12}
                           style={{
                             flex: 1,
@@ -1031,7 +1066,7 @@ export default function OnboardingPage() {
                           {verifying ? (
                             <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
                           ) : (
-                            '확인'
+                            ot('verify_btn')
                           )}
                         </button>
                       </div>
@@ -1073,7 +1108,7 @@ export default function OnboardingPage() {
                       color: '#1a202c',
                       margin: '0 0 16px 0',
                     }}>
-                      그룹 정보
+                      {ot('group_info')}
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div>
@@ -1083,7 +1118,7 @@ export default function OnboardingPage() {
                           marginBottom: '4px',
                           fontWeight: '600',
                         }}>
-                          그룹 이름
+                          {ot('group_name')}
                         </div>
                         <div style={{
                           fontSize: '18px',
@@ -1100,14 +1135,14 @@ export default function OnboardingPage() {
                           marginBottom: '4px',
                           fontWeight: '600',
                         }}>
-                          멤버 수
+                          {ot('member_count')}
                         </div>
                         <div style={{
                           fontSize: '18px',
                           fontWeight: '700',
                           color: '#1a202c',
                         }}>
-                          {groupPreview.member_count}명
+                          {groupPreview.member_count}{ot('member_count_suffix')}
                         </div>
                       </div>
                     </div>
@@ -1210,7 +1245,7 @@ export default function OnboardingPage() {
                           </>
                         ) : (
                           <>
-                            가입하기
+                            {ot('join_btn')}
                             <ArrowRight style={{ width: '18px', height: '18px' }} />
                           </>
                         )}
@@ -1318,7 +1353,7 @@ export default function OnboardingPage() {
                           alignItems: 'center',
                           gap: '8px',
                         }}>
-                          <span>{group.is_owner ? '소유자 (부모)' : group.role === 'ADMIN' ? '관리자 (부모)' : '멤버 (아이 또는 가족 구성원)'}</span>
+                          <span>{group.is_owner ? ot('role_owner') : group.role === 'ADMIN' ? ot('role_admin') : ot('role_member')}</span>
                           <span>•</span>
                           <span style={{ fontFamily: 'monospace' }}>{group.invite_code}</span>
                         </div>
@@ -1447,7 +1482,7 @@ export default function OnboardingPage() {
                   }}
                 >
                   <Users style={{ width: '16px', height: '16px' }} />
-                  초대 코드로 가입
+                  {ot('join_invite')}
                 </button>
               </div>
             </motion.div>

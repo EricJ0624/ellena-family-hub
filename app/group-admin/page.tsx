@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
+import { getCommonTranslation } from '@/lib/translations/common';
 import { 
   Users, 
   Settings, 
@@ -113,6 +116,9 @@ export default function GroupAdminPage() {
   const router = useRouter();
   
   // ?�밸챶占???�썩�????�쏙??????�쎌?�占????�쎌????�쎛????�쎌???�썲??(???�쎌?????�쎌?�占?筌ｌ�??
+  const { lang } = useLanguage();
+  const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) => getGroupAdminTranslation(lang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   let currentGroupId: string | null = null;
   let currentGroup: any = null;
   let userRole: string | null = null;
@@ -518,7 +524,7 @@ export default function GroupAdminPage() {
 
   // ???�쎌?�占?????�쎌�??
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('정말로 이 사진을 삭제하시겠습니까?')) {
+    if (!confirm(gat('confirm_delete_photo'))) {
       return;
     }
 
@@ -530,12 +536,12 @@ export default function GroupAdminPage() {
 
       if (error) throw error;
 
-      alert('사진이 삭제되었습니다.');
+      alert(gat('photo_deleted'));
       loadPhotos();
       loadStats();
     } catch (err: any) {
       console.error('???�쎌?�占?????�쎌�?????�쎌?�占?', err);
-      alert(err.message || '사진 삭제 중 오류가 발생했습니다.');
+      alert(err.message || gat('error_delete_photo'));
     }
   };
 
@@ -561,7 +567,7 @@ export default function GroupAdminPage() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>권한 확인 중...</p>
+          <p style={{ color: '#64748b', fontSize: '16px' }}>{gat('checking_permission')}</p>
         </div>
       </div>
     );
@@ -629,7 +635,7 @@ export default function GroupAdminPage() {
                 color: '#64748b',
                 margin: '4px 0 0 0',
               }}>
-                {currentGroup?.name || "그룹"} 관리
+                {currentGroup?.name || gat('group_label')} {gat('group_manage')}
               </p>
             </div>
           </div>
@@ -874,7 +880,7 @@ export default function GroupAdminPage() {
             padding: '48px',
           }}>
             <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
-            <span style={{ marginLeft: '12px', color: '#64748b' }}>로딩 중...</span>
+            <span style={{ marginLeft: '12px', color: '#64748b' }}>{gat('loading')}</span>
           </div>
         ) : (
           <>
@@ -1088,7 +1094,7 @@ export default function GroupAdminPage() {
                     }} />
                     <input
                       type="text"
-                      placeholder="파일명, 설명으로 검색..."
+                      placeholder={gat('search_photo_placeholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
@@ -1136,7 +1142,7 @@ export default function GroupAdminPage() {
                       >
                         <img
                           src={photo.image_url || photo.cloudinary_url || photo.s3_original_url || ''}
-                          alt={photo.original_filename || "사진"}
+                          alt={photo.original_filename || gat('photo_label')}
                           style={{
                             width: '100%',
                             height: '150px',
@@ -1153,7 +1159,7 @@ export default function GroupAdminPage() {
                           color: '#64748b',
                           marginBottom: '4px',
                         }}>
-                          {photo.original_filename || "파일명 없음"}
+                          {photo.original_filename || gat('no_filename')}
                         </div>
                         <div style={{
                           fontSize: '11px',
@@ -1193,7 +1199,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <ImageIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>사진이 없습니다.</p>
+                      <p>{gat('no_photos')}</p>
                     </div>
                   )}
                 </div>
@@ -1241,7 +1247,7 @@ export default function GroupAdminPage() {
                             fontWeight: '600',
                             color: '#1e293b',
                           }}>
-                            {location.nickname || location.email || "이름 없음"}
+                            {location.nickname || location.email || gat('no_name')}
                           </div>
                         </div>
                         <div style={{
@@ -1267,7 +1273,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <MapPin style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>위치 데이터가 없습니다.</p>
+                      <p>{gat('no_locations')}</p>
                     </div>
                   )}
                 </div>
@@ -1398,7 +1404,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>공지사항이 없습니다.</p>
+                      <p>{gat('no_announcements')}</p>
                     </div>
                   )}
                 </div>
@@ -1494,7 +1500,7 @@ export default function GroupAdminPage() {
                               fontSize: '12px',
                               fontWeight: '600',
                             }}>
-                              {ticket.status === "pending" ? "대기중" : ticket.status === "answered" ? "답변완료" : "종료"}
+                              {ticket.status === "pending" ? gat('status_pending') : ticket.status === "answered" ? gat('status_answered') : gat('status_closed')}
                             </span>
                           </div>
                           <p style={{
@@ -1550,7 +1556,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>문의가 없습니다.</p>
+                      <p>{gat('no_tickets')}</p>
                     </div>
                   )}
                 </div>
@@ -1594,7 +1600,7 @@ export default function GroupAdminPage() {
                         type="text"
                         value={ticketTitle}
                         onChange={(e) => setTicketTitle(e.target.value)}
-                        placeholder="제목을 입력하세요.."
+                        placeholder={gat('title_placeholder')}
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1608,7 +1614,7 @@ export default function GroupAdminPage() {
                       <textarea
                         value={ticketContent}
                         onChange={(e) => setTicketContent(e.target.value)}
-                        placeholder="문의 내용을 입력하세요.."
+                        placeholder={gat('content_placeholder')}
                         style={{
                           width: '100%',
                           minHeight: '300px',
@@ -1647,12 +1653,12 @@ export default function GroupAdminPage() {
                         <button
                           onClick={async () => {
                             if (!ticketTitle.trim() || !ticketContent.trim()) {
-                              alert('제목과 내용 모두 입력해주세요.');
+                              alert(gat('alert_title_content_required'));
                               return;
                             }
 
                             if (!currentGroupId) {
-                              alert('그룹 정보를 가져올 수 없습니다.');
+                              alert(gat('alert_group_info'));
                               return;
                             }
 
@@ -1660,7 +1666,7 @@ export default function GroupAdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
+                                alert(gat('alert_auth'));
                                 return;
                               }
 
@@ -1680,17 +1686,17 @@ export default function GroupAdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '문의 작성에 실패했습니다.');
+                                throw new Error(result.error || gat('error_ticket_create'));
                               }
 
-                              alert('문의가 작성되었습니다.');
+                              alert(gat('ticket_created'));
                               setShowTicketForm(false);
                               setTicketTitle('');
                               setTicketContent('');
                               loadSupportTickets();
                             } catch (error: any) {
                               console.error('??�쎈�?????�쎌?�占????�쎌?�占?', error);
-                              alert(error.message || '문의 작성 중 오류가 발생했습니다.');
+                              alert(error.message || gat('error_ticket_create'));
                             } finally {
                               setLoadingData(false);
                             }
@@ -1858,7 +1864,7 @@ export default function GroupAdminPage() {
                         }}>
                           <button
                             onClick={async () => {
-                              if (!confirm('정말로 접근 요청을 취소하시겠습니까?')) {
+                              if (!confirm(gat('confirm_cancel_request'))) {
                                 return;
                               }
 
@@ -1866,7 +1872,7 @@ export default function GroupAdminPage() {
                                 setLoadingData(true);
                                 const { data: { session } } = await supabase.auth.getSession();
                                 if (!session?.access_token) {
-                                  alert('인증 정보를 가져올 수 없습니다.');
+                                  alert(gat('alert_auth'));
                                   return;
                                 }
 
@@ -1881,14 +1887,14 @@ export default function GroupAdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '접근 요청 취소에 실패했습니다.');
+                                  throw new Error(result.error || gat('error_request_cancel'));
                                 }
 
-                                alert('접근 요청이 취소되었습니다.');
+                                alert(gat('request_cancelled'));
                                 loadAccessRequests();
                               } catch (error: any) {
                                 console.error('???�쎌??????�쎌?�占???�썩�?????�쎌?�占?', error);
-                                alert(error.message || '접근 요청 취소 중 오류가 발생했습니다.');
+                                alert(error.message || gat('error_request_cancel'));
                               } finally {
                                 setLoadingData(false);
                               }
@@ -1926,7 +1932,7 @@ export default function GroupAdminPage() {
                       color: '#94a3b8',
                     }}>
                       <Key style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>접근 요청이 없습니다.</p>
+                      <p>{gat('no_requests')}</p>
                     </div>
                   )}
                 </div>
@@ -1976,7 +1982,7 @@ export default function GroupAdminPage() {
                       <textarea
                         value={accessRequestReason}
                         onChange={(e) => setAccessRequestReason(e.target.value)}
-                        placeholder="접근 요청 사유를 입력하세요 (예: 기술 지원이 필요합니다...)"
+                        placeholder={gat('reason_placeholder')}
                         style={{
                           width: '100%',
                           minHeight: '200px',
@@ -2014,12 +2020,12 @@ export default function GroupAdminPage() {
                         <button
                           onClick={async () => {
                             if (!accessRequestReason.trim()) {
-                              alert('접근 요청 사유를 입력해주세요.');
+                              alert(gat('alert_reason_required'));
                               return;
                             }
 
                             if (!currentGroupId) {
-                              alert('그룹 정보를 가져올 수 없습니다.');
+                              alert(gat('alert_group_info'));
                               return;
                             }
 
@@ -2027,7 +2033,7 @@ export default function GroupAdminPage() {
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증 정보를 가져올 수 없습니다.');
+                                alert(gat('alert_auth'));
                                 return;
                               }
 
@@ -2046,16 +2052,16 @@ export default function GroupAdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '접근 요청 생성에 실패했습니다.');
+                                throw new Error(result.error || gat('error_request_create'));
                               }
 
-                              alert('접근 요청이 생성되었습니다.');
+                              alert(gat('request_created'));
                               setShowAccessRequestForm(false);
                               setAccessRequestReason('');
                               loadAccessRequests();
                             } catch (error: any) {
                               console.error('???�쎌??????�쎌?�占????�쎌?�占????�쎌?�占?', error);
-                              alert(error.message || '접근 요청 생성 중 오류가 발생했습니다.');
+                              alert(error.message || gat('error_request_create'));
                             } finally {
                               setLoadingData(false);
                             }

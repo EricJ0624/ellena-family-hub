@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getPiggyTranslation } from '@/lib/translations/piggy';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,10 +51,13 @@ type Transaction = {
   actor_nickname: string;
 };
 
-const formatAmount = (value: number) => `${value.toLocaleString('ko-KR')}원`;
+const LOCALE_MAP: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
 
 export default function PiggyBankPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
+  const pt = (key: keyof import('@/lib/translations/piggy').PiggyTranslations) => getPiggyTranslation(lang, key);
+  const formatAmount = (value: number) => `${value.toLocaleString(LOCALE_MAP[lang] || 'en-US')}${lang === 'ko' ? '원' : lang === 'ja' ? '円' : lang === 'zh-CN' || lang === 'zh-TW' ? '元' : ''}`;
   let currentGroupId: string | null = null;
   let currentGroup: { name?: string | null } | null = null;
   let userRole: 'ADMIN' | 'MEMBER' | null = null;
@@ -119,7 +124,7 @@ export default function PiggyBankPage() {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) {
-      throw new Error('인증이 필요합니다.');
+      throw new Error(pt('auth_required'));
     }
     return { Authorization: `Bearer ${token}` };
   };
@@ -134,7 +139,7 @@ export default function PiggyBankPage() {
     const response = await fetch(url, { headers });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '요약 정보를 불러오지 못했습니다.');
+      throw new Error(result.error || pt('load_summary_failed'));
     }
     setSummary({
       account: result.data.account,
@@ -157,7 +162,7 @@ export default function PiggyBankPage() {
     });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '아이 목록을 불러오지 못했습니다.');
+      throw new Error(result.error || pt('load_children_failed'));
     }
     setMembers(result.data || []);
   };
@@ -170,7 +175,7 @@ export default function PiggyBankPage() {
     });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '요청 목록을 불러오지 못했습니다.');
+      throw new Error(result.error || pt('load_requests_failed'));
     }
     setRequests(result.data || []);
   };
@@ -185,7 +190,7 @@ export default function PiggyBankPage() {
     const response = await fetch(url, { headers });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '거래 내역을 불러오지 못했습니다.');
+      throw new Error(result.error || pt('load_transactions_failed'));
     }
     setWalletTransactions(result.data?.walletTransactions || []);
     setBankTransactions(result.data?.bankTransactions || []);
@@ -198,7 +203,7 @@ export default function PiggyBankPage() {
     setLoading(true);
     setError(null);
     Promise.all([fetchSummary(), fetchRequests(), fetchMembers(), fetchTransactions()])
-      .catch((err) => setError(err.message || '데이터 로드 오류'))
+      .catch((err) => setError(err.message || pt('load_error')))
       .finally(() => setLoading(false));
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
 
@@ -268,7 +273,7 @@ export default function PiggyBankPage() {
     });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '요청 처리에 실패했습니다.');
+      throw new Error(result.error || pt('request_action_failed'));
     }
     await Promise.all([fetchSummary(), fetchRequests(), fetchTransactions()]);
   };
@@ -285,7 +290,7 @@ export default function PiggyBankPage() {
     });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '이름 변경에 실패했습니다.');
+      throw new Error(result.error || pt('rename_failed'));
     }
     await Promise.all([fetchSummary(), fetchTransactions()]);
   };
@@ -300,7 +305,7 @@ export default function PiggyBankPage() {
     });
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || '저금통 추가에 실패했습니다.');
+      throw new Error(result.error || pt('add_piggy_failed'));
     }
     setSelectedChildIdForAdmin(childId);
     await Promise.all([fetchSummary(), fetchTransactions()]);
@@ -316,15 +321,15 @@ export default function PiggyBankPage() {
         body: JSON.stringify({ groupId: currentGroupId }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '요청에 실패했습니다.');
-      alert(result.message || '요청이 전달되었습니다.');
+      if (!response.ok) throw new Error(result.error || pt('request_failed'));
+      alert(result.message || pt('request_sent'));
     } catch (err: any) {
-      setError(err.message || '요청에 실패했습니다.');
+      setError(err.message || pt('request_failed'));
     }
   };
 
   const handleDeletePiggy = async (childId: string) => {
-    if (!currentGroupId || !confirm('이 사용자의 저금통을 삭제하시겠습니까? 잔액 데이터가 삭제됩니다.')) return;
+    if (!currentGroupId || !confirm(pt('delete_confirm'))) return;
     try {
       const headers = await getAuthHeader();
       const response = await fetch(
@@ -332,24 +337,24 @@ export default function PiggyBankPage() {
         { method: 'DELETE', headers }
       );
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '삭제에 실패했습니다.');
+      if (!response.ok) throw new Error(result.error || pt('delete_failed'));
       setSelectedChildIdForAdmin('');
       await Promise.all([fetchSummary(), fetchMembers(), fetchTransactions()]);
     } catch (err: any) {
-      setError(err.message || '삭제에 실패했습니다.');
+      setError(err.message || pt('delete_failed'));
     }
   };
 
   const resolveMemberName = (userId: string) => {
     const member = members.find((m) => m.user_id === userId);
-    if (!member) return '아이';
-    return member.nickname || '아이';
+    if (!member) return pt('child_label');
+    return member.nickname || pt('child_label');
   };
 
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: '#64748b' }}>불러오는 중...</span>
+        <span style={{ color: '#64748b' }}>{pt('loading')}</span>
       </div>
     );
   }
@@ -372,8 +377,8 @@ export default function PiggyBankPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
           <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '90px', height: '90px' }} />
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>Piggy Bank 관리</h1>
-            <p style={{ margin: '4px 0 0', color: '#64748b' }}>{currentGroup?.name || '그룹'} · 아이별 저금통</p>
+            <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{pt('management_title')}</h1>
+            <p style={{ margin: '4px 0 0', color: '#64748b' }}>{currentGroup?.name || pt('group_label')} · {pt('piggy_per_child')}</p>
           </div>
         </div>
         {error && (
@@ -382,27 +387,27 @@ export default function PiggyBankPage() {
           </div>
         )}
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>아이 선택</h2>
-          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>저금통을 볼 아이를 선택하세요.</p>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('select_child_title')}</h2>
+          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>{pt('select_child_hint')}</p>
           <select
             value={selectedChildIdForAdmin}
             onChange={(e) => setSelectedChildIdForAdmin(e.target.value)}
             style={{ width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '12px' }}
           >
-            <option value="">선택하세요</option>
+            <option value="">{pt('select_placeholder')}</option>
             {accountsForSelect.map((acc) => (
               <option key={acc.id} value={acc.user_id || ''}>
-                {acc.ownerNickname || '저금통'} · 용돈 {formatAmount(acc.walletBalance ?? 0)} / 저금통 {formatAmount(acc.balance)}
+                {acc.ownerNickname || pt('piggy_label')} · {pt('allowance_label')} {formatAmount(acc.walletBalance ?? 0)} / {pt('piggy_label')} {formatAmount(acc.balance)}
               </option>
             ))}
           </select>
-          <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>아이를 선택하면 해당 저금통 화면으로 이동합니다.</p>
+          <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>{pt('select_child_hint2')}</p>
         </div>
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 추가</h2>
-          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>아이를 위해 실물 저금통을 준비한 뒤, 아래에서 저금통을 만들어 주세요.</p>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('add_piggy_title')}</h2>
+          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>{pt('add_piggy_hint')}</p>
           {membersWithoutPiggy.length === 0 ? (
-            <p style={{ color: '#94a3b8' }}>저금통이 없는 아이가 없습니다.</p>
+            <p style={{ color: '#94a3b8' }}>{pt('no_child_without_piggy')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {membersWithoutPiggy.map((p) => (
@@ -412,24 +417,24 @@ export default function PiggyBankPage() {
                     try {
                       await handleAddPiggyForChild(p.user_id);
                     } catch (err: any) {
-                      setError(err.message || '저금통 추가 실패');
+                      setError(err.message || pt('add_piggy_failed_short'));
                     }
                   }}
                   style={{ padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }}
                 >
-                  + {p.ownerNickname || '아이'} 저금통 만들기
+                  + {p.ownerNickname || pt('child_label')} {pt('create_piggy_btn')}
                 </button>
               ))}
             </div>
           )}
         </div>
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청</h2>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('open_requests_title')}</h2>
           <div style={{ marginTop: '12px' }}>
             {(() => {
               const pendingRequests = requests.filter((req) => req.status === 'pending');
               if (pendingRequests.length === 0) {
-                return <p style={{ color: '#94a3b8' }}>대기 중인 개봉요청이 없습니다.</p>;
+                return <p style={{ color: '#94a3b8' }}>{pt('no_pending_open_requests')}</p>;
               }
               const byChild = pendingRequests.reduce<Record<string, number>>((acc, req) => {
                 const id = req.child_id || '';
@@ -448,24 +453,24 @@ export default function PiggyBankPage() {
                   }}
                 >
                   <div style={{ fontWeight: 600, marginBottom: '8px' }}>
-                    대기 중인 개봉요청 {total}건
+                    {pt('pending_open_requests_count')} {total}{pt('count_suffix')}
                   </div>
                   <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#78350f' }}>
                     {Object.entries(byChild).map(([childId, count]) => (
                       <li key={childId} style={{ marginBottom: '4px' }}>
-                        {resolveMemberName(childId)} {count}건
+                        {resolveMemberName(childId)} {count}{pt('count_suffix')}
                       </li>
                     ))}
                   </ul>
                   <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#78350f' }}>
-                    아이를 선택하면 해당 아이의 개봉요청을 승인할 수 있습니다.
+                    {pt('select_child_to_approve')}
                   </p>
                 </div>
               );
             })()}
           </div>
         </div>
-        <button onClick={() => router.push('/dashboard')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>돌아가기</button>
+        <button onClick={() => router.push('/dashboard')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>{pt('back_to_dashboard')}</button>
       </div>
     );
   }
@@ -478,11 +483,11 @@ export default function PiggyBankPage() {
           <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '80px', height: '80px' }} />
           {pendingRequest ? (
             <p style={{ fontSize: '16px', color: '#92400e', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-              저금통 승인 대기중
+              {pt('approval_pending')}
             </p>
           ) : (
             <p style={{ fontSize: '16px', color: '#475569', textAlign: 'center', margin: 0 }}>
-              저금통이 없습니다. 관리자에게 요청하세요.
+              {pt('no_piggy_ask_admin')}
             </p>
           )}
           {!pendingRequest && (
@@ -499,50 +504,50 @@ export default function PiggyBankPage() {
                 cursor: 'pointer',
               }}
             >
-              저금통 요청
+              {pt('request_piggy_btn')}
             </button>
           )}
-          <button onClick={() => router.push('/dashboard')} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>대시보드로</button>
+          <button onClick={() => router.push('/dashboard')} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>{pt('go_dashboard')}</button>
         </div>
       );
     }
     if (summary !== null && summary.account == null && isAdmin && selectedChildIdForAdmin) {
-      const childName = members.find((m) => m.user_id === selectedChildIdForAdmin)?.nickname || '아이';
+      const childName = members.find((m) => m.user_id === selectedChildIdForAdmin)?.nickname || pt('child_label');
       return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
             <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '90px', height: '90px' }} />
             <div>
-              <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>Piggy Bank 관리</h1>
-              <p style={{ margin: '4px 0 0', color: '#64748b' }}>{childName} · 저금통 없음</p>
+              <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{pt('management_title')}</h1>
+              <p style={{ margin: '4px 0 0', color: '#64748b' }}>{childName} · {pt('no_piggy')}</p>
             </div>
           </div>
           {error && (
             <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '12px', borderRadius: '10px', color: '#991b1b', marginBottom: '16px' }}>{error}</div>
           )}
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <p style={{ fontSize: '15px', color: '#475569', marginBottom: '16px' }}>이 아이는 저금통을 소유하지 않았습니다. 아래 버튼으로 저금통을 추가하세요.</p>
+            <p style={{ fontSize: '15px', color: '#475569', marginBottom: '16px' }}>{pt('this_child_has_no_piggy')}</p>
             <button
               type="button"
               onClick={async () => {
                 try {
                   await handleAddPiggyForChild(selectedChildIdForAdmin);
                 } catch (err: any) {
-                  setError(err.message || '저금통 추가 실패');
+                  setError(err.message || pt('add_piggy_failed_short'));
                 }
               }}
               style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: '#22c55e', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
             >
-              저금통 추가
+              {pt('add_piggy_btn')}
             </button>
           </div>
-          <button onClick={() => router.push('/piggy-bank')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>전체 목록으로</button>
+          <button onClick={() => router.push('/piggy-bank')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>{pt('full_list')}</button>
         </div>
       );
     }
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: '#64748b' }}>불러오는 중...</span>
+        <span style={{ color: '#64748b' }}>{pt('loading')}</span>
       </div>
     );
   }
@@ -562,15 +567,15 @@ export default function PiggyBankPage() {
               onChange={(e) => setSelectedChildIdForAdmin(e.target.value)}
               style={{ display: 'block', marginBottom: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '8px 12px', fontSize: '14px' }}
             >
-              <option value="">전체 목록으로</option>
+              <option value="">{pt('full_list')}</option>
               {members.filter((m) => m.role === 'MEMBER').map((m) => (
-                <option key={m.user_id} value={m.user_id}>{m.nickname || '아이'}</option>
+                <option key={m.user_id} value={m.user_id}>{m.nickname || pt('child_label')}</option>
               ))}
             </select>
           )}
           <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{summary!.account!.ownerNickname || summary!.account!.name}</h1>
           <p style={{ margin: '4px 0 0', color: '#64748b' }}>
-            {currentGroup?.name || '그룹'} {isAdmin && selectedChildIdForAdmin ? `· ${resolveMemberName(selectedChildIdForAdmin)} 저금통` : '저금통'}
+            {currentGroup?.name || pt('group_label')} {isAdmin && selectedChildIdForAdmin ? `· ${resolveMemberName(selectedChildIdForAdmin)} ${pt('piggy_label')}` : pt('piggy_label')}
           </p>
           {isAdmin && selectedChildIdForAdmin && (
             <button
@@ -578,7 +583,7 @@ export default function PiggyBankPage() {
               onClick={() => handleDeletePiggy(selectedChildIdForAdmin)}
               style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
             >
-              저금통 삭제
+              {pt('delete_piggy_btn')}
             </button>
           )}
         </div>
@@ -592,13 +597,13 @@ export default function PiggyBankPage() {
 
       <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
         <div style={{ background: '#eff6ff', borderRadius: '14px', padding: '16px', border: '1px solid #bfdbfe' }}>
-          <div style={{ fontSize: '13px', color: '#1d4ed8' }}>내 용돈 잔액</div>
+          <div style={{ fontSize: '13px', color: '#1d4ed8' }}>{pt('wallet_balance')}</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#1d4ed8' }}>
             {formatAmount(summary?.wallet?.balance ?? 0)}
           </div>
         </div>
         <div style={{ background: '#fff7ed', borderRadius: '14px', padding: '16px', border: '1px solid #fed7aa' }}>
-          <div style={{ fontSize: '13px', color: '#9a3412' }}>저금통 잔액</div>
+          <div style={{ fontSize: '13px', color: '#9a3412' }}>{pt('piggy_balance')}</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#9a3412' }}>
             {formatAmount(summary?.account?.balance ?? 0)}
           </div>
@@ -607,9 +612,9 @@ export default function PiggyBankPage() {
 
       {/* 용돈 거래 내역 */}
       <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>용돈 내역</h2>
+        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>{pt('allowance_history')}</h2>
         {walletTransactions.length === 0 ? (
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>용돈 거래 내역이 없습니다.</p>
+          <p style={{ color: '#94a3b8', fontSize: '14px' }}>{pt('no_allowance_tx')}</p>
         ) : (
           <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {walletTransactions.map((tx) => {
@@ -633,7 +638,7 @@ export default function PiggyBankPage() {
                     </div>
                     {tx.actor_nickname && tx.type === 'allowance' && (
                       <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                        {tx.actor_nickname}가 지급
+                        {tx.actor_nickname}{pt('paid_by_suffix')}
                       </div>
                     )}
                     {tx.memo && (
@@ -658,9 +663,9 @@ export default function PiggyBankPage() {
 
       {/* 저금통 거래 내역 */}
       <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>저금통 내역</h2>
+        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>{pt('piggy_history')}</h2>
         {bankTransactions.length === 0 ? (
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>저금통 거래 내역이 없습니다.</p>
+          <p style={{ color: '#94a3b8', fontSize: '14px' }}>{pt('no_piggy_tx')}</p>
         ) : (
           <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {bankTransactions.map((tx) => {
@@ -684,7 +689,7 @@ export default function PiggyBankPage() {
                     </div>
                     {tx.actor_nickname && tx.type === 'parent_deposit' && (
                       <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                        {tx.actor_nickname}가 입금
+                        {tx.actor_nickname}{pt('deposited_by_suffix')}
                       </div>
                     )}
                     {tx.memo && (
@@ -709,7 +714,7 @@ export default function PiggyBankPage() {
 
       {isAdmin && (
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 이름</h2>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('piggy_name_title')}</h2>
           <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
             <input
               value={piggyName}
@@ -720,7 +725,7 @@ export default function PiggyBankPage() {
               onClick={handleRename}
               style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 600 }}
             >
-              변경
+              {pt('rename_btn')}
             </button>
           </div>
         </div>
@@ -729,17 +734,17 @@ export default function PiggyBankPage() {
       {isAdmin ? (
         <>
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>용돈 지급</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('allowance_grant_title')}</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <select
                 value={selectedChild}
                 onChange={(e) => setSelectedChild(e.target.value)}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               >
-                <option value="">지급 대상 선택</option>
+                <option value="">{pt('select_recipient')}</option>
                 {members.filter((m) => m.role === 'MEMBER').map((member) => (
                   <option key={member.user_id} value={member.user_id}>
-                    {member.nickname || '아이'}
+                    {member.nickname || pt('child_label')}
                   </option>
                 ))}
               </select>
@@ -747,13 +752,13 @@ export default function PiggyBankPage() {
                 type="number"
                 value={allowanceAmount}
                 onChange={(e) => setAllowanceAmount(e.target.value)}
-                placeholder="금액"
+                placeholder={pt('amount_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <input
                 value={allowanceMemo}
                 onChange={(e) => setAllowanceMemo(e.target.value)}
-                placeholder="메모 (선택)"
+                placeholder={pt('memo_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
@@ -767,36 +772,36 @@ export default function PiggyBankPage() {
                     setAllowanceAmount('');
                     setAllowanceMemo('');
                   } catch (err: any) {
-                    setError(err.message || '용돈 지급 실패');
+                    setError(err.message || pt('allowance_grant_failed'));
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700 }}
               >
-                용돈 지급
+                {pt('allowance_grant_btn')}
               </button>
             </div>
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 입금 (용돈과 별개)</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('parent_deposit_title')}</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <input
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="금액"
+                placeholder={pt('amount_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <input
                 value={depositMemo}
                 onChange={(e) => setDepositMemo(e.target.value)}
-                placeholder="메모 (선택)"
+                placeholder={pt('memo_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
                 onClick={async () => {
                   if (!selectedChildIdForAdmin) {
-                    setError('아이를 먼저 선택해 주세요.');
+                    setError(pt('select_child_first'));
                     return;
                   }
                   try {
@@ -808,20 +813,20 @@ export default function PiggyBankPage() {
                     setDepositAmount('');
                     setDepositMemo('');
                   } catch (err: any) {
-                    setError(err.message || '저금통 입금 실패');
+                    setError(err.message || pt('parent_deposit_failed'));
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700 }}
               >
-                저축 입금
+                {pt('parent_deposit_btn')}
               </button>
             </div>
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉요청 승인</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('open_approve_title')}</h2>
             <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'grid', gap: '12px', marginTop: '12px', paddingRight: '4px' }}>
-              {requests.length === 0 && <p style={{ color: '#94a3b8' }}>대기 중인 요청이 없습니다.</p>}
+              {requests.length === 0 && <p style={{ color: '#94a3b8' }}>{pt('no_pending_requests')}</p>}
               {requests.map((req) => {
                 const isInactive = req.status !== 'pending';
                 return (
@@ -838,9 +843,9 @@ export default function PiggyBankPage() {
                     <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
                     <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
                     <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px' }}>
-                      {req.destination === 'wallet' ? '용돈으로 적립' : '현금 인출'} · {req.reason || '사유 없음'}
+                      {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.reason || pt('reason_none')}
                     </div>
-                    {isInactive && <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{req.status === 'approved' ? '승인됨' : req.status === 'rejected' ? '거절됨' : req.status}</div>}
+                    {isInactive && <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}</div>}
                     {!isInactive && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                         <button
@@ -848,24 +853,24 @@ export default function PiggyBankPage() {
                             try {
                               await handleAction('/api/piggy-bank/open-approve', { requestId: req.id });
                             } catch (err: any) {
-                              setError(err.message || '승인 실패');
+                              setError(err.message || pt('approve_failed'));
                             }
                           }}
                           style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}
                         >
-                          승인
+                          {pt('approve_btn')}
                         </button>
                         <button
                           onClick={async () => {
                             try {
                               await handleAction('/api/piggy-bank/open-reject', { requestId: req.id });
                             } catch (err: any) {
-                              setError(err.message || '거절 실패');
+                              setError(err.message || pt('reject_failed'));
                             }
                           }}
                           style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}
                         >
-                          거절
+                          {pt('reject_btn')}
                         </button>
                       </div>
                     )}
@@ -878,25 +883,25 @@ export default function PiggyBankPage() {
       ) : (
         <>
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>지출 기록</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('spend_title')}</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <input
                 type="number"
                 value={spendAmount}
                 onChange={(e) => setSpendAmount(e.target.value)}
-                placeholder="금액"
+                placeholder={pt('amount_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <input
                 value={spendCategory}
                 onChange={(e) => setSpendCategory(e.target.value)}
-                placeholder="카테고리 (예: 문구, 간식)"
+                placeholder={pt('category_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <input
                 value={spendMemo}
                 onChange={(e) => setSpendMemo(e.target.value)}
-                placeholder="메모 (선택)"
+                placeholder={pt('memo_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
@@ -911,30 +916,30 @@ export default function PiggyBankPage() {
                     setSpendCategory('');
                     setSpendMemo('');
                   } catch (err: any) {
-                    setError(err.message || '지출 기록 실패');
+                    setError(err.message || pt('spend_failed'));
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#0ea5e9', color: '#fff', fontWeight: 700 }}
               >
-                지출 기록
+                {pt('spend_btn')}
               </button>
             </div>
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 저축하기</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('save_title')}</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <input
                 type="number"
                 value={saveAmount}
                 onChange={(e) => setSaveAmount(e.target.value)}
-                placeholder="저금통 저축 금액"
+                placeholder={pt('save_amount_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <input
                 value={saveMemo}
                 onChange={(e) => setSaveMemo(e.target.value)}
-                placeholder="메모 (선택)"
+                placeholder={pt('memo_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
@@ -944,24 +949,24 @@ export default function PiggyBankPage() {
                     setSaveAmount('');
                     setSaveMemo('');
                   } catch (err: any) {
-                    setError(err.message || '저금통 저축 실패');
+                    setError(err.message || pt('save_failed'));
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#f97316', color: '#fff', fontWeight: 700 }}
               >
-                저금통에 저축
+                {pt('save_btn')}
               </button>
             </div>
           </div>
 
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>저금통 개봉 요청</h2>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('open_request_title')}</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
               <input
                 type="number"
                 value={openAmount}
                 onChange={(e) => setOpenAmount(e.target.value)}
-                placeholder="요청 금액"
+                placeholder={pt('request_amount_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <select
@@ -969,13 +974,13 @@ export default function PiggyBankPage() {
                 onChange={(e) => setOpenDestination(e.target.value as 'wallet' | 'cash')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               >
-                <option value="wallet">용돈으로 적립</option>
-                <option value="cash">현금 인출</option>
+                <option value="wallet">{pt('to_wallet')}</option>
+                <option value="cash">{pt('to_cash')}</option>
               </select>
               <input
                 value={openReason}
                 onChange={(e) => setOpenReason(e.target.value)}
-                placeholder="사유 (선택)"
+                placeholder={pt('reason_placeholder')}
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
@@ -989,17 +994,17 @@ export default function PiggyBankPage() {
                     setOpenAmount('');
                     setOpenReason('');
                   } catch (err: any) {
-                    setError(err.message || '요청 실패');
+                    setError(err.message || pt('open_request_failed'));
                   }
                 }}
                 style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 700 }}
               >
-                개봉 요청
+                {pt('open_request_btn')}
               </button>
             </div>
 
             <div style={{ marginTop: '16px', display: 'grid', gap: '10px' }}>
-              {requests.length === 0 && <p style={{ color: '#94a3b8' }}>요청 내역이 없습니다.</p>}
+              {requests.length === 0 && <p style={{ color: '#94a3b8' }}>{pt('no_requests')}</p>}
               {requests.map((req) => {
                 const isInactive = req.status !== 'pending';
                 return (
@@ -1015,9 +1020,9 @@ export default function PiggyBankPage() {
                   >
                     <div style={{ fontWeight: 600 }}>{formatAmount(req.amount)}</div>
                     <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-                      {req.destination === 'wallet' ? '용돈 적립' : '현금 인출'} · {req.status === 'approved' ? '승인됨' : req.status === 'rejected' ? '거절됨' : req.status}
+                      {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{req.reason || '사유 없음'}</div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{req.reason || pt('reason_none')}</div>
                   </div>
                 );
               })}
@@ -1030,7 +1035,7 @@ export default function PiggyBankPage() {
         onClick={() => router.push('/dashboard')}
         style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}
       >
-        돌아가기
+        {pt('back_to_dashboard')}
       </button>
     </div>
   );

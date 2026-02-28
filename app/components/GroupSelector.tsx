@@ -5,13 +5,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, ChevronDown, Loader2, Plus, UserPlus, X, AlertCircle, CheckCircle, Copy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
+import { getCommonTranslation } from '@/lib/translations/common';
+import type { LangCode } from '@/lib/language-fonts';
 
 const GroupSelector: React.FC = () => {
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
+  const { lang } = useLanguage();
+  const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
+  const ct = (key: 'loading' | 'close' | 'cancel') => getCommonTranslation(lang, key);
   const [isOpen, setIsOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [groupName, setGroupName] = useState('');
+  const [groupPreferredLanguage, setGroupPreferredLanguage] = useState<LangCode>('ko');
   const [inviteCode, setInviteCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -21,7 +29,7 @@ const GroupSelector: React.FC = () => {
   // 그룹 생성
   const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      setError('그룹 이름을 입력해주세요.');
+      setError(ot('error_group_name_required'));
       return;
     }
 
@@ -32,19 +40,19 @@ const GroupSelector: React.FC = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('세션이 없습니다. 다시 로그인해 주세요.');
+        setError(ot('error_login_required'));
         setCreating(false);
         return;
       }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('로그인이 필요합니다.');
+        throw new Error(ot('error_login_required'));
       }
 
       // 초대 코드 생성 (RPC)
       const { data: inviteCodeData, error: codeError } = await supabase.rpc('generate_invite_code');
       if (codeError || !inviteCodeData) {
-        throw new Error('초대 코드 생성에 실패했습니다.');
+        throw new Error(ot('error_invite_code_failed'));
       }
 
       // 그룹 생성 (RPC 함수 사용)
@@ -65,7 +73,9 @@ const GroupSelector: React.FC = () => {
 
       if (fetchError) throw fetchError;
 
-      setSuccess('그룹이 생성되었습니다!');
+      await supabase.from('groups').update({ preferred_language: groupPreferredLanguage }).eq('id', groupId);
+
+      setSuccess(ot('success_created'));
       setGroupName('');
       
       // 그룹 목록 새로고침
@@ -80,7 +90,7 @@ const GroupSelector: React.FC = () => {
       }, 1500);
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
-      setError(err.message || '그룹 생성에 실패했습니다.');
+      setError(err.message || ot('error_create_failed'));
     } finally {
       setCreating(false);
     }
@@ -89,7 +99,7 @@ const GroupSelector: React.FC = () => {
   // 초대 코드로 가입
   const handleJoinGroup = async () => {
     if (!inviteCode.trim()) {
-      setError('초대 코드를 입력해주세요.');
+      setError(ot('error_invite_required'));
       return;
     }
 
@@ -104,7 +114,7 @@ const GroupSelector: React.FC = () => {
 
       if (joinError) throw joinError;
 
-      setSuccess('그룹에 가입되었습니다!');
+      setSuccess(ot('success_joined'));
       setInviteCode('');
       
       // 그룹 목록 새로고침
@@ -121,7 +131,7 @@ const GroupSelector: React.FC = () => {
       }, 1500);
     } catch (err: any) {
       console.error('그룹 가입 오류:', err);
-      setError(err.message || '그룹 가입에 실패했습니다.');
+      setError(err.message || ot('error_join_failed'));
     } finally {
       setJoining(false);
     }
@@ -131,7 +141,7 @@ const GroupSelector: React.FC = () => {
     return (
       <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg">
         <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-        <span className="text-sm text-gray-500">로딩 중...</span>
+        <span className="text-sm text-gray-500">{ct('loading')}</span>
       </div>
     );
   }
@@ -141,7 +151,7 @@ const GroupSelector: React.FC = () => {
       <>
         <div className="space-y-2">
           <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 text-center">
-            가입한 그룹이 없습니다.
+            {ot('no_groups')}
           </div>
           <div className="flex gap-2">
             <button
@@ -151,10 +161,10 @@ const GroupSelector: React.FC = () => {
                 setSuccess(null);
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-              aria-label="그룹 생성"
+              aria-label={ot('create_group')}
             >
               <Plus className="w-4 h-4" />
-              그룹 생성
+              {ot('create_group')}
             </button>
             <button
               onClick={() => {
@@ -163,10 +173,10 @@ const GroupSelector: React.FC = () => {
                 setSuccess(null);
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              aria-label="초대 코드로 가입"
+              aria-label={ot('join_invite')}
             >
               <UserPlus className="w-4 h-4" />
-              초대 코드로 가입
+              {ot('join_invite')}
             </button>
           </div>
         </div>
@@ -194,7 +204,7 @@ const GroupSelector: React.FC = () => {
               >
                 <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">새 그룹 생성</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">{ot('create_group')}</h3>
                     <button
                       onClick={() => {
                         setShowCreateModal(false);
@@ -203,7 +213,7 @@ const GroupSelector: React.FC = () => {
                         setSuccess(null);
                       }}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="닫기"
+                      aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -221,7 +231,7 @@ const GroupSelector: React.FC = () => {
                           setGroupName(e.target.value);
                           setError(null);
                         }}
-                        placeholder="예: 우리 가족"
+                        placeholder={ot('group_name_placeholder')}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         disabled={creating}
                         onKeyPress={(e) => {
@@ -230,6 +240,24 @@ const GroupSelector: React.FC = () => {
                           }
                         }}
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {ot('display_language')}
+                      </label>
+                      <select
+                        value={groupPreferredLanguage}
+                        onChange={(e) => setGroupPreferredLanguage(e.target.value as LangCode)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        disabled={creating}
+                      >
+                        <option value="ko">한국어</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh-CN">简体中文</option>
+                        <option value="zh-TW">繁體中文</option>
+                      </select>
                     </div>
 
                     {error && (
@@ -257,7 +285,7 @@ const GroupSelector: React.FC = () => {
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                         disabled={creating}
                       >
-                        취소
+                        {ct('cancel')}
                       </button>
                       <button
                         onClick={handleCreateGroup}
@@ -267,10 +295,10 @@ const GroupSelector: React.FC = () => {
                         {creating ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            생성 중...
+                            {ot('creating')}
                           </>
                         ) : (
-                          '생성'
+                          ot('create_short')
                         )}
                       </button>
                     </div>
@@ -304,7 +332,7 @@ const GroupSelector: React.FC = () => {
               >
                 <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">초대 코드로 가입</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">{ot('join_invite')}</h3>
                     <button
                       onClick={() => {
                         setShowJoinModal(false);
@@ -313,7 +341,7 @@ const GroupSelector: React.FC = () => {
                         setSuccess(null);
                       }}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="닫기"
+                      aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -322,7 +350,7 @@ const GroupSelector: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        초대 코드
+                        {ot('invite_code')}
                       </label>
                       <input
                         type="text"
@@ -331,7 +359,7 @@ const GroupSelector: React.FC = () => {
                           setInviteCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12));
                           setError(null);
                         }}
-                        placeholder="초대 코드를 입력하세요"
+                        placeholder={ot('invite_placeholder')}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
                         disabled={joining}
                         onKeyPress={(e) => {
@@ -367,7 +395,7 @@ const GroupSelector: React.FC = () => {
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                         disabled={joining}
                       >
-                        취소
+                        {ct('cancel')}
                       </button>
                       <button
                         onClick={handleJoinGroup}
@@ -377,10 +405,10 @@ const GroupSelector: React.FC = () => {
                         {joining ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            가입 중...
+                            {ot('joining')}
                           </>
                         ) : (
-                          '가입'
+                          ot('join_short')
                         )}
                       </button>
                     </div>
@@ -399,13 +427,13 @@ const GroupSelector: React.FC = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors w-full"
-        aria-label="그룹 선택"
+        aria-label={ot('select_group')}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
         <Users className="w-4 h-4 text-gray-500" />
         <span className="flex-1 text-left font-medium text-gray-900">
-          {currentGroup?.name || '그룹 선택'}
+          {currentGroup?.name || ot('select_group')}
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -453,8 +481,8 @@ const GroupSelector: React.FC = () => {
                         }).catch(console.error);
                       }}
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      aria-label="초대 코드 복사"
-                      title="초대 코드 복사"
+                      aria-label={ot('copy_title')}
+                      title={ot('copy_title')}
                     >
                       <Copy className="w-3 h-3 text-gray-400" />
                     </button>
@@ -470,10 +498,10 @@ const GroupSelector: React.FC = () => {
                     setSuccess(null);
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded transition-colors"
-                  aria-label="그룹 생성"
-                >
-                  <Plus className="w-4 h-4" />
-                  새 그룹 생성
+aria-label={ot('create_group')}
+                  >
+                    <Plus className="w-4 h-4" />
+                  {ot('create_group')}
                 </button>
                 <button
                   onClick={() => {
@@ -483,10 +511,10 @@ const GroupSelector: React.FC = () => {
                     setSuccess(null);
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors mt-1"
-                  aria-label="초대 코드로 가입"
+                  aria-label={ot('join_invite')}
                 >
                   <UserPlus className="w-4 h-4" />
-                  초대 코드로 가입
+                  {ot('join_invite')}
                 </button>
               </div>
             </motion.div>
@@ -517,7 +545,7 @@ const GroupSelector: React.FC = () => {
               >
                 <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">새 그룹 생성</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">{ot('create_group')}</h3>
                     <button
                       onClick={() => {
                         setShowCreateModal(false);
@@ -526,7 +554,7 @@ const GroupSelector: React.FC = () => {
                         setSuccess(null);
                       }}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="닫기"
+                      aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -544,7 +572,7 @@ const GroupSelector: React.FC = () => {
                           setGroupName(e.target.value);
                           setError(null);
                         }}
-                        placeholder="예: 우리 가족"
+                        placeholder={ot('group_name_placeholder')}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         disabled={creating}
                         onKeyPress={(e) => {
@@ -553,6 +581,24 @@ const GroupSelector: React.FC = () => {
                           }
                         }}
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {ot('display_language')}
+                      </label>
+                      <select
+                        value={groupPreferredLanguage}
+                        onChange={(e) => setGroupPreferredLanguage(e.target.value as LangCode)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        disabled={creating}
+                      >
+                        <option value="ko">한국어</option>
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                        <option value="zh-CN">简体中文</option>
+                        <option value="zh-TW">繁體中文</option>
+                      </select>
                     </div>
 
                     {error && (
@@ -580,7 +626,7 @@ const GroupSelector: React.FC = () => {
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                         disabled={creating}
                       >
-                        취소
+                        {ct('cancel')}
                       </button>
                       <button
                         onClick={handleCreateGroup}
@@ -590,10 +636,10 @@ const GroupSelector: React.FC = () => {
                         {creating ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            생성 중...
+                            {ot('creating')}
                           </>
                         ) : (
-                          '생성'
+                          ot('create_short')
                         )}
                       </button>
                     </div>
@@ -627,7 +673,7 @@ const GroupSelector: React.FC = () => {
               >
                 <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">초대 코드로 가입</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">{ot('join_invite')}</h3>
                     <button
                       onClick={() => {
                         setShowJoinModal(false);
@@ -636,7 +682,7 @@ const GroupSelector: React.FC = () => {
                         setSuccess(null);
                       }}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="닫기"
+                      aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -645,7 +691,7 @@ const GroupSelector: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        초대 코드
+                        {ot('invite_code')}
                       </label>
                       <input
                         type="text"
@@ -654,7 +700,7 @@ const GroupSelector: React.FC = () => {
                           setInviteCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 12));
                           setError(null);
                         }}
-                        placeholder="초대 코드를 입력하세요"
+                        placeholder={ot('invite_placeholder')}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
                         disabled={joining}
                         onKeyPress={(e) => {
@@ -690,7 +736,7 @@ const GroupSelector: React.FC = () => {
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                         disabled={joining}
                       >
-                        취소
+                        {ct('cancel')}
                       </button>
                       <button
                         onClick={handleJoinGroup}
@@ -700,10 +746,10 @@ const GroupSelector: React.FC = () => {
                         {joining ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            가입 중...
+                            {ot('joining')}
                           </>
                         ) : (
-                          '가입'
+                          ot('join_short')
                         )}
                       </button>
                     </div>

@@ -3,9 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const { lang } = useLanguage();
+  const act = (key: keyof import('@/lib/translations/authCallback').AuthCallbackTranslations) => getAuthCallbackTranslation(lang, key);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +80,7 @@ export default function AuthCallbackPage() {
         }
       } catch (err: any) {
         console.error('Auth callback error:', err);
-        setError(err.message || '인증 처리 중 오류가 발생했습니다.');
+        setError(err.message || act('error_message'));
         setTimeout(() => {
           router.push('/');
         }, 3000);
@@ -135,7 +139,7 @@ export default function AuthCallbackPage() {
         }}>
           {error}
         </div>
-        <p style={{ color: '#64748b', fontSize: '14px' }}>잠시 후 로그인 페이지로 이동합니다...</p>
+        <p style={{ color: '#64748b', fontSize: '14px' }}>{act('redirect_message')}</p>
       </div>
     );
   }
