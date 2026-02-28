@@ -56,7 +56,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       // 1. memberships 테이블에서 사용자가 속한 그룹 조회
       const { data: membershipData, error: membershipError } = await supabase
         .from('memberships')
-        .select('group_id, role')
+        .select('group_id, role, family_role')
         .eq('user_id', userId);
 
       if (membershipError) throw membershipError;
@@ -114,6 +114,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
           group_id: groupId,
           role: isOwner ? 'ADMIN' : (membership?.role as MembershipRole || 'MEMBER'),
           joined_at: new Date().toISOString(),
+          family_role: (membership as { family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null })?.family_role ?? null,
         };
       }));
 
