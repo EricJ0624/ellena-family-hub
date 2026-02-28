@@ -93,7 +93,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: 'Password reset link has been sent. Please check your email.',
   },
   ja: {
-    subtitle: '私たち家族の空間',
+    subtitle: '家族の思い出の場所',
     tab_login: 'ログイン',
     tab_signup: '新規登録',
     tab_forgot: 'パスワードを忘れた',
@@ -123,7 +123,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: 'パスワードリセットリンクを送信しました。メールを確認してください。',
   },
   'zh-CN': {
-    subtitle: '我们家庭的空间',
+    subtitle: '我们家的回忆角落',
     tab_login: '登录',
     tab_signup: '注册',
     tab_forgot: '忘记密码',
@@ -153,7 +153,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: '已发送密码重置链接，请查收邮件。',
   },
   'zh-TW': {
-    subtitle: '我們家庭的空間',
+    subtitle: '我們家的回憶角落',
     tab_login: '登入',
     tab_signup: '註冊',
     tab_forgot: '忘記密碼',
