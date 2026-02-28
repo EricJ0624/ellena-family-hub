@@ -1,20 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Settings, 
-  X, 
-  Copy, 
-  CheckCircle, 
-  RefreshCw, 
+import {
+  Settings,
+  X,
+  Copy,
+  CheckCircle,
+  RefreshCw,
   AlertCircle,
   Loader2,
-  Palette
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
-import { DesignEditor, type TitleStyle } from '@/app/components/TitlePage';
+import type { TitleStyle } from '@/app/components/TitlePage';
 
 interface GroupSettingsProps {
   onClose: () => void;
@@ -50,7 +48,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   const [titleStyle, setTitleStyle] = useState<TitleStyle>(() =>
     parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Hearth: Family Haven')
   );
-  const [showDesignEditor, setShowDesignEditor] = useState(false);
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -307,30 +304,24 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   대시보드 타이틀
                 </th>
                 <td style={{ padding: '12px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDesignEditor(true)}
+                  <input
+                    type="text"
+                    value={titleStyle.content ?? ''}
+                    onChange={(e) => setTitleStyle((prev) => ({ ...prev, content: e.target.value }))}
                     disabled={saving}
+                    placeholder="예: Hearth: Family Haven"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 16px',
-                      background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
-                      color: 'white',
-                      border: 'none',
+                      width: '100%',
+                      maxWidth: '320px',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '8px',
                       fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: saving ? 'not-allowed' : 'pointer',
-                      opacity: saving ? 0.7 : 1,
+                      color: '#1e293b',
                     }}
-                  >
-                    <Palette style={{ width: '18px', height: '18px' }} />
-                    타이틀 편집
-                  </button>
+                  />
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
-                    문구, 색상, 글자체, 크기, 자간, 굵기를 한 곳에서 편집한 뒤 저장하면 대시보드에 반영됩니다.
+                    대시보드 상단에 표시되는 문구입니다. 글자 크기는 화면에 맞게 자동 조정됩니다.
                   </p>
                 </td>
               </tr>
@@ -475,42 +466,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
-
-      {/* 타이틀 스타일 편집 모달 */}
-      <AnimatePresence>
-        {showDesignEditor && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 50,
-              padding: '24px',
-            }}
-            onClick={() => setShowDesignEditor(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: '480px' }}
-            >
-              <DesignEditor
-                titleStyle={titleStyle}
-                onStyleChange={setTitleStyle}
-                onClose={() => setShowDesignEditor(false)}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
