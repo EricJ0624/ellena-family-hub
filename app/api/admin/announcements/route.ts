@@ -75,9 +75,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, is_active, target } = body;
+    const { title, content, title_i18n, content_i18n, is_active, target } = body;
 
-    if (!title || !content) {
+    const i18n = title_i18n && content_i18n && typeof title_i18n === 'object' && typeof content_i18n === 'object';
+    const legacy = title != null && content != null;
+
+    if (i18n) {
+      const keys = Object.keys(title_i18n).filter((k) => (title_i18n[k] ?? '').toString().trim());
+      if (keys.length === 0) {
+        return NextResponse.json(
+          { error: '최소 한 개 언어로 제목과 내용을 입력해주세요.' },
+          { status: 400 }
+        );
+      }
+    } else if (!legacy || !String(title).trim() || !String(content).trim()) {
       return NextResponse.json(
         { error: '제목과 내용은 필수입니다.' },
         { status: 400 }
@@ -94,16 +105,40 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 공지사항 작성
+    let insertPayload: Record<string, unknown> = {
+      created_by: user.id,
+      is_active: is_active !== false,
+      target: target || 'ADMIN_ONLY',
+    };
+
+    if (i18n) {
+      const titleObj: Record<string, string> = {};
+      const contentObj: Record<string, string> = {};
+      for (const lang of ['ko', 'en', 'ja', 'zh-CN', 'zh-TW']) {
+        const t = (title_i18n[lang] ?? '').toString().trim();
+        const c = (content_i18n[lang] ?? '').toString().trim();
+        if (t || c) {
+          titleObj[lang] = t || '';
+          contentObj[lang] = c || '';
+        }
+      }
+      const fallbackTitle = titleObj.en || titleObj.ko || Object.values(titleObj)[0] || '';
+      const fallbackContent = contentObj.en || contentObj.ko || Object.values(contentObj)[0] || '';
+      insertPayload = {
+        ...insertPayload,
+        title_i18n: titleObj,
+        content_i18n: contentObj,
+        title: fallbackTitle,
+        content: fallbackContent,
+      };
+    } else {
+      insertPayload.title = String(title).trim();
+      insertPayload.content = String(content).trim();
+    }
+
     const { data: announcement, error } = await supabase
       .from('announcements')
-      .insert({
-        title: title.trim(),
-        content: content.trim(),
-        created_by: user.id,
-        is_active: is_active !== false, // 기본값: true
-        target: target || 'ADMIN_ONLY', // 기본값: ADMIN_ONLY
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -150,7 +185,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, is_active, target } = body;
+    const { id, title, content, title_i18n, content_i18n, is_active, target } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -159,7 +194,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!title || !content) {
+    const i18n = title_i18n && content_i18n && typeof title_i18n === 'object' && typeof content_i18n === 'object';
+    const legacy = title != null && content != null;
+
+    if (i18n) {
+      const keys = Object.keys(title_i18n).filter((k) => (title_i18n[k] ?? '').toString().trim());
+      if (keys.length === 0) {
+        return NextResponse.json(
+          { error: '최소 한 개 언어로 제목과 내용을 입력해주세요.' },
+          { status: 400 }
+        );
+      }
+    } else if (!legacy || !String(title).trim() || !String(content).trim()) {
       return NextResponse.json(
         { error: '제목과 내용은 필수입니다.' },
         { status: 400 }
@@ -176,15 +222,32 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 공지사항 수정
-    const updateData: any = {
-      title: title.trim(),
-      content: content.trim(),
+    const updateData: Record<string, unknown> = {
       is_active: is_active !== false,
     };
 
     if (target) {
       updateData.target = target;
+    }
+
+    if (i18n) {
+      const titleObj: Record<string, string> = {};
+      const contentObj: Record<string, string> = {};
+      for (const lang of ['ko', 'en', 'ja', 'zh-CN', 'zh-TW']) {
+        const t = (title_i18n[lang] ?? '').toString().trim();
+        const c = (content_i18n[lang] ?? '').toString().trim();
+        if (t || c) {
+          titleObj[lang] = t || '';
+          contentObj[lang] = c || '';
+        }
+      }
+      updateData.title_i18n = titleObj;
+      updateData.content_i18n = contentObj;
+      updateData.title = titleObj.en || titleObj.ko || Object.values(titleObj)[0] || '';
+      updateData.content = contentObj.en || contentObj.ko || Object.values(contentObj)[0] || '';
+    } else {
+      updateData.title = String(title).trim();
+      updateData.content = String(content).trim();
     }
 
     const { data: announcement, error } = await supabase

@@ -21,6 +21,7 @@ import { getCommonTranslation, type CommonTranslations } from '@/lib/translation
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
+import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -8142,7 +8143,10 @@ export default function FamilyHub() {
         {/* 공지사항 배너 (모든 멤버) */}
         {announcements.length > 0 && (
           <AnnouncementBanner 
-            announcements={announcements}
+            announcements={announcements.map((a) => {
+              const { title, content } = getAnnouncementTexts(a as Parameters<typeof getAnnouncementTexts>[0], lang);
+              return { id: a.id, title, content, created_at: a.created_at, is_read: a.is_read };
+            })}
             onMarkAsRead={handleMarkAsRead}
           />
         )}

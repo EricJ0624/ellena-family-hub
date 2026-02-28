@@ -506,28 +506,37 @@ export interface Database {
           id: string
           title: string
           content: string
+          title_i18n: Record<string, string> | null
+          content_i18n: Record<string, string> | null
           created_by: string | null
           created_at: string
           updated_at: string
           is_active: boolean
+          target?: 'ADMIN_ONLY' | 'ALL_MEMBERS'
         }
         Insert: {
           id?: string
           title: string
           content: string
+          title_i18n?: Record<string, string> | null
+          content_i18n?: Record<string, string> | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
           is_active?: boolean
+          target?: 'ADMIN_ONLY' | 'ALL_MEMBERS'
         }
         Update: {
           id?: string
           title?: string
           content?: string
+          title_i18n?: Record<string, string> | null
+          content_i18n?: Record<string, string> | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
           is_active?: boolean
+          target?: 'ADMIN_ONLY' | 'ALL_MEMBERS'
         }
         Relationships: [
           {

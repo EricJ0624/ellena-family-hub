@@ -34,6 +34,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import GroupSettings from '@/app/components/GroupSettings';
+import { getAnnouncementTexts } from '@/lib/announcement-i18n';
+import type { LangCode } from '@/lib/language-fonts';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -109,10 +111,15 @@ interface GroupStats {
   recentPhotos: number;
 }
 
+const ANNOUNCEMENT_LANGS: LangCode[] = ['ko', 'en', 'ja', 'zh-CN', 'zh-TW'];
+const ANNOUNCEMENT_LANG_LABELS: Record<LangCode, string> = { ko: '한국어', en: 'English', ja: '日本語', 'zh-CN': '简体中文', 'zh-TW': '繁體中文' };
+
 interface AnnouncementInfo {
   id: string;
   title: string;
   content: string;
+  title_i18n?: Record<string, string> | null;
+  content_i18n?: Record<string, string> | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -214,9 +221,10 @@ export default function AdminPage() {
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null | undefined>(undefined);
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
-  const [announcementTitle, setAnnouncementTitle] = useState('');
-  const [announcementContent, setAnnouncementContent] = useState('');
+  const [announcementTitleI18n, setAnnouncementTitleI18n] = useState<Record<string, string>>(() => Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+  const [announcementContentI18n, setAnnouncementContentI18n] = useState<Record<string, string>>(() => Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
   const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
+  const [announcementLangTab, setAnnouncementLangTab] = useState<LangCode>('ko');
   const [ticketAnswer, setTicketAnswer] = useState('');
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
   const [showNewAccessRequestModal, setShowNewAccessRequestModal] = useState(false);
@@ -3884,9 +3892,10 @@ export default function AdminPage() {
                   <button
                     onClick={() => {
                       setEditingAnnouncement(null);
-                      setAnnouncementTitle('');
-                      setAnnouncementContent('');
+                      setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                      setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
                       setAnnouncementTarget('ADMIN_ONLY');
+                      setAnnouncementLangTab('ko');
                     }}
                     style={{
                       padding: '10px 20px',
@@ -3940,7 +3949,7 @@ export default function AdminPage() {
                               color: '#1e293b',
                               margin: 0,
                             }}>
-                              {announcement.title}
+                              {getAnnouncementTexts(announcement, adminLang).title || announcement.title}
                             </h3>
                             {!announcement.is_active && (
                               <span style={{
@@ -3971,7 +3980,7 @@ export default function AdminPage() {
                             margin: 0,
                             whiteSpace: 'pre-wrap',
                           }}>
-                            {announcement.content}
+                            {getAnnouncementTexts(announcement, adminLang).content || announcement.content}
                           </p>
                         </div>
                         <div style={{
@@ -3982,9 +3991,12 @@ export default function AdminPage() {
                           <button
                             onClick={() => {
                               setEditingAnnouncement(announcement);
-                              setAnnouncementTitle(announcement.title);
-                              setAnnouncementContent(announcement.content);
+                              const ti = announcement.title_i18n && typeof announcement.title_i18n === 'object' ? announcement.title_i18n : { ko: announcement.title };
+                              const ci = announcement.content_i18n && typeof announcement.content_i18n === 'object' ? announcement.content_i18n : { ko: announcement.content };
+                              setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, (ti[l] ?? '')])));
+                              setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, (ci[l] ?? '')])));
                               setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
+                              setAnnouncementLangTab('ko');
                             }}
                             style={{
                               padding: '8px 12px',
@@ -4144,8 +4156,8 @@ export default function AdminPage() {
                   }}
                   onClick={() => {
                     setEditingAnnouncement(undefined);
-                    setAnnouncementTitle('');
-                    setAnnouncementContent('');
+                    setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                    setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
                     setAnnouncementTarget('ADMIN_ONLY');
                   }}
                   >
@@ -4166,13 +4178,34 @@ export default function AdminPage() {
                         color: '#1e293b',
                         marginBottom: '16px',
                       }}>
-                        {editingAnnouncement ? '공지 수정' : '새 공지 작성'}
+                        {editingAnnouncement ? at('tab_announcements') + ' ' + (adminLang === 'ko' ? '수정' : 'Edit') : (adminLang === 'ko' ? '새 공지 작성' : 'New announcement')}
                       </h3>
+                      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                        {ANNOUNCEMENT_LANGS.map((l) => (
+                          <button
+                            key={l}
+                            type="button"
+                            onClick={() => setAnnouncementLangTab(l)}
+                            style={{
+                              padding: '8px 14px',
+                              border: 'none',
+                              borderBottom: announcementLangTab === l ? '2px solid #9333ea' : '2px solid transparent',
+                              background: 'none',
+                              fontSize: '13px',
+                              fontWeight: announcementLangTab === l ? '600' : '400',
+                              color: announcementLangTab === l ? '#9333ea' : '#64748b',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {ANNOUNCEMENT_LANG_LABELS[l]}
+                          </button>
+                        ))}
+                      </div>
                       <input
                         type="text"
-                        value={announcementTitle}
-                        onChange={(e) => setAnnouncementTitle(e.target.value)}
-                        placeholder="제목을 입력하세요..."
+                        value={announcementTitleI18n[announcementLangTab] ?? ''}
+                        onChange={(e) => setAnnouncementTitleI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))}
+                        placeholder={adminLang === 'ko' ? '제목을 입력하세요...' : 'Enter title...'}
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -4184,12 +4217,12 @@ export default function AdminPage() {
                         }}
                       />
                       <textarea
-                        value={announcementContent}
-                        onChange={(e) => setAnnouncementContent(e.target.value)}
-                        placeholder="내용을 입력하세요..."
+                        value={announcementContentI18n[announcementLangTab] ?? ''}
+                        onChange={(e) => setAnnouncementContentI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))}
+                        placeholder={adminLang === 'ko' ? '내용을 입력하세요...' : 'Enter content...'}
                         style={{
                           width: '100%',
-                          minHeight: '300px',
+                          minHeight: '280px',
                           padding: '12px',
                           border: '1px solid #e2e8f0',
                           borderRadius: '8px',
@@ -4290,8 +4323,8 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             setEditingAnnouncement(undefined);
-                            setAnnouncementTitle('');
-                            setAnnouncementContent('');
+                            setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                            setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
                             setAnnouncementTarget('ADMIN_ONLY');
                           }}
                           style={{
@@ -4305,12 +4338,23 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          취소
+                          {ct('cancel')}
                         </button>
                         <button
                           onClick={async () => {
-                            if (!announcementTitle.trim() || !announcementContent.trim()) {
-                              alert('제목과 내용을 모두 입력해주세요.');
+                            const titleObj: Record<string, string> = {};
+                            const contentObj: Record<string, string> = {};
+                            for (const l of ANNOUNCEMENT_LANGS) {
+                              const t = (announcementTitleI18n[l] ?? '').trim();
+                              const c = (announcementContentI18n[l] ?? '').trim();
+                              if (t || c) {
+                                titleObj[l] = t || '';
+                                contentObj[l] = c || '';
+                              }
+                            }
+                            const keys = Object.keys(titleObj);
+                            if (keys.length === 0) {
+                              alert(adminLang === 'ko' ? '최소 한 개 언어로 제목과 내용을 입력해주세요.' : 'Please enter title and content in at least one language.');
                               return;
                             }
 
@@ -4323,7 +4367,6 @@ export default function AdminPage() {
                               }
 
                               if (editingAnnouncement) {
-                                // 수정
                                 const response = await fetch('/api/admin/announcements', {
                                   method: 'PUT',
                                   headers: {
@@ -4332,8 +4375,8 @@ export default function AdminPage() {
                                   },
                                   body: JSON.stringify({
                                     id: editingAnnouncement.id,
-                                    title: announcementTitle,
-                                    content: announcementContent,
+                                    title_i18n: titleObj,
+                                    content_i18n: contentObj,
                                     is_active: true,
                                     target: announcementTarget,
                                   }),
@@ -4342,12 +4385,11 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '공지 수정에 실패했습니다.');
+                                  throw new Error(result.error || (adminLang === 'ko' ? '공지 수정에 실패했습니다.' : 'Failed to update announcement.'));
                                 }
 
-                                alert('공지가 수정되었습니다.');
+                                alert(adminLang === 'ko' ? '공지가 수정되었습니다.' : 'Announcement updated.');
                               } else {
-                                // 작성
                                 const response = await fetch('/api/admin/announcements', {
                                   method: 'POST',
                                   headers: {
@@ -4355,8 +4397,8 @@ export default function AdminPage() {
                                     'Content-Type': 'application/json',
                                   },
                                   body: JSON.stringify({
-                                    title: announcementTitle,
-                                    content: announcementContent,
+                                    title_i18n: titleObj,
+                                    content_i18n: contentObj,
                                     is_active: true,
                                     target: announcementTarget,
                                   }),
@@ -4365,15 +4407,15 @@ export default function AdminPage() {
                                 const result = await response.json();
 
                                 if (!response.ok) {
-                                  throw new Error(result.error || '공지 작성에 실패했습니다.');
+                                  throw new Error(result.error || (adminLang === 'ko' ? '공지 작성에 실패했습니다.' : 'Failed to create announcement.'));
                                 }
 
-                                alert('공지가 작성되었습니다.');
+                                alert(adminLang === 'ko' ? '공지가 작성되었습니다.' : 'Announcement created.');
                               }
 
                               setEditingAnnouncement(undefined);
-                              setAnnouncementTitle('');
-                              setAnnouncementContent('');
+                              setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                              setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
                               setAnnouncementTarget('ADMIN_ONLY');
                               loadAnnouncements();
                             } catch (error: any) {
