@@ -63,7 +63,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: '비밀번호 재설정 링크를 이메일로 발송했습니다. 이메일을 확인해주세요.',
   },
   en: {
-    subtitle: "A space for our family's memories",
+    subtitle: "A space for our family",
     tab_login: 'Login',
     tab_signup: 'Sign up',
     tab_forgot: 'Forgot password',
@@ -93,7 +93,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: 'Password reset link has been sent. Please check your email.',
   },
   ja: {
-    subtitle: '私たち家族の思い出の空間',
+    subtitle: '私たち家族の空間',
     tab_login: 'ログイン',
     tab_signup: '新規登録',
     tab_forgot: 'パスワードを忘れた',
@@ -123,7 +123,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: 'パスワードリセットリンクを送信しました。メールを確認してください。',
   },
   'zh-CN': {
-    subtitle: '我们家庭的回忆空间',
+    subtitle: '我们家庭的空间',
     tab_login: '登录',
     tab_signup: '注册',
     tab_forgot: '忘记密码',
@@ -153,7 +153,7 @@ const login: Record<LangCode, LoginTranslations> = {
     success_reset_sent: '已发送密码重置链接，请查收邮件。',
   },
   'zh-TW': {
-    subtitle: '我們家庭的回憶空間',
+    subtitle: '我們家庭的空間',
     tab_login: '登入',
     tab_signup: '註冊',
     tab_forgot: '忘記密碼',
