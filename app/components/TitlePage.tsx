@@ -29,7 +29,7 @@ const seededRandom = (seed: string): number => {
 };
 
 // 오늘의 무작위 사진 선택 함수
-const getTodayRandomPhoto = (photos: Array<{ id: number; data: string }>, manualSeed?: number): number | null => {
+const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>, manualSeed?: number): number | null => {
   if (!photos || photos.length === 0) return null;
   
   const today = new Date();
@@ -53,7 +53,7 @@ interface TitleStyle {
 
 // 오늘의 무작위 사진 액자 컴포넌트
 interface DailyPhotoFrameProps {
-  photos: Array<{ id: number; data: string }>;
+  photos: Array<{ id: number | string; data: string }>;
   onShuffle?: () => void;
   frameStyle?: FrameStyle;
   onFrameChange?: (style: FrameStyle) => void;
@@ -707,7 +707,7 @@ const FloatingPetals: React.FC = () => {
 interface TitlePageProps {
   title?: string;
   onTitleClick?: () => void;
-  photos?: Array<{ id: number; data: string }>;
+  photos?: Array<{ id: number | string; data: string }>;
   titleStyle?: Partial<TitleStyle>;
   onTitleStyleChange?: (style: TitleStyle) => void;
   /** false면 타이틀 클릭 시 디자인 에디터 미표시 (읽기 전용) */

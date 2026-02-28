@@ -118,9 +118,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     const supabasePhotos: Photo[] = (photos || [])
       .filter((p: { image_url?: string; cloudinary_url?: string; s3_original_url?: string }) => p.image_url || p.cloudinary_url || p.s3_original_url)
       .map((p: Record<string, unknown>) => ({
-        id: p.id,
+        id: p.id as string | number,
         data: (p.image_url || p.cloudinary_url || p.s3_original_url) as string,
-        supabaseId: p.id,
+        supabaseId: p.id as string | number,
         isUploaded: true,
         isUploading: false,
         description: (p.caption as string) || '',
@@ -165,9 +165,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           if (exists) return prev;
           return [
             {
-              id: newPhoto.id,
+              id: newPhoto.id as string | number,
               data: url,
-              supabaseId: newPhoto.id,
+              supabaseId: newPhoto.id as string | number,
               isUploaded: true,
               isUploading: false,
               created_by: (newPhoto.uploader_id || newPhoto.created_by) as string | undefined,
@@ -185,9 +185,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
             p.id === updated.id || p.supabaseId === updated.id
               ? {
                   ...p,
-                  id: updated.id,
+                  id: updated.id as string | number,
                   data: url,
-                  supabaseId: updated.id,
+                  supabaseId: updated.id as string | number,
                   isUploaded: true,
                   created_by: (updated.uploader_id || updated.created_by || p.created_by) as string | undefined,
                 }

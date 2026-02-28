@@ -18,6 +18,7 @@ export type CommonTranslations = {
   close: string;
   delete_confirm: string; // "삭제하시겠습니까?"
   error_unknown: string;
+  back: string; // "뒤로" 등
 };
 
 const common: Record<LangCode, CommonTranslations> = {
@@ -39,6 +40,7 @@ const common: Record<LangCode, CommonTranslations> = {
     close: '닫기',
     delete_confirm: '삭제하시겠습니까?',
     error_unknown: '알 수 없는 오류',
+    back: '뒤로',
   },
   en: {
     app_title: 'Hearth: Family Haven',
@@ -58,6 +60,7 @@ const common: Record<LangCode, CommonTranslations> = {
     close: 'Close',
     delete_confirm: 'Are you sure you want to delete?',
     error_unknown: 'Unknown error',
+    back: 'Back',
   },
   ja: {
     app_title: 'Hearth: 家族の空間',
@@ -77,6 +80,7 @@ const common: Record<LangCode, CommonTranslations> = {
     close: '閉じる',
     delete_confirm: '削除してもよろしいですか？',
     error_unknown: '不明なエラー',
+    back: '戻る',
   },
   'zh-CN': {
     app_title: 'Hearth: 家庭的空间',
@@ -96,6 +100,7 @@ const common: Record<LangCode, CommonTranslations> = {
     close: '关闭',
     delete_confirm: '确定要删除吗？',
     error_unknown: '未知错误',
+    back: '返回',
   },
   'zh-TW': {
     app_title: 'Hearth: 家庭的空間',
@@ -115,6 +120,7 @@ const common: Record<LangCode, CommonTranslations> = {
     close: '關閉',
     delete_confirm: '確定要刪除嗎？',
     error_unknown: '未知錯誤',
+    back: '返回',
   },
 };
 

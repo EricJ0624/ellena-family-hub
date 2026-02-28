@@ -91,8 +91,8 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; supabaseId?: string | number };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
 type Message = { id: string | number; user: string; text: string; time: string };
-type Photo = { 
-  id: number; 
+type Photo = {
+  id: number | string; // 로컬 임시 id 또는 Supabase UUID
   data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시) 또는 플레이스홀더 (큰 파일)
   originalData?: string; // 원본 이미지 (S3 업로드용, 선택적)
   originalSize?: number; // 원본 파일 크기 (bytes)
@@ -3795,8 +3795,12 @@ export default function FamilyHub() {
 
     // 크기가 초과하면 오래된 사진부터 삭제
     if (currentSize > maxSize && cleanedState.album && cleanedState.album.length > 0) {
-      // ID 기준으로 정렬 (오래된 것부터)
-      const sortedAlbum = [...cleanedState.album].sort((a, b) => a.id - b.id);
+      // ID 기준으로 정렬 (오래된 것부터). id가 number면 차이로, string(UUID)면 문자열 비교
+      const sortedAlbum = [...cleanedState.album].sort((a, b) =>
+        typeof a.id === 'number' && typeof b.id === 'number'
+          ? a.id - b.id
+          : String(a.id).localeCompare(String(b.id))
+      );
       
       // 오래된 사진부터 삭제하면서 크기 체크
       for (let i = 0; i < sortedAlbum.length && currentSize > maxSize; i++) {
