@@ -52,7 +52,9 @@ function persistAlbumOnly(
       const decrypted = CryptoService.decrypt(saved, key) as Record<string, unknown> | null;
       if (decrypted && typeof decrypted === 'object') state = { ...decrypted };
     }
-    const withoutOriginal = newAlbum.map((p) => {
+    // blob/data URL은 저장하지 않음 → 뒤로가기 후 재진입 시 Hydration 에러 방지
+    const stableOnly = newAlbum.filter((p) => p.data && (p.data.startsWith('http://') || p.data.startsWith('https://')));
+    const withoutOriginal = stableOnly.map((p) => {
       const { originalData: _, ...rest } = p;
       return rest;
     });
@@ -113,7 +115,8 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       .limit(100);
 
     if (error) {
-      setAlbum(localAlbum);
+      const stableLocal = localAlbum.filter((p) => p.data && (p.data.startsWith('http://') || p.data.startsWith('https://')));
+      setAlbum(stableLocal);
       return;
     }
 
@@ -132,10 +135,12 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       }));
 
     const supabaseIds = new Set(supabasePhotos.map((p) => String(p.id)));
+    // blob/data URL은 merge하지 않음 → 뒤로가기 후 대시보드 Hydration 에러 방지
     const localOnly = localAlbum.filter((p) => {
       const sid = p.supabaseId ? String(p.supabaseId) : null;
       if (sid && supabaseIds.has(sid)) return false;
-      return p.isUploading === true || (p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:')));
+      if (!p.data) return false;
+      return p.data.startsWith('http://') || p.data.startsWith('https://');
     });
     const merged = [...supabasePhotos, ...localOnly];
     setAlbum(merged);
