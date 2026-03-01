@@ -468,7 +468,7 @@ export default function LoginPage() {
               return (
                 <>
                   {main}
-                  <span style={{ fontSize: '0.333em', verticalAlign: 'bottom' }}>{sub}</span>
+                  <span style={{ fontSize: '0.333em', verticalAlign: 'baseline' }}>{sub}</span>
                 </>
               );
             })()}
