@@ -95,7 +95,30 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   }, [mounted, stablePhotos, manualSeed]);
 
   const selectedPhoto = photoIndex !== null && stablePhotos[photoIndex] ? stablePhotos[photoIndex] : null;
-  
+
+  // 가로(landscape) = cover로 꽉 채움, 세로(portrait) = contain + 블러 배경 (이미지 로드 후 비율로 결정)
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  useEffect(() => {
+    if (!selectedPhoto) {
+      setImageAspectRatio(null);
+      setImageLoadError(false);
+    }
+  }, [selectedPhoto]);
+
+  // 블러 배경용 저해상도 URL (Cloudinary 등 지원 시 쿼리로 축소 요청, 부하 감소)
+  const getBlurLayerSrc = useCallback((url: string) => {
+    if (!url || !isStablePhotoUrl(url)) return url;
+    try {
+      if (url.includes('res.cloudinary.com') && !url.includes('w_')) {
+        return url.replace('/upload/', '/upload/w_200,q_30/');
+      }
+    } catch {
+      // ignore
+    }
+    return url;
+  }, []);
+
   // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
     setManualSeed(Date.now());
@@ -158,17 +181,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.15), inset 0 -1px 4px rgba(0,0,0,0.1)',
           }}
         >
-          {/* 가족 사진 영역 */}
-          <div style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            borderRadius: '2px',
-            overflow: 'hidden',
-          }}>
-            {/* 사진 또는 Fallback (안정 URL일 때만 Image 렌더 → blob/data 노출·Hydration 에러 방지) */}
+          {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              borderRadius: '2px',
+              overflow: 'hidden',
+              background: '#1a1a1a',
+            }}
+          >
             <AnimatePresence mode="wait">
-              {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) ? (
+              {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
                 <motion.div
                   key={`${selectedPhoto.id}-${manualSeed || 'default'}`}
                   initial={{ opacity: 0 }}
@@ -176,19 +201,52 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                   style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
+                    position: 'absolute',
+                    inset: 0,
                   }}
                 >
+                  {/* 1) 최하단: 가우시안 블러 배경 (원본 cover + scale 1.1 + blur, 저해상도 URL 사용 시 부하 감소) */}
+                  <img
+                    src={getBlurLayerSrc(selectedPhoto.data)}
+                    alt=""
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transform: 'translate(-50%, -50%) scale(1.1)',
+                      filter: 'blur(50px) brightness(0.7)',
+                    }}
+                  />
+                  {/* 2) 중간: 어두운 오버레이 (가독성) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  {/* 3) 최상단: 원본 사진 (가로=cover 꽉 채움, 세로=contain + 블러가 좌우 여백 채움) */}
                   <Image
                     src={selectedPhoto.data}
                     alt={tp('photo_alt_today_memory')}
                     fill
                     style={{
-                      objectFit: 'contain',
+                      objectFit: imageAspectRatio !== null && imageAspectRatio >= 1 ? 'cover' : 'contain',
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05)',
                     }}
                     unoptimized={true}
+                    onLoad={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target?.naturalWidth && target?.naturalHeight) {
+                        setImageAspectRatio(target.naturalWidth / target.naturalHeight);
+                      }
+                    }}
+                    onError={() => setImageLoadError(true)}
                   />
                 </motion.div>
               ) : (
@@ -199,15 +257,15 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                   style={{
-                    width: '100%',
-                    height: '100%',
+                    position: 'absolute',
+                    inset: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d5c4 100%)',
+                    background: '#1a1a1a',
                   }}
                 >
-                  <div style={{ fontSize: '4rem' }}>📷</div>
+                  <div style={{ fontSize: '4rem', opacity: 0.6 }}>📷</div>
                 </motion.div>
               )}
             </AnimatePresence>
