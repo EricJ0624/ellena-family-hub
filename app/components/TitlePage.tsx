@@ -166,7 +166,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
           <PhotoFrameSVG frameStyle={frameStyle} />
         </div>
 
-        {/* 내부 매트(Matte) - 크림색 여백 */}
+        {/* 내부 사진 영역 (매트 제거 → 사진이 액자에 꽉 차게) */}
         <div
           style={{
             position: 'absolute',
@@ -176,9 +176,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             bottom: '20px',
             borderRadius: '4px',
             overflow: 'hidden',
-            background: '#f5f5dc',
-            padding: '12px',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.15), inset 0 -1px 4px rgba(0,0,0,0.1)',
+            padding: 0,
           }}
         >
           {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
