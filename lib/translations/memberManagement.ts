@@ -205,6 +205,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_other: '其他',
     family_role_saved: '家庭显示已保存。',
     family_role_save_failed: '保存失败。',
+    family_role_modal_description: '您希望在家庭中如何显示？（选填）',
   },
   'zh-TW': {
     select_group_first: '請先選擇群組。',
