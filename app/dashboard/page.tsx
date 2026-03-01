@@ -6983,12 +6983,16 @@ export default function FamilyHub() {
                     </button>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', fontSize: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '42px', gap: '4px', textAlign: 'center', fontSize: '12px' }}>
                   {['일', '월', '화', '수', '목', '금', '토'].map((w, i) => (
                     <div
                       key={w}
                       style={{
                         padding: '6px 2px',
+                        minHeight: '34px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         fontWeight: '700',
                         color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#64748b',
                         backgroundColor: i === 0 || i === 6 ? 'rgba(0,0,0,0.03)' : 'transparent',
