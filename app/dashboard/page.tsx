@@ -21,6 +21,7 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
+import { getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
@@ -214,6 +215,7 @@ export default function FamilyHub() {
   const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname: string | null }>>([]);
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
+  const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null>>({});
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -3675,6 +3677,25 @@ export default function FamilyHub() {
     })();
   }, [state.events]);
 
+  // 현재 그룹 멤버의 가족 표시( family_role ) 로드 — 앱 전반 표시용
+  useEffect(() => {
+    if (!currentGroupId) {
+      setFamilyRoleByUserId({});
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('memberships')
+        .select('user_id, family_role')
+        .eq('group_id', currentGroupId);
+      const map: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null> = {};
+      (data || []).forEach((m: { user_id: string; family_role?: string | null }) => {
+        map[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'other') ?? null;
+      });
+      setFamilyRoleByUserId(map);
+    })();
+  }, [currentGroupId]);
+
   // 시스템 관리자 권한 확인
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -6769,6 +6790,7 @@ export default function FamilyHub() {
                   <span className="user-icon" style={{ fontSize: '12px' }}>👤</span>
                   <p className="user-name" style={{ margin: 0, fontSize: '12px', fontWeight: user.isCurrentUser ? '600' : '500' }}>
                     {user.name}
+                    {familyRoleByUserId[user.id] ? ` (${getFamilyRoleLabel(lang, familyRoleByUserId[user.id])})` : ''}
                     {user.isCurrentUser && ct('me_suffix')}
                   </p>
                 </div>
@@ -7148,6 +7170,7 @@ export default function FamilyHub() {
                                 {e.created_by != null && (
                                   <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}>
                                     {dt('event_author')}: {e.created_by === userId ? ct('me') : (eventAuthorNames[e.created_by] ?? ct('unknown'))}
+                                    {familyRoleByUserId[e.created_by] ? ` (${getFamilyRoleLabel(lang, familyRoleByUserId[e.created_by])})` : ''}
                                   </p>
                                 )}
                                 {e.desc && <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.desc}</p>}

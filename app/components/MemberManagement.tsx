@@ -80,7 +80,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
   const isAdmin = userRole === 'ADMIN' || isOwner;
 
-  // 멤버 목록 로드
+  // 멤버 목록 로드 (그룹 소유자 보정: 소유자는 항상 목록에 포함·ADMIN으로 표시)
   const loadMembers = useCallback(async () => {
     if (!currentGroupId) {
       setMembers([]);
@@ -92,7 +92,14 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       setLoading(true);
       setError(null);
 
-      // 그룹 멤버 조회 (뷰 사용 또는 직접 조인)
+      // 그룹 소유자 조회 (소유자가 memberships에 없거나 MEMBER로 되어 있어도 ADMIN으로 표시하기 위함)
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('owner_id, created_at')
+        .eq('id', currentGroupId)
+        .single();
+
+      // 그룹 멤버 조회
       const { data: membershipData, error: membershipError } = await supabase
         .from('memberships')
         .select('user_id, role, joined_at, family_role')
@@ -101,14 +108,19 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
       if (membershipError) throw membershipError;
 
-      if (!membershipData || membershipData.length === 0) {
+      const ownerId = groupData?.owner_id ?? null;
+      const memberIds = membershipData?.map(m => m.user_id) ?? [];
+      const userIds = ownerId && !memberIds.includes(ownerId)
+        ? [...memberIds, ownerId]
+        : memberIds;
+
+      if (userIds.length === 0) {
         setMembers([]);
         setLoading(false);
         return;
       }
 
       // 프로필 정보 조회
-      const userIds = membershipData.map(m => m.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, nickname')
@@ -118,18 +130,32 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
         console.warn('프로필 조회 실패:', profilesError);
       }
 
-      // 멤버 정보 결합
-      const memberList: MemberInfo[] = membershipData.map((membership) => {
+      // 멤버 정보 결합: 소유자는 role을 ADMIN으로 통일(표시용)
+      const memberList: MemberInfo[] = (membershipData ?? []).map((membership) => {
         const profile = profilesData?.find(p => p.id === membership.user_id);
+        const isOwner = membership.user_id === ownerId;
         return {
           user_id: membership.user_id,
-          role: membership.role as MembershipRole,
+          role: (isOwner ? 'ADMIN' : membership.role) as MembershipRole,
           joined_at: membership.joined_at,
           email: profile?.email || null,
           nickname: profile?.nickname || null,
           family_role: (membership as { family_role?: FamilyRole | null }).family_role ?? null,
         };
       });
+
+      // 소유자가 memberships에 없으면 목록 맨 앞에 추가 (시스템 관리자 페이지와 동일)
+      if (ownerId && !memberList.some(m => m.user_id === ownerId)) {
+        const ownerProfile = profilesData?.find(p => p.id === ownerId);
+        memberList.unshift({
+          user_id: ownerId,
+          role: 'ADMIN',
+          joined_at: groupData?.created_at ?? new Date().toISOString(),
+          email: ownerProfile?.email ?? null,
+          nickname: ownerProfile?.nickname ?? null,
+          family_role: null,
+        });
+      }
 
       setMembers(memberList);
     } catch (err: any) {

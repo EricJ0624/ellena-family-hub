@@ -247,3 +247,13 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
 export function getMemberManagementTranslation(lang: LangCode, key: keyof MemberManagementTranslations): string {
   return memberManagement[lang]?.[key] ?? memberManagement.en[key] ?? (memberManagement.ko[key] as string) ?? key;
 }
+
+/** 가족 표시 역할 값을 다국어 라벨로 변환 (앱 전반 표시용) */
+export function getFamilyRoleLabel(
+  lang: LangCode,
+  role: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
+): string {
+  if (!role) return '';
+  const key = `family_role_${role}` as keyof MemberManagementTranslations;
+  return getMemberManagementTranslation(lang, key);
+}
