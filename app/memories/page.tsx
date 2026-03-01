@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -31,6 +31,19 @@ export default function MemoriesPage() {
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [gridColumns, setGridColumns] = useState(3);
+
+  useEffect(() => {
+    const updateColumns = () => {
+      const w = typeof window !== 'undefined' ? window.innerWidth : 900;
+      if (w < 480) setGridColumns(1);
+      else if (w < 900) setGridColumns(3);
+      else setGridColumns(5);
+    };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
 
@@ -371,7 +384,7 @@ export default function MemoriesPage() {
         />
       </header>
 
-      <main style={{ padding: 16, maxWidth: 600, margin: '0 auto' }}>
+      <main style={{ padding: 16, maxWidth: 1200, margin: '0 auto', overflowX: 'hidden' }}>
         {album.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
@@ -389,7 +402,13 @@ export default function MemoriesPage() {
             <div>{dt('photo_upload_prompt')}</div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+              gap: 12,
+            }}
+          >
             {album.map((p, index) => (
               <motion.div
                 key={p.id}
@@ -559,20 +578,44 @@ export default function MemoriesPage() {
               background: 'rgba(0,0,0,0.95)',
               zIndex: 10000,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
+              padding: '56px 24px 24px',
+              boxSizing: 'border-box',
             }}
             onClick={closeLightbox}
           >
+            <button
+              type="button"
+              onClick={closeLightbox}
+              aria-label={ct('close') || '닫기'}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+                zIndex: 1,
+              }}
+            >
+              <X size={24} />
+            </button>
             <div
               style={{
-                position: 'relative',
-                maxWidth: '100%',
-                maxHeight: '100%',
+                flex: 1,
+                minHeight: 0,
+                width: '100%',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
+                justifyContent: 'center',
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -581,45 +624,27 @@ export default function MemoriesPage() {
                 alt=""
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '85vh',
+                  maxHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
                   objectFit: 'contain',
                   borderRadius: 8,
                 }}
               />
-              <p
-                style={{
-                  marginTop: 12,
-                  color: '#fff',
-                  fontSize: 14,
-                  textAlign: 'center',
-                  maxWidth: 400,
-                }}
-              >
-                {album[selectedIndex].description || dt('photo_description_hint')}
-              </p>
-              <button
-                type="button"
-                onClick={closeLightbox}
-                aria-label={ct('close') || '닫기'}
-                style={{
-                  position: 'absolute',
-                  top: -48,
-                  right: 0,
-                  background: 'rgba(255,255,255,0.2)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: 40,
-                  height: 40,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#fff',
-                }}
-              >
-                <X size={24} />
-              </button>
             </div>
+            <p
+              style={{
+                flexShrink: 0,
+                marginTop: 12,
+                color: 'rgba(255,255,255,0.9)',
+                fontSize: 14,
+                textAlign: 'center',
+                maxWidth: 400,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {album[selectedIndex].description || dt('photo_description_hint')}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
