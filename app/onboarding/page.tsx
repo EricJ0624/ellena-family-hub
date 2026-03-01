@@ -35,7 +35,7 @@ export default function OnboardingPage() {
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
     getMemberManagementTranslation(lang, key);
-  const ct = (key: 'save' | 'close' | 'cancel') => getCommonTranslation(lang, key);
+  const ct = (key: 'save' | 'close' | 'cancel' | 'skip') => getCommonTranslation(lang, key);
   const [fromAdmin, setFromAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'select' | 'create' | 'join' | 'choose-group'>('select');
@@ -1505,7 +1505,7 @@ export default function OnboardingPage() {
                   }}
                 >
                   <Home style={{ width: '16px', height: '16px' }} />
-                  새 그룹 생성
+                  {ot('create_group')}
                 </button>
                 <button
                   onClick={() => {
@@ -1605,7 +1605,7 @@ export default function OnboardingPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">{lang === 'ko' ? '가족에서 나를 어떻게 표시할까요? (선택사항)' : 'How would you like to be shown in the family? (Optional)'}</p>
+                  <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
                   <div className="space-y-4">
                     <select
                       value={joinFamilyRole}
@@ -1627,7 +1627,7 @@ export default function OnboardingPage() {
                         }}
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                       >
-                        {lang === 'ko' ? '건너뛰기' : 'Skip'}
+                        {ct('skip')}
                       </button>
                       <button
                         onClick={async () => {

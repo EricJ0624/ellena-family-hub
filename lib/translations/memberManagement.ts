@@ -39,6 +39,7 @@ export type MemberManagementTranslations = {
   family_role_other: string;
   family_role_saved: string;
   family_role_save_failed: string;
+  family_role_modal_description: string; // 가입 후 "가족에서 나를 어떻게 표시할까요? (선택사항)"
 };
 
 const memberManagement: Record<LangCode, MemberManagementTranslations> = {
@@ -81,6 +82,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_other: '기타',
     family_role_saved: '가족 표시가 저장되었습니다.',
     family_role_save_failed: '저장에 실패했습니다.',
+    family_role_modal_description: '가족에서 나를 어떻게 표시할까요? (선택사항)',
   },
   en: {
     select_group_first: 'Please select a group.',
@@ -121,6 +123,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_other: 'Other',
     family_role_saved: 'Family role saved.',
     family_role_save_failed: 'Failed to save.',
+    family_role_modal_description: 'How would you like to be shown in the family? (Optional)',
   },
   ja: {
     select_group_first: 'グループを選択してください。',
@@ -161,6 +164,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_other: 'その他',
     family_role_saved: '家族の表示を保存しました。',
     family_role_save_failed: '保存に失敗しました。',
+    family_role_modal_description: '家族でどのように表示しますか？（任意）',
   },
   'zh-CN': {
     select_group_first: '请先选择群组。',
@@ -241,6 +245,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_other: '其他',
     family_role_saved: '家庭顯示已儲存。',
     family_role_save_failed: '儲存失敗。',
+    family_role_modal_description: '您希望在家庭中如何顯示？（選填）',
   },
 };
 

@@ -15,7 +15,7 @@ const GroupSelector: React.FC = () => {
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
   const { lang } = useLanguage();
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
-  const ct = (key: 'loading' | 'close' | 'cancel' | 'save') => getCommonTranslation(lang, key);
+  const ct = (key: 'loading' | 'close' | 'cancel' | 'save' | 'skip') => getCommonTranslation(lang, key);
   const [isOpen, setIsOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -498,7 +498,7 @@ const GroupSelector: React.FC = () => {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">가족에서 나를 어떻게 표시할까요? (선택사항)</p>
+                  <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
                   <div className="space-y-4">
                     <select
                       value={joinFamilyRole}
@@ -519,7 +519,7 @@ const GroupSelector: React.FC = () => {
                         }}
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                       >
-                        {lang === 'ko' ? '건너뛰기' : 'Skip'}
+                        {ct('skip')}
                       </button>
                       <button
                         onClick={async () => {

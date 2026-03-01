@@ -6971,7 +6971,7 @@ export default function FamilyHub() {
                       }}
                     >
                       <ChevronLeft style={{ width: '18px', height: '18px' }} />
-                      이전 달
+                      {dt('calendar_prev_month')}
                     </button>
                     <button
                       type="button"
@@ -7000,15 +7000,15 @@ export default function FamilyHub() {
                         e.currentTarget.style.borderColor = '#e2e8f0';
                       }}
                     >
-                      다음 달
+                      {dt('calendar_next_month')}
                       <ChevronRight style={{ width: '18px', height: '18px' }} />
                     </button>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '42px', gap: '4px', textAlign: 'center', fontSize: '12px' }}>
-                  {['일', '월', '화', '수', '목', '금', '토'].map((w, i) => (
+                  {([0, 1, 2, 3, 4, 5, 6] as const).map((i) => (
                     <div
-                      key={w}
+                      key={i}
                       style={{
                         padding: '6px 2px',
                         minHeight: '34px',
@@ -7022,7 +7022,7 @@ export default function FamilyHub() {
                         fontSize: '12px',
                       }}
                     >
-                      {w}
+                      {dt(`calendar_weekday_${i}` as keyof DashboardTranslations)}
                     </div>
                   ))}
                   {calendarGrid.cells.map((cell, idx) => {

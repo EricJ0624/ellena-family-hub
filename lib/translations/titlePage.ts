@@ -28,6 +28,18 @@ export type TitlePageTranslations = {
   font_arial: string;
   font_georgia: string;
   font_times_new_roman: string;
+  design_edit_title: string;
+  design_edit_subtitle: string;
+  content_label: string;
+  font_weight_label: string;
+  letter_spacing_label: string;
+  font_weight_300: string;
+  font_weight_400: string;
+  font_weight_500: string;
+  font_weight_600: string;
+  font_weight_700: string;
+  font_weight_800: string;
+  font_weight_900: string;
 };
 
 const titlePage: Record<LangCode, TitlePageTranslations> = {
@@ -59,6 +71,18 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     font_arial: 'Arial (기본)',
     font_georgia: 'Georgia (클래식)',
     font_times_new_roman: 'Times New Roman (전통)',
+    design_edit_title: '디자인 수정',
+    design_edit_subtitle: '타이틀 스타일을 자유롭게 변경하세요',
+    content_label: '글자 내용',
+    font_weight_label: '폰트 두께',
+    letter_spacing_label: '자간',
+    font_weight_300: 'Light (300)',
+    font_weight_400: 'Normal (400)',
+    font_weight_500: 'Medium (500)',
+    font_weight_600: 'Semi Bold (600)',
+    font_weight_700: 'Bold (700)',
+    font_weight_800: 'Extra Bold (800)',
+    font_weight_900: 'Black (900)',
   },
   en: {
     frame_change: 'Change frame',
@@ -88,6 +112,18 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     font_arial: 'Arial (Default)',
     font_georgia: 'Georgia (Classic)',
     font_times_new_roman: 'Times New Roman (Traditional)',
+    design_edit_title: 'Edit design',
+    design_edit_subtitle: 'Customize the title style',
+    content_label: 'Text content',
+    font_weight_label: 'Font weight',
+    letter_spacing_label: 'Letter spacing',
+    font_weight_300: 'Light (300)',
+    font_weight_400: 'Normal (400)',
+    font_weight_500: 'Medium (500)',
+    font_weight_600: 'Semi Bold (600)',
+    font_weight_700: 'Bold (700)',
+    font_weight_800: 'Extra Bold (800)',
+    font_weight_900: 'Black (900)',
   },
   ja: {
     frame_change: 'フレーム変更',
@@ -117,6 +153,18 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     font_arial: 'Arial (標準)',
     font_georgia: 'Georgia (クラシック)',
     font_times_new_roman: 'Times New Roman (伝統)',
+    design_edit_title: 'デザイン編集',
+    design_edit_subtitle: 'タイトルスタイルを自由に変更できます',
+    content_label: '文字内容',
+    font_weight_label: 'フォントの太さ',
+    letter_spacing_label: '字間',
+    font_weight_300: 'Light (300)',
+    font_weight_400: 'Normal (400)',
+    font_weight_500: 'Medium (500)',
+    font_weight_600: 'Semi Bold (600)',
+    font_weight_700: 'Bold (700)',
+    font_weight_800: 'Extra Bold (800)',
+    font_weight_900: 'Black (900)',
   },
   'zh-CN': {
     frame_change: '更换相框',
@@ -146,6 +194,18 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     font_arial: 'Arial (默认)',
     font_georgia: 'Georgia (经典)',
     font_times_new_roman: 'Times New Roman (传统)',
+    design_edit_title: '编辑设计',
+    design_edit_subtitle: '自由更改标题样式',
+    content_label: '文字内容',
+    font_weight_label: '字重',
+    letter_spacing_label: '字间距',
+    font_weight_300: '细体 (300)',
+    font_weight_400: '常规 (400)',
+    font_weight_500: '中等 (500)',
+    font_weight_600: '半粗 (600)',
+    font_weight_700: '粗体 (700)',
+    font_weight_800: '特粗 (800)',
+    font_weight_900: '黑体 (900)',
   },
   'zh-TW': {
     frame_change: '更換相框',
@@ -175,6 +235,18 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     font_arial: 'Arial (預設)',
     font_georgia: 'Georgia (經典)',
     font_times_new_roman: 'Times New Roman (傳統)',
+    design_edit_title: '編輯設計',
+    design_edit_subtitle: '自由變更標題樣式',
+    content_label: '文字內容',
+    font_weight_label: '字重',
+    letter_spacing_label: '字間距',
+    font_weight_300: '細體 (300)',
+    font_weight_400: '常規 (400)',
+    font_weight_500: '中等 (500)',
+    font_weight_600: '半粗 (600)',
+    font_weight_700: '粗體 (700)',
+    font_weight_800: '特粗 (800)',
+    font_weight_900: '黑體 (900)',
   },
 };
 

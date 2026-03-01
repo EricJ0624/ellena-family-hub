@@ -145,6 +145,16 @@ export type DashboardTranslations = {
   invalid_filename: string;
   image_processing_error: string;
   file_input_reset_error: string;
+  // Calendar weekdays (Sun–Sat) and nav
+  calendar_weekday_0: string;
+  calendar_weekday_1: string;
+  calendar_weekday_2: string;
+  calendar_weekday_3: string;
+  calendar_weekday_4: string;
+  calendar_weekday_5: string;
+  calendar_weekday_6: string;
+  calendar_prev_month: string;
+  calendar_next_month: string;
 };
 
 const dashboard: Record<LangCode, DashboardTranslations> = {
@@ -156,8 +166,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     todo_who_placeholder: '이름 입력 (비워두면 누구나)',
     todo_register_btn: '등록하기',
     todo_empty_state: '할 일을 모두 완료했습니다! 🎉',
-    todo_section_title: 'Family Tasks',
-    todo_add_btn: '+ ADD',
+    todo_section_title: '할 일',
+    todo_add_btn: '추가',
     nickname_modal_title: '닉네임 설정',
     nickname_label: '닉네임 (2-20자)',
     nickname_placeholder: '닉네임을 입력하세요',
@@ -237,7 +247,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '가족 추억',
     section_title_chat: '가족 채팅',
     section_title_location: '가족 위치',
-    photo_upload_btn: 'Upload',
+    photo_upload_btn: '업로드',
     event_today: '오늘',
     location_where_btn: '어디야',
     piggy_reject_btn: '거절',
@@ -280,6 +290,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '유효하지 않은 파일명입니다.',
     image_processing_error: '이미지 처리 중 오류가 발생했습니다: ',
     file_input_reset_error: '파일 입력을 초기화할 수 없습니다. 페이지를 새로고침해주세요.',
+    calendar_weekday_0: '일',
+    calendar_weekday_1: '월',
+    calendar_weekday_2: '화',
+    calendar_weekday_3: '수',
+    calendar_weekday_4: '목',
+    calendar_weekday_5: '금',
+    calendar_weekday_6: '토',
+    calendar_prev_month: '이전 달',
+    calendar_next_month: '다음 달',
   },
   en: {
     todo_modal_title: 'New task',
@@ -413,6 +432,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: 'Invalid filename.',
     image_processing_error: 'An error occurred while processing the image: ',
     file_input_reset_error: 'Could not reset file input. Please refresh the page.',
+    calendar_weekday_0: 'Sun',
+    calendar_weekday_1: 'Mon',
+    calendar_weekday_2: 'Tue',
+    calendar_weekday_3: 'Wed',
+    calendar_weekday_4: 'Thu',
+    calendar_weekday_5: 'Fri',
+    calendar_weekday_6: 'Sat',
+    calendar_prev_month: 'Previous month',
+    calendar_next_month: 'Next month',
   },
   ja: {
     todo_modal_title: '新しいタスク',
@@ -546,6 +574,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '無効なファイル名です。',
     image_processing_error: '画像の処理中にエラーが発生しました: ',
     file_input_reset_error: 'ファイル入力をリセットできません。ページを再読み込みしてください。',
+    calendar_weekday_0: '日',
+    calendar_weekday_1: '月',
+    calendar_weekday_2: '火',
+    calendar_weekday_3: '水',
+    calendar_weekday_4: '木',
+    calendar_weekday_5: '金',
+    calendar_weekday_6: '土',
+    calendar_prev_month: '前月',
+    calendar_next_month: '翌月',
   },
   'zh-CN': {
     todo_modal_title: '新建任务',
@@ -679,6 +716,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '文件名无效。',
     image_processing_error: '处理图片时发生错误：',
     file_input_reset_error: '无法重置文件输入，请刷新页面。',
+    calendar_weekday_0: '日',
+    calendar_weekday_1: '一',
+    calendar_weekday_2: '二',
+    calendar_weekday_3: '三',
+    calendar_weekday_4: '四',
+    calendar_weekday_5: '五',
+    calendar_weekday_6: '六',
+    calendar_prev_month: '上月',
+    calendar_next_month: '下月',
   },
   'zh-TW': {
     todo_modal_title: '新任務',
@@ -812,6 +858,15 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '檔案名稱無效。',
     image_processing_error: '處理圖片時發生錯誤：',
     file_input_reset_error: '無法重設檔案輸入，請重新整理頁面。',
+    calendar_weekday_0: '日',
+    calendar_weekday_1: '一',
+    calendar_weekday_2: '二',
+    calendar_weekday_3: '三',
+    calendar_weekday_4: '四',
+    calendar_weekday_5: '五',
+    calendar_weekday_6: '六',
+    calendar_prev_month: '上月',
+    calendar_next_month: '下月',
   },
 };
 

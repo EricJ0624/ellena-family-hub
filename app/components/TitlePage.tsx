@@ -559,8 +559,8 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               <Palette className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">디자인 수정</h3>
-              <p className="text-xs text-white/80">타이틀 스타일을 자유롭게 변경하세요</p>
+              <h3 className="text-lg font-bold">{tp('design_edit_title')}</h3>
+              <p className="text-xs text-white/80">{tp('design_edit_subtitle')}</p>
             </div>
           </div>
           <button
@@ -579,7 +579,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            글자 내용
+            {tp('content_label')}
           </label>
           <input
             type="text"
@@ -675,20 +675,20 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-            폰트 두께
+            {tp('font_weight_label')}
           </label>
           <select
             value={localStyle.fontWeight}
             onChange={(e) => handleChange('fontWeight', e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer"
           >
-            <option value="300">Light (300)</option>
-            <option value="400">Normal (400)</option>
-            <option value="500">Medium (500)</option>
-            <option value="600">Semi Bold (600)</option>
-            <option value="700">Bold (700)</option>
-            <option value="800">Extra Bold (800)</option>
-            <option value="900">Black (900)</option>
+            <option value="300">{tp('font_weight_300')}</option>
+            <option value="400">{tp('font_weight_400')}</option>
+            <option value="500">{tp('font_weight_500')}</option>
+            <option value="600">{tp('font_weight_600')}</option>
+            <option value="700">{tp('font_weight_700')}</option>
+            <option value="800">{tp('font_weight_800')}</option>
+            <option value="900">{tp('font_weight_900')}</option>
           </select>
         </div>
         
@@ -697,7 +697,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
               <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-              자간
+              {tp('letter_spacing_label')}
             </label>
             <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
               {localStyle.letterSpacing}px
