@@ -3,7 +3,6 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { ChevronLeft, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -22,7 +21,6 @@ const PRESIGNED_URL_THRESHOLD = 3 * 1024 * 1024; // 3MB (대시보드와 동일)
 const MAX_SAFE_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export default function MemoriesPage() {
-  const router = useRouter();
   const { currentGroupId } = useGroup();
   const { album, addPhoto, deletePhoto, updatePhotoDescription, updatePhotoId } = useAlbum();
   const { lang } = useLanguage();
@@ -34,7 +32,7 @@ export default function MemoriesPage() {
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleBack = () => router.push('/dashboard');
+  const handleBack = () => { window.location.href = '/dashboard'; };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
