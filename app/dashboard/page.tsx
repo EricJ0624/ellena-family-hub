@@ -426,14 +426,30 @@ export default function FamilyHub() {
         return;
       }
       localState = decrypted;
-      // blob/data URL은 state.album에 넣지 않음 → 뒤로가기 후 Hydration 에러 방지
-      const stableAlbum = (decrypted.album && Array.isArray(decrypted.album))
-        ? decrypted.album.filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://')))
-        : [];
-      setState({ ...decrypted, album: stableAlbum });
-      // titleStyle도 함께 불러오기
-      if (decrypted.titleStyle) {
-        setTitleStyle(decrypted.titleStyle);
+      // decrypted가 문자열 등이면 spread 시 state 오염 → .filter() 등에서 Cannot read 'filter' of undefined 발생 방지
+      const isValidState = typeof decrypted === 'object' && decrypted !== null && !Array.isArray(decrypted);
+      if (isValidState) {
+        const d = decrypted as Record<string, unknown>;
+        const stableAlbum = (Array.isArray(d.album))
+          ? (d.album as Photo[]).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://')))
+          : [];
+        setState({
+          familyName: typeof d.familyName === 'string' ? d.familyName : INITIAL_STATE.familyName,
+          location: d.location && typeof d.location === 'object' && d.location !== null && !Array.isArray(d.location)
+            ? d.location as AppState['location']
+            : INITIAL_STATE.location,
+          familyLocations: Array.isArray(d.familyLocations) ? d.familyLocations as AppState['familyLocations'] : INITIAL_STATE.familyLocations,
+          todos: Array.isArray(d.todos) ? d.todos as AppState['todos'] : INITIAL_STATE.todos,
+          album: stableAlbum,
+          events: Array.isArray(d.events) ? d.events as AppState['events'] : INITIAL_STATE.events,
+          messages: Array.isArray(d.messages) ? d.messages as AppState['messages'] : INITIAL_STATE.messages,
+          titleStyle: d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null
+            ? d.titleStyle as AppState['titleStyle']
+            : INITIAL_STATE.titleStyle,
+        });
+        if (d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null) {
+          setTitleStyle(d.titleStyle as AppState['titleStyle']);
+        }
       }
     }
     // ✅ setState(INITIAL_STATE) 제거 - album을 빈 배열로 초기화하지 않음
@@ -1134,7 +1150,7 @@ export default function FamilyHub() {
     const eventCountByDate: Record<string, number> = {};
     for (let d = 1; d <= daysInMonth; d++) {
       const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      eventCountByDate[key] = state.events.filter(e => eventMatchesDate(e, key)).length;
+      eventCountByDate[key] = (state.events || []).filter(e => eventMatchesDate(e, key)).length;
     }
     const cells: Array<{ type: 'empty' } | { type: 'day'; date: Date; day: number; isCurrentMonth: true; isToday: boolean; eventCount: number }> = [];
     for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' });
@@ -1156,7 +1172,7 @@ export default function FamilyHub() {
   const eventsOnSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
     const key = selectedDate.getFullYear() + '-' + String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + String(selectedDate.getDate()).padStart(2, '0');
-    return state.events.filter(e => eventMatchesDate(e, key));
+    return (state.events || []).filter(e => eventMatchesDate(e, key));
   }, [selectedDate, state.events, eventMatchesDate]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
@@ -2370,10 +2386,10 @@ export default function FamilyHub() {
         
         // localStorage 데이터가 먼저 로드되었는지 확인
         // state가 초기 상태가 아니면 localStorage 데이터가 로드된 것으로 간주
-        const hasLocalStorageData = state.messages.length > 0 || 
-                                    state.todos.length > 0 || 
-                                    state.events.length > 0 || 
-                                    state.album.length > 0;
+        const hasLocalStorageData = (state.messages || []).length > 0 ||
+                                    (state.todos || []).length > 0 ||
+                                    (state.events || []).length > 0 ||
+                                    (state.album || []).length > 0;
         
         // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
         const storageKey = getStorageKey(userId, currentGroupId);
@@ -3644,7 +3660,7 @@ export default function FamilyHub() {
 
   // 일정 작성자 닉네임 로드 (표시용)
   useEffect(() => {
-    const authorIds = [...new Set(state.events.map(e => e.created_by).filter(Boolean))] as string[];
+    const authorIds = [...new Set((state.events || []).map(e => e.created_by).filter(Boolean))] as string[];
     if (authorIds.length === 0) {
       setEventAuthorNames({});
       return;
@@ -6825,9 +6841,9 @@ export default function FamilyHub() {
             </button>
           </div>
             <div className="section-body">
-              {state.todos.length > 0 ? (
+              {(state.todos || []).length > 0 ? (
                 <div className="todo-list">
-                  {state.todos.map(t => (
+                  {(state.todos || []).map(t => (
                     <div key={t.id} className="todo-item">
                       <div 
                         onClick={() => updateState('TOGGLE_TODO', t.id)} 
