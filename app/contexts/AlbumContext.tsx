@@ -158,22 +158,27 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         if (newPhoto.group_id !== currentGroupId) return;
         const url = (newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url) as string;
         if (!url) return;
+        const newEntry = {
+          id: newPhoto.id as string | number,
+          data: url,
+          supabaseId: newPhoto.id as string | number,
+          isUploaded: true,
+          isUploading: false,
+          created_by: (newPhoto.uploader_id || newPhoto.created_by) as string | undefined,
+        };
         setAlbum((prev) => {
           const exists = prev.some(
             (p) => String(p.id) === String(newPhoto.id) || (p.supabaseId && String(p.supabaseId) === String(newPhoto.id))
           );
           if (exists) return prev;
-          return [
-            {
-              id: newPhoto.id as string | number,
-              data: url,
-              supabaseId: newPhoto.id as string | number,
-              isUploaded: true,
-              isUploading: false,
-              created_by: (newPhoto.uploader_id || newPhoto.created_by) as string | undefined,
-            },
-            ...prev,
-          ];
+          // 업로드 중인 낙관적 항목이 있으면 그 중 하나를 실제 행으로 교체 (중복 표시 방지)
+          const uploadingIndex = prev.findIndex((p) => p.isUploading && !p.supabaseId);
+          if (uploadingIndex !== -1) {
+            const next = [...prev];
+            next[uploadingIndex] = newEntry;
+            return next;
+          }
+          return [newEntry, ...prev];
         });
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'memory_vault' }, (payload: { new: Record<string, unknown> }) => {

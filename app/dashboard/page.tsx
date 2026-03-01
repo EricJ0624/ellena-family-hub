@@ -5088,24 +5088,22 @@ export default function FamilyHub() {
     if (!userId || !isAuthenticated) return;
 
     try {
+      // maybeSingle() + limit(1): 동일 user_id에 행이 2개 이상 있어도 406 방지 (최신 1건만 사용)
       const { data, error } = await supabase
         .from('user_locations')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
-        // 위치가 없으면 초기화 상태 유지
-        if (error.code === 'PGRST116') {
-          // 데이터가 없음 (정상)
-          if (process.env.NODE_ENV === 'development') {
-            console.log('자신의 위치가 Supabase에 없음');
-          }
-          return;
-        }
         if (process.env.NODE_ENV === 'development') {
           console.warn('자신의 위치 로드 오류:', error);
         }
+        return;
+      }
+      if (!data) {
         return;
       }
 

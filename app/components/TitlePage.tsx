@@ -72,13 +72,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
   const [showFrameSelector, setShowFrameSelector] = useState(false);
-  
-  // 오늘의 사진 인덱스 계산 (메모이제이션)
+  // Hydration 불일치 방지: 날짜/시드 기반 선택은 클라이언트 마운트 후에만 수행 (React #418)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 오늘의 사진 인덱스 계산 (클라이언트 마운트 후에만, 서버와 동일하게 초기에는 null)
   const photoIndex = useMemo(() => {
+    if (!mounted) return null;
     return getTodayRandomPhoto(photos, manualSeed);
-  }, [photos, manualSeed]);
-  
-  const selectedPhoto = photoIndex !== null ? photos[photoIndex] : null;
+  }, [mounted, photos, manualSeed]);
+
+  const selectedPhoto = photoIndex !== null && photos[photoIndex] ? photos[photoIndex] : null;
   
   // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
