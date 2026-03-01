@@ -6673,11 +6673,19 @@ export default function FamilyHub() {
               ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
             }}
           >
-            {isDefaultDashboardTitle ? (
-              <>Hearth: <span style={{ fontSize: '0.5em', verticalAlign: 'middle' }}>Family Haven</span></>
-            ) : (
-              dashboardTitleText
-            )}
+            {(() => {
+              const full = dashboardTitleText;
+              const colon = full.indexOf(': ');
+              if (colon < 0) return full;
+              const main = full.slice(0, colon + 2);
+              const sub = full.slice(colon + 2);
+              return (
+                <>
+                  {main}
+                  <span style={{ fontSize: '0.333em', verticalAlign: 'bottom' }}>{sub}</span>
+                </>
+              );
+            })()}
           </h1>
           {isGroupLoading ? (
             <div
