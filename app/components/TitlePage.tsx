@@ -28,6 +28,10 @@ const seededRandom = (seed: string): number => {
   return Math.abs(hash % 10000) / 10000;
 };
 
+// 대시보드 표시용으로만 사용할 수 있는 안정적인 URL인지 (blob/data 제외 → Hydration/렌더 에러 방지)
+const isStablePhotoUrl = (url: string): boolean =>
+  !!url && (url.startsWith('http://') || url.startsWith('https://'));
+
 // 오늘의 무작위 사진 선택 함수
 const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>, manualSeed?: number): number | null => {
   if (!photos || photos.length === 0) return null;
@@ -78,13 +82,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     setMounted(true);
   }, []);
 
-  // 오늘의 사진 인덱스 계산 (클라이언트 마운트 후에만, 서버와 동일하게 초기에는 null)
-  const photoIndex = useMemo(() => {
-    if (!mounted) return null;
-    return getTodayRandomPhoto(photos, manualSeed);
-  }, [mounted, photos, manualSeed]);
+  // blob/data URL 제외 → 업로드 직후 뒤로가기 시 Hydration/렌더 에러 근본 방지
+  const stablePhotos = useMemo(
+    () => (photos || []).filter((p) => p?.data && isStablePhotoUrl(p.data)),
+    [photos]
+  );
 
-  const selectedPhoto = photoIndex !== null && photos[photoIndex] ? photos[photoIndex] : null;
+  // 오늘의 사진 인덱스 계산 (클라이언트 마운트 후에만, 안정 URL만 후보)
+  const photoIndex = useMemo(() => {
+    if (!mounted || stablePhotos.length === 0) return null;
+    return getTodayRandomPhoto(stablePhotos, manualSeed);
+  }, [mounted, stablePhotos, manualSeed]);
+
+  const selectedPhoto = photoIndex !== null && stablePhotos[photoIndex] ? stablePhotos[photoIndex] : null;
   
   // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
