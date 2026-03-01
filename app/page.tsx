@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -27,11 +27,40 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
+  const loginTitleRef = useRef<HTMLHeadingElement>(null);
+  const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
 
   // Hydration 오류 방지: 마운트 후에만 클라이언트 사이드 로직 실행
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // 로그인 타이틀 항상 한 줄: 넘치면 폰트 크기 축소
+  useEffect(() => {
+    if (!isMounted) return;
+    const el = loginTitleRef.current;
+    if (!el) return;
+    const MAX_FS = 48;
+    const MIN_FS = 14;
+    const fit = () => {
+      let fs = MAX_FS;
+      el.style.fontSize = `${fs}px`;
+      void el.offsetHeight;
+      while (el.scrollWidth > el.clientWidth && fs > MIN_FS) {
+        fs -= 2;
+        el.style.fontSize = `${fs}px`;
+        void el.offsetHeight;
+      }
+      setLoginTitleFontSize(fs);
+    };
+    const rafId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        fit();
+        document.fonts.ready.then(fit);
+      });
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [lang, isMounted]);
 
   // 이전 이메일 불러오기
   useEffect(() => {
@@ -413,17 +442,23 @@ export default function LoginPage() {
           }}>
             🏠
           </div>
-          <h1 style={{
-            fontSize: '48px',
-            fontFamily: getFontStyle(lang, 'title').fontFamily,
-            fontWeight: getFontStyle(lang, 'title').fontWeight,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            marginBottom: '12px',
-            letterSpacing: '-0.5px'
-          }}>
+          <h1
+            ref={loginTitleRef}
+            style={{
+              fontSize: loginTitleFontSize != null ? `${loginTitleFontSize}px` : '48px',
+              fontFamily: getFontStyle(lang, 'title').fontFamily,
+              fontWeight: getFontStyle(lang, 'title').fontWeight,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '12px',
+              letterSpacing: '-0.5px'
+            }}
+          >
             {ct('app_title')}
           </h1>
           <p style={{
