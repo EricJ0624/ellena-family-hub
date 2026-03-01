@@ -1122,7 +1122,7 @@ export default function FamilyHub() {
       cancelAnimationFrame(rafId);
       ro?.disconnect();
     };
-  }, [titleFitMaxFontSize, dashboardTitleText, showAdminForTitleFit, isGroupLoadingForTitleFit]);
+  }, [titleFitMaxFontSize, dashboardTitleText, showAdminForTitleFit, isGroupLoadingForTitleFit, lang]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
