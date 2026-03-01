@@ -23,7 +23,7 @@ export type CommonTranslations = {
 
 const common: Record<LangCode, CommonTranslations> = {
   ko: {
-    app_title: 'Hearth: 가족의 공간',
+    app_title: 'Hearth: 가족의 안식처',
     user: '사용자',
     me: '나',
     me_suffix: ' (나)',

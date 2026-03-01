@@ -6898,11 +6898,11 @@ export default function FamilyHub() {
             style={{
               background: 'linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f0f9ff 100%)',
               borderRadius: '16px',
-              padding: '20px',
+              padding: '14px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
             }}
           >
-            <div className="section-header" style={{ marginBottom: '16px' }}>
+            <div className="section-header" style={{ marginBottom: '10px' }}>
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
                 <Calendar style={{ width: '24px', height: '24px', color: '#7c3aed' }} />
                 Family Calendar
@@ -6914,10 +6914,10 @@ export default function FamilyHub() {
                 initial={{ opacity: 0.7 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
-                style={{ marginBottom: '16px' }}
+                style={{ marginBottom: '10px' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                  <h4 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>
                     {calendarGrid.year}년 {calendarGrid.month + 1}월
                   </h4>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -6983,17 +6983,17 @@ export default function FamilyHub() {
                     </button>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '13px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', fontSize: '12px' }}>
                   {['일', '월', '화', '수', '목', '금', '토'].map((w, i) => (
                     <div
                       key={w}
                       style={{
-                        padding: '10px 4px',
+                        padding: '6px 2px',
                         fontWeight: '700',
                         color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#64748b',
                         backgroundColor: i === 0 || i === 6 ? 'rgba(0,0,0,0.03)' : 'transparent',
-                        borderRadius: '8px',
-                        fontSize: '13px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
                       }}
                     >
                       {w}
@@ -7001,7 +7001,7 @@ export default function FamilyHub() {
                   ))}
                   {calendarGrid.cells.map((cell, idx) => {
                     if (cell.type === 'empty') {
-                      return <div key={'e-' + idx} style={{ padding: '8px 4px', minHeight: '44px' }} />;
+                      return <div key={'e-' + idx} style={{ padding: '4px 2px', minHeight: '34px' }} />;
                     }
                     const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
                     const isWeekend = cell.date.getDay() === 0 || cell.date.getDay() === 6;
@@ -7011,10 +7011,10 @@ export default function FamilyHub() {
                         type="button"
                         onClick={() => setSelectedDate(cell.date)}
                         style={{
-                          padding: '8px 4px',
-                          minHeight: '44px',
+                          padding: '4px 2px',
+                          minHeight: '34px',
                           border: isSelected ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                          borderRadius: '12px',
+                          borderRadius: '8px',
                           background: isSelected
                             ? 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
                             : cell.isToday
@@ -7023,13 +7023,13 @@ export default function FamilyHub() {
                                 ? 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
                                 : '#fff',
                           cursor: 'pointer',
-                          fontSize: '14px',
+                          fontSize: '13px',
                           fontWeight: cell.isToday ? '700' : '500',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '4px',
+                          gap: '2px',
                           boxShadow: isSelected ? '0 4px 12px rgba(124, 58, 237, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
                           transition: 'all 0.2s ease',
                           color: isWeekend && !isSelected && !cell.isToday ? '#64748b' : '#1e293b',
@@ -7049,7 +7049,7 @@ export default function FamilyHub() {
                       >
                         <span>{cell.day}</span>
                         {cell.isToday && (
-                          <span style={{ fontSize: '10px', fontWeight: '600', color: '#b45309' }}>{dt('event_today')}</span>
+                          <span style={{ fontSize: '9px', fontWeight: '600', color: '#b45309' }}>{dt('event_today')}</span>
                         )}
                       </button>
                     );
@@ -7066,16 +7066,16 @@ export default function FamilyHub() {
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.25 }}
                     style={{
-                      marginTop: '20px',
-                      padding: '20px',
+                      marginTop: '14px',
+                      padding: '14px',
                       border: '1px solid #e2e8f0',
-                      borderRadius: '16px',
+                      borderRadius: '12px',
                       backgroundColor: 'rgba(255,255,255,0.8)',
                       boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                      <h4 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <CalendarDays style={{ width: '20px', height: '20px', color: '#7c3aed' }} />
                         {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 일정
                       </h4>
@@ -7185,8 +7185,8 @@ export default function FamilyHub() {
                 onClick={openEventModal}
                 className="btn-calendar-add"
                 style={{
-                  marginTop: '20px',
-                  padding: '12px 20px',
+                  marginTop: '14px',
+                  padding: '10px 16px',
                   background: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
                   color: '#fff',
                   border: 'none',

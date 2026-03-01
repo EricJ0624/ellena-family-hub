@@ -4,7 +4,7 @@ import { GroupProviderWrapper } from "./providers/GroupProviderWrapper";
 
 export const metadata: Metadata = {
   title: "Hearth: Family Haven",
-  description: "우리 가족만의 안전한 공간",
+  description: "우리가족 추억의 공간",
 };
 
 // 모바일 화면 비율을 강제로 고정하는 최신 설정입니다.
