@@ -459,7 +459,19 @@ export default function LoginPage() {
               letterSpacing: '-0.5px'
             }}
           >
-            {ct('app_title')}
+            {(() => {
+              const full = ct('app_title');
+              const colon = full.indexOf(': ');
+              if (colon < 0) return full;
+              const main = full.slice(0, colon + 2);
+              const sub = full.slice(colon + 2);
+              return (
+                <>
+                  {main}
+                  <span style={{ fontSize: '0.333em', verticalAlign: 'middle' }}>{sub}</span>
+                </>
+              );
+            })()}
           </h1>
           <p style={{
             fontSize: '16px',
