@@ -166,9 +166,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             borderRadius: '2px',
             overflow: 'hidden',
           }}>
-            {/* 사진 또는 Fallback */}
+            {/* 사진 또는 Fallback (안정 URL일 때만 Image 렌더 → blob/data 노출·Hydration 에러 방지) */}
             <AnimatePresence mode="wait">
-              {selectedPhoto ? (
+              {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) ? (
                 <motion.div
                   key={`${selectedPhoto.id}-${manualSeed || 'default'}`}
                   initial={{ opacity: 0 }}

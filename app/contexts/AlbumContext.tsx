@@ -91,6 +91,8 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       setAlbum([]);
       return;
     }
+    // 그룹 전환 시 이전 그룹 앨범 즉시 제거 (blob/잘못된 데이터 노출·Hydration 에러 방지)
+    setAlbum([]);
     const key =
       sessionStorage.getItem(getAuthKey(userId)) ||
       process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||

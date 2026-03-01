@@ -183,6 +183,10 @@ export default function FamilyHub() {
   }
   const { lang } = useLanguage();
   const { album, albumRef } = useAlbum();
+  const stableAlbum = useMemo(
+    () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))),
+    [album]
+  );
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
   const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
@@ -6704,7 +6708,7 @@ export default function FamilyHub() {
         <header className="app-header">
           <TitlePage 
             title={currentGroup?.family_name?.trim() || state.familyName || ct('app_title')}
-            photos={album || []}
+            photos={stableAlbum}
             titleStyle={effectiveTitleStyle}
             onTitleStyleChange={(style) => {
               setTitleStyle(style);
