@@ -448,7 +448,7 @@ export default function FamilyHub() {
             : INITIAL_STATE.titleStyle,
         });
         if (d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null) {
-          setTitleStyle(d.titleStyle as AppState['titleStyle']);
+          setTitleStyle(d.titleStyle as Partial<TitleStyle>);
         }
       }
     }
