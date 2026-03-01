@@ -33,17 +33,30 @@ export default function MemoriesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
 
+  // 사진 개수(1~5→1열, 6~15→3열, 16+→5열) + 화면/줌에 따라 실제 열 수 조정
   useEffect(() => {
     const updateColumns = () => {
+      const n = album.length;
+      const maxCols = n <= 5 ? 1 : n <= 15 ? 3 : 5;
       const w = typeof window !== 'undefined' ? window.innerWidth : 900;
-      if (w < 480) setGridColumns(1);
-      else if (w < 900) setGridColumns(3);
-      else setGridColumns(5);
+      const viewportCols = w < 400 ? 1 : w < 800 ? 3 : 5;
+      setGridColumns(Math.min(maxCols, viewportCols));
     };
     updateColumns();
     window.addEventListener('resize', updateColumns);
-    return () => window.removeEventListener('resize', updateColumns);
-  }, []);
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (vv) {
+      vv.addEventListener('resize', updateColumns);
+      vv.addEventListener('scroll', updateColumns);
+    }
+    return () => {
+      window.removeEventListener('resize', updateColumns);
+      if (vv) {
+        vv.removeEventListener('resize', updateColumns);
+        vv.removeEventListener('scroll', updateColumns);
+      }
+    };
+  }, [album.length]);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
 
