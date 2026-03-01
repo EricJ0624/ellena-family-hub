@@ -6927,7 +6927,7 @@ export default function FamilyHub() {
             <div className="section-header" style={{ marginBottom: '10px' }}>
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
                 <Calendar style={{ width: '24px', height: '24px', color: '#7c3aed' }} />
-                Family Calendar
+                {dt('section_title_calendar')}
               </h3>
             </div>
             <div className="section-body">

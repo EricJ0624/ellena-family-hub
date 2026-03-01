@@ -100,6 +100,7 @@ export type DashboardTranslations = {
   section_title_memories: string;
   section_title_chat: string;
   section_title_location: string;
+  section_title_calendar: string;
   // UI buttons/labels (report)
   photo_upload_btn: string;
   event_today: string;
@@ -166,7 +167,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     todo_who_placeholder: '이름 입력 (비워두면 누구나)',
     todo_register_btn: '등록하기',
     todo_empty_state: '할 일을 모두 완료했습니다! 🎉',
-    todo_section_title: '할 일',
+    todo_section_title: '가족 임무',
     todo_add_btn: '추가',
     nickname_modal_title: '닉네임 설정',
     nickname_label: '닉네임 (2-20자)',
@@ -247,6 +248,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '가족 추억',
     section_title_chat: '가족 채팅',
     section_title_location: '가족 위치',
+    section_title_calendar: '가족 일정',
     photo_upload_btn: '업로드',
     event_today: '오늘',
     location_where_btn: '어디야',
@@ -389,6 +391,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: 'Family Memories',
     section_title_chat: 'Family Chat',
     section_title_location: 'Family Location',
+    section_title_calendar: 'Family Calendar',
     photo_upload_btn: 'Upload',
     event_today: 'Today',
     location_where_btn: 'Where are you?',
@@ -531,6 +534,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '家族の思い出',
     section_title_chat: '家族チャット',
     section_title_location: '家族の位置',
+    section_title_calendar: '家族カレンダー',
     photo_upload_btn: 'アップロード',
     event_today: '今日',
     location_where_btn: 'どこ？',
@@ -673,6 +677,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '家庭回忆',
     section_title_chat: '家庭聊天',
     section_title_location: '家庭位置',
+    section_title_calendar: '家庭日历',
     photo_upload_btn: '上传',
     event_today: '今天',
     location_where_btn: '你在哪？',
@@ -815,6 +820,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '家庭回憶',
     section_title_chat: '家庭聊天',
     section_title_location: '家庭位置',
+    section_title_calendar: '家庭日曆',
     photo_upload_btn: '上傳',
     event_today: '今天',
     location_where_btn: '你在哪？',
