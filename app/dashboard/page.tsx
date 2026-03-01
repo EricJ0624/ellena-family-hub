@@ -426,7 +426,11 @@ export default function FamilyHub() {
         return;
       }
       localState = decrypted;
-      setState(decrypted);
+      // blob/data URL은 state.album에 넣지 않음 → 뒤로가기 후 Hydration 에러 방지
+      const stableAlbum = (decrypted.album && Array.isArray(decrypted.album))
+        ? decrypted.album.filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://')))
+        : [];
+      setState({ ...decrypted, album: stableAlbum });
       // titleStyle도 함께 불러오기
       if (decrypted.titleStyle) {
         setTitleStyle(decrypted.titleStyle);
@@ -499,14 +503,13 @@ export default function FamilyHub() {
           
           const supabasePhotoIds = new Set(supabasePhotos.map(p => String(p.id)));
           
-          // localStorage에만 있는 사진 (업로드 중인 Base64/Blob만)
+          // localStorage에만 있는 사진 (안정 URL만 병합 → blob/data 제외로 Hydration 에러 방지)
           const localStorageOnlyPhotos = localStoragePhotos.filter(p => {
             const supabaseId = p.supabaseId ? String(p.supabaseId) : null;
             if (supabaseId && supabasePhotoIds.has(supabaseId)) {
               return false; // Supabase에 이미 있으면 제외
             }
-            // 업로드 중이거나 Base64/Blob 데이터만 유지
-            return p.isUploading || (p.data && (p.data.startsWith('data:') || p.data.startsWith('blob:')));
+            return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'));
           });
 
           // Supabase 사진 우선, localStorage 전용 사진 추가
@@ -3825,8 +3828,9 @@ export default function FamilyHub() {
       console.warn('userId가 없어 데이터를 저장할 수 없습니다.');
       return;
     }
-    // 앨범은 AlbumContext에서 관리하므로 저장 시 context 기준으로 반영
-    const stateWithAlbum: AppState = { ...newState, album: albumRef.current };
+    // 앨범은 AlbumContext에서 관리하므로 저장 시 context 기준으로 반영 (blob/data URL은 저장하지 않음 → Hydration 에러 방지)
+    const stableAlbum = (albumRef.current || []).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://')));
+    const stateWithAlbum: AppState = { ...newState, album: stableAlbum };
     try {
       const storageKey = getStorageKey(userId, currentGroupId);
       // originalData 제거 (localStorage 공간 절약)
