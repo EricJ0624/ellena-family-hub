@@ -51,8 +51,9 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
-  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시(visualViewport 축소)에만 뷰포트 기준으로 1/3열 전환.
-  const ZOOM_THRESHOLD = 0.85; // visualViewport.width / innerWidth < 이 값이면 줌인으로 간주
+  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시(현재 너비가 지금까지 최대보다 작을 때) 뷰포트 기준 1/3열 전환.
+  const ZOOM_THRESHOLD = 0.85;
+  const maxWidthRef = useRef(0);
   useEffect(() => {
     let rafId: number | undefined;
     const updateColumns = () => {
@@ -62,11 +63,12 @@ export default function MemoriesPage() {
         const n = album.length;
         const photoBasedCols = n <= 11 ? 1 : n < 40 ? 3 : 5;
         const vv = window.visualViewport;
-        const layoutWidth = window.innerWidth;
-        const visualWidth = vv ? vv.width : layoutWidth;
-        const isZoomedIn = layoutWidth > 0 && visualWidth < layoutWidth * ZOOM_THRESHOLD;
+        const currentWidth = vv ? vv.width : window.innerWidth;
+        maxWidthRef.current = Math.max(maxWidthRef.current, currentWidth);
+        const isZoomedIn =
+          maxWidthRef.current > 0 && currentWidth < maxWidthRef.current * ZOOM_THRESHOLD;
         const cols = isZoomedIn
-          ? (visualWidth < 320 ? 1 : visualWidth < 520 ? 3 : 5)
+          ? (currentWidth < 320 ? 1 : currentWidth < 520 ? 3 : 5)
           : photoBasedCols;
         setGridColumns(cols);
       });
