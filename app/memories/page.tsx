@@ -51,22 +51,23 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
-  // 사진 장수 우선: 1~11→1열, 12~39→3열, 40+→5열. 뷰포트에 따라 줌인하면 3열/1열로 전환.
+  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시(visualViewport 축소)에만 뷰포트 기준으로 1/3열 전환.
+  const ZOOM_THRESHOLD = 0.85; // visualViewport.width / innerWidth < 이 값이면 줌인으로 간주
   useEffect(() => {
     let rafId: number | undefined;
     const updateColumns = () => {
       rafId = requestAnimationFrame(() => {
         rafId = undefined;
+        if (typeof window === 'undefined') return;
         const n = album.length;
         const photoBasedCols = n <= 11 ? 1 : n < 40 ? 3 : 5;
-        const w =
-          typeof window !== 'undefined' && window.visualViewport
-            ? window.visualViewport.width
-            : typeof window !== 'undefined'
-              ? window.innerWidth
-              : 900;
-        const viewportCols = w < 320 ? 1 : w < 520 ? 3 : 5;
-        const cols = Math.min(photoBasedCols, viewportCols);
+        const vv = window.visualViewport;
+        const layoutWidth = window.innerWidth;
+        const visualWidth = vv ? vv.width : layoutWidth;
+        const isZoomedIn = layoutWidth > 0 && visualWidth < layoutWidth * ZOOM_THRESHOLD;
+        const cols = isZoomedIn
+          ? (visualWidth < 320 ? 1 : visualWidth < 520 ? 3 : 5)
+          : photoBasedCols;
         setGridColumns(cols);
       });
     };
