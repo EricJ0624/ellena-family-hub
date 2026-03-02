@@ -77,7 +77,6 @@ export default function MemoriesPage() {
         let cols = isZoomedIn
           ? (minW < 520 ? 1 : minW < 900 ? 3 : 5)
           : photoBasedCols;
-        // 5열→1열 한 번에 건너뛰기 방지: 5열일 때 1열로 가려 하면 먼저 3열로
         if (prevColsRef.current === 5 && cols === 1) cols = 3;
         prevColsRef.current = cols;
         setGridColumns(cols);
