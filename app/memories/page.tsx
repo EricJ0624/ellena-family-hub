@@ -52,14 +52,16 @@ export default function MemoriesPage() {
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
   // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
+  // 비율을 보수적으로 해서 좌우 잘림 없이 다 보인 뒤에만 다음 열 단계로 전환.
   const ZOOM_THRESHOLD = 0.92;
-  const RATIO_1COL = 0.43;
-  const RATIO_3COL = 0.75;
-  const RATIO_3TO1_HYST = 0.33;
+  const RATIO_1COL = 0.36;
+  const RATIO_3COL = 0.65;
+  const RATIO_3TO1_HYST = 0.28;
   const maxWidthRef = useRef(0);
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
+  const [contentMaxWidth, setContentMaxWidth] = useState<number | null>(null);
   lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
     let rafId: number | undefined;
@@ -100,6 +102,10 @@ export default function MemoriesPage() {
         if (cols !== 3) justSteppedFromFiveRef.current = false;
         prevColsRef.current = cols;
         setGridColumns(cols);
+        // 줌 시 그리드가 시각 뷰포트를 넘지 않도록 너비 제한 → 좌우 잘림 방지
+        setContentMaxWidth(
+          isZoomedIn && visualW > 0 && visualW < innerW * 0.98 ? Math.round(visualW) : null
+        );
       });
     };
     updateColumns();
@@ -522,7 +528,15 @@ export default function MemoriesPage() {
         />
       </header>
 
-      <main style={{ padding: 16, maxWidth: 1200, margin: '0 auto', overflowX: gridColumns === 1 ? 'auto' : 'hidden' }}>
+      <main
+        style={{
+          padding: 16,
+          maxWidth: contentMaxWidth ?? 1200,
+          width: contentMaxWidth != null ? contentMaxWidth : undefined,
+          margin: '0 auto',
+          overflowX: gridColumns === 1 ? 'auto' : 'hidden',
+        }}
+      >
         {album.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
