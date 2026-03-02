@@ -796,11 +796,12 @@ export default function MemoriesPage() {
       <AnimatePresence>
         {selectedIndex !== null && displayListForLightbox[selectedIndex] && (() => {
           const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
-          const dims = lightboxViewport.width > 0
+          const fromVV = vv && typeof vv.width === 'number' && vv.width > 0
+            ? { top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: vv.height }
+            : null;
+          const dims = fromVV ?? (lightboxViewport.width > 0
             ? lightboxViewport
-            : vv
-              ? { top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: vv.height }
-              : { top: 0, left: 0, width: typeof window !== 'undefined' ? window.innerWidth : 0, height: typeof window !== 'undefined' ? window.innerHeight : 0 };
+            : { top: 0, left: 0, width: typeof window !== 'undefined' ? window.innerWidth : 0, height: typeof window !== 'undefined' ? window.innerHeight : 0 });
           return (
           <motion.div
             key="lightbox"
