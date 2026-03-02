@@ -57,7 +57,6 @@ export default function MemoriesPage() {
   const RATIO_1COL = 0.36;
   const RATIO_3COL = 0.65;
   const RATIO_3TO1_HYST = 0.28;
-  const maxWidthRef = useRef(0);
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
@@ -75,13 +74,10 @@ export default function MemoriesPage() {
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
         const innerW = window.innerWidth;
-        const maxW = Math.max(visualW, innerW);
-        const minW = Math.min(visualW, innerW);
-        maxWidthRef.current = Math.max(maxWidthRef.current, maxW);
-        const ref = maxWidthRef.current || maxW || 900;
-        const isZoomedIn = ref > 0 && minW < ref * ZOOM_THRESHOLD;
-        const viewportCols =
-          minW < ref * RATIO_1COL ? 1 : minW < ref * RATIO_3COL ? 3 : 5;
+        const isZoomedIn = innerW > 0 && visualW < innerW * ZOOM_THRESHOLD;
+        const viewportCols = isZoomedIn
+          ? (visualW < innerW * RATIO_1COL ? 1 : visualW < innerW * RATIO_3COL ? 3 : 5)
+          : 5;
         let cols = isZoomedIn
           ? Math.min(viewportCols, photoBasedCols)
           : photoBasedCols;
@@ -93,11 +89,11 @@ export default function MemoriesPage() {
           cols = 3;
           justSteppedFromFiveRef.current = false;
         } else if (prev === 3 && cols === 1) {
-          cols = minW < ref * RATIO_3TO1_HYST ? 1 : 3;
+          cols = visualW < innerW * RATIO_3TO1_HYST ? 1 : 3;
         } else if (prev === 1 && cols === 5) {
           cols = 3;
         } else if (prev === 3 && cols === 5) {
-          cols = minW >= ref * RATIO_3COL ? 5 : 3;
+          cols = visualW >= innerW * RATIO_3COL ? 5 : 3;
         }
         if (cols !== 3) justSteppedFromFiveRef.current = false;
         prevColsRef.current = cols;
@@ -473,6 +469,10 @@ export default function MemoriesPage() {
           position: 'sticky',
           top: 0,
           zIndex: 50,
+          width: '100%',
+          maxWidth: `min(${mainMaxWidth}px, 100vw)`,
+          margin: '0 auto',
+          boxSizing: 'border-box',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: '#fff',
           padding: '12px 16px',
