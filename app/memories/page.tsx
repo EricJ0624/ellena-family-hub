@@ -53,6 +53,9 @@ export default function MemoriesPage() {
 
   // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
   const ZOOM_THRESHOLD = 0.92;
+  const RATIO_1COL = 0.43;
+  const RATIO_3COL = 0.75;
+  const RATIO_3TO1_HYST = 0.33;
   const maxWidthRef = useRef(0);
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
@@ -73,9 +76,10 @@ export default function MemoriesPage() {
         const maxW = Math.max(visualW, innerW);
         const minW = Math.min(visualW, innerW);
         maxWidthRef.current = Math.max(maxWidthRef.current, maxW);
-        const isZoomedIn =
-          maxWidthRef.current > 0 && minW < maxWidthRef.current * ZOOM_THRESHOLD;
-        const viewportCols = minW < 520 ? 1 : minW < 900 ? 3 : 5;
+        const ref = maxWidthRef.current || maxW || 900;
+        const isZoomedIn = ref > 0 && minW < ref * ZOOM_THRESHOLD;
+        const viewportCols =
+          minW < ref * RATIO_1COL ? 1 : minW < ref * RATIO_3COL ? 3 : 5;
         let cols = isZoomedIn
           ? Math.min(viewportCols, photoBasedCols)
           : photoBasedCols;
@@ -86,10 +90,12 @@ export default function MemoriesPage() {
         } else if (prev === 3 && cols === 1 && justSteppedFromFiveRef.current) {
           cols = 3;
           justSteppedFromFiveRef.current = false;
+        } else if (prev === 3 && cols === 1) {
+          cols = minW < ref * RATIO_3TO1_HYST ? 1 : 3;
         } else if (prev === 1 && cols === 5) {
           cols = 3;
         } else if (prev === 3 && cols === 5) {
-          cols = minW >= 900 ? 5 : 3;
+          cols = minW >= ref * RATIO_3COL ? 5 : 3;
         }
         if (cols !== 3) justSteppedFromFiveRef.current = false;
         prevColsRef.current = cols;
