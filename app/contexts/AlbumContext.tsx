@@ -18,6 +18,7 @@ export type Photo = {
   isUploading?: boolean;
   created_by?: string;
   description?: string;
+  taken_at?: string | null; // 촬영일시 ISO. null이면 날짜 없음
 };
 
 type AlbumContextType = {
@@ -109,7 +110,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
 
     const { data: photos, error } = await supabase
       .from('memory_vault')
-      .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+      .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at')
       .eq('group_id', currentGroupId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -132,6 +133,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         originalFilename: (p.original_filename as string) || '',
         mimeType: (p.mime_type as string) || 'image/jpeg',
         created_by: (p.uploader_id || p.created_by) as string | undefined,
+        taken_at: (p.taken_at as string | null) ?? null,
       }));
 
     const supabaseIds = new Set(supabasePhotos.map((p) => String(p.id)));
@@ -165,13 +167,14 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         if (newPhoto.group_id !== currentGroupId) return;
         const url = (newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url) as string;
         if (!url) return;
-        const newEntry = {
+        const newEntry: Photo = {
           id: newPhoto.id as string | number,
           data: url,
           supabaseId: newPhoto.id as string | number,
           isUploaded: true,
           isUploading: false,
           created_by: (newPhoto.uploader_id || newPhoto.created_by) as string | undefined,
+          taken_at: (newPhoto.taken_at as string | null) ?? null,
         };
         setAlbum((prev) => {
           const exists = prev.some(
@@ -202,6 +205,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
                   supabaseId: updated.id as string | number,
                   isUploaded: true,
                   created_by: (updated.uploader_id || updated.created_by || p.created_by) as string | undefined,
+                  taken_at: (updated.taken_at as string | null) ?? p.taken_at ?? null,
                 }
               : p
           )

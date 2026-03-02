@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       originalSize,
       forceCloudinary,
       groupId, // 그룹 ID (선택적, 있으면 권한 검증)
+      taken_at, // 촬영일시 ISO 문자열 (선택)
     } = body;
 
     if (!originalData || !fileName || !mimeType) {
@@ -280,6 +281,7 @@ export async function POST(request: NextRequest) {
         s3_key: s3Result?.key || null,
         mime_type: masterMimeType,
         original_filename: fileName,
+        taken_at: taken_at && typeof taken_at === 'string' ? taken_at : null,
       })
       .select()
       .single();

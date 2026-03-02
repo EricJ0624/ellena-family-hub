@@ -871,6 +871,7 @@ export interface Database {
           mime_type: string | null
           original_filename: string | null
           caption: string | null
+          taken_at: string | null
           created_at: string
         }
         Insert: {
@@ -887,6 +888,7 @@ export interface Database {
           mime_type?: string | null
           original_filename?: string | null
           caption?: string | null
+          taken_at?: string | null
           created_at?: string
         }
         Update: {
@@ -903,6 +905,7 @@ export interface Database {
           mime_type?: string | null
           original_filename?: string | null
           caption?: string | null
+          taken_at?: string | null
           created_at?: string
         }
         Relationships: [

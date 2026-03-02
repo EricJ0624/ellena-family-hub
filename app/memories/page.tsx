@@ -20,6 +20,23 @@ import { supabase } from '@/lib/supabase';
 const PRESIGNED_URL_THRESHOLD = 3 * 1024 * 1024; // 3MB (대시보드와 동일)
 const MAX_SAFE_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
+/** 파일명에서 날짜 추출 (IMG_20240115_123456, 2024-01-15 등). ISO 문자열 또는 null */
+function parseTakenAtFromFilename(filename: string): string | null {
+  const base = filename.replace(/\.[a-zA-Z0-9]+$/, '');
+  const match =
+    base.match(/(\d{4})[-_]?(\d{2})[-_]?(\d{2})/) ||
+    base.match(/(\d{4})(\d{2})(\d{2})/);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const year = parseInt(y!, 10);
+  const month = parseInt(m!, 10) - 1;
+  const day = parseInt(d!, 10);
+  if (month < 0 || month > 11 || day < 1 || day > 31) return null;
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 export default function MemoriesPage() {
   const { currentGroupId } = useGroup();
   const { album, addPhoto, deletePhoto, updatePhotoDescription, updatePhotoId } = useAlbum();
@@ -32,23 +49,29 @@ export default function MemoriesPage() {
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
+  const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
-  // 사진 장수 우선: 1~5장→1열, 6~15장→3열, 16장+→5열. 화면이 좁으면 그에 맞춰 열 수만 줄임.
+  // 사진 장수 우선: 1~11→1열, 12~39→3열, 40+→5열. 40장 이상이면 항상 5열. 그 외는 화면에 맞춰 조정.
   useEffect(() => {
     let rafId: number | undefined;
     const updateColumns = () => {
       rafId = requestAnimationFrame(() => {
         rafId = undefined;
         const n = album.length;
-        const photoBasedCols = n <= 5 ? 1 : n <= 15 ? 3 : 5;
-        const w =
-          typeof window !== 'undefined' && window.visualViewport
-            ? window.visualViewport.width
-            : typeof window !== 'undefined'
-              ? window.innerWidth
-              : 900;
-        const viewportCols = w < 320 ? 1 : w < 520 ? 3 : 5;
-        const cols = Math.min(photoBasedCols, viewportCols);
+        const photoBasedCols = n <= 11 ? 1 : n < 40 ? 3 : 5;
+        const cols =
+          n >= 40
+            ? 5
+            : (() => {
+                const w =
+                  typeof window !== 'undefined' && window.visualViewport
+                    ? window.visualViewport.width
+                    : typeof window !== 'undefined'
+                      ? window.innerWidth
+                      : 900;
+                const viewportCols = w < 320 ? 1 : w < 520 ? 3 : 5;
+                return Math.min(photoBasedCols, viewportCols);
+              })();
         setGridColumns(cols);
       });
     };
@@ -66,6 +89,64 @@ export default function MemoriesPage() {
       }
     };
   }, [album.length]);
+
+  type Photo = import('@/app/contexts/AlbumContext').Photo;
+  const groupedByDate = React.useMemo(() => {
+    const groups = new Map<string, Photo[]>();
+    const noDateKey = '__no_date__';
+    for (const p of album) {
+      const t = p.taken_at;
+      let key: string;
+      let label: string;
+      if (t) {
+        try {
+          const d = new Date(t);
+          if (isNaN(d.getTime())) {
+            key = noDateKey;
+            label = lang === 'ko' ? '날짜 없음' : 'No date';
+          } else {
+            key = t.slice(0, 10);
+            const y = d.getFullYear();
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            label = lang === 'ko' ? `${y}년 ${m}월 ${day}일` : `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        } catch {
+          key = noDateKey;
+          label = lang === 'ko' ? '날짜 없음' : 'No date';
+        }
+      } else {
+        key = noDateKey;
+        label = lang === 'ko' ? '날짜 없음' : 'No date';
+      }
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
+    }
+    const noDatePhotos = groups.get(noDateKey) || [];
+    groups.delete(noDateKey);
+    const sortedKeys = Array.from(groups.keys()).sort((a, b) => b.localeCompare(a));
+    const sections: { dateKey: string; label: string; photos: Photo[] }[] = [];
+    for (const k of sortedKeys) {
+      const d = new Date(k);
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const day = d.getDate();
+      const label = lang === 'ko' ? `${y}년 ${m}월 ${day}일` : `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      sections.push({ dateKey: k, label, photos: groups.get(k)! });
+    }
+    if (noDatePhotos.length) {
+      sections.push({
+        dateKey: noDateKey,
+        label: lang === 'ko' ? '날짜 없음' : 'No date',
+        photos: noDatePhotos,
+      });
+    }
+    return sections;
+  }, [album, lang]);
+
+  const displayListForLightbox: Photo[] = viewMode === 'byDate'
+    ? groupedByDate.flatMap((s) => s.photos)
+    : album;
 
   const handleBack = () => { window.location.href = '/dashboard'; };
 
@@ -124,6 +205,7 @@ export default function MemoriesPage() {
     const uploadFileName = file.name;
     const uploadMimeType = mimeType;
     const uploadFileSize = file.size;
+    const takenAt = parseTakenAtFromFilename(uploadFileName);
     const photoId = Date.now();
     addPhoto({
       id: photoId,
@@ -190,6 +272,7 @@ export default function MemoriesPage() {
               resizedData: imageData !== originalData ? imageData : null,
               groupId: currentGroupId,
               forceCloudinary: isRawFile,
+              taken_at: takenAt ?? undefined,
             }),
             signal: completeController.signal,
           });
@@ -231,6 +314,7 @@ export default function MemoriesPage() {
                   originalSize: uploadFileSize,
                   groupId: currentGroupId,
                   forceCloudinary: isRawFile,
+                  taken_at: takenAt ?? undefined,
                 }),
               });
               const fallbackResult = await fallbackRes.json();
@@ -424,6 +508,42 @@ export default function MemoriesPage() {
             <div>{dt('photo_upload_prompt')}</div>
           </div>
         ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setViewMode('latest')}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: viewMode === 'latest' ? '2px solid #667eea' : '1px solid #e2e8f0',
+                  background: viewMode === 'latest' ? '#eef2ff' : '#fff',
+                  color: viewMode === 'latest' ? '#4338ca' : '#64748b',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                {lang === 'ko' ? '최신순' : 'Latest'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('byDate')}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: viewMode === 'byDate' ? '2px solid #667eea' : '1px solid #e2e8f0',
+                  background: viewMode === 'byDate' ? '#eef2ff' : '#fff',
+                  color: viewMode === 'byDate' ? '#4338ca' : '#64748b',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                }}
+              >
+                {lang === 'ko' ? '촬영일별 보기' : 'By date taken'}
+              </button>
+            </div>
+            {viewMode === 'latest' ? (
           <div
             style={{
               display: 'grid',
@@ -585,11 +705,93 @@ export default function MemoriesPage() {
               </motion.div>
             ))}
           </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {groupedByDate.map((section) => (
+                  <section key={section.dateKey}>
+                    <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: '#334155' }}>
+                      {section.label} ({section.photos.length}{lang === 'ko' ? '장' : ''})
+                    </h2>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+                        gap: 12,
+                      }}
+                    >
+                      {section.photos.map((p) => {
+                        const globalIndex = displayListForLightbox.findIndex((x) => String(x.id) === String(p.id));
+                        return (
+                          <motion.div
+                            key={p.id}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="memory-card"
+                            style={{
+                              background: '#fff',
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                            }}
+                          >
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => openLightbox(globalIndex >= 0 ? globalIndex : 0)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(globalIndex >= 0 ? globalIndex : 0); } }}
+                              style={{ cursor: 'pointer', position: 'relative' }}
+                            >
+                              <div style={{ aspectRatio: '4/3', background: '#f1f5f9', position: 'relative' }}>
+                                <img
+                                  src={p.data}
+                                  alt=""
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                />
+                              </div>
+                            </div>
+                            <div style={{ padding: 12 }}>
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => { setEditingId(p.id); setEditDescription(p.description || ''); }}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setEditingId(p.id); setEditDescription(p.description || ''); } }}
+                                style={{ fontSize: 14, color: p.description ? '#1e293b' : '#94a3b8', minHeight: 20, cursor: 'pointer' }}
+                              >
+                                {editingId === p.id ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <input
+                                      type="text"
+                                      value={editDescription}
+                                      onChange={(e) => setEditDescription(e.target.value)}
+                                      placeholder={dt('photo_description_placeholder')}
+                                      style={{ width: '100%', padding: 8, border: '1px solid #6366f1', borderRadius: 6, fontSize: 14 }}
+                                      autoFocus
+                                    />
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                      <button type="button" onClick={() => { updatePhotoDescription({ photoId: p.id, description: editDescription }); setEditingId(null); setEditDescription(''); }} style={{ flex: 1, padding: '6px 12px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{ct('save')}</button>
+                                      <button type="button" onClick={() => { setEditingId(null); setEditDescription(''); }} style={{ padding: '6px 12px', background: '#e2e8f0', color: '#64748b', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{ct('cancel')}</button>
+                                      <button type="button" onClick={() => { if (confirm(dt('photo_delete_confirm'))) { deletePhoto(p.id); setEditingId(null); setEditDescription(''); } }} style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{ct('delete')}</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span>{p.description || dt('photo_description_hint')}</span>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 
       <AnimatePresence>
-        {selectedIndex !== null && album[selectedIndex] && (
+        {selectedIndex !== null && displayListForLightbox[selectedIndex] && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -634,7 +836,11 @@ export default function MemoriesPage() {
               style={{
                 flex: 1,
                 minHeight: 0,
+                minWidth: 0,
                 width: '100%',
+                maxWidth: '100vw',
+                maxHeight: 'calc(100vh - 100px)',
+                overflow: 'auto',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -642,7 +848,7 @@ export default function MemoriesPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={album[selectedIndex].data}
+                src={displayListForLightbox[selectedIndex].data}
                 alt=""
                 style={{
                   maxWidth: '100%',
@@ -665,7 +871,7 @@ export default function MemoriesPage() {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {album[selectedIndex].description || dt('photo_description_hint')}
+              {displayListForLightbox[selectedIndex].description || dt('photo_description_hint')}
             </p>
           </motion.div>
         )}

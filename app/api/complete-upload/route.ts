@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       resizedData, // 리사이징된 이미지 (Base64, 선택적)
       forceCloudinary,
       groupId, // 그룹 ID (선택적, 있으면 권한 검증)
+      taken_at, // 촬영일시 ISO 문자열 (선택, EXIF/파일명에서 추출)
     } = body;
 
     if (!s3Key || !s3Url || !fileName || !mimeType) {
@@ -195,6 +196,7 @@ export async function POST(request: NextRequest) {
         s3_key: s3Key,
         mime_type: masterMimeType,
         original_filename: fileName,
+        taken_at: taken_at && typeof taken_at === 'string' ? taken_at : null,
       })
       .select()
       .single();
