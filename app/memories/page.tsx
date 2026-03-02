@@ -68,13 +68,14 @@ export default function MemoriesPage() {
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
         const innerW = window.innerWidth;
-        const currentWidth = Math.max(visualW, innerW);
-        maxWidthRef.current = Math.max(maxWidthRef.current, currentWidth);
+        const maxW = Math.max(visualW, innerW);
+        const minW = Math.min(visualW, innerW);
+        maxWidthRef.current = Math.max(maxWidthRef.current, maxW);
         const isZoomedIn =
-          maxWidthRef.current > 0 && currentWidth < maxWidthRef.current * ZOOM_THRESHOLD;
-        // 줌인 시: 1열 구간을 넓게 해서 줌 아웃하며 전체 사진 볼 때 3열로 너무 빨리 안 바뀌게
+          maxWidthRef.current > 0 && minW < maxWidthRef.current * ZOOM_THRESHOLD;
+        // 줌인 시: 실제 보이는 너비(min)로 열 수 결정 → 5→3→1 순서로 전환. 1열 구간 넓게 유지.
         const cols = isZoomedIn
-          ? (currentWidth < 520 ? 1 : currentWidth < 900 ? 3 : 5)
+          ? (minW < 520 ? 1 : minW < 900 ? 3 : 5)
           : photoBasedCols;
         setGridColumns(cols);
       });
