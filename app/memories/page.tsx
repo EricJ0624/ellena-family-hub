@@ -127,6 +127,25 @@ export default function MemoriesPage() {
   }, [album.length]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const centerScrollOnResize = () => {
+      if (lightboxOpenRef.current) return;
+      const doc = document.documentElement;
+      const pageCenterX = doc.scrollWidth / 2;
+      const pageCenterY = doc.scrollHeight / 2;
+      const targetX = pageCenterX - vv.width / 2;
+      const targetY = pageCenterY - vv.height / 2;
+      const clampX = Math.max(0, Math.min(targetX, doc.scrollWidth - vv.width));
+      const clampY = Math.max(0, Math.min(targetY, doc.scrollHeight - vv.height));
+      window.scrollTo(clampX, clampY);
+    };
+    vv.addEventListener('resize', centerScrollOnResize);
+    return () => vv.removeEventListener('resize', centerScrollOnResize);
+  }, []);
+
+  useEffect(() => {
     const el = headerRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const refWidthRef = headerRefWidthRef;
