@@ -62,6 +62,7 @@ export default function MemoriesPage() {
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
   const [viewportWidth, setViewportWidth] = useState<number>(1200);
+  const [headerScale, setHeaderScale] = useState<number>(1);
   lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
     let rafId: number | undefined;
@@ -104,6 +105,8 @@ export default function MemoriesPage() {
         prevColsRef.current = cols;
         setGridColumns(cols);
         setViewportWidth(visualW);
+        const scale = innerW > 0 ? visualW / innerW : 1;
+        setHeaderScale(Math.min(1, Math.max(0.5, scale)));
       });
     };
     updateColumns();
@@ -480,10 +483,10 @@ export default function MemoriesPage() {
           boxSizing: 'border-box',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: '#fff',
-          padding: '12px 16px',
+          padding: `${12 * headerScale}px ${16 * headerScale}px`,
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          gap: 12 * headerScale,
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         }}
       >
@@ -494,9 +497,9 @@ export default function MemoriesPage() {
           style={{
             background: 'rgba(255,255,255,0.2)',
             border: 'none',
-            borderRadius: 8,
-            width: 40,
-            height: 40,
+            borderRadius: 8 * headerScale,
+            width: 40 * headerScale,
+            height: 40 * headerScale,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -504,20 +507,20 @@ export default function MemoriesPage() {
             color: '#fff',
           }}
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={Math.round(24 * headerScale)} />
         </button>
-        <h1 style={{ flex: 1, margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+        <h1 style={{ flex: 1, margin: 0, fontSize: `${1.25 * headerScale}rem`, fontWeight: 700 }}>
           {dt('section_title_memories')}
         </h1>
         <label
           htmlFor="memories-file-input"
           style={{
-            padding: '8px 16px',
+            padding: `${8 * headerScale}px ${16 * headerScale}px`,
             background: 'rgba(255,255,255,0.25)',
-            borderRadius: 8,
+            borderRadius: 8 * headerScale,
             fontWeight: 600,
             cursor: 'pointer',
-            fontSize: 14,
+            fontSize: 14 * headerScale,
           }}
         >
           {dt('photo_upload_btn')}
@@ -561,18 +564,18 @@ export default function MemoriesPage() {
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 8 * headerScale, marginBottom: 16 * headerScale }}>
               <button
                 type="button"
                 onClick={() => setViewMode('latest')}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
+                  padding: `${8 * headerScale}px ${14 * headerScale}px`,
+                  borderRadius: 8 * headerScale,
                   border: viewMode === 'latest' ? '2px solid #667eea' : '1px solid #e2e8f0',
                   background: viewMode === 'latest' ? '#eef2ff' : '#fff',
                   color: viewMode === 'latest' ? '#4338ca' : '#64748b',
                   fontWeight: 600,
-                  fontSize: 14,
+                  fontSize: 14 * headerScale,
                   cursor: 'pointer',
                 }}
               >
@@ -582,13 +585,13 @@ export default function MemoriesPage() {
                 type="button"
                 onClick={() => setViewMode('byDate')}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
+                  padding: `${8 * headerScale}px ${14 * headerScale}px`,
+                  borderRadius: 8 * headerScale,
                   border: viewMode === 'byDate' ? '2px solid #667eea' : '1px solid #e2e8f0',
                   background: viewMode === 'byDate' ? '#eef2ff' : '#fff',
                   color: viewMode === 'byDate' ? '#4338ca' : '#64748b',
                   fontWeight: 600,
-                  fontSize: 14,
+                  fontSize: 14 * headerScale,
                   cursor: 'pointer',
                 }}
               >
