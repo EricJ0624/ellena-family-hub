@@ -61,6 +61,8 @@ export default function MemoriesPage() {
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const headerRefWidthRef = useRef<number>(0);
   const [viewportWidth, setViewportWidth] = useState<number>(1200);
   const [headerScale, setHeaderScale] = useState<number>(1);
   lightboxOpenRef.current = selectedIndex !== null;
@@ -105,8 +107,6 @@ export default function MemoriesPage() {
         prevColsRef.current = cols;
         setGridColumns(cols);
         setViewportWidth(visualW);
-        const scale = innerW > 0 ? visualW / innerW : 1;
-        setHeaderScale(Math.min(1, Math.max(0.5, scale)));
       });
     };
     updateColumns();
@@ -125,6 +125,22 @@ export default function MemoriesPage() {
       }
     };
   }, [album.length]);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const refWidthRef = headerRefWidthRef;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      if (w > 0 && refWidthRef.current === 0) refWidthRef.current = w;
+      if (refWidthRef.current > 0) {
+        const scale = w / refWidthRef.current;
+        setHeaderScale(Math.min(1, Math.max(0.5, scale)));
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   type Photo = import('@/app/contexts/AlbumContext').Photo;
   const groupedByDate = React.useMemo(() => {
@@ -473,6 +489,7 @@ export default function MemoriesPage() {
   return (
     <div className="memories-page" style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'clip', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
       <header
+        ref={headerRef}
         style={{
           position: 'sticky',
           top: 0,
