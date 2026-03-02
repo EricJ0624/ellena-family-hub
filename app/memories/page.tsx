@@ -54,9 +54,9 @@ export default function MemoriesPage() {
   // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
   // 비율을 보수적으로 해서 좌우 잘림 없이 다 보인 뒤에만 다음 열 단계로 전환.
   const ZOOM_THRESHOLD = 0.92;
-  const RATIO_1COL = 0.36;
+  const RATIO_1COL = 0.52;
   const RATIO_3COL = 0.65;
-  const RATIO_3TO1_HYST = 0.28;
+  const RATIO_3TO1_HYST = 0.45;
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
