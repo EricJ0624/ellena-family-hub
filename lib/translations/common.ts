@@ -24,7 +24,7 @@ export type CommonTranslations = {
 
 const common: Record<LangCode, CommonTranslations> = {
   ko: {
-    app_title: 'Hearth: 가족의 안식처',
+    app_title: 'Hearth: 패밀리 헤이븐',
     user: '사용자',
     me: '나',
     me_suffix: ' (나)',
@@ -66,7 +66,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'Skip',
   },
   ja: {
-    app_title: 'Hearth: 家族の空間',
+    app_title: 'Hearth: ファミリーヘイブン',
     user: 'ユーザー',
     me: '自分',
     me_suffix: ' (自分)',
@@ -87,7 +87,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'スキップ',
   },
   'zh-CN': {
-    app_title: 'Hearth: 家庭的空间',
+    app_title: 'Hearth: 法米利·黑文',
     user: '用户',
     me: '我',
     me_suffix: ' (我)',
@@ -108,7 +108,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: '跳过',
   },
   'zh-TW': {
-    app_title: 'Hearth: 家庭的空間',
+    app_title: 'Hearth: 法米利·黑文',
     user: '使用者',
     me: '我',
     me_suffix: ' (我)',

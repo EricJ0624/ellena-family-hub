@@ -263,7 +263,16 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     background: '#1a1a1a',
                   }}
                 >
-                  <div style={{ fontSize: '4rem', opacity: 0.6 }}>📷</div>
+                  <img
+                    src="/frame-default.png"
+                    alt=""
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
