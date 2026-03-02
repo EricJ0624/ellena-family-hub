@@ -51,10 +51,11 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
-  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시 뷰포트 기준 1/3열, 줌아웃 시 다시 사진 장수 기준.
-  const ZOOM_THRESHOLD = 0.85;
+  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
+  const ZOOM_THRESHOLD = 0.92;
   const maxWidthRef = useRef(0);
   const prevColsRef = useRef(5);
+  const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
   lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
@@ -78,8 +79,19 @@ export default function MemoriesPage() {
         let cols = isZoomedIn
           ? Math.min(viewportCols, photoBasedCols)
           : photoBasedCols;
-        if (prevColsRef.current === 5 && cols === 1) cols = 3;
-        if (prevColsRef.current === 1 && cols === 5) cols = 3;
+        const prev = prevColsRef.current;
+        if (prev === 5 && cols === 1) {
+          cols = 3;
+          justSteppedFromFiveRef.current = true;
+        } else if (prev === 3 && cols === 1 && justSteppedFromFiveRef.current) {
+          cols = 3;
+          justSteppedFromFiveRef.current = false;
+        } else if (prev === 1 && cols === 5) {
+          cols = 3;
+        } else if (prev === 3 && cols === 5) {
+          cols = minW >= 900 ? 5 : 3;
+        }
+        if (cols !== 3) justSteppedFromFiveRef.current = false;
         prevColsRef.current = cols;
         setGridColumns(cols);
       });
