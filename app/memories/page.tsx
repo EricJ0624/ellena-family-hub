@@ -538,7 +538,7 @@ export default function MemoriesPage() {
           maxWidth: mainMaxWidth,
           margin: '0 auto',
           boxSizing: 'border-box',
-          overflowX: gridColumns === 1 ? 'auto' : 'hidden',
+          overflowX: 'hidden',
           minWidth: 0,
         }}
       >
@@ -623,15 +623,23 @@ export default function MemoriesPage() {
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(index); } }}
                   style={{ cursor: 'pointer', position: 'relative' }}
                 >
-                  <div style={{ aspectRatio: '4/3', background: '#f1f5f9', position: 'relative' }}>
+                  <div
+                    style={{
+                      aspectRatio: gridColumns === 1 ? undefined : '4/3',
+                      background: '#f1f5f9',
+                      position: 'relative',
+                      ...(gridColumns === 1 ? { width: '100%' } : {}),
+                    }}
+                  >
                     <img
                       src={p.data}
                       alt=""
                       style={{
                         width: '100%',
-                        height: '100%',
+                        height: gridColumns === 1 ? 'auto' : '100%',
                         objectFit: gridColumns === 1 ? 'contain' : 'cover',
                         display: 'block',
+                        ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                       }}
                     />
                     {p.isUploading && (
@@ -653,9 +661,13 @@ export default function MemoriesPage() {
                   </div>
                 </div>
                 {gridColumns !== 5 && (
-                <div style={{ padding: 12 }}>
+                <div
+                  style={{
+                    padding: gridColumns === 1 ? 8 : 12,
+                  }}
+                >
                   {editingId === p.id ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: gridColumns === 1 ? 6 : 8 }}>
                       <input
                         type="text"
                         value={editDescription}
@@ -663,14 +675,14 @@ export default function MemoriesPage() {
                         placeholder={dt('photo_description_placeholder')}
                         style={{
                           width: '100%',
-                          padding: 8,
+                          padding: gridColumns === 1 ? 6 : 8,
                           border: '1px solid #6366f1',
                           borderRadius: 6,
-                          fontSize: 14,
+                          fontSize: gridColumns === 1 ? 13 : 14,
                         }}
                         autoFocus
                       />
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: gridColumns === 1 ? 6 : 8 }}>
                         <button
                           type="button"
                           onClick={() => {
@@ -680,12 +692,12 @@ export default function MemoriesPage() {
                           }}
                           style={{
                             flex: 1,
-                            padding: '6px 12px',
+                            padding: gridColumns === 1 ? '5px 10px' : '6px 12px',
                             background: '#6366f1',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 6,
-                            fontSize: 12,
+                            fontSize: gridColumns === 1 ? 11 : 12,
                             fontWeight: 600,
                             cursor: 'pointer',
                           }}
@@ -699,12 +711,12 @@ export default function MemoriesPage() {
                             setEditDescription('');
                           }}
                           style={{
-                            padding: '6px 12px',
+                            padding: gridColumns === 1 ? '5px 10px' : '6px 12px',
                             background: '#e2e8f0',
                             color: '#64748b',
                             border: 'none',
                             borderRadius: 6,
-                            fontSize: 12,
+                            fontSize: gridColumns === 1 ? 11 : 12,
                             fontWeight: 600,
                             cursor: 'pointer',
                           }}
@@ -721,12 +733,12 @@ export default function MemoriesPage() {
                             }
                           }}
                           style={{
-                            padding: '6px 12px',
+                            padding: gridColumns === 1 ? '5px 10px' : '6px 12px',
                             background: '#ef4444',
                             color: '#fff',
                             border: 'none',
                             borderRadius: 6,
-                            fontSize: 12,
+                            fontSize: gridColumns === 1 ? 11 : 12,
                             fontWeight: 600,
                             cursor: 'pointer',
                           }}
@@ -745,9 +757,9 @@ export default function MemoriesPage() {
                       }}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setEditingId(p.id); setEditDescription(p.description || ''); } }}
                       style={{
-                        fontSize: 14,
+                        fontSize: gridColumns === 1 ? 12 : 14,
                         color: p.description ? '#1e293b' : '#94a3b8',
-                        minHeight: 20,
+                        minHeight: gridColumns === 1 ? 16 : 20,
                         cursor: 'pointer',
                       }}
                     >
@@ -796,37 +808,61 @@ export default function MemoriesPage() {
                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(globalIndex >= 0 ? globalIndex : 0); } }}
                               style={{ cursor: 'pointer', position: 'relative' }}
                             >
-                              <div style={{ aspectRatio: '4/3', background: '#f1f5f9', position: 'relative' }}>
+                              <div
+                                style={{
+                                  aspectRatio: gridColumns === 1 ? undefined : '4/3',
+                                  background: '#f1f5f9',
+                                  position: 'relative',
+                                  ...(gridColumns === 1 ? { width: '100%' } : {}),
+                                }}
+                              >
                                 <img
                                   src={p.data}
                                   alt=""
-                                  style={{ width: '100%', height: '100%', objectFit: gridColumns === 1 ? 'contain' : 'cover', display: 'block' }}
+                                  style={{
+                                    width: '100%',
+                                    height: gridColumns === 1 ? 'auto' : '100%',
+                                    objectFit: gridColumns === 1 ? 'contain' : 'cover',
+                                    display: 'block',
+                                    ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
+                                  }}
                                 />
                               </div>
                             </div>
                             {gridColumns !== 5 && (
-                            <div style={{ padding: 12 }}>
+                            <div style={{ padding: gridColumns === 1 ? 8 : 12 }}>
                               <div
                                 role="button"
                                 tabIndex={0}
                                 onClick={() => { setEditingId(p.id); setEditDescription(p.description || ''); }}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setEditingId(p.id); setEditDescription(p.description || ''); } }}
-                                style={{ fontSize: 14, color: p.description ? '#1e293b' : '#94a3b8', minHeight: 20, cursor: 'pointer' }}
+                                style={{
+                                  fontSize: gridColumns === 1 ? 12 : 14,
+                                  color: p.description ? '#1e293b' : '#94a3b8',
+                                  minHeight: gridColumns === 1 ? 16 : 20,
+                                  cursor: 'pointer',
+                                }}
                               >
                                 {editingId === p.id ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: gridColumns === 1 ? 6 : 8 }}>
                                     <input
                                       type="text"
                                       value={editDescription}
                                       onChange={(e) => setEditDescription(e.target.value)}
                                       placeholder={dt('photo_description_placeholder')}
-                                      style={{ width: '100%', padding: 8, border: '1px solid #6366f1', borderRadius: 6, fontSize: 14 }}
+                                      style={{
+                                        width: '100%',
+                                        padding: gridColumns === 1 ? 6 : 8,
+                                        border: '1px solid #6366f1',
+                                        borderRadius: 6,
+                                        fontSize: gridColumns === 1 ? 13 : 14,
+                                      }}
                                       autoFocus
                                     />
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                      <button type="button" onClick={() => { updatePhotoDescription({ photoId: p.id, description: editDescription }); setEditingId(null); setEditDescription(''); }} style={{ flex: 1, padding: '6px 12px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{ct('save')}</button>
-                                      <button type="button" onClick={() => { setEditingId(null); setEditDescription(''); }} style={{ padding: '6px 12px', background: '#e2e8f0', color: '#64748b', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{ct('cancel')}</button>
-                                      <button type="button" onClick={() => { if (confirm(dt('photo_delete_confirm'))) { deletePhoto(p.id); setEditingId(null); setEditDescription(''); } }} style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{ct('delete')}</button>
+                                    <div style={{ display: 'flex', gap: gridColumns === 1 ? 6 : 8 }}>
+                                      <button type="button" onClick={() => { updatePhotoDescription({ photoId: p.id, description: editDescription }); setEditingId(null); setEditDescription(''); }} style={{ flex: 1, padding: gridColumns === 1 ? '5px 10px' : '6px 12px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, fontSize: gridColumns === 1 ? 11 : 12, fontWeight: 600, cursor: 'pointer' }}>{ct('save')}</button>
+                                      <button type="button" onClick={() => { setEditingId(null); setEditDescription(''); }} style={{ padding: gridColumns === 1 ? '5px 10px' : '6px 12px', background: '#e2e8f0', color: '#64748b', border: 'none', borderRadius: 6, fontSize: gridColumns === 1 ? 11 : 12, fontWeight: 600, cursor: 'pointer' }}>{ct('cancel')}</button>
+                                      <button type="button" onClick={() => { if (confirm(dt('photo_delete_confirm'))) { deletePhoto(p.id); setEditingId(null); setEditDescription(''); } }} style={{ padding: gridColumns === 1 ? '5px 10px' : '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontSize: gridColumns === 1 ? 11 : 12, fontWeight: 600, cursor: 'pointer' }}>{ct('delete')}</button>
                                     </div>
                                   </div>
                                 ) : (
