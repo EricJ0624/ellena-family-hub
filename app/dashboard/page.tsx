@@ -1055,7 +1055,7 @@ export default function FamilyHub() {
     minWidth: 0,
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    textOverflow: 'clip',
     fontSize: isDefaultDashboardTitle ? 'clamp(44px, 11vw, 68px)' : 'clamp(18px, 4.5vw, 28px)',
     fontWeight: titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
@@ -1082,10 +1082,12 @@ export default function FamilyHub() {
     let rafId: number = 0;
 
     const fit = (el: HTMLHeadingElement) => {
+      const w = el.clientWidth;
+      if (w <= 0) return;
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
-      void el.offsetHeight; // 강제 reflow
-      while (el.scrollWidth > el.clientWidth && fs > MIN_FS) {
+      void el.offsetHeight;
+      while (el.scrollWidth > w && fs > MIN_FS) {
         fs -= 2;
         el.style.fontSize = `${fs}px`;
         void el.offsetHeight;
@@ -1094,12 +1096,17 @@ export default function FamilyHub() {
     };
 
     const run = (el: HTMLHeadingElement) => {
-      fit(el);
-      ro = new ResizeObserver(() => fit(el));
+      const runFit = () => {
+        if (el.clientWidth > 0) fit(el);
+      };
+      runFit();
+      ro = new ResizeObserver(runFit);
       ro.observe(el);
       document.fonts.ready.then(() => {
-        if (!cancelled.current) fit(el);
+        if (!cancelled.current) runFit();
       });
+      setTimeout(runFit, 100);
+      setTimeout(runFit, 400);
     };
 
     const tryRun = (retryCount: number) => {
