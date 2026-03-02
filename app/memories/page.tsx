@@ -57,6 +57,7 @@ export default function MemoriesPage() {
   const RATIO_1COL = 0.52;
   const RATIO_3COL = 0.65;
   const RATIO_3TO1_HYST = 0.45;
+  const baseWidthRef = useRef(0);
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
@@ -74,9 +75,13 @@ export default function MemoriesPage() {
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
         const innerW = window.innerWidth;
-        const isZoomedIn = innerW > 0 && visualW < innerW * ZOOM_THRESHOLD;
+        if (baseWidthRef.current === 0) {
+          baseWidthRef.current = Math.max(innerW, visualW, 400);
+        }
+        const base = baseWidthRef.current;
+        const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
         const viewportCols = isZoomedIn
-          ? (visualW < innerW * RATIO_1COL ? 1 : visualW < innerW * RATIO_3COL ? 3 : 5)
+          ? (visualW < base * RATIO_1COL ? 1 : visualW < base * RATIO_3COL ? 3 : 5)
           : 5;
         let cols = isZoomedIn
           ? Math.min(viewportCols, photoBasedCols)
@@ -89,11 +94,11 @@ export default function MemoriesPage() {
           cols = 3;
           justSteppedFromFiveRef.current = false;
         } else if (prev === 3 && cols === 1) {
-          cols = visualW < innerW * RATIO_3TO1_HYST ? 1 : 3;
+          cols = visualW < base * RATIO_3TO1_HYST ? 1 : 3;
         } else if (prev === 1 && cols === 5) {
           cols = 3;
         } else if (prev === 3 && cols === 5) {
-          cols = visualW >= innerW * RATIO_3COL ? 5 : 3;
+          cols = visualW >= base * RATIO_3COL ? 5 : 3;
         }
         if (cols !== 3) justSteppedFromFiveRef.current = false;
         prevColsRef.current = cols;
