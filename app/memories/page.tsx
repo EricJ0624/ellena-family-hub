@@ -177,6 +177,7 @@ export default function MemoriesPage() {
     return () => {
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
+      setLightboxViewport({ top: 0, left: 0, width: 0, height: 0 });
     };
   }, [selectedIndex]);
 
