@@ -455,6 +455,15 @@ interface TitleTextProps {
 }
 
 const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }) => {
+  const raw = titleStyle.content || title;
+  const parenMatch = typeof raw === 'string' && raw.match(/^(.*?)(\s*\([^)]+\))(.*)$/);
+  const titleContent = parenMatch ? (
+    <>
+      {parenMatch[1]}
+      <span style={{ fontSize: '0.65em', verticalAlign: 'baseline' }}>{parenMatch[2]}</span>
+      {parenMatch[3]}
+    </>
+  ) : raw;
   return (
     <motion.h1
       initial={{ opacity: 0, y: 20 }}
@@ -472,7 +481,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
         textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
       }}
     >
-      {titleStyle.content || title}
+      {titleContent}
     </motion.h1>
   );
 };

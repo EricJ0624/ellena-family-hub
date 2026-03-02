@@ -6698,8 +6698,19 @@ export default function FamilyHub() {
               const full = dashboardTitleText;
               const colon = full.indexOf(': ');
               if (colon < 0) return full;
-              const main = full.slice(0, colon + 2);
+              let main: React.ReactNode = full.slice(0, colon + 2);
               const sub = full.slice(colon + 2);
+              const mainStr = full.slice(0, colon + 2);
+              const parenMatch = mainStr.match(/^(.*?)(\s*\([^)]+\))(.*)$/);
+              if (parenMatch) {
+                main = (
+                  <>
+                    {parenMatch[1]}
+                    <span style={{ fontSize: '0.65em', verticalAlign: 'baseline' }}>{parenMatch[2]}</span>
+                    {parenMatch[3]}
+                  </>
+                );
+              }
               return (
                 <>
                   {main}
