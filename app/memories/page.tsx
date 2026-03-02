@@ -51,7 +51,7 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
-  // 사진 장수 우선: 1~11→1열, 12~39→3열, 40+→5열. 40장 이상이면 항상 5열. 그 외는 화면에 맞춰 조정.
+  // 사진 장수 우선: 1~11→1열, 12~39→3열, 40+→5열. 뷰포트에 따라 줌인하면 3열/1열로 전환.
   useEffect(() => {
     let rafId: number | undefined;
     const updateColumns = () => {
@@ -59,19 +59,14 @@ export default function MemoriesPage() {
         rafId = undefined;
         const n = album.length;
         const photoBasedCols = n <= 11 ? 1 : n < 40 ? 3 : 5;
-        const cols =
-          n >= 40
-            ? 5
-            : (() => {
-                const w =
-                  typeof window !== 'undefined' && window.visualViewport
-                    ? window.visualViewport.width
-                    : typeof window !== 'undefined'
-                      ? window.innerWidth
-                      : 900;
-                const viewportCols = w < 320 ? 1 : w < 520 ? 3 : 5;
-                return Math.min(photoBasedCols, viewportCols);
-              })();
+        const w =
+          typeof window !== 'undefined' && window.visualViewport
+            ? window.visualViewport.width
+            : typeof window !== 'undefined'
+              ? window.innerWidth
+              : 900;
+        const viewportCols = w < 320 ? 1 : w < 520 ? 3 : 5;
+        const cols = Math.min(photoBasedCols, viewportCols);
         setGridColumns(cols);
       });
     };
@@ -426,7 +421,10 @@ export default function MemoriesPage() {
     }
   };
 
-  const openLightbox = (index: number) => setSelectedIndex(index);
+  const openLightbox = (index: number) => {
+    setEditingId(null);
+    setSelectedIndex(index);
+  };
   const closeLightbox = () => setSelectedIndex(null);
 
   return (
@@ -578,7 +576,7 @@ export default function MemoriesPage() {
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: gridColumns === 1 ? 'contain' : 'cover',
                         display: 'block',
                       }}
                     />
@@ -600,6 +598,7 @@ export default function MemoriesPage() {
                     )}
                   </div>
                 </div>
+                {gridColumns !== 5 && (
                 <div style={{ padding: 12 }}>
                   {editingId === p.id ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -702,6 +701,7 @@ export default function MemoriesPage() {
                     </div>
                   )}
                 </div>
+                )}
               </motion.div>
             ))}
           </div>
@@ -745,10 +745,11 @@ export default function MemoriesPage() {
                                 <img
                                   src={p.data}
                                   alt=""
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                  style={{ width: '100%', height: '100%', objectFit: gridColumns === 1 ? 'contain' : 'cover', display: 'block' }}
                                 />
                               </div>
                             </div>
+                            {gridColumns !== 5 && (
                             <div style={{ padding: 12 }}>
                               <div
                                 role="button"
@@ -778,6 +779,7 @@ export default function MemoriesPage() {
                                 )}
                               </div>
                             </div>
+                            )}
                           </motion.div>
                         );
                       })}
@@ -860,19 +862,133 @@ export default function MemoriesPage() {
                 }}
               />
             </div>
-            <p
+            <div
               style={{
                 flexShrink: 0,
                 marginTop: 12,
-                color: 'rgba(255,255,255,0.9)',
-                fontSize: 14,
-                textAlign: 'center',
+                width: '100%',
                 maxWidth: 400,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {displayListForLightbox[selectedIndex].description || dt('photo_description_hint')}
-            </p>
+              {editingId === displayListForLightbox[selectedIndex].id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder={dt('photo_description_placeholder')}
+                    style={{
+                      width: '100%',
+                      padding: 10,
+                      border: '1px solid rgba(255,255,255,0.5)',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#fff',
+                    }}
+                    autoFocus
+                  />
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updatePhotoDescription({
+                          photoId: displayListForLightbox[selectedIndex].id,
+                          description: editDescription,
+                        });
+                        setEditingId(null);
+                        setEditDescription('');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#6366f1',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {ct('save')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditDescription('');
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {ct('cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(dt('photo_delete_confirm'))) {
+                          deletePhoto(displayListForLightbox[selectedIndex].id);
+                          setEditingId(null);
+                          setEditDescription('');
+                          closeLightbox();
+                        }
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#ef4444',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {ct('delete')}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setEditingId(displayListForLightbox[selectedIndex].id);
+                    setEditDescription(displayListForLightbox[selectedIndex].description || '');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setEditingId(displayListForLightbox[selectedIndex].id);
+                      setEditDescription(displayListForLightbox[selectedIndex].description || '');
+                    }
+                  }}
+                  style={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontSize: 14,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 4,
+                  }}
+                >
+                  {displayListForLightbox[selectedIndex].description || dt('photo_description_hint')}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
