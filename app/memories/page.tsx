@@ -471,7 +471,7 @@ export default function MemoriesPage() {
   const mainMaxWidth = contentMaxWidth ?? Math.min(1200, viewportWidth);
 
   return (
-    <div className="memories-page" style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
+    <div className="memories-page" style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'hidden', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
       <header
         style={{
           position: 'sticky',
@@ -535,7 +535,7 @@ export default function MemoriesPage() {
         style={{
           padding: 16,
           width: '100%',
-          maxWidth: mainMaxWidth,
+          maxWidth: `min(${mainMaxWidth}px, 100vw)`,
           margin: '0 auto',
           boxSizing: 'border-box',
           overflowX: 'hidden',
