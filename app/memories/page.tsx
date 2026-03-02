@@ -62,6 +62,7 @@ export default function MemoriesPage() {
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
   const [contentMaxWidth, setContentMaxWidth] = useState<number | null>(null);
+  const [viewportWidth, setViewportWidth] = useState<number>(1200);
   lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
     let rafId: number | undefined;
@@ -102,7 +103,7 @@ export default function MemoriesPage() {
         if (cols !== 3) justSteppedFromFiveRef.current = false;
         prevColsRef.current = cols;
         setGridColumns(cols);
-        // 줌 시 그리드가 시각 뷰포트를 넘지 않도록 너비 제한 → 좌우 잘림 방지
+        setViewportWidth(visualW);
         setContentMaxWidth(
           isZoomedIn && visualW > 0 && visualW < innerW * 0.98 ? Math.round(visualW) : null
         );
@@ -467,8 +468,10 @@ export default function MemoriesPage() {
   };
   const closeLightbox = () => setSelectedIndex(null);
 
+  const mainMaxWidth = contentMaxWidth ?? Math.min(1200, viewportWidth);
+
   return (
-    <div className="memories-page" style={{ minHeight: '100vh', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
+    <div className="memories-page" style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
       <header
         style={{
           position: 'sticky',
@@ -531,10 +534,12 @@ export default function MemoriesPage() {
       <main
         style={{
           padding: 16,
-          maxWidth: contentMaxWidth ?? 1200,
-          width: contentMaxWidth != null ? contentMaxWidth : undefined,
+          width: '100%',
+          maxWidth: mainMaxWidth,
           margin: '0 auto',
+          boxSizing: 'border-box',
           overflowX: gridColumns === 1 ? 'auto' : 'hidden',
+          minWidth: 0,
         }}
       >
         {album.length === 0 ? (
@@ -595,6 +600,7 @@ export default function MemoriesPage() {
               display: 'grid',
               gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
               gap: 12,
+              minWidth: 0,
             }}
           >
             {album.map((p, index) => (
@@ -765,6 +771,7 @@ export default function MemoriesPage() {
                         display: 'grid',
                         gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
                         gap: 12,
+                        minWidth: 0,
                       }}
                     >
                       {section.photos.map((p) => {
@@ -924,7 +931,8 @@ export default function MemoriesPage() {
                 maxHeight: 'calc(100vh - 100px)',
                 overflow: 'auto',
                 display: 'flex',
-                alignItems: 'center',
+                flexDirection: 'column',
+                alignItems: 'stretch',
                 justifyContent: 'center',
               }}
               onClick={(e) => e.stopPropagation()}
@@ -933,12 +941,12 @@ export default function MemoriesPage() {
                 src={displayListForLightbox[selectedIndex].data}
                 alt=""
                 style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  width: 'auto',
+                  width: '100%',
                   height: 'auto',
+                  maxHeight: '100%',
                   objectFit: 'contain',
                   borderRadius: 8,
+                  display: 'block',
                 }}
               />
             </div>
