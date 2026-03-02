@@ -51,24 +51,30 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
 
-  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시(현재 너비가 지금까지 최대보다 작을 때) 뷰포트 기준 1/3열 전환.
+  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시 뷰포트 기준 1/3열, 줌아웃 시 다시 사진 장수 기준.
   const ZOOM_THRESHOLD = 0.85;
   const maxWidthRef = useRef(0);
+  const lightboxOpenRef = useRef(false);
+  lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
     let rafId: number | undefined;
     const updateColumns = () => {
       rafId = requestAnimationFrame(() => {
         rafId = undefined;
         if (typeof window === 'undefined') return;
+        if (lightboxOpenRef.current) return;
         const n = album.length;
         const photoBasedCols = n <= 11 ? 1 : n < 40 ? 3 : 5;
         const vv = window.visualViewport;
-        const currentWidth = vv ? vv.width : window.innerWidth;
+        const visualW = vv ? vv.width : window.innerWidth;
+        const innerW = window.innerWidth;
+        const currentWidth = Math.max(visualW, innerW);
         maxWidthRef.current = Math.max(maxWidthRef.current, currentWidth);
         const isZoomedIn =
           maxWidthRef.current > 0 && currentWidth < maxWidthRef.current * ZOOM_THRESHOLD;
+        // 줌인 시: 1열 구간을 넓게 해서 줌 아웃하며 전체 사진 볼 때 3열로 너무 빨리 안 바뀌게
         const cols = isZoomedIn
-          ? (currentWidth < 320 ? 1 : currentWidth < 520 ? 3 : 5)
+          ? (currentWidth < 520 ? 1 : currentWidth < 900 ? 3 : 5)
           : photoBasedCols;
         setGridColumns(cols);
       });
@@ -78,12 +84,14 @@ export default function MemoriesPage() {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     if (vv) {
       vv.addEventListener('resize', updateColumns);
+      vv.addEventListener('scroll', updateColumns);
     }
     return () => {
       if (rafId !== undefined) cancelAnimationFrame(rafId);
       window.removeEventListener('resize', updateColumns);
       if (vv) {
         vv.removeEventListener('resize', updateColumns);
+        vv.removeEventListener('scroll', updateColumns);
       }
     };
   }, [album.length]);
@@ -491,7 +499,7 @@ export default function MemoriesPage() {
         />
       </header>
 
-      <main style={{ padding: 16, maxWidth: 1200, margin: '0 auto', overflowX: 'hidden' }}>
+      <main style={{ padding: 16, maxWidth: 1200, margin: '0 auto', overflowX: gridColumns === 1 ? 'auto' : 'hidden' }}>
         {album.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
