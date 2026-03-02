@@ -61,7 +61,6 @@ export default function MemoriesPage() {
   const prevColsRef = useRef(5);
   const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
-  const [contentMaxWidth, setContentMaxWidth] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState<number>(1200);
   lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
@@ -104,9 +103,6 @@ export default function MemoriesPage() {
         prevColsRef.current = cols;
         setGridColumns(cols);
         setViewportWidth(visualW);
-        setContentMaxWidth(
-          isZoomedIn && visualW > 0 && visualW < innerW * 0.98 ? Math.round(visualW) : null
-        );
       });
     };
     updateColumns();
@@ -468,7 +464,7 @@ export default function MemoriesPage() {
   };
   const closeLightbox = () => setSelectedIndex(null);
 
-  const mainMaxWidth = contentMaxWidth ?? Math.min(1200, viewportWidth);
+  const mainMaxWidth = Math.min(1200, viewportWidth);
 
   return (
     <div className="memories-page" style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'clip', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
