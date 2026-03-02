@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
@@ -54,6 +54,7 @@ export default function MemoriesPage() {
   // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인 시 뷰포트 기준 1/3열, 줌아웃 시 다시 사진 장수 기준.
   const ZOOM_THRESHOLD = 0.85;
   const maxWidthRef = useRef(0);
+  const prevColsRef = useRef(5);
   const lightboxOpenRef = useRef(false);
   lightboxOpenRef.current = selectedIndex !== null;
   useEffect(() => {
@@ -73,10 +74,12 @@ export default function MemoriesPage() {
         maxWidthRef.current = Math.max(maxWidthRef.current, maxW);
         const isZoomedIn =
           maxWidthRef.current > 0 && minW < maxWidthRef.current * ZOOM_THRESHOLD;
-        // 줌인 시: 실제 보이는 너비(min)로 열 수 결정 → 5→3→1 순서로 전환. 1열 구간 넓게 유지.
-        const cols = isZoomedIn
+        let cols = isZoomedIn
           ? (minW < 520 ? 1 : minW < 900 ? 3 : 5)
           : photoBasedCols;
+        // 5열→1열 한 번에 건너뛰기 방지: 5열일 때 1열로 가려 하면 먼저 3열로
+        if (prevColsRef.current === 5 && cols === 1) cols = 3;
+        prevColsRef.current = cols;
         setGridColumns(cols);
       });
     };
@@ -825,6 +828,38 @@ export default function MemoriesPage() {
           >
             <button
               type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(dt('photo_delete_confirm'))) {
+                  deletePhoto(displayListForLightbox[selectedIndex].id);
+                  setEditingId(null);
+                  setEditDescription('');
+                  closeLightbox();
+                }
+              }}
+              aria-label={ct('delete') || '삭제'}
+              title={ct('delete')}
+              style={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                background: 'rgba(239,68,68,0.9)',
+                border: 'none',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+                zIndex: 1,
+              }}
+            >
+              <Trash2 size={20} />
+            </button>
+            <button
+              type="button"
               onClick={closeLightbox}
               aria-label={ct('close') || '닫기'}
               style={{
@@ -947,29 +982,6 @@ export default function MemoriesPage() {
                       }}
                     >
                       {ct('cancel')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(dt('photo_delete_confirm'))) {
-                          deletePhoto(displayListForLightbox[selectedIndex].id);
-                          setEditingId(null);
-                          setEditDescription('');
-                          closeLightbox();
-                        }
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        background: '#ef4444',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {ct('delete')}
                     </button>
                   </div>
                 </>
