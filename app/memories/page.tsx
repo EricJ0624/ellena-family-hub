@@ -33,27 +33,36 @@ export default function MemoriesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
 
-  // 사진 개수(1~5→1열, 6~15→3열, 16+→5열) + 화면/줌에 따라 실제 열 수 조정
+  // 사진 장수 우선: 1~5장→1열, 6~15장→3열, 16장+→5열. 화면이 좁으면 그에 맞춰 열 수만 줄임.
   useEffect(() => {
+    let rafId: number | undefined;
     const updateColumns = () => {
-      const n = album.length;
-      const maxCols = n <= 5 ? 1 : n <= 15 ? 3 : 5;
-      const w = typeof window !== 'undefined' ? window.innerWidth : 900;
-      const viewportCols = w < 400 ? 1 : w < 800 ? 3 : 5;
-      setGridColumns(Math.min(maxCols, viewportCols));
+      rafId = requestAnimationFrame(() => {
+        rafId = undefined;
+        const n = album.length;
+        const photoBasedCols = n <= 5 ? 1 : n <= 15 ? 3 : 5;
+        const w =
+          typeof window !== 'undefined' && window.visualViewport
+            ? window.visualViewport.width
+            : typeof window !== 'undefined'
+              ? window.innerWidth
+              : 900;
+        const viewportCols = w < 320 ? 1 : w < 520 ? 3 : 5;
+        const cols = Math.min(photoBasedCols, viewportCols);
+        setGridColumns(cols);
+      });
     };
     updateColumns();
     window.addEventListener('resize', updateColumns);
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     if (vv) {
       vv.addEventListener('resize', updateColumns);
-      vv.addEventListener('scroll', updateColumns);
     }
     return () => {
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
       window.removeEventListener('resize', updateColumns);
       if (vv) {
         vv.removeEventListener('resize', updateColumns);
-        vv.removeEventListener('scroll', updateColumns);
       }
     };
   }, [album.length]);
