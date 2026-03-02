@@ -74,10 +74,12 @@ export default function MemoriesPage() {
         maxWidthRef.current = Math.max(maxWidthRef.current, maxW);
         const isZoomedIn =
           maxWidthRef.current > 0 && minW < maxWidthRef.current * ZOOM_THRESHOLD;
+        const viewportCols = minW < 520 ? 1 : minW < 900 ? 3 : 5;
         let cols = isZoomedIn
-          ? (minW < 520 ? 1 : minW < 900 ? 3 : 5)
+          ? Math.min(viewportCols, photoBasedCols)
           : photoBasedCols;
         if (prevColsRef.current === 5 && cols === 1) cols = 3;
+        if (prevColsRef.current === 1 && cols === 5) cols = 3;
         prevColsRef.current = cols;
         setGridColumns(cols);
       });
