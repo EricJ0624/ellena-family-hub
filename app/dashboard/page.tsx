@@ -14,6 +14,7 @@ import {
   stopBackgroundLocationTracking
 } from '@/lib/webpush';
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
+import { AppTitleContent } from '@/app/components/AppTitleContent';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -6694,30 +6695,7 @@ export default function FamilyHub() {
               ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
             }}
           >
-            {(() => {
-              const full = dashboardTitleText;
-              const colon = full.indexOf(': ');
-              if (colon < 0) return full;
-              let main: React.ReactNode = full.slice(0, colon + 2);
-              const sub = full.slice(colon + 2);
-              const mainStr = full.slice(0, colon + 2);
-              const parenMatch = mainStr.match(/^(.*?)(\s*\([^)]+\))(.*)$/);
-              if (parenMatch) {
-                main = (
-                  <>
-                    {parenMatch[1]}
-                    <span style={{ fontSize: '0.65em', verticalAlign: 'baseline' }}>{parenMatch[2]}</span>
-                    {parenMatch[3]}
-                  </>
-                );
-              }
-              return (
-                <>
-                  {main}
-                  <span style={{ fontSize: '0.333em', verticalAlign: 'baseline' }}>{sub}</span>
-                </>
-              );
-            })()}
+            <AppTitleContent title={dashboardTitleText} />
           </h1>
           {isGroupLoading ? (
             <div

@@ -7,6 +7,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
 import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { AppTitleContent } from '@/app/components/AppTitleContent';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -35,14 +36,12 @@ export default function LoginPage() {
     setIsMounted(true);
   }, []);
 
-  // 로그인 타이틀 항상 한 줄: 넘치면 폰트 크기 축소
+  // 로그인 타이틀 한 줄 맞춤: 넘치면 폰트 자동 축소, 리사이즈 시 재계산 (대시보드와 동일 방식)
   useEffect(() => {
     if (!isMounted) return;
-    const el = loginTitleRef.current;
-    if (!el) return;
     const MAX_FS = 48;
     const MIN_FS = 14;
-    const fit = () => {
+    const fit = (el: HTMLHeadingElement) => {
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
       void el.offsetHeight;
@@ -53,13 +52,23 @@ export default function LoginPage() {
       }
       setLoginTitleFontSize(fs);
     };
-    const rafId = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        fit();
-        document.fonts.ready.then(fit);
-      });
-    });
-    return () => cancelAnimationFrame(rafId);
+    let ro: ResizeObserver | null = null;
+    const tryRun = (retryCount: number) => {
+      const el = loginTitleRef.current;
+      if (el) {
+        fit(el);
+        ro = new ResizeObserver(() => fit(el));
+        ro.observe(el);
+        document.fonts.ready.then(() => fit(el));
+        return;
+      }
+      if (retryCount < 10) requestAnimationFrame(() => tryRun(retryCount + 1));
+    };
+    const rafId = requestAnimationFrame(() => requestAnimationFrame(() => tryRun(0)));
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro?.disconnect();
+    };
   }, [lang, isMounted]);
 
   // 이전 이메일 불러오기
@@ -459,19 +468,7 @@ export default function LoginPage() {
               letterSpacing: '-0.5px'
             }}
           >
-            {(() => {
-              const full = ct('app_title');
-              const colon = full.indexOf(': ');
-              if (colon < 0) return full;
-              const main = full.slice(0, colon + 2);
-              const sub = full.slice(colon + 2);
-              return (
-                <>
-                  {main}
-                  <span style={{ fontSize: '0.333em', verticalAlign: 'baseline' }}>{sub}</span>
-                </>
-              );
-            })()}
+            <AppTitleContent title={ct('app_title')} />
           </h1>
           <p style={{
             fontSize: '16px',
