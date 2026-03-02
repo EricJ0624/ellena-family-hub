@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -45,6 +45,7 @@ export default function MemoriesPage() {
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [lightboxViewport, setLightboxViewport] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -157,6 +158,27 @@ export default function MemoriesPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useLayoutEffect(() => {
+    if (selectedIndex === null || typeof window === 'undefined') return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setLightboxViewport({
+        top: vv.offsetTop,
+        left: vv.offsetLeft,
+        width: vv.width,
+        height: vv.height,
+      });
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [selectedIndex]);
 
   type Photo = import('@/app/contexts/AlbumContext').Photo;
   const groupedByDate = React.useMemo(() => {
@@ -771,14 +793,25 @@ export default function MemoriesPage() {
       </main>
 
       <AnimatePresence>
-        {selectedIndex !== null && displayListForLightbox[selectedIndex] && (
+        {selectedIndex !== null && displayListForLightbox[selectedIndex] && (() => {
+          const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
+          const dims = lightboxViewport.width > 0
+            ? lightboxViewport
+            : vv
+              ? { top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: vv.height }
+              : { top: 0, left: 0, width: typeof window !== 'undefined' ? window.innerWidth : 0, height: typeof window !== 'undefined' ? window.innerHeight : 0 };
+          return (
           <motion.div
+            key="lightbox"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{
               position: 'fixed',
-              inset: 0,
+              top: dims.top,
+              left: dims.left,
+              width: dims.width,
+              height: dims.height,
               background: 'rgba(0,0,0,0.95)',
               zIndex: 10000,
               display: 'flex',
@@ -850,8 +883,8 @@ export default function MemoriesPage() {
                 minHeight: 0,
                 minWidth: 0,
                 width: '100%',
-                maxWidth: '100vw',
-                maxHeight: 'calc(100vh - 100px)',
+                maxWidth: '100%',
+                maxHeight: '100%',
                 overflow: 'auto',
                 display: 'flex',
                 flexDirection: 'column',
@@ -978,7 +1011,8 @@ export default function MemoriesPage() {
               )}
             </div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
