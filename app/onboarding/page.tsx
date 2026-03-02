@@ -1496,6 +1496,7 @@ export default function OnboardingPage() {
                     justifyContent: 'center',
                     gap: '6px',
                     transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#f0f4ff';
@@ -1504,8 +1505,8 @@ export default function OnboardingPage() {
                     e.currentTarget.style.backgroundColor = 'white';
                   }}
                 >
-                  <Home style={{ width: '16px', height: '16px' }} />
-                  {ot('create_group')}
+                  <Home style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                  <span>{ot('create_group')}</span>
                 </button>
                 <button
                   onClick={() => {

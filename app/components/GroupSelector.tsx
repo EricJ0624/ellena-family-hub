@@ -188,11 +188,11 @@ const GroupSelector: React.FC = () => {
                 setError(null);
                 setSuccess(null);
               }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium whitespace-nowrap"
               aria-label={ot('create_group')}
             >
-              <Plus className="w-4 h-4" />
-              {ot('create_group')}
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span>{ot('create_group')}</span>
             </button>
             <button
               onClick={() => {
@@ -637,11 +637,11 @@ const GroupSelector: React.FC = () => {
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded transition-colors"
-aria-label={ot('create_group')}
-                  >
-                    <Plus className="w-4 h-4" />
-                  {ot('create_group')}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded transition-colors whitespace-nowrap"
+                  aria-label={ot('create_group')}
+                >
+                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  <span>{ot('create_group')}</span>
                 </button>
                 <button
                   onClick={() => {
