@@ -245,7 +245,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_groups: '📋 소유한 그룹:',
     delete_warning_owner_deleted: '⚠️ 삭제되는 내용:\n• 소유한 그룹이 영구적으로 삭제됩니다\n• 그룹의 모든 데이터가 삭제됩니다 (사진, 일정, 메모, 저금통 등)\n• 그룹의 모든 멤버가 자동으로 탈퇴됩니다\n• 이 작업은 되돌릴 수 없습니다',
     delete_warning_owner_final: '정말로 탈퇴하시겠습니까?',
-    section_title_memories: '가족 추억',
+    section_title_memories: '가족 앨범',
     section_title_chat: '가족 채팅',
     section_title_location: '가족 위치',
     section_title_calendar: '가족 일정',
