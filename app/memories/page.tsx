@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -45,6 +45,7 @@ export default function MemoriesPage() {
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [lightboxViewport, setLightboxViewport] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -157,6 +158,28 @@ export default function MemoriesPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useLayoutEffect(() => {
+    if (selectedIndex === null || typeof window === 'undefined') return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setLightboxViewport({
+        top: vv.offsetTop,
+        left: vv.offsetLeft,
+        width: vv.width,
+        height: vv.height,
+      });
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      setLightboxViewport({ top: 0, left: 0, width: 0, height: 0 });
+    };
+  }, [selectedIndex]);
 
   type Photo = import('@/app/contexts/AlbumContext').Photo;
   const groupedByDate = React.useMemo(() => {
@@ -771,7 +794,15 @@ export default function MemoriesPage() {
       </main>
 
       <AnimatePresence>
-        {selectedIndex !== null && displayListForLightbox[selectedIndex] && (
+        {selectedIndex !== null && displayListForLightbox[selectedIndex] && (() => {
+          const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
+          const fromVV = vv && typeof vv.width === 'number' && vv.width > 0
+            ? { top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: vv.height }
+            : null;
+          const dims = fromVV ?? (lightboxViewport.width > 0
+            ? lightboxViewport
+            : { top: 0, left: 0, width: typeof window !== 'undefined' ? window.innerWidth : 0, height: typeof window !== 'undefined' ? window.innerHeight : 0 });
+          return (
           <motion.div
             key="lightbox"
             initial={{ opacity: 0 }}
@@ -779,9 +810,10 @@ export default function MemoriesPage() {
             exit={{ opacity: 0 }}
             style={{
               position: 'fixed',
-              inset: 0,
-              width: typeof window !== 'undefined' ? window.innerWidth : '100%',
-              height: typeof window !== 'undefined' ? window.innerHeight : '100%',
+              top: dims.top,
+              left: dims.left,
+              width: dims.width,
+              height: dims.height,
               background: 'rgba(0,0,0,0.95)',
               zIndex: 10000,
               display: 'flex',
@@ -981,7 +1013,8 @@ export default function MemoriesPage() {
               )}
             </div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
