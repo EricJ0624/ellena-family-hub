@@ -795,13 +795,15 @@ export default function MemoriesPage() {
 
       <AnimatePresence>
         {selectedIndex !== null && displayListForLightbox[selectedIndex] && (() => {
+          const layoutW = typeof window !== 'undefined' ? window.innerWidth : 0;
+          const layoutH = typeof window !== 'undefined' ? window.innerHeight : 0;
           const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
-          const fromVV = vv && typeof vv.width === 'number' && vv.width > 0
-            ? { top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: vv.height }
-            : null;
-          const dims = fromVV ?? (lightboxViewport.width > 0
-            ? lightboxViewport
-            : { top: 0, left: 0, width: typeof window !== 'undefined' ? window.innerWidth : 0, height: typeof window !== 'undefined' ? window.innerHeight : 0 });
+          const vvValid = vv && typeof vv.width === 'number' && vv.width > 0;
+          const vLeft = vvValid ? vv!.offsetLeft - (layoutW - vv!.width) / 2 : 0;
+          const vTop = vvValid ? vv!.offsetTop - (layoutH - vv!.height) / 2 : 0;
+          const fromState = lightboxViewport.width > 0;
+          const left = vvValid ? vLeft : (fromState ? lightboxViewport.left - (layoutW - lightboxViewport.width) / 2 : 0);
+          const top = vvValid ? vTop : (fromState ? lightboxViewport.top - (layoutH - lightboxViewport.height) / 2 : 0);
           return (
           <motion.div
             key="lightbox"
@@ -810,10 +812,10 @@ export default function MemoriesPage() {
             exit={{ opacity: 0 }}
             style={{
               position: 'fixed',
-              top: dims.top,
-              left: dims.left,
-              width: dims.width,
-              height: dims.height,
+              top,
+              left,
+              width: layoutW,
+              height: layoutH,
               background: 'rgba(0,0,0,0.95)',
               zIndex: 10000,
               display: 'flex',
