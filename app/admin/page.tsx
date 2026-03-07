@@ -2502,17 +2502,17 @@ export default function AdminPage() {
                                     body: JSON.stringify({ userId: user.id }),
                                   });
 
-                                  const result = await response.json();
+                                  const result = await response.json().catch(() => ({}));
 
                                   if (!response.ok) {
-                                    throw new Error(result.error || at('error_force_leave'));
+                                    throw new Error((result as { error?: string })?.error || at('error_force_leave'));
                                   }
 
                                   alert(at('force_leave_done').replace(/\$\{name\}/g, userDisplayName));
                                   loadUsers(); // 목록 새로고침
                                 } catch (error: any) {
                                   console.error(`${at('force_leave_btn')} 오류:`, error);
-                                  alert(error.message || at('error_force_leave_msg'));
+                                  alert(error?.message || at('error_force_leave_msg'));
                                 } finally {
                                   setLoadingData(false);
                                 }
@@ -2776,7 +2776,8 @@ export default function AdminPage() {
                             cursor: 'pointer',
                           }}
                           onClick={async () => {
-                            if (!confirm(`정말로 "${group.name}" 그룹을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
+                            const msg = at('confirm_delete_group').replace(/\$\{groupName\}/g, group.name);
+                            if (!confirm(msg)) {
                               return;
                             }
 
@@ -2799,19 +2800,19 @@ export default function AdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '그룹 삭제에 실패했습니다.');
+                                throw new Error(result.error || at('error_delete_group'));
                               }
 
-                              alert('그룹이 삭제되었습니다.');
+                              alert(at('group_deleted'));
                               loadGroups(); // 목록 새로고침
                               loadManageableGroups(); // 관리 가능한 그룹 목록도 새로고침
                             } catch (error: any) {
                               console.error('그룹 삭제 오류:', error);
-                              alert(error.message || '그룹 삭제 중 오류가 발생했습니다.');
+                              alert(error.message || at('error_delete_group'));
                             }
                           }}
                         >
-                          삭제
+                          {at('delete_group_btn')}
                         </button>
                       </div>
                     </motion.div>
@@ -3294,7 +3295,11 @@ export default function AdminPage() {
                                             e.currentTarget.style.backgroundColor = '#fee2e2';
                                           }}
                                           onClick={async () => {
-                                            if (!confirm(`정말로 ${member.email || member.nickname || '이 멤버'}를 "${selectedGroup.name}" 그룹에서 추방하시겠습니까?`)) {
+                                            const memberDisplay = member.email || member.nickname || at('user_fallback');
+                                            const kickMsg = at('confirm_kick_from_group')
+                                              .replace(/\$\{memberDisplay\}/g, memberDisplay)
+                                              .replace(/\$\{groupName\}/g, selectedGroup.name);
+                                            if (!confirm(kickMsg)) {
                                               return;
                                             }
 
@@ -3308,21 +3313,21 @@ export default function AdminPage() {
 
                                               if (error) throw error;
 
-                                              alert('멤버가 그룹에서 추방되었습니다.');
+                                              alert(at('kick_done'));
                                               if (selectedGroupId) {
                                                 loadGroupMembers(selectedGroupId);
                                                 loadGroupStats(selectedGroupId);
                                               }
                                             } catch (err: any) {
                                               console.error('멤버 추방 오류:', err);
-                                              alert(err.message || '멤버 추방 중 오류가 발생했습니다.');
+                                              alert(err.message || at('error_kick_msg'));
                                             } finally {
                                               setLoadingData(false);
                                             }
                                           }}
                                         >
                                           <UserX style={{ width: '14px', height: '14px' }} />
-                                          추방
+                                          {at('kick_btn')}
                                         </button>
                                       )}
                                       <button
@@ -3380,10 +3385,10 @@ export default function AdminPage() {
                                               body: JSON.stringify({ userId: member.user_id }),
                                             });
 
-                                            const result = await response.json();
+                                            const result = await response.json().catch(() => ({}));
 
                                             if (!response.ok) {
-                                              throw new Error(result.error || at('error_force_leave'));
+                                              throw new Error((result as { error?: string })?.error || at('error_force_leave'));
                                             }
 
                                             alert(at('force_leave_done').replace(/\$\{name\}/g, userDisplayName));
@@ -3393,7 +3398,7 @@ export default function AdminPage() {
                                             }
                                           } catch (error: any) {
                                             console.error(`${at('force_leave_btn')} 오류:`, error);
-                                            alert(error.message || at('error_force_leave_msg'));
+                                            alert(error?.message || at('error_force_leave_msg'));
                                           } finally {
                                             setLoadingData(false);
                                           }

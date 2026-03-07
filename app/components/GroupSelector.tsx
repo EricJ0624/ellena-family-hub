@@ -471,8 +471,10 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 bg-black/50 z-40"
                 onClick={() => {
                   setShowJoinFamilyRoleModal(false);
+                  setCurrentGroupId(joinedGroupId);
                   setJoinedGroupId(null);
                   setJoinFamilyRole('');
+                  refreshGroups();
                 }}
                 aria-hidden="true"
               />
@@ -489,8 +491,10 @@ const GroupSelector: React.FC = () => {
                     <button
                       onClick={() => {
                         setShowJoinFamilyRoleModal(false);
+                        setCurrentGroupId(joinedGroupId);
                         setJoinedGroupId(null);
                         setJoinFamilyRole('');
+                        refreshGroups();
                       }}
                       className="text-gray-400 hover:text-gray-600"
                       aria-label={ct('close')}
@@ -512,10 +516,12 @@ const GroupSelector: React.FC = () => {
                     </select>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           setShowJoinFamilyRoleModal(false);
+                          setCurrentGroupId(joinedGroupId);
                           setJoinedGroupId(null);
                           setJoinFamilyRole('');
+                          await refreshGroups();
                         }}
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                       >
@@ -527,6 +533,7 @@ const GroupSelector: React.FC = () => {
                           const { data: { session } } = await supabase.auth.getSession();
                           if (!user || !session?.access_token || !joinedGroupId) {
                             setShowJoinFamilyRoleModal(false);
+                            setCurrentGroupId(joinedGroupId);
                             setJoinedGroupId(null);
                             return;
                           }
@@ -543,6 +550,7 @@ const GroupSelector: React.FC = () => {
                             }
                           }
                           setShowJoinFamilyRoleModal(false);
+                          setCurrentGroupId(joinedGroupId);
                           setJoinedGroupId(null);
                           setJoinFamilyRole('');
                           await refreshGroups();
@@ -891,6 +899,110 @@ const GroupSelector: React.FC = () => {
                         ) : (
                           ot('join_short')
                         )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* 가입 후 가족 표시 선택 모달 (그룹이 있을 때 초대 코드 가입 후) */}
+        <AnimatePresence>
+          {showJoinFamilyRoleModal && joinedGroupId && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 z-40"
+                onClick={() => {
+                  setShowJoinFamilyRoleModal(false);
+                  setCurrentGroupId(joinedGroupId);
+                  setJoinedGroupId(null);
+                  setJoinFamilyRole('');
+                  refreshGroups();
+                }}
+                aria-hidden="true"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">{mmt('family_role_label')}</h3>
+                    <button
+                      onClick={() => {
+                        setShowJoinFamilyRoleModal(false);
+                        setCurrentGroupId(joinedGroupId);
+                        setJoinedGroupId(null);
+                        setJoinFamilyRole('');
+                        refreshGroups();
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                      aria-label={ct('close')}
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
+                  <div className="space-y-4">
+                    <select
+                      value={joinFamilyRole}
+                      onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'other')}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">{mmt('family_role_none')}</option>
+                      <option value="son">{mmt('family_role_son')}</option>
+                      <option value="daughter">{mmt('family_role_daughter')}</option>
+                      <option value="other">{mmt('family_role_other')}</option>
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          setShowJoinFamilyRoleModal(false);
+                          setCurrentGroupId(joinedGroupId);
+                          setJoinedGroupId(null);
+                          setJoinFamilyRole('');
+                          await refreshGroups();
+                        }}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                      >
+                        {ct('skip')}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const { data: { user } } = await supabase.auth.getUser();
+                          const { data: { session } } = await supabase.auth.getSession();
+                          if (!user || !session?.access_token || !joinedGroupId) {
+                            setShowJoinFamilyRoleModal(false);
+                            setCurrentGroupId(joinedGroupId);
+                            setJoinedGroupId(null);
+                            return;
+                          }
+                          if (joinFamilyRole) {
+                            try {
+                              const res = await fetch('/api/groups/members/family-role', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+                                body: JSON.stringify({ targetUserId: user.id, groupId: joinedGroupId, familyRole: joinFamilyRole }),
+                              });
+                              if (!res.ok) console.warn('가족 표시 저장 실패');
+                            } catch (e) {
+                              console.warn('가족 표시 저장 실패', e);
+                            }
+                          }
+                          setShowJoinFamilyRoleModal(false);
+                          setCurrentGroupId(joinedGroupId);
+                          setJoinedGroupId(null);
+                          setJoinFamilyRole('');
+                          await refreshGroups();
+                        }}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        {ct('save')}
                       </button>
                     </div>
                   </div>

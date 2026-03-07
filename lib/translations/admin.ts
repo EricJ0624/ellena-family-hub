@@ -138,6 +138,14 @@ export type AdminTranslations = {
   error_announcement_update_failed: string;
   error_announcement_create_failed: string;
   confirm_permanent_delete: string;
+  confirm_delete_group: string;
+  group_deleted: string;
+  error_delete_group: string;
+  delete_group_btn: string;
+  confirm_kick_from_group: string;
+  kick_done: string;
+  error_kick_msg: string;
+  kick_btn: string;
 }
 
 const auditHeadersKo = ['일시', '작업자(admin_id)', '작업', '리소스 유형', '리소스 ID', '그룹 ID', '대상 사용자', '상세', 'IP', 'User-Agent'];
@@ -213,7 +221,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     only_one_sys_admin: '시스템 관리자는 1명만 지정할 수 있습니다. 기존 관리자의 권한을 먼저 해제해주세요.',
     no_self_delete: '본인의 계정은 삭제할 수 없습니다.',
     confirm_force_leave: '"${name}" 회원을 강제 탈퇴시키겠습니까?',
-    confirm_force_leave_warning: '정말로 "${name}" 회원을 강제 탈퇴 처리하시겠습니까? 되돌릴 수 없습니다.',
+    confirm_force_leave_warning: '정말로 "${name}" 회원을 강제 탈퇴 처리하시겠습니까?\n\n해당 회원의 데이터가 영구적으로 삭제되며 복구할 수 없습니다. 이 작업은 되돌릴 수 없습니다.',
     force_leave_done: '"${name}" 회원이 강제 탈퇴 처리되었습니다.',
     error_force_leave_msg: '회원 강제 탈퇴 중 오류가 발생했습니다.',
     user_fallback: '이 사용자',
@@ -281,6 +289,14 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_announcement_update_failed: '공지 수정에 실패했습니다.',
     error_announcement_create_failed: '공지 작성에 실패했습니다.',
     confirm_permanent_delete: '이 공지사항을 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+    confirm_delete_group: '정말로 "${groupName}" 그룹을 삭제하시겠습니까?\n\n이 그룹의 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다. 이 작업은 되돌릴 수 없습니다.',
+    group_deleted: '그룹이 삭제되었습니다.',
+    error_delete_group: '그룹 삭제에 실패했습니다.',
+    delete_group_btn: '삭제',
+    confirm_kick_from_group: '정말로 "${memberDisplay}"를 "${groupName}" 그룹에서 추방하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다. 해당 그룹 내 해당 회원의 데이터가 삭제되며 복구할 수 없습니다.',
+    kick_done: '멤버가 그룹에서 추방되었습니다.',
+    error_kick_msg: '멤버 추방 중 오류가 발생했습니다.',
+    kick_btn: '추방',
   },
   en: {
     page_title: 'Admin',
@@ -352,7 +368,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     only_one_sys_admin: 'Only one system admin can be set. Revoke the existing one first.',
     no_self_delete: 'You cannot delete your own account.',
     confirm_force_leave: 'Remove "${name}" from the system?',
-    confirm_force_leave_warning: 'Really remove "${name}"? This cannot be undone.',
+    confirm_force_leave_warning: 'Really remove "${name}"?\n\nThat member\'s data will be permanently deleted and cannot be recovered. This cannot be undone.',
     force_leave_done: '"${name}" has been removed.',
     error_force_leave_msg: 'Failed to remove user.',
     user_fallback: 'This user',
@@ -420,6 +436,14 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_announcement_update_failed: 'Failed to update announcement.',
     error_announcement_create_failed: 'Failed to create announcement.',
     confirm_permanent_delete: 'Permanently delete this announcement? This cannot be undone.',
+    confirm_delete_group: 'Really delete the group "${groupName}"?\n\nAll data in this group will be permanently deleted and cannot be recovered. This cannot be undone.',
+    group_deleted: 'Group deleted.',
+    error_delete_group: 'Failed to delete group.',
+    delete_group_btn: 'Delete',
+    confirm_kick_from_group: 'Really remove "${memberDisplay}" from the group "${groupName}"?\n\nThis cannot be undone. That member\'s data in this group will be deleted and cannot be recovered.',
+    kick_done: 'Member has been removed from the group.',
+    error_kick_msg: 'Failed to remove member from group.',
+    kick_btn: 'Remove',
   },
   ja: {
     page_title: '管理画面',
@@ -491,7 +515,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     only_one_sys_admin: 'システム管理者は1名のみ指定できます。既存の管理者の権限を先に解除してください。',
     no_self_delete: '自分のアカウントは削除できません。',
     confirm_force_leave: '"${name}"を強制退会させますか？',
-    confirm_force_leave_warning: '本当に"${name}"を削除しますか？取り消せません。',
+    confirm_force_leave_warning: '本当に"${name}"を削除しますか？\n\n該当会員のデータは完全に削除され、復元できません。この操作は取り消せません。',
     force_leave_done: '"${name}"を削除しました。',
     error_force_leave_msg: '強制退会に失敗しました。',
     user_fallback: 'このユーザー',
@@ -559,6 +583,14 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_announcement_update_failed: 'お知らせの更新に失敗しました。',
     error_announcement_create_failed: 'お知らせの作成に失敗しました。',
     confirm_permanent_delete: 'このお知らせを完全に削除しますか？元に戻せません。',
+    confirm_delete_group: '本当に「${groupName}」グループを削除しますか？\n\nこのグループのすべてのデータは完全に削除され、復元できません。この操作は取り消せません。',
+    group_deleted: 'グループを削除しました。',
+    error_delete_group: 'グループの削除に失敗しました。',
+    delete_group_btn: '削除',
+    confirm_kick_from_group: '本当に「${memberDisplay}」を「${groupName}」グループから削除しますか？\n\nこの操作は取り消せません。該当メンバーのデータは削除され、復元できません。',
+    kick_done: 'メンバーをグループから削除しました。',
+    error_kick_msg: 'メンバーの削除に失敗しました。',
+    kick_btn: '削除',
   },
   'zh-CN': {
     page_title: '管理后台',
@@ -630,7 +662,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     only_one_sys_admin: '系统管理员仅可指定一人。请先解除现有管理员权限。',
     no_self_delete: '无法删除自己的账户。',
     confirm_force_leave: '强制「${name}」退会？',
-    confirm_force_leave_warning: '确定要移除「${name}」？此操作无法撤销。',
+    confirm_force_leave_warning: '确定要移除「${name}」？\n\n该成员的数据将被永久删除且无法恢复。此操作无法撤销。',
     force_leave_done: '已移除「${name}」。',
     error_force_leave_msg: '强制退会失败。',
     user_fallback: '该用户',
@@ -698,6 +730,14 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_announcement_update_failed: '更新公告失败。',
     error_announcement_create_failed: '创建公告失败。',
     confirm_permanent_delete: '确定永久删除此公告？此操作无法撤销。',
+    confirm_delete_group: '确定要删除群组「${groupName}」？\n\n该群组所有数据将被永久删除且无法恢复。此操作无法撤销。',
+    group_deleted: '群组已删除。',
+    error_delete_group: '删除群组失败。',
+    delete_group_btn: '删除',
+    confirm_kick_from_group: '确定要将「${memberDisplay}」从群组「${groupName}」中移除？\n\n此操作无法撤销。该成员在此群组内的数据将被删除且无法恢复。',
+    kick_done: '已将该成员移出群组。',
+    error_kick_msg: '移除成员失败。',
+    kick_btn: '移除',
   },
   'zh-TW': {
     page_title: '管理後台',
@@ -769,7 +809,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     only_one_sys_admin: '系統管理員僅可指定一人。請先解除現有管理員權限。',
     no_self_delete: '無法刪除自己的帳戶。',
     confirm_force_leave: '強制「${name}」退會？',
-    confirm_force_leave_warning: '確定要移除「${name}」？此操作無法復原。',
+    confirm_force_leave_warning: '確定要移除「${name}」？\n\n該成員的資料將被永久刪除且無法復原。此操作無法復原。',
     force_leave_done: '已移除「${name}」。',
     error_force_leave_msg: '強制退會失敗。',
     user_fallback: '該用戶',
@@ -837,6 +877,14 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_announcement_update_failed: '更新公告失敗。',
     error_announcement_create_failed: '建立公告失敗。',
     confirm_permanent_delete: '確定永久刪除此公告？此操作無法復原。',
+    confirm_delete_group: '確定要刪除群組「${groupName}」？\n\n該群組所有資料將被永久刪除且無法復原。此操作無法復原。',
+    group_deleted: '群組已刪除。',
+    error_delete_group: '刪除群組失敗。',
+    delete_group_btn: '刪除',
+    confirm_kick_from_group: '確定要將「${memberDisplay}」從群組「${groupName}」中移除？\n\n此操作無法復原。該成員在此群組內的資料將被刪除且無法復原。',
+    kick_done: '已將該成員移出群組。',
+    error_kick_msg: '移除成員失敗。',
+    kick_btn: '移除',
   },
 };
 

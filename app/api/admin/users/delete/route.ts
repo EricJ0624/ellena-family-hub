@@ -45,7 +45,12 @@ export async function DELETE(request: NextRequest) {
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      throw deleteError;
+      const err = deleteError as { message?: string; status?: number };
+      const msg = err?.message || deleteError.message || '사용자 삭제에 실패했습니다.';
+      console.error('deleteUser 실패:', msg, deleteError);
+      const ex = new Error(msg) as Error & { status?: number };
+      ex.status = err?.status ?? 500;
+      throw ex;
     }
 
     const { ipAddress, userAgent } = getAuditRequestMeta(request);
@@ -65,9 +70,11 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('사용자 삭제 오류:', error);
+    const message = error?.message || '사용자 삭제 중 오류가 발생했습니다.';
+    const status = error?.status >= 400 ? error.status : 500;
     return NextResponse.json(
-      { error: error.message || '사용자 삭제 중 오류가 발생했습니다.' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
