@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
 import type { LangCode } from '@/lib/language-fonts';
 import { useLanguage } from '@/app/contexts/LanguageContext';
+import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -32,6 +33,7 @@ interface UserGroup {
 export default function OnboardingPage() {
   const router = useRouter();
   const { lang } = useLanguage();
+  const { setCurrentGroupId } = useGroup();
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
     getMemberManagementTranslation(lang, key);
@@ -67,6 +69,9 @@ export default function OnboardingPage() {
   // 에러 및 성공 메시지
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // 가입 버튼 연타 방지 (가입 성공 후 두 번째 요청이 'Already a member'로 에러 뜨는 것 방지)
+  const joinInProgressRef = useRef(false);
 
   // 초기화: 사용자 정보 및 그룹 확인
   useEffect(() => {
@@ -334,6 +339,9 @@ export default function OnboardingPage() {
       setError(ot('error_group_check'));
       return;
     }
+    // 연타 방지: 이미 가입 요청 중이면 무시 (두 번째 요청이 'Already a member' 에러로 뜨는 것 방지)
+    if (joinInProgressRef.current) return;
+    joinInProgressRef.current = true;
 
     setJoining(true);
     setError(null);
@@ -347,19 +355,30 @@ export default function OnboardingPage() {
       if (joinError) throw joinError;
 
       setSuccess(ot('success_joined'));
-
-      if (joinedGroupIdData) {
-        setJoinedGroupId(joinedGroupIdData);
+      const groupId = joinedGroupIdData ?? groupPreview.id;
+      if (groupId) {
+        setJoinedGroupId(groupId);
         setJoinFamilyRole('');
+        setCurrentGroupId(groupId);
         setShowJoinFamilyRoleModal(true);
       } else {
         setTimeout(() => router.push('/dashboard'), 1500);
       }
     } catch (err: any) {
-      console.error('그룹 가입 오류:', err);
-      setError(err.message || ot('error_join_failed'));
+      const msg = err?.message ?? '';
+      const isAlreadyMember = msg.includes('Already a member of this group') || msg.includes('이미 해당 그룹의 멤버');
+      if (isAlreadyMember && groupPreview?.id) {
+        // 이미 가입된 멤버 → 역할 선택 없이 해당 그룹으로 대시보드 이동
+        setError(null);
+        setCurrentGroupId(groupPreview.id);
+        router.push('/dashboard');
+      } else {
+        console.error('그룹 가입 오류:', err);
+        setError(msg || ot('error_join_failed'));
+      }
     } finally {
       setJoining(false);
+      joinInProgressRef.current = false;
     }
   };
 
