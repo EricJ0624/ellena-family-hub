@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 사용자가 해당 그룹의 멤버인지 확인
+    // 해당 그룹 멤버인지 확인 (그룹 페이지 진입 가능한 사용자만 공지 조회)
     const { data: membership, error: membershipError } = await supabase
       .from('memberships')
       .select('id')
@@ -40,12 +40,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 공지사항 목록 조회 (활성 + ALL_MEMBERS 공지만)
+    // 공지사항 목록 조회 (활성 + 대상이 '모든 멤버'(ALL_MEMBERS)인 공지만, target null인 레거시 행 포함)
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')
       .eq('is_active', true)
-      .eq('target', 'ALL_MEMBERS')
+      .or('target.eq.ALL_MEMBERS,target.is.null')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -117,7 +117,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 사용자가 해당 그룹의 멤버인지 확인
     const { data: membership, error: membershipError } = await supabase
       .from('memberships')
       .select('id')

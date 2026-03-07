@@ -6223,7 +6223,7 @@ export default function FamilyHub() {
     }
   };
 
-  // 공지사항 로드 함수
+  // 공지사항 로드 (그룹 페이지 진입 후에만 - group_id 필수)
   const loadAnnouncements = useCallback(async () => {
     if (!currentGroupId || !userId) return;
 
@@ -6231,9 +6231,8 @@ export default function FamilyHub() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      // 관리자/소유자는 모든 공지, 일반 멤버는 ALL_MEMBERS 공지만
       const isAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
-      const apiUrl = isAdmin 
+      const apiUrl = isAdmin
         ? `/api/group-admin/announcements?group_id=${currentGroupId}`
         : `/api/announcements?group_id=${currentGroupId}`;
 
@@ -6292,10 +6291,9 @@ export default function FamilyHub() {
     setIsOwner(groupIsOwner);
   }, [currentGroupId, userId, groupUserRole, groupIsOwner]);
 
-  // 공지사항 로드 (모든 멤버)
+  // 공지사항 로드 (그룹 선택된 상태에서만)
   useEffect(() => {
     if (!currentGroupId || !userId) return;
-
     loadAnnouncements();
   }, [currentGroupId, userId, groupUserRole, groupIsOwner, loadAnnouncements]);
 
