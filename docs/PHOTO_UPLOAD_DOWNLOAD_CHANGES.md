@@ -40,6 +40,12 @@
 - Cloudinary: **변환(processing)만** 담당. 변환 결과는 CloudFront로 1회 전달.
 - 한 파일당: Cloudinary는 1회 변환·1회 전달 목적. 장기 저장은 CloudFront(1년)만.
 
+**일반 이미지 표시 경로 (목표 구현):**
+- 브라우저 요청 `/api/photo/proxy?key=...` → `CLOUDFRONT_IMAGE_DOMAIN` 있으면 **302 → CloudFront** `https://<cf도메인>/api/photo/serve?key=...`.
+- CloudFront 캐시 미스 시에만 Origin(우리 앱) `GET /api/photo/serve?key=...` 호출 → 서버가 Cloudinary fetch 후 200 스트림 → CloudFront가 캐시(1년).
+- 이후 동일 이미지 요청은 CloudFront 캐시에서만 응답 (Cloudinary·우리 API 미호출).
+- **당신이 할 설정**: [CLOUDFRONT_IMAGE_DELIVERY_SETUP.md](./CLOUDFRONT_IMAGE_DELIVERY_SETUP.md) 참고.
+
 ### 3-1. 사진 파일로 저장 (다운로드 버튼)
 
 - **API**: `GET /api/photo/download?id=<memory_vault.id>`  
