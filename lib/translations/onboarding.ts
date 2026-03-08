@@ -24,6 +24,7 @@ export type OnboardingTranslations = {
   member_count: string;
   member_count_suffix: string; // e.g. "명", " members", "人"
   join_btn: string;
+  go_to_group_btn: string;
   copy_title: string;
   create_btn: string;
   error_init: string;
@@ -77,6 +78,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count: '멤버 수',
     member_count_suffix: '명',
     join_btn: '가입하기',
+    go_to_group_btn: '그룹으로 이동',
     copy_title: '복사',
     create_btn: '그룹 만들기',
     error_init: '초기화 중 오류가 발생했습니다.',
@@ -128,6 +130,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count: 'Members',
     member_count_suffix: ' members',
     join_btn: 'Join',
+    go_to_group_btn: 'Go to group',
     copy_title: 'Copy',
     create_btn: 'Create group',
     error_init: 'An error occurred during initialization.',
@@ -179,6 +182,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count: 'メンバー数',
     member_count_suffix: '人',
     join_btn: '参加する',
+    go_to_group_btn: 'グループへ移動',
     copy_title: 'コピー',
     create_btn: 'グループ作成',
     error_init: '初期化中にエラーが発生しました。',
@@ -230,6 +234,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count: '成员数',
     member_count_suffix: '人',
     join_btn: '加入',
+    go_to_group_btn: '前往群组',
     copy_title: '复制',
     create_btn: '创建群组',
     error_init: '初始化时发生错误。',
@@ -281,6 +286,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count: '成員數',
     member_count_suffix: '人',
     join_btn: '加入',
+    go_to_group_btn: '前往群組',
     copy_title: '複製',
     create_btn: '建立群組',
     error_init: '初始化時發生錯誤。',

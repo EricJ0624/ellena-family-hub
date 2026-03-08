@@ -1292,34 +1292,34 @@ export default function OnboardingPage() {
                         다시 입력
                       </button>
                       <button
-                        onClick={handleJoinGroup}
-                        disabled={joining}
+                        onClick={joinedGroupId && groupPreview?.id === joinedGroupId ? handleGoToDashboard : handleJoinGroup}
+                        disabled={joining && !(joinedGroupId && groupPreview?.id === joinedGroupId)}
                         style={{
                           flex: 1,
                           padding: '14px 24px',
-                          backgroundColor: joining ? '#94a3b8' : '#667eea',
+                          backgroundColor: joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? '#94a3b8' : '#667eea',
                           color: 'white',
                           border: 'none',
                           borderRadius: '12px',
                           fontSize: '14px',
                           fontWeight: '600',
-                          cursor: joining ? 'not-allowed' : 'pointer',
+                          cursor: joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? 'not-allowed' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '8px',
-                          boxShadow: joining ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
+                          boxShadow: joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
                           transition: 'all 0.3s ease',
                         }}
                       >
-                        {joining ? (
+                        {joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? (
                           <>
                             <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
                             가입 중...
                           </>
                         ) : (
                           <>
-                            {ot('join_btn')}
+                            {joinedGroupId && groupPreview?.id === joinedGroupId ? ot('go_to_group_btn') : ot('join_btn')}
                             <ArrowRight style={{ width: '18px', height: '18px' }} />
                           </>
                         )}
