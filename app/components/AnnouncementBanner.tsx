@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Megaphone, X } from 'lucide-react';
 
-/** 공지 배너가 한 사이클에 이동하는 속도 (px/s). 이 값으로 내용 길이와 관계없이 동일한 체감 속도 유지 */
+/** 공지 배너가 한 사이클에 이동하는 속도 (px/s). 이 값으로 공지 개수/길이와 관계없이 동일한 체감 속도 유지 */
 const MARQUEE_PIXELS_PER_SECOND = 50;
-const MARQUEE_DURATION_MIN = 12;
+/** 최소 duration(초). 너무 낮으면 1개 공지일 때도 50px/s 유지 가능. 높이면 1개일 때 느려짐 */
+const MARQUEE_DURATION_MIN = 3;
 const MARQUEE_DURATION_MAX = 120;
 
 interface Announcement {
@@ -41,7 +42,9 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
     if (!el) return;
 
     const measure = () => {
+      // 레이아웃 완료 후 scrollWidth 측정 (공지 개수/내용에 따라 달라짐)
       const width = el.scrollWidth;
+      if (width <= 0) return;
       // 키프레임이 -50% 이동하므로 한 사이클 이동 거리 = width * 0.5
       const distancePerCycle = width * 0.5;
       const duration = Math.max(
@@ -51,10 +54,16 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
       setAnimationDuration(duration);
     };
 
-    measure();
+    // 첫 측정: 레이아웃 후 한 프레임 뒤에 측정 (공지 1개 vs 2개 모두 정확한 width 반영)
+    const raf = requestAnimationFrame(() => {
+      measure();
+    });
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, [displayAnnouncements.length, unreadAnnouncements.map(a => a.id).join(',')]);
 
   const handleAnnouncementClick = (announcement: Announcement) => {
