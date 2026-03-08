@@ -77,11 +77,14 @@ export default function MemoriesPage() {
   const ZOOM_THRESHOLD = 0.92;
   const baseWidthRef = useRef(0);
   const lightboxOpenRef = useRef(false);
+  /** 라이트박스 열릴 때 뷰포트 크기 고정 → 줌인 시에도 사진이 작아지지 않음 */
+  const lightboxSizeRef = useRef<{ w: number; h: number } | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const headerRefWidthRef = useRef<number>(0);
   const [viewportWidth, setViewportWidth] = useState<number>(1200);
   const [headerScale, setHeaderScale] = useState<number>(1);
   lightboxOpenRef.current = selectedIndex !== null;
+  if (selectedIndex === null) lightboxSizeRef.current = null;
   useEffect(() => {
     let rafId: number | undefined;
     const updateColumns = () => {
@@ -847,13 +850,18 @@ export default function MemoriesPage() {
         {selectedIndex !== null && displayListForLightbox[selectedIndex] && (() => {
           const layoutW = typeof window !== 'undefined' ? window.innerWidth : 0;
           const layoutH = typeof window !== 'undefined' ? window.innerHeight : 0;
+          if (typeof window !== 'undefined' && !lightboxSizeRef.current) {
+            lightboxSizeRef.current = { w: window.innerWidth, h: window.innerHeight };
+          }
+          const sizeW = lightboxSizeRef.current?.w ?? layoutW;
+          const sizeH = lightboxSizeRef.current?.h ?? layoutH;
           const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
           const vvValid = vv && typeof vv.width === 'number' && vv.width > 0;
-          const vLeft = vvValid ? vv!.offsetLeft - (layoutW - vv!.width) / 2 : 0;
-          const vTop = vvValid ? vv!.offsetTop - (layoutH - vv!.height) / 2 : 0;
+          const vLeft = vvValid ? vv!.offsetLeft - (sizeW - vv!.width) / 2 : 0;
+          const vTop = vvValid ? vv!.offsetTop - (sizeH - vv!.height) / 2 : 0;
           const fromState = lightboxViewport.width > 0;
-          const left = vvValid ? vLeft : (fromState ? lightboxViewport.left - (layoutW - lightboxViewport.width) / 2 : 0);
-          const top = vvValid ? vTop : (fromState ? lightboxViewport.top - (layoutH - lightboxViewport.height) / 2 : 0);
+          const left = vvValid ? vLeft : (fromState ? lightboxViewport.left - (sizeW - lightboxViewport.width) / 2 : 0);
+          const top = vvValid ? vTop : (fromState ? lightboxViewport.top - (sizeH - lightboxViewport.height) / 2 : 0);
           return (
           <motion.div
             key="lightbox"
@@ -864,8 +872,8 @@ export default function MemoriesPage() {
               position: 'fixed',
               top,
               left,
-              width: layoutW,
-              height: layoutH,
+              width: sizeW,
+              height: sizeH,
               background: 'rgba(0,0,0,0.95)',
               zIndex: 10000,
               display: 'flex',
