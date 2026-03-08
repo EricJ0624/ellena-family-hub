@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { ChevronLeft, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, X, Trash2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
@@ -908,6 +908,67 @@ export default function MemoriesPage() {
             >
               <Trash2 size={20} />
             </button>
+            {displayListForLightbox[selectedIndex].supabaseId && (() => {
+              const photo = displayListForLightbox[selectedIndex];
+              const modeLabel = photo.upload_mode === 'original' ? dt('photo_download_original') : dt('photo_download_normal');
+              const downloadLabel = `${dt('photo_download')} (${modeLabel})`;
+              return (
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.access_token) {
+                      alert(dt('photo_download_auth_required'));
+                      return;
+                    }
+                    const id = String(photo.supabaseId ?? photo.id);
+                    const res = await fetch(`/api/photo/download?id=${encodeURIComponent(id)}`, {
+                      headers: { Authorization: `Bearer ${session.access_token}` },
+                    });
+                    if (!res.ok) {
+                      const j = await res.json().catch(() => ({}));
+                      alert(j?.error || dt('photo_download_failed'));
+                      return;
+                    }
+                    const blob = await res.blob();
+                    const disp = res.headers.get('Content-Disposition');
+                    const match = disp && /filename\*?=(?:UTF-8'')?([^;]+)|filename="?([^";]+)"?/i.exec(disp);
+                    const filename = (match && (decodeURIComponent(match[1]?.replace(/^"|"$/g, '') || '') || match[2]?.replace(/^"|"$/g, ''))) || `photo-${id}.jpg`;
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  } catch (err) {
+                    console.error(err);
+                    alert(dt('photo_download_failed'));
+                  }
+                }}
+                aria-label={downloadLabel}
+                title={downloadLabel}
+                style={{
+                  position: 'absolute',
+                  top: 12,
+                  left: 60,
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 40,
+                  height: 40,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#fff',
+                  zIndex: 1,
+                }}
+              >
+                <Download size={20} />
+              </button>
+              );
+            })()}
             <button
               type="button"
               onClick={closeLightbox}

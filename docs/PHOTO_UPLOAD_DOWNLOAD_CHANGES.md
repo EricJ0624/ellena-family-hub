@@ -40,6 +40,15 @@
 - Cloudinary: **변환(processing)만** 담당. 변환 결과는 CloudFront로 1회 전달.
 - 한 파일당: Cloudinary는 1회 변환·1회 전달 목적. 장기 저장은 CloudFront(1년)만.
 
+### 3-1. 사진 파일로 저장 (다운로드 버튼)
+
+- **API**: `GET /api/photo/download?id=<memory_vault.id>`  
+  - `Authorization: Bearer <access_token>` 필요.  
+  - 해당 행의 `group_id`로 권한 검사 후, `s3_key`로 S3에서 읽어 스트림 반환.  
+  - `Content-Disposition: attachment` + `original_filename`(또는 기본 파일명) 사용.
+- **UI**: 가족앨범(메모리) 라이트박스에서 업로드된 사진(`supabaseId` 있음)에 한해 **다운로드** 버튼 표시.  
+  - 클릭 시 위 API를 토큰과 함께 호출한 뒤, 응답 Blob을 파일로 저장.
+
 ---
 
 ## 4. 제거할 코드 (app 관련)

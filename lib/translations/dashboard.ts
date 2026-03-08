@@ -146,6 +146,12 @@ export type DashboardTranslations = {
   invalid_filename: string;
   image_processing_error: string;
   file_input_reset_error: string;
+  // Photo download (memories lightbox)
+  photo_download: string;
+  photo_download_normal: string;
+  photo_download_original: string;
+  photo_download_auth_required: string;
+  photo_download_failed: string;
   // Calendar weekdays (Sun–Sat) and nav
   calendar_weekday_0: string;
   calendar_weekday_1: string;
@@ -292,6 +298,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '유효하지 않은 파일명입니다.',
     image_processing_error: '이미지 처리 중 오류가 발생했습니다: ',
     file_input_reset_error: '파일 입력을 초기화할 수 없습니다. 페이지를 새로고침해주세요.',
+    photo_download: '다운로드',
+    photo_download_normal: '일반사진',
+    photo_download_original: '원본사진',
+    photo_download_auth_required: '다운로드하려면 로그인이 필요합니다.',
+    photo_download_failed: '다운로드 중 오류가 발생했습니다.',
     calendar_weekday_0: '일',
     calendar_weekday_1: '월',
     calendar_weekday_2: '화',
@@ -435,6 +446,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: 'Invalid filename.',
     image_processing_error: 'An error occurred while processing the image: ',
     file_input_reset_error: 'Could not reset file input. Please refresh the page.',
+    photo_download: 'Download',
+    photo_download_normal: 'Normal (compressed)',
+    photo_download_original: 'Original',
+    photo_download_auth_required: 'Please log in to download.',
+    photo_download_failed: 'Download failed.',
     calendar_weekday_0: 'Sun',
     calendar_weekday_1: 'Mon',
     calendar_weekday_2: 'Tue',
@@ -578,6 +594,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '無効なファイル名です。',
     image_processing_error: '画像の処理中にエラーが発生しました: ',
     file_input_reset_error: 'ファイル入力をリセットできません。ページを再読み込みしてください。',
+    photo_download: 'ダウンロード',
+    photo_download_normal: '通常（圧縮）',
+    photo_download_original: 'オリジナル',
+    photo_download_auth_required: 'ダウンロードにはログインが必要です。',
+    photo_download_failed: 'ダウンロードに失敗しました。',
     calendar_weekday_0: '日',
     calendar_weekday_1: '月',
     calendar_weekday_2: '火',
@@ -721,6 +742,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '文件名无效。',
     image_processing_error: '处理图片时发生错误：',
     file_input_reset_error: '无法重置文件输入，请刷新页面。',
+    photo_download: '下载',
+    photo_download_normal: '普通（压缩）',
+    photo_download_original: '原图',
+    photo_download_auth_required: '请登录后再下载。',
+    photo_download_failed: '下载失败。',
     calendar_weekday_0: '日',
     calendar_weekday_1: '一',
     calendar_weekday_2: '二',
@@ -864,6 +890,11 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     invalid_filename: '檔案名稱無效。',
     image_processing_error: '處理圖片時發生錯誤：',
     file_input_reset_error: '無法重設檔案輸入，請重新整理頁面。',
+    photo_download: '下載',
+    photo_download_normal: '一般（壓縮）',
+    photo_download_original: '原圖',
+    photo_download_auth_required: '請先登入才能下載。',
+    photo_download_failed: '下載失敗。',
     calendar_weekday_0: '日',
     calendar_weekday_1: '一',
     calendar_weekday_2: '二',
