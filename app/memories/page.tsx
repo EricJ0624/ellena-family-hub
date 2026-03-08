@@ -73,15 +73,9 @@ export default function MemoriesPage() {
   const markImageFailed = (id: string | number) =>
     setFailedImageIds((prev) => new Set(prev).add(String(id)));
 
-  // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
-  // 비율을 보수적으로 해서 좌우 잘림 없이 다 보인 뒤에만 다음 열 단계로 전환.
+  // 하이브리드: 뷰포트 기준 열 수 + 사진 수로 상한 캡. 1~11장은 기본 1열(크게), 줌인 시 뷰포트대로 1/2/3/4/5열.
   const ZOOM_THRESHOLD = 0.92;
-  const RATIO_1COL = 0.52;
-  const RATIO_3COL = 0.65;
-  const RATIO_3TO1_HYST = 0.45;
   const baseWidthRef = useRef(0);
-  const prevColsRef = useRef(5);
-  const justSteppedFromFiveRef = useRef(false);
   const lightboxOpenRef = useRef(false);
   const headerRef = useRef<HTMLElement>(null);
   const headerRefWidthRef = useRef<number>(0);
@@ -96,7 +90,6 @@ export default function MemoriesPage() {
         if (typeof window === 'undefined') return;
         if (lightboxOpenRef.current) return;
         const n = album.length;
-        const photoBasedCols = n <= 11 ? 1 : n < 40 ? 3 : 5;
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
         const innerW = window.innerWidth;
@@ -105,28 +98,13 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        const viewportCols = isZoomedIn
-          ? (visualW < base * RATIO_1COL ? 1 : visualW < base * RATIO_3COL ? 3 : 5)
-          : 5;
-        let cols = isZoomedIn
-          ? Math.min(viewportCols, photoBasedCols)
-          : photoBasedCols;
-        const prev = prevColsRef.current;
-        if (prev === 5 && cols === 1) {
-          cols = 3;
-          justSteppedFromFiveRef.current = true;
-        } else if (prev === 3 && cols === 1 && justSteppedFromFiveRef.current) {
-          cols = 3;
-          justSteppedFromFiveRef.current = false;
-        } else if (prev === 3 && cols === 1) {
-          cols = visualW < base * RATIO_3TO1_HYST ? 1 : 3;
-        } else if (prev === 1 && cols === 5) {
-          cols = 3;
-        } else if (prev === 3 && cols === 5) {
-          cols = visualW >= base * RATIO_3COL ? 5 : 3;
-        }
-        if (cols !== 3) justSteppedFromFiveRef.current = false;
-        prevColsRef.current = cols;
+        // 뷰포트 너비 → 가능 열 수 (소셜 앱 방식)
+        const viewportCols = visualW < 320 ? 1 : visualW < 480 ? 2 : visualW < 720 ? 3 : visualW < 1000 ? 4 : 5;
+        // 사진 수로 상한: 1~11→1열, 12~39→3열, 40+→5열 (적을수록 크게)
+        const photoBasedMax = n <= 11 ? 1 : n < 40 ? 3 : 5;
+        const cols = n <= 11 && isZoomedIn
+          ? viewportCols
+          : Math.min(viewportCols, photoBasedMax);
         setGridColumns(cols);
         setViewportWidth(visualW);
       });
