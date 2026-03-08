@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.system_admins (
   user_id UUID NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  created_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   is_active BOOLEAN DEFAULT TRUE NOT NULL,
   last_access_at TIMESTAMPTZ,
   notes TEXT

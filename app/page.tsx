@@ -290,11 +290,16 @@ export default function LoginPage() {
         }
       }
     } catch (error: any) {
-      // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
+      // 개발 시 실제 오류 원인 확인용 (HTTP 상태, 메시지)
       if (process.env.NODE_ENV === 'development') {
-        console.error('Signup error:', error);
+        const status = error?.status ?? error?.code;
+        console.error('[Sign up] 오류:', {
+          status,
+          message: error?.message,
+          full: error
+        });
       }
-      if (error.message?.includes('already registered')) {
+      if (error?.message?.includes('already registered')) {
         setErrorMsg(t('error_email_taken'));
       } else {
         setErrorMsg(t('error_signup_failed'));

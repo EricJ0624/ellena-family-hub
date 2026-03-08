@@ -6224,13 +6224,20 @@ export default function FamilyHub() {
   };
 
   // 공지사항 로드 (그룹 페이지 진입 후에만 - group_id 필수)
-  const loadAnnouncements = useCallback(async () => {
+  const loadAnnouncements = useCallback(async (retryCount = 0) => {
     if (!currentGroupId || !userId) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) {
+        // 세션 복원 전에 effect가 돌 수 있음 → 한 번만 1초 후 재시도
+        if (retryCount < 1) {
+          setTimeout(() => loadAnnouncements(1), 1000);
+        }
+        return;
+      }
 
+      // 역할이 아직 null이면 멤버 API 사용 (관리자만 별도 API)
       const isAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
       const apiUrl = isAdmin
         ? `/api/group-admin/announcements?group_id=${currentGroupId}`
@@ -6247,9 +6254,16 @@ export default function FamilyHub() {
       if (response.ok) {
         const result = await response.json();
         setAnnouncements(result.data || []);
+      } else {
+        setAnnouncements([]);
+        if (process.env.NODE_ENV === 'development') {
+          const body = await response.json().catch(() => ({}));
+          console.warn('공지사항 조회 실패:', response.status, body?.error || response.statusText);
+        }
       }
     } catch (error) {
       console.error('공지사항 로드 오류:', error);
+      setAnnouncements([]);
     }
   }, [currentGroupId, userId, groupUserRole, groupIsOwner]);
 

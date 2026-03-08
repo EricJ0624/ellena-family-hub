@@ -34,13 +34,21 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (membershipError || !membership) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[공지 API] 멤버십 없음:', {
+          user_id: user.id,
+          user_email: user.email,
+          group_id: groupId,
+          membershipError: membershipError?.message,
+        });
+      }
       return NextResponse.json(
         { error: '해당 그룹의 멤버가 아닙니다.' },
         { status: 403 }
       );
     }
 
-    // 공지사항 목록 조회 (활성 + 대상이 '모든 멤버'(ALL_MEMBERS)인 공지만, target null인 레거시 행 포함)
+    // 공지사항 목록 조회 (활성 + 대상이 '모든 멤버' ALL_MEMBERS인 공지, target 미설정(null)도 멤버에게 노출)
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')
