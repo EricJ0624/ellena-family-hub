@@ -26,9 +26,10 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseServerClient();
 
     // 해당 그룹 멤버인지 확인 (그룹 페이지 진입 가능한 사용자만 공지 조회)
+    // memberships는 (user_id, group_id) 복합 PK, id 컬럼 없음
     const { data: membership, error: membershipError } = await supabase
       .from('memberships')
-      .select('id')
+      .select('user_id')
       .eq('user_id', user.id)
       .eq('group_id', groupId)
       .single();
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     const { data: membership, error: membershipError } = await supabase
       .from('memberships')
-      .select('id')
+      .select('user_id')
       .eq('user_id', user.id)
       .eq('group_id', group_id)
       .single();
