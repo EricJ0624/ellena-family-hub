@@ -25,6 +25,17 @@ const COMPRESSION_OPTIONS = {
   initialQuality: 0.9,
 };
 
+/** 프록시 URL에서 s3 key 추출 (진단 링크용). 없으면 null */
+function getDiagnoseKeyFromData(data: string): string | null {
+  if (!data || !data.includes('/api/photo/proxy')) return null;
+  try {
+    const u = data.startsWith('http') ? new URL(data) : new URL(data, 'https://a');
+    return u.searchParams.get('key');
+  } catch {
+    return null;
+  }
+}
+
 /** 파일명에서 날짜 추출 (IMG_20240115_123456, 2024-01-15 등). ISO 문자열 또는 null */
 function parseTakenAtFromFilename(filename: string): string | null {
   const base = filename.replace(/\.[a-zA-Z0-9]+$/, '');
@@ -57,6 +68,10 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
+  /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
+  const markImageFailed = (id: string | number) =>
+    setFailedImageIds((prev) => new Set(prev).add(String(id)));
 
   // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
   // 비율을 보수적으로 해서 좌우 잘림 없이 다 보인 뒤에만 다음 열 단계로 전환.
@@ -681,6 +696,12 @@ export default function MemoriesPage() {
                     <img
                       src={p.data}
                       alt=""
+                      onError={() => markImageFailed(p.id)}
+                      onLoad={(e) => {
+                        if (getDiagnoseKeyFromData(p.data) && (e.target as HTMLImageElement).naturalWidth === 0) {
+                          markImageFailed(p.id);
+                        }
+                      }}
                       style={{
                         width: '100%',
                         height: gridColumns === 1 ? 'auto' : '100%',
@@ -689,6 +710,34 @@ export default function MemoriesPage() {
                         ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                       }}
                     />
+                    {failedImageIds.has(String(p.id)) && getDiagnoseKeyFromData(p.data) && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'rgba(0,0,0,0.6)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          padding: 12,
+                          color: '#fff',
+                          fontSize: 12,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <span>이미지 로드 실패</span>
+                        <a
+                          href={`/api/photo/diagnose?key=${encodeURIComponent(getDiagnoseKeyFromData(p.data)!)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#93c5fd', textDecoration: 'underline' }}
+                        >
+                          진단하기
+                        </a>
+                      </div>
+                    )}
                     {p.isUploading && (
                       <div
                         style={{
@@ -758,6 +807,12 @@ export default function MemoriesPage() {
                                 <img
                                   src={p.data}
                                   alt=""
+                                  onError={() => markImageFailed(p.id)}
+                                  onLoad={(e) => {
+                                    if (getDiagnoseKeyFromData(p.data) && (e.target as HTMLImageElement).naturalWidth === 0) {
+                                      markImageFailed(p.id);
+                                    }
+                                  }}
                                   style={{
                                     width: '100%',
                                     height: gridColumns === 1 ? 'auto' : '100%',
@@ -766,6 +821,34 @@ export default function MemoriesPage() {
                                     ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                                   }}
                                 />
+                                {failedImageIds.has(String(p.id)) && getDiagnoseKeyFromData(p.data) && (
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      inset: 0,
+                                      background: 'rgba(0,0,0,0.6)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: 8,
+                                      padding: 12,
+                                      color: '#fff',
+                                      fontSize: 12,
+                                      textAlign: 'center',
+                                    }}
+                                  >
+                                    <span>이미지 로드 실패</span>
+                                    <a
+                                      href={`/api/photo/diagnose?key=${encodeURIComponent(getDiagnoseKeyFromData(p.data)!)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ color: '#93c5fd', textDecoration: 'underline' }}
+                                    >
+                                      진단하기
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </motion.div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import sharp from 'sharp';
 
@@ -598,6 +598,23 @@ export function generateS3KeyWithGroup(
   // 그룹 ID가 있으면 경로에 포함
   const groupPath = groupId ? `groups/${groupId}/` : '';
   return `originals/${groupPath}${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
+}
+
+/**
+ * S3에 객체가 존재하는지 확인 (진단용)
+ */
+export async function checkS3ObjectExists(s3Key: string): Promise<boolean> {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    if (!bucketName) return false;
+    const s3Client = getS3Client();
+    await s3Client.send(
+      new HeadObjectCommand({ Bucket: bucketName, Key: s3Key })
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
