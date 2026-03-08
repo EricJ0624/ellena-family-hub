@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Megaphone, X } from 'lucide-react';
+
+/** 공지 배너가 한 사이클에 이동하는 속도 (px/s). 이 값으로 내용 길이와 관계없이 동일한 체감 속도 유지 */
+const MARQUEE_PIXELS_PER_SECOND = 50;
+const MARQUEE_DURATION_MIN = 12;
+const MARQUEE_DURATION_MAX = 120;
 
 interface Announcement {
   id: string;
@@ -20,17 +25,37 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
   const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [animationDuration, setAnimationDuration] = useState(MARQUEE_DURATION_MIN);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   // 읽지 않은 공지만 필터링
   const unreadAnnouncements = announcements.filter(a => !a.is_read);
 
-  // 공지가 없거나 배너를 닫았으면 표시하지 않음
-  if (!isVisible || unreadAnnouncements.length === 0) {
-    return null;
-  }
-
   // 무한 스크롤을 위해 공지사항 배열을 2번 반복
   const displayAnnouncements = [...unreadAnnouncements, ...unreadAnnouncements];
+
+  // 내용 너비에 비례해 duration 계산 → 항상 같은 px/s 속도 유지
+  useEffect(() => {
+    if (displayAnnouncements.length === 0) return;
+    const el = trackRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const width = el.scrollWidth;
+      // 키프레임이 -50% 이동하므로 한 사이클 이동 거리 = width * 0.5
+      const distancePerCycle = width * 0.5;
+      const duration = Math.max(
+        MARQUEE_DURATION_MIN,
+        Math.min(MARQUEE_DURATION_MAX, distancePerCycle / MARQUEE_PIXELS_PER_SECOND)
+      );
+      setAnimationDuration(duration);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [displayAnnouncements.length, unreadAnnouncements.map(a => a.id).join(',')]);
 
   const handleAnnouncementClick = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
@@ -38,6 +63,10 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
       onMarkAsRead(announcement.id);
     }
   };
+
+  if (!isVisible || unreadAnnouncements.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -92,11 +121,12 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
             marginRight: '2px',
           }}>
             <div
+              ref={trackRef}
               style={{
                 display: 'flex',
                 gap: '48px',
                 width: 'max-content',
-                animation: isPaused ? 'none' : 'marquee 15s linear infinite',
+                animation: isPaused ? 'none' : `marquee ${animationDuration}s linear infinite`,
                 willChange: 'transform',
               }}
               onMouseEnter={() => setIsPaused(true)}
