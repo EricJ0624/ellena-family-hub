@@ -29,8 +29,9 @@ const seededRandom = (seed: string): number => {
 };
 
 // 대시보드 표시용으로만 사용할 수 있는 안정적인 URL인지 (blob/data 제외 → Hydration/렌더 에러 방지)
+// 일반 업로드 프록시 경로도 포함 (액자에 표시)
 const isStablePhotoUrl = (url: string): boolean =>
-  !!url && (url.startsWith('http://') || url.startsWith('https://'));
+  !!url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/api/photo/proxy'));
 
 // 오늘의 무작위 사진 선택 함수
 const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>, manualSeed?: number): number | null => {

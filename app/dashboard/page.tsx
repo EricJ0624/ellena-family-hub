@@ -186,7 +186,7 @@ export default function FamilyHub() {
   const { lang } = useLanguage();
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
-    () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://'))),
+    () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
     [album]
   );
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
@@ -434,7 +434,7 @@ export default function FamilyHub() {
       if (isValidState) {
         const d = decrypted as Record<string, unknown>;
         const stableAlbum = (Array.isArray(d.album))
-          ? (d.album as Photo[]).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://')))
+          ? (d.album as Photo[]).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy')))
           : [];
         setState({
           familyName: typeof d.familyName === 'string' ? d.familyName : INITIAL_STATE.familyName,
@@ -528,7 +528,7 @@ export default function FamilyHub() {
             if (supabaseId && supabasePhotoIds.has(supabaseId)) {
               return false; // Supabase에 이미 있으면 제외
             }
-            return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://'));
+            return p.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'));
           });
 
           // Supabase 사진 우선, localStorage 전용 사진 추가
@@ -3884,7 +3884,7 @@ export default function FamilyHub() {
       return;
     }
     // 앨범은 AlbumContext에서 관리하므로 저장 시 context 기준으로 반영 (blob/data URL은 저장하지 않음 → Hydration 에러 방지)
-    const stableAlbum = (albumRef.current || []).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://')));
+    const stableAlbum = (albumRef.current || []).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy')));
     const stateWithAlbum: AppState = { ...newState, album: stableAlbum };
     try {
       const storageKey = getStorageKey(userId, currentGroupId);

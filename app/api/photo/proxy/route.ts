@@ -20,6 +20,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const cfDomain =
+    process.env.AWS_CLOUDFRONT_DOMAIN ||
+    process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
+  if (!cfDomain) {
+    return NextResponse.json(
+      {
+        error: 'CloudFront domain not configured',
+        hint: 'Set AWS_CLOUDFRONT_DOMAIN or NEXT_PUBLIC_CLOUDFRONT_DOMAIN on Vercel (e.g. d1bjjw198g1fxc.cloudfront.net). Without it, the proxy uses direct S3 URL and Cloudinary gets 401.',
+      },
+      { status: 503 }
+    );
+  }
+
   const sourceUrl = generatePublicAssetUrl(key);
   // Cloudinary fetch: w_2560,f_auto 등 변환 후 전달
   const fetchUrl = `https://res.cloudinary.com/${cloudName}/image/fetch/w_2560,f_auto,q_auto/${encodeURIComponent(sourceUrl)}`;
