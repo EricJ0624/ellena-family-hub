@@ -55,7 +55,14 @@ function persistAlbumOnly(
       if (decrypted && typeof decrypted === 'object') state = { ...decrypted };
     }
     // blob/data URL은 저장하지 않음 → 뒤로가기 후 재진입 시 Hydration 에러 방지
-    const stableOnly = newAlbum.filter((p) => p.data && (p.data.startsWith('http://') || p.data.startsWith('https://')));
+    // 일반 업로드 프록시 경로 포함 (대시보드/액자와 동일하게 stable로 취급)
+    const stableOnly = newAlbum.filter(
+      (p) =>
+        p.data &&
+        (p.data.startsWith('http://') ||
+          p.data.startsWith('https://') ||
+          p.data.startsWith('/api/photo/proxy'))
+    );
     const withoutOriginal = stableOnly.map((p) => {
       const { originalData: _, ...rest } = p;
       return rest;
@@ -117,7 +124,13 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       .limit(100);
 
     if (error) {
-      const stableLocal = localAlbum.filter((p) => p.data && (p.data.startsWith('http://') || p.data.startsWith('https://')));
+      const stableLocal = localAlbum.filter(
+        (p) =>
+          p.data &&
+          (p.data.startsWith('http://') ||
+            p.data.startsWith('https://') ||
+            p.data.startsWith('/api/photo/proxy'))
+      );
       setAlbum(stableLocal);
       return;
     }
@@ -144,7 +157,11 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       const sid = p.supabaseId ? String(p.supabaseId) : null;
       if (sid && supabaseIds.has(sid)) return false;
       if (!p.data) return false;
-      return p.data.startsWith('http://') || p.data.startsWith('https://');
+      return (
+        p.data.startsWith('http://') ||
+        p.data.startsWith('https://') ||
+        p.data.startsWith('/api/photo/proxy')
+      );
     });
     const merged = [...supabasePhotos, ...localOnly];
     setAlbum(merged);
