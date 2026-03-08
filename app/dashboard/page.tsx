@@ -6230,9 +6230,9 @@ export default function FamilyHub() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        // 세션 복원 전에 effect가 돌 수 있음 → 한 번만 1초 후 재시도
-        if (retryCount < 1) {
-          setTimeout(() => loadAnnouncements(1), 1000);
+        // 세션 복원 전에 effect가 돌 수 있음 → 최대 2번 재시도 (1초, 2.5초 후)
+        if (retryCount < 2) {
+          setTimeout(() => loadAnnouncements(retryCount + 1), retryCount === 0 ? 1000 : 2500);
         }
         return;
       }
@@ -6242,6 +6242,10 @@ export default function FamilyHub() {
       const apiUrl = isAdmin
         ? `/api/group-admin/announcements?group_id=${currentGroupId}`
         : `/api/announcements?group_id=${currentGroupId}`;
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[공지] 요청:', { api: isAdmin ? 'group-admin' : 'member', groupId: currentGroupId, role: groupUserRole, isOwner: groupIsOwner });
+      }
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -6253,12 +6257,20 @@ export default function FamilyHub() {
 
       if (response.ok) {
         const result = await response.json();
-        setAnnouncements(result.data || []);
+        const list = result.data || [];
+        setAnnouncements(list);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[공지] 성공:', list.length, '건');
+        }
       } else {
         setAnnouncements([]);
+        const body = await response.json().catch(() => ({}));
         if (process.env.NODE_ENV === 'development') {
-          const body = await response.json().catch(() => ({}));
-          console.warn('공지사항 조회 실패:', response.status, body?.error || response.statusText);
+          console.warn('[공지] 조회 실패:', response.status, body?.error || response.statusText);
+          // 403이면 역할/멤버십 타이밍 이슈일 수 있음 → 한 번만 1.5초 후 재시도
+          if (response.status === 403 && retryCount < 1) {
+            setTimeout(() => loadAnnouncements(retryCount + 1), 1500);
+          }
         }
       }
     } catch (error) {
