@@ -10,6 +10,7 @@ import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
+import imageCompression from 'browser-image-compression';
 import {
   getDisplayImageData,
   getMimeTypeFromExtension,
@@ -17,8 +18,12 @@ import {
 } from '@/lib/photo-upload-utils';
 import { supabase } from '@/lib/supabase';
 
-const PRESIGNED_URL_THRESHOLD = 3 * 1024 * 1024; // 3MB (대시보드와 동일)
-const MAX_SAFE_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB 통일
+const COMPRESSION_OPTIONS = {
+  maxSizeMB: 3,
+  maxWidthOrHeight: 2560,
+  initialQuality: 0.9,
+};
 
 /** 파일명에서 날짜 추출 (IMG_20240115_123456, 2024-01-15 등). ISO 문자열 또는 null */
 function parseTakenAtFromFilename(filename: string): string | null {
@@ -51,6 +56,7 @@ export default function MemoriesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
+  const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
 
   // 사진 장수: 1~11→1열, 12~39→3열, 40+→5열. 줌인/줌아웃 시 5↔3↔1 순서 유지.
   // 비율을 보수적으로 해서 좌우 잘림 없이 다 보인 뒤에만 다음 열 단계로 전환.
@@ -270,14 +276,13 @@ export default function MemoriesPage() {
       e.target.value = '';
       return;
     }
-    if (file.size > MAX_SAFE_FILE_SIZE) {
-      const msg = `파일이 매우 큽니다 (${Math.round(file.size / 1024 / 1024)}MB).\n\n업로드에 시간이 오래 걸릴 수 있습니다. 계속하시겠습니까?`;
-      if (!confirm(msg)) {
-        e.target.value = '';
-        return;
-      }
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`파일이 20MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      e.target.value = '';
+      return;
     }
     const isRawFile = isRawFileExtension(ext);
+    const effectiveMode = isRawFile ? 'original' as const : uploadMode;
     let imageData: string;
     let originalData: string;
     try {
@@ -319,169 +324,126 @@ export default function MemoriesPage() {
         e.target.value = '';
         return;
       }
-      const usePresignedUrl = isRawFile || uploadFileSize >= PRESIGNED_URL_THRESHOLD;
       const authHeader = () => ({ Authorization: `Bearer ${session.access_token}` });
 
-      if (usePresignedUrl) {
-        try {
-          const urlController = new AbortController();
-          const urlTimeout = setTimeout(() => urlController.abort(), 10000);
-          const urlRes = await fetch('/api/get-upload-url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeader() },
-            body: JSON.stringify({
-              fileName: uploadFileName,
-              mimeType: uploadMimeType,
-              fileSize: uploadFileSize,
-              groupId: currentGroupId,
-            }),
-            signal: urlController.signal,
+      let bodyToPut: Blob;
+      let fileNameForUpload = uploadFileName;
+      let mimeTypeForUpload = uploadMimeType;
+      let fileSizeForUpload = uploadFileSize;
+
+      if (effectiveMode === 'normal' && !isRawFile && mimeType.startsWith('image/')) {
+        const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
+        bodyToPut = compressed;
+        const ext = compressed.name.split('.').pop()?.toLowerCase() || 'jpg';
+        fileNameForUpload = uploadFileName.replace(/\.[^.]+$/i, `.${ext}`);
+        mimeTypeForUpload = compressed.type || 'image/jpeg';
+        fileSizeForUpload = compressed.size;
+      } else {
+        bodyToPut = file;
+      }
+
+      try {
+        const urlController = new AbortController();
+        const urlTimeout = setTimeout(() => urlController.abort(), 10000);
+        const urlRes = await fetch('/api/get-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          body: JSON.stringify({
+            fileName: fileNameForUpload,
+            mimeType: mimeTypeForUpload,
+            fileSize: fileSizeForUpload,
+            groupId: currentGroupId,
+            upload_mode: effectiveMode,
+          }),
+          signal: urlController.signal,
+        });
+        clearTimeout(urlTimeout);
+        if (!urlRes.ok) {
+          const errBody = await urlRes.json().catch(() => ({}));
+          throw new Error(errBody.error || errBody.details || 'Presigned URL 요청 실패');
+        }
+        const { presignedUrl, s3Key, s3Url } = await urlRes.json();
+        const putRes = await fetch(presignedUrl, {
+          method: 'PUT',
+          body: bodyToPut,
+          headers: { 'Content-Type': mimeTypeForUpload },
+        });
+        if (!putRes.ok) throw new Error('S3 직접 업로드 실패');
+        const completeController = new AbortController();
+        const completeTimeout = setTimeout(() => completeController.abort(), 60000);
+        const completeRes = await fetch('/api/complete-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          body: JSON.stringify({
+            s3Key,
+            s3Url,
+            fileName: fileNameForUpload,
+            mimeType: mimeTypeForUpload,
+            originalSize: effectiveMode === 'original' ? uploadFileSize : fileSizeForUpload,
+            groupId: currentGroupId,
+            upload_mode: effectiveMode,
+            taken_at: takenAt ?? undefined,
+          }),
+          signal: completeController.signal,
+        });
+        clearTimeout(completeTimeout);
+        const completeResult = await completeRes.json();
+        if (completeRes.ok && completeResult.id && completeResult.s3Url) {
+          updatePhotoId({
+            oldId: photoId,
+            newId: completeResult.id,
+            cloudinaryUrl: null,
+            s3Url: completeResult.s3Url,
           });
-          clearTimeout(urlTimeout);
-          if (!urlRes.ok) {
-            const errBody = await urlRes.json().catch(() => ({}));
-            throw new Error(errBody.error || errBody.details || 'Presigned URL 요청 실패');
-          }
-          const { presignedUrl, s3Key, s3Url } = await urlRes.json();
-          const putRes = await fetch(presignedUrl, {
-            method: 'PUT',
-            body: file,
-            headers: { 'Content-Type': uploadMimeType },
+          uploadCompleted = true;
+        } else if (completeRes.ok) {
+          updatePhotoId({
+            oldId: photoId,
+            newId: photoId,
+            cloudinaryUrl: null,
+            s3Url: s3Url,
           });
-          if (!putRes.ok) throw new Error('S3 직접 업로드 실패');
-          const completeController = new AbortController();
-          const completeTimeout = setTimeout(() => completeController.abort(), 180000);
-          const completeRes = await fetch('/api/complete-upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeader() },
-            body: JSON.stringify({
-              s3Key,
-              s3Url,
-              fileName: uploadFileName,
-              mimeType: uploadMimeType,
-              originalSize: uploadFileSize,
-              resizedData: imageData !== originalData ? imageData : null,
-              groupId: currentGroupId,
-              forceCloudinary: isRawFile,
-              taken_at: takenAt ?? undefined,
-            }),
-            signal: completeController.signal,
-          });
-          clearTimeout(completeTimeout);
-          const completeResult = await completeRes.json();
-          if (completeRes.ok && completeResult.id && (completeResult.cloudinaryUrl ?? completeResult.s3Url)) {
-            updatePhotoId({
-              oldId: photoId,
-              newId: completeResult.id,
-              cloudinaryUrl: completeResult.cloudinaryUrl ?? null,
-              s3Url: completeResult.s3Url ?? null,
+          uploadCompleted = true;
+        } else {
+          updatePhotoId({ oldId: photoId, newId: photoId, cloudinaryUrl: null, s3Url: s3Url });
+          uploadCompleted = true;
+        }
+      } catch (presignedErr: unknown) {
+        const errMsg = presignedErr instanceof Error ? presignedErr.message : '';
+        const isCors = errMsg.includes('CORS') || errMsg.includes('Failed to fetch');
+        if (isCors || errMsg.includes('S3') || errMsg.includes('Presigned')) {
+          try {
+            const fallbackRes = await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader() },
+              body: JSON.stringify({
+                originalData,
+                fileName: uploadFileName,
+                mimeType: uploadMimeType,
+                originalSize: uploadFileSize,
+                groupId: currentGroupId,
+                upload_mode: effectiveMode,
+                taken_at: takenAt ?? undefined,
+              }),
             });
-            uploadCompleted = true;
-          } else if (completeRes.ok) {
-            updatePhotoId({
-              oldId: photoId,
-              newId: photoId,
-              cloudinaryUrl: null,
-              s3Url: s3Url,
-            });
-            uploadCompleted = true;
-          } else {
-            updatePhotoId({ oldId: photoId, newId: photoId, cloudinaryUrl: null, s3Url: s3Url });
-            uploadCompleted = true;
-          }
-        } catch (presignedErr: unknown) {
-          const errMsg = presignedErr instanceof Error ? presignedErr.message : '';
-          const isCors = errMsg.includes('CORS') || errMsg.includes('Failed to fetch');
-          if (isCors || errMsg.includes('S3') || errMsg.includes('Presigned')) {
-            try {
-              const fallbackRes = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...authHeader() },
-                body: JSON.stringify({
-                  originalData,
-                  resizedData: imageData !== originalData ? imageData : null,
-                  fileName: uploadFileName,
-                  mimeType: uploadMimeType,
-                  originalSize: uploadFileSize,
-                  groupId: currentGroupId,
-                  forceCloudinary: isRawFile,
-                  taken_at: takenAt ?? undefined,
-                }),
+            const fallbackResult = await fallbackRes.json();
+            if (fallbackRes.ok && fallbackResult.id && fallbackResult.s3Url) {
+              updatePhotoId({
+                oldId: photoId,
+                newId: fallbackResult.id,
+                cloudinaryUrl: null,
+                s3Url: fallbackResult.s3Url,
               });
-              const fallbackResult = await fallbackRes.json();
-              if (fallbackRes.ok && fallbackResult.id && (fallbackResult.cloudinaryUrl || fallbackResult.s3Url)) {
-                updatePhotoId({
-                  oldId: photoId,
-                  newId: fallbackResult.id,
-                  cloudinaryUrl: fallbackResult.cloudinaryUrl,
-                  s3Url: fallbackResult.s3Url,
-                });
-                uploadCompleted = true;
-                if (isCors) alert('업로드 완료: CORS 오류로 인해 서버 경유 방식으로 업로드되었습니다.');
-              } else {
-                throw presignedErr;
-              }
-            } catch {
+              uploadCompleted = true;
+              if (isCors) alert('업로드 완료: CORS 오류로 인해 서버 경유 방식으로 업로드되었습니다.');
+            } else {
               throw presignedErr;
             }
-          } else {
+          } catch {
             throw presignedErr;
           }
-        }
-      } else {
-        const uploadController = new AbortController();
-        const uploadTimeout = setTimeout(() => uploadController.abort(), 60000);
-        try {
-          const uploadRes = await fetch('/api/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeader() },
-            body: JSON.stringify({
-              originalData,
-              resizedData: imageData !== originalData ? imageData : null,
-              fileName: uploadFileName,
-              mimeType: uploadMimeType,
-              originalSize: uploadFileSize,
-              groupId: currentGroupId,
-            }),
-            signal: uploadController.signal,
-          });
-          clearTimeout(uploadTimeout);
-          const result = await uploadRes.json();
-          if (uploadRes.ok && result.id && (result.cloudinaryUrl || result.s3Url)) {
-            updatePhotoId({
-              oldId: photoId,
-              newId: result.id,
-              cloudinaryUrl: result.cloudinaryUrl,
-              s3Url: result.s3Url,
-            });
-            uploadCompleted = true;
-          } else {
-            deletePhoto(photoId);
-            uploadCompleted = true;
-            const fileSizeDisplay = uploadFileSize >= 1024 * 1024
-              ? `${(uploadFileSize / 1024 / 1024).toFixed(2)}MB`
-              : `${(uploadFileSize / 1024).toFixed(2)}KB`;
-            const fileInfo = `파일: ${uploadFileName}\n크기: ${fileSizeDisplay}\n형식: ${uploadMimeType}`;
-            const failureReason = result.error || result.details || '업로드 실패';
-            alert(`사진 업로드 실패\n\n${fileInfo}\n\n실패 이유:\n${failureReason}`);
-          }
-        } catch (fetchErr: unknown) {
-          clearTimeout(uploadTimeout);
-          deletePhoto(photoId);
-          uploadCompleted = true;
-          const fileSizeDisplay = uploadFileSize >= 1024 * 1024
-            ? `${(uploadFileSize / 1024 / 1024).toFixed(2)}MB`
-            : `${(uploadFileSize / 1024).toFixed(2)}KB`;
-          const fileInfo = `파일: ${uploadFileName}\n크기: ${fileSizeDisplay}\n형식: ${uploadMimeType}`;
-          let failureReason: string;
-          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
-            failureReason = '업로드 타임아웃 (60초 초과)';
-          } else if (fetchErr instanceof Error && (fetchErr.message?.includes('Failed to fetch') || fetchErr.message?.includes('NetworkError'))) {
-            failureReason = `네트워크 오류: ${fetchErr.message || '서버에 연결할 수 없습니다.'}`;
-          } else {
-            throw fetchErr;
-          }
-          alert(`사진 업로드 실패\n\n${fileInfo}\n\n실패 이유:\n${failureReason}`);
+        } else {
+          throw presignedErr;
         }
       }
     } catch (uploadErr: unknown) {
@@ -568,6 +530,31 @@ export default function MemoriesPage() {
         <h1 style={{ flex: 1, margin: 0, fontSize: `${1.25 * headerScale}rem`, fontWeight: 700 }}>
           {dt('section_title_memories')}
         </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 * headerScale }}>
+          <span style={{ fontSize: 12 * headerScale, color: 'rgba(255,255,255,0.9)' }}>
+            {lang === 'ko' ? '업로드:' : 'Upload:'}
+          </span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 * headerScale, cursor: 'pointer', fontSize: 13 * headerScale }}>
+            <input
+              type="radio"
+              name="uploadMode"
+              checked={uploadMode === 'normal'}
+              onChange={() => setUploadMode('normal')}
+              style={{ width: 14, height: 14 }}
+            />
+            {lang === 'ko' ? '일반(압축)' : 'Normal'}
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 * headerScale, cursor: 'pointer', fontSize: 13 * headerScale }}>
+            <input
+              type="radio"
+              name="uploadMode"
+              checked={uploadMode === 'original'}
+              onChange={() => setUploadMode('original')}
+              style={{ width: 14, height: 14 }}
+            />
+            {lang === 'ko' ? '원본' : 'Original'}
+          </label>
+        </div>
         <label
           htmlFor="memories-file-input"
           style={{

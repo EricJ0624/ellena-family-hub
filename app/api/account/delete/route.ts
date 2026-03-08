@@ -4,7 +4,6 @@ import {
   getSupabaseServerClient,
   deleteFromCloudinary,
   deleteFromS3,
-  generateAppS3KeyFromMasterKey,
 } from '@/lib/api-helpers';
 
 /**
@@ -107,8 +106,6 @@ export async function DELETE(request: NextRequest) {
             }
             if (photo.s3_key) {
               deletePromises.push(deleteFromS3(photo.s3_key));
-              const appKey = generateAppS3KeyFromMasterKey(photo.s3_key);
-              deletePromises.push(deleteFromS3(appKey));
             }
           }
           await Promise.all(deletePromises);

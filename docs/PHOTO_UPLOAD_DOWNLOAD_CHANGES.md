@@ -95,7 +95,7 @@
 
 ## 6. 작업 순서 제안
 
-1. Supabase 복구 후: `supabase_add_memory_vault_upload_mode.sql` 실행.
+1. **직접 실행 필요**: Supabase 대시보드 → SQL Editor에서 `supabase_add_memory_vault_upload_mode.sql` 내용 붙여넣기 후 실행. (MCP로 스키마 변경 불가 시)
 2. app 관련 코드 제거 (`generateAppS3KeyFromMasterKey`, complete-upload/upload/삭제 API의 app 로직).
 3. get-upload-url: 20MB 통일, `upload_mode` 지원.
 4. complete-upload: Cloudinary/리사이즈/app 제거, `upload_mode` 반영, 표시 URL 설정.

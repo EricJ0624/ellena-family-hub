@@ -601,15 +601,11 @@ export function generateS3KeyWithGroup(
 }
 
 /**
- * S3 App 이미지 Key 생성 (마스터 Key 기반)
+ * 일반(normal) 표시용 URL: API 프록시 경로 (Cloudinary fetch로 302 리다이렉트)
+ * 다운로드 시 Cloudinary 변환 후 CloudFront 캐시용
  */
-export function generateAppS3KeyFromMasterKey(masterKey: string): string {
-  let appKey = masterKey.replace(/^originals\//, 'app/');
-  const dotIndex = appKey.lastIndexOf('.');
-  if (dotIndex === -1) {
-    return `${appKey}_app`;
-  }
-  return `${appKey.slice(0, dotIndex)}_app${appKey.slice(dotIndex)}`;
+export function getNormalImageProxyPath(s3Key: string): string {
+  return `/api/photo/proxy?key=${encodeURIComponent(s3Key)}`;
 }
 
 /**

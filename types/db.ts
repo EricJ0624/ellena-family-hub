@@ -873,6 +873,7 @@ export interface Database {
           caption: string | null
           taken_at: string | null
           created_at: string
+          upload_mode: 'normal' | 'original' | null
         }
         Insert: {
           id?: string
@@ -890,6 +891,7 @@ export interface Database {
           caption?: string | null
           taken_at?: string | null
           created_at?: string
+          upload_mode?: 'normal' | 'original' | null
         }
         Update: {
           id?: string
@@ -907,6 +909,7 @@ export interface Database {
           caption?: string | null
           taken_at?: string | null
           created_at?: string
+          upload_mode?: 'normal' | 'original' | null
         }
         Relationships: [
           {
