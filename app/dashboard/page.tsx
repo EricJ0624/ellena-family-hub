@@ -691,6 +691,16 @@ export default function FamilyHub() {
           router.push('/');
           return;
         }
+
+        // 강제탈퇴 등으로 서버(auth.users)에서 삭제된 사용자 검사: getSession()은 로컬 캐시만 반환하므로
+        // getUser()로 서버에 검증 요청. 삭제된 사용자는 여기서 실패하여 로그아웃 처리됨.
+        const { data: { user: serverUser }, error: userError } = await supabase.auth.getUser();
+        if (userError || !serverUser) {
+          if (typeof window !== 'undefined') localStorage.removeItem('sb-auth-token');
+          try { await supabase.auth.signOut(); } catch (_) {}
+          router.push('/');
+          return;
+        }
         
         // Supabase 세션이 있으면 바로 대시보드 표시
         setIsAuthenticated(true);
