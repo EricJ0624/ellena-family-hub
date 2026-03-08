@@ -523,30 +523,32 @@ export default function MemoriesPage() {
         <h1 style={{ flex: 1, margin: 0, fontSize: `${1.25 * headerScale}rem`, fontWeight: 700 }}>
           {dt('section_title_memories')}
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 * headerScale }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 * headerScale }}>
           <span style={{ fontSize: 12 * headerScale, color: 'rgba(255,255,255,0.9)' }}>
             {lang === 'ko' ? '업로드:' : 'Upload:'}
           </span>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 * headerScale, cursor: 'pointer', fontSize: 13 * headerScale }}>
-            <input
-              type="radio"
-              name="uploadMode"
-              checked={uploadMode === 'normal'}
-              onChange={() => setUploadMode('normal')}
-              style={{ width: 14, height: 14 }}
-            />
-            {lang === 'ko' ? '일반(압축)' : 'Normal'}
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 * headerScale, cursor: 'pointer', fontSize: 13 * headerScale }}>
-            <input
-              type="radio"
-              name="uploadMode"
-              checked={uploadMode === 'original'}
-              onChange={() => setUploadMode('original')}
-              style={{ width: 14, height: 14 }}
-            />
-            {lang === 'ko' ? '원본' : 'Original'}
-          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 * headerScale }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 * headerScale, cursor: 'pointer', fontSize: 13 * headerScale }}>
+              <input
+                type="radio"
+                name="uploadMode"
+                checked={uploadMode === 'normal'}
+                onChange={() => setUploadMode('normal')}
+                style={{ width: 14, height: 14 }}
+              />
+              {lang === 'ko' ? '일반(압축)' : 'Normal'}
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 * headerScale, cursor: 'pointer', fontSize: 13 * headerScale }}>
+              <input
+                type="radio"
+                name="uploadMode"
+                checked={uploadMode === 'original'}
+                onChange={() => setUploadMode('original')}
+                style={{ width: 14, height: 14 }}
+              />
+              {lang === 'ko' ? '원본' : 'Original'}
+            </label>
+          </div>
         </div>
         <label
           htmlFor="memories-file-input"
