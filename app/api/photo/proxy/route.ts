@@ -7,9 +7,19 @@ import { generatePublicAssetUrl } from '@/lib/api-helpers';
  * - 없음: 302 → Cloudinary fetch URL (기존 동작, 하위 호환).
  */
 export async function GET(request: NextRequest) {
-  const key = request.nextUrl.searchParams.get('key');
+  let key = request.nextUrl.searchParams.get('key');
   if (!key || typeof key !== 'string') {
     return NextResponse.json({ error: 'key is required' }, { status: 400 });
+  }
+  // 이중 인코딩 보정: %2F 등이 남아 있으면 디코딩해서 실제 s3Key로 만든 뒤, 리다이렉트 시 한 번만 인코딩
+  try {
+    while (key.includes('%')) {
+      const decoded = decodeURIComponent(key);
+      if (decoded === key) break;
+      key = decoded;
+    }
+  } catch {
+    // 디코딩 실패 시 원본 유지
   }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
