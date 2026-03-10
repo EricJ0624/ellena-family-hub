@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   if (!key || typeof key !== 'string') {
     return NextResponse.json({ error: 'key is required' }, { status: 400 });
   }
+  const debug = request.nextUrl.searchParams.get('debug') === '1';
+
   // 이중 인코딩 보정: %2F 등이 남아 있으면 디코딩 후 리다이렉트 시 한 번만 인코딩
   try {
     while (key.includes('%')) {
@@ -37,6 +39,16 @@ export async function GET(request: NextRequest) {
 
   const normalized = cfDomain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
   const sourceUrl = generatePublicAssetUrl(key);
-  const cloudFrontUrl = `https://${normalized}/image/fetch/f_auto,q_auto,w_2560/${encodeURIComponent(sourceUrl)}`;
+  const cloudFrontUrl = `https://${normalized}/image/fetch/w_2560,f_auto,q_auto/${encodeURIComponent(sourceUrl)}`;
+
+  if (debug) {
+    return NextResponse.json({
+      key,
+      sourceUrl,
+      redirectUrl: cloudFrontUrl,
+      hint: '브라우저에서 redirectUrl을 열어 200/403/404 등 상태와 응답을 확인하세요.',
+    });
+  }
+
   return NextResponse.redirect(cloudFrontUrl, 302);
 }

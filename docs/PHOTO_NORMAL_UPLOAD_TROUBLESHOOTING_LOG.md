@@ -95,23 +95,37 @@
 
 ---
 
-## 4. 남은 이슈 및 선택지
+## 4. 현재 흐름 (image/fetch 구조)
 
-### 4.1 원인 정리
+- **Proxy**: `GET /api/photo/proxy?key=...` → **302** → `https://<CloudFront>/image/fetch/w_2560,f_auto,q_auto/<encoded_sourceUrl>`
+- **sourceUrl**: `generatePublicAssetUrl(key)` = `https://<CloudFront>/<s3_key>` (같은 CloudFront, S3 Origin으로 원본 제공).
+- **CloudFront**: `image/fetch/*` → Cloudinary Origin, **Default (\*)** → S3. Cloudinary가 sourceUrl을 fetch할 때 CloudFront가 S3에서 원본 반환.
+- **디버깅**: 같은 key로 `?debug=1` 붙이면 302 대신 JSON으로 `redirectUrl`, `sourceUrl` 반환. 브라우저에서 `redirectUrl`을 직접 열어 200/403/404 등 확인.
+
+## 5. 액자·대시보드 연동 요약
+
+| 위치 | URL 소스 | 비고 |
+|------|----------|------|
+| **TitlePage (액자)** | `selectedPhoto.data` (DB의 image_url 등) | `isStablePhotoUrl`에 `/api/photo/proxy` 포함 → proxy URL을 stable로 사용. `<Image src={selectedPhoto.data} unoptimized />` |
+| **대시보드 앨범** | `photo.image_url \|\| photo.cloudinary_url \|\| photo.s3_original_url` | 일반 업로드는 `image_url` = `/api/photo/proxy?key=...` |
+| **AlbumContext** | stable 판단 시 `http://`, `https://`, `/api/photo/proxy` 포함 | blob/data URL 제외, proxy URL은 유지 |
+
+이미지가 계속 실패할 때: Network에서 proxy 302 후 **두 번째 요청(CloudFront image/fetch)** 의 URL·상태·응답 헤더 확인. CloudFront 캐시가 에러를 캐시했을 수 있으므로 **CloudFront 캐시 무효화** (`/image/fetch/*` 또는 해당 path) 후 재시도.
+
+## 6. 남은 이슈 및 선택지 (과거 serve 구조 참고)
+
+### 6.1 원인 정리 (이전 serve 구조)
 
 - **502** = CloudFront가 Origin(Vercel)에서 에러 응답을 받은 상태.
-- Vercel 로그에 `/api/photo/serve` 가 안 찍히는 것으로 보아, **CloudFront → Vercel 요청이 Host 등 이유로 거절되거나 연결 자체가 실패**하는 것으로 추정.
+- 현재는 **serve 제거**, **image/fetch** 로 Cloudinary 직접 사용.
 
-### 4.2 해결 선택지 (구조 유지 vs 단순화)
+### 6.2 path 디코딩 시 (image/fetch 여전히 실패할 때)
 
-| 방법 | 설명 | 비고 |
-|------|------|------|
-| **Lambda@Edge (origin-request)** | us-east-1에 Lambda 생성 후, Origin request에서 **Host** 헤더를 `ellena-family-hub.vercel.app` 로 설정. CloudFront Behavior의 Origin request에 해당 Lambda 버전 연결. | Cloudinary 1회 + CloudFront 캐시 구조 유지. 리전·Lambda 관리 필요. |
-| **Proxy를 Vercel 직접 URL로 302** | `CLOUDFRONT_IMAGE_DOMAIN`이 있어도 proxy가 302 목적지를 **CloudFront가 아닌** `https://ellena-family-hub.vercel.app/api/photo/serve?key=...` 로 변경. | Host 문제 없음. **CloudFront 캐시 미사용** (매 요청 Vercel → Cloudinary). |
+- CloudFront가 Origin으로 전달할 때 path를 한 번 디코딩하면, `%2F`가 `/`가 되어 소스 URL이 깨질 수 있음. 그 경우 proxy에서 **소스 URL 이중 인코딩** (`encodeURIComponent(encodeURIComponent(sourceUrl))`) 시도 후 테스트.
 
 ---
 
-## 5. 관련 문서
+## 7. 관련 문서
 
 - [CLOUDFRONT_IMAGE_DELIVERY_SETUP.md](./CLOUDFRONT_IMAGE_DELIVERY_SETUP.md) — CloudFront Behavior 추가·Vercel env 설정
 - [S3_BUCKET_POLICY_FOR_CLOUDFRONT.md](./S3_BUCKET_POLICY_FOR_CLOUDFRONT.md) — S3 버킷 정책·일반 업로드 401
