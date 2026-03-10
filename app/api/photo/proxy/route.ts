@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { generatePublicAssetUrl } from '@/lib/api-helpers';
 
 /**
  * 일반(normal) 업로드 이미지 표시용.
  * 이미지를 직접 반환하지 않고, CloudFront URL로 302 Redirect만 수행.
- * 구조: S3 → Cloudinary(변환) → CloudFront(캐시·배포).
+ * 구조: S3 → Cloudinary(fetch·변환) → CloudFront(캐시·배포). image/fetch 사용.
  */
 export async function GET(request: NextRequest) {
   let key = request.nextUrl.searchParams.get('key');
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 
   const normalized = cfDomain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  const encodedKey = encodeURIComponent(key);
-  const cloudFrontUrl = `https://${normalized}/image/upload/f_auto,q_auto,w_2560/${encodedKey}`;
+  const sourceUrl = generatePublicAssetUrl(key);
+  const cloudFrontUrl = `https://${normalized}/image/fetch/f_auto,q_auto,w_2560/${encodeURIComponent(sourceUrl)}`;
   return NextResponse.redirect(cloudFrontUrl, 302);
 }
