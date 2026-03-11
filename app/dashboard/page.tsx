@@ -312,6 +312,7 @@ export default function FamilyHub() {
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
+  const lastFamilyLocationsSetAtRef = useRef<number>(0); // 위치 목록 설정 시각 (레이스 시 stale 덮어쓰기 방지)
   
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -5436,16 +5437,27 @@ export default function FamilyHub() {
             };
           });
 
-        setState(prev => ({
-          ...prev,
-          familyLocations: locations
-        }));
+        setState(prev => {
+          const currentIds = new Set((prev.familyLocations || []).map((l: any) => l.userId));
+          const newIds = new Set(locations.map((l: any) => l.userId));
+          const isSubset = newIds.size <= currentIds.size && [...newIds].every((id: string) => currentIds.has(id));
+          const recentlySet = lastFamilyLocationsSetAtRef.current && (Date.now() - lastFamilyLocationsSetAtRef.current) < 2000;
+          if (isSubset && newIds.size < currentIds.size && recentlySet) {
+            return prev;
+          }
+          lastFamilyLocationsSetAtRef.current = Date.now();
+          return { ...prev, familyLocations: locations };
+        });
       } else {
         // 데이터가 없을 때도 빈 배열로 설정하여 기존 위치 제거
-        setState(prev => ({
-          ...prev,
-          familyLocations: []
-        }));
+        setState(prev => {
+          const recentlySet = lastFamilyLocationsSetAtRef.current && (Date.now() - lastFamilyLocationsSetAtRef.current) < 2000;
+          if (prev.familyLocations && prev.familyLocations.length > 0 && recentlySet) {
+            return prev;
+          }
+          lastFamilyLocationsSetAtRef.current = Date.now();
+          return { ...prev, familyLocations: [] };
+        });
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
