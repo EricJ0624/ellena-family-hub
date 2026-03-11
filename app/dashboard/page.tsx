@@ -3426,14 +3426,31 @@ export default function FamilyHub() {
               const otherId = updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id;
               if (otherId) acceptedUserIdsRef.current.add(otherId);
             }
-            if (updatedRequest && (updatedRequest.status === 'cancelled' || updatedRequest.status === 'rejected')) {
-              const otherId = updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id;
-              if (otherId) acceptedUserIdsRef.current.delete(otherId);
-            }
+            const cancelledOtherId = (updatedRequest && (updatedRequest.status === 'cancelled' || updatedRequest.status === 'rejected'))
+              ? (updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id)
+              : null;
             // 위치 요청 목록 다시 로드 (완료 대기)
             await loadLocationRequests();
             // locationRequests 상태가 업데이트될 때까지 약간의 지연
             await new Promise(resolve => setTimeout(resolve, 200));
+            // ✅ 취소/거절 시 ref에서 제거는 '갱신된 목록에 해당 사용자와 accepted 없을 때만' (다른 accepted 요청이 있으면 유지)
+            if (cancelledOtherId) {
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token && currentGroupId) {
+                  const res = await fetch(`/api/location-request?userId=${userId}&type=all&groupId=${currentGroupId}`, {
+                    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+                  });
+                  const json = await res.json();
+                  if (json.success && Array.isArray(json.data)) {
+                    const hasAcceptedWithUser = json.data.some(
+                      (r: any) => r.status === 'accepted' && (r.requester_id === cancelledOtherId || r.target_id === cancelledOtherId)
+                    );
+                    if (!hasAcceptedWithUser) acceptedUserIdsRef.current.delete(cancelledOtherId);
+                  }
+                }
+              } catch (_) {}
+            }
             
             // ✅ 승인된 요청이 있으면 양쪽 사용자 모두 위치 추적 시작
             if (updatedRequest && updatedRequest.status === 'accepted') {
@@ -3551,13 +3568,14 @@ export default function FamilyHub() {
               updateMapMarkers();
             }, 300);
             
-            // ✅ 요청한 쪽: 승인한 사람이 위치 저장할 시간을 두고 한 번 더 로드 → 승인자 마커가 지도에 뜨도록
-            const isRequester = updatedRequest.requester_id === userId;
-            if (updatedRequest.status === 'accepted' && isRequester) {
-              setTimeout(() => {
-                loadFamilyLocations();
-                setTimeout(updateMapMarkers, 400);
-              }, 2000);
+            // ✅ 요청한 쪽: 승인자가 위치 저장할 시간을 두고 재시도 로드 → 승인자 마커가 지도에 뜨도록
+            if (updatedRequest.status === 'accepted' && updatedRequest.requester_id === userId) {
+              [1000, 2500, 4500].forEach((delay) => {
+                setTimeout(() => {
+                  loadFamilyLocations();
+                  setTimeout(updateMapMarkers, 400);
+                }, delay);
+              });
             }
             
             // 지도 마커 업데이트를 위해 상태 변경 트리거
@@ -6019,8 +6037,9 @@ export default function FamilyHub() {
       if (result.success) {
         if (action === 'accept') {
           // ✅ 승인 직후 상대 ID를 ref에 등록 → 이후 updateMapMarkers에서 해당 마커를 절대 제거하지 않음 (첫 사라짐 방지)
-          if (currentRequest) {
-            const otherId = currentRequest.requester_id === userId ? currentRequest.target_id : currentRequest.requester_id;
+          const reqForRef = currentRequest || (result.data && { requester_id: result.data.requester_id, target_id: result.data.target_id });
+          if (reqForRef) {
+            const otherId = reqForRef.requester_id === userId ? reqForRef.target_id : reqForRef.requester_id;
             if (otherId) acceptedUserIdsRef.current.add(otherId);
           }
           // ✅ 위치 공유 승인 시 현재 위치를 자동으로 가져와서 저장
