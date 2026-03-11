@@ -1524,9 +1524,10 @@ export default function FamilyHub() {
         return 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
       };
 
-      // 승인된 사용자들의 위치 마커 업데이트 또는 생성
+      // 승인된 사용자들의 위치 마커 업데이트 또는 생성 (ID 검증: 빈 값/본인 제외, 키 겹침 방지)
       state.familyLocations.forEach((loc) => {
-        if (loc.latitude && loc.longitude && loc.userId && loc.userId !== userId) {
+        if (!loc.userId || loc.userId === userId) return;
+        if (loc.latitude && loc.longitude) {
           const style = getFamilyMarkerStyle(loc.familyRole);
           const existingMarker = markersRef.current.get(loc.userId);
           if (existingMarker) {
@@ -1839,13 +1840,13 @@ export default function FamilyHub() {
         }
 
         // ✅ 지도가 이미 초기화된 경우 기존 마커는 유지하고 업데이트만 수행
-        // ✅ 처음 초기화하는 경우에만 기존 마커 제거
+        // ✅ 처음 초기화하는 경우에만 기존 마커 제거 (Strict Mode 이중 실행 시 참조 유실 방지)
         if (!mapRef.current) {
-          // 기존 마커 모두 제거 (처음 초기화 시에만)
-        markersRef.current.forEach((marker) => {
-          marker.setMap(null);
-        });
-        markersRef.current.clear();
+          markersRef.current.forEach((marker) => {
+            if (marker.map !== undefined) (marker as any).map = null;
+            else if (typeof (marker as any).setMap === 'function') (marker as any).setMap(null);
+          });
+          markersRef.current.clear();
         }
 
         // ✅ 마커 업데이트 (본인 위치 + 상대방 위치)
@@ -1954,7 +1955,10 @@ export default function FamilyHub() {
       }
     }
     return () => {
-      if (updateMapMarkersDebounceRef.current) clearTimeout(updateMapMarkersDebounceRef.current);
+      if (updateMapMarkersDebounceRef.current) {
+        clearTimeout(updateMapMarkersDebounceRef.current);
+        updateMapMarkersDebounceRef.current = null;
+      }
     };
   }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
 
@@ -3375,11 +3379,7 @@ export default function FamilyHub() {
           { event: 'UPDATE', schema: 'public', table: 'user_locations' },
           async (payload: any) => {
             console.log('Realtime 위치 UPDATE 이벤트 수신:', payload);
-            await loadFamilyLocations(); // 위치 목록 다시 로드
-            // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
-            setTimeout(() => {
-              updateMapMarkers();
-            }, 200);
+            await loadFamilyLocations(); // setState → 지도 useEffect가 최신 state로 updateMapMarkers 호출 (클로저 stale 방지)
           }
         )
         .subscribe((status, err) => {
@@ -3542,14 +3542,9 @@ export default function FamilyHub() {
                       updateLocation();
                     }
                     
-                    // ✅ 양쪽 사용자 모두 위치가 표시되도록 위치 목록 다시 로드
+                    // ✅ 양쪽 사용자 모두 위치가 표시되도록 위치 목록 다시 로드 (setState → 지도 effect가 마커 갱신)
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await loadFamilyLocations();
-                    
-                    // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
-                    setTimeout(() => {
-                      updateMapMarkers();
-                    }, 300);
                   }
                 } catch (error) {
                   console.warn('위치 추적 시작 실패:', error);
@@ -3568,21 +3563,13 @@ export default function FamilyHub() {
             // 양쪽 사용자 모두 위치가 저장될 때까지 충분한 대기 시간
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // 위치 목록 다시 로드 (양쪽 사용자 위치 모두 포함)
+            // 위치 목록 다시 로드 (setState → 지도 effect가 최신 state로 마커 갱신)
             await loadFamilyLocations();
             
-            // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
-            setTimeout(() => {
-              updateMapMarkers();
-            }, 300);
-            
-            // ✅ 요청한 쪽: 승인자가 위치 저장할 시간을 두고 재시도 로드 → 승인자 마커가 지도에 뜨도록
+            // ✅ 요청한 쪽: 승인자가 위치 저장할 시간을 두고 재시도 로드 (loadFamilyLocations만 호출, effect가 마커 갱신)
             if (updatedRequest.status === 'accepted' && updatedRequest.requester_id === userId) {
               [1000, 2500, 4500].forEach((delay) => {
-                setTimeout(() => {
-                  loadFamilyLocations();
-                  setTimeout(updateMapMarkers, 400);
-                }, delay);
+                setTimeout(() => loadFamilyLocations(), delay);
               });
             }
             
@@ -5300,11 +5287,7 @@ export default function FamilyHub() {
             longitude: data.longitude
           });
         }
-
-        // 지도 마커 업데이트
-        setTimeout(() => {
-          updateMapMarkers();
-        }, 100);
+        // setState로 지도 effect가 마커 갱신 (직접 updateMapMarkers 호출 제거 → 클로저 stale 방지)
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -6088,11 +6071,7 @@ export default function FamilyHub() {
               // 승인한 사용자의 위치 저장 후, 요청한 사용자의 위치도 로드되도록 대기
               await new Promise(resolve => setTimeout(resolve, 500));
               await loadFamilyLocations();
-              
-              // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
-              setTimeout(() => {
-                updateMapMarkers();
-              }, 300);
+              // setState → 지도 effect가 마커 갱신
             }
           } catch (locationError) {
             console.warn('위치 가져오기 실패:', locationError);
@@ -6132,13 +6111,8 @@ export default function FamilyHub() {
         // 위치 저장 및 로드가 완료될 때까지 대기
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // 위치 목록 다시 로드 (양쪽 사용자 위치 모두 포함)
+        // 위치 목록 다시 로드 (setState → 지도 effect가 마커 갱신)
         await loadFamilyLocations();
-        
-        // ✅ 지도 마커 즉시 업데이트 (리프레시 없이 표시)
-        setTimeout(() => {
-          updateMapMarkers();
-        }, 300);
       } else {
         // "이미 처리된 요청입니다" 에러는 조용히 처리 (반복 alert 방지)
         if (result.error && (result.error.includes('이미 처리된 요청') || result.error.includes('만료된 요청'))) {
