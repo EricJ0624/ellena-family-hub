@@ -5414,15 +5414,16 @@ export default function FamilyHub() {
                     .update({ address: convertedAddress })
                     .eq('user_id', loc.user_id);
                   
-                  // 상태 업데이트 (해당 사용자 위치만 업데이트)
-                  setState(prev => ({
-                    ...prev,
-                    familyLocations: prev.familyLocations.map((fl: any) =>
-                      fl.userId === loc.user_id
-                        ? { ...fl, address: convertedAddress }
-                        : fl
-                    )
-                  }));
+                  // 상태 업데이트 (해당 사용자 위치만 업데이트). 빈 배열로 덮어쓰지 않도록 방지
+                  setState(prev => {
+                    if (!prev.familyLocations?.length || !prev.familyLocations.some((fl: any) => fl.userId === loc.user_id)) return prev;
+                    return {
+                      ...prev,
+                      familyLocations: prev.familyLocations.map((fl: any) =>
+                        fl.userId === loc.user_id ? { ...fl, address: convertedAddress } : fl
+                      )
+                    };
+                  });
                 }
               })();
               
