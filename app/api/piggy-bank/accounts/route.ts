@@ -28,12 +28,87 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const { data: account } = await supabase
       .from('piggy_bank_accounts')
-      .select('id')
+      .select('id, name')
       .eq('group_id', groupId)
       .eq('user_id', childId)
       .maybeSingle();
 
     if (account) {
+      const now = new Date().toISOString();
+
+      // 1. 아카이브: 삭제 직전 거래 내역을 관리자 전용 보관소에 복사
+      const { data: walletRows } = await supabase
+        .from('piggy_wallet_transactions')
+        .select('group_id, user_id, actor_id, amount, type, memo, request_id, created_at')
+        .eq('group_id', groupId)
+        .eq('user_id', childId);
+
+      const { data: bankRows } = await supabase
+        .from('piggy_bank_transactions')
+        .select('group_id, actor_id, related_user_id, amount, type, memo, request_id, created_at')
+        .eq('group_id', groupId)
+        .eq('related_user_id', childId);
+
+      const { data: snapshot, error: snapErr } = await supabase
+        .from('piggy_deleted_account_snapshots')
+        .insert({
+          group_id: groupId,
+          user_id: childId,
+          deleted_at: now,
+          deleted_by: user.id,
+          account_name: account.name ?? null,
+        })
+        .select('id')
+        .single();
+
+      if (!snapErr && snapshot?.id) {
+        if (walletRows?.length) {
+          await supabase.from('piggy_wallet_transactions_archive').insert(
+            walletRows.map((row) => ({
+              group_id: row.group_id,
+              user_id: row.user_id,
+              actor_id: row.actor_id,
+              amount: row.amount,
+              type: row.type,
+              memo: row.memo,
+              request_id: row.request_id,
+              created_at: row.created_at,
+              archived_at: now,
+              archived_by: user.id,
+              snapshot_id: snapshot.id,
+            }))
+          );
+        }
+        if (bankRows?.length) {
+          await supabase.from('piggy_bank_transactions_archive').insert(
+            bankRows.map((row) => ({
+              group_id: row.group_id,
+              actor_id: row.actor_id,
+              related_user_id: row.related_user_id,
+              amount: row.amount,
+              type: row.type,
+              memo: row.memo,
+              request_id: row.request_id,
+              created_at: row.created_at,
+              archived_at: now,
+              archived_by: user.id,
+              snapshot_id: snapshot.id,
+            }))
+          );
+        }
+      }
+
+      // 2. 실제 데이터 삭제: 거래 → 지갑 → 계정 순
+      await supabase
+        .from('piggy_wallet_transactions')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', childId);
+      await supabase
+        .from('piggy_bank_transactions')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('related_user_id', childId);
       await supabase.from('piggy_wallets').delete().eq('group_id', groupId).eq('user_id', childId);
       const { error: delAcc } = await supabase.from('piggy_bank_accounts').delete().eq('id', account.id);
       if (delAcc) throw delAcc;
