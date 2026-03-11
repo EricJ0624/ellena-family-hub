@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { authenticateUser } from '@/lib/api-helpers';
+import { checkPermission } from '@/lib/permissions';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,6 +41,17 @@ export async function GET(request: NextRequest) {
         { error: '요청자 정보가 올바르지 않습니다.' },
         { status: 403 }
       );
+    }
+
+    // groupId가 있으면 요청자가 해당 그룹 멤버인지 검사 (비멤버가 다른 그룹 멤버 목록 조회 방지)
+    if (groupId) {
+      const permissionResult = await checkPermission(user.id, groupId, null, user.id);
+      if (!permissionResult.success) {
+        return NextResponse.json(
+          { error: '해당 그룹의 멤버만 목록을 조회할 수 있습니다.' },
+          { status: 403 }
+        );
+      }
     }
 
     // Service role key를 사용하여 RLS 우회 (서버 사이드에서 모든 사용자 조회)
