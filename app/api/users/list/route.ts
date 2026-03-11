@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const currentUserId = searchParams.get('currentUserId');
+    const groupId = searchParams.get('groupId'); // 선택: 지정 시 해당 그룹 멤버만 반환
 
     if (!currentUserId) {
       return NextResponse.json(
@@ -116,8 +117,27 @@ export async function GET(request: NextRequest) {
       console.log(`profiles 테이블에서 조회 성공: ${data.length}명 (본인 제외: ${currentUserId})`);
     }
 
+    let resultData = data || [];
+
+    // groupId가 있으면 해당 그룹 멤버만 필터 (위치 요청 등 그룹 단위 기능용)
+    if (groupId) {
+      const { data: groupRow } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', groupId)
+        .single();
+      const { data: memberships } = await supabase
+        .from('memberships')
+        .select('user_id')
+        .eq('group_id', groupId);
+      const allowedIds = new Set<string>();
+      if (groupRow?.owner_id) allowedIds.add(groupRow.owner_id);
+      memberships?.forEach((m: { user_id: string }) => allowedIds.add(m.user_id));
+      resultData = resultData.filter((p: { id: string }) => allowedIds.has(p.id));
+    }
+
     // 닉네임 기준으로 정렬 (닉네임이 있으면 우선, 없으면 이메일)
-    const sortedData = (data || []).sort((a, b) => {
+    const sortedData = resultData.sort((a: { nickname: string | null; email: string }, b: { nickname: string | null; email: string }) => {
       const nameA = a.nickname || a.email || '';
       const nameB = b.nickname || b.email || '';
       return nameA.localeCompare(nameB);

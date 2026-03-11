@@ -3818,11 +3818,11 @@ export default function FamilyHub() {
     
     console.log('🔓 모달 열림 - 사용자 목록 로드 시작', { userId, isAuthenticated, modalOpened: modalOpenedRef.current });
     
-    // 비동기로 로드하여 리렌더링과 완전히 분리
+    // 비동기로 로드하여 리렌더링과 완전히 분리 (현재 그룹 멤버만 표시 → 위치 요청은 그룹 멤버에게만 가능)
     const loadUsers = async () => {
       try {
-        console.log('📋 loadAllUsers 호출 시작');
-        await loadAllUsers(0); // 명시적으로 retryCount 0 전달
+        console.log('📋 loadAllUsers 호출 시작 (그룹 멤버만)', { currentGroupId });
+        await loadAllUsers(0, currentGroupId ? { groupId: currentGroupId } : undefined);
         console.log('✅ loadAllUsers 호출 완료');
       } catch (err) {
         console.error('❌ loadAllUsers 호출 중 오류:', err);
@@ -3836,7 +3836,7 @@ export default function FamilyHub() {
       loadUsers();
     }, 100); // 약간의 지연을 두어 모달이 완전히 렌더링된 후 로드
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showLocationRequestModal, isAuthenticated, userId]); // loadAllUsers는 useCallback으로 메모이제이션되어 userId, isAuthenticated 변경 시 자동 재생성됨
+  }, [showLocationRequestModal, isAuthenticated, userId, currentGroupId]); // currentGroupId: 그룹 멤버만 로드
 
   // 7. 위치 요청 만료 체크 (1분마다 실행)
   useEffect(() => {
@@ -5695,7 +5695,8 @@ export default function FamilyHub() {
   };
 
   // 모든 사용자 목록 로드 (로그인한/안한 모두) - profiles 테이블에서 직접 조회
-  const loadAllUsers = useCallback(async (retryCount = 0) => {
+  // options.groupId 있으면 해당 그룹 멤버만 조회 (위치 요청 모달용)
+  const loadAllUsers = useCallback(async (retryCount = 0, options?: { groupId?: string }) => {
     if (!userId || !isAuthenticated) {
       setAllUsers([]);
       setLoadingUsers(false);
@@ -5714,15 +5715,16 @@ export default function FamilyHub() {
     const retryDelay = 1000; // 1초
 
     try {
-      console.log('📋 사용자 목록 로드 시작 - API 호출:', { userId, retryCount });
+      const listUrl = `/api/users/list?currentUserId=${userId}${options?.groupId ? `&groupId=${options.groupId}` : ''}`;
+      console.log('📋 사용자 목록 로드 시작 - API 호출:', { userId, retryCount, groupId: options?.groupId });
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error(dt('auth_session_expired'));
       }
 
-      // API를 통해 서버 사이드에서 모든 사용자 조회 (profiles가 비어있으면 auth.users에서 조회)
-      const response = await fetch(`/api/users/list?currentUserId=${userId}`, {
+      // API를 통해 서버 사이드에서 조회 (groupId 있으면 해당 그룹 멤버만)
+      const response = await fetch(listUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -5760,7 +5762,7 @@ export default function FamilyHub() {
       if (retryCount < maxRetries && (error?.message?.includes('fetch') || error?.message?.includes('network') || error?.name === 'TypeError')) {
         console.warn(`🔄 사용자 목록 로드 재시도 (${retryCount + 1}/${maxRetries}):`, error?.message || error);
         setTimeout(() => {
-          loadAllUsers(retryCount + 1);
+          loadAllUsers(retryCount + 1, options);
         }, retryDelay * (retryCount + 1));
         return;
       }
@@ -8263,8 +8265,8 @@ export default function FamilyHub() {
                       </p>
                       <button
                         onClick={() => {
-                          console.log('사용자 목록 새로고침');
-                          loadAllUsers(0);
+                          console.log('사용자 목록 새로고침 (그룹 멤버만)');
+                          loadAllUsers(0, currentGroupId ? { groupId: currentGroupId } : undefined);
                         }}
                         style={{
                           marginTop: '12px',

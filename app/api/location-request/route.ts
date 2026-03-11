@@ -25,7 +25,10 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    const { targetId, requesterId, groupId } = await request.json();
+    const body = await request.json();
+    const targetId = typeof body.targetId === 'string' ? body.targetId.trim() : body.targetId;
+    const requesterId = typeof body.requesterId === 'string' ? body.requesterId.trim() : body.requesterId;
+    const groupId = typeof body.groupId === 'string' ? body.groupId.trim() : body.groupId;
 
     if (!targetId || !requesterId || !groupId) {
       return NextResponse.json(
@@ -84,15 +87,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: targetMembership } = await supabase
+    // .single()은 0건이면 null, 2건 이상이면 에러로 null 반환 → 멤버인데 중복 행 시 잘못 거절됨. limit(1)로 존재 여부만 확인
+    const { data: membershipRows, error: membershipError } = await supabase
       .from('memberships')
       .select('user_id')
       .eq('group_id', groupId)
       .eq('user_id', targetId)
-      .single();
+      .limit(1);
 
-    const isTargetOwner = groupData.owner_id === targetId;
-    if (!targetMembership && !isTargetOwner) {
+    if (membershipError) {
+      console.error('위치 요청 API memberships 조회 오류:', membershipError);
+      return NextResponse.json(
+        { error: '멤버 확인 중 오류가 발생했습니다.', details: membershipError.message },
+        { status: 500 }
+      );
+    }
+
+    const isMember = membershipRows != null && membershipRows.length > 0;
+    const isTargetOwner = (groupData.owner_id && String(groupData.owner_id).toLowerCase() === String(targetId).toLowerCase());
+    if (!isMember && !isTargetOwner) {
       return NextResponse.json(
         { error: '대상 사용자는 해당 그룹의 멤버가 아닙니다.' },
         { status: 400 }
