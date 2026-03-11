@@ -117,7 +117,9 @@ export default function PiggyBankPage() {
   const [openReason, setOpenReason] = useState('');
   const [openDestination, setOpenDestination] = useState<'wallet' | 'cash'>('wallet');
   const [allowanceSubmitting, setAllowanceSubmitting] = useState(false);
+  const [depositSubmitting, setDepositSubmitting] = useState(false);
   const [saveSubmitting, setSaveSubmitting] = useState(false);
+  const [spendSubmitting, setSpendSubmitting] = useState(false);
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -754,6 +756,7 @@ export default function PiggyBankPage() {
                 type="button"
                 disabled={allowanceSubmitting}
                 onClick={async () => {
+                  if (allowanceSubmitting) return;
                   if (!selectedChildIdForAdmin) {
                     setError(pt('select_child_first'));
                     return;
@@ -805,11 +808,15 @@ export default function PiggyBankPage() {
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
+                type="button"
+                disabled={depositSubmitting}
                 onClick={async () => {
+                  if (depositSubmitting) return;
                   if (!selectedChildIdForAdmin) {
                     setError(pt('select_child_first'));
                     return;
                   }
+                  setDepositSubmitting(true);
                   try {
                     await handleAction('/api/piggy-bank/parent-deposit', {
                       childId: selectedChildIdForAdmin,
@@ -820,11 +827,21 @@ export default function PiggyBankPage() {
                     setDepositMemo('');
                   } catch (err: any) {
                     setError(err.message || pt('parent_deposit_failed'));
+                  } finally {
+                    setDepositSubmitting(false);
                   }
                 }}
-                style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700 }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: depositSubmitting ? '#94a3b8' : '#ef4444',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: depositSubmitting ? 'not-allowed' : 'pointer',
+                }}
               >
-                {pt('parent_deposit_btn')}
+                {depositSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('parent_deposit_btn')}
               </button>
             </div>
           </div>
@@ -911,7 +928,11 @@ export default function PiggyBankPage() {
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
+                type="button"
+                disabled={spendSubmitting}
                 onClick={async () => {
+                  if (spendSubmitting) return;
+                  setSpendSubmitting(true);
                   try {
                     await handleAction('/api/piggy-bank/spend', {
                       amount: spendAmount,
@@ -923,11 +944,21 @@ export default function PiggyBankPage() {
                     setSpendMemo('');
                   } catch (err: any) {
                     setError(err.message || pt('spend_failed'));
+                  } finally {
+                    setSpendSubmitting(false);
                   }
                 }}
-                style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#0ea5e9', color: '#fff', fontWeight: 700 }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: spendSubmitting ? '#94a3b8' : '#0ea5e9',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: spendSubmitting ? 'not-allowed' : 'pointer',
+                }}
               >
-                {pt('spend_btn')}
+                {spendSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('spend_btn')}
               </button>
             </div>
           </div>
@@ -952,6 +983,7 @@ export default function PiggyBankPage() {
                 type="button"
                 disabled={saveSubmitting}
                 onClick={async () => {
+                  if (saveSubmitting) return;
                   setSaveSubmitting(true);
                   try {
                     await handleAction('/api/piggy-bank/save', { amount: saveAmount, memo: saveMemo });
