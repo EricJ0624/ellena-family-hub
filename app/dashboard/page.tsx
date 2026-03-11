@@ -1621,10 +1621,7 @@ export default function FamilyHub() {
           const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
           if (otherId) acceptedFromState.add(otherId);
         }
-        if (req.status === 'cancelled' || req.status === 'rejected') {
-          const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
-          if (otherId) acceptedUserIdsRef.current.delete(otherId);
-        }
+        // ref에서 제거는 Realtime/핸들러에서만 함. 여기서 하면 예전 취소 요청 때문에 ref가 비어 마커가 사라질 수 있음
       });
       markersRef.current.forEach((marker, markerUserId) => {
         if (markerUserId === 'my-location') return;
@@ -3553,6 +3550,15 @@ export default function FamilyHub() {
             setTimeout(() => {
               updateMapMarkers();
             }, 300);
+            
+            // ✅ 요청한 쪽: 승인한 사람이 위치 저장할 시간을 두고 한 번 더 로드 → 승인자 마커가 지도에 뜨도록
+            const isRequester = updatedRequest.requester_id === userId;
+            if (updatedRequest.status === 'accepted' && isRequester) {
+              setTimeout(() => {
+                loadFamilyLocations();
+                setTimeout(updateMapMarkers, 400);
+              }, 2000);
+            }
             
             // 지도 마커 업데이트를 위해 상태 변경 트리거
             setState(prev => ({ ...prev }));
