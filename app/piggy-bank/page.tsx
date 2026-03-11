@@ -116,6 +116,8 @@ export default function PiggyBankPage() {
   const [openAmount, setOpenAmount] = useState('');
   const [openReason, setOpenReason] = useState('');
   const [openDestination, setOpenDestination] = useState<'wallet' | 'cash'>('wallet');
+  const [allowanceSubmitting, setAllowanceSubmitting] = useState(false);
+  const [saveSubmitting, setSaveSubmitting] = useState(false);
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -749,11 +751,14 @@ export default function PiggyBankPage() {
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
+                type="button"
+                disabled={allowanceSubmitting}
                 onClick={async () => {
                   if (!selectedChildIdForAdmin) {
                     setError(pt('select_child_first'));
                     return;
                   }
+                  setAllowanceSubmitting(true);
                   try {
                     await handleAction('/api/piggy-bank/allowance', {
                       childId: selectedChildIdForAdmin,
@@ -764,11 +769,21 @@ export default function PiggyBankPage() {
                     setAllowanceMemo('');
                   } catch (err: any) {
                     setError(err.message || pt('allowance_grant_failed'));
+                  } finally {
+                    setAllowanceSubmitting(false);
                   }
                 }}
-                style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700 }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: allowanceSubmitting ? '#94a3b8' : '#2563eb',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: allowanceSubmitting ? 'not-allowed' : 'pointer',
+                }}
               >
-                {pt('allowance_grant_btn')}
+                {allowanceSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('allowance_grant_btn')}
               </button>
             </div>
           </div>
@@ -934,18 +949,31 @@ export default function PiggyBankPage() {
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
+                type="button"
+                disabled={saveSubmitting}
                 onClick={async () => {
+                  setSaveSubmitting(true);
                   try {
                     await handleAction('/api/piggy-bank/save', { amount: saveAmount, memo: saveMemo });
                     setSaveAmount('');
                     setSaveMemo('');
                   } catch (err: any) {
                     setError(err.message || pt('save_failed'));
+                  } finally {
+                    setSaveSubmitting(false);
                   }
                 }}
-                style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#f97316', color: '#fff', fontWeight: 700 }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: saveSubmitting ? '#94a3b8' : '#f97316',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: saveSubmitting ? 'not-allowed' : 'pointer',
+                }}
               >
-                {pt('save_btn')}
+                {saveSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('save_btn')}
               </button>
             </div>
           </div>
