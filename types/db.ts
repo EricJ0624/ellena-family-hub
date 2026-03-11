@@ -22,8 +22,10 @@ export interface Database {
           name: string
           invite_code: string
           owner_id: string
+          avatar_url: string | null
           created_at: string
           updated_at: string
+          invite_code_expires_at: string | null
           storage_quota_bytes: number
           family_name: string | null
           title_style: Json | null
@@ -34,8 +36,10 @@ export interface Database {
           name: string
           invite_code: string
           owner_id: string
+          avatar_url?: string | null
           created_at?: string
           updated_at?: string
+          invite_code_expires_at?: string | null
           storage_quota_bytes?: number
           family_name?: string | null
           title_style?: Json | null
@@ -46,8 +50,10 @@ export interface Database {
           name?: string
           invite_code?: string
           owner_id?: string
+          avatar_url?: string | null
           created_at?: string
           updated_at?: string
+          invite_code_expires_at?: string | null
           storage_quota_bytes?: number
           family_name?: string | null
           title_style?: Json | null
@@ -425,22 +431,31 @@ export interface Database {
         Row: {
           id: string
           email: string | null
-          nickname: string | null
+          display_name: string | null
+          avatar_url: string | null
+          role: string | null
           created_at: string | null
+          nickname: string | null
           updated_at: string | null
         }
         Insert: {
           id: string
           email?: string | null
-          nickname?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          role?: string | null
           created_at?: string | null
+          nickname?: string | null
           updated_at?: string | null
         }
         Update: {
           id?: string
           email?: string | null
-          nickname?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          role?: string | null
           created_at?: string | null
+          nickname?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -552,16 +567,19 @@ export interface Database {
       }
       announcement_reads: {
         Row: {
+          id: string
           announcement_id: string
           user_id: string
           read_at: string
         }
         Insert: {
+          id?: string
           announcement_id: string
           user_id: string
           read_at?: string
         }
         Update: {
+          id?: string
           announcement_id?: string
           user_id?: string
           read_at?: string
@@ -830,6 +848,7 @@ export interface Database {
           address: string | null
           last_updated: string
           created_at: string
+          group_id: string
         }
         Insert: {
           user_id: string
@@ -838,6 +857,7 @@ export interface Database {
           address?: string | null
           last_updated?: string
           created_at?: string
+          group_id?: string
         }
         Update: {
           user_id?: string
@@ -846,6 +866,7 @@ export interface Database {
           address?: string | null
           last_updated?: string
           created_at?: string
+          group_id?: string
         }
         Relationships: [
           {
@@ -871,6 +892,7 @@ export interface Database {
           mime_type: string | null
           original_filename: string | null
           caption: string | null
+          description: string | null
           taken_at: string | null
           created_at: string
           upload_mode: 'normal' | 'original' | null
@@ -889,6 +911,7 @@ export interface Database {
           mime_type?: string | null
           original_filename?: string | null
           caption?: string | null
+          description?: string | null
           taken_at?: string | null
           created_at?: string
           upload_mode?: 'normal' | 'original' | null
@@ -907,6 +930,7 @@ export interface Database {
           mime_type?: string | null
           original_filename?: string | null
           caption?: string | null
+          description?: string | null
           taken_at?: string | null
           created_at?: string
           upload_mode?: 'normal' | 'original' | null
@@ -977,6 +1001,7 @@ export interface Database {
           title: string
           description: string | null
           event_date: string
+          location: string | null
           created_at: string
           repeat_type: 'none' | 'monthly' | 'yearly' | null
         }
@@ -987,6 +1012,7 @@ export interface Database {
           title: string
           description?: string | null
           event_date: string
+          location?: string | null
           created_at?: string
           repeat_type?: 'none' | 'monthly' | 'yearly' | null
         }
@@ -997,6 +1023,7 @@ export interface Database {
           title?: string
           description?: string | null
           event_date?: string
+          location?: string | null
           created_at?: string
           repeat_type?: 'none' | 'monthly' | 'yearly' | null
         }
