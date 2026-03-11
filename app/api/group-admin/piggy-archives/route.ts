@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { isSystemAdmin } from '@/lib/permissions';
+import { checkPermission } from '@/lib/permissions';
 
 const WALLET_TYPE_LABELS: Record<string, string> = {
   allowance: '용돈 지급',
@@ -23,26 +23,40 @@ function formatDate(dateString: string): string {
   return `${month}월 ${day}일`;
 }
 
-/** 시스템 관리자 전용: 삭제된 저금통 보관 내역 조회 */
+/** 그룹 관리자 전용: 해당 그룹의 삭제된 저금통 보관 내역 조회 */
 export async function GET(request: NextRequest) {
   try {
     const authResult = await authenticateUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json({ error: '시스템 관리자 권한이 필요합니다.' }, { status: 403 });
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('group_id');
+    const snapshotId = searchParams.get('snapshot_id');
+
+    if (!groupId) {
+      return NextResponse.json({ error: '그룹 ID가 필요합니다.' }, { status: 400 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const snapshotId = searchParams.get('snapshot_id');
-    const groupId = searchParams.get('group_id');
+    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
+    if (!permissionResult.success) {
+      return NextResponse.json({ error: '그룹 관리자 권한이 필요합니다.' }, { status: 403 });
+    }
 
     const supabase = getSupabaseServerClient();
 
     if (snapshotId) {
-      // 특정 스냅샷의 용돈/저금통 거래 내역 조회
+      const { data: snapshot, error: snapErr } = await supabase
+        .from('piggy_deleted_account_snapshots')
+        .select('id, group_id')
+        .eq('id', snapshotId)
+        .eq('group_id', groupId)
+        .maybeSingle();
+
+      if (snapErr || !snapshot) {
+        return NextResponse.json({ error: '해당 보관 내역을 찾을 수 없거나 권한이 없습니다.' }, { status: 404 });
+      }
+
       const { data: walletRows, error: we } = await supabase
         .from('piggy_wallet_transactions_archive')
         .select('id, amount, type, memo, created_at, actor_id')
@@ -102,18 +116,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 삭제된 저금통 스냅샷 목록 (group_id 선택 시 필터)
-    let q = supabase
+    const { data: snapshots, error: snapErr } = await supabase
       .from('piggy_deleted_account_snapshots')
       .select('id, group_id, user_id, deleted_at, deleted_by, account_name')
+      .eq('group_id', groupId)
       .order('deleted_at', { ascending: false })
       .limit(100);
-
-    if (groupId) {
-      q = q.eq('group_id', groupId);
-    }
-
-    const { data: snapshots, error: snapErr } = await q;
 
     if (snapErr) throw snapErr;
 
@@ -134,19 +142,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const groupIds = [...new Set((snapshots || []).map((s) => s.group_id))];
-    let groupNames: Record<string, string> = {};
-    if (groupIds.length > 0) {
-      const { data: groups } = await supabase.from('groups').select('id, name').in('id', groupIds);
-      (groups || []).forEach((g) => {
-        groupNames[g.id] = g.name || '-';
-      });
-    }
-
     const list = (snapshots || []).map((s) => ({
       id: s.id,
       group_id: s.group_id,
-      group_name: groupNames[s.group_id] || '-',
       user_id: s.user_id,
       user_nickname: nicknames[s.user_id] || '-',
       deleted_at: s.deleted_at,
@@ -160,7 +158,7 @@ export async function GET(request: NextRequest) {
       data: { snapshots: list },
     });
   } catch (error: any) {
-    console.error('Piggy archives 오류:', error);
+    console.error('Group admin piggy archives 오류:', error);
     return NextResponse.json(
       { error: error.message || '보관 내역 조회에 실패했습니다.' },
       { status: 500 }

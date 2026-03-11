@@ -191,7 +191,7 @@ export default function AdminPage() {
   }, []);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log' | 'piggy-archives'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
@@ -203,7 +203,7 @@ export default function AdminPage() {
   // 그룹 관리 관련 상태
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupDetailInfo | null>(null);
-  const [groupAdminTab, setGroupAdminTab] = useState<'dashboard' | 'members' | 'settings' | 'content' | 'announcements' | 'support-tickets' | 'dashboard-access-requests'>('dashboard');
+  const [groupAdminTab, setGroupAdminTab] = useState<'dashboard' | 'members' | 'settings' | 'content' | 'announcements' | 'support-tickets' | 'dashboard-access-requests' | 'piggy-archives'>('dashboard');
   const [groupStats, setGroupStats] = useState<GroupStats | null>(null);
   const [groupMembers, setGroupMembers] = useState<MemberInfo[]>([]);
   const [groupPhotos, setGroupPhotos] = useState<PhotoInfo[]>([]);
@@ -275,7 +275,6 @@ export default function AdminPage() {
     account_name: string | null;
   }>>([]);
   const [piggyArchivesLoading, setPiggyArchivesLoading] = useState(false);
-  const [piggyArchivesGroupFilter, setPiggyArchivesGroupFilter] = useState('');
   const [piggyArchivesDetailId, setPiggyArchivesDetailId] = useState<string | null>(null);
   const [piggyArchivesDetail, setPiggyArchivesDetail] = useState<{
     walletTransactions: Array<{ id: string; amount: number; type: string; typeLabel: string; memo: string | null; created_at: string; dateLabel: string; actor_nickname: string }>;
@@ -1087,6 +1086,8 @@ export default function AdminPage() {
         loadGroupSupportTickets(selectedGroupId);
       } else if (groupAdminTab === 'dashboard-access-requests') {
         loadGroupAccessRequests(selectedGroupId);
+      } else if (groupAdminTab === 'piggy-archives') {
+        loadPiggyArchivesSnapshots(selectedGroupId);
       }
     } else if (activeTab === 'announcements') {
       loadAnnouncements();
@@ -1098,8 +1099,6 @@ export default function AdminPage() {
       loadAccessRequests();
     } else if (activeTab === 'audit-log') {
       loadAuditLogs(1);
-    } else if (activeTab === 'piggy-archives') {
-      loadPiggyArchivesSnapshots();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAuthorized, groupAdminTab, selectedGroupId]);
@@ -1300,7 +1299,7 @@ export default function AdminPage() {
     }
   }, [auditLogFilters]);
 
-  const loadPiggyArchivesSnapshots = useCallback(async () => {
+  const loadPiggyArchivesSnapshots = useCallback(async (groupId: string) => {
     try {
       setPiggyArchivesLoading(true);
       setError(null);
@@ -1310,15 +1309,24 @@ export default function AdminPage() {
         setPiggyArchivesLoading(false);
         return;
       }
-      const params = new URLSearchParams();
-      if (piggyArchivesGroupFilter) params.set('group_id', piggyArchivesGroupFilter);
-      const response = await fetch(`/api/admin/piggy-archives?${params.toString()}`, {
+      const response = await fetch(`/api/group-admin/piggy-archives?group_id=${encodeURIComponent(groupId)}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || '보관 내역 조회 실패');
-      setPiggyArchivesSnapshots(result.data?.snapshots ?? []);
+      const list = result.data?.snapshots ?? [];
+      setPiggyArchivesSnapshots(list.map((s: { id: string; group_id: string; user_id: string; user_nickname: string; deleted_at: string; deleted_by: string | null; deleted_by_nickname: string | null; account_name: string | null }) => ({
+        id: s.id,
+        group_id: s.group_id,
+        group_name: selectedGroup?.name ?? '-',
+        user_id: s.user_id,
+        user_nickname: s.user_nickname,
+        deleted_at: s.deleted_at,
+        deleted_by: s.deleted_by,
+        deleted_by_nickname: s.deleted_by_nickname,
+        account_name: s.account_name,
+      })));
     } catch (err: any) {
       console.error('저금통 보관 목록 로드 오류:', err);
       setError(err.message || '저금통 보관 내역 조회에 실패했습니다.');
@@ -1326,15 +1334,15 @@ export default function AdminPage() {
     } finally {
       setPiggyArchivesLoading(false);
     }
-  }, [piggyArchivesGroupFilter]);
+  }, [selectedGroup?.name]);
 
-  const loadPiggyArchivesDetail = useCallback(async (snapshotId: string) => {
+  const loadPiggyArchivesDetail = useCallback(async (groupId: string, snapshotId: string) => {
     try {
       setPiggyArchivesDetailLoading(true);
       setPiggyArchivesDetail(null);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
-      const response = await fetch(`/api/admin/piggy-archives?snapshot_id=${encodeURIComponent(snapshotId)}`, {
+      const response = await fetch(`/api/group-admin/piggy-archives?group_id=${encodeURIComponent(groupId)}&snapshot_id=${encodeURIComponent(snapshotId)}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
       });
@@ -1824,23 +1832,6 @@ export default function AdminPage() {
           >
             <FileText style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             {at('tab_audit_log')}
-          </button>
-          <button
-            onClick={() => setActiveTab('piggy-archives')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'piggy-archives' ? '3px solid #9333ea' : '3px solid transparent',
-              color: activeTab === 'piggy-archives' ? '#9333ea' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'piggy-archives' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
-            <PiggyBank style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            저금통 보관 내역
           </button>
         </div>
       </div>
@@ -3118,6 +3109,23 @@ export default function AdminPage() {
                         <KeyRound style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
                         접근 요청
                       </button>
+                      <button
+                        onClick={() => setGroupAdminTab('piggy-archives')}
+                        style={{
+                          padding: '12px 24px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: groupAdminTab === 'piggy-archives' ? '3px solid #9333ea' : '3px solid transparent',
+                          color: groupAdminTab === 'piggy-archives' ? '#9333ea' : '#64748b',
+                          fontSize: '14px',
+                          fontWeight: groupAdminTab === 'piggy-archives' ? '600' : '500',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <PiggyBank style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                        저금통 보관 내역
+                      </button>
                     </div>
 
                     {/* 대시보드 서브 탭 */}
@@ -3950,6 +3958,151 @@ export default function AdminPage() {
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* 저금통 보관 내역 서브 탭 */}
+                    {groupAdminTab === 'piggy-archives' && selectedGroupId && (
+                      <div>
+                        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px' }}>
+                          저금통 보관 내역 (삭제된 저금통 거래)
+                        </h2>
+                        <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '24px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: '#f1f5f9' }}>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제일시</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>아이(닉네임)</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>저금통 이름</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제한 관리자</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>동작</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {piggyArchivesLoading && piggyArchivesSnapshots.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                                    <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                                    로딩 중…
+                                  </td>
+                                </tr>
+                              ) : piggyArchivesSnapshots.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                                    삭제된 저금통 보관 내역이 없습니다.
+                                  </td>
+                                </tr>
+                              ) : (
+                                piggyArchivesSnapshots.map((s) => (
+                                  <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{new Date(s.deleted_at).toLocaleString('ko-KR')}</td>
+                                    <td style={{ padding: '10px 12px' }}>{s.user_nickname}</td>
+                                    <td style={{ padding: '10px 12px' }}>{s.account_name || '-'}</td>
+                                    <td style={{ padding: '10px 12px' }}>{s.deleted_by_nickname ?? '-'}</td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setPiggyArchivesDetailId(s.id);
+                                          loadPiggyArchivesDetail(selectedGroupId, s.id);
+                                        }}
+                                        style={{
+                                          padding: '4px 10px',
+                                          borderRadius: '6px',
+                                          border: '1px solid #e2e8f0',
+                                          background: '#f8fafc',
+                                          fontSize: '12px',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        거래 내역 보기
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        {piggyArchivesDetailId && (
+                          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', backgroundColor: '#f8fafc' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>보관된 거래 내역</h3>
+                              <button
+                                type="button"
+                                onClick={() => { setPiggyArchivesDetailId(null); setPiggyArchivesDetail(null); }}
+                                style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontSize: '12px', cursor: 'pointer' }}
+                              >
+                                닫기
+                              </button>
+                            </div>
+                            {piggyArchivesDetailLoading ? (
+                              <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                                <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                                로딩 중…
+                              </div>
+                            ) : piggyArchivesDetail && (piggyArchivesDetail.walletTransactions.length > 0 || piggyArchivesDetail.bankTransactions.length > 0) ? (
+                              <>
+                                <h4 style={{ margin: '12px 0 8px', fontSize: '14px', color: '#475569' }}>용돈 내역</h4>
+                                {piggyArchivesDetail.walletTransactions.length === 0 ? (
+                                  <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>없음</p>
+                                ) : (
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '16px' }}>
+                                    <thead>
+                                      <tr style={{ backgroundColor: '#f1f5f9' }}>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>일시</th>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>유형</th>
+                                        <th style={{ padding: '8px', textAlign: 'right' }}>금액</th>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>메모</th>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>행위자</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {piggyArchivesDetail.walletTransactions.map((tx) => (
+                                        <tr key={tx.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                          <td style={{ padding: '8px' }}>{tx.dateLabel}</td>
+                                          <td style={{ padding: '8px' }}>{tx.typeLabel}</td>
+                                          <td style={{ padding: '8px', textAlign: 'right' }}>{tx.amount.toLocaleString()}원</td>
+                                          <td style={{ padding: '8px' }}>{tx.memo || '-'}</td>
+                                          <td style={{ padding: '8px' }}>{tx.actor_nickname}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                                <h4 style={{ margin: '12px 0 8px', fontSize: '14px', color: '#475569' }}>저금통 내역</h4>
+                                {piggyArchivesDetail.bankTransactions.length === 0 ? (
+                                  <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>없음</p>
+                                ) : (
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                    <thead>
+                                      <tr style={{ backgroundColor: '#f1f5f9' }}>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>일시</th>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>유형</th>
+                                        <th style={{ padding: '8px', textAlign: 'right' }}>금액</th>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>메모</th>
+                                        <th style={{ padding: '8px', textAlign: 'left' }}>행위자</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {piggyArchivesDetail.bankTransactions.map((tx) => (
+                                        <tr key={tx.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                          <td style={{ padding: '8px' }}>{tx.dateLabel}</td>
+                                          <td style={{ padding: '8px' }}>{tx.typeLabel}</td>
+                                          <td style={{ padding: '8px', textAlign: 'right' }}>{tx.amount.toLocaleString()}원</td>
+                                          <td style={{ padding: '8px' }}>{tx.memo || '-'}</td>
+                                          <td style={{ padding: '8px' }}>{tx.actor_nickname}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </>
+                            ) : (
+                              <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>거래 내역이 없습니다.</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -5894,178 +6047,6 @@ console.error(at('error_revoke_failed'), error);
               </div>
             )}
 
-            {/* 저금통 보관 내역 탭 */}
-            {activeTab === 'piggy-archives' && (
-              <div>
-                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px' }}>
-                  저금통 보관 내역 (삭제된 저금통 거래)
-                </h2>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
-                  <input
-                    type="text"
-                    placeholder="그룹 ID 필터 (선택)"
-                    value={piggyArchivesGroupFilter}
-                    onChange={(e) => setPiggyArchivesGroupFilter(e.target.value)}
-                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}
-                  />
-                  <button
-                    onClick={() => loadPiggyArchivesSnapshots()}
-                    disabled={piggyArchivesLoading}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#9333ea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: piggyArchivesLoading ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {piggyArchivesLoading ? <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite', display: 'inline', verticalAlign: 'middle' }} /> : null}
-                    조회
-                  </button>
-                </div>
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '24px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제일시</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>그룹</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>아이(닉네임)</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>저금통 이름</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제한 관리자</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>동작</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {piggyArchivesLoading && piggyArchivesSnapshots.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                            <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-                            로딩 중…
-                          </td>
-                        </tr>
-                      ) : piggyArchivesSnapshots.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                            삭제된 저금통 보관 내역이 없습니다.
-                          </td>
-                        </tr>
-                      ) : (
-                        piggyArchivesSnapshots.map((s) => (
-                          <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{new Date(s.deleted_at).toLocaleString('ko-KR')}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.group_name}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.user_nickname}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.account_name || '-'}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.deleted_by_nickname ?? '-'}</td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPiggyArchivesDetailId(s.id);
-                                  loadPiggyArchivesDetail(s.id);
-                                }}
-                                style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #e2e8f0',
-                                  background: '#f8fafc',
-                                  fontSize: '12px',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                거래 내역 보기
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                {piggyArchivesDetailId && (
-                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', backgroundColor: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>보관된 거래 내역</h3>
-                      <button
-                        type="button"
-                        onClick={() => { setPiggyArchivesDetailId(null); setPiggyArchivesDetail(null); }}
-                        style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontSize: '12px', cursor: 'pointer' }}
-                      >
-                        닫기
-                      </button>
-                    </div>
-                    {piggyArchivesDetailLoading ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                        <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-                        로딩 중…
-                      </div>
-                    ) : piggyArchivesDetail && (piggyArchivesDetail.walletTransactions.length > 0 || piggyArchivesDetail.bankTransactions.length > 0) ? (
-                      <>
-                        <h4 style={{ margin: '12px 0 8px', fontSize: '14px', color: '#475569' }}>용돈 내역</h4>
-                        {piggyArchivesDetail.walletTransactions.length === 0 ? (
-                          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>없음</p>
-                        ) : (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '16px' }}>
-                            <thead>
-                              <tr style={{ backgroundColor: '#f1f5f9' }}>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>일시</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>유형</th>
-                                <th style={{ padding: '8px', textAlign: 'right' }}>금액</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>메모</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>행위자</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {piggyArchivesDetail.walletTransactions.map((tx) => (
-                                <tr key={tx.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '8px' }}>{tx.dateLabel}</td>
-                                  <td style={{ padding: '8px' }}>{tx.typeLabel}</td>
-                                  <td style={{ padding: '8px', textAlign: 'right' }}>{tx.amount.toLocaleString()}원</td>
-                                  <td style={{ padding: '8px' }}>{tx.memo || '-'}</td>
-                                  <td style={{ padding: '8px' }}>{tx.actor_nickname}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        )}
-                        <h4 style={{ margin: '12px 0 8px', fontSize: '14px', color: '#475569' }}>저금통 내역</h4>
-                        {piggyArchivesDetail.bankTransactions.length === 0 ? (
-                          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>없음</p>
-                        ) : (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                            <thead>
-                              <tr style={{ backgroundColor: '#f1f5f9' }}>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>일시</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>유형</th>
-                                <th style={{ padding: '8px', textAlign: 'right' }}>금액</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>메모</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>행위자</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {piggyArchivesDetail.bankTransactions.map((tx) => (
-                                <tr key={tx.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '8px' }}>{tx.dateLabel}</td>
-                                  <td style={{ padding: '8px' }}>{tx.typeLabel}</td>
-                                  <td style={{ padding: '8px', textAlign: 'right' }}>{tx.amount.toLocaleString()}원</td>
-                                  <td style={{ padding: '8px' }}>{tx.memo || '-'}</td>
-                                  <td style={{ padding: '8px' }}>{tx.actor_nickname}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        )}
-                      </>
-                    ) : (
-                      <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>거래 내역이 없습니다.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </>
         )}
       </div>
