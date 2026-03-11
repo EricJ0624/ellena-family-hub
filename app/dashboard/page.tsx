@@ -312,7 +312,8 @@ export default function FamilyHub() {
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
-  
+  const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
+
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
     content: INITIAL_STATE.familyName,
@@ -1612,18 +1613,24 @@ export default function FamilyHub() {
         }
       });
 
-      // familyLocations에 없는 사용자의 마커 제거 (단, 승인된 위치공유 사용자는 제거하지 않음 → 상태 레이스로 마커가 사라지는 것 방지)
+      // familyLocations에 없는 사용자의 마커 제거 (단, 승인된 사용자는 제거하지 않음)
       const currentUserIds = new Set(state.familyLocations.map((loc: any) => loc.userId).filter((id: string) => id !== userId));
-      const acceptedOtherUserIds = new Set<string>();
+      const acceptedFromState = new Set<string>();
       (locationRequests || []).forEach((req: any) => {
-        if (req.status !== 'accepted') return;
-        const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
-        if (otherId) acceptedOtherUserIds.add(otherId);
+        if (req.status === 'accepted') {
+          const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
+          if (otherId) acceptedFromState.add(otherId);
+        }
+        if (req.status === 'cancelled' || req.status === 'rejected') {
+          const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
+          if (otherId) acceptedUserIdsRef.current.delete(otherId);
+        }
       });
       markersRef.current.forEach((marker, markerUserId) => {
         if (markerUserId === 'my-location') return;
         if (currentUserIds.has(markerUserId)) return;
-        if (acceptedOtherUserIds.has(markerUserId)) return; // 승인된 사용자 마커는 familyLocations가 비어도 유지
+        if (acceptedFromState.has(markerUserId)) return;
+        if (acceptedUserIdsRef.current.has(markerUserId)) return; // 승인 직후 ref에 올라간 ID → 첫 사라짐 방지
         if (useAdvancedMarker && marker.map) {
           marker.map = null;
         } else if (marker.setMap) {
@@ -3416,13 +3423,22 @@ export default function FamilyHub() {
           { event: 'UPDATE', schema: 'public', table: 'location_requests' },
           async (payload: any) => {
             console.log('📍 Realtime 위치 요청 UPDATE 이벤트 수신:', payload);
+            const updatedRequest = payload.new;
+            // ✅ 승인 이벤트 수신 직후 상대 ID를 ref에 등록 (첫 사라짐 방지, state보다 먼저 반영)
+            if (updatedRequest && updatedRequest.status === 'accepted') {
+              const otherId = updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id;
+              if (otherId) acceptedUserIdsRef.current.add(otherId);
+            }
+            if (updatedRequest && (updatedRequest.status === 'cancelled' || updatedRequest.status === 'rejected')) {
+              const otherId = updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id;
+              if (otherId) acceptedUserIdsRef.current.delete(otherId);
+            }
             // 위치 요청 목록 다시 로드 (완료 대기)
             await loadLocationRequests();
             // locationRequests 상태가 업데이트될 때까지 약간의 지연
             await new Promise(resolve => setTimeout(resolve, 200));
             
             // ✅ 승인된 요청이 있으면 양쪽 사용자 모두 위치 추적 시작
-            const updatedRequest = payload.new;
             if (updatedRequest && updatedRequest.status === 'accepted') {
               const isRequester = updatedRequest.requester_id === userId;
               const isTarget = updatedRequest.target_id === userId;
@@ -5996,6 +6012,11 @@ export default function FamilyHub() {
 
       if (result.success) {
         if (action === 'accept') {
+          // ✅ 승인 직후 상대 ID를 ref에 등록 → 이후 updateMapMarkers에서 해당 마커를 절대 제거하지 않음 (첫 사라짐 방지)
+          if (currentRequest) {
+            const otherId = currentRequest.requester_id === userId ? currentRequest.target_id : currentRequest.requester_id;
+            if (otherId) acceptedUserIdsRef.current.add(otherId);
+          }
           // ✅ 위치 공유 승인 시 현재 위치를 자동으로 가져와서 저장
           try {
             if (navigator.geolocation) {
@@ -6047,9 +6068,14 @@ export default function FamilyHub() {
           }
           
           alert(dt('location_share_approved'));
-        } else if (action === 'reject') {
-          alert(dt('location_request_rejected'));
-        } else {
+        } else if (action === 'reject' || action === 'cancel') {
+          if (action === 'reject') alert(dt('location_request_rejected'));
+          if (currentRequest) {
+            const otherId = currentRequest.requester_id === userId ? currentRequest.target_id : currentRequest.requester_id;
+            if (otherId) acceptedUserIdsRef.current.delete(otherId);
+          }
+        }
+        if (action === 'cancel') {
           // ✅ 위치 요청 취소 시 state.location 초기화
           setState(prev => ({
             ...prev,
