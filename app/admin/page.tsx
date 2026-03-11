@@ -1357,6 +1357,31 @@ export default function AdminPage() {
     }
   }, []);
 
+  const deletePiggyArchivesSnapshot = useCallback(async (groupId: string, snapshotId: string) => {
+    if (!confirm('이 보관 내역을 삭제하시겠습니까? 삭제된 거래 기록은 복구할 수 없습니다.')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError(at('error_session_expired'));
+        return;
+      }
+      const response = await fetch(
+        `/api/group-admin/piggy-archives?group_id=${encodeURIComponent(groupId)}&snapshot_id=${encodeURIComponent(snapshotId)}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '삭제 실패');
+      if (piggyArchivesDetailId === snapshotId) {
+        setPiggyArchivesDetailId(null);
+        setPiggyArchivesDetail(null);
+      }
+      loadPiggyArchivesSnapshots(groupId);
+    } catch (err: any) {
+      console.error('저금통 보관 내역 삭제 오류:', err);
+      setError(err.message || '보관 내역 삭제에 실패했습니다.');
+    }
+  }, [piggyArchivesDetailId]);
+
   const exportAuditLogsCsv = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -4000,23 +4025,40 @@ export default function AdminPage() {
                                     <td style={{ padding: '10px 12px' }}>{s.account_name || '-'}</td>
                                     <td style={{ padding: '10px 12px' }}>{s.deleted_by_nickname ?? '-'}</td>
                                     <td style={{ padding: '10px 12px' }}>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setPiggyArchivesDetailId(s.id);
-                                          loadPiggyArchivesDetail(selectedGroupId, s.id);
-                                        }}
-                                        style={{
-                                          padding: '4px 10px',
-                                          borderRadius: '6px',
-                                          border: '1px solid #e2e8f0',
-                                          background: '#f8fafc',
-                                          fontSize: '12px',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        거래 내역 보기
-                                      </button>
+                                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPiggyArchivesDetailId(s.id);
+                                            loadPiggyArchivesDetail(selectedGroupId, s.id);
+                                          }}
+                                          style={{
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            border: '1px solid #e2e8f0',
+                                            background: '#f8fafc',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          거래 내역 보기
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => deletePiggyArchivesSnapshot(selectedGroupId, s.id)}
+                                          style={{
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            border: '1px solid #fecaca',
+                                            background: '#fef2f2',
+                                            color: '#b91c1c',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          삭제
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 ))

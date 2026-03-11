@@ -165,3 +165,54 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+/** 그룹 관리자 전용: 보관된 저금통 거래 내역(스냅샷) 삭제. 해당 스냅샷의 아카이브 거래 행도 cascade 삭제됨. */
+export async function DELETE(request: NextRequest) {
+  try {
+    const authResult = await authenticateUser(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const { user } = authResult;
+
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('group_id');
+    const snapshotId = searchParams.get('snapshot_id');
+
+    if (!groupId || !snapshotId) {
+      return NextResponse.json({ error: 'group_id와 snapshot_id가 필요합니다.' }, { status: 400 });
+    }
+
+    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
+    if (!permissionResult.success) {
+      return NextResponse.json({ error: '그룹 관리자 권한이 필요합니다.' }, { status: 403 });
+    }
+
+    const supabase = getSupabaseServerClient();
+
+    const { data: snapshot, error: findErr } = await supabase
+      .from('piggy_deleted_account_snapshots')
+      .select('id, group_id')
+      .eq('id', snapshotId)
+      .eq('group_id', groupId)
+      .maybeSingle();
+
+    if (findErr || !snapshot) {
+      return NextResponse.json({ error: '해당 보관 내역을 찾을 수 없거나 권한이 없습니다.' }, { status: 404 });
+    }
+
+    const { error: delErr } = await supabase
+      .from('piggy_deleted_account_snapshots')
+      .delete()
+      .eq('id', snapshotId)
+      .eq('group_id', groupId);
+
+    if (delErr) throw delErr;
+
+    return NextResponse.json({ success: true, message: '보관 내역이 삭제되었습니다.' });
+  } catch (error: any) {
+    console.error('Group admin piggy archives delete 오류:', error);
+    return NextResponse.json(
+      { error: error.message || '보관 내역 삭제에 실패했습니다.' },
+      { status: 500 }
+    );
+  }
+}
