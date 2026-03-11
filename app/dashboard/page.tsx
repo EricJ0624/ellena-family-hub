@@ -312,7 +312,6 @@ export default function FamilyHub() {
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
-  const lastFamilyLocationsSetAtRef = useRef<number>(0); // 위치 목록 설정 시각 (레이스 시 stale 덮어쓰기 방지)
   
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -5307,6 +5306,14 @@ export default function FamilyHub() {
         return;
       }
 
+      // ✅ 표시할 사용자 = 승인된 location_requests 기준 (stale fetch여도 마커 유지)
+      const expectedUserIds = new Set<string>();
+      (currentLocationRequests || []).forEach((req: any) => {
+        if (req.status !== 'accepted') return;
+        const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
+        if (otherId) expectedUserIds.add(otherId);
+      });
+
       if (data && data.length > 0) {
         // 가족 표시 역할(family_role) 조회 (지도 마커용)
         const otherUserIds = [...new Set((data as any[]).map((loc: any) => loc.user_id).filter((id: string) => id !== userId))];
@@ -5437,25 +5444,21 @@ export default function FamilyHub() {
             };
           });
 
+        // ✅ merge: 승인된 사용자는 새 데이터가 없어도 prev 유지 (마커 끊김 방지)
+        const newLocationsByUser = new Map(locations.map((l: any) => [l.userId, l]));
         setState(prev => {
-          const currentIds = new Set((prev.familyLocations || []).map((l: any) => l.userId));
-          const newIds = new Set(locations.map((l: any) => l.userId));
-          const isSubset = newIds.size <= currentIds.size && [...newIds].every((id: string) => currentIds.has(id));
-          const recentlySet = lastFamilyLocationsSetAtRef.current && (Date.now() - lastFamilyLocationsSetAtRef.current) < 2000;
-          if (isSubset && newIds.size < currentIds.size && recentlySet) {
-            return prev;
-          }
-          lastFamilyLocationsSetAtRef.current = Date.now();
-          return { ...prev, familyLocations: locations };
+          const prevList = prev.familyLocations || [];
+          const merged = [...expectedUserIds].map((uid) => {
+            const fromNew = newLocationsByUser.get(uid);
+            if (fromNew) return fromNew;
+            return prevList.find((l: any) => l.userId === uid);
+          }).filter(Boolean);
+          return { ...prev, familyLocations: merged };
         });
       } else {
-        // 데이터가 없을 때도 빈 배열로 설정하여 기존 위치 제거
+        // 데이터가 없을 때: 승인된 관계가 있으면 prev 유지, 없으면 빈 배열
         setState(prev => {
-          const recentlySet = lastFamilyLocationsSetAtRef.current && (Date.now() - lastFamilyLocationsSetAtRef.current) < 2000;
-          if (prev.familyLocations && prev.familyLocations.length > 0 && recentlySet) {
-            return prev;
-          }
-          lastFamilyLocationsSetAtRef.current = Date.now();
+          if (expectedUserIds.size > 0 && prev.familyLocations?.length) return prev;
           return { ...prev, familyLocations: [] };
         });
       }
