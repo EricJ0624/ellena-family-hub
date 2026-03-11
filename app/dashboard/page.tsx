@@ -5448,22 +5448,21 @@ export default function FamilyHub() {
         const newLocationsByUser = new Map(locations.map((l: any) => [l.userId, l]));
         setState(prev => {
           const prevList = prev.familyLocations || [];
-          // API가 아직 승인 반영 전이면 expectedUserIds가 비어 있어 merged=[]가 됨 → prev 유지 (취소/거절이 있을 때만 비우기)
-          const hasCancelledOrRejected = (currentLocationRequests || []).some((r: any) => r.status === 'cancelled' || r.status === 'rejected');
-          if (expectedUserIds.size === 0 && prevList.length > 0 && !hasCancelledOrRejected) return prev;
           const merged = [...expectedUserIds].map((uid) => {
             const fromNew = newLocationsByUser.get(uid);
             if (fromNew) return fromNew;
             return prevList.find((l: any) => l.userId === uid);
           }).filter(Boolean);
+          // expectedUserIds가 비어있을 때는 API stale 가능성 → []로 덮어쓰지 않음 (prev 유지, 취소/거절 시에만 else 쪽에서 비움)
+          if (expectedUserIds.size === 0 && merged.length === 0) return prev;
           return { ...prev, familyLocations: merged };
         });
       } else {
-        // 데이터가 없을 때: 승인된 관계가 있으면 prev 유지. expectedUserIds 비어있고 prev 있는데 취소/거절 없으면 stale 가능성 → prev 유지
+        // 데이터가 없을 때: 승인된 관계 있으면 prev 유지. expectedUserIds 비어있으면 stale 가능성 → []로 덮어쓰지 않음
         setState(prev => {
           if (expectedUserIds.size > 0 && prev.familyLocations?.length) return prev;
           const hasCancelledOrRejected = (currentLocationRequests || []).some((r: any) => r.status === 'cancelled' || r.status === 'rejected');
-          if (expectedUserIds.size === 0 && prev.familyLocations?.length && !hasCancelledOrRejected) return prev;
+          if (expectedUserIds.size === 0 && !hasCancelledOrRejected) return prev;
           return { ...prev, familyLocations: [] };
         });
       }
