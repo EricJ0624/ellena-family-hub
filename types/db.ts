@@ -883,11 +883,9 @@ export interface Database {
           uploader_id: string
           group_id: string | null
           image_url: string
-          cloudinary_url: string | null
           s3_original_url: string | null
           file_type: 'photo' | 'video'
           original_file_size: number | null
-          cloudinary_public_id: string | null
           s3_key: string | null
           mime_type: string | null
           original_filename: string | null
@@ -902,11 +900,9 @@ export interface Database {
           uploader_id: string
           group_id: string | null
           image_url: string
-          cloudinary_url?: string | null
           s3_original_url?: string | null
           file_type?: 'photo' | 'video'
           original_file_size?: number | null
-          cloudinary_public_id?: string | null
           s3_key?: string | null
           mime_type?: string | null
           original_filename?: string | null
@@ -921,11 +917,9 @@ export interface Database {
           uploader_id?: string
           group_id?: string | null
           image_url?: string
-          cloudinary_url?: string | null
           s3_original_url?: string | null
           file_type?: 'photo' | 'video'
           original_file_size?: number | null
-          cloudinary_public_id?: string | null
           s3_key?: string | null
           mime_type?: string | null
           original_filename?: string | null

@@ -107,16 +107,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     }
   }, [selectedPhoto]);
 
-  // 블러 배경용 저해상도 URL (Cloudinary 등 지원 시 쿼리로 축소 요청, 부하 감소)
+  // 블러 배경용 저해상도 URL (S3/CloudFront 직링크는 그대로 사용)
   const getBlurLayerSrc = useCallback((url: string) => {
     if (!url || !isStablePhotoUrl(url)) return url;
-    try {
-      if (url.includes('res.cloudinary.com') && !url.includes('w_')) {
-        return url.replace('/upload/', '/upload/w_200,q_30/');
-      }
-    } catch {
-      // ignore
-    }
     return url;
   }, []);
 

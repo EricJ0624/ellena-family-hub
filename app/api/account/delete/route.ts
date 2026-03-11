@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateUser,
   getSupabaseServerClient,
-  deleteFromCloudinary,
   deleteFromS3,
 } from '@/lib/api-helpers';
 
@@ -91,19 +90,16 @@ export async function DELETE(request: NextRequest) {
         );
       }
 
-      // 확인 완료 시 그룹 삭제 진행 (각 그룹의 S3/Cloudinary 파일 삭제 후 DB 삭제)
+      // 확인 완료 시 그룹 삭제 진행 (각 그룹의 S3 파일 삭제 후 DB 삭제, Cloudinary 제거)
       for (const group of ownedGroups) {
         const { data: groupPhotos } = await supabaseServer
           .from('memory_vault')
-          .select('id, cloudinary_public_id, s3_key')
+          .select('id, s3_key')
           .eq('group_id', group.id);
 
         if (groupPhotos && groupPhotos.length > 0) {
           const deletePromises: Promise<boolean>[] = [];
           for (const photo of groupPhotos) {
-            if (photo.cloudinary_public_id) {
-              deletePromises.push(deleteFromCloudinary(photo.cloudinary_public_id));
-            }
             if (photo.s3_key) {
               deletePromises.push(deleteFromS3(photo.s3_key));
             }
@@ -160,32 +156,23 @@ export async function DELETE(request: NextRequest) {
       console.warn('위치 요청 데이터 삭제 실패 (무시):', requestError);
     }
 
-    // 6. 메모리 볼트 데이터 삭제 (Cloudinary, S3 파일도 함께 삭제)
+    // 6. 메모리 볼트 데이터 삭제 (S3 파일 삭제 후 DB 삭제, Cloudinary 제거)
     try {
-      // 먼저 파일 정보 조회
       const { data: photos } = await supabaseServer
         .from('memory_vault')
-        .select('id, cloudinary_public_id, s3_key')
+        .select('id, s3_key')
         .eq('uploader_id', user.id);
 
       if (photos && photos.length > 0) {
-        // Cloudinary와 S3에서 파일 삭제
         const deletePromises: Promise<boolean>[] = [];
-        
         for (const photo of photos) {
-          if (photo.cloudinary_public_id) {
-            deletePromises.push(deleteFromCloudinary(photo.cloudinary_public_id));
-          }
           if (photo.s3_key) {
             deletePromises.push(deleteFromS3(photo.s3_key));
           }
         }
-
-        // 모든 삭제 작업 병렬 실행
         await Promise.all(deletePromises);
-
         if (process.env.NODE_ENV === 'development') {
-          console.log(`사용자 파일 삭제 완료: ${photos.length}개 파일 (Cloudinary, S3)`);
+          console.log(`사용자 파일 삭제 완료: ${photos.length}개 파일 (S3)`);
         }
       }
 

@@ -4,7 +4,6 @@ import {
   base64ToBlob,
   checkS3Config,
   generatePublicAssetUrl,
-  getNormalImageProxyPath,
   getSupabaseServerClient,
   uploadToS3WithGroup,
 } from '@/lib/api-helpers';
@@ -123,10 +122,8 @@ export async function POST(request: NextRequest) {
     );
 
     const mode = upload_mode === 'normal' ? 'normal' : 'original';
-    const imageUrl =
-      mode === 'original'
-        ? generatePublicAssetUrl(s3Result.key)
-        : getNormalImageProxyPath(s3Result.key);
+    // 일반/원본 모두 CloudFront → S3 직달 URL (Cloudinary 제거)
+    const imageUrl = generatePublicAssetUrl(s3Result.key);
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';
 
     const supabaseServer = getSupabaseServerClient();
@@ -136,11 +133,9 @@ export async function POST(request: NextRequest) {
         uploader_id: user.id,
         group_id: groupId,
         image_url: imageUrl,
-        cloudinary_url: null,
         s3_original_url: s3Result.url,
         file_type: fileType,
         original_file_size: originalSize ?? blob.size,
-        cloudinary_public_id: null,
         s3_key: s3Result.key,
         mime_type: mimeType,
         original_filename: fileName,

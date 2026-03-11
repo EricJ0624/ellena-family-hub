@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateUser,
   getSupabaseServerClient,
-  deleteFromCloudinary,
   deleteFromS3,
 } from '@/lib/api-helpers';
 import { isSystemAdmin } from '@/lib/permissions';
@@ -38,18 +37,15 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 그룹 삭제 전: 해당 그룹의 memory_vault(사진) 조회 후 S3/Cloudinary에서 파일 삭제
+    // 그룹 삭제 전: 해당 그룹의 memory_vault(사진) 조회 후 S3에서 파일 삭제 (Cloudinary 제거)
     const { data: photos } = await supabase
       .from('memory_vault')
-      .select('id, cloudinary_public_id, s3_key')
+      .select('id, s3_key')
       .eq('group_id', groupId);
 
     if (photos && photos.length > 0) {
       const deletePromises: Promise<boolean>[] = [];
       for (const photo of photos) {
-        if (photo.cloudinary_public_id) {
-          deletePromises.push(deleteFromCloudinary(photo.cloudinary_public_id));
-        }
         if (photo.s3_key) {
           deletePromises.push(deleteFromS3(photo.s3_key));
         }

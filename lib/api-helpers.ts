@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { v2 as cloudinary } from 'cloudinary';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import sharp from 'sharp';
@@ -29,14 +28,6 @@ export function getSupabaseServerClient() {
 }
 
 // --- [UTILITY] 환경 변수 체크 함수 ---
-export function checkCloudinaryConfig(): { available: boolean; missing: string[] } {
-  const missing: string[] = [];
-  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push('CLOUDINARY_CLOUD_NAME');
-  if (!process.env.CLOUDINARY_API_KEY) missing.push('CLOUDINARY_API_KEY');
-  if (!process.env.CLOUDINARY_API_SECRET) missing.push('CLOUDINARY_API_SECRET');
-  return { available: missing.length === 0, missing };
-}
-
 export function checkS3Config(): { available: boolean; missing: string[] } {
   const missing: string[] = [];
   if (!process.env.AWS_S3_BUCKET_NAME) missing.push('AWS_S3_BUCKET_NAME');
@@ -44,36 +35,6 @@ export function checkS3Config(): { available: boolean; missing: string[] } {
   if (!process.env.AWS_SECRET_ACCESS_KEY) missing.push('AWS_SECRET_ACCESS_KEY');
   if (!process.env.AWS_REGION) missing.push('AWS_REGION');
   return { available: missing.length === 0, missing };
-}
-
-// --- [SINGLETON PATTERN] Cloudinary 설정 (한 번만 초기화) ---
-let cloudinaryInitialized = false;
-
-function initializeCloudinary() {
-  if (!cloudinaryInitialized) {
-    const config = checkCloudinaryConfig();
-    if (!config.available) {
-      throw new Error(`Cloudinary 환경 변수가 설정되지 않았습니다: ${config.missing.join(', ')}`);
-    }
-    
-    // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
-    // checkCloudinaryConfig()로 이미 검증했으므로 안전하게 사용 가능
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
-    
-    // 추가 안전 검증 (이중 체크)
-    if (!cloudName || !apiKey || !apiSecret) {
-      throw new Error(`Cloudinary 환경 변수가 설정되지 않았습니다: ${config.missing.join(', ')}`);
-    }
-    
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-    });
-    cloudinaryInitialized = true;
-  }
 }
 
 // --- [UTILITY] AWS 리전 정리 함수 (환경 변수에서 리전 코드만 추출) ---
@@ -199,58 +160,6 @@ export function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([byteArray], { type: mimeType });
 }
 
-// --- [CLOUDINARY] 파일 업로드 함수 (중복 제거) ---
-export async function uploadToCloudinary(
-  file: Blob,
-  fileName: string,
-  mimeType: string,
-  userId: string
-): Promise<{ url: string; publicId: string }> {
-  initializeCloudinary();
-  
-  const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
-  const folder = `family-memories/${userId}`;
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: fileType === 'image' ? 'image' : 'video',
-        // 보안 강화: authenticated 모드로 설정 (서명된 URL만 접근 가능)
-        access_mode: 'authenticated',
-        transformation: fileType === 'image' 
-          ? [
-              { width: 1920, height: 1920, crop: 'limit', quality: 'auto' },
-              { fetch_format: 'auto' }
-            ]
-          : [
-              { quality: 'auto', fetch_format: 'auto' }
-            ],
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else if (result) {
-          resolve({
-            url: result.secure_url,
-            publicId: result.public_id,
-          });
-        } else {
-          reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
-        }
-      }
-    );
-
-    // Blob을 Buffer로 변환하여 업로드
-    file.arrayBuffer()
-      .then(buffer => {
-        const nodeBuffer = Buffer.from(buffer);
-        uploadStream.end(nodeBuffer);
-      })
-      .catch(reject);
-  });
-}
-
 // --- [S3] S3 클라이언트 인스턴스 반환 (중복 제거) ---
 export function getS3ClientInstance(): S3Client {
   return getS3Client();
@@ -324,29 +233,8 @@ export async function downloadFromS3(s3Key: string): Promise<Blob> {
 }
 
 // ============================================
-// Cloudinary & S3 파일 삭제 함수
+// S3 파일 삭제 함수
 // ============================================
-
-/**
- * Cloudinary에서 파일 삭제
- * 
- * @param publicId - Cloudinary Public ID
- * @returns 삭제 성공 여부
- */
-export async function deleteFromCloudinary(publicId: string): Promise<boolean> {
-  try {
-    initializeCloudinary();
-    const result = await cloudinary.uploader.destroy(publicId);
-    
-    if (result.result === 'ok' || result.result === 'not found') {
-      return true; // 삭제 성공 또는 이미 삭제됨
-    }
-    return false;
-  } catch (error: any) {
-    console.error('Cloudinary 삭제 오류:', error);
-    return false; // 삭제 실패해도 계속 진행
-  }
-}
 
 /**
  * S3에서 파일 삭제
@@ -493,87 +381,6 @@ export function ensureGroupIdFilter<T>(
 // ============================================
 
 /**
- * Cloudinary 업로드 함수 (그룹 권한 메타데이터 포함)
- * 
- * @param file - 업로드할 파일 (Blob)
- * @param fileName - 파일명
- * @param mimeType - MIME 타입
- * @param userId - 사용자 ID
- * @param groupId - 그룹 ID (선택사항, 권한 검증용)
- * @returns 업로드 결과 (url, publicId)
- */
-export async function uploadToCloudinaryWithGroup(
-  file: Blob,
-  fileName: string,
-  mimeType: string,
-  userId: string,
-  groupId?: string,
-  options?: {
-    maxDimension?: number;
-    quality?: string;
-    fetchFormat?: string;
-  }
-): Promise<{ url: string; publicId: string; format?: string }> {
-  initializeCloudinary();
-  
-  const fileType = mimeType.startsWith('image/') ? 'image' : 'video';
-  const folder = groupId 
-    ? `family-memories/${groupId}/${userId}`
-    : `family-memories/${userId}`;
-
-  // 그룹 ID를 메타데이터에 포함 (권한 검증용)
-  const context: Record<string, string> = {};
-  if (groupId) {
-    context.groupId = groupId;
-    context.userId = userId;
-  }
-
-  const maxDimension = options?.maxDimension || 1920;
-  const quality = options?.quality || 'auto';
-  const fetchFormat = options?.fetchFormat || 'auto';
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: fileType === 'image' ? 'image' : 'video',
-        context, // 메타데이터에 그룹 ID 포함
-        // 보안 강화: authenticated 모드로 설정 (서명된 URL만 접근 가능)
-        access_mode: 'authenticated',
-        transformation: fileType === 'image' 
-          ? [
-              { width: maxDimension, height: maxDimension, crop: 'limit', quality },
-              { fetch_format: fetchFormat }
-            ]
-          : [
-              { quality, fetch_format: fetchFormat }
-            ],
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else if (result) {
-          resolve({
-            url: result.secure_url,
-            publicId: result.public_id,
-            format: result.format,
-          });
-        } else {
-          reject(new Error('Cloudinary 업로드 결과가 없습니다.'));
-        }
-      }
-    );
-
-    file.arrayBuffer()
-      .then(buffer => {
-        const nodeBuffer = Buffer.from(buffer);
-        uploadStream.end(nodeBuffer);
-      })
-      .catch(reject);
-  });
-}
-
-/**
  * S3 Key 생성 (그룹 권한 메타데이터 포함)
  * 
  * @param fileName - 파일명
@@ -618,8 +425,8 @@ export async function checkS3ObjectExists(s3Key: string): Promise<boolean> {
 }
 
 /**
- * 일반(normal) 표시용 URL: API 프록시 경로 (Cloudinary fetch로 302 리다이렉트)
- * 다운로드 시 Cloudinary 변환 후 CloudFront 캐시용
+ * 레거시: 일반(normal) 표시용 API 프록시 경로.
+ * proxy는 CloudFront → S3 직링크로 302 (Cloudinary 제거).
  */
 export function getNormalImageProxyPath(s3Key: string): string {
   return `/api/photo/proxy?key=${encodeURIComponent(s3Key)}`;

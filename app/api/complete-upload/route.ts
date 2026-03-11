@@ -3,7 +3,6 @@ import {
   authenticateUser,
   deleteFromS3,
   generatePublicAssetUrl,
-  getNormalImageProxyPath,
   getSupabaseServerClient,
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
@@ -84,11 +83,8 @@ export async function POST(request: NextRequest) {
     const mode = upload_mode === 'original' ? 'original' : 'normal';
     const fileType = mimeType.startsWith('image/') ? 'photo' : 'video';
 
-    // 표시 URL: 원본 = CloudFront S3 직달, 일반 = API 프록시(Cloudinary fetch) 상대 경로
-    const imageUrl =
-      mode === 'original'
-        ? generatePublicAssetUrl(s3Key)
-        : getNormalImageProxyPath(s3Key);
+    // 표시 URL: 일반/원본 모두 CloudFront → S3 직달 (Cloudinary 제거)
+    const imageUrl = generatePublicAssetUrl(s3Key);
 
     const supabaseServer = getSupabaseServerClient();
     const { data: memoryData, error: dbError } = await supabaseServer
@@ -97,11 +93,9 @@ export async function POST(request: NextRequest) {
         uploader_id: user.id,
         group_id: groupId,
         image_url: imageUrl,
-        cloudinary_url: null,
         s3_original_url: s3Url,
         file_type: fileType,
         original_file_size: originalSize || null,
-        cloudinary_public_id: null,
         s3_key: s3Key,
         mime_type: mimeType,
         original_filename: fileName,

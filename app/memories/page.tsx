@@ -388,7 +388,6 @@ export default function MemoriesPage() {
           updatePhotoId({
             oldId: photoId,
             newId: completeResult.id,
-            cloudinaryUrl: null,
             s3Url: completeResult.s3Url,
           });
           uploadCompleted = true;
@@ -396,12 +395,11 @@ export default function MemoriesPage() {
           updatePhotoId({
             oldId: photoId,
             newId: photoId,
-            cloudinaryUrl: null,
             s3Url: s3Url,
           });
           uploadCompleted = true;
         } else {
-          updatePhotoId({ oldId: photoId, newId: photoId, cloudinaryUrl: null, s3Url: s3Url });
+          updatePhotoId({ oldId: photoId, newId: photoId, s3Url: s3Url });
           uploadCompleted = true;
         }
       } catch (presignedErr: unknown) {
@@ -427,7 +425,6 @@ export default function MemoriesPage() {
               updatePhotoId({
                 oldId: photoId,
                 newId: fallbackResult.id,
-                cloudinaryUrl: null,
                 s3Url: fallbackResult.s3Url,
               });
               uploadCompleted = true;
@@ -452,12 +449,8 @@ export default function MemoriesPage() {
         : `${(uploadFileSize / 1024).toFixed(2)}KB`;
       const fileInfo = `파일: ${uploadFileName}\n크기: ${fileSizeDisplay}\n형식: ${uploadMimeType}`;
       let failureReason: string;
-      if (errorMessage.includes('Cloudinary 환경 변수') || errorMessage.includes('CLOUDINARY')) {
-        failureReason = 'Cloudinary 환경 변수가 설정되지 않았습니다.\n\n필요한 환경 변수:\n- CLOUDINARY_CLOUD_NAME\n- CLOUDINARY_API_KEY\n- CLOUDINARY_API_SECRET\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
-      } else if (errorMessage.includes('AWS_S3_BUCKET_NAME') || errorMessage.includes('S3 환경 변수')) {
+      if (errorMessage.includes('AWS_S3_BUCKET_NAME') || errorMessage.includes('S3 환경 변수')) {
         failureReason = 'S3 환경 변수가 설정되지 않았습니다.\n\n필요한 환경 변수:\n- AWS_S3_BUCKET_NAME\n- AWS_ACCESS_KEY_ID\n- AWS_SECRET_ACCESS_KEY\n- AWS_REGION\n\n.env.local 파일과 Vercel 환경 변수에 설정해주세요.';
-      } else if (errorMessage.includes('Cloudinary와 S3 업로드가 모두 실패')) {
-        failureReason = 'Cloudinary와 S3 업로드가 모두 실패했습니다.\n\n환경 변수를 확인해주세요:\n- Cloudinary: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET\n- S3: AWS_S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION';
       } else if (errorMessage.includes('CORS') || errorMessage.includes('Failed to fetch')) {
         failureReason = 'S3 버킷 CORS 설정이 필요합니다.\n\nS3 버킷의 CORS 설정을 확인하거나 관리자에게 문의하세요.';
       } else if (errorMessage.includes('타임아웃') || errorMessage.toLowerCase().includes('timeout')) {

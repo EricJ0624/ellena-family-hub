@@ -87,7 +87,6 @@ interface MemberInfo {
 interface PhotoInfo {
   id: string;
   image_url: string | null;
-  cloudinary_url: string | null;
   s3_original_url: string | null;
   original_filename: string | null;
   created_at: string;
@@ -854,7 +853,7 @@ export default function AdminPage() {
 
       const { data: photosData, error: photosError } = await supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, original_filename, created_at, uploader_id, caption')
+        .select('id, image_url, s3_original_url, original_filename, created_at, uploader_id, caption')
         .in('uploader_id', memberIds)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -3594,13 +3593,13 @@ export default function AdminPage() {
                                 cursor: 'pointer',
                               }}
                               onClick={() => {
-                                const url = photo.image_url || photo.cloudinary_url || photo.s3_original_url;
+                                const url = photo.image_url || photo.s3_original_url;
                                 if (url) window.open(url, '_blank');
                               }}
                             >
-                              {photo.image_url || photo.cloudinary_url || photo.s3_original_url ? (
+                              {photo.image_url || photo.s3_original_url ? (
                                 <img
-                                  src={photo.image_url || photo.cloudinary_url || photo.s3_original_url || ''}
+                                  src={photo.image_url || photo.s3_original_url || ''}
                                   alt={photo.original_filename || '사진'}
                                   style={{
                                     width: '100%',

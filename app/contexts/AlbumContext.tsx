@@ -31,7 +31,6 @@ type AlbumContextType = {
   updatePhotoId: (payload: {
     oldId: number | string;
     newId: number | string;
-    cloudinaryUrl?: string | null;
     s3Url?: string | null;
     uploadFailed?: boolean;
   }) => void;
@@ -118,7 +117,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
 
     const { data: photos, error } = await supabase
       .from('memory_vault')
-      .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode')
+      .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode')
       .eq('group_id', currentGroupId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -136,10 +135,10 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     }
 
     const supabasePhotos: Photo[] = (photos || [])
-      .filter((p: { image_url?: string; cloudinary_url?: string; s3_original_url?: string }) => p.image_url || p.cloudinary_url || p.s3_original_url)
+      .filter((p: { image_url?: string; s3_original_url?: string }) => p.image_url || p.s3_original_url)
       .map((p: Record<string, unknown>) => ({
         id: p.id as string | number,
-        data: (p.image_url || p.cloudinary_url || p.s3_original_url) as string,
+        data: (p.image_url || p.s3_original_url) as string,
         supabaseId: p.id as string | number,
         isUploaded: true,
         isUploading: false,
@@ -184,7 +183,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memory_vault' }, (payload: { new: Record<string, unknown> }) => {
         const newPhoto = payload.new;
         if (newPhoto.group_id !== currentGroupId) return;
-        const url = (newPhoto.image_url || newPhoto.cloudinary_url || newPhoto.s3_original_url) as string;
+        const url = (newPhoto.image_url || newPhoto.s3_original_url) as string;
         if (!url) return;
         const newEntry: Photo = {
           id: newPhoto.id as string | number,
@@ -213,7 +212,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'memory_vault' }, (payload: { new: Record<string, unknown> }) => {
         const updated = payload.new;
-        const url = (updated.image_url || updated.cloudinary_url || updated.s3_original_url) as string;
+        const url = (updated.image_url || updated.s3_original_url) as string;
         if (!url) return;
         setAlbum((prev) =>
             prev.map((p) =>
@@ -276,7 +275,6 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     (payload: {
       oldId: number | string;
       newId: number | string;
-      cloudinaryUrl?: string | null;
       s3Url?: string | null;
       uploadFailed?: boolean;
     }) => {
@@ -287,7 +285,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           return {
             ...p,
             id: payload.newId,
-            data: payload.cloudinaryUrl || payload.s3Url || p.data,
+            data: payload.s3Url || p.data,
             supabaseId: payload.newId,
             isUploaded: true,
             isUploading: false,

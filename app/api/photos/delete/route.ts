@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { 
   authenticateUser, 
   getSupabaseServerClient,
-  deleteFromCloudinary,
   deleteFromS3,
 } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
@@ -54,7 +53,7 @@ export async function DELETE(request: NextRequest) {
     const supabaseServer = getSupabaseServerClient();
     const { data: photoData, error: fetchError } = await supabaseServer
       .from('memory_vault')
-      .select('id, uploader_id, cloudinary_public_id, s3_key, group_id')
+      .select('id, uploader_id, s3_key, group_id')
       .eq('id', photoId)
       .eq('group_id', groupId) // Multi-tenant: group_id 검증
       .single();
@@ -77,19 +76,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 1. Cloudinary에서 파일 삭제
-    let cloudinaryDeleted = false;
-    if (photoData.cloudinary_public_id) {
-      cloudinaryDeleted = await deleteFromCloudinary(photoData.cloudinary_public_id);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Cloudinary 삭제 결과:', {
-          publicId: photoData.cloudinary_public_id,
-          success: cloudinaryDeleted
-        });
-      }
-    }
-
-    // 2. S3에서 파일 삭제
+    // S3에서 파일 삭제 (Cloudinary 제거)
     let s3Deleted = false;
     if (photoData.s3_key) {
       s3Deleted = await deleteFromS3(photoData.s3_key);
@@ -113,11 +100,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 성공 응답 (일부 삭제 실패해도 DB 삭제는 성공했으므로 성공으로 처리)
     return NextResponse.json({
       success: true,
       photoId,
-      cloudinaryDeleted,
       s3Deleted,
       message: '사진이 삭제되었습니다.'
     });

@@ -347,7 +347,7 @@ export default function FamilyHub() {
       // 그룹 필터링: Multi-tenant 아키텍처 - group_id로 직접 필터링
       let query = supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+        .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
         .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
         .order('created_at', { ascending: false })
         .limit(100);
@@ -394,10 +394,10 @@ export default function FamilyHub() {
         return [];
       }
 
-      // Photo 형식으로 변환 (URL 우선순위: cloudinary_url > s3_original_url > image_url)
+      // Photo 형식으로 변환 (URL: image_url 우선, 없으면 s3_original_url)
       return photos.map((photo: any) => ({
         id: photo.id,
-        data: photo.image_url || photo.cloudinary_url || photo.s3_original_url || '',
+        data: photo.image_url || photo.s3_original_url || '',
         supabaseId: photo.id,
         isUploaded: true,
         isUploading: false,
@@ -469,7 +469,7 @@ export default function FamilyHub() {
 
       const { data: photos, error } = await supabase
         .from('memory_vault')
-        .select('id, image_url, cloudinary_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+        .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
         .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
         .order('created_at', { ascending: false })
         .limit(100);
@@ -487,10 +487,10 @@ export default function FamilyHub() {
       } else if (photos && photos.length > 0) {
         // Photo 형식으로 변환
         const supabasePhotos: Photo[] = photos
-          .filter((photo: any) => photo.image_url || photo.cloudinary_url || photo.s3_original_url)
+          .filter((photo: any) => photo.image_url || photo.s3_original_url)
           .map((photo: any) => ({
             id: photo.id,
-            data: photo.image_url || photo.cloudinary_url || photo.s3_original_url || '',
+            data: photo.image_url || photo.s3_original_url || '',
             supabaseId: photo.id,
             isUploaded: true,
             isUploading: false,
@@ -4528,7 +4528,6 @@ export default function FamilyHub() {
                 if (process.env.NODE_ENV === 'development') {
                   console.log('사진 삭제 성공:', { 
                     photoId: payload, 
-                    cloudinaryDeleted: deleteResult.cloudinaryDeleted,
                     s3Deleted: deleteResult.s3Deleted,
                     message: deleteResult.message
                   });
@@ -4645,7 +4644,7 @@ export default function FamilyHub() {
               return {
                 ...photo,
                 id: payload.newId, // Supabase ID로 업데이트
-                data: payload.cloudinaryUrl || payload.s3Url || photo.data, // URL로 업데이트 (Base64 대신)
+                data: payload.s3Url || photo.data, // URL로 업데이트 (Base64 대신, Cloudinary 제거)
                 supabaseId: payload.newId,
                 isUploaded: true,
                 isUploading: false // 업로드 완료
