@@ -313,6 +313,7 @@ export default function FamilyHub() {
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
+  const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
 
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -1874,8 +1875,12 @@ export default function FamilyHub() {
     // Google Maps API 스크립트 로드 (중복 방지)
     // google.maps.Map이 사용 가능한지 확인 (완전히 로드되었는지 확인)
     if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-      // 이미 로드되어 있으면 바로 초기화
-      initializeMap();
+      // 이미 로드되어 있으면 디바운스 후 초기화 → familyLocations/locationRequests 연속 변경 시 마지막 상태로 한 번만 마커 갱신
+      if (updateMapMarkersDebounceRef.current) clearTimeout(updateMapMarkersDebounceRef.current);
+      updateMapMarkersDebounceRef.current = setTimeout(() => {
+        updateMapMarkersDebounceRef.current = null;
+        initializeMap();
+      }, 500);
     } else if (!googleMapsScriptLoadedRef.current) {
       // 스크립트가 이미 DOM에 있는지 확인
       const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
@@ -1948,6 +1953,9 @@ export default function FamilyHub() {
         document.head.appendChild(script);
       }
     }
+    return () => {
+      if (updateMapMarkersDebounceRef.current) clearTimeout(updateMapMarkersDebounceRef.current);
+    };
   }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
