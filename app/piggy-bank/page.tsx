@@ -106,7 +106,6 @@ export default function PiggyBankPage() {
   const [piggyName, setPiggyName] = useState('');
   const [allowanceAmount, setAllowanceAmount] = useState('');
   const [allowanceMemo, setAllowanceMemo] = useState('');
-  const [selectedChild, setSelectedChild] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMemo, setDepositMemo] = useState('');
   const [spendAmount, setSpendAmount] = useState('');
@@ -736,18 +735,6 @@ export default function PiggyBankPage() {
           <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('allowance_grant_title')}</h2>
             <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
-              <select
-                value={selectedChild}
-                onChange={(e) => setSelectedChild(e.target.value)}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
-              >
-                <option value="">{pt('select_recipient')}</option>
-                {members.filter((m) => m.role === 'MEMBER').map((member) => (
-                  <option key={member.user_id} value={member.user_id}>
-                    {member.nickname || pt('child_label')}
-                  </option>
-                ))}
-              </select>
               <input
                 type="number"
                 value={allowanceAmount}
@@ -763,9 +750,13 @@ export default function PiggyBankPage() {
               />
               <button
                 onClick={async () => {
+                  if (!selectedChildIdForAdmin) {
+                    setError(pt('select_child_first'));
+                    return;
+                  }
                   try {
                     await handleAction('/api/piggy-bank/allowance', {
-                      childId: selectedChild,
+                      childId: selectedChildIdForAdmin,
                       amount: allowanceAmount,
                       memo: allowanceMemo,
                     });
