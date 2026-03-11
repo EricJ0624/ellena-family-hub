@@ -1612,22 +1612,29 @@ export default function FamilyHub() {
         }
       });
 
-      // familyLocations에 없는 사용자의 마커 제거
+      // familyLocations에 없는 사용자의 마커 제거 (단, 승인된 위치공유 사용자는 제거하지 않음 → 상태 레이스로 마커가 사라지는 것 방지)
       const currentUserIds = new Set(state.familyLocations.map((loc: any) => loc.userId).filter((id: string) => id !== userId));
+      const acceptedOtherUserIds = new Set<string>();
+      (locationRequests || []).forEach((req: any) => {
+        if (req.status !== 'accepted') return;
+        const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
+        if (otherId) acceptedOtherUserIds.add(otherId);
+      });
       markersRef.current.forEach((marker, markerUserId) => {
-        if (markerUserId !== 'my-location' && !currentUserIds.has(markerUserId)) {
-          if (useAdvancedMarker && marker.map) {
-            marker.map = null;
-          } else if (marker.setMap) {
-            marker.setMap(null);
-          }
-          markersRef.current.delete(markerUserId);
+        if (markerUserId === 'my-location') return;
+        if (currentUserIds.has(markerUserId)) return;
+        if (acceptedOtherUserIds.has(markerUserId)) return; // 승인된 사용자 마커는 familyLocations가 비어도 유지
+        if (useAdvancedMarker && marker.map) {
+          marker.map = null;
+        } else if (marker.setMap) {
+          marker.setMap(null);
         }
+        markersRef.current.delete(markerUserId);
       });
     } catch (error) {
       console.error('지도 마커 업데이트 오류:', error);
     }
-  }, [state.location, state.familyLocations, userName, userId, lang]);
+  }, [state.location, state.familyLocations, locationRequests, userName, userId, lang]);
 
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
