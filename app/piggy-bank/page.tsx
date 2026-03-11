@@ -120,6 +120,7 @@ export default function PiggyBankPage() {
   const [depositSubmitting, setDepositSubmitting] = useState(false);
   const [saveSubmitting, setSaveSubmitting] = useState(false);
   const [spendSubmitting, setSpendSubmitting] = useState(false);
+  const [openRequestSubmitting, setOpenRequestSubmitting] = useState(false);
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -1035,7 +1036,11 @@ export default function PiggyBankPage() {
                 style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
               />
               <button
+                type="button"
+                disabled={openRequestSubmitting}
                 onClick={async () => {
+                  if (openRequestSubmitting) return;
+                  setOpenRequestSubmitting(true);
                   try {
                     await handleAction('/api/piggy-bank/open-request', {
                       amount: openAmount,
@@ -1046,11 +1051,21 @@ export default function PiggyBankPage() {
                     setOpenReason('');
                   } catch (err: any) {
                     setError(err.message || pt('open_request_failed'));
+                  } finally {
+                    setOpenRequestSubmitting(false);
                   }
                 }}
-                style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 700 }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: openRequestSubmitting ? '#94a3b8' : '#7c3aed',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: openRequestSubmitting ? 'not-allowed' : 'pointer',
+                }}
               >
-                {pt('open_request_btn')}
+                {openRequestSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('open_request_btn')}
               </button>
             </div>
 
