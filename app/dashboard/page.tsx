@@ -314,7 +314,6 @@ export default function FamilyHub() {
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
-  const familyLocationsRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 리프레시/재로그인 후 마커 복구용 1회 지연 재호출
 
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -3627,37 +3626,26 @@ export default function FamilyHub() {
     };
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
+    // currentGroupId 없을 때는 위치 로드 스킵 → 그룹 로드 후 effect 재실행 시 한 번만 로드 (재로그인 시 마커 유지)
+    if (!currentGroupId) {
+      return;
+    }
     console.log('🔄 Supabase 데이터 로드 시작...');
-    // ✅ loadData 완료 후 실행되도록 지연 시간 증가 (loadData가 먼저 완료되도록 보장)
-    // 재로그인 시에도 항상 Supabase에서 데이터 로드
     const timer = setTimeout(() => {
-      loadSupabaseData().then(() => {
+      loadSupabaseData().then(async () => {
         console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
         setupRealtimeSubscriptions();
-        // 위치 데이터 로드
-          loadMyLocation(); // 자신의 위치 먼저 로드
+        loadMyLocation();
+        await loadLocationRequests();
         loadFamilyLocations();
-        loadLocationRequests(); // 위치 요청 목록 로드
-        // 리프레시/재로그인 직후 API 타이밍으로 마커가 비는 경우 보완: 기존 로직 유지 + 1회 지연 재호출만 추가
-        if (familyLocationsRetryTimerRef.current) clearTimeout(familyLocationsRetryTimerRef.current);
-        familyLocationsRetryTimerRef.current = setTimeout(() => {
-          familyLocationsRetryTimerRef.current = null;
-          loadFamilyLocations();
-        }, 1500);
-      }).catch((error) => {
+      }).catch(async (error) => {
         console.error('❌ Supabase 데이터 로드 실패:', error);
-        // 데이터 로드 실패해도 Realtime 구독은 설정
         setupRealtimeSubscriptions();
-        // 위치 데이터 로드 시도
-          loadMyLocation(); // 자신의 위치 먼저 로드
+        loadMyLocation();
+        await loadLocationRequests().catch(() => {});
         loadFamilyLocations();
-        if (familyLocationsRetryTimerRef.current) clearTimeout(familyLocationsRetryTimerRef.current);
-        familyLocationsRetryTimerRef.current = setTimeout(() => {
-          familyLocationsRetryTimerRef.current = null;
-          loadFamilyLocations();
-        }, 1500);
       });
-    }, 500); // ✅ 지연 시간 증가 (loadData 완료 후 실행되도록 보장)
+    }, 500);
     
     // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
     const handleVisibilityChange = () => {
@@ -3700,10 +3688,6 @@ export default function FamilyHub() {
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
       clearTimeout(timer);
-      if (familyLocationsRetryTimerRef.current) {
-        clearTimeout(familyLocationsRetryTimerRef.current);
-        familyLocationsRetryTimerRef.current = null;
-      }
       if (typeof window !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('online', handleOnline);
