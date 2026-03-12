@@ -68,6 +68,7 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const gridColumnsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gridColumnsRef = useRef(3);
+  const columnStepLimitAppliedRef = useRef(false);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
   /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
@@ -108,22 +109,25 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (최대 7열)
-        const viewportCols = visualW < 260 ? 1 : visualW < 320 ? 2 : visualW < 380 ? 3 : visualW < 460 ? 4 : visualW < 560 ? 5 : visualW < 660 ? 6 : 7;
+        // 뷰포트 너비 → 열 수 (390px 폰에서도 줌아웃 시 5~7열 도달, 최대 7열)
+        const viewportCols = visualW < 90 ? 1 : visualW < 150 ? 2 : visualW < 210 ? 3 : visualW < 270 ? 4 : visualW < 330 ? 5 : visualW < 390 ? 6 : 7;
         // 사진 수 상한: 1~11→1열만, 그 외는 뷰포트대로 최대 7열
         const photoBasedMax = n <= 11 ? 1 : 7;
         const rawCols = n <= 11 && isZoomedIn
           ? viewportCols
           : Math.min(viewportCols, photoBasedMax);
         const prevCols = gridColumnsRef.current;
-        const cols = rawCols < prevCols
-          ? Math.max(rawCols, prevCols - 1)
-          : rawCols > prevCols
-            ? Math.min(rawCols, prevCols + 1)
-            : rawCols;
+        const cols = !columnStepLimitAppliedRef.current
+          ? rawCols
+          : rawCols < prevCols
+            ? Math.max(rawCols, prevCols - 1)
+            : rawCols > prevCols
+              ? Math.min(rawCols, prevCols + 1)
+              : rawCols;
         if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
         gridColumnsDebounceRef.current = setTimeout(() => {
           gridColumnsDebounceRef.current = null;
+          columnStepLimitAppliedRef.current = true;
           gridColumnsRef.current = cols;
           setGridColumns(cols);
         }, 60);
