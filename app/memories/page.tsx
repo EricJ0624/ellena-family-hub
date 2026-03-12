@@ -102,8 +102,8 @@ export default function MemoriesPage() {
           initialViewportWidthSetRef.current = true;
           setInitialViewportWidth(visualW);
         }
-        // 아이폰 사진처럼: 뷰포트 너비만으로 열 수 (1~7), 1~11장은 1열로 크게
-        const viewportCols = visualW < 240 ? 1 : visualW < 320 ? 2 : visualW < 420 ? 3 : visualW < 520 ? 4 : visualW < 640 ? 5 : visualW < 760 ? 6 : 7;
+        // 아이폰 사진처럼: 뷰포트 너비만으로 열 수 (1~7), 390px 폰에서도 4열 이상 가능
+        const viewportCols = visualW < 200 ? 1 : visualW < 280 ? 2 : visualW < 360 ? 3 : visualW < 440 ? 4 : visualW < 520 ? 5 : visualW < 600 ? 6 : 7;
         const cols = n <= 11 ? 1 : viewportCols;
         setGridColumns(cols);
       });
