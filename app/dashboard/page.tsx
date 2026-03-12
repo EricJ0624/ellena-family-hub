@@ -314,6 +314,8 @@ export default function FamilyHub() {
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
+  const sessionWaitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // 세션 준비 후 위치 로드용
+  const locationLoadStartedRef = useRef(false); // 세션 대기 중 중복 run 방지
 
   // 타이틀 스타일 상태
   const [titleStyle, setTitleStyle] = useState<Partial<TitleStyle>>({
@@ -3626,12 +3628,13 @@ export default function FamilyHub() {
     };
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
-    // currentGroupId 없을 때는 위치 로드 스킵 → 그룹 로드 후 effect 재실행 시 한 번만 로드 (재로그인 시 마커 유지)
+    // currentGroupId 없을 때는 위치 로드 스킵 → 그룹 로드 후 effect 재실행 시 한 번만 로드
     if (!currentGroupId) {
       return;
     }
-    console.log('🔄 Supabase 데이터 로드 시작...');
-    const timer = setTimeout(() => {
+    const runLocationLoad = () => {
+      if (locationLoadStartedRef.current) return;
+      locationLoadStartedRef.current = true;
       loadSupabaseData().then(async () => {
         console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
         setupRealtimeSubscriptions();
@@ -3645,7 +3648,38 @@ export default function FamilyHub() {
         await loadLocationRequests().catch(() => {});
         loadFamilyLocations();
       });
-    }, 500);
+    };
+    // 리프레시/재로그인 시 세션 복원 후 로드 (500ms 고정 대신 세션 준비 대기 → 마커 유지)
+    const start = Date.now();
+    const MAX_SESSION_WAIT_MS = 2000;
+    const SESSION_POLL_MS = 100;
+    const tryRunWhenSessionReady = async () => {
+      if (locationLoadStartedRef.current) return true;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        if (sessionWaitIntervalRef.current) {
+          clearInterval(sessionWaitIntervalRef.current);
+          sessionWaitIntervalRef.current = null;
+        }
+        runLocationLoad();
+        return true;
+      }
+      if (Date.now() - start >= MAX_SESSION_WAIT_MS) {
+        if (sessionWaitIntervalRef.current) {
+          clearInterval(sessionWaitIntervalRef.current);
+          sessionWaitIntervalRef.current = null;
+        }
+        runLocationLoad();
+        return true;
+      }
+      return false;
+    };
+    tryRunWhenSessionReady().then((done) => {
+      if (done) return;
+      sessionWaitIntervalRef.current = setInterval(() => {
+        tryRunWhenSessionReady();
+      }, SESSION_POLL_MS);
+    });
     
     // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
     const handleVisibilityChange = () => {
@@ -3687,7 +3721,11 @@ export default function FamilyHub() {
     // 정리 함수
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
-      clearTimeout(timer);
+      locationLoadStartedRef.current = false;
+      if (sessionWaitIntervalRef.current) {
+        clearInterval(sessionWaitIntervalRef.current);
+        sessionWaitIntervalRef.current = null;
+      }
       if (typeof window !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('online', handleOnline);
