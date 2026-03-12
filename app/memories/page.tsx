@@ -73,6 +73,10 @@ export default function MemoriesPage() {
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
   const markImageFailed = (id: string | number) =>
     setFailedImageIds((prev) => new Set(prev).add(String(id)));
+  /** 이미지 로드 완료된 id → 페이드인 표시용 */
+  const [imageLoadedIds, setImageLoadedIds] = useState<Set<string>>(new Set());
+  const markImageLoaded = (id: string | number) =>
+    setImageLoadedIds((prev) => new Set(prev).add(String(id)));
 
   // 동일 규칙 모든 기기: visualViewport 너비로 열 수 결정 → 줌으로 늘었다 줄었다. + 사진 수 상한(적을 때 크게).
   const ZOOM_THRESHOLD = 0.92;
@@ -102,8 +106,8 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (폰에서도 줌으로 4~6열 도달 가능하도록 구간 완화)
-        const viewportCols = visualW < 280 ? 1 : visualW < 360 ? 2 : visualW < 440 ? 3 : visualW < 520 ? 4 : visualW < 640 ? 5 : 6;
+        // 뷰포트 너비 → 열 수 (390px 폰에서도 4열, 줌아웃 시 5~6열 도달)
+        const viewportCols = visualW < 260 ? 1 : visualW < 320 ? 2 : visualW < 380 ? 3 : visualW < 460 ? 4 : visualW < 560 ? 5 : 6;
         // 사진 수 상한: 1~11→1열만, 그 외는 뷰포트대로 최대 6열
         const photoBasedMax = n <= 11 ? 1 : 6;
         const cols = n <= 11 && isZoomedIn
@@ -684,6 +688,8 @@ export default function MemoriesPage() {
                       onLoad={(e) => {
                         if (getDiagnoseKeyFromData(p.data) && (e.target as HTMLImageElement).naturalWidth === 0) {
                           markImageFailed(p.id);
+                        } else {
+                          markImageLoaded(p.id);
                         }
                       }}
                       style={{
@@ -691,6 +697,8 @@ export default function MemoriesPage() {
                         height: gridColumns === 1 ? 'auto' : '100%',
                         objectFit: gridColumns === 1 ? 'contain' : 'cover',
                         display: 'block',
+                        opacity: imageLoadedIds.has(String(p.id)) ? 1 : 0,
+                        transition: 'opacity 0.25s ease-out',
                         ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                       }}
                     />
@@ -797,6 +805,8 @@ export default function MemoriesPage() {
                                   onLoad={(e) => {
                                     if (getDiagnoseKeyFromData(p.data) && (e.target as HTMLImageElement).naturalWidth === 0) {
                                       markImageFailed(p.id);
+                                    } else {
+                                      markImageLoaded(p.id);
                                     }
                                   }}
                                   style={{
@@ -804,6 +814,8 @@ export default function MemoriesPage() {
                                     height: gridColumns === 1 ? 'auto' : '100%',
                                     objectFit: gridColumns === 1 ? 'contain' : 'cover',
                                     display: 'block',
+                                    opacity: imageLoadedIds.has(String(p.id)) ? 1 : 0,
+                                    transition: 'opacity 0.25s ease-out',
                                     ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                                   }}
                                 />
@@ -1022,6 +1034,7 @@ export default function MemoriesPage() {
               <img
                 src={displayListForLightbox[selectedIndex].data}
                 alt=""
+                onLoad={() => markImageLoaded(displayListForLightbox[selectedIndex].id)}
                 style={{
                   width: '100%',
                   height: 'auto',
@@ -1029,6 +1042,8 @@ export default function MemoriesPage() {
                   objectFit: 'contain',
                   borderRadius: 8,
                   display: 'block',
+                  opacity: imageLoadedIds.has(String(displayListForLightbox[selectedIndex].id)) ? 1 : 0,
+                  transition: 'opacity 0.25s ease-out',
                 }}
               />
             </div>
