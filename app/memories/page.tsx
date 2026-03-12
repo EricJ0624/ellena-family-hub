@@ -83,9 +83,7 @@ export default function MemoriesPage() {
   const headerRef = useRef<HTMLElement>(null);
   const headerRefWidthRef = useRef<number>(0);
   const [headerScale, setHeaderScale] = useState<number>(1);
-  /** 그리드/메인 너비 고정용: 초기 1회 저장 → 줌해도 레이아웃 너비 유지, 열만 바뀌어 사진 크기 반영 */
-  const [initialViewportWidth, setInitialViewportWidth] = useState<number | null>(null);
-  const initialViewportWidthSetRef = useRef(false);
+  const [viewportWidth, setViewportWidth] = useState<number>(1200);
   lightboxOpenRef.current = selectedIndex !== null;
   if (selectedIndex === null) lightboxSizeRef.current = null;
   useEffect(() => {
@@ -98,10 +96,7 @@ export default function MemoriesPage() {
         const n = album.length;
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
-        if (!initialViewportWidthSetRef.current) {
-          initialViewportWidthSetRef.current = true;
-          setInitialViewportWidth(visualW);
-        }
+        setViewportWidth(visualW);
         // 아이폰 사진처럼: 뷰포트 너비만으로 열 수 (1~7), 390px 폰에서도 4열 이상 가능
         const viewportCols = visualW < 200 ? 1 : visualW < 280 ? 2 : visualW < 360 ? 3 : visualW < 440 ? 4 : visualW < 520 ? 5 : visualW < 600 ? 6 : 7;
         const cols = n <= 11 ? 1 : viewportCols;
@@ -470,7 +465,7 @@ export default function MemoriesPage() {
   };
   const closeLightbox = () => setSelectedIndex(null);
 
-  const mainMaxWidth = Math.min(1200, initialViewportWidth ?? 1200);
+  const mainMaxWidth = Math.min(1200, viewportWidth);
 
   return (
     <div className="memories-page" style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'clip', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
