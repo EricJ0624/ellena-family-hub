@@ -67,6 +67,7 @@ export default function MemoriesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
   const gridColumnsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gridColumnsRef = useRef(3);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
   /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
@@ -88,6 +89,7 @@ export default function MemoriesPage() {
   const headerRefWidthRef = useRef<number>(0);
   const [viewportWidth, setViewportWidth] = useState<number>(1200);
   const [headerScale, setHeaderScale] = useState<number>(1);
+  gridColumnsRef.current = gridColumns;
   lightboxOpenRef.current = selectedIndex !== null;
   if (selectedIndex === null) lightboxSizeRef.current = null;
   useEffect(() => {
@@ -106,16 +108,23 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (390px 폰에서도 4열, 줌아웃 시 5~6열 도달)
-        const viewportCols = visualW < 260 ? 1 : visualW < 320 ? 2 : visualW < 380 ? 3 : visualW < 460 ? 4 : visualW < 560 ? 5 : 6;
-        // 사진 수 상한: 1~11→1열만, 그 외는 뷰포트대로 최대 6열
-        const photoBasedMax = n <= 11 ? 1 : 6;
-        const cols = n <= 11 && isZoomedIn
+        // 뷰포트 너비 → 열 수 (최대 7열)
+        const viewportCols = visualW < 260 ? 1 : visualW < 320 ? 2 : visualW < 380 ? 3 : visualW < 460 ? 4 : visualW < 560 ? 5 : visualW < 660 ? 6 : 7;
+        // 사진 수 상한: 1~11→1열만, 그 외는 뷰포트대로 최대 7열
+        const photoBasedMax = n <= 11 ? 1 : 7;
+        const rawCols = n <= 11 && isZoomedIn
           ? viewportCols
           : Math.min(viewportCols, photoBasedMax);
+        const prevCols = gridColumnsRef.current;
+        const cols = rawCols < prevCols
+          ? Math.max(rawCols, prevCols - 1)
+          : rawCols > prevCols
+            ? Math.min(rawCols, prevCols + 1)
+            : rawCols;
         if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
         gridColumnsDebounceRef.current = setTimeout(() => {
           gridColumnsDebounceRef.current = null;
+          gridColumnsRef.current = cols;
           setGridColumns(cols);
         }, 60);
         setViewportWidth(visualW);
@@ -684,6 +693,9 @@ export default function MemoriesPage() {
                     <img
                       src={p.data}
                       alt=""
+                      loading={index < 8 ? 'eager' : 'lazy'}
+                      decoding="async"
+                      fetchPriority={index < 4 ? 'high' : undefined}
                       onError={() => markImageFailed(p.id)}
                       onLoad={(e) => {
                         if (getDiagnoseKeyFromData(p.data) && (e.target as HTMLImageElement).naturalWidth === 0) {
@@ -698,7 +710,7 @@ export default function MemoriesPage() {
                         objectFit: gridColumns === 1 ? 'contain' : 'cover',
                         display: 'block',
                         opacity: imageLoadedIds.has(String(p.id)) ? 1 : 0,
-                        transition: 'opacity 0.25s ease-out',
+                        transition: 'opacity 0.2s ease-out',
                         ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                       }}
                     />
@@ -801,6 +813,8 @@ export default function MemoriesPage() {
                                 <img
                                   src={p.data}
                                   alt=""
+                                  loading={section.photos.indexOf(p) < 8 ? 'eager' : 'lazy'}
+                                  decoding="async"
                                   onError={() => markImageFailed(p.id)}
                                   onLoad={(e) => {
                                     if (getDiagnoseKeyFromData(p.data) && (e.target as HTMLImageElement).naturalWidth === 0) {
@@ -815,7 +829,7 @@ export default function MemoriesPage() {
                                     objectFit: gridColumns === 1 ? 'contain' : 'cover',
                                     display: 'block',
                                     opacity: imageLoadedIds.has(String(p.id)) ? 1 : 0,
-                                    transition: 'opacity 0.25s ease-out',
+                                    transition: 'opacity 0.2s ease-out',
                                     ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
                                   }}
                                 />
