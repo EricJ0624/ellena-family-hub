@@ -73,7 +73,7 @@ export default function MemoriesPage() {
   const markImageFailed = (id: string | number) =>
     setFailedImageIds((prev) => new Set(prev).add(String(id)));
 
-  // 하이브리드: 뷰포트 기준 열 수 + 사진 수로 상한 캡. 1~11장은 기본 1열(크게), 줌인 시 뷰포트대로 1/2/3/4/5열.
+  // 동일 규칙 모든 기기: visualViewport 너비로 열 수 결정 → 줌으로 늘었다 줄었다. + 사진 수 상한(적을 때 크게).
   const ZOOM_THRESHOLD = 0.92;
   const baseWidthRef = useRef(0);
   const lightboxOpenRef = useRef(false);
@@ -101,9 +101,9 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 가능 열 수 (소셜 앱 방식)
-        const viewportCols = visualW < 320 ? 1 : visualW < 480 ? 2 : visualW < 720 ? 3 : visualW < 1000 ? 4 : 5;
-        // 사진 수로 상한: 1~11→1열, 12~39→3열, 40+→5열 (적을수록 크게)
+        // 뷰포트 너비 → 열 수 (모든 기기 동일 규칙, 작은 폰~태블릿까지 줌으로 1~5열 전환 가능)
+        const viewportCols = visualW < 280 ? 1 : visualW < 360 ? 2 : visualW < 460 ? 3 : visualW < 600 ? 4 : 5;
+        // 사진 수 상한: 1~11→1열, 12~39→3열, 40+→5열 (적을수록 크게)
         const photoBasedMax = n <= 11 ? 1 : n < 40 ? 3 : 5;
         const cols = n <= 11 && isZoomedIn
           ? viewportCols
