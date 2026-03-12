@@ -66,6 +66,7 @@ export default function MemoriesPage() {
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
+  const gridColumnsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
   /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
@@ -101,14 +102,18 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (모든 기기 동일 규칙, 작은 폰~태블릿까지 줌으로 1~5열 전환 가능)
-        const viewportCols = visualW < 280 ? 1 : visualW < 360 ? 2 : visualW < 460 ? 3 : visualW < 600 ? 4 : 5;
-        // 사진 수 상한: 1~11→1열, 12~39→3열, 40+→5열 (적을수록 크게)
-        const photoBasedMax = n <= 11 ? 1 : n < 40 ? 3 : 5;
+        // 뷰포트 너비 → 열 수 (모든 기기 동일 규칙, 줌으로 1~6열 전환 가능)
+        const viewportCols = visualW < 280 ? 1 : visualW < 360 ? 2 : visualW < 460 ? 3 : visualW < 600 ? 4 : visualW < 720 ? 5 : 6;
+        // 사진 수 상한: 1~11→1열, 12~39→3열, 40+→6열 (적을수록 크게)
+        const photoBasedMax = n <= 11 ? 1 : n < 40 ? 3 : 6;
         const cols = n <= 11 && isZoomedIn
           ? viewportCols
           : Math.min(viewportCols, photoBasedMax);
-        setGridColumns(cols);
+        if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
+        gridColumnsDebounceRef.current = setTimeout(() => {
+          gridColumnsDebounceRef.current = null;
+          setGridColumns(cols);
+        }, 60);
         setViewportWidth(visualW);
       });
     };
@@ -121,6 +126,7 @@ export default function MemoriesPage() {
     }
     return () => {
       if (rafId !== undefined) cancelAnimationFrame(rafId);
+      if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
       window.removeEventListener('resize', updateColumns);
       if (vv) {
         vv.removeEventListener('resize', updateColumns);
@@ -644,8 +650,10 @@ export default function MemoriesPage() {
             {album.map((p, index) => (
               <motion.div
                 key={p.id}
+                layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ layout: { duration: 0.2, ease: 'easeInOut' } }}
                 className="memory-card"
                 style={{
                   background: '#fff',
@@ -755,8 +763,10 @@ export default function MemoriesPage() {
                         return (
                           <motion.div
                             key={p.id}
+                            layout
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
+                            transition={{ layout: { duration: 0.2, ease: 'easeInOut' } }}
                             className="memory-card"
                             style={{
                               background: '#fff',
