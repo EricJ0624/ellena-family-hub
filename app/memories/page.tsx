@@ -102,10 +102,10 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (모든 기기 동일 규칙, 줌으로 1~6열 전환 가능)
-        const viewportCols = visualW < 280 ? 1 : visualW < 360 ? 2 : visualW < 460 ? 3 : visualW < 600 ? 4 : visualW < 720 ? 5 : 6;
-        // 사진 수 상한: 1~11→1열, 12~39→3열, 40+→6열 (적을수록 크게)
-        const photoBasedMax = n <= 11 ? 1 : n < 40 ? 3 : 6;
+        // 뷰포트 너비 → 열 수 (폰에서도 줌으로 4~6열 도달 가능하도록 구간 완화)
+        const viewportCols = visualW < 280 ? 1 : visualW < 360 ? 2 : visualW < 440 ? 3 : visualW < 520 ? 4 : visualW < 640 ? 5 : 6;
+        // 사진 수 상한: 1~11→1열만, 그 외는 뷰포트대로 최대 6열
+        const photoBasedMax = n <= 11 ? 1 : 6;
         const cols = n <= 11 && isZoomedIn
           ? viewportCols
           : Math.min(viewportCols, photoBasedMax);
@@ -650,10 +650,10 @@ export default function MemoriesPage() {
             {album.map((p, index) => (
               <motion.div
                 key={p.id}
-                layout
+                layout="position"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ layout: { duration: 0.2, ease: 'easeInOut' } }}
+                transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
                 className="memory-card"
                 style={{
                   background: '#fff',
@@ -763,10 +763,10 @@ export default function MemoriesPage() {
                         return (
                           <motion.div
                             key={p.id}
-                            layout
+                            layout="position"
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ layout: { duration: 0.2, ease: 'easeInOut' } }}
+                            transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
                             className="memory-card"
                             style={{
                               background: '#fff',
