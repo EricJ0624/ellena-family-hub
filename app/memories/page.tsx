@@ -66,9 +66,6 @@ export default function MemoriesPage() {
   const [editDescription, setEditDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gridColumns, setGridColumns] = useState(3);
-  const gridColumnsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const gridColumnsRef = useRef(3);
-  const columnInitializedRef = useRef(false);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
   /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
@@ -80,17 +77,15 @@ export default function MemoriesPage() {
   const markImageLoaded = (id: string | number) =>
     setImageLoadedIds((prev) => new Set(prev).add(String(id)));
 
-  // 동일 규칙 모든 기기: visualViewport 너비로 열 수 결정 → 줌으로 늘었다 줄었다. + 사진 수 상한(적을 때 크게).
-  const ZOOM_THRESHOLD = 0.92;
-  const baseWidthRef = useRef(0);
   const lightboxOpenRef = useRef(false);
   /** 라이트박스 열릴 때 뷰포트 크기 고정 → 줌인 시에도 사진이 작아지지 않음 */
   const lightboxSizeRef = useRef<{ w: number; h: number } | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const headerRefWidthRef = useRef<number>(0);
-  const [viewportWidth, setViewportWidth] = useState<number>(1200);
   const [headerScale, setHeaderScale] = useState<number>(1);
-  gridColumnsRef.current = gridColumns;
+  /** 그리드/메인 너비 고정용: 초기 1회 저장 → 줌해도 레이아웃 너비 유지, 열만 바뀌어 사진 크기 반영 */
+  const [initialViewportWidth, setInitialViewportWidth] = useState<number | null>(null);
+  const initialViewportWidthSetRef = useRef(false);
   lightboxOpenRef.current = selectedIndex !== null;
   if (selectedIndex === null) lightboxSizeRef.current = null;
   useEffect(() => {
@@ -103,35 +98,14 @@ export default function MemoriesPage() {
         const n = album.length;
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
-        const innerW = window.innerWidth;
-        if (baseWidthRef.current === 0) {
-          baseWidthRef.current = Math.max(innerW, visualW, 400);
+        if (!initialViewportWidthSetRef.current) {
+          initialViewportWidthSetRef.current = true;
+          setInitialViewportWidth(visualW);
         }
-        const base = baseWidthRef.current;
-        const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (줌 시 1~7열)
-        const viewportCols = visualW < 90 ? 1 : visualW < 150 ? 2 : visualW < 210 ? 3 : visualW < 270 ? 4 : visualW < 330 ? 5 : visualW < 390 ? 6 : 7;
-        const photoBasedMax = n <= 11 ? 1 : 7;
-        const rawCols = n <= 11 && isZoomedIn
-          ? viewportCols
-          : Math.min(viewportCols, photoBasedMax);
-        const prevCols = gridColumnsRef.current;
-        // 초기 1회: 사진 수에 맞춘 열만 사용(뷰포트 무시), 이후에는 줌에 따라 1단계씩만 변경
-        const cols = !columnInitializedRef.current
-          ? (n <= 11 ? 1 : n <= 20 ? 2 : n <= 35 ? 3 : n <= 50 ? 4 : 5)
-          : rawCols < prevCols
-            ? Math.max(rawCols, prevCols - 1)
-            : rawCols > prevCols
-              ? Math.min(rawCols, prevCols + 1)
-              : rawCols;
-        if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
-        gridColumnsDebounceRef.current = setTimeout(() => {
-          gridColumnsDebounceRef.current = null;
-          columnInitializedRef.current = true;
-          gridColumnsRef.current = cols;
-          setGridColumns(cols);
-        }, 60);
-        setViewportWidth(visualW);
+        // 아이폰 사진처럼: 뷰포트 너비만으로 열 수 (1~7), 1~11장은 1열로 크게
+        const viewportCols = visualW < 240 ? 1 : visualW < 320 ? 2 : visualW < 420 ? 3 : visualW < 520 ? 4 : visualW < 640 ? 5 : visualW < 760 ? 6 : 7;
+        const cols = n <= 11 ? 1 : viewportCols;
+        setGridColumns(cols);
       });
     };
     updateColumns();
@@ -143,7 +117,6 @@ export default function MemoriesPage() {
     }
     return () => {
       if (rafId !== undefined) cancelAnimationFrame(rafId);
-      if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
       window.removeEventListener('resize', updateColumns);
       if (vv) {
         vv.removeEventListener('resize', updateColumns);
@@ -497,7 +470,7 @@ export default function MemoriesPage() {
   };
   const closeLightbox = () => setSelectedIndex(null);
 
-  const mainMaxWidth = Math.min(1200, viewportWidth);
+  const mainMaxWidth = Math.min(1200, initialViewportWidth ?? 1200);
 
   return (
     <div className="memories-page" style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'clip', background: 'var(--bg-dashboard, #f8fafc)', paddingBottom: 80 }}>
