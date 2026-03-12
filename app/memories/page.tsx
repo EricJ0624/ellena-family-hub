@@ -97,8 +97,8 @@ export default function MemoriesPage() {
         const vv = window.visualViewport;
         const visualW = vv ? vv.width : window.innerWidth;
         setViewportWidth(visualW);
-        // 아이폰 사진처럼: 뷰포트 너비만으로 열 수 (1~7), 390px 폰에서도 4열 이상 가능
-        const viewportCols = visualW < 200 ? 1 : visualW < 280 ? 2 : visualW < 360 ? 3 : visualW < 440 ? 4 : visualW < 520 ? 5 : visualW < 600 ? 6 : 7;
+        // 아이폰 사진처럼: 뷰포트만으로 열 수, 390px에서도 줌아웃 시 5~6열
+        const viewportCols = visualW < 200 ? 1 : visualW < 260 ? 2 : visualW < 320 ? 3 : visualW < 380 ? 4 : visualW < 440 ? 5 : visualW < 520 ? 6 : 7;
         const cols = n <= 11 ? 1 : viewportCols;
         setGridColumns(cols);
       });
@@ -628,7 +628,7 @@ export default function MemoriesPage() {
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
-              gap: 12,
+              gap: 8,
               minWidth: 0,
             }}
           >
@@ -746,7 +746,7 @@ export default function MemoriesPage() {
                       style={{
                         display: 'grid',
                         gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
-                        gap: 12,
+                        gap: 8,
                         minWidth: 0,
                       }}
                     >
@@ -849,20 +849,15 @@ export default function MemoriesPage() {
 
       <AnimatePresence>
         {selectedIndex !== null && displayListForLightbox[selectedIndex] && (() => {
-          const layoutW = typeof window !== 'undefined' ? window.innerWidth : 0;
-          const layoutH = typeof window !== 'undefined' ? window.innerHeight : 0;
-          if (typeof window !== 'undefined' && !lightboxSizeRef.current) {
-            lightboxSizeRef.current = { w: window.innerWidth, h: window.innerHeight };
-          }
-          const sizeW = lightboxSizeRef.current?.w ?? layoutW;
-          const sizeH = lightboxSizeRef.current?.h ?? layoutH;
           const vv = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport : null;
+          if (typeof window !== 'undefined' && vv && !lightboxSizeRef.current) {
+            lightboxSizeRef.current = { w: vv.width, h: vv.height };
+          }
+          const sizeW = lightboxSizeRef.current?.w ?? (typeof window !== 'undefined' ? window.innerWidth : 0);
+          const sizeH = lightboxSizeRef.current?.h ?? (typeof window !== 'undefined' ? window.innerHeight : 0);
           const vvValid = vv && typeof vv.width === 'number' && vv.width > 0;
           const vLeft = vvValid ? vv!.offsetLeft - (sizeW - vv!.width) / 2 : 0;
           const vTop = vvValid ? vv!.offsetTop - (sizeH - vv!.height) / 2 : 0;
-          const fromState = lightboxViewport.width > 0;
-          const left = vvValid ? vLeft : (fromState ? lightboxViewport.left - (sizeW - lightboxViewport.width) / 2 : 0);
-          const top = vvValid ? vTop : (fromState ? lightboxViewport.top - (sizeH - lightboxViewport.height) / 2 : 0);
           return (
           <motion.div
             key="lightbox"
@@ -871,16 +866,16 @@ export default function MemoriesPage() {
             exit={{ opacity: 0 }}
             style={{
               position: 'fixed',
-              top,
-              left,
+              top: vvValid ? vTop : 0,
+              left: vvValid ? vLeft : 0,
               width: sizeW,
               height: sizeH,
               background: 'rgba(0,0,0,0.95)',
               zIndex: 10000,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              padding: '56px 24px 24px',
+              alignItems: 'stretch',
+              padding: 0,
               boxSizing: 'border-box',
             }}
             onClick={closeLightbox}
@@ -1003,17 +998,13 @@ export default function MemoriesPage() {
             </button>
             <div
               style={{
-                flex: 1,
-                minHeight: 0,
-                minWidth: 0,
-                width: '100%',
-                maxWidth: '100%',
-                maxHeight: '100%',
-                overflow: 'auto',
+                position: 'absolute',
+                inset: 0,
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'stretch',
+                alignItems: 'center',
                 justifyContent: 'center',
+                padding: 12,
+                boxSizing: 'border-box',
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1022,11 +1013,12 @@ export default function MemoriesPage() {
                 alt=""
                 onLoad={() => markImageLoaded(displayListForLightbox[selectedIndex].id)}
                 style={{
-                  width: '100%',
-                  height: 'auto',
+                  maxWidth: '100%',
                   maxHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
                   objectFit: 'contain',
-                  borderRadius: 8,
+                  borderRadius: 4,
                   display: 'block',
                   opacity: imageLoadedIds.has(String(displayListForLightbox[selectedIndex].id)) ? 1 : 0,
                   transition: 'opacity 0.25s ease-out',
@@ -1035,14 +1027,19 @@ export default function MemoriesPage() {
             </div>
             <div
               style={{
-                flexShrink: 0,
-                marginTop: 12,
-                width: '100%',
-                maxWidth: 400,
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '12px 16px',
+                background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 8,
+                maxWidth: 400,
+                margin: '0 auto',
+                boxSizing: 'border-box',
               }}
               onClick={(e) => e.stopPropagation()}
             >
