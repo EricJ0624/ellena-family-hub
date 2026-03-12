@@ -68,7 +68,7 @@ export default function MemoriesPage() {
   const [gridColumns, setGridColumns] = useState(3);
   const gridColumnsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gridColumnsRef = useRef(3);
-  const columnStepLimitAppliedRef = useRef(false);
+  const columnInitializedRef = useRef(false);
   const [viewMode, setViewMode] = useState<'latest' | 'byDate'>('latest');
   const [uploadMode, setUploadMode] = useState<'normal' | 'original'>('normal');
   /** 이미지 로드 실패한 사진 id (진단 링크 표시용). 문자열로 통일해 비교 */
@@ -109,16 +109,16 @@ export default function MemoriesPage() {
         }
         const base = baseWidthRef.current;
         const isZoomedIn = base > 0 && visualW < base * ZOOM_THRESHOLD;
-        // 뷰포트 너비 → 열 수 (390px 폰에서도 줌아웃 시 5~7열 도달, 최대 7열)
+        // 뷰포트 너비 → 열 수 (줌 시 1~7열)
         const viewportCols = visualW < 90 ? 1 : visualW < 150 ? 2 : visualW < 210 ? 3 : visualW < 270 ? 4 : visualW < 330 ? 5 : visualW < 390 ? 6 : 7;
-        // 사진 수 상한: 1~11→1열만, 그 외는 뷰포트대로 최대 7열
         const photoBasedMax = n <= 11 ? 1 : 7;
         const rawCols = n <= 11 && isZoomedIn
           ? viewportCols
           : Math.min(viewportCols, photoBasedMax);
         const prevCols = gridColumnsRef.current;
-        const cols = !columnStepLimitAppliedRef.current
-          ? rawCols
+        // 초기 1회: 사진 수에 맞춘 열만 사용(뷰포트 무시), 이후에는 줌에 따라 1단계씩만 변경
+        const cols = !columnInitializedRef.current
+          ? (n <= 11 ? 1 : n <= 20 ? 2 : n <= 35 ? 3 : n <= 50 ? 4 : 5)
           : rawCols < prevCols
             ? Math.max(rawCols, prevCols - 1)
             : rawCols > prevCols
@@ -127,7 +127,7 @@ export default function MemoriesPage() {
         if (gridColumnsDebounceRef.current) clearTimeout(gridColumnsDebounceRef.current);
         gridColumnsDebounceRef.current = setTimeout(() => {
           gridColumnsDebounceRef.current = null;
-          columnStepLimitAppliedRef.current = true;
+          columnInitializedRef.current = true;
           gridColumnsRef.current = cols;
           setGridColumns(cols);
         }, 60);
