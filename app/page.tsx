@@ -72,6 +72,30 @@ export default function LoginPage() {
     };
   }, [lang, isMounted]);
 
+  // 이미 로그인되어 있으면 자동 리다이렉트
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    const checkExistingSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[AUTH-DEBUG] 로그인 페이지: 기존 세션 발견 - 리다이렉트');
+          }
+          // 이미 로그인되어 있으면 온보딩으로 이동
+          router.push('/onboarding');
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[AUTH-DEBUG] 세션 확인 실패:', error);
+        }
+      }
+    };
+    
+    checkExistingSession();
+  }, [isMounted, router]);
+
   // 이전 이메일 불러오기
   useEffect(() => {
     if (isMounted && mode === 'login') {
