@@ -201,7 +201,7 @@ export default function LoginPage() {
       return;
     }
 
-    // 닉네임 필수 검증
+    // 별명 필수 검증
     const trimmedNickname = nickname.trim();
     if (!trimmedNickname) {
       setErrorMsg(t('error_nickname_required'));
@@ -575,7 +575,7 @@ export default function LoginPage() {
             animation: 'fadeInUp 0.6s ease-out 0.2s both'
           }}
         >
-          {/* 닉네임 입력 (가입 모드에서만) */}
+          {/* 별명 입력 (가입 모드에서만) */}
           {mode === 'signup' && (
             <div style={{ position: 'relative' }}>
               <input

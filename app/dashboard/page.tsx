@@ -3356,7 +3356,7 @@ export default function FamilyHub() {
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId, currentGroupId]); // familyId 변경 시 데이터 재로드
 
-  // 일정 작성자 닉네임 로드 (표시용)
+  // 일정 작성자 별명 로드 (표시용)
   useEffect(() => {
     const authorIds = [...new Set((state.events || []).map(e => e.created_by).filter(Boolean))] as string[];
     if (authorIds.length === 0) {
@@ -5881,14 +5881,14 @@ export default function FamilyHub() {
       // 4. 사용자 목록 새로고침 (다른 사용자에게 변경사항 반영)
       await loadAllUsers();
 
-      // 5. Piggy Bank 요약 정보 새로고침 (닉네임 변경 반영)
+      // 5. Piggy Bank 요약 정보 새로고침 (별명 변경 반영)
       if (currentGroupId) {
         await loadPiggySummary();
       }
 
       alert(dt('nickname_updated'));
     } catch (error: any) {
-      console.error('닉네임 업데이트 오류:', error);
+      console.error('별명 업데이트 오류:', error);
       alert(dt('nickname_update_failed') + (error.message || ct('error_unknown')));
     }
   };

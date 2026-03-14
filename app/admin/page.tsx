@@ -2303,7 +2303,7 @@ export default function AdminPage() {
                           fontWeight: '600',
                           color: '#475569',
                         }}>
-                          닉네임
+                          별명
                         </th>
                         <th style={{
                           padding: '12px',
@@ -3324,7 +3324,7 @@ export default function AdminPage() {
                                   fontWeight: '600',
                                   color: '#475569',
                                 }}>
-                                  닉네임
+                                  별명
                                 </th>
                                 <th style={{
                                   padding: '12px',
@@ -3996,7 +3996,7 @@ export default function AdminPage() {
                             <thead>
                               <tr style={{ backgroundColor: '#f1f5f9' }}>
                                 <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제일시</th>
-                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>아이(닉네임)</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>아이(별명)</th>
                                 <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>저금통 이름</th>
                                 <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제한 관리자</th>
                                 <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>동작</th>

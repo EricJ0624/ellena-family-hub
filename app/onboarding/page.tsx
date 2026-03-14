@@ -157,7 +157,7 @@ export default function OnboardingPage() {
           return;
         }
 
-        // 프로필에서 닉네임 가져오기
+        // 프로필에서 별명 가져오기
         const { data: profile } = await supabase
           .from('profiles')
           .select('nickname')

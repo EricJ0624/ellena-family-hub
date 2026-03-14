@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
       resultData = resultData.filter((p: { id: string }) => allowedIds.has(p.id));
     }
 
-    // 닉네임 기준으로 정렬 (닉네임이 있으면 우선, 없으면 이메일)
+    // 별명 기준으로 정렬 (별명이 있으면 우선, 없으면 이메일)
     const sortedData = resultData.sort((a: { nickname: string | null; email: string }, b: { nickname: string | null; email: string }) => {
       const nameA = a.nickname || a.email || '';
       const nameB = b.nickname || b.email || '';

@@ -89,12 +89,12 @@ export async function GET(request: NextRequest) {
       throw bankError;
     }
 
-    // 3. actor_id 목록 수집 (닉네임 조회용)
+    // 3. actor_id 목록 수집 (별명 조회용)
     const actorIds = new Set<string>();
     (walletTransactions || []).forEach((tx) => actorIds.add(tx.actor_id));
     (bankTransactions || []).forEach((tx) => actorIds.add(tx.actor_id));
 
-    // 4. 닉네임 조회
+    // 4. 별명 조회
     let actorNicknames: Record<string, string> = {};
     if (actorIds.size > 0) {
       const { data: profiles } = await supabase

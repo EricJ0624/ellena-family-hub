@@ -45,11 +45,11 @@ export type MemberManagementTranslations = {
 const memberManagement: Record<LangCode, MemberManagementTranslations> = {
   ko: {
     select_group_first: '그룹을 선택해주세요.',
-    search_placeholder: '이메일, 닉네임, ID로 검색...',
+    search_placeholder: '이메일, 별명, ID로 검색...',
     group_settings_btn: '그룹 설정',
     loading_members: '멤버 목록을 불러오는 중...',
     email: '이메일',
-    nickname: '닉네임',
+    nickname: '별명',
     role: '역할',
     joined_at: '가입일',
     manage: '관리',
