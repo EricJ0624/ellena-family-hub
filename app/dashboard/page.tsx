@@ -1369,11 +1369,18 @@ export default function FamilyHub() {
   // ✅ 지도 마커 업데이트 함수 (재사용 가능, useCallback으로 외부에서도 호출 가능)
   // AdvancedMarkerElement 사용으로 deprecated 경고 해결
   const updateMapMarkers = useCallback(() => {
-    if (!mapRef.current || typeof window === 'undefined' || !(window as any).google) return;
+    console.log('🗺️ [updateMapMarkers] 시작');
+    console.log('🗺️ [updateMapMarkers] state.familyLocations:', state.familyLocations?.length, '개');
+    console.log('🗺️ [updateMapMarkers] acceptedUserIdsRef:', Array.from(acceptedUserIdsRef.current));
+    
+    if (!mapRef.current || typeof window === 'undefined' || !(window as any).google) {
+      console.log('❌ [updateMapMarkers] map, window 또는 google 없음');
+      return;
+    }
 
     try {
       const google = (window as any).google;
-      const { AdvancedMarkerElement, PinElement } = google.maps.marker || {};
+      const { AdvancedMarkerElement, PinElement} = google.maps.marker || {};
 
       // AdvancedMarkerElement가 사용 가능한지 확인
       const useAdvancedMarker = AdvancedMarkerElement && PinElement;
@@ -1489,9 +1496,15 @@ export default function FamilyHub() {
       };
 
       // 승인된 사용자들의 위치 마커 업데이트 또는 생성 (ID 검증: 빈 값/본인 제외, 키 겹침 방지)
+      console.log('🗺️ [updateMapMarkers] familyLocations 순회 시작:', state.familyLocations.length, '개');
       state.familyLocations.forEach((loc) => {
-        if (!loc.userId || loc.userId === userId) return;
+        console.log('🗺️ [updateMapMarkers] 위치 처리:', loc.userId, '- 본인:', loc.userId === userId);
+        if (!loc.userId || loc.userId === userId) {
+          console.log('  ❌ userId 없거나 본인 - 스킵');
+          return;
+        }
         if (loc.latitude && loc.longitude) {
+          console.log('  ✅ 좌표 있음 - 마커 생성/업데이트');
           const style = getFamilyMarkerStyle(loc.familyRole);
           const existingMarker = markersRef.current.get(loc.userId);
           if (existingMarker) {
@@ -1584,13 +1597,23 @@ export default function FamilyHub() {
       // familyLocations는 이미 승인된 사용자만 포함하도록 필터링되어 있음
       // acceptedUserIdsRef만으로 승인 직후 마커 유지 보장
       const currentUserIds = new Set(state.familyLocations.map((loc: any) => loc.userId).filter((id: string) => id !== userId));
+      console.log('🗺️ [updateMapMarkers] currentUserIds:', Array.from(currentUserIds));
+      console.log('🗺️ [updateMapMarkers] markersRef 전체:', Array.from(markersRef.current.keys()));
       
       markersRef.current.forEach((marker, markerUserId) => {
         if (markerUserId === 'my-location') return;
+        console.log(`🗺️ [updateMapMarkers] 마커 체크: ${markerUserId}`);
         // familyLocations에 있거나 승인 직후 ref에 있는 사용자는 유지
-        if (currentUserIds.has(markerUserId)) return;
-        if (acceptedUserIdsRef.current.has(markerUserId)) return;
+        if (currentUserIds.has(markerUserId)) {
+          console.log(`  ✅ currentUserIds에 있음 - 유지`);
+          return;
+        }
+        if (acceptedUserIdsRef.current.has(markerUserId)) {
+          console.log(`  ✅ acceptedUserIdsRef에 있음 - 유지`);
+          return;
+        }
         
+        console.log(`  ❌ 제거 대상`);
         // 그 외 마커는 제거
         if (useAdvancedMarker && marker.map) {
           marker.map = null;
@@ -4747,7 +4770,12 @@ export default function FamilyHub() {
 
   // 가족 구성원 위치 로드 (승인된 관계만 표시)
   const loadFamilyLocations = async () => {
-    if (!userId || !isAuthenticated) return;
+    console.log('🔍 [loadFamilyLocations] 시작 - userId:', userId, 'groupId:', currentGroupId);
+    
+    if (!userId || !isAuthenticated) {
+      console.log('❌ [loadFamilyLocations] userId 또는 isAuthenticated 없음');
+      return;
+    }
     if (!currentGroupId) {
       console.warn('loadFamilyLocations: currentGroupId가 없습니다. groupId가 필요합니다.');
       return;
@@ -4756,9 +4784,10 @@ export default function FamilyHub() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        console.warn('loadFamilyLocations: 인증 세션이 없습니다.');
+        console.warn('❌ [loadFamilyLocations] 인증 세션이 없습니다.');
         return;
       }
+      console.log('✅ [loadFamilyLocations] 세션 확인 완료');
 
       // 최신 위치 요청 목록을 직접 조회하여 최신 상태 보장
       let currentLocationRequests = locationRequests;
@@ -4770,27 +4799,34 @@ export default function FamilyHub() {
           },
         });
         const result = await response.json();
+        console.log('📍 [loadFamilyLocations] location_requests fetch 결과:', result);
         if (result.success && result.data) {
           currentLocationRequests = result.data;
+          console.log('📍 [loadFamilyLocations] currentLocationRequests 개수:', currentLocationRequests.length);
+          console.log('📍 [loadFamilyLocations] currentLocationRequests:', JSON.stringify(currentLocationRequests, null, 2));
           // ✅ CRITICAL FIX: state에도 반영 (updateMapMarkers가 최신 locationRequests 참조하도록)
           setLocationRequests(result.data);
         }
       } catch (err) {
         // 조회 실패 시 기존 locationRequests 사용
-        console.warn('위치 요청 조회 실패, 기존 상태 사용:', err);
+        console.warn('❌ [loadFamilyLocations] 위치 요청 조회 실패:', err);
       }
 
       // 승인된 위치 요청이 있는 사용자들의 위치만 조회
       // RLS 정책에 의해 승인된 관계의 위치만 반환됨
+      console.log('📍 [loadFamilyLocations] user_locations 조회 시작');
       const { data, error } = await supabase
         .from('user_locations')
         .select('*')
         .order('last_updated', { ascending: false });
 
+      console.log('📍 [loadFamilyLocations] user_locations 조회 결과 - data:', data?.length, 'rows, error:', error);
+      if (data) {
+        console.log('📍 [loadFamilyLocations] user_locations 상세:', JSON.stringify(data, null, 2));
+      }
+
       if (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('위치 로드 오류:', error);
-        }
+        console.warn('❌ [loadFamilyLocations] 위치 로드 오류:', error);
         return;
       }
 
@@ -4801,6 +4837,7 @@ export default function FamilyHub() {
         const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
         if (otherId) expectedUserIds.add(otherId);
       });
+      console.log('📍 [loadFamilyLocations] expectedUserIds:', Array.from(expectedUserIds));
 
       if (data && data.length > 0) {
         // 가족 표시 역할(family_role) 조회 (지도 마커용)
@@ -4816,13 +4853,12 @@ export default function FamilyHub() {
         }
 
         // ✅ 승인된 다른 사용자 위치만 표시 (본인 위치는 제외)
+        console.log('🔍 [loadFamilyLocations] 필터링 시작 - 총', data.length, '개 위치');
         const locations = data
           .filter((loc: any) => {
             // ✅ 본인 위치는 확실히 제외 (본인 위치는 state.location에만 있음)
             if (loc.user_id === userId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('loadFamilyLocations: 본인 위치 제외', loc.user_id);
-              }
+              console.log('🔍 [loadFamilyLocations] 본인 위치 제외:', loc.user_id);
               return false;
             }
             // 다른 사용자 위치는 승인된 요청이 있는 경우만 표시 (최신 locationRequests 사용)
@@ -4832,12 +4868,11 @@ export default function FamilyHub() {
                 (req.requester_id === loc.user_id && req.target_id === userId && req.status === 'accepted')
             );
             
-            if (process.env.NODE_ENV === 'development') {
-              if (hasAcceptedRequest) {
-                console.log('loadFamilyLocations: 승인된 사용자 위치 포함', loc.user_id);
-              } else {
-                console.log('loadFamilyLocations: 승인되지 않은 사용자 위치 제외', loc.user_id);
-              }
+            console.log(`🔍 [loadFamilyLocations] user_id: ${loc.user_id}, hasAcceptedRequest: ${hasAcceptedRequest}`);
+            if (!hasAcceptedRequest) {
+              console.log('  ❌ 승인된 요청 없음 - 제외');
+            } else {
+              console.log('  ✅ 승인된 요청 있음 - 포함');
             }
             
             return hasAcceptedRequest;
@@ -4865,10 +4900,17 @@ export default function FamilyHub() {
           });
 
         // ✅ merge: 승인된 사용자는 새 데이터가 없어도 prev 유지 (마커 끊김 방지)
+        console.log('📍 [loadFamilyLocations] 필터링 후 locations 개수:', locations.length);
+        console.log('📍 [loadFamilyLocations] locations 상세:', JSON.stringify(locations, null, 2));
+        
         const newLocationsByUser = new Map(locations.map((l: any) => [l.userId, l]));
         
         // ✅ CRITICAL FIX: acceptedUserIdsRef 동기화 (updateMapMarkers가 최신 승인 관계 인식하도록)
-        expectedUserIds.forEach(uid => acceptedUserIdsRef.current.add(uid));
+        expectedUserIds.forEach(uid => {
+          acceptedUserIdsRef.current.add(uid);
+          console.log('📍 [loadFamilyLocations] acceptedUserIdsRef에 추가:', uid);
+        });
+        console.log('📍 [loadFamilyLocations] acceptedUserIdsRef 전체:', Array.from(acceptedUserIdsRef.current));
         
         setState(prev => {
           const prevList = prev.familyLocations || [];
@@ -4877,21 +4919,35 @@ export default function FamilyHub() {
             if (fromNew) return fromNew;
             return prevList.find((l: any) => l.userId === uid);
           }).filter(Boolean);
+          console.log('📍 [loadFamilyLocations] merged 개수:', merged.length);
+          console.log('📍 [loadFamilyLocations] merged:', JSON.stringify(merged, null, 2));
           // expectedUserIds가 비어있을 때는 API stale 가능성 → []로 덮어쓰지 않음 (prev 유지, 취소/거절 시에만 else 쪽에서 비움)
-          if (expectedUserIds.size === 0 && merged.length === 0) return prev;
+          if (expectedUserIds.size === 0 && merged.length === 0) {
+            console.log('📍 [loadFamilyLocations] expectedUserIds 비어있고 merged도 비어있음 - prev 유지');
+            return prev;
+          }
+          console.log('✅ [loadFamilyLocations] setState 호출 - familyLocations 업데이트');
           return { ...prev, familyLocations: merged };
         });
       } else {
         // 데이터가 없을 때: 승인된 관계 있으면 prev 유지. expectedUserIds 비어있으면 stale 가능성 → []로 덮어쓰지 않음
+        console.log('❌ [loadFamilyLocations] user_locations 데이터 없음');
         
         // ✅ CRITICAL FIX: acceptedUserIdsRef 동기화 (취소/거부된 사용자 제거)
         expectedUserIds.forEach(uid => acceptedUserIdsRef.current.add(uid));
         
         setState(prev => {
-          if (expectedUserIds.size > 0 && prev.familyLocations?.length) return prev;
+          if (expectedUserIds.size > 0 && prev.familyLocations?.length) {
+            console.log('📍 [loadFamilyLocations] expectedUserIds 있고 prev.familyLocations 있음 - prev 유지');
+            return prev;
+          }
           const hasCancelledOrRejected = (currentLocationRequests || []).some((r: any) => r.status === 'cancelled' || r.status === 'rejected');
-          if (expectedUserIds.size === 0 && !hasCancelledOrRejected) return prev;
+          if (expectedUserIds.size === 0 && !hasCancelledOrRejected) {
+            console.log('📍 [loadFamilyLocations] expectedUserIds 없고 취소/거부 없음 - prev 유지');
+            return prev;
+          }
           
+          console.log('❌ [loadFamilyLocations] familyLocations 비우기');
           // familyLocations를 비울 때 ref도 정리
           const removedUserIds = new Set((prev.familyLocations || []).map((loc: any) => loc.userId));
           removedUserIds.forEach(uid => acceptedUserIdsRef.current.delete(uid));
