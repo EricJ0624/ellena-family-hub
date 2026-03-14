@@ -3350,31 +3350,34 @@ export default function FamilyHub() {
         subscriptionsRef.current.locationRequests = null;
       }
 
+      // ✅ event: '*' 단일 바인딩으로 구독 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 오류 방지)
       console.log('📍 위치 요청 subscription 설정 중...');
       const locationRequestsSubscription = supabase
         .channel('location_requests_changes')
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'location_requests' },
+          { event: '*', schema: 'public', table: 'location_requests' },
           async (payload: any) => {
-            console.log('📍 Realtime 위치 요청 INSERT 이벤트 수신:', payload);
-            // ✅ 현재 사용자가 요청을 받은 경우(target_id)에만 즉시 로드
-            const newRequest = payload.new;
-            if (newRequest && newRequest.target_id === userId) {
-              await loadLocationRequests(); // 위치 요청 목록 다시 로드
-              // ✅ UI 업데이트를 위해 상태 강제 갱신
-              setState(prev => ({ ...prev }));
-            } else {
-              // 요청을 보낸 경우에도 목록 업데이트 (상태 동기화)
-              loadLocationRequests();
+            const ev = payload.eventType ?? (payload.new ? 'UPDATE' : 'DELETE');
+            if (ev === 'INSERT') {
+              console.log('📍 Realtime 위치 요청 INSERT 이벤트 수신:', payload);
+              const newRequest = payload.new;
+              if (newRequest && newRequest.target_id === userId) {
+                await loadLocationRequests();
+                setState(prev => ({ ...prev }));
+              } else {
+                loadLocationRequests();
+              }
+              return;
             }
-          }
-        )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'location_requests' },
-          async (payload: any) => {
+            if (ev === 'DELETE') {
+              console.log('📍 Realtime 위치 요청 DELETE 이벤트 수신:', payload);
+              loadLocationRequests();
+              loadFamilyLocations();
+              return;
+            }
+            // UPDATE
             console.log('📍 Realtime 위치 요청 UPDATE 이벤트 수신:', payload);
             const updatedRequest = payload.new;
-            // ✅ 승인 이벤트 수신 직후 상대 ID를 ref에 등록 (첫 사라짐 방지, state보다 먼저 반영)
             if (updatedRequest && updatedRequest.status === 'accepted') {
               const otherId = updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id;
               if (otherId) acceptedUserIdsRef.current.add(otherId);
@@ -3382,11 +3385,8 @@ export default function FamilyHub() {
             const cancelledOtherId = (updatedRequest && (updatedRequest.status === 'cancelled' || updatedRequest.status === 'rejected'))
               ? (updatedRequest.requester_id === userId ? updatedRequest.target_id : updatedRequest.requester_id)
               : null;
-            // 위치 요청 목록 다시 로드 (완료 대기)
             await loadLocationRequests();
-            // locationRequests 상태가 업데이트될 때까지 약간의 지연
             await new Promise(resolve => setTimeout(resolve, 200));
-            // ✅ 취소/거절 시 ref에서 제거는 '갱신된 목록에 해당 사용자와 accepted 없을 때만' (다른 accepted 요청이 있으면 유지)
             if (cancelledOtherId) {
               try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -3404,13 +3404,9 @@ export default function FamilyHub() {
                 }
               } catch (_) {}
             }
-            
-            // ✅ 승인된 요청이 있으면 양쪽 사용자 모두 위치 추적 시작
             if (updatedRequest && updatedRequest.status === 'accepted') {
               const isRequester = updatedRequest.requester_id === userId;
               const isTarget = updatedRequest.target_id === userId;
-              
-              // 양쪽 사용자 모두 위치 추적 시작 (아직 시작하지 않은 경우)
               if ((isRequester || isTarget) && !isLocationSharing) {
                 try {
                   if (navigator.geolocation) {
@@ -3421,28 +3417,21 @@ export default function FamilyHub() {
                         maximumAge: 0
                       });
                     });
-                    
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
-                    const address = ''; // Geocoding 미사용 — 좌표만 저장
+                    const address = '';
                     await saveLocationToSupabase(latitude, longitude, address);
                     setState(prev => ({
                       ...prev,
                       location: {
-                        address: address,
-                        latitude: latitude,
-                        longitude: longitude,
-                        userId: userId,
+                        address,
+                        latitude,
+                        longitude,
+                        userId,
                         updatedAt: new Date().toISOString()
                       }
                     }));
-                    
-                    // 위치 추적 시작 (실시간 업데이트)
-                    if (!isLocationSharing) {
-                      updateLocation();
-                    }
-                    
-                    // ✅ 양쪽 사용자 모두 위치가 표시되도록 위치 목록 다시 로드 (setState → 지도 effect가 마커 갱신)
+                    if (!isLocationSharing) updateLocation();
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await loadFamilyLocations();
                   }
@@ -3451,38 +3440,17 @@ export default function FamilyHub() {
                 }
               }
             }
-            
-            // ✅ 취소된 요청이 있으면 양쪽 사용자 모두 요청 목록에서 제거
             if (updatedRequest && updatedRequest.status === 'cancelled') {
-              // loadLocationRequests()가 이미 호출되었으므로 UI가 자동으로 업데이트됨
-              // 위치 목록도 다시 로드하여 마커 제거
               await loadFamilyLocations();
             }
-            
-            // 승인 시 위치 목록도 다시 로드 (승인된 요청이 반영된 후)
-            // 양쪽 사용자 모두 위치가 저장될 때까지 충분한 대기 시간
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // 위치 목록 다시 로드 (setState → 지도 effect가 최신 state로 마커 갱신)
             await loadFamilyLocations();
-            
-            // ✅ 요청한 쪽: 승인자가 위치 저장할 시간을 두고 재시도 로드 (loadFamilyLocations만 호출, effect가 마커 갱신)
-            if (updatedRequest.status === 'accepted' && updatedRequest.requester_id === userId) {
+            if (updatedRequest?.status === 'accepted' && updatedRequest.requester_id === userId) {
               [1000, 2500, 4500].forEach((delay) => {
                 setTimeout(() => loadFamilyLocations(), delay);
               });
             }
-            
-            // 지도 마커 업데이트를 위해 상태 변경 트리거
             setState(prev => ({ ...prev }));
-          }
-        )
-        .on('postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'location_requests' },
-          (payload: any) => {
-            console.log('📍 Realtime 위치 요청 DELETE 이벤트 수신:', payload);
-            loadLocationRequests(); // 위치 요청 목록 다시 로드
-            loadFamilyLocations(); // 위치 목록도 다시 로드
           }
         )
         .subscribe((status, err) => {
