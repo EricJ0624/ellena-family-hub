@@ -1079,8 +1079,8 @@ export default function FamilyHub() {
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
     textOverflow: 'clip',
-    // fit 적용 전 초기값: 보수적으로 작게 해서 잘림 방지, fit 실행 후 fittedTitleFontSize로 덮어씀
-    fontSize: isDefaultDashboardTitle ? 'clamp(20px, 5vw, 68px)' : 'clamp(16px, 4vw, 28px)',
+    // fit 적용 전: 고정 작은 크기로 잘림 방지, fit 실행 후 fittedTitleFontSize로 덮어씀
+    fontSize: 18,
     fontWeight: titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
     fontFamily: titleFont.fontFamily,
@@ -1134,7 +1134,15 @@ export default function FamilyHub() {
           timeouts.push(setTimeout(runFit, 300));
         }
       };
-      runFit();
+      // 첫 측정은 레이아웃/페인트 후 한 프레임 뒤에 수행
+      const scheduleFirst = () => {
+        if (cancelled.current) return;
+        requestAnimationFrame(() => {
+          if (cancelled.current) return;
+          runFit();
+        });
+      };
+      scheduleFirst();
       ro = new ResizeObserver(runFit);
       ro.observe(el);
       document.fonts.ready.then(() => {
@@ -1144,6 +1152,8 @@ export default function FamilyHub() {
       timeouts.push(setTimeout(runFit, 400));
       timeouts.push(setTimeout(runFit, 800));
       timeouts.push(setTimeout(runFit, 1200));
+      timeouts.push(setTimeout(runFit, 2000));
+      timeouts.push(setTimeout(runFit, 2500));
     };
 
     const tryRun = (retryCount: number) => {
