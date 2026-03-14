@@ -280,6 +280,11 @@ export default function FamilyHub() {
   const [isOwner, setIsOwner] = useState(false);
   
   // Realtime subscription 참조 (로그아웃 시 정리용) - 기능별 분리 관리
+  /** Realtime 채널명 재사용 방지(바인딩 중복 방지). 구독 설정 시점마다 갱신 */
+  const realtimeSubscriptionIdRef = useRef<number>(0);
+  /** 순차 구독 지연 타이머 정리용 */
+  const realtimeStaggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
   const subscriptionsRef = useRef<{
     messages: any;
     tasks: any;
@@ -288,10 +293,10 @@ export default function FamilyHub() {
     presence: any;
     locations: any;
     locationRequests: any;
-  }>({ 
-    messages: null, 
-    tasks: null, 
-    events: null, 
+  }>({
+    messages: null,
+    tasks: null,
+    events: null,
     photos: null,
     presence: null,
     locations: null,
@@ -2137,7 +2142,7 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 방지)
       console.log('📨 메시지 subscription 설정 중...');
       const messagesSubscription = supabase
-        .channel(`family_messages_changes:${currentGroupId ?? 'none'}`)
+        .channel(`family_messages_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'family_messages' },
           (payload: any) => {
@@ -2552,7 +2557,7 @@ export default function FamilyHub() {
 
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
       const tasksSubscription = supabase
-        .channel(`family_tasks_changes:${currentGroupId ?? 'none'}`)
+        .channel(`family_tasks_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
@@ -2775,7 +2780,7 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
       console.log('📅 일정 subscription 설정 중...');
       const eventsSubscription = supabase
-        .channel(`family_events_changes:${currentGroupId ?? 'none'}`)
+        .channel(`family_events_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'family_events' },
           (payload: any) => {
@@ -3019,7 +3024,7 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE 분리 시 server/client bindings mismatch 방지)
       console.log('📍 위치 subscription 설정 중...');
       const locationsSubscription = supabase
-        .channel(`user_locations_changes:${currentGroupId ?? 'none'}`)
+        .channel(`user_locations_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'user_locations' },
           async (payload: any) => {
@@ -3058,7 +3063,7 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩으로 구독 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 오류 방지)
       console.log('📍 위치 요청 subscription 설정 중...');
       const locationRequestsSubscription = supabase
-        .channel(`location_requests_changes:${currentGroupId ?? 'none'}`)
+        .channel(`location_requests_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'location_requests' },
           async (payload: any) => {
@@ -3185,17 +3190,26 @@ export default function FamilyHub() {
         const currentKey = getCurrentKey();
         console.log('setupRealtimeSubscriptions - final currentKey:', currentKey ? '있음' : '없음');
       }
-      
-      // 각 기능별 구독 함수 호출
+
+      // 이전 순차 구독 타이머 정리
+      realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
+      realtimeStaggerTimeoutsRef.current = [];
+
+      // 채널명 재사용 방지 (effect 재실행 시 새 ID로 바인딩 중복 방지)
+      realtimeSubscriptionIdRef.current = Date.now();
+
       setupPresenceSubscription();
-      setupMessagesSubscription();
-      setupTasksSubscription();
-      setupEventsSubscription();
-      // 사진 구독은 AlbumContext에서 처리
-      setupLocationsSubscription();
-      setupLocationRequestsSubscription();
-      
-      console.log('✅ 모든 Realtime subscription 설정 완료');
+
+      // postgres_changes 구독을 순차 지연 — Presence 후 100ms부터 200ms 간격으로 join (동시 다수 join 시 서버 바인딩 불일치 완화)
+      const INITIAL_DELAY_MS = 100;
+      const STAGGER_MS = 200;
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupMessagesSubscription(), INITIAL_DELAY_MS));
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupTasksSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 1));
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupEventsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 3));
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 4));
+
+      console.log('✅ Realtime subscription 설정 예약 완료 (순차 구독)');
     };
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
@@ -3293,6 +3307,8 @@ export default function FamilyHub() {
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
       locationLoadStartedRef.current = false;
+      realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
+      realtimeStaggerTimeoutsRef.current = [];
       if (sessionWaitIntervalRef.current) {
         clearInterval(sessionWaitIntervalRef.current);
         sessionWaitIntervalRef.current = null;

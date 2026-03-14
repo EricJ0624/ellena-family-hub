@@ -122,7 +122,7 @@ export default function PiggyBankPage() {
   const [spendSubmitting, setSpendSubmitting] = useState(false);
   const [openRequestSubmitting, setOpenRequestSubmitting] = useState(false);
 
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
   const getAuthHeader = async () => {
     const { data } = await supabase.auth.getSession();
@@ -211,59 +211,54 @@ export default function PiggyBankPage() {
       .finally(() => setLoading(false));
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
 
-  /** 실시간 반영: 동일 그룹 저금통 변경 구독 */
+  /** 실시간 반영: 테이블당 채널 1개만 사용 (한 채널에 여러 postgres_changes 시 server/client bindings mismatch 방지) */
   useEffect(() => {
     if (!currentGroupId) return;
 
     const groupId = currentGroupId;
-    const channel = supabase
-      .channel(`piggy_bank_${groupId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'piggy_bank_accounts', filter: `group_id=eq.${groupId}` },
-        () => {
-          fetchSummary();
-          fetchTransactions();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'piggy_wallets', filter: `group_id=eq.${groupId}` },
-        () => {
-          fetchSummary();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'piggy_open_requests', filter: `group_id=eq.${groupId}` },
-        () => {
-          fetchSummary();
-          fetchRequests();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'piggy_wallet_transactions', filter: `group_id=eq.${groupId}` },
-        () => {
-          fetchTransactions();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'piggy_bank_transactions', filter: `group_id=eq.${groupId}` },
-        () => {
-          fetchTransactions();
-        }
-      )
-      .subscribe();
+    const channels: ReturnType<typeof supabase.channel>[] = [];
 
-    channelRef.current = channel;
+    const chAccounts = supabase
+      .channel(`piggy_bank_accounts:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_bank_accounts', filter: `group_id=eq.${groupId}` }, () => {
+        fetchSummary();
+        fetchTransactions();
+      })
+      .subscribe();
+    channels.push(chAccounts);
+
+    const chWallets = supabase
+      .channel(`piggy_wallets:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_wallets', filter: `group_id=eq.${groupId}` }, () => fetchSummary())
+      .subscribe();
+    channels.push(chWallets);
+
+    const chRequests = supabase
+      .channel(`piggy_open_requests:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_open_requests', filter: `group_id=eq.${groupId}` }, () => {
+        fetchSummary();
+        fetchRequests();
+      })
+      .subscribe();
+    channels.push(chRequests);
+
+    const chWalletTx = supabase
+      .channel(`piggy_wallet_transactions:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_wallet_transactions', filter: `group_id=eq.${groupId}` }, () => fetchTransactions())
+      .subscribe();
+    channels.push(chWalletTx);
+
+    const chBankTx = supabase
+      .channel(`piggy_bank_transactions:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'piggy_bank_transactions', filter: `group_id=eq.${groupId}` }, () => fetchTransactions())
+      .subscribe();
+    channels.push(chBankTx);
+
+    channelsRef.current = channels;
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      channelsRef.current.forEach((ch) => supabase.removeChannel(ch));
+      channelsRef.current = [];
     };
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
 
