@@ -4855,6 +4855,34 @@ export default function FamilyHub() {
         return;
       }
 
+      // ✅ CRITICAL FIX: 승인된 관계가 있는데 user_locations 데이터가 없으면 자동으로 위치 저장
+      if (expectedUserIds.size > 0 && (!data || data.length === 0)) {
+        console.log('⚠️ [loadFamilyLocations] 승인된 관계 있지만 user_locations 데이터 없음 - 위치 자동 저장 시작');
+        try {
+          if (navigator.geolocation) {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+              });
+            });
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const address = '';
+            console.log('⚠️ [loadFamilyLocations] 위치 획득 성공, 저장 중:', latitude, longitude);
+            await saveLocationToSupabase(latitude, longitude, address);
+            console.log('⚠️ [loadFamilyLocations] 위치 저장 완료 - 재조회');
+            // 저장 후 다시 조회
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await loadFamilyLocations();
+            return;
+          }
+        } catch (error) {
+          console.warn('⚠️ [loadFamilyLocations] 자동 위치 저장 실패:', error);
+        }
+      }
+
       if (data && data.length > 0) {
         // 가족 표시 역할(family_role) 조회 (지도 마커용)
         const otherUserIds = [...new Set((data as any[]).map((loc: any) => loc.user_id).filter((id: string) => id !== userId))];
