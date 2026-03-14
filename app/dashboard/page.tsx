@@ -1090,12 +1090,14 @@ export default function FamilyHub() {
   const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const isGroupLoadingForTitleFit = groupLoading && !currentGroupId;
   // 한 줄 맞춤: 넘칠 때만 폰트 자동 축소. 사용자 지정 크기는 상한으로 유지(그보다 크게 하지 않음)
+  // 레이아웃/그룹 로딩이 늦게 끝나도 재조정되도록 지연 실행 추가
   useEffect(() => {
     const MAX_FS = Math.max(12, Math.min(120, titleFitMaxFontSize));
     const MIN_FS = 12;
     const cancelled = { current: false };
     let ro: ResizeObserver | null = null;
     let rafId: number = 0;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
 
     const fit = (el: HTMLHeadingElement) => {
       const w = el.clientWidth;
@@ -1113,6 +1115,7 @@ export default function FamilyHub() {
 
     const run = (el: HTMLHeadingElement) => {
       const runFit = () => {
+        if (cancelled.current) return;
         if (el.clientWidth > 0) fit(el);
       };
       runFit();
@@ -1121,8 +1124,10 @@ export default function FamilyHub() {
       document.fonts.ready.then(() => {
         if (!cancelled.current) runFit();
       });
-      setTimeout(runFit, 100);
-      setTimeout(runFit, 400);
+      timeouts.push(setTimeout(runFit, 100));
+      timeouts.push(setTimeout(runFit, 400));
+      timeouts.push(setTimeout(runFit, 800));
+      timeouts.push(setTimeout(runFit, 1200));
     };
 
     const tryRun = (retryCount: number) => {
@@ -1147,6 +1152,7 @@ export default function FamilyHub() {
       cancelled.current = true;
       cancelAnimationFrame(rafId);
       ro?.disconnect();
+      timeouts.forEach((t) => clearTimeout(t));
     };
   }, [titleFitMaxFontSize, dashboardTitleText, showAdminForTitleFit, isGroupLoadingForTitleFit, lang]);
 

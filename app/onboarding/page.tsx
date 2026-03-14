@@ -1423,13 +1423,8 @@ export default function OnboardingPage() {
                         <div style={{
                           fontSize: '12px',
                           color: '#64748b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
                         }}>
                           <span>{group.is_owner ? ot('role_owner') : group.role === 'ADMIN' ? ot('role_admin') : ot('role_member')}</span>
-                          <span>•</span>
-                          <span style={{ fontFamily: 'monospace' }}>{group.invite_code}</span>
                         </div>
                       </div>
                       {selectedGroupId === group.id && (
