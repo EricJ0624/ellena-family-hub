@@ -3146,7 +3146,10 @@ export default function FamilyHub() {
             if (updatedRequest && updatedRequest.status === 'accepted') {
               const isRequester = updatedRequest.requester_id === userId;
               const isTarget = updatedRequest.target_id === userId;
-              if ((isRequester || isTarget) && !isLocationSharing) {
+              // ✅ FIX: 승인 시 무조건 위치 저장 (!isLocationSharing 조건 제거)
+              // 양방향 위치 공유를 위해 양쪽 모두 user_locations에 데이터 저장 필요
+              if (isRequester || isTarget) {
+                console.log('🎯 [Realtime] 승인됨 - 위치 즉시 저장 시작');
                 try {
                   if (navigator.geolocation) {
                     const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -3159,7 +3162,9 @@ export default function FamilyHub() {
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
                     const address = '';
+                    console.log('🎯 [Realtime] 위치 획득 성공:', latitude, longitude);
                     await saveLocationToSupabase(latitude, longitude, address);
+                    console.log('🎯 [Realtime] saveLocationToSupabase 완료');
                     setState(prev => ({
                       ...prev,
                       location: {
@@ -3170,12 +3175,17 @@ export default function FamilyHub() {
                         updatedAt: new Date().toISOString()
                       }
                     }));
-                    if (!isLocationSharing) updateLocation();
+                    // 위치 추적이 아직 시작되지 않았다면 시작
+                    if (!isLocationSharing) {
+                      console.log('🎯 [Realtime] 위치 추적 시작');
+                      updateLocation();
+                    }
                     await new Promise(resolve => setTimeout(resolve, 500));
+                    console.log('🎯 [Realtime] loadFamilyLocations 호출');
                     await loadFamilyLocations();
                   }
                 } catch (error) {
-                  console.warn('위치 추적 시작 실패:', error);
+                  console.warn('❌ [Realtime] 위치 추적 시작 실패:', error);
                 }
               }
             }
@@ -4815,6 +4825,10 @@ export default function FamilyHub() {
       // 승인된 위치 요청이 있는 사용자들의 위치만 조회
       // RLS 정책에 의해 승인된 관계의 위치만 반환됨
       console.log('📍 [loadFamilyLocations] user_locations 조회 시작');
+      console.log('📍 [loadFamilyLocations] 현재 userId:', userId);
+      console.log('📍 [loadFamilyLocations] expectedUserIds:', Array.from(expectedUserIds));
+      
+      // ✅ CRITICAL FIX: 본인 위치 + RLS로 승인된 관계 위치 모두 조회
       const { data, error } = await supabase
         .from('user_locations')
         .select('*')
@@ -4823,6 +4837,10 @@ export default function FamilyHub() {
       console.log('📍 [loadFamilyLocations] user_locations 조회 결과 - data:', data?.length, 'rows, error:', error);
       if (data) {
         console.log('📍 [loadFamilyLocations] user_locations 상세:', JSON.stringify(data, null, 2));
+        // 각 위치 데이터의 user_id 출력
+        data.forEach((loc: any) => {
+          console.log(`  - user_id: ${loc.user_id}, lat: ${loc.latitude}, lng: ${loc.longitude}`);
+        });
       }
 
       if (error) {
