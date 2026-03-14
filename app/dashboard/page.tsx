@@ -4776,6 +4776,8 @@ export default function FamilyHub() {
         const result = await response.json();
         if (result.success && result.data) {
           currentLocationRequests = result.data;
+          // ✅ CRITICAL FIX: state에도 반영 (updateMapMarkers가 최신 locationRequests 참조하도록)
+          setLocationRequests(result.data);
         }
       } catch (err) {
         // 조회 실패 시 기존 locationRequests 사용
