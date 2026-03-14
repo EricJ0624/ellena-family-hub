@@ -178,11 +178,45 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       photosChannelRef.current = null;
     }
 
+    // 채널당 postgres_changes 1개만 사용 (여러 개 시 server/client bindings mismatch)
     const ch = supabase
-      .channel('memory_vault_album')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memory_vault' }, (payload: { new: Record<string, unknown> }) => {
-        const newPhoto = payload.new;
-        if (newPhoto.group_id !== currentGroupId) return;
+      .channel(`memory_vault_album:${currentGroupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'memory_vault' }, (payload: { eventType?: string; old?: { id?: unknown }; new?: Record<string, unknown> }) => {
+        const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
+        if (ev === 'DELETE') {
+          const id = payload.old?.id;
+          if (id == null) return;
+          setAlbum((prev) =>
+            prev.filter((p) => String(p.id) !== String(id) && (p.supabaseId ? String(p.supabaseId) !== String(id) : true))
+          );
+          return;
+        }
+        if (ev === 'UPDATE' && payload.new) {
+          const updated = payload.new as Record<string, unknown>;
+          const url = (updated.image_url || updated.s3_original_url) as string;
+          if (!url) return;
+          if (updated.group_id !== currentGroupId) return;
+          setAlbum((prev) =>
+            prev.map((p) =>
+              p.id === updated.id || p.supabaseId === updated.id
+                ? {
+                    ...p,
+                    id: updated.id as string | number,
+                    data: url,
+                    supabaseId: updated.id as string | number,
+                    isUploaded: true,
+                    created_by: (updated.uploader_id || updated.created_by || p.created_by) as string | undefined,
+                    taken_at: (updated.taken_at as string | null) ?? p.taken_at ?? null,
+                    upload_mode: (updated.upload_mode as 'normal' | 'original' | null) ?? p.upload_mode ?? null,
+                  }
+                : p
+            )
+          );
+          return;
+        }
+        // INSERT
+        const newPhoto = payload.new as Record<string, unknown> | undefined;
+        if (!newPhoto || newPhoto.group_id !== currentGroupId) return;
         const url = (newPhoto.image_url || newPhoto.s3_original_url) as string;
         if (!url) return;
         const newEntry: Photo = {
@@ -200,7 +234,6 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
             (p) => String(p.id) === String(newPhoto.id) || (p.supabaseId && String(p.supabaseId) === String(newPhoto.id))
           );
           if (exists) return prev;
-          // 업로드 중인 낙관적 항목이 있으면 그 중 하나를 실제 행으로 교체 (중복 표시 방지)
           const uploadingIndex = prev.findIndex((p) => p.isUploading && !p.supabaseId);
           if (uploadingIndex !== -1) {
             const next = [...prev];
@@ -209,34 +242,6 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           }
           return [newEntry, ...prev];
         });
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'memory_vault' }, (payload: { new: Record<string, unknown> }) => {
-        const updated = payload.new;
-        const url = (updated.image_url || updated.s3_original_url) as string;
-        if (!url) return;
-        setAlbum((prev) =>
-            prev.map((p) =>
-            p.id === updated.id || p.supabaseId === updated.id
-              ? {
-                  ...p,
-                  id: updated.id as string | number,
-                  data: url,
-                  supabaseId: updated.id as string | number,
-                  isUploaded: true,
-                  created_by: (updated.uploader_id || updated.created_by || p.created_by) as string | undefined,
-                  taken_at: (updated.taken_at as string | null) ?? p.taken_at ?? null,
-                  upload_mode: (updated.upload_mode as 'normal' | 'original' | null) ?? p.upload_mode ?? null,
-                }
-              : p
-          )
-        );
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'memory_vault' }, (payload: { old: { id?: unknown } }) => {
-        const id = payload.old?.id;
-        if (id == null) return;
-        setAlbum((prev) =>
-          prev.filter((p) => String(p.id) !== String(id) && (p.supabaseId ? String(p.supabaseId) !== String(id) : true))
-        );
       })
       .subscribe();
     photosChannelRef.current = ch;

@@ -90,7 +90,7 @@ export function TravelPlannerContent() {
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
 
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
   const selectedTripIdRef = useRef<string | null>(null);
   selectedTripIdRef.current = selectedTrip?.id ?? null;
   const travelMapRef = useRef<{ setCenter: (c: { lat: number; lng: number }) => void; fitBounds: (b: unknown) => void } | null>(null);
@@ -596,65 +596,64 @@ export function TravelPlannerContent() {
     }
   }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining]);
 
-  /** 실시간 반영: 동일 그룹 사용자의 변경 사항 구독 */
+  /** 실시간 반영: 테이블당 채널 1개만 사용 (한 채널에 여러 postgres_changes 시 server/client bindings mismatch) */
   useEffect(() => {
     if (!currentGroupId) return;
 
     const groupId = currentGroupId;
-    const channel = supabase
-      .channel(`travel_planner_${groupId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'travel_trips', filter: `group_id=eq.${groupId}` },
-        (payload: { eventType?: string; type?: string; old?: { id?: string }; new?: unknown }) => {
-          fetchTrips();
-          const isDelete = payload?.eventType === 'DELETE' || payload?.type === 'DELETE' || (payload?.old?.id != null && payload?.new == null);
-          if (isDelete && payload?.old?.id === selectedTripIdRef.current) {
-            setSelectedTrip(null);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'travel_itineraries', filter: `group_id=eq.${groupId}` },
-        () => {
-          const tripId = selectedTripIdRef.current;
-          if (tripId) fetchItineraries(tripId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'travel_expenses', filter: `group_id=eq.${groupId}` },
-        () => {
-          const tripId = selectedTripIdRef.current;
-          if (tripId) fetchExpenses(tripId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'travel_accommodations', filter: `group_id=eq.${groupId}` },
-        () => {
-          const tripId = selectedTripIdRef.current;
-          if (tripId) fetchAccommodations(tripId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'travel_dining', filter: `group_id=eq.${groupId}` },
-        () => {
-          const tripId = selectedTripIdRef.current;
-          if (tripId) fetchDining(tripId);
-        }
-      )
-      .subscribe();
+    const channels: ReturnType<typeof supabase.channel>[] = [];
 
-    channelRef.current = channel;
+    const chTrips = supabase
+      .channel(`travel_trips:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_trips', filter: `group_id=eq.${groupId}` }, (payload: { eventType?: string; type?: string; old?: { id?: string }; new?: unknown }) => {
+        fetchTrips();
+        const isDelete = payload?.eventType === 'DELETE' || payload?.type === 'DELETE' || (payload?.old?.id != null && payload?.new == null);
+        if (isDelete && payload?.old?.id === selectedTripIdRef.current) setSelectedTrip(null);
+      })
+      .subscribe();
+    channels.push(chTrips);
+
+    const chItineraries = supabase
+      .channel(`travel_itineraries:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_itineraries', filter: `group_id=eq.${groupId}` }, () => {
+        const tripId = selectedTripIdRef.current;
+        if (tripId) fetchItineraries(tripId);
+      })
+      .subscribe();
+    channels.push(chItineraries);
+
+    const chExpenses = supabase
+      .channel(`travel_expenses:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_expenses', filter: `group_id=eq.${groupId}` }, () => {
+        const tripId = selectedTripIdRef.current;
+        if (tripId) fetchExpenses(tripId);
+      })
+      .subscribe();
+    channels.push(chExpenses);
+
+    const chAccommodations = supabase
+      .channel(`travel_accommodations:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_accommodations', filter: `group_id=eq.${groupId}` }, () => {
+        const tripId = selectedTripIdRef.current;
+        if (tripId) fetchAccommodations(tripId);
+      })
+      .subscribe();
+    channels.push(chAccommodations);
+
+    const chDining = supabase
+      .channel(`travel_dining:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_dining', filter: `group_id=eq.${groupId}` }, () => {
+        const tripId = selectedTripIdRef.current;
+        if (tripId) fetchDining(tripId);
+      })
+      .subscribe();
+    channels.push(chDining);
+
+    channelsRef.current = channels;
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      channelsRef.current.forEach((ch) => supabase.removeChannel(ch));
+      channelsRef.current = [];
     };
   }, [currentGroupId, fetchTrips, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining]);
 
