@@ -1579,21 +1579,19 @@ export default function FamilyHub() {
         }
       });
 
-      // familyLocations에 없는 사용자의 마커 제거 (단, 승인된 사용자는 제거하지 않음)
+      // familyLocations에 없는 사용자의 마커 제거
+      // ✅ FIX: locationRequests state는 비동기 업데이트로 stale할 수 있으므로 참조하지 않음
+      // familyLocations는 이미 승인된 사용자만 포함하도록 필터링되어 있음
+      // acceptedUserIdsRef만으로 승인 직후 마커 유지 보장
       const currentUserIds = new Set(state.familyLocations.map((loc: any) => loc.userId).filter((id: string) => id !== userId));
-      const acceptedFromState = new Set<string>();
-      (locationRequests || []).forEach((req: any) => {
-        if (req.status === 'accepted') {
-          const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
-          if (otherId) acceptedFromState.add(otherId);
-        }
-        // ref에서 제거는 Realtime/핸들러에서만 함. 여기서 하면 예전 취소 요청 때문에 ref가 비어 마커가 사라질 수 있음
-      });
+      
       markersRef.current.forEach((marker, markerUserId) => {
         if (markerUserId === 'my-location') return;
+        // familyLocations에 있거나 승인 직후 ref에 있는 사용자는 유지
         if (currentUserIds.has(markerUserId)) return;
-        if (acceptedFromState.has(markerUserId)) return;
-        if (acceptedUserIdsRef.current.has(markerUserId)) return; // 승인 직후 ref에 올라간 ID → 첫 사라짐 방지
+        if (acceptedUserIdsRef.current.has(markerUserId)) return;
+        
+        // 그 외 마커는 제거
         if (useAdvancedMarker && marker.map) {
           marker.map = null;
         } else if (marker.setMap) {
@@ -1604,7 +1602,7 @@ export default function FamilyHub() {
     } catch (error) {
       console.error('지도 마커 업데이트 오류:', error);
     }
-  }, [state.location, state.familyLocations, locationRequests, userName, userId, lang]);
+  }, [state.location, state.familyLocations, userName, userId, lang]);
 
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   useEffect(() => {
@@ -4868,6 +4866,10 @@ export default function FamilyHub() {
 
         // ✅ merge: 승인된 사용자는 새 데이터가 없어도 prev 유지 (마커 끊김 방지)
         const newLocationsByUser = new Map(locations.map((l: any) => [l.userId, l]));
+        
+        // ✅ CRITICAL FIX: acceptedUserIdsRef 동기화 (updateMapMarkers가 최신 승인 관계 인식하도록)
+        expectedUserIds.forEach(uid => acceptedUserIdsRef.current.add(uid));
+        
         setState(prev => {
           const prevList = prev.familyLocations || [];
           const merged = [...expectedUserIds].map((uid) => {
@@ -4881,10 +4883,19 @@ export default function FamilyHub() {
         });
       } else {
         // 데이터가 없을 때: 승인된 관계 있으면 prev 유지. expectedUserIds 비어있으면 stale 가능성 → []로 덮어쓰지 않음
+        
+        // ✅ CRITICAL FIX: acceptedUserIdsRef 동기화 (취소/거부된 사용자 제거)
+        expectedUserIds.forEach(uid => acceptedUserIdsRef.current.add(uid));
+        
         setState(prev => {
           if (expectedUserIds.size > 0 && prev.familyLocations?.length) return prev;
           const hasCancelledOrRejected = (currentLocationRequests || []).some((r: any) => r.status === 'cancelled' || r.status === 'rejected');
           if (expectedUserIds.size === 0 && !hasCancelledOrRejected) return prev;
+          
+          // familyLocations를 비울 때 ref도 정리
+          const removedUserIds = new Set((prev.familyLocations || []).map((loc: any) => loc.userId));
+          removedUserIds.forEach(uid => acceptedUserIdsRef.current.delete(uid));
+          
           return { ...prev, familyLocations: [] };
         });
       }
