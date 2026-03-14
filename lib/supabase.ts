@@ -16,11 +16,7 @@ export const AUTH_STORAGE_KEY = 'sb-auth-token';
 function getAuthStorage(): Storage | undefined {
   if (typeof window === 'undefined') return undefined;
   const flag = localStorage.getItem(PERSIST_SESSION_FLAG_KEY);
-  const useSessionStorage = flag === '0';
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[AUTH-DEBUG] getAuthStorage:', { flag, useSessionStorage: useSessionStorage ? 'sessionStorage' : 'localStorage' });
-  }
-  return useSessionStorage ? window.sessionStorage : window.localStorage;
+  return flag === '0' ? window.sessionStorage : window.localStorage;
 }
 
 /** 세션 저장소에서 토큰 제거 (localStorage + sessionStorage 둘 다 정리) */
@@ -34,25 +30,15 @@ export function clearAuthStorage(): void {
   }
 }
 
-// Supabase 초기화 전에 두 저장소의 명백히 손상된(JSON 파싱 실패) 세션만 정리
 if (typeof window !== 'undefined') {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AUTH-DEBUG] 초기화 시작 - 세션 검증');
-    }
     for (const storage of [localStorage, sessionStorage]) {
       const stored = storage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
         try {
           JSON.parse(stored);
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[AUTH-DEBUG] 유효한 세션 발견:', storage === localStorage ? 'localStorage' : 'sessionStorage');
-          }
         } catch {
           storage.removeItem(AUTH_STORAGE_KEY);
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[AUTH-DEBUG] JSON 파싱 불가 세션 제거됨:', storage === localStorage ? 'localStorage' : 'sessionStorage');
-          }
         }
       }
     }
@@ -64,24 +50,10 @@ if (typeof window !== 'undefined') {
 const customStorage =
   typeof window !== 'undefined'
     ? {
-        getItem: (key: string) => {
-          const result = getAuthStorage()?.getItem(key) ?? null;
-          if (process.env.NODE_ENV === 'development' && key === AUTH_STORAGE_KEY) {
-            console.log('[AUTH-DEBUG] customStorage.getItem:', { key, hasValue: !!result, length: result?.length });
-          }
-          return result;
-        },
-        setItem: (key: string, value: string) => {
-          if (process.env.NODE_ENV === 'development' && key === AUTH_STORAGE_KEY) {
-            console.log('[AUTH-DEBUG] customStorage.setItem:', { key, length: value.length });
-          }
-          getAuthStorage()?.setItem(key, value);
-        },
+        getItem: (key: string) => getAuthStorage()?.getItem(key) ?? null,
+        setItem: (key: string, value: string) => getAuthStorage()?.setItem(key, value),
         removeItem: (key: string) => {
           if (typeof window === 'undefined') return;
-          if (process.env.NODE_ENV === 'development' && key === AUTH_STORAGE_KEY) {
-            console.log('[AUTH-DEBUG] customStorage.removeItem:', { key });
-          }
           localStorage.removeItem(key);
           sessionStorage.removeItem(key);
         },
@@ -119,20 +91,8 @@ if (typeof window !== 'undefined') {
       clearAuthStorage();
       return;
     }
-    if (event === 'TOKEN_REFRESHED') {
-      if (session) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('토큰 갱신 성공');
-        }
-      } else {
-        clearAuthStorage();
-      }
-    }
-    
-    if (event === 'SIGNED_IN') {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('인증 상태 변경: 로그인');
-      }
+    if (event === 'TOKEN_REFRESHED' && !session) {
+      clearAuthStorage();
     }
   });
   

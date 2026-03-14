@@ -82,15 +82,10 @@ export default function OnboardingPage() {
             ? new URLSearchParams(window.location.search).get('from') === 'admin'
             : false;
         setFromAdmin(fromAdminParam);
-        // 세션 확인 (getSession이 더 빠르고 로컬 캐시 우선)
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
-          // getSession 실패 시 서버 검증 시도
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('[AUTH-DEBUG] 온보딩: 세션 없음 - 로그인 페이지로 리다이렉트');
-            }
             router.push('/');
             return;
           }

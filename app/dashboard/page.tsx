@@ -651,16 +651,8 @@ export default function FamilyHub() {
     // Supabase 인증 확인
     const checkAuth = async () => {
       try {
-        // getSession() 호출 전에 두 저장소의 명백히 손상된(JSON 파싱 실패) 세션만 정리
         if (typeof window !== 'undefined') {
           try {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('[AUTH-DEBUG] 대시보드 세션 확인:', {
-                persistFlag: localStorage.getItem('SFH_PERSIST_SESSION'),
-                hasLocalStorageSession: !!localStorage.getItem(AUTH_STORAGE_KEY),
-                hasSessionStorageSession: !!sessionStorage.getItem(AUTH_STORAGE_KEY)
-              });
-            }
             for (const storage of [localStorage, sessionStorage]) {
               const stored = storage.getItem(AUTH_STORAGE_KEY);
               if (stored) {
@@ -668,9 +660,6 @@ export default function FamilyHub() {
                   JSON.parse(stored);
                 } catch {
                   storage.removeItem(AUTH_STORAGE_KEY);
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('[AUTH-DEBUG] 파싱 불가 세션 제거:', storage === localStorage ? 'localStorage' : 'sessionStorage');
-                  }
                 }
               }
             }

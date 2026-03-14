@@ -80,16 +80,10 @@ export default function LoginPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[AUTH-DEBUG] 로그인 페이지: 기존 세션 발견 - 리다이렉트');
-          }
-          // 이미 로그인되어 있으면 온보딩으로 이동
           router.push('/onboarding');
         }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[AUTH-DEBUG] 세션 확인 실패:', error);
-        }
+      } catch {
+        // ignore
       }
     };
     
@@ -117,12 +111,8 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-      // "로그인 상태 유지" 선택에 따라 세션을 localStorage 또는 sessionStorage에 저장
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, keepLoggedIn ? '1' : '0');
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[AUTH-DEBUG] 로그인 시도:', { keepLoggedIn, flag: keepLoggedIn ? '1' : '0' });
-        }
       }
       const { error, data } = await supabase.auth.signInWithPassword({ 
         email, 
@@ -143,22 +133,9 @@ export default function LoginPage() {
           setLastEmailFromStorage(email);
         }
         
-        // 세션이 저장되도록 충분한 지연 후 리다이렉트
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // 세션 확인
         const { data: { session } } = await supabase.auth.getSession();
-        if (process.env.NODE_ENV === 'development') {
-          const storage = localStorage.getItem('SFH_PERSIST_SESSION') === '0' ? sessionStorage : localStorage;
-          console.log('[AUTH-DEBUG] 로그인 후 세션 확인:', { 
-            hasSession: !!session,
-            persistFlag: localStorage.getItem('SFH_PERSIST_SESSION'),
-            hasLocalStorageSession: !!localStorage.getItem('sb-auth-token'),
-            hasSessionStorageSession: !!sessionStorage.getItem('sb-auth-token'),
-            activeStorage: storage === sessionStorage ? 'sessionStorage' : 'localStorage',
-            activeStorageHasToken: !!storage.getItem('sb-auth-token')
-          });
-        }
         
         if (session && session.user) {
           if (!session.user.email_confirmed_at) {
