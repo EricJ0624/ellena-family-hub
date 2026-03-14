@@ -4858,6 +4858,25 @@ export default function FamilyHub() {
       // ✅ CRITICAL FIX: 승인된 관계가 있는데 user_locations 데이터가 없으면 자동으로 위치 저장
       if (expectedUserIds.size > 0 && (!data || data.length === 0)) {
         console.log('⚠️ [loadFamilyLocations] 승인된 관계 있지만 user_locations 데이터 없음 - 위치 자동 저장 시작');
+        
+        // 세션 확인 (없으면 대기)
+        let sessionReady = false;
+        for (let i = 0; i < 10; i++) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            sessionReady = true;
+            console.log('⚠️ [loadFamilyLocations] 세션 확인 완료');
+            break;
+          }
+          console.log(`⚠️ [loadFamilyLocations] 세션 대기 중... (${i + 1}/10)`);
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+        if (!sessionReady) {
+          console.warn('❌ [loadFamilyLocations] 세션 타임아웃 - 위치 저장 실패');
+          return;
+        }
+        
         try {
           if (navigator.geolocation) {
             const position = await new Promise<GeolocationPosition>((resolve, reject) => {
