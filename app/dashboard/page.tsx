@@ -2128,204 +2128,85 @@ export default function FamilyHub() {
         subscriptionsRef.current.messages = null;
       }
 
+      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 방지)
       console.log('📨 메시지 subscription 설정 중...');
       const messagesSubscription = supabase
-        .channel('family_messages_changes')
+        .channel(`family_messages_changes:${currentGroupId ?? 'none'}`)
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'family_messages' },
+          { event: '*', schema: 'public', table: 'family_messages' },
           (payload: any) => {
-            console.log('Realtime 메시지 INSERT 이벤트 수신 (family_messages 테이블):', payload);
+            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
+            if (ev === 'DELETE') {
+              const deletedMessage = payload.old;
+              const deletedId = deletedMessage?.id;
+              if (!deletedId) return;
+              if (deletedMessage?.group_id != null && deletedMessage.group_id !== currentGroupId) return;
+              const deletedIdStr = String(deletedId).trim();
+              setState(prev => ({
+                ...prev,
+                messages: prev.messages.filter(m => String(m.id).trim() !== deletedIdStr)
+              }));
+              return;
+            }
+            if (ev === 'UPDATE') {
+              const updatedMessage = payload.new;
+              if (updatedMessage.group_id != null && updatedMessage.group_id !== currentGroupId) return;
+              const messageText = updatedMessage.message_text || '';
+              let decryptedText = messageText;
+              const updateMessageKey = getCurrentKey();
+              if (updateMessageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
+                try {
+                  const decrypted = CryptoService.decrypt(messageText, updateMessageKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
+                } catch (_) {}
+              }
+              const timeStr = `${new Date(updatedMessage.created_at).getHours()}:${String(new Date(updatedMessage.created_at).getMinutes()).padStart(2, '0')}`;
+              setState(prev => ({
+                ...prev,
+                messages: prev.messages.map(m =>
+                  m.id === updatedMessage.id ? { id: updatedMessage.id, user: '사용자', text: decryptedText, time: timeStr } : m
+                )
+              }));
+              return;
+            }
+            // INSERT
             const newMessage = payload.new;
-            
-            // 검증: 올바른 테이블에서 온 데이터인지 확인
-            if (!newMessage || !newMessage.id) {
-              console.error('Realtime 메시지: 잘못된 payload:', payload);
-              return;
-            }
-            // 그룹별: 현재 그룹 메시지만 state에 반영
-            if (newMessage.group_id != null && newMessage.group_id !== currentGroupId) {
-              return;
-            }
-            
-            // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
+            if (!newMessage || !newMessage.id) return;
+            if (newMessage.group_id != null && newMessage.group_id !== currentGroupId) return;
             const messageText = newMessage.message_text || '';
             let decryptedText = messageText;
             const messageKey = getCurrentKey();
-            if (messageKey && messageText) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = messageText.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(messageText, messageKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = messageText;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = messageText;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = messageText;
-              }
-            } else {
-              decryptedText = messageText;
+            if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
+              try {
+                const decrypted = CryptoService.decrypt(messageText, messageKey);
+                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
+              } catch (_) {}
             }
-            
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            
             setState(prev => {
-              // 같은 ID를 가진 메시지가 이미 있으면 추가하지 않음
               const existingMessage = prev.messages?.find(m => String(m.id) === String(newMessage.id));
-              if (existingMessage) {
-                return prev;
-              }
-              
-              // 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체
+              if (existingMessage) return prev;
               if (newMessage.sender_id === userId) {
-                // 임시 ID 항목을 찾기: 같은 텍스트를 가진 임시 ID 항목
                 const recentDuplicate = prev.messages?.find(m => {
                   const isTempId = typeof m.id === 'number';
-                  // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
                   const isRecent = isTempId && (m.id as number) > (Date.now() - 30000);
-                  // 텍스트가 정확히 일치하는지 확인
                   return isRecent && m.text === decryptedText;
                 });
-                
                 if (recentDuplicate) {
-                  // 임시 항목을 Supabase ID로 교체
                   return {
                     ...prev,
-                    messages: prev.messages.map(m => 
-                      m.id === recentDuplicate.id 
-                        ? {
-                            id: newMessage.id,
-                            user: '사용자',
-                            text: decryptedText,
-                            time: timeStr
-                          }
-                        : m
+                    messages: prev.messages.map(m =>
+                      m.id === recentDuplicate.id ? { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr } : m
                     )
                   };
                 }
-                
-                // 임시 항목을 찾지 못했지만, 같은 텍스트를 가진 메시지가 있으면 추가하지 않음 (중복 방지)
-                const duplicateByContent = prev.messages?.find(m => 
-                  m.text === decryptedText &&
-                  String(m.id) !== String(newMessage.id) // 같은 ID가 아닌 경우만
-                );
-                if (duplicateByContent) {
-                  return prev; // 중복이면 추가하지 않음
-                }
-              }
-              
-              // 다른 사용자가 입력한 메시지이거나, 자신이 입력한 메시지이지만 임시 항목이 없으면 추가
-              return {
-                ...prev,
-                messages: [...prev.messages, {
-                  id: newMessage.id,
-                  user: '사용자',
-                  text: decryptedText,
-                  time: timeStr
-                }]
-              };
-            });
-          }
-        )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'family_messages' },
-          (payload: any) => {
-            const updatedMessage = payload.new;
-            // 그룹별: 현재 그룹 메시지만 state에 반영
-            if (updatedMessage.group_id != null && updatedMessage.group_id !== currentGroupId) {
-              return;
-            }
-            
-            // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
-            const messageText = updatedMessage.message_text || '';
-            let decryptedText = messageText;
-            const updateMessageKey = getCurrentKey();
-            if (updateMessageKey && messageText) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = messageText.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(messageText, updateMessageKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = messageText;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = messageText;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = messageText;
-              }
-            } else {
-              decryptedText = messageText;
-            }
-            
-            const createdAt = new Date(updatedMessage.created_at);
-            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            
-            setState(prev => ({
-              ...prev,
-              messages: prev.messages.map(m => 
-                m.id === updatedMessage.id 
-                  ? {
-                      id: updatedMessage.id,
-                      user: '사용자',
-                      text: decryptedText,
-                      time: timeStr
-                    }
-                  : m
-              )
-            }));
-          }
-        )
-        .on('postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'family_messages' },
-          (payload: any) => {
-            console.log('Realtime 메시지 DELETE 이벤트 수신 (family_messages 테이블):', payload);
-            
-            const deletedMessage = payload.old;
-            const deletedId = deletedMessage?.id;
-            if (!deletedId) {
-              console.warn('Realtime 메시지 DELETE: deletedId가 없음:', payload);
-              return;
-            }
-            // Multi-tenant 아키텍처: group_id 필터링 (group_id가 있는 경우에만 검증)
-            if (deletedMessage?.group_id != null && deletedMessage.group_id !== currentGroupId) {
-              return;
-            }
-            const deletedIdStr = String(deletedId).trim();
-            console.log('Realtime 메시지 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
-            setState(prev => {
-              const beforeCount = prev.messages.length;
-              const filtered = prev.messages.filter(m => {
-                // ID 비교: 여러 형식 지원 (숫자, 문자열, UUID)
-                const mId = m.id;
-                const mIdStr = String(mId).trim();
-                return mIdStr !== deletedIdStr;
-              });
-              const afterCount = filtered.length;
-              const deletedCount = beforeCount - afterCount;
-              console.log('Realtime 메시지 DELETE 결과:', { beforeCount, afterCount, deleted: deletedCount, deletedId: deletedIdStr });
-              if (deletedCount === 0 && beforeCount > 0) {
-                console.warn('⚠️ Realtime 메시지 DELETE - 삭제된 항목이 없음. ID 불일치 가능성:', {
-                  deletedId: deletedIdStr,
-                  existingIds: prev.messages.slice(0, 3).map(m => ({ id: m.id, idType: typeof m.id }))
-                });
+                const duplicateByContent = prev.messages?.find(m => m.text === decryptedText && String(m.id) !== String(newMessage.id));
+                if (duplicateByContent) return prev;
               }
               return {
                 ...prev,
-                messages: filtered
+                messages: [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr }]
               };
             });
           }
@@ -2665,7 +2546,7 @@ export default function FamilyHub() {
 
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
       const tasksSubscription = supabase
-        .channel('family_tasks_changes')
+        .channel(`family_tasks_changes:${currentGroupId ?? 'none'}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
@@ -2888,7 +2769,7 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
       console.log('📅 일정 subscription 설정 중...');
       const eventsSubscription = supabase
-        .channel('family_events_changes')
+        .channel(`family_events_changes:${currentGroupId ?? 'none'}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'family_events' },
           (payload: any) => {
@@ -3132,11 +3013,11 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE 분리 시 server/client bindings mismatch 방지)
       console.log('📍 위치 subscription 설정 중...');
       const locationsSubscription = supabase
-        .channel('user_locations_changes')
+        .channel(`user_locations_changes:${currentGroupId ?? 'none'}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'user_locations' },
           async (payload: any) => {
-            const ev = payload.eventType ?? (payload.new ? 'UPDATE' : 'INSERT');
+            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new && payload.old ? 'UPDATE' : 'INSERT');
             if (ev === 'DELETE') {
               loadFamilyLocations();
               return;
@@ -3171,11 +3052,11 @@ export default function FamilyHub() {
       // ✅ event: '*' 단일 바인딩으로 구독 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 오류 방지)
       console.log('📍 위치 요청 subscription 설정 중...');
       const locationRequestsSubscription = supabase
-        .channel('location_requests_changes')
+        .channel(`location_requests_changes:${currentGroupId ?? 'none'}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'location_requests' },
           async (payload: any) => {
-            const ev = payload.eventType ?? (payload.new ? 'UPDATE' : 'DELETE');
+            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new && payload.old ? 'UPDATE' : 'INSERT');
             if (ev === 'INSERT') {
               console.log('📍 Realtime 위치 요청 INSERT 이벤트 수신:', payload);
               const newRequest = payload.new;
