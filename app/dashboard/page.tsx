@@ -4434,14 +4434,34 @@ export default function FamilyHub() {
 
     // 리프레시 직후 세션 미복원 시 403(RLS) 방지 — 세션 있을 때만 upsert
     const { data: { session } } = await supabase.auth.getSession();
+    console.log('💾 [saveLocationToSupabase] 세션 체크:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.access_token,
+      userId: userId,
+      sessionUserId: session?.user?.id
+    });
+    
     if (!session?.access_token) {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('위치 저장 스킵: 세션이 없습니다. (리프레시 직후 등)');
-      }
+      console.warn('❌ [saveLocationToSupabase] 위치 저장 스킵: 세션이 없습니다.');
+      return;
+    }
+    
+    // 세션 사용자와 현재 사용자가 일치하는지 확인
+    if (session.user?.id !== userId) {
+      console.warn('❌ [saveLocationToSupabase] 세션 사용자 불일치:', {
+        sessionUserId: session.user?.id,
+        currentUserId: userId
+      });
       return;
     }
 
     try {
+      console.log('💾 [saveLocationToSupabase] upsert 시도:', {
+        user_id: userId,
+        lat: latitude,
+        lng: longitude
+      });
+      
       const { error } = await supabase
         .from('user_locations')
         .upsert({
@@ -4455,15 +4475,15 @@ export default function FamilyHub() {
         });
 
       if (error) {
-        console.warn('위치 저장 오류:', error);
+        console.warn('❌ [saveLocationToSupabase] 위치 저장 오류:', error);
       } else {
         lastLocationUpdateRef.current = now;
         lastSentLatRef.current = latitude;
         lastSentLngRef.current = longitude;
-        console.log('위치 저장 성공');
+        console.log('✅ [saveLocationToSupabase] 위치 저장 성공');
       }
     } catch (dbError: any) {
-      console.warn('위치 저장 시도 중 오류:', dbError);
+      console.warn('❌ [saveLocationToSupabase] 위치 저장 시도 중 오류:', dbError);
     }
   };
 
