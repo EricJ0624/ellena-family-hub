@@ -2663,13 +2663,61 @@ export default function FamilyHub() {
         subscriptionsRef.current.tasks = null;
       }
 
+      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
       const tasksSubscription = supabase
         .channel('family_tasks_changes')
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'family_tasks' },
+          { event: '*', schema: 'public', table: 'family_tasks' },
           (payload: any) => {
-            console.log('Realtime 할일 INSERT 이벤트 수신 (family_tasks 테이블):', payload);
+            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
+            if (ev === 'DELETE') {
+              const deletedTask = payload.old;
+              const deletedId = deletedTask?.id;
+              if (!deletedId) return;
+              const deletedIdStr = String(deletedId).trim();
+              setState(prev => ({
+                ...prev,
+                todos: prev.todos.filter(t => {
+                  const tIdStr = String(t.id).trim();
+                  const tSupabaseId = t.supabaseId ? String(t.supabaseId).trim() : null;
+                  return tIdStr !== deletedIdStr && (!tSupabaseId || tSupabaseId !== deletedIdStr);
+                })
+              }));
+              return;
+            }
+            if (ev === 'UPDATE') {
+              const updatedTask = payload.new;
+              const taskText = updatedTask.title || updatedTask.task_text || '';
+              let decryptedText = taskText;
+              const updateTaskKey = getCurrentKey();
+              if (updateTaskKey && updateTaskKey.length > 0 && taskText && taskText.length > 0 && taskText.startsWith('U2FsdGVkX1')) {
+                try {
+                  const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
+                } catch (_) {}
+              }
+              let decryptedAssignee = '누구나';
+              if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to !== '누구나' && !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) && updatedTask.assigned_to.startsWith('U2FsdGVkX1')) {
+                try {
+                  const decrypted = CryptoService.decrypt(updatedTask.assigned_to, updateTaskKey);
+                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedAssignee = decrypted;
+                } catch (_) {}
+              } else if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string') {
+                decryptedAssignee = updatedTask.assigned_to;
+              }
+              setState(prev => ({
+                ...prev,
+                todos: prev.todos.map(t =>
+                  t.id === updatedTask.id
+                    ? { id: updatedTask.id, text: decryptedText, assignee: decryptedAssignee || t.assignee, done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done }
+                    : t
+                )
+              }));
+              return;
+            }
+            // INSERT
             const newTask = payload.new;
+            console.log('Realtime 할일 INSERT 이벤트 수신 (family_tasks 테이블):', payload);
             
             // 검증: 올바른 테이블에서 온 데이터인지 확인
             if (!newTask || !newTask.id) {
@@ -2808,122 +2856,6 @@ export default function FamilyHub() {
             });
           }
         )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'family_tasks' },
-          (payload: any) => {
-            const updatedTask = payload.new;
-            
-            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-            // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
-            const taskText = updatedTask.title || updatedTask.task_text || '';
-            let decryptedText = taskText;
-            const updateTaskKey = getCurrentKey();
-            if (updateTaskKey && updateTaskKey.length > 0 && taskText && taskText.length > 0) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = taskText.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = taskText;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = taskText;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = taskText;
-              }
-            } else {
-              decryptedText = taskText;
-            }
-            
-            // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
-            // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
-            let decryptedAssignee = '누구나';
-            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (암호화된 형식인 경우에만)
-            if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to !== '누구나' && !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = updatedTask.assigned_to.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(updatedTask.assigned_to, updateTaskKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedAssignee = decrypted;
-                  }
-                } catch (e) {
-                  // 복호화 실패 - 기본값 사용 (조용히 처리)
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedAssignee = updatedTask.assigned_to;
-              }
-            }
-            
-            setState(prev => ({
-              ...prev,
-              todos: prev.todos.map(t => 
-                t.id === updatedTask.id 
-                    ? {
-                        id: updatedTask.id,
-                        text: decryptedText,
-                        assignee: decryptedAssignee || t.assignee,
-                        done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done // is_completed 컬럼 사용
-                      }
-                  : t
-              )
-            }));
-          }
-        )
-        .on('postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'family_tasks' },
-          (payload: any) => {
-            console.log('Realtime 할일 DELETE 이벤트 수신 (family_tasks 테이블):', payload);
-            
-            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-            
-            // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
-            const deletedTask = payload.old;
-            const deletedId = deletedTask?.id;
-            if (!deletedId) {
-              console.warn('Realtime 할일 DELETE: deletedId가 없음:', payload);
-              return;
-            }
-            const deletedIdStr = String(deletedId).trim();
-            console.log('Realtime 할일 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
-            setState(prev => {
-              const beforeCount = prev.todos.length;
-              const filtered = prev.todos.filter(t => {
-                // ID 비교: 여러 형식 지원 (숫자, 문자열, UUID)
-                const tId = t.id;
-                const tIdStr = String(tId).trim();
-                const tSupabaseId = t.supabaseId ? String(t.supabaseId).trim() : null;
-                
-                // 직접 ID 비교 또는 supabaseId 비교
-                const isMatch = tIdStr === deletedIdStr || (tSupabaseId && tSupabaseId === deletedIdStr);
-                return !isMatch;
-              });
-              const afterCount = filtered.length;
-              const deletedCount = beforeCount - afterCount;
-              console.log('Realtime 할일 DELETE 결과:', { beforeCount, afterCount, deleted: deletedCount, deletedId: deletedIdStr });
-              if (deletedCount === 0 && beforeCount > 0) {
-                console.warn('⚠️ Realtime 할일 DELETE - 삭제된 항목이 없음. ID 불일치 가능성:', {
-                  deletedId: deletedIdStr,
-                  existingIds: prev.todos.slice(0, 3).map(t => ({ id: t.id, idType: typeof t.id, supabaseId: t.supabaseId }))
-                });
-              }
-              return {
-                ...prev,
-                todos: filtered
-              };
-            });
-          }
-        )
         .subscribe((status, err) => {
           console.log('📋 Realtime 할일 subscription 상태:', status);
           if (err) {
@@ -2953,14 +2885,70 @@ export default function FamilyHub() {
         subscriptionsRef.current.events = null;
       }
       
+      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
       console.log('📅 일정 subscription 설정 중...');
       const eventsSubscription = supabase
         .channel('family_events_changes')
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'family_events' },
+          { event: '*', schema: 'public', table: 'family_events' },
           (payload: any) => {
-            console.log('Realtime 일정 INSERT 이벤트 수신 (family_events 테이블):', payload);
+            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
+            if (ev === 'DELETE') {
+              const deletedEvent = payload.old;
+              const deletedId = deletedEvent?.id;
+              if (!deletedId) return;
+              const deletedIdStr = String(deletedId).trim().toLowerCase();
+              setState(prev => ({
+                ...prev,
+                events: prev.events.filter(e => {
+                  const eIdStr = String(e.id).trim().toLowerCase();
+                  const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim().toLowerCase() : null;
+                  const isMatch = eIdStr === deletedIdStr || (eSupabaseId === deletedIdStr) || eIdStr.replace(/-/g, '') === deletedIdStr.replace(/-/g, '');
+                  return !isMatch;
+                })
+              }));
+              return;
+            }
+            if (ev === 'UPDATE') {
+              const updatedEvent = payload.new;
+              const eventDateValue = updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
+              const eventDate = new Date(eventDateValue);
+              const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+              const day = eventDate.getDate().toString();
+              const updatedEventTitleField = updatedEvent.title || updatedEvent.event_title || '';
+              const updatedEventDescField = updatedEvent.description || '';
+              let decryptedTitle = updatedEventTitleField;
+              let decryptedDesc = updatedEventDescField;
+              const updateEventKey = getCurrentKey();
+              if (updateEventKey) {
+                if (updatedEventTitleField?.startsWith('U2FsdGVkX1')) {
+                  try {
+                    const d = CryptoService.decrypt(updatedEventTitleField, updateEventKey);
+                    if (d && typeof d === 'string' && d.length > 0) decryptedTitle = d;
+                  } catch (_) {}
+                }
+                if (updatedEventDescField?.startsWith('U2FsdGVkX1')) {
+                  try {
+                    const d = CryptoService.decrypt(updatedEventDescField, updateEventKey);
+                    if (d && typeof d === 'string' && d.length > 0) decryptedDesc = d;
+                  } catch (_) {}
+                }
+              }
+              const updatedDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
+              const updatedRepeatType = (updatedEvent.repeat_type === 'monthly' || updatedEvent.repeat_type === 'yearly') ? updatedEvent.repeat_type : 'none';
+              setState(prev => ({
+                ...prev,
+                events: prev.events.map(e =>
+                  e.id === updatedEvent.id
+                    ? { id: updatedEvent.id, month, day, title: decryptedTitle, desc: decryptedDesc, event_date: updatedDateStr, created_by: updatedEvent.created_by, created_at: updatedEvent.created_at, repeat_type: updatedRepeatType }
+                    : e
+                )
+              }));
+              return;
+            }
+            // INSERT
             const newEvent = payload.new;
+            console.log('Realtime 일정 INSERT 이벤트 수신 (family_events 테이블):', payload);
             
             // 검증: 올바른 테이블에서 온 데이터인지 확인
             if (!newEvent || !newEvent.id) {
@@ -3109,175 +3097,6 @@ export default function FamilyHub() {
             });
           }
         )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'family_events' },
-          (payload: any) => {
-            const updatedEvent = payload.new;
-            
-            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
-            const eventDateValue = updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
-            const eventDate = new Date(eventDateValue);
-            const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-            const day = eventDate.getDate().toString();
-            
-            // 암호화된 제목 및 설명 복호화
-            // event_title 대신 title 사용 (실제 테이블 구조에 맞게)
-            const updatedEventTitleField = updatedEvent.title || updatedEvent.event_title || '';
-            const updatedEventDescField = updatedEvent.description || '';
-            let decryptedTitle = updatedEventTitleField;
-            let decryptedDesc = updatedEventDescField;
-            const updateEventKey = getCurrentKey();
-            if (updateEventKey) {
-              // 제목 복호화 (암호화된 형식인 경우에만)
-              if (updatedEventTitleField) {
-                const isEncrypted = updatedEventTitleField.startsWith('U2FsdGVkX1');
-                if (isEncrypted) {
-                  try {
-                    const decryptedTitleData = CryptoService.decrypt(updatedEventTitleField, updateEventKey);
-                    if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
-                      decryptedTitle = decryptedTitleData;
-                    } else {
-                      decryptedTitle = updatedEventTitleField;
-                    }
-                  } catch (e: any) {
-                    decryptedTitle = updatedEventTitleField;
-                  }
-                } else {
-                  // 이미 평문이면 그대로 사용
-                  decryptedTitle = updatedEventTitleField;
-                }
-              }
-              // 설명 복호화 (암호화된 형식인 경우에만)
-              if (updatedEventDescField) {
-                const isEncrypted = updatedEventDescField.startsWith('U2FsdGVkX1');
-                if (isEncrypted) {
-                  try {
-                    const decryptedDescData = CryptoService.decrypt(updatedEventDescField, updateEventKey);
-                    if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
-                      decryptedDesc = decryptedDescData;
-                    } else {
-                      decryptedDesc = updatedEventDescField;
-                    }
-                  } catch (e: any) {
-                    decryptedDesc = updatedEventDescField;
-                  }
-                } else {
-                  // 이미 평문이면 그대로 사용
-                  decryptedDesc = updatedEventDescField;
-                }
-              }
-            } else {
-              decryptedTitle = updatedEventTitleField;
-              decryptedDesc = updatedEventDescField;
-            }
-            
-            const updatedDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
-            const updatedRepeatType = (updatedEvent.repeat_type === 'monthly' || updatedEvent.repeat_type === 'yearly') ? updatedEvent.repeat_type : 'none';
-            setState(prev => ({
-              ...prev,
-              events: prev.events.map(e =>
-                e.id === updatedEvent.id
-                  ? {
-                      id: updatedEvent.id,
-                      month: month,
-                      day: day,
-                      title: decryptedTitle,
-                      desc: decryptedDesc,
-                      event_date: updatedDateStr,
-                      created_by: updatedEvent.created_by,
-                      created_at: updatedEvent.created_at,
-                      repeat_type: updatedRepeatType
-                    }
-                  : e
-              )
-            }));
-          }
-        )
-        .on('postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'family_events' },
-          (payload: any) => {
-            console.log('Realtime 일정 DELETE 이벤트 수신 (family_events 테이블):', payload);
-            
-            // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-            // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-            
-            // 기준: 모든 사용자에게 동일하게 삭제 반영 (사용자 구분 없음)
-            const deletedEvent = payload.old;
-            const deletedId = deletedEvent?.id;
-            if (!deletedId) {
-              console.warn('Realtime 일정 DELETE: deletedId가 없음:', payload);
-              return;
-            }
-            const deletedIdStr = String(deletedId).trim();
-            console.log('Realtime 일정 DELETE 처리:', { deletedId, deletedIdStr, deletedIdType: typeof deletedId });
-            setState(prev => {
-              const beforeCount = prev.events.length;
-              
-              // 상세 로깅: 모든 이벤트 ID 확인
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 일정 DELETE - 현재 이벤트 목록:', prev.events.map(e => ({
-                  id: e.id,
-                  idType: typeof e.id,
-                  idStr: String(e.id),
-                  supabaseId: e.supabaseId,
-                  title: e.title?.substring(0, 20)
-                })));
-                console.log('Realtime 일정 DELETE - 삭제할 ID:', {
-                  deletedId,
-                  deletedIdStr,
-                  deletedIdType: typeof deletedId
-                });
-              }
-              
-              const filtered = prev.events.filter(e => {
-                // ID 비교: 여러 형식 지원 (숫자, 문자열, UUID)
-                const eId = e.id;
-                const eIdStr = String(eId).trim().toLowerCase(); // 대소문자 무시
-                const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim().toLowerCase() : null;
-                const deletedIdStrLower = deletedIdStr.toLowerCase(); // 대소문자 무시
-                
-                // 직접 ID 비교 또는 supabaseId 비교 (대소문자 무시)
-                const isMatch = eIdStr === deletedIdStrLower || 
-                               (eSupabaseId && eSupabaseId === deletedIdStrLower) ||
-                               eIdStr.replace(/-/g, '') === deletedIdStrLower.replace(/-/g, ''); // 하이픈 제거 후 비교
-                
-                if (isMatch && process.env.NODE_ENV === 'development') {
-                  console.log('✅ Realtime 일정 DELETE - ID 매칭 성공:', {
-                    eId: e.id,
-                    eIdStr,
-                    deletedIdStr,
-                    matchType: eIdStr === deletedIdStrLower ? 'exact' : 
-                              (eSupabaseId && eSupabaseId === deletedIdStrLower) ? 'supabaseId' : 'normalized'
-                  });
-                }
-                
-                return !isMatch;
-              });
-              const afterCount = filtered.length;
-              const deletedCount = beforeCount - afterCount;
-              console.log('Realtime 일정 DELETE 결과:', { beforeCount, afterCount, deleted: deletedCount, deletedId: deletedIdStr });
-              if (deletedCount === 0 && beforeCount > 0) {
-                console.warn('⚠️ Realtime 일정 DELETE - 삭제된 항목이 없음. ID 불일치 가능성:', {
-                  deletedId: deletedIdStr,
-                  deletedIdLower: deletedIdStr.toLowerCase(),
-                  existingIds: prev.events.map(e => ({ 
-                    id: e.id, 
-                    idType: typeof e.id, 
-                    idStr: String(e.id).toLowerCase(),
-                    supabaseId: e.supabaseId,
-                    title: e.title?.substring(0, 20)
-                  }))
-                });
-              }
-              return {
-                ...prev,
-                events: filtered
-              };
-            });
-          }
-        )
         .subscribe((status, err) => {
           console.log('📅 Realtime 일정 subscription 상태:', status);
           if (err) {
@@ -3310,21 +3129,20 @@ export default function FamilyHub() {
         subscriptionsRef.current.locations = null;
       }
       
+      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE 분리 시 server/client bindings mismatch 방지)
       console.log('📍 위치 subscription 설정 중...');
       const locationsSubscription = supabase
         .channel('user_locations_changes')
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'user_locations' },
-          (payload: any) => {
-            console.log('Realtime 위치 INSERT 이벤트 수신:', payload);
-            loadFamilyLocations(); // 위치 목록 다시 로드
-          }
-        )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'user_locations' },
+          { event: '*', schema: 'public', table: 'user_locations' },
           async (payload: any) => {
-            console.log('Realtime 위치 UPDATE 이벤트 수신:', payload);
-            await loadFamilyLocations(); // setState → 지도 useEffect가 최신 state로 updateMapMarkers 호출 (클로저 stale 방지)
+            const ev = payload.eventType ?? (payload.new ? 'UPDATE' : 'INSERT');
+            if (ev === 'DELETE') {
+              loadFamilyLocations();
+              return;
+            }
+            console.log('Realtime 위치 이벤트 수신:', ev, payload);
+            await loadFamilyLocations();
           }
         )
         .subscribe((status, err) => {
