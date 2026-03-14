@@ -98,15 +98,15 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
           justifyContent: 'space-between',
           maxWidth: '1400px',
           margin: '0 auto',
-          paddingLeft: '24px',
+          paddingLeft: '12px',
           paddingRight: '24px',
         }}>
-          {/* 아이콘 */}
+          {/* 아이콘 + 라벨 (최소 폭 없이 필요한 만큼만 사용) */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            minWidth: '100px',
+            gap: '4px',
+            flexShrink: 0,
           }}>
             <Megaphone style={{ 
               width: '20px', 
