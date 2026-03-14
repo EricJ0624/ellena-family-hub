@@ -1332,6 +1332,9 @@ export default function FamilyHub() {
   const updateLocationFromServiceWorker = async (latitude: number, longitude: number, accuracy: number) => {
     if (!userId || !isAuthenticated) return;
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
     try {
       // Geocoding 미사용 — 좌표만으로 위치 공유
       const currentAddress = state.location.address || '';
@@ -4414,6 +4417,15 @@ export default function FamilyHub() {
     }
 
     if (!userId || !isAuthenticated) return;
+
+    // 리프레시 직후 세션 미복원 시 403(RLS) 방지 — 세션 있을 때만 upsert
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('위치 저장 스킵: 세션이 없습니다. (리프레시 직후 등)');
+      }
+      return;
+    }
 
     try {
       const { error } = await supabase
