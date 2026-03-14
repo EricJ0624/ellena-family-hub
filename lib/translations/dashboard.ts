@@ -101,6 +101,7 @@ export type DashboardTranslations = {
   section_title_chat: string;
   section_title_location: string;
   section_title_calendar: string;
+  announcements_label: string;
   // UI buttons/labels (report)
   photo_upload_btn: string;
   event_today: string;
@@ -255,6 +256,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_chat: '가족 채팅',
     section_title_location: '가족 위치',
     section_title_calendar: '가족 일정',
+    announcements_label: '공지사항',
     photo_upload_btn: '업로드',
     event_today: '오늘',
     location_where_btn: '어디야',
@@ -403,6 +405,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_chat: 'Family Chat',
     section_title_location: 'Family Location',
     section_title_calendar: 'Family Calendar',
+    announcements_label: 'Announcements',
     photo_upload_btn: 'Upload',
     event_today: 'Today',
     location_where_btn: 'Where are you?',
@@ -551,6 +554,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_chat: '家族チャット',
     section_title_location: '家族の位置',
     section_title_calendar: '家族カレンダー',
+    announcements_label: 'お知らせ',
     photo_upload_btn: 'アップロード',
     event_today: '今日',
     location_where_btn: 'どこ？',
@@ -699,6 +703,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_chat: '家庭聊天',
     section_title_location: '家庭位置',
     section_title_calendar: '家庭日历',
+    announcements_label: '公告',
     photo_upload_btn: '上传',
     event_today: '今天',
     location_where_btn: '你在哪？',
@@ -847,6 +852,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_chat: '家庭聊天',
     section_title_location: '家庭位置',
     section_title_calendar: '家庭日曆',
+    announcements_label: '公告',
     photo_upload_btn: '上傳',
     event_today: '今天',
     location_where_btn: '你在哪？',

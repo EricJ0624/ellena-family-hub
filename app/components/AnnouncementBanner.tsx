@@ -20,9 +20,11 @@ interface Announcement {
 interface AnnouncementBannerProps {
   announcements: Announcement[];
   onMarkAsRead?: (announcementId: string) => void;
+  /** 배너 좌측 라벨 (다국어 지원용, 미전달 시 "공지사항") */
+  label?: string;
 }
 
-export default function AnnouncementBanner({ announcements, onMarkAsRead }: AnnouncementBannerProps) {
+export default function AnnouncementBanner({ announcements, onMarkAsRead, label = '공지사항' }: AnnouncementBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
@@ -117,7 +119,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead }: Anno
               fontWeight: '600',
               color: '#92400e',
             }}>
-              공지사항
+              {label}
             </span>
           </div>
 

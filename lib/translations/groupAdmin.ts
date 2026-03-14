@@ -12,6 +12,8 @@ export type GroupAdminTranslations = {
   no_name: string;
   no_locations: string;
   no_announcements: string;
+  announcements_tab: string;
+  announcements_section_unread: string;
   no_tickets: string;
   status_pending: string;
   status_answered: string;
@@ -55,6 +57,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     no_name: '이름 없음',
     no_locations: '위치 데이터가 없습니다.',
     no_announcements: '공지사항이 없습니다.',
+    announcements_tab: '공지사항',
+    announcements_section_unread: '공지사항 (${count}개 읽지 않음)',
     no_tickets: '문의가 없습니다.',
     status_pending: '대기중',
     status_answered: '답변완료',
@@ -96,6 +100,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     no_name: 'No name',
     no_locations: 'No location data.',
     no_announcements: 'No announcements.',
+    announcements_tab: 'Announcements',
+    announcements_section_unread: 'Announcements (${count} unread)',
     no_tickets: 'No support tickets.',
     status_pending: 'Pending',
     status_answered: 'Answered',
@@ -137,6 +143,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     no_name: '名前なし',
     no_locations: '位置データがありません。',
     no_announcements: 'お知らせがありません。',
+    announcements_tab: 'お知らせ',
+    announcements_section_unread: 'お知らせ（${count}件未読）',
     no_tickets: 'お問い合わせがありません。',
     status_pending: '対応中',
     status_answered: '回答済み',
@@ -178,6 +186,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     no_name: '无名称',
     no_locations: '暂无位置数据。',
     no_announcements: '暂无公告。',
+    announcements_tab: '公告',
+    announcements_section_unread: '公告（${count} 条未读）',
     no_tickets: '暂无工单。',
     status_pending: '待处理',
     status_answered: '已回复',
@@ -219,6 +229,8 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     no_name: '無名稱',
     no_locations: '尚無位置資料。',
     no_announcements: '尚無公告。',
+    announcements_tab: '公告',
+    announcements_section_unread: '公告（${count} 則未讀）',
     no_tickets: '尚無工單。',
     status_pending: '待處理',
     status_answered: '已回覆',

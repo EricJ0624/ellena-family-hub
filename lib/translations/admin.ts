@@ -82,6 +82,8 @@ export type AdminTranslations = {
   role_member: string;
   target_all_members: string;
   target_admin_only: string;
+  announcements_label: string;
+  announcements_section_count: string;
   announcement_manage_title: string;
   new_announcement_btn: string;
   disabled_label: string;
@@ -233,6 +235,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     role_member: '멤버',
     target_all_members: '모든 멤버',
     target_admin_only: '관리자만',
+    announcements_label: '공지사항',
+    announcements_section_count: '공지사항 (${count}개)',
     announcement_manage_title: '공지사항 관리',
     new_announcement_btn: '새 공지 작성',
     disabled_label: '비활성화됨',
@@ -380,6 +384,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     role_member: 'Member',
     target_all_members: 'All members',
     target_admin_only: 'Admins only',
+    announcements_label: 'Announcements',
+    announcements_section_count: 'Announcements (${count})',
     announcement_manage_title: 'Announcements',
     new_announcement_btn: 'New announcement',
     disabled_label: 'Disabled',
@@ -527,6 +533,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     role_member: 'メンバー',
     target_all_members: '全メンバー',
     target_admin_only: '管理者のみ',
+    announcements_label: 'お知らせ',
+    announcements_section_count: 'お知らせ（${count}件）',
     announcement_manage_title: 'お知らせ管理',
     new_announcement_btn: '新規お知らせ',
     disabled_label: '無効',
@@ -674,6 +682,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     role_member: '成员',
     target_all_members: '所有成员',
     target_admin_only: '仅管理员',
+    announcements_label: '公告',
+    announcements_section_count: '公告（${count} 条）',
     announcement_manage_title: '公告管理',
     new_announcement_btn: '新建公告',
     disabled_label: '已禁用',
@@ -821,6 +831,8 @@ const admin: Record<LangCode, AdminTranslations> = {
     role_member: '成員',
     target_all_members: '所有成員',
     target_admin_only: '僅管理員',
+    announcements_label: '公告',
+    announcements_section_count: '公告（${count} 則）',
     announcement_manage_title: '公告管理',
     new_announcement_btn: '新公告',
     disabled_label: '已停用',

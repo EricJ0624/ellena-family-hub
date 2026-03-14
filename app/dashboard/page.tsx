@@ -6113,6 +6113,7 @@ export default function FamilyHub() {
               return { id: a.id, title, content, created_at: a.created_at, is_read: a.is_read };
             })}
             onMarkAsRead={handleMarkAsRead}
+            label={dt('announcements_label')}
           />
         )}
 

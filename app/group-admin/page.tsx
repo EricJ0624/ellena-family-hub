@@ -790,7 +790,7 @@ export default function GroupAdminPage() {
             }}
           >
             <Megaphone style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            공지사항
+            {gat('announcements_tab')}
             {announcements.filter(a => !a.is_read).length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -889,6 +889,7 @@ export default function GroupAdminPage() {
                 {/* 공지사항 배너 */}
                 <AnnouncementBanner 
                   announcements={announcements}
+                  label={gat('announcements_tab')}
                   onMarkAsRead={async (announcementId) => {
                     try {
                       const { data: { session } } = await supabase.auth.getSession();
@@ -1288,7 +1289,7 @@ export default function GroupAdminPage() {
                   color: '#1e293b',
                   marginBottom: '24px',
                 }}>
-                  공지사항 (${announcements.filter(a => !a.is_read).length}개 읽지 않음)
+                  {gat('announcements_section_unread').replace(/\$\{count\}/g, String(announcements.filter(a => !a.is_read).length))}
                 </h2>
 
                 <div style={{

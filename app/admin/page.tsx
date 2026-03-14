@@ -3097,7 +3097,7 @@ export default function AdminPage() {
                         }}
                       >
                         <Megaphone style={{ width: '16px', height: '16px', display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-                        공지사항
+                        {at('announcements_label')}
                       </button>
                       <button
                         onClick={() => setGroupAdminTab('support-tickets')}
@@ -3666,7 +3666,7 @@ export default function AdminPage() {
                           color: '#1e293b',
                           marginBottom: '24px',
                         }}>
-                          공지사항 ({groupAnnouncements.length}개)
+                          {at('announcements_section_count').replace(/\$\{count\}/g, String(groupAnnouncements.length))}
                         </h2>
 
                         <div style={{
