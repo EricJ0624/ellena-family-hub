@@ -1077,7 +1077,8 @@ export default function FamilyHub() {
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
     textOverflow: 'clip',
-    fontSize: isDefaultDashboardTitle ? 'clamp(44px, 11vw, 68px)' : 'clamp(18px, 4.5vw, 28px)',
+    // fit 적용 전 초기값: 보수적으로 작게 해서 잘림 방지, fit 실행 후 fittedTitleFontSize로 덮어씀
+    fontSize: isDefaultDashboardTitle ? 'clamp(20px, 5vw, 68px)' : 'clamp(16px, 4vw, 28px)',
     fontWeight: titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
     fontFamily: titleFont.fontFamily,
@@ -1121,7 +1122,15 @@ export default function FamilyHub() {
     const run = (el: HTMLHeadingElement) => {
       const runFit = () => {
         if (cancelled.current) return;
-        if (el.clientWidth > 0) fit(el);
+        const w = el.clientWidth;
+        if (w > 0) {
+          fit(el);
+        } else {
+          // 레이아웃 미준비 시 재시도 (clientWidth 0인 경우)
+          timeouts.push(setTimeout(runFit, 50));
+          timeouts.push(setTimeout(runFit, 150));
+          timeouts.push(setTimeout(runFit, 300));
+        }
       };
       runFit();
       ro = new ResizeObserver(runFit);
