@@ -1072,8 +1072,8 @@ export default function FamilyHub() {
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
     textOverflow: 'clip',
-    // fit 적용 전: 고정 작은 크기로 잘림 방지, fit 실행 후 fittedTitleFontSize로 덮어씀
-    fontSize: 18,
+    // fit 적용 전: 읽기 좋은 기본 크기, fit 실행 후 fittedTitleFontSize로 덮어씀
+    fontSize: 28,
     fontWeight: titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
     fontFamily: titleFont.fontFamily,
@@ -1127,15 +1127,12 @@ export default function FamilyHub() {
           timeouts.push(setTimeout(runFit, 300));
         }
       };
-      // 첫 측정은 레이아웃/페인트 후 한 프레임 뒤에 수행
-      const scheduleFirst = () => {
-        if (cancelled.current) return;
-        requestAnimationFrame(() => {
-          if (cancelled.current) return;
-          runFit();
-        });
-      };
-      scheduleFirst();
+      // 즉시 한 번 실행 (첫 로드 시 화면에 맞춘 크기가 최대한 빨리 적용되도록)
+      runFit();
+      // 레이아웃 안정 후 재측정
+      requestAnimationFrame(() => {
+        if (!cancelled.current) runFit();
+      });
       ro = new ResizeObserver(runFit);
       ro.observe(el);
       document.fonts.ready.then(() => {
@@ -1155,17 +1152,13 @@ export default function FamilyHub() {
         run(el);
         return;
       }
-      if (retryCount < 10) {
+      if (retryCount < 15) {
         rafId = requestAnimationFrame(() => tryRun(retryCount + 1));
       }
     };
 
-    rafId = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (cancelled.current) return;
-        tryRun(0);
-      });
-    });
+    // ref가 있으면 즉시 fit 실행(첫 로드 시 바로 맞춤), 없으면 rAF로 재시도
+    tryRun(0);
 
     return () => {
       cancelled.current = true;
