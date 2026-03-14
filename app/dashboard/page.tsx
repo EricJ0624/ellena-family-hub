@@ -4822,6 +4822,14 @@ export default function FamilyHub() {
         console.warn('❌ [loadFamilyLocations] 위치 요청 조회 실패:', err);
       }
 
+      // ✅ 표시할 사용자 = 승인된 location_requests 기준 (stale fetch여도 마커 유지)
+      const expectedUserIds = new Set<string>();
+      (currentLocationRequests || []).forEach((req: any) => {
+        if (req.status !== 'accepted') return;
+        const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
+        if (otherId) expectedUserIds.add(otherId);
+      });
+      
       // 승인된 위치 요청이 있는 사용자들의 위치만 조회
       // RLS 정책에 의해 승인된 관계의 위치만 반환됨
       console.log('📍 [loadFamilyLocations] user_locations 조회 시작');
@@ -4847,15 +4855,6 @@ export default function FamilyHub() {
         console.warn('❌ [loadFamilyLocations] 위치 로드 오류:', error);
         return;
       }
-
-      // ✅ 표시할 사용자 = 승인된 location_requests 기준 (stale fetch여도 마커 유지)
-      const expectedUserIds = new Set<string>();
-      (currentLocationRequests || []).forEach((req: any) => {
-        if (req.status !== 'accepted') return;
-        const otherId = req.requester_id === userId ? req.target_id : req.requester_id;
-        if (otherId) expectedUserIds.add(otherId);
-      });
-      console.log('📍 [loadFamilyLocations] expectedUserIds:', Array.from(expectedUserIds));
 
       if (data && data.length > 0) {
         // 가족 표시 역할(family_role) 조회 (지도 마커용)
