@@ -3,7 +3,7 @@
 // 동적 렌더링 강제 (GroupProvider 의존성 때문에)
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -1090,11 +1090,10 @@ export default function FamilyHub() {
   // 타이틀 오른쪽 레이아웃 영향 — effect 선언 위치에서 사용 가능한 값
   const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const isGroupLoadingForTitleFit = groupLoading && !currentGroupId;
-  // 한 줄 맞춤: 넘칠 때만 폰트 자동 축소. 사용자 지정 크기는 상한으로 유지(그보다 크게 하지 않음)
-  // 레이아웃/그룹 로딩이 늦게 끝나도 재조정되도록 지연 실행 추가
-  useEffect(() => {
-    const MAX_FS = Math.max(12, Math.min(120, titleFitMaxFontSize));
-    const MIN_FS = 12;
+  // 한 줄 맞춤: 모든 화면 크기·언어에서 동일하게 동작. useLayoutEffect로 DOM 직후 측정, ResizeObserver로 리사이즈 대응
+  useLayoutEffect(() => {
+    const MAX_FS = Math.max(14, Math.min(120, titleFitMaxFontSize));
+    const MIN_FS = 14;
     const cancelled = { current: false };
     let ro: ResizeObserver | null = null;
     let rafId: number = 0;
@@ -1105,8 +1104,9 @@ export default function FamilyHub() {
       if (w <= 0) return;
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
-      void el.offsetHeight;
-      while (el.scrollWidth > w && fs > MIN_FS) {
+      void el.offsetHeight; // reflow
+      // 서브픽셀 오버플로우 방지: 1px 여유 두고 수렴
+      while (el.scrollWidth > w + 1 && fs > MIN_FS) {
         fs -= 2;
         el.style.fontSize = `${fs}px`;
         void el.offsetHeight;
@@ -1114,36 +1114,35 @@ export default function FamilyHub() {
       setFittedTitleFontSize(fs);
     };
 
+    const runFit = (el: HTMLHeadingElement) => {
+      if (cancelled.current) return;
+      const w = el.clientWidth;
+      if (w > 0) {
+        fit(el);
+      } else {
+        // 레이아웃 미준비: 여러 시점에 재시도 (다양한 기기/환경 대응)
+        timeouts.push(setTimeout(() => runFit(el), 0));
+        timeouts.push(setTimeout(() => runFit(el), 50));
+        timeouts.push(setTimeout(() => runFit(el), 100));
+        timeouts.push(setTimeout(() => runFit(el), 200));
+        timeouts.push(setTimeout(() => runFit(el), 400));
+        timeouts.push(setTimeout(() => runFit(el), 800));
+        timeouts.push(setTimeout(() => runFit(el), 1500));
+      }
+    };
+
     const run = (el: HTMLHeadingElement) => {
-      const runFit = () => {
-        if (cancelled.current) return;
-        const w = el.clientWidth;
-        if (w > 0) {
-          fit(el);
-        } else {
-          // 레이아웃 미준비 시 재시도 (clientWidth 0인 경우)
-          timeouts.push(setTimeout(runFit, 50));
-          timeouts.push(setTimeout(runFit, 150));
-          timeouts.push(setTimeout(runFit, 300));
-        }
-      };
-      // 즉시 한 번 실행 (첫 로드 시 화면에 맞춘 크기가 최대한 빨리 적용되도록)
-      runFit();
-      // 레이아웃 안정 후 재측정
-      requestAnimationFrame(() => {
-        if (!cancelled.current) runFit();
-      });
-      ro = new ResizeObserver(runFit);
+      const runFitForEl = () => runFit(el);
+      runFitForEl();
+      requestAnimationFrame(runFitForEl);
+      timeouts.push(setTimeout(runFitForEl, 0));
+      ro = new ResizeObserver(runFitForEl);
       ro.observe(el);
-      document.fonts.ready.then(() => {
-        if (!cancelled.current) runFit();
-      });
-      timeouts.push(setTimeout(runFit, 100));
-      timeouts.push(setTimeout(runFit, 400));
-      timeouts.push(setTimeout(runFit, 800));
-      timeouts.push(setTimeout(runFit, 1200));
-      timeouts.push(setTimeout(runFit, 2000));
-      timeouts.push(setTimeout(runFit, 2500));
+      document.fonts.ready.then(runFitForEl);
+      timeouts.push(setTimeout(runFitForEl, 100));
+      timeouts.push(setTimeout(runFitForEl, 400));
+      timeouts.push(setTimeout(runFitForEl, 1200));
+      timeouts.push(setTimeout(runFitForEl, 2500));
     };
 
     const tryRun = (retryCount: number) => {
@@ -1152,12 +1151,11 @@ export default function FamilyHub() {
         run(el);
         return;
       }
-      if (retryCount < 15) {
+      if (retryCount < 20) {
         rafId = requestAnimationFrame(() => tryRun(retryCount + 1));
       }
     };
 
-    // ref가 있으면 즉시 fit 실행(첫 로드 시 바로 맞춤), 없으면 rAF로 재시도
     tryRun(0);
 
     return () => {
