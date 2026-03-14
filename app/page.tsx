@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, PERSIST_SESSION_FLAG_KEY } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(true); // 로그인 상태 유지 (기본 체크)
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
 
@@ -92,8 +93,10 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-      // signInWithPassword는 단일 인자만 받습니다
-      // 세션 지속은 lib/supabase.ts에서 이미 persistSession: true로 설정되어 있습니다
+      // "로그인 상태 유지" 선택에 따라 세션을 localStorage 또는 sessionStorage에 저장
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, keepLoggedIn ? '1' : '0');
+      }
       const { error, data } = await supabase.auth.signInWithPassword({ 
         email, 
         password 
@@ -655,6 +658,33 @@ export default function LoginPage() {
                 }}
               />
             </div>
+          )}
+
+          {/* 로그인 상태 유지 (로그인 모드에서만) */}
+          {mode === 'login' && (
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: '#64748b',
+              userSelect: 'none',
+              marginTop: '-4px'
+            }}>
+              <input
+                type="checkbox"
+                checked={keepLoggedIn}
+                onChange={(e) => setKeepLoggedIn(e.target.checked)}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  accentColor: '#667eea',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>{t('keep_logged_in')}</span>
+            </label>
           )}
 
           {/* 비밀번호 확인 입력 (가입 모드에서만) */}

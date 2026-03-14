@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
-import { supabase } from '@/lib/supabase';
+import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { 
   getPushToken, 
@@ -651,24 +651,28 @@ export default function FamilyHub() {
     // Supabase 인증 확인
     const checkAuth = async () => {
       try {
-        // 근본 원인 해결: getSession() 호출 전에 localStorage 세션 데이터 검증
+        // getSession() 호출 전에 두 저장소의 세션 데이터 검증 (로그인 상태 유지 여부에 따라 localStorage 또는 sessionStorage 사용)
         if (typeof window !== 'undefined') {
           try {
-            const storedSession = localStorage.getItem('sb-auth-token');
-            if (storedSession) {
+            const validate = (raw: string) => {
               try {
-                const parsed = JSON.parse(storedSession);
-                // refresh_token이 없거나 유효하지 않으면 사전에 정리
-                if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string' || parsed.refresh_token.trim() === '') {
-                  localStorage.removeItem('sb-auth-token');
-                }
-              } catch (parseError) {
-                // JSON 파싱 실패 = 손상된 데이터 → 정리
-                localStorage.removeItem('sb-auth-token');
+                const parsed = JSON.parse(raw);
+                const session = parsed?.currentSession ?? parsed;
+                const hasRefresh = session?.refresh_token && typeof session.refresh_token === 'string' && session.refresh_token.trim() !== '';
+                const hasAccess = session?.access_token && typeof session.access_token === 'string' && session.access_token.trim() !== '';
+                return !!(hasRefresh && hasAccess);
+              } catch {
+                return false;
+              }
+            };
+            for (const storage of [localStorage, sessionStorage]) {
+              const stored = storage.getItem(AUTH_STORAGE_KEY);
+              if (stored && !validate(stored)) {
+                storage.removeItem(AUTH_STORAGE_KEY);
               }
             }
-          } catch (error) {
-            // localStorage 접근 실패는 무시
+          } catch {
+            // ignore
           }
         }
         
@@ -679,11 +683,9 @@ export default function FamilyHub() {
         if (error) {
           // "Invalid Refresh Token" 또는 "Refresh Token Not Found" 에러인 경우
           if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token')) {
-            // localStorage에서 세션 정보 제거 (에러 메시지 출력 안 함)
             if (typeof window !== 'undefined') {
-              localStorage.removeItem('sb-auth-token');
+              clearAuthStorage();
             }
-            // 로그아웃 처리 (에러 메시지 출력 안 함)
             try {
             await supabase.auth.signOut();
             } catch (signOutError) {
@@ -707,7 +709,7 @@ export default function FamilyHub() {
         // getUser()로 서버에 검증 요청. 삭제된 사용자는 여기서 실패하여 로그아웃 처리됨.
         const { data: { user: serverUser }, error: userError } = await supabase.auth.getUser();
         if (userError || !serverUser) {
-          if (typeof window !== 'undefined') localStorage.removeItem('sb-auth-token');
+          if (typeof window !== 'undefined') clearAuthStorage();
           try { await supabase.auth.signOut(); } catch (_) {}
           router.push('/');
           return;
@@ -5801,7 +5803,7 @@ export default function FamilyHub() {
         }
         
         // 모든 Supabase 관련 세션 데이터 정리
-        localStorage.removeItem('sb-auth-token');
+        clearAuthStorage();
         sessionStorage.clear();
         
         // 로그인 페이지로 리다이렉트

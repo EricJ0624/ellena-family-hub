@@ -5,6 +5,7 @@ type LoginTranslations = {
   tab_login: string;
   tab_signup: string;
   tab_forgot: string;
+  keep_logged_in: string;
   placeholder_nickname: string;
   placeholder_email: string;
   placeholder_password: string;
@@ -37,6 +38,7 @@ const login: Record<LangCode, LoginTranslations> = {
     tab_login: '로그인',
     tab_signup: '가입하기',
     tab_forgot: '비밀번호 찾기',
+    keep_logged_in: '로그인 상태 유지',
     placeholder_nickname: '닉네임 (필수, 2~20자)',
     placeholder_email: '이메일 주소',
     placeholder_password: '비밀번호',
@@ -67,6 +69,7 @@ const login: Record<LangCode, LoginTranslations> = {
     tab_login: 'Login',
     tab_signup: 'Sign up',
     tab_forgot: 'Forgot password',
+    keep_logged_in: 'Keep me logged in',
     placeholder_nickname: 'Nickname (required, 2-20 characters)',
     placeholder_email: 'Email address',
     placeholder_password: 'Password',
@@ -97,6 +100,7 @@ const login: Record<LangCode, LoginTranslations> = {
     tab_login: 'ログイン',
     tab_signup: '新規登録',
     tab_forgot: 'パスワードを忘れた',
+    keep_logged_in: 'ログイン状態を保持',
     placeholder_nickname: 'ニックネーム（必須、2〜20文字）',
     placeholder_email: 'メールアドレス',
     placeholder_password: 'パスワード',
@@ -127,6 +131,7 @@ const login: Record<LangCode, LoginTranslations> = {
     tab_login: '登录',
     tab_signup: '注册',
     tab_forgot: '忘记密码',
+    keep_logged_in: '保持登录状态',
     placeholder_nickname: '昵称（必填，2-20字）',
     placeholder_email: '邮箱地址',
     placeholder_password: '密码',
@@ -157,6 +162,7 @@ const login: Record<LangCode, LoginTranslations> = {
     tab_login: '登入',
     tab_signup: '註冊',
     tab_forgot: '忘記密碼',
+    keep_logged_in: '保持登入狀態',
     placeholder_nickname: '暱稱（必填，2-20字）',
     placeholder_email: '電子郵件地址',
     placeholder_password: '密碼',

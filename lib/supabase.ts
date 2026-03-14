@@ -9,55 +9,78 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase 설정이 .env.local 파일에 누락되었습니다.');
 }
 
-// Supabase 초기화 전에 localStorage의 손상된 세션 데이터 정리
-// 근본 원인 해결: Supabase가 초기화될 때 유효하지 않은 세션 데이터로 인한 에러 방지
-if (typeof window !== 'undefined') {
+/** 로그인 페이지 "로그인 상태 유지" 체크 시 사용. '0' = sessionStorage(탭 닫으면 로그아웃), 그 외 = localStorage(유지) */
+export const PERSIST_SESSION_FLAG_KEY = 'SFH_PERSIST_SESSION';
+export const AUTH_STORAGE_KEY = 'sb-auth-token';
+
+function getAuthStorage(): Storage | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return localStorage.getItem(PERSIST_SESSION_FLAG_KEY) === '0' ? window.sessionStorage : window.localStorage;
+}
+
+/** 세션 저장소에서 토큰 제거 (localStorage + sessionStorage 둘 다 정리) */
+export function clearAuthStorage(): void {
+  if (typeof window === 'undefined') return;
   try {
-    const storedSession = localStorage.getItem('sb-auth-token');
-    if (storedSession) {
-      try {
-        // 저장된 세션 데이터가 유효한 JSON인지 확인
-        const parsed = JSON.parse(storedSession);
-        
-        // refresh_token이 없거나 유효하지 않으면 정리
-        if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string' || parsed.refresh_token.trim() === '') {
-          localStorage.removeItem('sb-auth-token');
-          if (process.env.NODE_ENV === 'development') {
-            console.log('손상된 refresh_token 감지 - localStorage 정리됨');
-          }
-        }
-        
-        // access_token이 없거나 유효하지 않으면 정리
-        if (!parsed?.access_token || typeof parsed.access_token !== 'string' || parsed.access_token.trim() === '') {
-          localStorage.removeItem('sb-auth-token');
-          if (process.env.NODE_ENV === 'development') {
-            console.log('손상된 access_token 감지 - localStorage 정리됨');
-          }
-        }
-      } catch (parseError) {
-        // JSON 파싱 실패 = 손상된 데이터 → 정리
-        localStorage.removeItem('sb-auth-token');
-        if (process.env.NODE_ENV === 'development') {
-          console.log('JSON 파싱 실패 - localStorage 정리됨');
-        }
-      }
-    }
-  } catch (error) {
-    // localStorage 접근 실패는 무시
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // ignore
   }
 }
 
+function validateStoredSession(raw: string): boolean {
+  try {
+    const parsed = JSON.parse(raw);
+    const session = parsed?.currentSession ?? parsed;
+    const hasRefresh = session?.refresh_token && typeof session.refresh_token === 'string' && session.refresh_token.trim() !== '';
+    const hasAccess = session?.access_token && typeof session.access_token === 'string' && session.access_token.trim() !== '';
+    return !!(hasRefresh && hasAccess);
+  } catch {
+    return false;
+  }
+}
+
+// Supabase 초기화 전에 두 저장소의 손상된 세션 데이터 정리
+// 근본 원인 해결: Supabase가 초기화될 때 유효하지 않은 세션 데이터로 인한 에러 방지
+if (typeof window !== 'undefined') {
+  try {
+    for (const storage of [localStorage, sessionStorage]) {
+      const stored = storage.getItem(AUTH_STORAGE_KEY);
+      if (stored && !validateStoredSession(stored)) {
+        storage.removeItem(AUTH_STORAGE_KEY);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('손상된 세션 감지 - 저장소 정리됨');
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+const customStorage =
+  typeof window !== 'undefined'
+    ? {
+        getItem: (key: string) => getAuthStorage()?.getItem(key) ?? null,
+        setItem: (key: string, value: string) => getAuthStorage()?.setItem(key, value),
+        removeItem: (key: string) => {
+          if (typeof window === 'undefined') return;
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        },
+      }
+    : undefined;
+
 // 이 supabase 객체를 통해 DB에 접근합니다.
-// 브라우저에서 세션을 유지하기 위해 auth 옵션 명시
-// 세션 지속 시간: Supabase 대시보드에서 JWT 만료 시간을 24시간(86400초)으로 설정해야 합니다.
-// Settings > Authentication > JWT expiry time을 86400으로 설정하세요.
+// "로그인 상태 유지" 체크 시 localStorage, 미체크 시 sessionStorage 사용.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true, // 세션을 localStorage에 저장하여 하루 동안 유지
-    autoRefreshToken: true, // 토큰 자동 갱신 (세션 지속)
-    detectSessionInUrl: true, // URL에서 세션 감지 (비밀번호 재설정 등)
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined, // localStorage 사용
-    storageKey: 'sb-auth-token', // 세션 저장 키
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: customStorage,
+    storageKey: AUTH_STORAGE_KEY,
   },
   realtime: {
     params: {
@@ -77,29 +100,16 @@ if (typeof window !== 'undefined') {
   supabase.auth.onAuthStateChange(async (event, session) => {
     // Refresh Token 에러가 발생한 경우 조용히 처리
     if (event === 'SIGNED_OUT' && !session) {
-      // refresh token이 유효하지 않아서 자동 로그아웃된 경우
-      // localStorage를 정리하고 조용히 처리 (에러 메시지 출력 안 함)
-      try {
-        localStorage.removeItem('sb-auth-token');
-      } catch (error) {
-        // localStorage 접근 실패는 무시
-      }
-      return; // 에러 메시지 출력하지 않고 조용히 처리
+      clearAuthStorage();
+      return;
     }
-    
-    // TOKEN_REFRESHED 이벤트에서 에러가 발생한 경우 처리
     if (event === 'TOKEN_REFRESHED') {
       if (session) {
         if (process.env.NODE_ENV === 'development') {
           console.log('토큰 갱신 성공');
         }
       } else {
-        // 토큰 갱신 실패 - 조용히 처리
-        try {
-          localStorage.removeItem('sb-auth-token');
-        } catch (error) {
-          // localStorage 접근 실패는 무시
-        }
+        clearAuthStorage();
       }
     }
     
