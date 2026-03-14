@@ -100,6 +100,7 @@ export type TravelTranslations = {
   marker_dining: string;
   marker_place: string;
   map_hint: string;
+  link_google_search: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -203,6 +204,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_dining: '식',
     marker_place: '관',
     map_hint: '숙소·먹거리·일정에 위도/경도를 입력하면 지도에 표시됩니다. 파란색: 숙소, 초록색: 먹거리, 빨간색: 관광지',
+    link_google_search: '구글에서 검색',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -304,6 +306,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_dining: 'D',
     marker_place: 'P',
     map_hint: 'Enter latitude/longitude in accommodation, dining, or itinerary to show on the map. Blue: accommodation, Green: dining, Red: places.',
+    link_google_search: 'Search on Google',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -405,6 +408,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_dining: '食',
     marker_place: '観',
     map_hint: '宿泊・食事・スケジュールに緯度・経度を入力すると地図に表示されます。青: 宿泊、緑: 食事、赤: 観光地',
+    link_google_search: 'Googleで検索',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -506,6 +510,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_dining: '食',
     marker_place: '观',
     map_hint: '在住宿、餐饮或日程中输入经纬度即可在地图上显示。蓝色：住宿，绿色：餐饮，红色：景点',
+    link_google_search: '在 Google 上搜索',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -607,6 +612,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_dining: '食',
     marker_place: '觀',
     map_hint: '在住宿、餐飲或行程中輸入經緯度即可在地圖上顯示。藍色：住宿，綠色：餐飲，紅色：景點',
+    link_google_search: '在 Google 上搜尋',
   },
 };
 

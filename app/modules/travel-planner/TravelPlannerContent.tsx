@@ -76,6 +76,10 @@ export function TravelPlannerContent() {
   const [itineraryAddress, setItineraryAddress] = useState('');
   const [itineraryLatitude, setItineraryLatitude] = useState('');
   const [itineraryLongitude, setItineraryLongitude] = useState('');
+  /** 선택한 장소명(Place Details Basic) — 구글 검색 링크용 */
+  const [accPlaceName, setAccPlaceName] = useState('');
+  const [diningPlaceName, setDiningPlaceName] = useState('');
+  const [itineraryPlaceName, setItineraryPlaceName] = useState('');
 
   const [formTitle, setFormTitle] = useState('');
   const [formDestination, setFormDestination] = useState('');
@@ -95,6 +99,11 @@ export function TravelPlannerContent() {
   const accAddressInputRef = useRef<HTMLInputElement>(null);
   const diningAddressInputRef = useRef<HTMLInputElement>(null);
   const itineraryAddressInputRef = useRef<HTMLInputElement>(null);
+  const placesServiceContainerRef = useRef<HTMLDivElement>(null);
+  const placesServiceRef = useRef<{ getDetails: (req: unknown, cb: (place: unknown, status: string) => void) => void } | null>(null);
+  const accSessionTokenRef = useRef<unknown>(null);
+  const diningSessionTokenRef = useRef<unknown>(null);
+  const itinerarySessionTokenRef = useRef<unknown>(null);
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -311,74 +320,227 @@ export function TravelPlannerContent() {
     document.head.appendChild(script);
   }, [selectedTrip, accommodations, dining, itineraries]);
 
-  // Places Autocomplete: 숙소 폼 주소 필드
+  // Places Autocomplete: 숙소 폼 — 캐시 조회 → 없으면 Place Details(Basic) 후 캐시 저장 + 구글 검색 링크
   useEffect(() => {
     if (!showAccommodationForm) return;
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
     if (!apiKey) return;
     const g = (window as any).google;
     if (!g?.maps?.places?.Autocomplete) return;
+    const container = placesServiceContainerRef.current;
+    if (!container) return;
+    if (!placesServiceRef.current) placesServiceRef.current = new g.maps.places.PlacesService(container);
+    const service = placesServiceRef.current;
+    const AutocompleteSessionToken = g.maps?.places?.AutocompleteSessionToken;
+    if (AutocompleteSessionToken) accSessionTokenRef.current = new AutocompleteSessionToken();
     const timer = setTimeout(() => {
       const el = accAddressInputRef.current;
       if (!el) return;
-      const autocomplete = new g.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+      const opts: { types: string[]; sessionToken?: unknown } = { types: ['establishment', 'geocode'] };
+      if (accSessionTokenRef.current) opts.sessionToken = accSessionTokenRef.current;
+      const autocomplete = new g.maps.places.Autocomplete(el, opts);
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-        if (place.formatted_address) setAccAddress(place.formatted_address);
-        if (place.geometry?.location) {
-          setAccLatitude(String(place.geometry.location.lat()));
-          setAccLongitude(String(place.geometry.location.lng()));
-        }
+        if (!place?.place_id) return;
+        (async () => {
+          try {
+            const headers = await getAuthHeaders();
+            const res = await fetch(`/api/place-cache?placeId=${encodeURIComponent(place.place_id)}`, { headers });
+            const json = await res.json();
+            if (json.cached && json.latitude != null && json.longitude != null) {
+              setAccAddress(json.formatted_address ?? '');
+              setAccLatitude(String(json.latitude));
+              setAccLongitude(String(json.longitude));
+              setAccPlaceName(json.name ?? '');
+              if (AutocompleteSessionToken) accSessionTokenRef.current = new AutocompleteSessionToken();
+              return;
+            }
+          } catch (_) {}
+          if (!service) return;
+          const req: { placeId: string; fields: string[]; sessionToken?: unknown } = {
+            placeId: place.place_id,
+            fields: ['place_id', 'name', 'geometry', 'formatted_address'],
+          };
+          if (accSessionTokenRef.current) req.sessionToken = accSessionTokenRef.current;
+          service.getDetails(req, (placeDetails: any, status: string) => {
+            if (status !== 'OK' || !placeDetails) return;
+            if (placeDetails.formatted_address) setAccAddress(placeDetails.formatted_address);
+            if (placeDetails.geometry?.location) {
+              setAccLatitude(String(placeDetails.geometry.location.lat()));
+              setAccLongitude(String(placeDetails.geometry.location.lng()));
+            }
+            if (placeDetails.name) setAccPlaceName(placeDetails.name);
+            if (AutocompleteSessionToken) accSessionTokenRef.current = new AutocompleteSessionToken();
+            (async () => {
+              try {
+                const headers = await getAuthHeaders();
+                await fetch('/api/place-cache', {
+                  method: 'POST',
+                  headers: { ...headers, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    place_id: placeDetails.place_id,
+                    name: placeDetails.name ?? undefined,
+                    latitude: placeDetails.geometry?.location?.lat(),
+                    longitude: placeDetails.geometry?.location?.lng(),
+                    formatted_address: placeDetails.formatted_address ?? undefined,
+                  }),
+                });
+              } catch (_) {}
+            })();
+          });
+        })();
       });
     }, 100);
     return () => clearTimeout(timer);
-  }, [showAccommodationForm]);
+  }, [showAccommodationForm, getAuthHeaders]);
 
-  // Places Autocomplete: 먹거리 폼 주소 필드
+  // Places Autocomplete: 먹거리 폼 — 캐시 조회 → 없으면 Place Details(Basic) 후 캐시 저장 + 구글 검색 링크
   useEffect(() => {
     if (!showDiningForm) return;
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
     if (!apiKey) return;
     const g = (window as any).google;
     if (!g?.maps?.places?.Autocomplete) return;
+    const container = placesServiceContainerRef.current;
+    if (!container) return;
+    if (!placesServiceRef.current) placesServiceRef.current = new g.maps.places.PlacesService(container);
+    const service = placesServiceRef.current;
+    const AutocompleteSessionToken = g.maps?.places?.AutocompleteSessionToken;
+    if (AutocompleteSessionToken) diningSessionTokenRef.current = new AutocompleteSessionToken();
     const timer = setTimeout(() => {
       const el = diningAddressInputRef.current;
       if (!el) return;
-      const autocomplete = new g.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+      const opts: { types: string[]; sessionToken?: unknown } = { types: ['establishment', 'geocode'] };
+      if (diningSessionTokenRef.current) opts.sessionToken = diningSessionTokenRef.current;
+      const autocomplete = new g.maps.places.Autocomplete(el, opts);
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-        if (place.formatted_address) setDiningAddress(place.formatted_address);
-        if (place.geometry?.location) {
-          setDiningLatitude(String(place.geometry.location.lat()));
-          setDiningLongitude(String(place.geometry.location.lng()));
-        }
+        if (!place?.place_id) return;
+        (async () => {
+          try {
+            const headers = await getAuthHeaders();
+            const res = await fetch(`/api/place-cache?placeId=${encodeURIComponent(place.place_id)}`, { headers });
+            const json = await res.json();
+            if (json.cached && json.latitude != null && json.longitude != null) {
+              setDiningAddress(json.formatted_address ?? '');
+              setDiningLatitude(String(json.latitude));
+              setDiningLongitude(String(json.longitude));
+              setDiningPlaceName(json.name ?? '');
+              if (AutocompleteSessionToken) diningSessionTokenRef.current = new AutocompleteSessionToken();
+              return;
+            }
+          } catch (_) {}
+          if (!service) return;
+          const req: { placeId: string; fields: string[]; sessionToken?: unknown } = {
+            placeId: place.place_id,
+            fields: ['place_id', 'name', 'geometry', 'formatted_address'],
+          };
+          if (diningSessionTokenRef.current) req.sessionToken = diningSessionTokenRef.current;
+          service.getDetails(req, (placeDetails: any, status: string) => {
+            if (status !== 'OK' || !placeDetails) return;
+            if (placeDetails.formatted_address) setDiningAddress(placeDetails.formatted_address);
+            if (placeDetails.geometry?.location) {
+              setDiningLatitude(String(placeDetails.geometry.location.lat()));
+              setDiningLongitude(String(placeDetails.geometry.location.lng()));
+            }
+            if (placeDetails.name) setDiningPlaceName(placeDetails.name);
+            if (AutocompleteSessionToken) diningSessionTokenRef.current = new AutocompleteSessionToken();
+            (async () => {
+              try {
+                const headers = await getAuthHeaders();
+                await fetch('/api/place-cache', {
+                  method: 'POST',
+                  headers: { ...headers, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    place_id: placeDetails.place_id,
+                    name: placeDetails.name ?? undefined,
+                    latitude: placeDetails.geometry?.location?.lat(),
+                    longitude: placeDetails.geometry?.location?.lng(),
+                    formatted_address: placeDetails.formatted_address ?? undefined,
+                  }),
+                });
+              } catch (_) {}
+            })();
+          });
+        })();
       });
     }, 100);
     return () => clearTimeout(timer);
-  }, [showDiningForm]);
+  }, [showDiningForm, getAuthHeaders]);
 
-  // Places Autocomplete: 일정(관광지) 폼 주소 필드
+  // Places Autocomplete: 일정(관광지) 폼 — 캐시 조회 → 없으면 Place Details(Basic) 후 캐시 저장 + 구글 검색 링크
   useEffect(() => {
     if (!showItineraryForm) return;
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
     if (!apiKey) return;
     const g = (window as any).google;
     if (!g?.maps?.places?.Autocomplete) return;
+    const container = placesServiceContainerRef.current;
+    if (!container) return;
+    if (!placesServiceRef.current) placesServiceRef.current = new g.maps.places.PlacesService(container);
+    const service = placesServiceRef.current;
+    const AutocompleteSessionToken = g.maps?.places?.AutocompleteSessionToken;
+    if (AutocompleteSessionToken) itinerarySessionTokenRef.current = new AutocompleteSessionToken();
     const timer = setTimeout(() => {
       const el = itineraryAddressInputRef.current;
       if (!el) return;
-      const autocomplete = new g.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+      const opts: { types: string[]; sessionToken?: unknown } = { types: ['establishment', 'geocode'] };
+      if (itinerarySessionTokenRef.current) opts.sessionToken = itinerarySessionTokenRef.current;
+      const autocomplete = new g.maps.places.Autocomplete(el, opts);
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-        if (place.formatted_address) setItineraryAddress(place.formatted_address);
-        if (place.geometry?.location) {
-          setItineraryLatitude(String(place.geometry.location.lat()));
-          setItineraryLongitude(String(place.geometry.location.lng()));
-        }
+        if (!place?.place_id) return;
+        (async () => {
+          try {
+            const headers = await getAuthHeaders();
+            const res = await fetch(`/api/place-cache?placeId=${encodeURIComponent(place.place_id)}`, { headers });
+            const json = await res.json();
+            if (json.cached && json.latitude != null && json.longitude != null) {
+              setItineraryAddress(json.formatted_address ?? '');
+              setItineraryLatitude(String(json.latitude));
+              setItineraryLongitude(String(json.longitude));
+              setItineraryPlaceName(json.name ?? '');
+              if (AutocompleteSessionToken) itinerarySessionTokenRef.current = new AutocompleteSessionToken();
+              return;
+            }
+          } catch (_) {}
+          if (!service) return;
+          const req: { placeId: string; fields: string[]; sessionToken?: unknown } = {
+            placeId: place.place_id,
+            fields: ['place_id', 'name', 'geometry', 'formatted_address'],
+          };
+          if (itinerarySessionTokenRef.current) req.sessionToken = itinerarySessionTokenRef.current;
+          service.getDetails(req, (placeDetails: any, status: string) => {
+            if (status !== 'OK' || !placeDetails) return;
+            if (placeDetails.formatted_address) setItineraryAddress(placeDetails.formatted_address);
+            if (placeDetails.geometry?.location) {
+              setItineraryLatitude(String(placeDetails.geometry.location.lat()));
+              setItineraryLongitude(String(placeDetails.geometry.location.lng()));
+            }
+            if (placeDetails.name) setItineraryPlaceName(placeDetails.name);
+            if (AutocompleteSessionToken) itinerarySessionTokenRef.current = new AutocompleteSessionToken();
+            (async () => {
+              try {
+                const headers = await getAuthHeaders();
+                await fetch('/api/place-cache', {
+                  method: 'POST',
+                  headers: { ...headers, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    place_id: placeDetails.place_id,
+                    name: placeDetails.name ?? undefined,
+                    latitude: placeDetails.geometry?.location?.lat(),
+                    longitude: placeDetails.geometry?.location?.lng(),
+                    formatted_address: placeDetails.formatted_address ?? undefined,
+                  }),
+                });
+              } catch (_) {}
+            })();
+          });
+        })();
       });
     }, 100);
     return () => clearTimeout(timer);
-  }, [showItineraryForm]);
+  }, [showItineraryForm, getAuthHeaders]);
 
   /** 그룹 멤버 표시명 맵 로드 (memberships + profiles) */
   useEffect(() => {
@@ -603,6 +765,7 @@ export function TravelPlannerContent() {
       setItineraryAddress(item.address ?? '');
       setItineraryLatitude(item.latitude != null ? String(item.latitude) : '');
       setItineraryLongitude(item.longitude != null ? String(item.longitude) : '');
+      setItineraryPlaceName('');
     } else {
       setEditingItinerary(null);
       setItineraryDayDate('');
@@ -613,6 +776,7 @@ export function TravelPlannerContent() {
       setItineraryAddress('');
       setItineraryLatitude('');
       setItineraryLongitude('');
+      setItineraryPlaceName('');
     }
     setShowItineraryForm(true);
   };
@@ -820,6 +984,7 @@ export function TravelPlannerContent() {
       setAccMemo(item.memo ?? '');
       setAccLatitude(item.latitude != null ? String(item.latitude) : '');
       setAccLongitude(item.longitude != null ? String(item.longitude) : '');
+      setAccPlaceName('');
     } else {
       setEditingAccommodation(null);
       setAccName('');
@@ -829,6 +994,7 @@ export function TravelPlannerContent() {
       setAccMemo('');
       setAccLatitude('');
       setAccLongitude('');
+      setAccPlaceName('');
     }
     setShowAccommodationForm(true);
   };
@@ -942,6 +1108,7 @@ export function TravelPlannerContent() {
       setDiningAddress(item.address ?? '');
       setDiningLatitude(item.latitude != null ? String(item.latitude) : '');
       setDiningLongitude(item.longitude != null ? String(item.longitude) : '');
+      setDiningPlaceName('');
     } else {
       setEditingDining(null);
       setDiningName('');
@@ -952,6 +1119,7 @@ export function TravelPlannerContent() {
       setDiningAddress('');
       setDiningLatitude('');
       setDiningLongitude('');
+      setDiningPlaceName('');
     }
     setShowDiningForm(true);
   };
@@ -1086,6 +1254,7 @@ export function TravelPlannerContent() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: 20 }}>
+      <div ref={placesServiceContainerRef} style={{ position: 'absolute', left: -9999, width: 1, height: 1 }} aria-hidden="true" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <button
           type="button"
@@ -2006,8 +2175,15 @@ export function TravelPlannerContent() {
                 value={itineraryAddress}
                 onChange={(e) => setItineraryAddress(e.target.value)}
                 placeholder={tt('placeholder_search_address')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 4, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              {itineraryPlaceName && (
+                <div style={{ marginBottom: 12 }}>
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(itineraryPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                    {tt('link_google_search')}
+                  </a>
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
@@ -2298,8 +2474,15 @@ export function TravelPlannerContent() {
                 value={accAddress}
                 onChange={(e) => setAccAddress(e.target.value)}
                 placeholder={tt('placeholder_search_address')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 4, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              {accPlaceName && (
+                <div style={{ marginBottom: 12 }}>
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(accPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                    {tt('link_google_search')}
+                  </a>
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
@@ -2418,8 +2601,15 @@ export function TravelPlannerContent() {
                 value={diningAddress}
                 onChange={(e) => setDiningAddress(e.target.value)}
                 placeholder={tt('placeholder_search_address')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 4, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              {diningPlaceName && (
+                <div style={{ marginBottom: 12 }}>
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(diningPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                    {tt('link_google_search')}
+                  </a>
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도</label>

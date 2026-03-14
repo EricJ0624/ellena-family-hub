@@ -1,0 +1,12 @@
+---
+description: Google Maps API 플랫폼 선택 (웹 vs 앱)
+alwaysApply: false
+globs: **/*map*,**/*place*,**/*travel*
+---
+
+# Google Maps 플랫폼
+
+- **웹**: Maps **JavaScript API** 사용  
+- **앱(모바일)**: Maps **SDK for Mobile** 사용  
+
+자세한 내용은 `docs/GOOGLE_MAPS.md` 참고. 앱용 개발 시 JavaScript API 대신 Mobile SDK로 전환할 것.
