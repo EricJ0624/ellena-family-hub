@@ -4462,25 +4462,47 @@ export default function FamilyHub() {
         lng: longitude
       });
       
-      const { error } = await supabase
-        .from('user_locations')
-        .upsert({
-          user_id: userId,
-          latitude: latitude,
-          longitude: longitude,
-          address: address,
-          last_updated: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+      // ✅ CRITICAL FIX: RPC를 사용하여 서버 측에서 세션 검증 및 저장
+      // 클라이언트 측 RLS 우회를 위해 RPC 함수 사용
+      const { error } = await supabase.rpc('upsert_user_location', {
+        p_user_id: userId,
+        p_latitude: latitude,
+        p_longitude: longitude,
+        p_address: address,
+        p_last_updated: new Date().toISOString()
+      });
 
       if (error) {
         console.warn('❌ [saveLocationToSupabase] 위치 저장 오류:', error);
+        // RPC 함수가 없으면 기존 방식으로 폴백
+        if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
+          console.log('⚠️ [saveLocationToSupabase] RPC 없음 - 기존 upsert 방식 사용');
+          const { error: upsertError } = await supabase
+            .from('user_locations')
+            .upsert({
+              user_id: userId,
+              latitude: latitude,
+              longitude: longitude,
+              address: address,
+              last_updated: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
+            });
+          
+          if (upsertError) {
+            console.warn('❌ [saveLocationToSupabase] upsert 실패:', upsertError);
+          } else {
+            lastLocationUpdateRef.current = now;
+            lastSentLatRef.current = latitude;
+            lastSentLngRef.current = longitude;
+            console.log('✅ [saveLocationToSupabase] 위치 저장 성공 (upsert)');
+          }
+        }
       } else {
         lastLocationUpdateRef.current = now;
         lastSentLatRef.current = latitude;
         lastSentLngRef.current = longitude;
-        console.log('✅ [saveLocationToSupabase] 위치 저장 성공');
+        console.log('✅ [saveLocationToSupabase] 위치 저장 성공 (RPC)');
       }
     } catch (dbError: any) {
       console.warn('❌ [saveLocationToSupabase] 위치 저장 시도 중 오류:', dbError);
