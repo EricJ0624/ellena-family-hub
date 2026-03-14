@@ -29,28 +29,19 @@ export function clearAuthStorage(): void {
   }
 }
 
-function validateStoredSession(raw: string): boolean {
-  try {
-    const parsed = JSON.parse(raw);
-    const session = parsed?.currentSession ?? parsed;
-    const hasRefresh = session?.refresh_token && typeof session.refresh_token === 'string' && session.refresh_token.trim() !== '';
-    const hasAccess = session?.access_token && typeof session.access_token === 'string' && session.access_token.trim() !== '';
-    return !!(hasRefresh && hasAccess);
-  } catch {
-    return false;
-  }
-}
-
-// Supabase 초기화 전에 두 저장소의 손상된 세션 데이터 정리
-// 근본 원인 해결: Supabase가 초기화될 때 유효하지 않은 세션 데이터로 인한 에러 방지
+// Supabase 초기화 전에 두 저장소의 명백히 손상된(JSON 파싱 실패) 세션만 정리
 if (typeof window !== 'undefined') {
   try {
     for (const storage of [localStorage, sessionStorage]) {
       const stored = storage.getItem(AUTH_STORAGE_KEY);
-      if (stored && !validateStoredSession(stored)) {
-        storage.removeItem(AUTH_STORAGE_KEY);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('손상된 세션 감지 - 저장소 정리됨');
+      if (stored) {
+        try {
+          JSON.parse(stored);
+        } catch {
+          storage.removeItem(AUTH_STORAGE_KEY);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('JSON 파싱 불가 세션 제거됨');
+          }
         }
       }
     }

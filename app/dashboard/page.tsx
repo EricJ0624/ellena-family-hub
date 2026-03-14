@@ -651,24 +651,17 @@ export default function FamilyHub() {
     // Supabase 인증 확인
     const checkAuth = async () => {
       try {
-        // getSession() 호출 전에 두 저장소의 세션 데이터 검증 (로그인 상태 유지 여부에 따라 localStorage 또는 sessionStorage 사용)
+        // getSession() 호출 전에 두 저장소의 명백히 손상된(JSON 파싱 실패) 세션만 정리
         if (typeof window !== 'undefined') {
           try {
-            const validate = (raw: string) => {
-              try {
-                const parsed = JSON.parse(raw);
-                const session = parsed?.currentSession ?? parsed;
-                const hasRefresh = session?.refresh_token && typeof session.refresh_token === 'string' && session.refresh_token.trim() !== '';
-                const hasAccess = session?.access_token && typeof session.access_token === 'string' && session.access_token.trim() !== '';
-                return !!(hasRefresh && hasAccess);
-              } catch {
-                return false;
-              }
-            };
             for (const storage of [localStorage, sessionStorage]) {
               const stored = storage.getItem(AUTH_STORAGE_KEY);
-              if (stored && !validate(stored)) {
-                storage.removeItem(AUTH_STORAGE_KEY);
+              if (stored) {
+                try {
+                  JSON.parse(stored);
+                } catch {
+                  storage.removeItem(AUTH_STORAGE_KEY);
+                }
               }
             }
           } catch {
