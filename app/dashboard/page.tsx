@@ -4466,6 +4466,7 @@ export default function FamilyHub() {
       // 클라이언트 측 RLS 우회를 위해 RPC 함수 사용
       const { error } = await supabase.rpc('upsert_user_location', {
         p_user_id: userId,
+        p_group_id: currentGroupId,
         p_latitude: latitude,
         p_longitude: longitude,
         p_address: address,
@@ -4481,6 +4482,7 @@ export default function FamilyHub() {
             .from('user_locations')
             .upsert({
               user_id: userId,
+              group_id: currentGroupId,
               latitude: latitude,
               longitude: longitude,
               address: address,
