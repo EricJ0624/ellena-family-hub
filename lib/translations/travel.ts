@@ -94,6 +94,8 @@ export type TravelTranslations = {
   addition: string;
   save: string;
   add: string;
+  save_only: string;
+  save_and_add_to_itinerary: string;
   cancel: string;
   member_fallback: string;
   marker_accommodation: string;
@@ -208,6 +210,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     addition: '추가',
     save: '저장',
     add: '추가',
+    save_only: '저장만',
+    save_and_add_to_itinerary: '저장 및 일정으로 추가',
     cancel: '취소',
     member_fallback: '멤버',
     marker_accommodation: '숙',
@@ -320,6 +324,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     addition: 'Addition',
     save: 'Save',
     add: 'Add',
+    save_only: 'Save only',
+    save_and_add_to_itinerary: 'Save and add to itinerary',
     cancel: 'Cancel',
     member_fallback: 'Member',
     marker_accommodation: 'A',
@@ -432,6 +438,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     addition: '追加',
     save: '保存',
     add: '追加',
+    save_only: '保存のみ',
+    save_and_add_to_itinerary: '保存して日程に追加',
     cancel: 'キャンセル',
     member_fallback: 'メンバー',
     marker_accommodation: '宿',
@@ -544,6 +552,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     addition: '追加',
     save: '保存',
     add: '添加',
+    save_only: '仅保存',
+    save_and_add_to_itinerary: '保存并添加到日程',
     cancel: '取消',
     member_fallback: '成员',
     marker_accommodation: '宿',
@@ -656,6 +666,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     addition: '追加',
     save: '儲存',
     add: '新增',
+    save_only: '僅儲存',
+    save_and_add_to_itinerary: '儲存並加入行程',
     cancel: '取消',
     member_fallback: '成員',
     marker_accommodation: '宿',

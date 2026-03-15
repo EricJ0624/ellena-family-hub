@@ -109,6 +109,10 @@ export function TravelPlannerContent() {
   const accSessionTokenRef = useRef<unknown>(null);
   const diningSessionTokenRef = useRef<unknown>(null);
   const itinerarySessionTokenRef = useRef<unknown>(null);
+  const accommodationFormRef = useRef<HTMLFormElement>(null);
+  const createAccommodationAddToItineraryRef = useRef(true);
+  const diningFormRef = useRef<HTMLFormElement>(null);
+  const createDiningAddToItineraryRef = useRef(true);
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -1017,7 +1021,7 @@ export function TravelPlannerContent() {
     setShowAccommodationForm(true);
   };
 
-  const handleCreateAccommodation = async (e: React.FormEvent) => {
+  const handleCreateAccommodation = async (e: React.FormEvent, addToItinerary: boolean) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !accName.trim() || !accCheckIn || !accCheckOut) {
       alert(tt('alert_acc_required'));
@@ -1042,6 +1046,7 @@ export function TravelPlannerContent() {
           memo: accMemo.trim() || undefined,
           latitude: accLatitude.trim() ? Number(accLatitude) : undefined,
           longitude: accLongitude.trim() ? Number(accLongitude) : undefined,
+          addToItinerary,
         }),
       });
       const json = await res.json();
@@ -1142,7 +1147,7 @@ export function TravelPlannerContent() {
     setShowDiningForm(true);
   };
 
-  const handleCreateDining = async (e: React.FormEvent) => {
+  const handleCreateDining = async (e: React.FormEvent, addToItinerary: boolean) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !diningName.trim() || !diningDayDate) {
       alert(tt('alert_dining_required'));
@@ -1164,6 +1169,7 @@ export function TravelPlannerContent() {
           address: diningAddress.trim() || undefined,
           latitude: diningLatitude.trim() ? Number(diningLatitude) : undefined,
           longitude: diningLongitude.trim() ? Number(diningLongitude) : undefined,
+          addToItinerary,
         }),
       });
       const json = await res.json();
@@ -2578,7 +2584,7 @@ export function TravelPlannerContent() {
                 <X style={{ width: 20, height: 20 }} />
               </button>
             </div>
-            <form onSubmit={editingAccommodation ? handleUpdateAccommodation : handleCreateAccommodation} style={{ overflow: 'hidden', minWidth: 0 }}>
+            <form ref={accommodationFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAccommodation) handleUpdateAccommodation(e); else handleCreateAccommodation(e, createAccommodationAddToItineraryRef.current); }} style={{ overflow: 'hidden', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_acc_name')}</label>
               <input
                 value={accName}
@@ -2653,12 +2659,25 @@ export function TravelPlannerContent() {
                 placeholder={tt('placeholder_optional')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => setShowAccommodationForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>{tt('cancel')}</button>
-                <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  {editingAccommodation ? tt('save') : tt('add')}
-                </button>
+                {editingAccommodation ? (
+                  <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    {tt('save')}
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" disabled={submitting} onClick={() => { createAccommodationAddToItineraryRef.current = false; accommodationFormRef.current?.requestSubmit(); }} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                      {tt('save_only')}
+                    </button>
+                    <button type="button" disabled={submitting} onClick={() => { createAccommodationAddToItineraryRef.current = true; accommodationFormRef.current?.requestSubmit(); }} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                      {tt('save_and_add_to_itinerary')}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -2699,7 +2718,7 @@ export function TravelPlannerContent() {
                 <X style={{ width: 20, height: 20 }} />
               </button>
             </div>
-            <form onSubmit={editingDining ? handleUpdateDining : handleCreateDining} style={{ overflow: 'hidden', minWidth: 0 }}>
+            <form ref={diningFormRef} onSubmit={(e) => { e.preventDefault(); if (editingDining) handleUpdateDining(e); else handleCreateDining(e, createDiningAddToItineraryRef.current); }} style={{ overflow: 'hidden', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_name')}</label>
               <input
                 value={diningName}
@@ -2780,12 +2799,25 @@ export function TravelPlannerContent() {
                 placeholder={tt('placeholder_optional')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => setShowDiningForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>{tt('cancel')}</button>
-                <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  {editingDining ? tt('save') : tt('add')}
-                </button>
+                {editingDining ? (
+                  <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    {tt('save')}
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" disabled={submitting} onClick={() => { createDiningAddToItineraryRef.current = false; diningFormRef.current?.requestSubmit(); }} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                      {tt('save_only')}
+                    </button>
+                    <button type="button" disabled={submitting} onClick={() => { createDiningAddToItineraryRef.current = true; diningFormRef.current?.requestSubmit(); }} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                      {tt('save_and_add_to_itinerary')}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
