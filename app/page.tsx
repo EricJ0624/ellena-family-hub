@@ -12,6 +12,7 @@ import { AppTitleContent } from '@/app/components/AppTitleContent';
 type Mode = 'login' | 'signup' | 'forgot';
 
 const LAST_EMAIL_KEY = 'SFH_LAST_EMAIL';
+const INVITE_STORAGE_KEY = 'SFH_INVITE_CODE';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,6 +37,18 @@ export default function LoginPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // 초대 링크(?invite= 또는 ?invite_code=) 쿼리 읽어서 sessionStorage에 저장 (가입/로그인 후 온보딩에서 사용)
+  useEffect(() => {
+    if (!isMounted || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get('invite')?.trim() || params.get('invite_code')?.trim();
+    if (invite) {
+      try {
+        window.sessionStorage.setItem(INVITE_STORAGE_KEY, invite);
+      } catch (_) {}
+    }
+  }, [isMounted]);
 
   // 로그인 타이틀 한 줄 맞춤: 넘치면 폰트 자동 축소, 리사이즈 시 재계산 (대시보드와 동일 방식)
   useEffect(() => {
@@ -80,7 +93,13 @@ export default function LoginPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          router.push('/onboarding');
+          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const invite =
+            (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
+            params?.get('invite')?.trim() ||
+            params?.get('invite_code')?.trim() ||
+            null;
+          router.push(invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding');
         }
       } catch {
         // ignore
@@ -164,10 +183,18 @@ export default function LoginPage() {
 
           const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
 
+          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const invite =
+            (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
+            params?.get('invite')?.trim() ||
+            params?.get('invite_code')?.trim() ||
+            null;
+          const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
+
           if (isAdmin) {
             // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
             if (hasGroups) {
-              router.push('/onboarding');
+              router.push(onboardingPath);
             } else {
               router.push('/admin');
             }
@@ -175,7 +202,7 @@ export default function LoginPage() {
           }
 
           // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
-          router.push('/onboarding');
+          router.push(onboardingPath);
         } else {
           setErrorMsg(t('error_session_failed'));
         }
@@ -290,7 +317,13 @@ export default function LoginPage() {
         const isNewUserSession = session?.user?.id === data.user?.id;
         if (session && isNewUserSession) {
           await new Promise(resolve => setTimeout(resolve, 100));
-          router.push('/onboarding');
+          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const invite =
+            (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
+            params?.get('invite')?.trim() ||
+            params?.get('invite_code')?.trim() ||
+            null;
+          router.push(invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding');
         } else {
           setSuccessMsg(t('success_signup_done'));
           setTimeout(() => {

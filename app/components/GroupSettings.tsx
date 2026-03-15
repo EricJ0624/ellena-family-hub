@@ -62,6 +62,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   });
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
   const [copied, setCopied] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +176,22 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('클립보드 복사 실패:', err);
+      setError(gst('copy_failed'));
+    }
+  };
+
+  // 초대 링크 복사 (가입 + 그룹 가입 한 번에 가능한 URL)
+  const handleCopyInviteLink = async () => {
+    if (!inviteCode) return;
+
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const link = `${origin}/?invite=${encodeURIComponent(inviteCode)}`;
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (err) {
+      console.error('초대 링크 복사 실패:', err);
       setError(gst('copy_failed'));
     }
   };
@@ -436,6 +453,35 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                         <>
                           <Copy style={{ width: '16px', height: '16px' }} />
                           {gst('copy_btn')}
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCopyInviteLink}
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#059669',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                      aria-label={gst('invite_link_copy_aria')}
+                    >
+                      {copiedLink ? (
+                        <>
+                          <CheckCircle style={{ width: '16px', height: '16px' }} />
+                          {gst('copied')}
+                        </>
+                      ) : (
+                        <>
+                          <Copy style={{ width: '16px', height: '16px' }} />
+                          {gst('invite_link_copy_btn')}
                         </>
                       )}
                     </button>

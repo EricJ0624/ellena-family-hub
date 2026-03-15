@@ -82,6 +82,12 @@ export default function OnboardingPage() {
           typeof window !== 'undefined'
             ? new URLSearchParams(window.location.search).get('from') === 'admin'
             : false;
+        const inviteParam =
+          typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('invite')?.trim() ||
+              new URLSearchParams(window.location.search).get('invite_code')?.trim() ||
+              ''
+            : '';
         setFromAdmin(fromAdminParam);
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
@@ -180,6 +186,39 @@ export default function OnboardingPage() {
           const emailNickname = user.email?.split('@')[0] || '사용자';
           setNickname(emailNickname);
           setGroupName(`${emailNickname}의 가족`);
+        }
+
+        // 초대 링크로 진입한 경우: join 단계로 이동, 코드 채우기, 그룹 미리보기 자동 검증
+        if (inviteParam) {
+          setStep('join');
+          setInviteCode(inviteParam);
+          setError(null);
+          setSuccess(null);
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              const res = await fetch('/api/group/preview-by-invite-code', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ invite_code: inviteParam }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (res.ok && data.id) {
+                setGroupPreview({
+                  id: data.id,
+                  name: data.name,
+                  member_count: data.member_count ?? 0,
+                  invite_code: data.invite_code,
+                });
+                setSuccess(ot('success_found'));
+              }
+            }
+          } catch (_) {
+            // 검증 실패해도 코드는 채워진 상태로 join 단계 표시
+          }
         }
 
         setLoading(false);

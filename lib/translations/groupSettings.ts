@@ -13,6 +13,8 @@ export type GroupSettingsTranslations = {
   language_hint: string;
   invite_code: string;
   invite_copy_aria: string;
+  invite_link_copy_btn: string;
+  invite_link_copy_aria: string;
   invite_refresh_aria: string;
   copied: string;
   copy_btn: string;
@@ -42,6 +44,8 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     language_hint: '그룹 대시보드의 타이틀·본문 폰트에 적용됩니다.',
     invite_code: '초대 코드',
     invite_copy_aria: '초대 코드 복사',
+    invite_link_copy_btn: '초대 링크 복사',
+    invite_link_copy_aria: '초대 링크 복사',
     invite_refresh_aria: '초대 코드 갱신',
     copied: '복사됨',
     copy_btn: '복사',
@@ -69,6 +73,8 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     language_hint: 'Applied to title and body fonts on the group dashboard.',
     invite_code: 'Invite code',
     invite_copy_aria: 'Copy invite code',
+    invite_link_copy_btn: 'Copy invite link',
+    invite_link_copy_aria: 'Copy invite link',
     invite_refresh_aria: 'Refresh invite code',
     copied: 'Copied',
     copy_btn: 'Copy',
@@ -96,6 +102,8 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     language_hint: 'グループのダッシュボードのタイトル・本文フォントに適用されます。',
     invite_code: '招待コード',
     invite_copy_aria: '招待コードをコピー',
+    invite_link_copy_btn: '招待リンクをコピー',
+    invite_link_copy_aria: '招待リンクをコピー',
     invite_refresh_aria: '招待コードを再発行',
     copied: 'コピーしました',
     copy_btn: 'コピー',
@@ -123,6 +131,8 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     language_hint: '应用于群组仪表盘的标题与正文字体。',
     invite_code: '邀请码',
     invite_copy_aria: '复制邀请码',
+    invite_link_copy_btn: '复制邀请链接',
+    invite_link_copy_aria: '复制邀请链接',
     invite_refresh_aria: '重新生成邀请码',
     copied: '已复制',
     copy_btn: '复制',
@@ -150,6 +160,8 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     language_hint: '套用於群組儀表板的標題與內文字型。',
     invite_code: '邀請碼',
     invite_copy_aria: '複製邀請碼',
+    invite_link_copy_btn: '複製邀請連結',
+    invite_link_copy_aria: '複製邀請連結',
     invite_refresh_aria: '重新產生邀請碼',
     copied: '已複製',
     copy_btn: '複製',

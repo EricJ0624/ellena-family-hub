@@ -66,13 +66,15 @@ export default function AuthCallbackPage() {
             .limit(1);
 
           const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+          const invite = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
+          const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
 
           if (isAdmin) {
             // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
-            router.push(hasGroups ? '/onboarding' : '/admin');
+            router.push(hasGroups ? onboardingPath : '/admin');
           } else {
             // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
-            router.push('/onboarding');
+            router.push(onboardingPath);
           }
         } else {
           // 토큰이 없으면 로그인 페이지로 리다이렉트
