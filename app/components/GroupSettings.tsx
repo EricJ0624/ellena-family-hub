@@ -515,6 +515,9 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
                     초대 코드를 복사하여 가족 구성원에게 공유하세요.
                   </p>
+                  <p style={{ fontSize: '12px', color: '#b45309', marginTop: '6px', fontWeight: 500 }}>
+                    {gst('invite_only_family_hint')}
+                  </p>
                   <p style={{ fontSize: '12px', color: '#9333ea', marginTop: '6px', fontWeight: 500 }}>
                     {gst('invite_refresh_hint')}
                   </p>
