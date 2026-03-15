@@ -410,14 +410,51 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                 </th>
                 <td style={{ padding: '12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* 입력창 + 코드 복사 */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* 복사 버튼 + 안내 (다른 버튼들과 왼쪽 정렬) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <button
+                        onClick={handleCopyInviteCode}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          alignSelf: 'flex-start',
+                        }}
+                        aria-label={gst('invite_copy_aria')}
+                      >
+                        {copied ? (
+                          <>
+                            <CheckCircle style={{ width: '16px', height: '16px' }} />
+                            {gst('copied')}
+                          </>
+                        ) : (
+                          <>
+                            <Copy style={{ width: '16px', height: '16px' }} />
+                            {gst('copy_btn')}
+                          </>
+                        )}
+                      </button>
+                      <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                        {gst('invite_share_hint')}
+                      </p>
+                    </div>
+                    {/* 초대 코드 입력창 */}
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                       <input
                         type="text"
                         value={inviteCode}
                         readOnly
                         style={{
                           minWidth: '220px',
+                          maxWidth: '100%',
                           padding: '10px 12px',
                           border: '1px solid #e2e8f0',
                           borderRadius: '8px',
@@ -426,43 +463,8 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                           textAlign: 'center',
                           fontSize: '16px',
                           letterSpacing: '0.12em',
-                          flex: 1,
                         }}
                       />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                        <button
-                          onClick={handleCopyInviteCode}
-                          style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#2563eb',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                          aria-label={gst('invite_copy_aria')}
-                        >
-                          {copied ? (
-                            <>
-                              <CheckCircle style={{ width: '16px', height: '16px' }} />
-                              {gst('copied')}
-                            </>
-                          ) : (
-                            <>
-                              <Copy style={{ width: '16px', height: '16px' }} />
-                              {gst('copy_btn')}
-                            </>
-                          )}
-                        </button>
-                        <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                          {gst('invite_share_hint')}
-                        </p>
-                      </div>
                     </div>
                     {/* 초대 링크 복사 + 안내 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

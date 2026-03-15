@@ -39,7 +39,7 @@ export default function LoginPage() {
   }, []);
 
   // 초대 링크(?invite= 또는 ?invite_code=) 쿼리 읽어서 sessionStorage에 저장 후 URL에서 제거 (Referrer/히스토리 노출 방지)
-  // 형식 검증: 영숫자 1~20자만 저장
+  // 형식 검증: 영숫자 1~20자만 저장. 초대 링크로 들어온 경우 가입하기 탭으로 전환
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -48,6 +48,7 @@ export default function LoginPage() {
       try {
         if (/^[0-9A-Za-z]{1,20}$/.test(raw)) {
           window.sessionStorage.setItem(INVITE_STORAGE_KEY, raw);
+          setMode('signup');
         }
         params.delete('invite');
         params.delete('invite_code');
@@ -55,6 +56,8 @@ export default function LoginPage() {
         const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
         window.history.replaceState({}, '', newUrl);
       } catch (_) {}
+    } else if (window.sessionStorage.getItem(INVITE_STORAGE_KEY)) {
+      setMode('signup');
     }
   }, [isMounted]);
 
@@ -266,9 +269,18 @@ export default function LoginPage() {
 
       const signupNickname = trimmedNickname;
       
-      // 초대 링크로 가입 시: 이메일 인증 후에도 그룹 연결을 위해 user_metadata에 초대 코드 저장
+      // 초대 링크로 가입 시: 이메일 인증 후 그룹 연결을 위해 API로 초대 코드 임시 저장 (user_metadata는 일부 환경에서 가입 실패 유발)
       const rawInvite = typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null;
-      const pendingInviteCode = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : undefined;
+      const pendingInviteCode = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : null;
+      if (pendingInviteCode && typeof window !== 'undefined') {
+        try {
+          await fetch(`${window.location.origin}/api/invite/store-pending`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), invite_code: pendingInviteCode }),
+          });
+        } catch (_) {}
+      }
 
       // SSR 안전성: window 객체가 있을 때만 origin 사용
       const redirectTo = typeof window !== 'undefined' 
@@ -282,8 +294,7 @@ export default function LoginPage() {
           emailRedirectTo: redirectTo,
           data: {
             nickname: signupNickname,
-            full_name: signupNickname,
-            ...(pendingInviteCode && { pending_invite_code: pendingInviteCode }),
+            full_name: signupNickname
           }
         }
       });

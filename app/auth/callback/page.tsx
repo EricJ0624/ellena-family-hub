@@ -66,12 +66,25 @@ export default function AuthCallbackPage() {
             .limit(1);
 
           const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
-          // 초대 링크로 가입한 경우: 이메일 인증 링크가 다른 탭/기기에서 열려도 user_metadata에 저장된 코드 사용
-          const inviteFromMeta = user?.user_metadata?.pending_invite_code;
-          const inviteFromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
-          const invite = (inviteFromMeta && /^[0-9A-Za-z]{1,20}$/.test(String(inviteFromMeta)))
-            ? String(inviteFromMeta)
-            : inviteFromStorage;
+          // 초대 링크로 가입한 경우: API에 임시 저장된 코드 우선 사용 (다른 탭/기기에서 인증해도 동작)
+          let invite: string | null = null;
+          try {
+            const { data: { session: sess } } = await supabase.auth.getSession();
+            if (sess?.access_token) {
+              const res = await fetch(`${window.location.origin}/api/invite/my-pending`, {
+                headers: { Authorization: `Bearer ${sess.access_token}` },
+              });
+              const json = await res.json().catch(() => ({}));
+              const fromApi = json?.invite_code;
+              if (fromApi && /^[0-9A-Za-z]{1,20}$/.test(String(fromApi))) invite = String(fromApi);
+            }
+          } catch (_) {}
+          if (!invite) {
+            const fromMeta = user?.user_metadata?.pending_invite_code;
+            const fromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
+            if (fromMeta && /^[0-9A-Za-z]{1,20}$/.test(String(fromMeta))) invite = String(fromMeta);
+            else if (fromStorage) invite = fromStorage;
+          }
           const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
 
           if (isAdmin) {
