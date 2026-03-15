@@ -319,6 +319,7 @@ export default function FamilyHub() {
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
   const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
+  const dashboardTitleRowRef = useRef<HTMLDivElement>(null); // 타이틀 행 컨테이너 (리사이즈 시 재fit)
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
   const sessionWaitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // 세션 준비 후 위치 로드용
@@ -1119,7 +1120,7 @@ export default function FamilyHub() {
       if (w > 0) {
         fit(el);
       } else {
-        // 레이아웃 미준비: 여러 시점에 재시도 (다양한 기기/환경 대응)
+        // 레이아웃 미준비: 여러 시점에 재시도 (다양한 기기/환경·느린 하이드레이션 대응)
         timeouts.push(setTimeout(() => runFit(el), 0));
         timeouts.push(setTimeout(() => runFit(el), 50));
         timeouts.push(setTimeout(() => runFit(el), 100));
@@ -1127,6 +1128,9 @@ export default function FamilyHub() {
         timeouts.push(setTimeout(() => runFit(el), 400));
         timeouts.push(setTimeout(() => runFit(el), 800));
         timeouts.push(setTimeout(() => runFit(el), 1500));
+        timeouts.push(setTimeout(() => runFit(el), 3000));
+        timeouts.push(setTimeout(() => runFit(el), 5000));
+        timeouts.push(setTimeout(() => runFit(el), 8000));
       }
     };
 
@@ -1137,6 +1141,9 @@ export default function FamilyHub() {
       timeouts.push(setTimeout(runFitForEl, 0));
       ro = new ResizeObserver(runFitForEl);
       ro.observe(el);
+      // 타이틀 행 컨테이너 리사이즈 시에도 재fit (flex 레이아웃 변화·뷰포트 변경 대응)
+      const rowEl = dashboardTitleRowRef.current;
+      if (rowEl) ro.observe(rowEl);
       // 폰트 로드 직후·늦은 로드 대비: ready 후 추가 재실행 + 보험용 늦은 한 번 더
       document.fonts.ready.then(() => {
         runFitForEl();
@@ -1148,6 +1155,8 @@ export default function FamilyHub() {
       timeouts.push(setTimeout(runFitForEl, 1200));
       timeouts.push(setTimeout(runFitForEl, 2500));
       timeouts.push(setTimeout(runFitForEl, 3500)); // 느린/재접속 후 폰트 로드 대비
+      timeouts.push(setTimeout(runFitForEl, 5000));
+      timeouts.push(setTimeout(runFitForEl, 8000)); // 매우 느린 레이아웃/하이드레이션 폴백
       // 재접속 시 폰트 로드 후 타이틀 다시 맞춤 (인터넷 끊겼다 되면 조절 복구)
       const handleOnline = () => {
         if (cancelled.current) return;
@@ -1167,7 +1176,8 @@ export default function FamilyHub() {
         run(el);
         return;
       }
-      if (retryCount < 20) {
+      // ref 미착근 시 재시도 횟수 확대 (느린 마운트·조건부 렌더 대응)
+      if (retryCount < 50) {
         rafId = requestAnimationFrame(() => tryRun(retryCount + 1));
       }
     };
@@ -6322,7 +6332,7 @@ export default function FamilyHub() {
         )}
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '48px' }}>
+        <div ref={dashboardTitleRowRef} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '48px' }}>
           <h1
             ref={dashboardTitleRef}
             style={{
