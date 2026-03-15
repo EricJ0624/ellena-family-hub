@@ -31,10 +31,8 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
   const [animationDuration, setAnimationDuration] = useState(MARQUEE_DURATION_MIN);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // 읽지 않은 공지만 필터링
+  // 읽은 공지는 배너에 표시하지 않음. 미읽음만 표시.
   const unreadAnnouncements = announcements.filter(a => !a.is_read);
-
-  // 무한 스크롤을 위해 공지사항 배열을 2번 반복
   const displayAnnouncements = [...unreadAnnouncements, ...unreadAnnouncements];
 
   // 내용 너비에 비례해 duration 계산 → 항상 같은 px/s 속도 유지
@@ -75,6 +73,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
     }
   };
 
+  // 미읽음이 없으면 배너 숨김 (읽은 공지는 배너에 안 나오는 것이 정상)
   if (!isVisible || unreadAnnouncements.length === 0) {
     return null;
   }
