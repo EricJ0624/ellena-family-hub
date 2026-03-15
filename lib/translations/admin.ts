@@ -148,6 +148,32 @@ export type AdminTranslations = {
   kick_done: string;
   error_kick_msg: string;
   kick_btn: string;
+  confirm_delete_piggy_archive: string;
+  error_piggy_archive_fetch: string;
+  error_piggy_archive_list: string;
+  error_piggy_archive_detail: string;
+  error_piggy_archive_delete: string;
+  error_piggy_archive_delete_msg: string;
+  piggy_archive_section_title: string;
+  piggy_archive_deleted_at: string;
+  piggy_archive_account_name: string;
+  piggy_archive_deleted_by: string;
+  no_piggy_archives: string;
+  archive_delete_btn: string;
+  no_transactions: string;
+  no_groups: string;
+  select_group_option: string;
+  no_photos: string;
+  users_empty_hint: string;
+  announcement_title_content_required: string;
+  answer_required: string;
+  answer_save_failed: string;
+  answer_saved: string;
+  answer_save_error: string;
+  answer_content_required: string;
+  select_group_label: string;
+  piggy_archive_transactions_title: string;
+  view_transactions_btn: string;
 }
 
 const auditHeadersKo = ['일시', '작업자(admin_id)', '작업', '리소스 유형', '리소스 ID', '그룹 ID', '대상 사용자', '상세', 'IP', 'User-Agent'];
@@ -301,6 +327,32 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: '멤버가 그룹에서 추방되었습니다.',
     error_kick_msg: '멤버 추방 중 오류가 발생했습니다.',
     kick_btn: '추방',
+    confirm_delete_piggy_archive: '이 보관 내역을 삭제하시겠습니까? 삭제된 거래 기록은 복구할 수 없습니다.',
+    error_piggy_archive_fetch: '보관 내역 조회 실패',
+    error_piggy_archive_list: '저금통 보관 내역 조회에 실패했습니다.',
+    error_piggy_archive_detail: '상세 조회 실패',
+    error_piggy_archive_delete: '삭제 실패',
+    error_piggy_archive_delete_msg: '보관 내역 삭제에 실패했습니다.',
+    piggy_archive_section_title: '저금통 보관 내역 (삭제된 저금통 거래)',
+    piggy_archive_deleted_at: '삭제일시',
+    piggy_archive_account_name: '저금통 이름',
+    piggy_archive_deleted_by: '삭제한 관리자',
+    no_piggy_archives: '삭제된 저금통 보관 내역이 없습니다.',
+    archive_delete_btn: '삭제',
+    no_transactions: '거래 내역이 없습니다.',
+    no_groups: '그룹이 없습니다.',
+    select_group_option: '그룹을 선택하세요',
+    no_photos: '사진이 없습니다.',
+    users_empty_hint: '가족 그룹을 생성하거나 초대 코드로 가입할 수 있습니다.',
+    announcement_title_content_required: '최소 한 개 언어로 제목과 내용을 입력해주세요.',
+    answer_required: '답변을 입력해주세요.',
+    answer_save_failed: '답변 저장 실패',
+    answer_saved: '답변이 저장되었습니다.',
+    answer_save_error: '답변 저장에 실패했습니다.',
+    answer_content_required: '답변 내용을 입력해주세요.',
+    select_group_label: '관리할 그룹 선택',
+    piggy_archive_transactions_title: '보관된 거래 내역',
+    view_transactions_btn: '거래 내역 보기',
   },
   en: {
     page_title: 'Admin',
@@ -450,6 +502,32 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: 'Member has been removed from the group.',
     error_kick_msg: 'Failed to remove member from group.',
     kick_btn: 'Remove',
+    confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
+    error_piggy_archive_fetch: 'Failed to fetch archive.',
+    error_piggy_archive_list: 'Failed to load piggy archives.',
+    error_piggy_archive_detail: 'Failed to load detail.',
+    error_piggy_archive_delete: 'Delete failed.',
+    error_piggy_archive_delete_msg: 'Failed to delete archive.',
+    piggy_archive_section_title: 'Piggy archives (deleted piggy transactions)',
+    piggy_archive_deleted_at: 'Deleted at',
+    piggy_archive_account_name: 'Account name',
+    piggy_archive_deleted_by: 'Deleted by',
+    no_piggy_archives: 'No piggy archives.',
+    archive_delete_btn: 'Delete',
+    no_transactions: 'No transactions.',
+    no_groups: 'No groups.',
+    select_group_option: 'Select a group',
+    no_photos: 'No photos.',
+    users_empty_hint: 'You can create a family group or join with an invite code.',
+    announcement_title_content_required: 'Please enter title and content in at least one language.',
+    answer_required: 'Please enter your answer.',
+    answer_save_failed: 'Failed to save answer.',
+    answer_saved: 'Answer saved.',
+    answer_save_error: 'Failed to save answer.',
+    answer_content_required: 'Please enter the answer content.',
+    select_group_label: 'Select group to manage',
+    piggy_archive_transactions_title: 'Archived transactions',
+    view_transactions_btn: 'View transactions',
   },
   ja: {
     page_title: '管理画面',
@@ -599,6 +677,32 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: 'メンバーをグループから削除しました。',
     error_kick_msg: 'メンバーの削除に失敗しました。',
     kick_btn: '削除',
+    confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
+    error_piggy_archive_fetch: 'Failed to fetch archive.',
+    error_piggy_archive_list: 'Failed to load piggy archives.',
+    error_piggy_archive_detail: 'Failed to load detail.',
+    error_piggy_archive_delete: 'Delete failed.',
+    error_piggy_archive_delete_msg: 'Failed to delete archive.',
+    piggy_archive_section_title: 'Piggy archives (deleted piggy transactions)',
+    piggy_archive_deleted_at: 'Deleted at',
+    piggy_archive_account_name: 'Account name',
+    piggy_archive_deleted_by: 'Deleted by',
+    no_piggy_archives: 'No piggy archives.',
+    archive_delete_btn: 'Delete',
+    no_transactions: 'No transactions.',
+    no_groups: 'No groups.',
+    select_group_option: 'Select a group',
+    no_photos: 'No photos.',
+    users_empty_hint: 'You can create a family group or join with an invite code.',
+    announcement_title_content_required: 'Please enter title and content in at least one language.',
+    answer_required: 'Please enter your answer.',
+    answer_save_failed: 'Failed to save answer.',
+    answer_saved: 'Answer saved.',
+    answer_save_error: 'Failed to save answer.',
+    answer_content_required: 'Please enter the answer content.',
+    select_group_label: 'Select group to manage',
+    piggy_archive_transactions_title: 'Archived transactions',
+    view_transactions_btn: 'View transactions',
   },
   'zh-CN': {
     page_title: '管理后台',
@@ -748,6 +852,32 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: '已将该成员移出群组。',
     error_kick_msg: '移除成员失败。',
     kick_btn: '移除',
+    confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
+    error_piggy_archive_fetch: 'Failed to fetch archive.',
+    error_piggy_archive_list: 'Failed to load piggy archives.',
+    error_piggy_archive_detail: 'Failed to load detail.',
+    error_piggy_archive_delete: 'Delete failed.',
+    error_piggy_archive_delete_msg: 'Failed to delete archive.',
+    piggy_archive_section_title: 'Piggy archives (deleted piggy transactions)',
+    piggy_archive_deleted_at: 'Deleted at',
+    piggy_archive_account_name: 'Account name',
+    piggy_archive_deleted_by: 'Deleted by',
+    no_piggy_archives: 'No piggy archives.',
+    archive_delete_btn: 'Delete',
+    no_transactions: 'No transactions.',
+    no_groups: 'No groups.',
+    select_group_option: 'Select a group',
+    no_photos: 'No photos.',
+    users_empty_hint: 'You can create a family group or join with an invite code.',
+    announcement_title_content_required: 'Please enter title and content in at least one language.',
+    answer_required: 'Please enter your answer.',
+    answer_save_failed: 'Failed to save answer.',
+    answer_saved: 'Answer saved.',
+    answer_save_error: 'Failed to save answer.',
+    answer_content_required: 'Please enter the answer content.',
+    select_group_label: 'Select group to manage',
+    piggy_archive_transactions_title: 'Archived transactions',
+    view_transactions_btn: 'View transactions',
   },
   'zh-TW': {
     page_title: '管理後台',
@@ -897,6 +1027,32 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: '已將該成員移出群組。',
     error_kick_msg: '移除成員失敗。',
     kick_btn: '移除',
+    confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
+    error_piggy_archive_fetch: 'Failed to fetch archive.',
+    error_piggy_archive_list: 'Failed to load piggy archives.',
+    error_piggy_archive_detail: 'Failed to load detail.',
+    error_piggy_archive_delete: 'Delete failed.',
+    error_piggy_archive_delete_msg: 'Failed to delete archive.',
+    piggy_archive_section_title: 'Piggy archives (deleted piggy transactions)',
+    piggy_archive_deleted_at: 'Deleted at',
+    piggy_archive_account_name: 'Account name',
+    piggy_archive_deleted_by: 'Deleted by',
+    no_piggy_archives: 'No piggy archives.',
+    archive_delete_btn: 'Delete',
+    no_transactions: 'No transactions.',
+    no_groups: 'No groups.',
+    select_group_option: 'Select a group',
+    no_photos: 'No photos.',
+    users_empty_hint: 'You can create a family group or join with an invite code.',
+    announcement_title_content_required: 'Please enter title and content in at least one language.',
+    answer_required: 'Please enter your answer.',
+    answer_save_failed: 'Failed to save answer.',
+    answer_saved: 'Answer saved.',
+    answer_save_error: 'Failed to save answer.',
+    answer_content_required: 'Please enter the answer content.',
+    select_group_label: 'Select group to manage',
+    piggy_archive_transactions_title: 'Archived transactions',
+    view_transactions_btn: 'View transactions',
   },
 };
 

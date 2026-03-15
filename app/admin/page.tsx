@@ -1363,7 +1363,7 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '보관 내역 조회 실패');
+      if (!response.ok) throw new Error(result.error || at('error_piggy_archive_fetch'));
       const list = result.data?.snapshots ?? [];
       setPiggyArchivesSnapshots(list.map((s: { id: string; group_id: string; user_id: string; user_nickname: string; deleted_at: string; deleted_by: string | null; deleted_by_nickname: string | null; account_name: string | null }) => ({
         id: s.id,
@@ -1378,7 +1378,7 @@ export default function AdminPage() {
       })));
     } catch (err: any) {
       console.error('저금통 보관 목록 로드 오류:', err);
-      setError(err.message || '저금통 보관 내역 조회에 실패했습니다.');
+      setError(err.message || at('error_piggy_archive_list'));
       setPiggyArchivesSnapshots([]);
     } finally {
       setPiggyArchivesLoading(false);
@@ -1396,7 +1396,7 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '상세 조회 실패');
+      if (!response.ok) throw new Error(result.error || at('error_piggy_archive_detail'));
       setPiggyArchivesDetail(result.data ?? null);
     } catch (err: any) {
       console.error('저금통 보관 상세 로드 오류:', err);
@@ -1407,7 +1407,7 @@ export default function AdminPage() {
   }, []);
 
   const deletePiggyArchivesSnapshot = useCallback(async (groupId: string, snapshotId: string) => {
-    if (!confirm('이 보관 내역을 삭제하시겠습니까? 삭제된 거래 기록은 복구할 수 없습니다.')) return;
+    if (!confirm(at('confirm_delete_piggy_archive'))) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -1419,7 +1419,7 @@ export default function AdminPage() {
         { method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` } }
       );
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '삭제 실패');
+      if (!response.ok) throw new Error(result.error || at('error_piggy_archive_delete'));
       if (piggyArchivesDetailId === snapshotId) {
         setPiggyArchivesDetailId(null);
         setPiggyArchivesDetail(null);
@@ -1427,7 +1427,7 @@ export default function AdminPage() {
       loadPiggyArchivesSnapshots(groupId);
     } catch (err: any) {
       console.error('저금통 보관 내역 삭제 오류:', err);
-      setError(err.message || '보관 내역 삭제에 실패했습니다.');
+      setError(err.message || at('error_piggy_archive_delete_msg'));
     }
   }, [piggyArchivesDetailId]);
 
@@ -2241,7 +2241,7 @@ export default function AdminPage() {
                     color: '#64748b',
                     marginBottom: '16px',
                   }}>
-                    가족 그룹을 생성하거나 초대 코드로 가입할 수 있습니다.
+                    {at('users_empty_hint')}
                   </div>
                   <button
                     onClick={() => router.push('/onboarding?from=admin')}
@@ -2984,7 +2984,7 @@ export default function AdminPage() {
                     color: '#94a3b8',
                   }}>
                     <Settings style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                    <p>그룹이 없습니다.</p>
+                    <p>{at('no_groups')}</p>
                   </div>
                 )}
               </div>
@@ -3008,7 +3008,7 @@ export default function AdminPage() {
                     color: '#475569',
                     marginBottom: '8px',
                   }}>
-                    관리할 그룹 선택
+                    {at('select_group_label')}
                   </label>
                   <select
                     value={selectedGroupId || ''}
@@ -3032,7 +3032,7 @@ export default function AdminPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    <option value="">그룹을 선택하세요</option>
+                    <option value="">{at('select_group_option')}</option>
                     {/* 관리 가능한 그룹만 표시 */}
                     {manageableGroups.map((group) => (
                       <option key={group.id} value={group.id}>
@@ -3047,7 +3047,7 @@ export default function AdminPage() {
                       color: '#f59e0b',
                       fontStyle: 'italic',
                     }}>
-                      관리할 수 있는 그룹이 없습니다. 그룹 소유자이거나 관리자로 등록된 그룹만 관리할 수 있습니다.
+                      {at('no_manageable_groups')}
                     </p>
                   )}
                 </div>
@@ -3708,7 +3708,7 @@ export default function AdminPage() {
                             color: '#94a3b8',
                           }}>
                             <ImageIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                            <p>사진이 없습니다.</p>
+                            <p>{at('no_photos')}</p>
                           </div>
                         )}
                       </div>
@@ -4035,7 +4035,7 @@ export default function AdminPage() {
                               color: '#94a3b8',
                             }}>
                               <KeyRound style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                              <p>접근 요청이 없습니다.</p>
+                              <p>{at('no_access_requests')}</p>
                             </div>
                           )}
                         </div>
@@ -4046,17 +4046,17 @@ export default function AdminPage() {
                     {groupAdminTab === 'piggy-archives' && selectedGroupId && (
                       <div>
                         <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px' }}>
-                          저금통 보관 내역 (삭제된 저금통 거래)
+                          {at('piggy_archive_section_title')}
                         </h2>
                         <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '24px' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                             <thead>
                               <tr style={{ backgroundColor: '#f1f5f9' }}>
-                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제일시</th>
-                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>아이(별명)</th>
-                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>저금통 이름</th>
-                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>삭제한 관리자</th>
-                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>동작</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{at('piggy_archive_deleted_at')}</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{at('nickname')}</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{at('piggy_archive_account_name')}</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{at('piggy_archive_deleted_by')}</th>
+                                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{at('actions')}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -4064,13 +4064,13 @@ export default function AdminPage() {
                                 <tr>
                                   <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
                                     <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-                                    로딩 중…
+                                    {at('loading')}
                                   </td>
                                 </tr>
                               ) : piggyArchivesSnapshots.length === 0 ? (
                                 <tr>
                                   <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                                    삭제된 저금통 보관 내역이 없습니다.
+                                    {at('no_piggy_archives')}
                                   </td>
                                 </tr>
                               ) : (
@@ -4097,7 +4097,7 @@ export default function AdminPage() {
                                             cursor: 'pointer',
                                           }}
                                         >
-                                          거래 내역 보기
+                                          {at('view_transactions_btn')}
                                         </button>
                                         <button
                                           type="button"
@@ -4112,7 +4112,7 @@ export default function AdminPage() {
                                             cursor: 'pointer',
                                           }}
                                         >
-                                          삭제
+                                          {at('archive_delete_btn')}
                                         </button>
                                       </div>
                                     </td>
@@ -4125,7 +4125,7 @@ export default function AdminPage() {
                         {piggyArchivesDetailId && (
                           <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', backgroundColor: '#f8fafc' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>보관된 거래 내역</h3>
+                              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{at('piggy_archive_transactions_title')}</h3>
                               <button
                                 type="button"
                                 onClick={() => { setPiggyArchivesDetailId(null); setPiggyArchivesDetail(null); }}
@@ -4137,7 +4137,7 @@ export default function AdminPage() {
                             {piggyArchivesDetailLoading ? (
                               <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
                                 <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-                                로딩 중…
+                                {at('loading')}
                               </div>
                             ) : piggyArchivesDetail && (piggyArchivesDetail.walletTransactions.length > 0 || piggyArchivesDetail.bankTransactions.length > 0) ? (
                               <>
@@ -4197,7 +4197,7 @@ export default function AdminPage() {
                                 )}
                               </>
                             ) : (
-                              <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>거래 내역이 없습니다.</p>
+                              <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>{at('no_transactions')}</p>
                             )}
                           </div>
                         )}
@@ -4702,7 +4702,7 @@ export default function AdminPage() {
                             }
                             const keys = Object.keys(titleObj);
                             if (keys.length === 0) {
-                              alert(adminLang === 'ko' ? '최소 한 개 언어로 제목과 내용을 입력해주세요.' : 'Please enter title and content in at least one language.');
+                              alert(at('announcement_title_content_required'));
                               return;
                             }
 
@@ -5081,7 +5081,7 @@ export default function AdminPage() {
                         <button
                           onClick={async () => {
                             if (!ticketAnswer.trim()) {
-                              alert('답변을 입력해주세요.');
+                              alert(at('answer_required'));
                               return;
                             }
 
@@ -5108,16 +5108,16 @@ export default function AdminPage() {
                               const result = await response.json();
 
                               if (!response.ok) {
-                                throw new Error(result.error || '답변 저장 실패');
+                                throw new Error(result.error || at('answer_save_failed'));
                               }
 
-                              alert('답변이 저장되었습니다.');
+                              alert(at('answer_saved'));
                               setEditingTicket(null);
                               setTicketAnswer('');
                               loadAllSupportTickets();
                             } catch (err: any) {
                               console.error('답변 저장 오류:', err);
-                              alert(err.message || '답변 저장에 실패했습니다.');
+                              alert(err.message || at('answer_save_error'));
                             }
                           }}
                           style={{
@@ -5368,7 +5368,7 @@ export default function AdminPage() {
                         <button
                           onClick={async () => {
                             if (!ticketAnswer.trim()) {
-                              alert('답변 내용을 입력해주세요.');
+                              alert(at('answer_content_required'));
                               return;
                             }
 
@@ -5759,7 +5759,7 @@ console.error(at('error_revoke_failed'), error);
                       color: '#94a3b8',
                     }}>
                       <KeyRound style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-                      <p>접근 요청이 없습니다.</p>
+                      <p>{at('no_access_requests')}</p>
                     </div>
                   )}
                 </div>
@@ -5827,7 +5827,7 @@ console.error(at('error_revoke_failed'), error);
                             fontFamily: 'inherit',
                           }}
                         >
-                          <option value="">그룹을 선택하세요</option>
+                          <option value="">{at('select_group_option')}</option>
                           {groups.map((group) => (
                             <option key={group.id} value={group.id}>
                               {group.name}
