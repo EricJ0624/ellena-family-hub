@@ -5850,37 +5850,23 @@ export default function FamilyHub() {
         return;
       }
 
-      // 역할이 확정되면 해당 API 사용. 역할이 아직 null이면 관리자 API 먼저 시도 (소유자는 memberships에 없을 수 있어 멤버 API에서 403 나는 경우 방지)
+      // 역할에 따라 API 분기 (관리자/소유자 → group-admin, 그 외 → member)
       const isAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
-      const roleUnknown = groupUserRole == null && !groupIsOwner;
-
-      const tryFetch = (url: string) =>
-        fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-      let apiUrl = isAdmin
+      const apiUrl = isAdmin
         ? `/api/group-admin/announcements?group_id=${currentGroupId}`
         : `/api/announcements?group_id=${currentGroupId}`;
-      if (roleUnknown) apiUrl = `/api/group-admin/announcements?group_id=${currentGroupId}`;
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('[공지] 요청:', { api: roleUnknown ? 'group-admin(역할미정)' : isAdmin ? 'group-admin' : 'member', groupId: currentGroupId, role: groupUserRole, isOwner: groupIsOwner });
+        console.log('[공지] 요청:', { api: isAdmin ? 'group-admin' : 'member', groupId: currentGroupId, role: groupUserRole, isOwner: groupIsOwner });
       }
 
-      let response = await tryFetch(apiUrl);
-
-      // 역할 미정 상태에서 403이면 멤버 API로 한 번 더 시도 (일반 멤버일 수 있음)
-      if (roleUnknown && response.status === 403) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[공지] 403 → 멤버 API로 재시도');
-        }
-        response = await tryFetch(`/api/announcements?group_id=${currentGroupId}`);
-      }
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (response.ok) {
         const result = await response.json();
