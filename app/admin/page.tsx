@@ -6,8 +6,10 @@ import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAdminTranslation, getAdminAuditHeaders } from '@/lib/translations/admin';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { 
   Users, 
+  User,
   UserPlus, 
   UserX, 
   Settings, 
@@ -183,6 +185,8 @@ export default function AdminPage() {
   }, []);
   const at = (key: keyof import('@/lib/translations/admin').AdminTranslations) => getAdminTranslation(adminLang, key);
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(adminLang, key);
+  const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
+    getMemberManagementTranslation(adminLang as import('@/lib/language-fonts').LangCode, key);
 
   const setAdminLang = useCallback((lang: AdminLang) => {
     setAdminLangState(lang);
@@ -205,6 +209,8 @@ export default function AdminPage() {
   const [groupAdminTab, setGroupAdminTab] = useState<'dashboard' | 'members' | 'settings' | 'content' | 'announcements' | 'support-tickets' | 'dashboard-access-requests' | 'piggy-archives'>('dashboard');
   const [groupStats, setGroupStats] = useState<GroupStats | null>(null);
   const [groupMembers, setGroupMembers] = useState<MemberInfo[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [updatingRoleUserId, setUpdatingRoleUserId] = useState<string | null>(null);
   const [groupPhotos, setGroupPhotos] = useState<PhotoInfo[]>([]);
   const [groupLocations, setGroupLocations] = useState<LocationInfo[]>([]);
   const [showMemberManagement, setShowMemberManagement] = useState(false);
@@ -314,6 +320,7 @@ export default function AdminPage() {
         }
 
         setIsAuthorized(true);
+        setCurrentUserId(user.id);
         
         // 관리자 접근 시간 업데이트
         await supabase.rpc('update_admin_last_access');
@@ -819,6 +826,49 @@ export default function AdminPage() {
       setLoadingData(false);
     }
   }, []);
+
+  // 그룹 멤버 역할 변경 (관리자 승급 / 일반 멤버로 전환)
+  const handleUpdateMemberRole = useCallback(async (memberUserId: string, newRole: 'ADMIN' | 'MEMBER') => {
+    if (!selectedGroupId || !selectedGroup) return;
+    if (currentUserId === memberUserId) {
+      alert(mmt('cannot_change_self_role'));
+      return;
+    }
+    if (selectedGroup.owner_id === memberUserId) {
+      alert(mmt('cannot_change_owner_role'));
+      return;
+    }
+    try {
+      setUpdatingRoleUserId(memberUserId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert(mmt('session_expired'));
+        return;
+      }
+      const res = await fetch('/api/groups/members/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: memberUserId,
+          groupId: selectedGroupId,
+          newRole,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || mmt('role_change_failed'));
+      alert(data.message || (newRole === 'ADMIN' ? mmt('role_changed_to_admin') : mmt('role_changed_to_member')));
+      await loadGroupMembers(selectedGroupId);
+      await loadGroupStats(selectedGroupId);
+    } catch (err: any) {
+      console.error('역할 변경 오류:', err);
+      alert(err?.message || mmt('role_change_failed'));
+    } finally {
+      setUpdatingRoleUserId(null);
+    }
+  }, [selectedGroupId, selectedGroup, currentUserId, loadGroupMembers, loadGroupStats]);
 
   // 그룹 사진 목록 로드
   const loadGroupPhotos = useCallback(async (groupId: string) => {
@@ -3395,65 +3445,149 @@ export default function AdminPage() {
                                     {new Date(member.joined_at).toLocaleDateString('ko-KR')}
                                   </td>
                                   <td style={{ padding: '12px', textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                      {selectedGroup.owner_id !== member.user_id && (
-                                        <button
-                                          style={{
-                                            padding: '6px 12px',
-                                            backgroundColor: '#fee2e2',
-                                            color: '#991b1b',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            fontWeight: '600',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            transition: 'all 0.2s',
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#fecaca';
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#fee2e2';
-                                          }}
-                                          onClick={async () => {
-                                            const memberDisplay = member.email || member.nickname || at('user_fallback');
-                                            const kickMsg = at('confirm_kick_from_group')
-                                              .replace(/\$\{memberDisplay\}/g, memberDisplay)
-                                              .replace(/\$\{groupName\}/g, selectedGroup.name);
-                                            if (!confirm(kickMsg)) {
-                                              return;
-                                            }
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                      {(() => {
+                                        const isOwnerMember = selectedGroup.owner_id === member.user_id;
+                                        const isCurrentUser = currentUserId === member.user_id;
+                                        const currentUserMembership = currentUserId ? groupMembers.find(m => m.user_id === currentUserId) : null;
+                                        const canChangeRole = currentUserId && selectedGroup && !isOwnerMember && !isCurrentUser &&
+                                          (selectedGroup.owner_id === currentUserId || currentUserMembership?.role === 'ADMIN');
+                                        const isUpdatingRole = updatingRoleUserId === member.user_id;
 
-                                            try {
-                                              setLoadingData(true);
-                                              const { error } = await supabase
-                                                .from('memberships')
-                                                .delete()
-                                                .eq('user_id', member.user_id)
-                                                .eq('group_id', selectedGroupId!);
+                                        return (
+                                          <>
+                                            {canChangeRole && (
+                                              member.role === 'MEMBER' ? (
+                                                <button
+                                                  type="button"
+                                                  title={mmt('promote_title')}
+                                                  disabled={isUpdatingRole}
+                                                  style={{
+                                                    padding: '6px 10px',
+                                                    color: '#7c3aed',
+                                                    backgroundColor: 'transparent',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '6px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    cursor: isUpdatingRole ? 'not-allowed' : 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                  }}
+                                                  onClick={() => {
+                                                    if (confirm(`${member.nickname || member.email || ''}${mmt('promote_confirm')}`)) {
+                                                      handleUpdateMemberRole(member.user_id, 'ADMIN');
+                                                    }
+                                                  }}
+                                                  aria-label={`${member.nickname || member.email} ${mmt('promote_title')}`}
+                                                >
+                                                  {isUpdatingRole ? (
+                                                    <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
+                                                  ) : (
+                                                    <>
+                                                      <Shield style={{ width: '14px', height: '14px' }} />
+                                                      {mmt('promote_title')}
+                                                    </>
+                                                  )}
+                                                </button>
+                                              ) : (
+                                                <button
+                                                  type="button"
+                                                  title={mmt('demote_title')}
+                                                  disabled={isUpdatingRole}
+                                                  style={{
+                                                    padding: '6px 10px',
+                                                    color: '#475569',
+                                                    backgroundColor: 'transparent',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '6px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    cursor: isUpdatingRole ? 'not-allowed' : 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                  }}
+                                                  onClick={() => {
+                                                    if (confirm(`${member.nickname || member.email || ''}${mmt('demote_confirm')}`)) {
+                                                      handleUpdateMemberRole(member.user_id, 'MEMBER');
+                                                    }
+                                                  }}
+                                                  aria-label={`${member.nickname || member.email} ${mmt('demote_title')}`}
+                                                >
+                                                  {isUpdatingRole ? (
+                                                    <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
+                                                  ) : (
+                                                    <>
+                                                      <User style={{ width: '14px', height: '14px' }} />
+                                                      {mmt('demote_title')}
+                                                    </>
+                                                  )}
+                                                </button>
+                                              )
+                                            )}
+                                            {selectedGroup.owner_id !== member.user_id && (
+                                              <button
+                                                style={{
+                                                  padding: '6px 12px',
+                                                  backgroundColor: '#fee2e2',
+                                                  color: '#991b1b',
+                                                  border: 'none',
+                                                  borderRadius: '6px',
+                                                  fontSize: '12px',
+                                                  fontWeight: '600',
+                                                  cursor: 'pointer',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  transition: 'all 0.2s',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                  e.currentTarget.style.backgroundColor = '#fecaca';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                  e.currentTarget.style.backgroundColor = '#fee2e2';
+                                                }}
+                                                onClick={async () => {
+                                                  const memberDisplay = member.email || member.nickname || at('user_fallback');
+                                                  const kickMsg = at('confirm_kick_from_group')
+                                                    .replace(/\$\{memberDisplay\}/g, memberDisplay)
+                                                    .replace(/\$\{groupName\}/g, selectedGroup.name);
+                                                  if (!confirm(kickMsg)) {
+                                                    return;
+                                                  }
 
-                                              if (error) throw error;
+                                                  try {
+                                                    setLoadingData(true);
+                                                    const { error } = await supabase
+                                                      .from('memberships')
+                                                      .delete()
+                                                      .eq('user_id', member.user_id)
+                                                      .eq('group_id', selectedGroupId!);
 
-                                              alert(at('kick_done'));
-                                              if (selectedGroupId) {
-                                                loadGroupMembers(selectedGroupId);
-                                                loadGroupStats(selectedGroupId);
-                                              }
-                                            } catch (err: any) {
-                                              console.error('멤버 추방 오류:', err);
-                                              alert(err.message || at('error_kick_msg'));
-                                            } finally {
-                                              setLoadingData(false);
-                                            }
-                                          }}
-                                        >
-                                          <UserX style={{ width: '14px', height: '14px' }} />
-                                          {at('kick_btn')}
-                                        </button>
-                                      )}
+                                                    if (error) throw error;
+
+                                                    alert(at('kick_done'));
+                                                    if (selectedGroupId) {
+                                                      loadGroupMembers(selectedGroupId);
+                                                      loadGroupStats(selectedGroupId);
+                                                    }
+                                                  } catch (err: any) {
+                                                    console.error('멤버 추방 오류:', err);
+                                                    alert(err.message || at('error_kick_msg'));
+                                                  } finally {
+                                                    setLoadingData(false);
+                                                  }
+                                                }}
+                                              >
+                                                <UserX style={{ width: '14px', height: '14px' }} />
+                                                {at('kick_btn')}
+                                              </button>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
                                     </div>
                                   </td>
                                 </motion.tr>
