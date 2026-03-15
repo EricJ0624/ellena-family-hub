@@ -28,7 +28,7 @@ const GroupSelector: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [createFamilyRole, setCreateFamilyRole] = useState<'' | 'mom' | 'dad'>('');
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
-  const [joinFamilyRole, setJoinFamilyRole] = useState<'' | 'son' | 'daughter' | 'other'>('');
+  const [joinFamilyRole, setJoinFamilyRole] = useState<'' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other'>('');
   const [showJoinFamilyRoleModal, setShowJoinFamilyRoleModal] = useState(false);
 
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
@@ -506,12 +506,14 @@ const GroupSelector: React.FC = () => {
                   <div className="space-y-4">
                     <select
                       value={joinFamilyRole}
-                      onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'other')}
+                      onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">{mmt('family_role_none')}</option>
                       <option value="son">{mmt('family_role_son')}</option>
                       <option value="daughter">{mmt('family_role_daughter')}</option>
+                      <option value="grandpa">{mmt('family_role_grandpa')}</option>
+                      <option value="grandma">{mmt('family_role_grandma')}</option>
                       <option value="other">{mmt('family_role_other')}</option>
                     </select>
                     <div className="flex gap-2">
@@ -951,12 +953,14 @@ const GroupSelector: React.FC = () => {
                   <div className="space-y-4">
                     <select
                       value={joinFamilyRole}
-                      onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'other')}
+                      onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">{mmt('family_role_none')}</option>
                       <option value="son">{mmt('family_role_son')}</option>
                       <option value="daughter">{mmt('family_role_daughter')}</option>
+                      <option value="grandpa">{mmt('family_role_grandpa')}</option>
+                      <option value="grandma">{mmt('family_role_grandma')}</option>
                       <option value="other">{mmt('family_role_other')}</option>
                     </select>
                     <div className="flex gap-2">

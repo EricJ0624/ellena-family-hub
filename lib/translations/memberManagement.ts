@@ -36,6 +36,8 @@ export type MemberManagementTranslations = {
   family_role_dad: string;
   family_role_son: string;
   family_role_daughter: string;
+  family_role_grandpa: string;
+  family_role_grandma: string;
   family_role_other: string;
   family_role_saved: string;
   family_role_save_failed: string;
@@ -79,6 +81,8 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_dad: '아빠',
     family_role_son: '아들',
     family_role_daughter: '딸',
+    family_role_grandpa: '할아버지',
+    family_role_grandma: '할머니',
     family_role_other: '기타',
     family_role_saved: '가족 표시가 저장되었습니다.',
     family_role_save_failed: '저장에 실패했습니다.',
@@ -120,6 +124,8 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_dad: 'Dad',
     family_role_son: 'Son',
     family_role_daughter: 'Daughter',
+    family_role_grandpa: 'Grandpa',
+    family_role_grandma: 'Grandma',
     family_role_other: 'Other',
     family_role_saved: 'Family role saved.',
     family_role_save_failed: 'Failed to save.',
@@ -161,6 +167,8 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_dad: 'パパ',
     family_role_son: '息子',
     family_role_daughter: '娘',
+    family_role_grandpa: 'おじいちゃん',
+    family_role_grandma: 'おばあちゃん',
     family_role_other: 'その他',
     family_role_saved: '家族の表示を保存しました。',
     family_role_save_failed: '保存に失敗しました。',
@@ -202,6 +210,8 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_dad: '爸爸',
     family_role_son: '儿子',
     family_role_daughter: '女儿',
+    family_role_grandpa: '爷爷',
+    family_role_grandma: '奶奶',
     family_role_other: '其他',
     family_role_saved: '家庭显示已保存。',
     family_role_save_failed: '保存失败。',
@@ -243,6 +253,8 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_dad: '爸爸',
     family_role_son: '兒子',
     family_role_daughter: '女兒',
+    family_role_grandpa: '爺爺',
+    family_role_grandma: '奶奶',
     family_role_other: '其他',
     family_role_saved: '家庭顯示已儲存。',
     family_role_save_failed: '儲存失敗。',
@@ -257,9 +269,26 @@ export function getMemberManagementTranslation(lang: LangCode, key: keyof Member
 /** 가족 표시 역할 값을 다국어 라벨로 변환 (앱 전반 표시용) */
 export function getFamilyRoleLabel(
   lang: LangCode,
-  role: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
+  role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
 ): string {
   if (!role) return '';
   const key = `family_role_${role}` as keyof MemberManagementTranslations;
   return getMemberManagementTranslation(lang, key);
+}
+
+/** 가족 표시 역할 → 이모지 (위치 공유·지도 마커용) */
+export function getFamilyRoleEmoji(
+  role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
+): string {
+  if (!role) return '👤';
+  const map: Record<string, string> = {
+    mom: '👩',
+    dad: '👨',
+    son: '👦',
+    daughter: '👧',
+    grandpa: '👴',
+    grandma: '👵',
+    other: '👤',
+  };
+  return map[role] ?? '👤';
 }

@@ -114,7 +114,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
           group_id: groupId,
           role: isOwner ? 'ADMIN' : (membership?.role as MembershipRole || 'MEMBER'),
           joined_at: new Date().toISOString(),
-          family_role: (membership as { family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null })?.family_role ?? null,
+          family_role: (membership as { family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null })?.family_role ?? null,
         };
       }));
 

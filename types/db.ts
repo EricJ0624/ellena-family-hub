@@ -74,21 +74,21 @@ export interface Database {
           group_id: string
           role: 'ADMIN' | 'MEMBER'
           joined_at: string
-          family_role: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
+          family_role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
         }
         Insert: {
           user_id: string
           group_id: string
           role?: 'ADMIN' | 'MEMBER'
           joined_at?: string
-          family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
+          family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
         }
         Update: {
           user_id?: string
           group_id?: string
           role?: 'ADMIN' | 'MEMBER'
           joined_at?: string
-          family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null
+          family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
         }
         Relationships: [
           {
@@ -1152,7 +1152,7 @@ export interface Database {
     Enums: {
       membership_role: 'ADMIN' | 'MEMBER'
       location_request_status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
-      family_role: 'mom' | 'dad' | 'son' | 'daughter' | 'other'
+      family_role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other'
     }
     CompositeTypes: {
       [_ in never]: never

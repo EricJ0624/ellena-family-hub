@@ -522,6 +522,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                       { value: '', label: mmt('family_role_none') },
                       { value: 'son', label: mmt('family_role_son') },
                       { value: 'daughter', label: mmt('family_role_daughter') },
+                      { value: 'grandpa', label: mmt('family_role_grandpa') },
+                      { value: 'grandma', label: mmt('family_role_grandma') },
                       { value: 'other', label: mmt('family_role_other') },
                     ];
 

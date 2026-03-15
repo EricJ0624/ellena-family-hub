@@ -22,7 +22,7 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
-import { getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
+import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
@@ -125,7 +125,7 @@ interface AppState {
     latitude: number;
     longitude: number;
     updatedAt: string;
-    familyRole?: 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null;
+    familyRole?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null;
   }>;
   todos: Todo[];
   album: Photo[];
@@ -209,7 +209,7 @@ export default function FamilyHub() {
   const [userName, setUserName] = useState<string>('');
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
-  const [nicknameModalFamilyRole, setNicknameModalFamilyRole] = useState<'mom' | 'dad' | 'son' | 'daughter' | 'other' | null>(null);
+  const [nicknameModalFamilyRole, setNicknameModalFamilyRole] = useState<'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
@@ -217,7 +217,7 @@ export default function FamilyHub() {
   const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname: string | null }>>([]);
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
-  const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null>>({});
+  const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -1517,20 +1517,24 @@ export default function FamilyHub() {
         }
       }
 
-      // 가족 표시 역할별 마커 색/크기: 엄마=빨강 성인, 아빠=파랑 성인, 딸=빨강 아이, 아들=파랑 아이, 기타=회색
+      // 가족 표시 역할별 마커 색/크기: 엄마=빨강, 아빠=파랑, 딸=빨강 아이, 아들=파랑 아이, 할아버지=주황, 할머니=보라, 기타=회색
       const getFamilyMarkerStyle = (role: string | null | undefined) => {
         switch (role) {
           case 'mom': return { background: '#EA4335', scale: 1.2 };
           case 'dad': return { background: '#4285F4', scale: 1.2 };
           case 'daughter': return { background: '#EA4335', scale: 0.95 };
           case 'son': return { background: '#4285F4', scale: 0.95 };
+          case 'grandpa': return { background: '#FBBC04', scale: 1.1 };
+          case 'grandma': return { background: '#9C27B0', scale: 1.1 };
           default: return { background: '#9E9E9E', scale: 1.0 };
         }
       };
       const getFamilyMarkerIconUrl = (role: string | null | undefined) => {
         if (role === 'dad' || role === 'son') return 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+        if (role === 'grandpa' || role === 'grandma') return 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
         return 'http://maps.google.com/mapfiles/ms/icons/red-dot.png';
       };
+      const getFamilyMarkerEmoji = (role: string | null | undefined) => getFamilyRoleEmoji(role as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null);
 
       // 승인된 사용자들의 위치 마커 업데이트 또는 생성 (ID 검증: 빈 값/본인 제외, 키 겹침 방지)
       console.log('🗺️ [updateMapMarkers] familyLocations 순회 시작:', state.familyLocations.length, '개');
@@ -1560,7 +1564,8 @@ export default function FamilyHub() {
                 scale: style.scale
               });
               const labelDiv = document.createElement('div');
-              labelDiv.textContent = loc.userName || ct('user');
+              const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
+              labelDiv.textContent = emojiLabel;
               labelDiv.style.color = '#ffffff';
               labelDiv.style.fontSize = '12px';
               labelDiv.style.fontWeight = 'bold';
@@ -1571,8 +1576,9 @@ export default function FamilyHub() {
               container.appendChild(labelDiv);
               existingMarker.content = container;
             } else if (existingMarker.setLabel) {
+              const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
               existingMarker.setLabel({
-                text: loc.userName || ct('user'),
+                text: emojiLabel,
                 color: '#ffffff',
                 fontSize: '12px',
                 fontWeight: 'bold'
@@ -1592,7 +1598,8 @@ export default function FamilyHub() {
                 scale: style.scale
               });
               const labelDiv = document.createElement('div');
-              labelDiv.textContent = loc.userName || ct('user');
+              const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
+              labelDiv.textContent = emojiLabel;
               labelDiv.style.color = '#ffffff';
               labelDiv.style.fontSize = '12px';
               labelDiv.style.fontWeight = 'bold';
@@ -1609,12 +1616,13 @@ export default function FamilyHub() {
               });
             } else {
               // 폴백: 기존 Marker API 사용
+              const emojiLabel = getFamilyMarkerEmoji(loc.familyRole) + ' ' + (loc.userName || ct('user'));
               marker = new google.maps.Marker({
                 position: { lat: loc.latitude, lng: loc.longitude },
                 map: mapRef.current,
                 title: `${loc.userName}${dt('location_of')}`,
                 label: {
-                  text: loc.userName || ct('user'),
+                  text: emojiLabel,
                   color: '#ffffff',
                   fontSize: '12px',
                   fontWeight: 'bold'
@@ -3460,7 +3468,7 @@ export default function FamilyHub() {
         .eq('group_id', currentGroupId);
       const map: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null> = {};
       (data || []).forEach((m: { user_id: string; family_role?: string | null }) => {
-        map[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'other') ?? null;
+        map[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other') ?? null;
       });
       setFamilyRoleByUserId(map);
     })();
@@ -4996,7 +5004,7 @@ export default function FamilyHub() {
       if (data && data.length > 0) {
         // 가족 표시 역할(family_role) 조회 (지도 마커용)
         const otherUserIds = [...new Set((data as any[]).map((loc: any) => loc.user_id).filter((id: string) => id !== userId))];
-        let familyRoleMap = new Map<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null>();
+        let familyRoleMap = new Map<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>();
         if (currentGroupId && otherUserIds.length > 0) {
           const { data: membershipData } = await supabase
             .from('memberships')
@@ -6340,7 +6348,7 @@ export default function FamilyHub() {
                 <select
                   className="form-input"
                   value={nicknameModalFamilyRole ?? ''}
-                  onChange={(e) => setNicknameModalFamilyRole(e.target.value === '' ? null : e.target.value as 'mom' | 'dad' | 'son' | 'daughter' | 'other')}
+                  onChange={(e) => setNicknameModalFamilyRole(e.target.value === '' ? null : e.target.value as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
                 >
                   <option value="">{getMemberManagementTranslation(lang, 'family_role_none')}</option>
                   {(groupIsOwner || groupUserRole === 'ADMIN') ? (
@@ -6352,6 +6360,8 @@ export default function FamilyHub() {
                     <>
                       <option value="son">{getMemberManagementTranslation(lang, 'family_role_son')}</option>
                       <option value="daughter">{getMemberManagementTranslation(lang, 'family_role_daughter')}</option>
+                      <option value="grandpa">{getMemberManagementTranslation(lang, 'family_role_grandpa')}</option>
+                      <option value="grandma">{getMemberManagementTranslation(lang, 'family_role_grandma')}</option>
                       <option value="other">{getMemberManagementTranslation(lang, 'family_role_other')}</option>
                     </>
                   )}
@@ -6483,7 +6493,7 @@ export default function FamilyHub() {
                   <span className="user-icon" style={{ fontSize: '12px' }}>👤</span>
                   <p className="user-name" style={{ margin: 0, fontSize: '12px', fontWeight: user.isCurrentUser ? '600' : '500' }}>
                     {user.name}
-                    {familyRoleByUserId[user.id] ? ` (${getFamilyRoleLabel(lang, familyRoleByUserId[user.id])})` : ''}
+                    {familyRoleByUserId[user.id] ? ` ${getFamilyRoleEmoji(familyRoleByUserId[user.id])} ${getFamilyRoleLabel(lang, familyRoleByUserId[user.id])}` : ''}
                     {user.isCurrentUser && ct('me_suffix')}
                   </p>
                 </div>
@@ -6863,7 +6873,7 @@ export default function FamilyHub() {
                                 {e.created_by != null && (
                                   <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}>
                                     {dt('event_author')}: {e.created_by === userId ? ct('me') : (eventAuthorNames[e.created_by] ?? ct('unknown'))}
-                                    {familyRoleByUserId[e.created_by] ? ` (${getFamilyRoleLabel(lang, familyRoleByUserId[e.created_by])})` : ''}
+                                    {familyRoleByUserId[e.created_by] ? ` ${getFamilyRoleEmoji(familyRoleByUserId[e.created_by])} ${getFamilyRoleLabel(lang, familyRoleByUserId[e.created_by])}` : ''}
                                   </p>
                                 )}
                                 {e.desc && <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.desc}</p>}

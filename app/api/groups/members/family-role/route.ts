@@ -3,7 +3,7 @@ import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 import type { FamilyRole } from '@/types/db';
 
-const VALID_FAMILY_ROLES: (FamilyRole | null)[] = [null, 'mom', 'dad', 'son', 'daughter', 'other'];
+const VALID_FAMILY_ROLES: (FamilyRole | null)[] = [null, 'mom', 'dad', 'son', 'daughter', 'grandpa', 'grandma', 'other'];
 
 /**
  * 가족 표시 역할(family_role) 설정 API
@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest) {
 
     if (familyRole !== null && familyRole !== undefined && !VALID_FAMILY_ROLES.includes(familyRole)) {
       return NextResponse.json(
-        { error: '유효하지 않은 가족 역할입니다. (mom, dad, son, daughter, other 또는 미설정)' },
+        { error: '유효하지 않은 가족 역할입니다. (mom, dad, son, daughter, grandpa, grandma, other 또는 미설정)' },
         { status: 400 }
       );
     }
@@ -92,9 +92,9 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (!isOwnerOrAdmin && !['son', 'daughter', 'other'].includes(value)) {
+      if (!isOwnerOrAdmin && !['son', 'daughter', 'grandpa', 'grandma', 'other'].includes(value)) {
         return NextResponse.json(
-          { error: '멤버는 아들(son), 딸(daughter), 기타(other)만 선택할 수 있습니다.' },
+          { error: '멤버는 아들(son), 딸(daughter), 할아버지(grandpa), 할머니(grandma), 기타(other)만 선택할 수 있습니다.' },
           { status: 400 }
         );
       }
