@@ -22,7 +22,7 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
-import { getFamilyRoleLabel } from '@/lib/translations/memberManagement';
+import { getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
@@ -209,6 +209,7 @@ export default function FamilyHub() {
   const [userName, setUserName] = useState<string>('');
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
+  const [nicknameModalFamilyRole, setNicknameModalFamilyRole] = useState<'mom' | 'dad' | 'son' | 'daughter' | 'other' | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
@@ -637,6 +638,13 @@ export default function FamilyHub() {
       loadData(key, userId).catch(() => undefined);
     }
   }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
+
+  // 닉네임 모달 열릴 때 가족 표시 값을 현재 값으로 초기화
+  useEffect(() => {
+    if (isNicknameModalOpen && userId) {
+      setNicknameModalFamilyRole(familyRoleByUserId[userId] ?? null);
+    }
+  }, [isNicknameModalOpen, userId, familyRoleByUserId]);
 
   // --- [EFFECTS] ---
   
@@ -6089,10 +6097,31 @@ export default function FamilyHub() {
         nicknameInputRef.current.value = "";
       }
 
-      // 4. 사용자 목록 새로고침 (다른 사용자에게 변경사항 반영)
+      // 4. 가족 표시(family_role) 저장
+      if (currentGroupId && userId) {
+        try {
+          const roleRes = await fetch('/api/groups/members/family-role', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUserId: userId,
+              groupId: currentGroupId,
+              familyRole: nicknameModalFamilyRole,
+            }),
+          });
+          const roleResult = await roleRes.json();
+          if (roleRes.ok && roleResult.success) {
+            setFamilyRoleByUserId((prev) => ({ ...prev, [userId]: nicknameModalFamilyRole }));
+          }
+        } catch (roleErr) {
+          console.warn('가족 표시 저장 실패 (무시):', roleErr);
+        }
+      }
+
+      // 5. 사용자 목록 새로고침 (다른 사용자에게 변경사항 반영)
       await loadAllUsers();
 
-      // 5. Piggy Bank 요약 정보 새로고침 (별명 변경 반영)
+      // 6. Piggy Bank 요약 정보 새로고침 (별명 변경 반영)
       if (currentGroupId) {
         await loadPiggySummary();
       }
@@ -6296,6 +6325,28 @@ export default function FamilyHub() {
                   maxLength={20}
                   defaultValue={userName}
                 />
+              </div>
+              <div className="form-field">
+                <label className="form-label">{getMemberManagementTranslation(lang, 'family_role_label')}</label>
+                <select
+                  className="form-input"
+                  value={nicknameModalFamilyRole ?? ''}
+                  onChange={(e) => setNicknameModalFamilyRole(e.target.value === '' ? null : e.target.value as 'mom' | 'dad' | 'son' | 'daughter' | 'other')}
+                >
+                  <option value="">{getMemberManagementTranslation(lang, 'family_role_none')}</option>
+                  {(groupIsOwner || groupUserRole === 'ADMIN') ? (
+                    <>
+                      <option value="mom">{getMemberManagementTranslation(lang, 'family_role_mom')}</option>
+                      <option value="dad">{getMemberManagementTranslation(lang, 'family_role_dad')}</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="son">{getMemberManagementTranslation(lang, 'family_role_son')}</option>
+                      <option value="daughter">{getMemberManagementTranslation(lang, 'family_role_daughter')}</option>
+                      <option value="other">{getMemberManagementTranslation(lang, 'family_role_other')}</option>
+                    </>
+                  )}
+                </select>
               </div>
             </div>
             <div className="modal-actions">

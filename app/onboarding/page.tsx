@@ -427,17 +427,15 @@ export default function OnboardingPage() {
 
       if (groupId) {
         setJoinedGroupId(groupId);
-        setJoinFamilyRole('');
         setCurrentGroupId(groupId);
-        setShowJoinFamilyRoleModal(true);
+        setShowJoinFamilyRoleModal(false);
         try {
           if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
         } catch (_) {}
       } else if (groupPreview?.id) {
         setJoinedGroupId(groupPreview.id);
-        setJoinFamilyRole('');
         setCurrentGroupId(groupPreview.id);
-        setShowJoinFamilyRoleModal(true);
+        setShowJoinFamilyRoleModal(false);
         try {
           if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
         } catch (_) {}
@@ -1344,6 +1342,72 @@ export default function OnboardingPage() {
                           {groupPreview.member_count}{ot('member_count_suffix')}
                         </div>
                       </div>
+
+                      {/* You've joined 페이지: 가족 표시 선택 (일반 멤버: 아들/딸/기타) */}
+                      {joinedGroupId && groupPreview?.id === joinedGroupId && (
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                          <label style={{
+                            display: 'block',
+                            fontSize: '12px',
+                            color: '#64748b',
+                            marginBottom: '6px',
+                            fontWeight: '600',
+                          }}>
+                            {mmt('family_role_label')}
+                          </label>
+                          <select
+                            value={joinFamilyRole}
+                            onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'other')}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              fontSize: '14px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '8px',
+                              backgroundColor: 'white',
+                              color: '#1a202c',
+                            }}
+                            aria-label={mmt('family_role_label')}
+                          >
+                            <option value="">{mmt('family_role_none')}</option>
+                            <option value="son">{mmt('family_role_son')}</option>
+                            <option value="daughter">{mmt('family_role_daughter')}</option>
+                            <option value="other">{mmt('family_role_other')}</option>
+                          </select>
+                          {joinFamilyRole && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const { data: { user } } = await supabase.auth.getUser();
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!user?.id || !session?.access_token || !joinedGroupId) return;
+                                try {
+                                  const res = await fetch('/api/groups/members/family-role', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+                                    body: JSON.stringify({ targetUserId: user.id, groupId: joinedGroupId, familyRole: joinFamilyRole }),
+                                  });
+                                  if (res.ok) setSuccess(mmt('family_role_saved'));
+                                  else setError(mmt('family_role_save_failed'));
+                                } catch {
+                                  setError(mmt('family_role_save_failed'));
+                                }
+                              }}
+                              style={{
+                                marginTop: '8px',
+                                padding: '6px 12px',
+                                fontSize: '12px',
+                                backgroundColor: '#f1f5f9',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {ct('save')}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* 에러/성공 메시지 */}
