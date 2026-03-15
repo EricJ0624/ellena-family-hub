@@ -63,6 +63,8 @@ export function TravelPlannerContent() {
   const [accLatitude, setAccLatitude] = useState('');
   const [accLongitude, setAccLongitude] = useState('');
   const [showDiningForm, setShowDiningForm] = useState(false);
+  /** 일정 추가 시 구분 선택 (숙소/먹거리/관광지/교통/기타) → 해당 폼 열기 */
+  const [showScheduleAddTypePicker, setShowScheduleAddTypePicker] = useState(false);
   const [editingDining, setEditingDining] = useState<TravelDining | null>(null);
   const [diningName, setDiningName] = useState('');
   const [diningDayDate, setDiningDayDate] = useState('');
@@ -80,7 +82,7 @@ export function TravelPlannerContent() {
   const [accPlaceName, setAccPlaceName] = useState('');
   const [diningPlaceName, setDiningPlaceName] = useState('');
   const [itineraryPlaceName, setItineraryPlaceName] = useState('');
-  const [itineraryPlaceType, setItineraryPlaceType] = useState<'' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike'>('attraction');
+  const [itineraryPlaceType, setItineraryPlaceType] = useState<'' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other'>('attraction');
 
   const [formTitle, setFormTitle] = useState('');
   const [formDestination, setFormDestination] = useState('');
@@ -273,6 +275,7 @@ export function TravelPlannerContent() {
           case 'transport_air': return '✈️';
           case 'transport_car': return '🚗';
           case 'transport_bike': return '🚲';
+          case 'other': return '📌';
           default: return '🏛️'; // attraction or null
         }
       };
@@ -764,7 +767,8 @@ export function TravelPlannerContent() {
     }
   };
 
-  const openItineraryForm = (item: TravelItinerary | null) => {
+  type ItineraryPlaceTypeOption = 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other';
+  const openItineraryForm = (item: TravelItinerary | null, defaultPlaceType?: ItineraryPlaceTypeOption) => {
     if (item) {
       setEditingItinerary(item);
       setItineraryDayDate(item.day_date);
@@ -776,7 +780,7 @@ export function TravelPlannerContent() {
       setItineraryLatitude(item.latitude != null ? String(item.latitude) : '');
       setItineraryLongitude(item.longitude != null ? String(item.longitude) : '');
       setItineraryPlaceName('');
-      setItineraryPlaceType((item.place_type as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike') || 'attraction');
+      setItineraryPlaceType((item.place_type as '' | ItineraryPlaceTypeOption) || 'attraction');
     } else {
       setEditingItinerary(null);
       setItineraryDayDate('');
@@ -788,7 +792,7 @@ export function TravelPlannerContent() {
       setItineraryLatitude('');
       setItineraryLongitude('');
       setItineraryPlaceName('');
-      setItineraryPlaceType('attraction');
+      setItineraryPlaceType(defaultPlaceType ?? 'attraction');
     }
     setShowItineraryForm(true);
   };
@@ -1476,7 +1480,7 @@ export function TravelPlannerContent() {
                 </h3>
                 <button
                   type="button"
-                  onClick={() => openItineraryForm(null)}
+                  onClick={() => setShowScheduleAddTypePicker(true)}
                   style={{ padding: '6px 10px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
                   + 일정 추가
@@ -1504,7 +1508,7 @@ export function TravelPlannerContent() {
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                          <span style={{ marginRight: 6 }}>{i.source_type === 'accommodation' ? '🏨' : i.source_type === 'dining' ? '🍽️' : i.place_type === 'transport_air' ? '✈️' : i.place_type === 'transport_car' ? '🚗' : i.place_type === 'transport_bike' ? '🚲' : '🏛️'}</span>
+                          <span style={{ marginRight: 6 }}>{i.source_type === 'accommodation' ? '🏨' : i.source_type === 'dining' ? '🍽️' : i.place_type === 'transport_air' ? '✈️' : i.place_type === 'transport_car' ? '🚗' : i.place_type === 'transport_bike' ? '🚲' : i.place_type === 'other' ? '📌' : '🏛️'}</span>
                           {i.title}
                         </div>
                         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
@@ -2106,6 +2110,51 @@ export function TravelPlannerContent() {
         </div>
       )}
 
+      {showScheduleAddTypePicker && selectedTrip && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50,
+            padding: 16,
+            boxSizing: 'border-box',
+          }}
+          onClick={() => setShowScheduleAddTypePicker(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: 24,
+              width: '90%',
+              maxWidth: 380,
+              minWidth: 0,
+              overflow: 'hidden',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{tt('schedule_add_type_prompt')}</h3>
+              <button type="button" onClick={() => setShowScheduleAddTypePicker(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X style={{ width: 20, height: 20 }} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); setShowAccommodationForm(true); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🏨 {tt('add_accommodation')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); setShowDiningForm(true); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🍽️ {tt('add_dining')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'attraction'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🏛️ {tt('place_type_attraction')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_air'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>✈️ {tt('place_type_transport_air')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_car'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🚗 {tt('place_type_transport_car')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_bike'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🚲 {tt('place_type_transport_bike')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'other'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>📌 {tt('place_type_other')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showItineraryForm && selectedTrip && (
         <div
           style={{
@@ -2241,7 +2290,7 @@ export function TravelPlannerContent() {
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_place_type')}</label>
               <select
                 value={itineraryPlaceType}
-                onChange={(e) => setItineraryPlaceType(e.target.value as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike')}
+                onChange={(e) => setItineraryPlaceType(e.target.value as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other')}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -2257,6 +2306,7 @@ export function TravelPlannerContent() {
                 <option value="transport_air">{tt('place_type_transport_air')} ✈️</option>
                 <option value="transport_car">{tt('place_type_transport_car')} 🚗</option>
                 <option value="transport_bike">{tt('place_type_transport_bike')} 🚲</option>
+                <option value="other">{tt('place_type_other')} 📌</option>
               </select>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input

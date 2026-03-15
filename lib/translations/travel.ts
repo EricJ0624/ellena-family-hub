@@ -104,11 +104,13 @@ export type TravelTranslations = {
   place_type_transport_air: string;
   place_type_transport_car: string;
   place_type_transport_bike: string;
+  place_type_other: string;
   map_hint: string;
   link_google_search: string;
   show_map_btn: string;
   hide_map_btn: string;
   map_placeholder_desc: string;
+  schedule_add_type_prompt: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -216,11 +218,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     place_type_transport_air: '비행기',
     place_type_transport_car: '자동차',
     place_type_transport_bike: '바이크',
-    map_hint: '숙소·먹거리·일정에 위도/경도를 입력하면 지도에 이모지로 표시됩니다. 🏨 숙소 🍽️ 먹거리 🏛️ 관광지 ✈️ 비행기 🚗 자동차 🚲 바이크',
+    place_type_other: '기타 (무연동)',
+    map_hint: '숙소·먹거리·일정에 위도/경도를 입력하면 지도에 이모지로 표시됩니다. 🏨 숙소 🍽️ 먹거리 🏛️ 관광지 ✈️ 비행기 🚗 자동차 🚲 바이크 📌 기타',
     link_google_search: '구글에서 검색',
     show_map_btn: '지도 보기',
     hide_map_btn: '지도 숨기기',
     map_placeholder_desc: '지도를 열면 숙소·먹거리·관광지 위치를 볼 수 있습니다.',
+    schedule_add_type_prompt: '추가할 구분을 선택하세요',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -326,11 +330,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     place_type_transport_air: 'Flight',
     place_type_transport_car: 'Car',
     place_type_transport_bike: 'Bike',
-    map_hint: 'Enter lat/lng to show on map. 🏨 Accommodation 🍽️ Dining 🏛️ Attraction ✈️ Flight 🚗 Car 🚲 Bike',
+    place_type_other: 'Other',
+    map_hint: 'Enter lat/lng to show on map. 🏨 Accommodation 🍽️ Dining 🏛️ Attraction ✈️ Flight 🚗 Car 🚲 Bike 📌 Other',
     link_google_search: 'Search on Google',
     show_map_btn: 'Show map',
     hide_map_btn: 'Hide map',
     map_placeholder_desc: 'Open the map to see accommodation, dining, and place locations.',
+    schedule_add_type_prompt: 'Select type to add',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -436,11 +442,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     place_type_transport_air: '飛行機',
     place_type_transport_car: '車',
     place_type_transport_bike: 'バイク',
-    map_hint: '緯度・経度を入力すると地図に表示。🏨 宿泊 🍽️ 食事 🏛️ 観光地 ✈️ 飛行機 🚗 車 🚲 バイク',
+    place_type_other: 'その他',
+    map_hint: '緯度・経度を入力すると地図に表示。🏨 宿泊 🍽️ 食事 🏛️ 観光地 ✈️ 飛行機 🚗 車 🚲 バイク 📌 その他',
     link_google_search: 'Googleで検索',
     show_map_btn: '地図を表示',
     hide_map_btn: '地図を隠す',
     map_placeholder_desc: '地図を開くと宿泊・食事・観光地の位置を確認できます。',
+    schedule_add_type_prompt: '追加する区分を選択',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -546,11 +554,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     place_type_transport_air: '飞机',
     place_type_transport_car: '汽车',
     place_type_transport_bike: '自行车',
-    map_hint: '输入经纬度可在地图显示。🏨 住宿 🍽️ 餐饮 🏛️ 观光 ✈️ 飞机 🚗 汽车 🚲 自行车',
+    place_type_other: '其他',
+    map_hint: '输入经纬度可在地图显示。🏨 住宿 🍽️ 餐饮 🏛️ 观光 ✈️ 飞机 🚗 汽车 🚲 自行车 📌 其他',
     link_google_search: '在 Google 上搜索',
     show_map_btn: '显示地图',
     hide_map_btn: '隐藏地图',
     map_placeholder_desc: '打开地图可查看住宿、餐饮与景点位置。',
+    schedule_add_type_prompt: '选择要添加的类型',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -656,11 +666,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     place_type_transport_air: '飛機',
     place_type_transport_car: '汽車',
     place_type_transport_bike: '自行車',
-    map_hint: '輸入經緯度可在地圖顯示。🏨 住宿 🍽️ 餐飲 🏛️ 觀光 ✈️ 飛機 🚗 汽車 🚲 自行車',
+    place_type_other: '其他',
+    map_hint: '輸入經緯度可在地圖顯示。🏨 住宿 🍽️ 餐飲 🏛️ 觀光 ✈️ 飛機 🚗 汽車 🚲 自行車 📌 其他',
     link_google_search: '在 Google 上搜尋',
     show_map_btn: '顯示地圖',
     hide_map_btn: '隱藏地圖',
     map_placeholder_desc: '開啟地圖可查看住宿、餐飲與景點位置。',
+    schedule_add_type_prompt: '選擇要新增的類型',
   },
 };
 

@@ -42,6 +42,7 @@ export async function GET(
       .eq('group_id', groupId)
       .is('deleted_at', null)
       .order('day_date', { ascending: true })
+      .order('start_time', { ascending: true, nullsFirst: false })
       .order('sort_order', { ascending: true });
 
     if (error) {
@@ -121,7 +122,7 @@ export async function POST(
     if (end_time != null && String(end_time).trim()) insertPayload.end_time = String(end_time).trim().substring(0, 5);
     if (source_type != null && String(source_type).trim()) insertPayload.source_type = String(source_type).trim();
     if (source_id != null && String(source_id).trim()) insertPayload.source_id = String(source_id).trim();
-    if (place_type != null && ['attraction', 'transport_air', 'transport_car', 'transport_bike'].includes(String(place_type).trim())) {
+    if (place_type != null && ['attraction', 'transport_air', 'transport_car', 'transport_bike', 'other'].includes(String(place_type).trim())) {
       insertPayload.place_type = String(place_type).trim();
     }
     if (address != null) insertPayload.address = address ? String(address).trim() : null;

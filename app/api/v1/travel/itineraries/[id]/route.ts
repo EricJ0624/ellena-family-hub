@@ -38,7 +38,7 @@ export async function PATCH(
     if (body.address !== undefined) updatePayload.address = body.address ? String(body.address).trim() : null;
     if (body.place_type !== undefined) {
       const pt = body.place_type == null || body.place_type === '' ? null : String(body.place_type).trim();
-      updatePayload.place_type = pt && ['attraction', 'transport_air', 'transport_car', 'transport_bike'].includes(pt) ? pt : null;
+      updatePayload.place_type = pt && ['attraction', 'transport_air', 'transport_car', 'transport_bike', 'other'].includes(pt) ? pt : null;
     }
     if (body.latitude !== undefined) updatePayload.latitude = body.latitude == null ? null : Number(body.latitude);
     if (body.longitude !== undefined) updatePayload.longitude = body.longitude == null ? null : Number(body.longitude);

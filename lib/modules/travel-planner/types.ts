@@ -36,8 +36,8 @@ export interface TravelItinerary {
   source_type?: string | null;
   /** 연결된 travel_accommodations.id 또는 travel_dining.id */
   source_id?: string | null;
-  /** 지도 마커 구분: attraction(관광지), transport_air(비행기), transport_car(자동차), transport_bike(바이크) */
-  place_type?: 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | null;
+  /** 지도 마커 구분: attraction(관광지), transport_air(비행기), transport_car(자동차), transport_bike(바이크), other(기타 무연동) */
+  place_type?: 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other' | null;
   /** 주소 (지도 표시용) */
   address?: string | null;
   latitude?: number | null;
