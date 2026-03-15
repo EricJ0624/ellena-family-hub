@@ -101,6 +101,9 @@ export type TravelTranslations = {
   marker_place: string;
   map_hint: string;
   link_google_search: string;
+  show_map_btn: string;
+  hide_map_btn: string;
+  map_placeholder_desc: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -205,6 +208,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_place: '관',
     map_hint: '숙소·먹거리·일정에 위도/경도를 입력하면 지도에 표시됩니다. 파란색: 숙소, 초록색: 먹거리, 빨간색: 관광지',
     link_google_search: '구글에서 검색',
+    show_map_btn: '지도 보기',
+    hide_map_btn: '지도 숨기기',
+    map_placeholder_desc: '지도를 열면 숙소·먹거리·관광지 위치를 볼 수 있습니다. 지도는 열 때만 로드되어 비용이 발생합니다.',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -307,6 +313,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_place: 'P',
     map_hint: 'Enter latitude/longitude in accommodation, dining, or itinerary to show on the map. Blue: accommodation, Green: dining, Red: places.',
     link_google_search: 'Search on Google',
+    show_map_btn: 'Show map',
+    hide_map_btn: 'Hide map',
+    map_placeholder_desc: 'Open the map to see accommodation, dining, and place locations. The map loads only when opened, which incurs cost.',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -409,6 +418,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_place: '観',
     map_hint: '宿泊・食事・スケジュールに緯度・経度を入力すると地図に表示されます。青: 宿泊、緑: 食事、赤: 観光地',
     link_google_search: 'Googleで検索',
+    show_map_btn: '地図を表示',
+    hide_map_btn: '地図を隠す',
+    map_placeholder_desc: '地図を開くと宿泊・食事・観光地の位置を確認できます。地図は開いたときのみ読み込まれ、料金が発生します。',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -511,6 +523,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_place: '观',
     map_hint: '在住宿、餐饮或日程中输入经纬度即可在地图上显示。蓝色：住宿，绿色：餐饮，红色：景点',
     link_google_search: '在 Google 上搜索',
+    show_map_btn: '显示地图',
+    hide_map_btn: '隐藏地图',
+    map_placeholder_desc: '打开地图可查看住宿、餐饮与景点位置。地图仅在打开时加载，会产生费用。',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -613,6 +628,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_place: '觀',
     map_hint: '在住宿、餐飲或行程中輸入經緯度即可在地圖上顯示。藍色：住宿，綠色：餐飲，紅色：景點',
     link_google_search: '在 Google 上搜尋',
+    show_map_btn: '顯示地圖',
+    hide_map_btn: '隱藏地圖',
+    map_placeholder_desc: '開啟地圖可查看住宿、餐飲與景點位置。地圖僅在開啟時載入，會產生費用。',
   },
 };
 

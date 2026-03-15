@@ -89,6 +89,8 @@ export function TravelPlannerContent() {
 
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
+  /** 지도 사용 시에만 로드 (위치 공유와 동일) */
+  const [showTravelMap, setShowTravelMap] = useState(false);
 
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
   const selectedTripIdRef = useRef<string | null>(null);
@@ -214,9 +216,9 @@ export function TravelPlannerContent() {
     if (trip) setSelectedTrip(trip);
   }, [urlTripId, trips]);
 
-  // 여행 플래너 지도: 숙소·먹거리·일정(관광지) 위치 표시
+  // 여행 플래너 지도: 사용할 때만 로드 (위치 공유와 동일). 숙소·먹거리·일정(관광지) 위치 표시
   useEffect(() => {
-    if (typeof window === 'undefined' || !selectedTrip) {
+    if (!showTravelMap || typeof window === 'undefined' || !selectedTrip) {
       travelMapMarkersRef.current.forEach((m: any) => m?.setMap?.(null));
       travelMapMarkersRef.current = [];
       travelMapRef.current = null;
@@ -318,7 +320,7 @@ export function TravelPlannerContent() {
       }, 100);
     };
     document.head.appendChild(script);
-  }, [selectedTrip, accommodations, dining, itineraries]);
+  }, [showTravelMap, selectedTrip, accommodations, dining, itineraries]);
 
   // Places Autocomplete: 숙소 폼 — 캐시 조회 → 없으면 Place Details(Basic) 후 캐시 저장 + 구글 검색 링크
   useEffect(() => {
@@ -1661,13 +1663,63 @@ export function TravelPlannerContent() {
                   <MapPin style={{ width: 18, height: 18 }} />
                   위치 지도 (숙소·먹거리·관광지)
                 </h3>
-                <div
-                  id="travel-planner-map"
-                  style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid #e2e8f0', background: '#f1f5f9' }}
-                />
-                <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                  {tt('map_hint')}
-                </p>
+                {!showTravelMap ? (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: 320,
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f8fafc',
+                      color: '#64748b',
+                      padding: 20,
+                    }}
+                  >
+                    <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#475569' }}>
+                      📍 지도
+                    </p>
+                    <p style={{ fontSize: 13, lineHeight: 1.5, textAlign: 'center', maxWidth: 320, marginBottom: 16 }}>
+                      {tt('map_placeholder_desc')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowTravelMap(true)}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {tt('show_map_btn')}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      id="travel-planner-map"
+                      style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid #e2e8f0', background: '#f1f5f9' }}
+                    />
+                    <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {tt('map_hint')}
+                      <button
+                        type="button"
+                        onClick={() => setShowTravelMap(false)}
+                        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#94a3b8', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        {tt('hide_map_btn')}
+                      </button>
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
