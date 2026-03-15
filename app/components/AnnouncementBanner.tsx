@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Megaphone, X } from 'lucide-react';
 
-/** 공지 항목 전환 간격 (ms). 한 줄 정적 표시 + 말줄임으로 단어 중간 잘림 원천 방지 */
-const ANNOUNCEMENT_CYCLE_MS = 6000;
+/** 공지 배너가 한 사이클에 이동하는 속도 (px/s). 이 값으로 공지 개수/길이와 관계없이 동일한 체감 속도 유지 */
+const MARQUEE_PIXELS_PER_SECOND = 50;
+/** 최소 duration(초). 너무 낮으면 1개 공지일 때도 50px/s 유지 가능. 높이면 1개일 때 느려짐 */
+const MARQUEE_DURATION_MIN = 3;
+const MARQUEE_DURATION_MAX = 120;
 
 interface Announcement {
   id: string;
@@ -23,20 +26,47 @@ interface AnnouncementBannerProps {
 
 export default function AnnouncementBanner({ announcements, onMarkAsRead, label = '공지사항' }: AnnouncementBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-  const [cycleIndex, setCycleIndex] = useState(0);
+  const [animationDuration, setAnimationDuration] = useState(MARQUEE_DURATION_MIN);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   // 읽지 않은 공지만 필터링
   const unreadAnnouncements = announcements.filter(a => !a.is_read);
 
-  // 여러 공지일 때 N초마다 다음 항목으로 순환 (한 줄 정적 표시로 단어 중간 잘림 방지)
+  // 무한 스크롤을 위해 공지사항 배열을 2번 반복
+  const displayAnnouncements = [...unreadAnnouncements, ...unreadAnnouncements];
+
+  // 내용 너비에 비례해 duration 계산 → 항상 같은 px/s 속도 유지
   useEffect(() => {
-    if (unreadAnnouncements.length <= 1) return;
-    const id = setInterval(() => {
-      setCycleIndex((i) => (i + 1) % unreadAnnouncements.length);
-    }, ANNOUNCEMENT_CYCLE_MS);
-    return () => clearInterval(id);
-  }, [unreadAnnouncements.length]);
+    if (displayAnnouncements.length === 0) return;
+    const el = trackRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      // 레이아웃 완료 후 scrollWidth 측정 (공지 개수/내용에 따라 달라짐)
+      const width = el.scrollWidth;
+      if (width <= 0) return;
+      // 키프레임이 -50% 이동하므로 한 사이클 이동 거리 = width * 0.5
+      const distancePerCycle = width * 0.5;
+      const duration = Math.max(
+        MARQUEE_DURATION_MIN,
+        Math.min(MARQUEE_DURATION_MAX, distancePerCycle / MARQUEE_PIXELS_PER_SECOND)
+      );
+      setAnimationDuration(duration);
+    };
+
+    // 첫 측정: 레이아웃 후 한 프레임 뒤에 측정 (공지 1개 vs 2개 모두 정확한 width 반영)
+    const raf = requestAnimationFrame(() => {
+      measure();
+    });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [displayAnnouncements.length, unreadAnnouncements.map(a => a.id).join(',')]);
 
   const handleAnnouncementClick = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
@@ -93,42 +123,40 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
             </span>
           </div>
 
-          {/* 한 줄 정적 표시 + 말줄임: 항상 문장 앞부분이 보이도록 해 단어 중간 잘림(예: Welcome→lcome) 원천 방지 */}
+          {/* 스크롤 영역 (minWidth: 0으로 flex 오버플로우 시 줄어들 수 있게) */}
           <div style={{
             flex: 1,
             minWidth: 0,
-            minHeight: 24,
             overflow: 'hidden',
             position: 'relative',
-            marginLeft: '8px',
-            marginRight: '8px',
-            display: 'flex',
-            alignItems: 'center',
+            marginLeft: '2px',
+            marginRight: '2px',
           }}>
-            {unreadAnnouncements.length > 0 && (() => {
-              const announcement = unreadAnnouncements[cycleIndex % unreadAnnouncements.length];
-              const contentSnippet = announcement.content.length > 80
-                ? `${announcement.content.substring(0, 80)}...`
-                : announcement.content;
-              const line = `${announcement.title} — ${contentSnippet}`;
-              return (
-                <button
-                  type="button"
+            <div
+              ref={trackRef}
+              style={{
+                display: 'flex',
+                gap: '48px',
+                width: 'max-content',
+                animation: isPaused ? 'none' : `marquee ${animationDuration}s linear infinite`,
+                willChange: 'transform',
+              }}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
+              {displayAnnouncements.map((announcement, index) => (
+                <div
+                  key={`${announcement.id}-${index}`}
                   onClick={() => handleAnnouncementClick(announcement)}
                   style={{
-                    width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    textAlign: 'left',
+                    gap: '8px',
                     cursor: 'pointer',
+                    whiteSpace: 'nowrap',
                     fontSize: '14px',
                     color: '#78350f',
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    margin: 0,
-                    minWidth: 0,
+                    transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = '#92400e';
@@ -140,28 +168,26 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
                   }}
                 >
                   <span style={{
-                    padding: '2px 6px',
+                    padding: '2px 8px',
                     backgroundColor: '#fbbf24',
                     color: 'white',
                     borderRadius: '4px',
                     fontSize: '11px',
                     fontWeight: '600',
-                    flexShrink: 0,
                   }}>
                     NEW
                   </span>
-                  <span style={{
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {line}
+                  <span style={{ fontWeight: '600' }}>
+                    {announcement.title}
                   </span>
-                </button>
-              );
-            })()}
+                  <span style={{ color: '#a16207' }}>
+                    {announcement.content.length > 80 
+                      ? `${announcement.content.substring(0, 80)}...` 
+                      : announcement.content}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* 닫기 버튼 */}
