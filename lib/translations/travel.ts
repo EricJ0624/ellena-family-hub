@@ -210,7 +210,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     link_google_search: '구글에서 검색',
     show_map_btn: '지도 보기',
     hide_map_btn: '지도 숨기기',
-    map_placeholder_desc: '지도를 열면 숙소·먹거리·관광지 위치를 볼 수 있습니다. 지도는 열 때만 로드되어 비용이 발생합니다.',
+    map_placeholder_desc: '지도를 열면 숙소·먹거리·관광지 위치를 볼 수 있습니다.',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -315,7 +315,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     link_google_search: 'Search on Google',
     show_map_btn: 'Show map',
     hide_map_btn: 'Hide map',
-    map_placeholder_desc: 'Open the map to see accommodation, dining, and place locations. The map loads only when opened, which incurs cost.',
+    map_placeholder_desc: 'Open the map to see accommodation, dining, and place locations.',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -420,7 +420,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     link_google_search: 'Googleで検索',
     show_map_btn: '地図を表示',
     hide_map_btn: '地図を隠す',
-    map_placeholder_desc: '地図を開くと宿泊・食事・観光地の位置を確認できます。地図は開いたときのみ読み込まれ、料金が発生します。',
+    map_placeholder_desc: '地図を開くと宿泊・食事・観光地の位置を確認できます。',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -525,7 +525,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     link_google_search: '在 Google 上搜索',
     show_map_btn: '显示地图',
     hide_map_btn: '隐藏地图',
-    map_placeholder_desc: '打开地图可查看住宿、餐饮与景点位置。地图仅在打开时加载，会产生费用。',
+    map_placeholder_desc: '打开地图可查看住宿、餐饮与景点位置。',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -630,7 +630,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     link_google_search: '在 Google 上搜尋',
     show_map_btn: '顯示地圖',
     hide_map_btn: '隱藏地圖',
-    map_placeholder_desc: '開啟地圖可查看住宿、餐飲與景點位置。地圖僅在開啟時載入，會產生費用。',
+    map_placeholder_desc: '開啟地圖可查看住宿、餐飲與景點位置。',
   },
 };
 
