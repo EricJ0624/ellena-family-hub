@@ -66,7 +66,12 @@ export default function AuthCallbackPage() {
             .limit(1);
 
           const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
-          const invite = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
+          // 초대 링크로 가입한 경우: 이메일 인증 링크가 다른 탭/기기에서 열려도 user_metadata에 저장된 코드 사용
+          const inviteFromMeta = user?.user_metadata?.pending_invite_code;
+          const inviteFromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
+          const invite = (inviteFromMeta && /^[0-9A-Za-z]{1,20}$/.test(String(inviteFromMeta)))
+            ? String(inviteFromMeta)
+            : inviteFromStorage;
           const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
 
           if (isAdmin) {

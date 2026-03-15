@@ -416,6 +416,10 @@ export default function OnboardingPage() {
       if (joinError) throw joinError;
 
       setSuccess(ot('success_joined'));
+      // 초대 링크로 가입 후 그룹 가입 완료 시 user_metadata에서 초대 코드 제거 (재사용 방지)
+      try {
+        await supabase.auth.updateUser({ data: { pending_invite_code: null } });
+      } catch (_) {}
       const raw = joinedGroupIdData;
       const resolvedId =
         typeof raw === 'string' && raw.trim()

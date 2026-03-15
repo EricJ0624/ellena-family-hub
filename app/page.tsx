@@ -266,6 +266,10 @@ export default function LoginPage() {
 
       const signupNickname = trimmedNickname;
       
+      // 초대 링크로 가입 시: 이메일 인증 후에도 그룹 연결을 위해 user_metadata에 초대 코드 저장
+      const rawInvite = typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null;
+      const pendingInviteCode = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : undefined;
+
       // SSR 안전성: window 객체가 있을 때만 origin 사용
       const redirectTo = typeof window !== 'undefined' 
         ? `${window.location.origin}/auth/callback`
@@ -278,7 +282,8 @@ export default function LoginPage() {
           emailRedirectTo: redirectTo,
           data: {
             nickname: signupNickname,
-            full_name: signupNickname
+            full_name: signupNickname,
+            ...(pendingInviteCode && { pending_invite_code: pendingInviteCode }),
           }
         }
       });
