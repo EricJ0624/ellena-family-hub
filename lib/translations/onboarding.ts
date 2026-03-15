@@ -25,6 +25,9 @@ export type OnboardingTranslations = {
   member_count_suffix: string; // e.g. "명", " members", "人"
   join_btn: string;
   go_to_group_btn: string;
+  join_step_enter_code: string;
+  join_step_confirm: string;
+  join_step_joined: string;
   copy_title: string;
   create_btn: string;
   error_init: string;
@@ -79,6 +82,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count_suffix: '명',
     join_btn: '가입하기',
     go_to_group_btn: '그룹으로 이동',
+    join_step_enter_code: '초대 코드 입력',
+    join_step_confirm: '가입 확인',
+    join_step_joined: '가입되었습니다!',
     copy_title: '복사',
     create_btn: '그룹 만들기',
     error_init: '초기화 중 오류가 발생했습니다.',
@@ -131,6 +137,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count_suffix: ' members',
     join_btn: 'Join',
     go_to_group_btn: 'Go to group',
+    join_step_enter_code: 'Enter invite code',
+    join_step_confirm: 'Confirm and join',
+    join_step_joined: "You've joined!",
     copy_title: 'Copy',
     create_btn: 'Create group',
     error_init: 'An error occurred during initialization.',
@@ -183,6 +192,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count_suffix: '人',
     join_btn: '参加する',
     go_to_group_btn: 'グループへ移動',
+    join_step_enter_code: '招待コードを入力',
+    join_step_confirm: '参加の確認',
+    join_step_joined: '参加しました！',
     copy_title: 'コピー',
     create_btn: 'グループ作成',
     error_init: '初期化中にエラーが発生しました。',
@@ -235,6 +247,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count_suffix: '人',
     join_btn: '加入',
     go_to_group_btn: '前往群组',
+    join_step_enter_code: '输入邀请码',
+    join_step_confirm: '确认并加入',
+    join_step_joined: '已加入！',
     copy_title: '复制',
     create_btn: '创建群组',
     error_init: '初始化时发生错误。',
@@ -287,6 +302,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     member_count_suffix: '人',
     join_btn: '加入',
     go_to_group_btn: '前往群組',
+    join_step_enter_code: '輸入邀請碼',
+    join_step_confirm: '確認並加入',
+    join_step_joined: '已加入！',
     copy_title: '複製',
     create_btn: '建立群組',
     error_init: '初始化時發生錯誤。',
