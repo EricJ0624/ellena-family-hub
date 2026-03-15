@@ -1674,7 +1674,9 @@ export function TravelPlannerContent() {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: '#f8fafc',
+                      backgroundImage: 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
                       color: '#64748b',
                       padding: 20,
                     }}

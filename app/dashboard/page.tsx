@@ -7433,17 +7433,17 @@ export default function FamilyHub() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: '#f8fafc',
+                  backgroundImage: 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                   color: '#64748b',
-                  padding: '20px'
+                  padding: '20px',
                 }}>
                   <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>
                     📍 지도
                   </p>
                   <p style={{ fontSize: '13px', lineHeight: '1.5', textAlign: 'center', maxWidth: '320px' }}>
                     위치 공유를 켜면 지도에서 가족 위치를 볼 수 있습니다.
-                    <br />
-                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>지도는 위치 공유 시에만 로드되어 비용이 발생합니다.</span>
                   </p>
                 </div>
               ) : process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
