@@ -1665,7 +1665,16 @@ export default function FamilyHub() {
   }, [state.location, state.familyLocations, userName, userId, lang]);
 
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
+  // ✅ 위치 공유 OFF일 때는 지도를 로드하지 않음 → Google Map load 비용 0
   useEffect(() => {
+    if (!isLocationSharing) {
+      if (mapRef.current) {
+        mapRef.current = null;
+      }
+      setMapLoaded(false);
+      return;
+    }
+
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
     if (!googleMapApiKey) {
       console.error('Google Maps API 키가 설정되지 않았습니다. NEXT_PUBLIC_GOOGLE_MAP_API_KEY 환경 변수를 확인해주세요.');
@@ -1982,7 +1991,7 @@ export default function FamilyHub() {
         updateMapMarkersDebounceRef.current = null;
       }
     };
-  }, [state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
+  }, [isLocationSharing, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
 
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
@@ -7412,8 +7421,32 @@ export default function FamilyHub() {
                 </div>
               )}
               
-              {/* 구글맵 항상 표시 */}
-              {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
+              {/* 구글맵: 위치 공유 ON일 때만 로드 (OFF일 때는 비용 0) */}
+              {!isLocationSharing ? (
+                <div style={{
+                  width: '100%',
+                  height: '400px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  marginTop: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#f8fafc',
+                  color: '#64748b',
+                  padding: '20px'
+                }}>
+                  <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>
+                    📍 지도
+                  </p>
+                  <p style={{ fontSize: '13px', lineHeight: '1.5', textAlign: 'center', maxWidth: '320px' }}>
+                    위치 공유를 켜면 지도에서 가족 위치를 볼 수 있습니다.
+                    <br />
+                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>지도는 위치 공유 시에만 로드되어 비용이 발생합니다.</span>
+                  </p>
+                </div>
+              ) : process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
                 mapError ? (
                   <div style={{
                     width: '100%',
@@ -7484,7 +7517,8 @@ export default function FamilyHub() {
                     }}
                   />
                 )
-              ) : (
+              ) : null}
+              {isLocationSharing && !process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
                 <div style={{
                   width: '100%',
                   height: '400px',
@@ -7524,7 +7558,7 @@ export default function FamilyHub() {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
               
 
               {/* 위치 요청 목록 */}
