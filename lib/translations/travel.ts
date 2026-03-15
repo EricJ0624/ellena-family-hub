@@ -113,6 +113,13 @@ export type TravelTranslations = {
   hide_map_btn: string;
   map_placeholder_desc: string;
   schedule_add_type_prompt: string;
+  section_attraction: string;
+  section_transport: string;
+  no_attraction: string;
+  no_transport: string;
+  add_attraction: string;
+  add_transport: string;
+  view_itinerary_pdf: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -229,6 +236,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     hide_map_btn: '지도 숨기기',
     map_placeholder_desc: '지도를 열면 숙소·먹거리·관광지 위치를 볼 수 있습니다.',
     schedule_add_type_prompt: '추가할 구분을 선택하세요',
+    section_attraction: '관광지',
+    section_transport: '교통',
+    no_attraction: '등록된 관광지가 없습니다.',
+    no_transport: '등록된 교통 일정이 없습니다.',
+    add_attraction: '관광지 추가',
+    add_transport: '교통 추가',
+    view_itinerary_pdf: '일정 PDF로 보기',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -343,6 +357,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     hide_map_btn: 'Hide map',
     map_placeholder_desc: 'Open the map to see accommodation, dining, and place locations.',
     schedule_add_type_prompt: 'Select type to add',
+    section_attraction: 'Attractions',
+    section_transport: 'Transportation',
+    no_attraction: 'No attractions registered.',
+    no_transport: 'No transportation schedules.',
+    add_attraction: 'Add Attraction',
+    add_transport: 'Add Transportation',
+    view_itinerary_pdf: 'View Itinerary PDF',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -457,6 +478,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     hide_map_btn: '地図を隠す',
     map_placeholder_desc: '地図を開くと宿泊・食事・観光地の位置を確認できます。',
     schedule_add_type_prompt: '追加する区分を選択',
+    section_attraction: '観光地',
+    section_transport: '交通',
+    no_attraction: '登録された観光地がありません。',
+    no_transport: '登録された交通スケジュールがありません。',
+    add_attraction: '観光地追加',
+    add_transport: '交通追加',
+    view_itinerary_pdf: '日程をPDFで見る',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -571,6 +599,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     hide_map_btn: '隐藏地图',
     map_placeholder_desc: '打开地图可查看住宿、餐饮与景点位置。',
     schedule_add_type_prompt: '选择要添加的类型',
+    section_attraction: '观光地',
+    section_transport: '交通',
+    no_attraction: '没有注册的观光地。',
+    no_transport: '没有注册的交通日程。',
+    add_attraction: '添加观光地',
+    add_transport: '添加交通',
+    view_itinerary_pdf: '查看行程PDF',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -685,6 +720,13 @@ const travel: Record<LangCode, TravelTranslations> = {
     hide_map_btn: '隱藏地圖',
     map_placeholder_desc: '開啟地圖可查看住宿、餐飲與景點位置。',
     schedule_add_type_prompt: '選擇要新增的類型',
+    section_attraction: '觀光地',
+    section_transport: '交通',
+    no_attraction: '沒有註冊的觀光地。',
+    no_transport: '沒有註冊的交通行程。',
+    add_attraction: '新增觀光地',
+    add_transport: '新增交通',
+    view_itinerary_pdf: '查看行程PDF',
   },
 };
 

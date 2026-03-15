@@ -19,6 +19,11 @@ import {
   Pencil,
   Home,
   UtensilsCrossed,
+  Landmark,
+  Car,
+  ChevronDown,
+  ChevronRight,
+  FileDown,
 } from 'lucide-react';
 
 const API_BASE = '/api/v1/travel';
@@ -83,6 +88,10 @@ export function TravelPlannerContent() {
   const [diningPlaceName, setDiningPlaceName] = useState('');
   const [itineraryPlaceName, setItineraryPlaceName] = useState('');
   const [itineraryPlaceType, setItineraryPlaceType] = useState<'' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other'>('attraction');
+  const [sectionOpenAttraction, setSectionOpenAttraction] = useState(false);
+  const [sectionOpenDining, setSectionOpenDining] = useState(false);
+  const [sectionOpenAccommodation, setSectionOpenAccommodation] = useState(false);
+  const [sectionOpenTransport, setSectionOpenTransport] = useState(false);
 
   const [formTitle, setFormTitle] = useState('');
   const [formDestination, setFormDestination] = useState('');
@@ -770,6 +779,106 @@ export function TravelPlannerContent() {
       alert(e instanceof Error ? e.message : tt('delete_failed'));
     }
   };
+
+  const sortedItineraries = [...itineraries].sort((a, b) => {
+    const d = (a.day_date || '').localeCompare(b.day_date || '');
+    if (d !== 0) return d;
+    return (a.start_time || '').localeCompare(b.start_time || '');
+  });
+
+  const getItineraryTypeLabel = (i: TravelItinerary) => {
+    if (i.source_type === 'accommodation') return '숙소';
+    if (i.source_type === 'dining') return '식당';
+    if (i.place_type === 'transport_air') return '비행기';
+    if (i.place_type === 'transport_car') return '자동차';
+    if (i.place_type === 'transport_bike') return '바이크';
+    if (i.place_type === 'other') return '기타';
+    return '관광지';
+  };
+
+  const downloadItineraryPdf = useCallback(() => {
+    if (!selectedTrip) return;
+    import('jspdf').then(({ jsPDF }) => {
+      const doc = new jsPDF();
+      const margin = 20;
+      const pageW = doc.internal.pageSize.getWidth();
+      const lineH = 6;
+      let y = 24;
+
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(selectedTrip.title, margin, y);
+      y += lineH + 4;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      if (selectedTrip.destination) {
+        doc.text(selectedTrip.destination, margin, y);
+        y += lineH;
+      }
+      doc.text(`${selectedTrip.start_date} ~ ${selectedTrip.end_date}`, margin, y);
+      y += lineH + 10;
+
+      if (itineraries.length === 0) {
+        doc.setFontSize(10);
+        doc.text('등록된 일정이 없습니다.', margin, y);
+        doc.save(`itinerary-${selectedTrip.title.replace(/[^\w\u3131-\uD7A3]/g, '-')}.pdf`);
+        return;
+      }
+
+      const byDay = new Map<string, TravelItinerary[]>();
+      for (const i of sortedItineraries) {
+        const day = i.day_date || '';
+        if (!byDay.has(day)) byDay.set(day, []);
+        byDay.get(day)!.push(i);
+      }
+      const days = Array.from(byDay.keys()).sort();
+
+      for (let idx = 0; idx < days.length; idx++) {
+        if (y > 265) {
+          doc.addPage();
+          y = 20;
+        }
+        const day = days[idx];
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y - 4, pageW - margin, y - 4);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Day ${idx + 1}  ·  ${day}`, margin, y);
+        y += lineH + 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+
+        for (const i of byDay.get(day)!) {
+          if (y > 272) {
+            doc.addPage();
+            y = 20;
+          }
+          const label = getItineraryTypeLabel(i);
+          const timeStr = (i.start_time || i.end_time) ? `  ${i.start_time || '--'} ~ ${i.end_time || '--'}` : '';
+          doc.text(`[${label}] ${i.title}${timeStr}`, margin, y);
+          y += lineH;
+          if (i.description && i.description.trim()) {
+            const lines = doc.splitTextToSize(i.description.trim(), pageW - margin * 2 - 8);
+            doc.setFontSize(9);
+            for (const line of lines) {
+              if (y > 272) {
+                doc.addPage();
+                y = 20;
+              }
+              doc.text(line, margin + 6, y);
+              y += 5;
+            }
+            doc.setFontSize(10);
+            y += 2;
+          }
+          y += 2;
+        }
+        y += 6;
+      }
+      doc.save(`itinerary-${selectedTrip.title.replace(/[^\w\u3131-\uD7A3]/g, '-')}.pdf`);
+    });
+  }, [selectedTrip, itineraries]);
 
   type ItineraryPlaceTypeOption = 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other';
   const openItineraryForm = (item: TravelItinerary | null, defaultPlaceType?: ItineraryPlaceTypeOption) => {
@@ -1484,19 +1593,29 @@ export function TravelPlannerContent() {
                   <ListOrdered style={{ width: 18, height: 18 }} />
                   일정
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowScheduleAddTypePicker(true)}
-                  style={{ padding: '6px 10px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                >
-                  + 일정 추가
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={downloadItineraryPdf}
+                    style={{ padding: '6px 10px', background: '#10b981', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <FileDown style={{ width: 14, height: 14 }} />
+                    {tt('view_itinerary_pdf')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowScheduleAddTypePicker(true)}
+                    style={{ padding: '6px 10px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    + 일정 추가
+                  </button>
+                </div>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {itineraries.length === 0 ? (
+                {sortedItineraries.length === 0 ? (
                   <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_itinerary')}</li>
                 ) : (
-                  itineraries.map((i) => (
+                  sortedItineraries.map((i) => (
                     <li
                       key={i.id}
                       style={{
@@ -1537,150 +1656,410 @@ export function TravelPlannerContent() {
               </ul>
             </div>
 
-            <div style={{ marginTop: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Home style={{ width: 18, height: 18 }} />
-                  숙소
-                </h3>
-                  <button
-                    type="button"
-                    onClick={() => openAccommodationForm(null)}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#9333ea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    + 숙소 추가
-                  </button>
-                </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {accommodations.length === 0 ? (
-                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_accommodation')}</li>
-                  ) : (
-                    accommodations.map((a) => (
-                      <li
-                        key={a.id}
-                        style={{
-                          padding: '10px 12px',
-                          marginBottom: 6,
-                          background: '#f8fafc',
-                          borderRadius: 8,
-                          border: '1px solid #e2e8f0',
-                          fontSize: 14,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{a.name}</div>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{a.check_in_date} ~ {a.check_out_date}</div>
-                          {a.address && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.address}</div>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                            등록: {getDisplayName(a.created_by)}
-                            {a.updated_by != null && ` · 수정: ${getDisplayName(a.updated_by)}`}
+            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setSectionOpenAttraction((v) => !v)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: '#f8fafc',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#475569',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {sectionOpenAttraction ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
+                  <Landmark style={{ width: 18, height: 18 }} />
+                  관광지 ({sortedItineraries.filter(i => !i.source_type && (i.place_type === 'attraction' || i.place_type == null)).length})
+                </span>
+              </button>
+              {sectionOpenAttraction && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => openItineraryForm(null, 'attraction')}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + 관광지 추가
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {sortedItineraries.filter(i => !i.source_type && (i.place_type === 'attraction' || i.place_type == null)).length === 0 ? (
+                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 관광지가 없습니다.</li>
+                    ) : (
+                      sortedItineraries.filter(i => !i.source_type && (i.place_type === 'attraction' || i.place_type == null)).map((i) => (
+                        <li
+                          key={i.id}
+                          style={{
+                            padding: '10px 12px',
+                            marginBottom: 6,
+                            background: '#f8fafc',
+                            borderRadius: 8,
+                            border: '1px solid #e2e8f0',
+                            fontSize: 14,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                              <span style={{ marginRight: 6 }}>🏛️</span>
+                              {i.title}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                              {i.day_date}
+                              {(i.start_time || i.end_time) && <span style={{ marginLeft: 6 }}>· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
+                            </div>
+                            {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
+                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(i.created_by)}{i.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(i.updated_by)}`}</div>
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                          {getGoogleMapsUrl(a) && (
-                            <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
-                              <MapPin style={{ width: 14, height: 14 }} />
-                            </a>
-                          )}
-                          <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
-                            <Pencil style={{ width: 14, height: 14 }} />
-                          </button>
-                          <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
-                            <Trash2 style={{ width: 14, height: 14 }} />
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                  )}
-                </ul>
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                            {getGoogleMapsUrl(i) && (
+                              <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
+                            )}
+                            <button type="button" onClick={() => openItineraryForm(i)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                            <button type="button" onClick={() => handleDeleteItinerary(i)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                          </div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
 
-            <div style={{ marginTop: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <UtensilsCrossed style={{ width: 18, height: 18 }} />
-                    먹거리
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => openDiningForm(null)}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#9333ea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    + 먹거리 추가
-                  </button>
+            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setSectionOpenDining((v) => !v)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: '#f8fafc',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#475569',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {sectionOpenDining ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
+                  <UtensilsCrossed style={{ width: 18, height: 18 }} />
+                  먹거리 ({dining.length})
+                </span>
+              </button>
+              {sectionOpenDining && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => openDiningForm(null)}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + 먹거리 추가
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {dining.length === 0 ? (
+                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_dining')}</li>
+                    ) : (
+                      dining.map((d) => (
+                        <li
+                          key={d.id}
+                          style={{
+                            padding: '10px 12px',
+                            marginBottom: 6,
+                            background: '#f8fafc',
+                            borderRadius: 8,
+                            border: '1px solid #e2e8f0',
+                            fontSize: 14,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{d.name}</div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                              {d.day_date}
+                              {d.time_at && <span style={{ marginLeft: 6 }}>{d.time_at}</span>}
+                              {d.category && <span style={{ marginLeft: 6, color: '#64748b' }}>{d.category}</span>}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                              등록: {getDisplayName(d.created_by)}
+                              {d.updated_by != null && ` · 수정: ${getDisplayName(d.updated_by)}`}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                            {getGoogleMapsUrl(d) && (
+                              <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
+                                <MapPin style={{ width: 14, height: 14 }} />
+                              </a>
+                            )}
+                            <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
+                              <Pencil style={{ width: 14, height: 14 }} />
+                            </button>
+                            <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
+                              <Trash2 style={{ width: 14, height: 14 }} />
+                            </button>
+                          </div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {dining.length === 0 ? (
-                    <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_dining')}</li>
-                  ) : (
-                    dining.map((d) => (
-                      <li
-                        key={d.id}
-                        style={{
-                          padding: '10px 12px',
-                          marginBottom: 6,
-                          background: '#f8fafc',
-                          borderRadius: 8,
-                          border: '1px solid #e2e8f0',
-                          fontSize: 14,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{d.name}</div>
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                            {d.day_date}
-                            {d.time_at && <span style={{ marginLeft: 6 }}>{d.time_at}</span>}
-                            {d.category && <span style={{ marginLeft: 6, color: '#64748b' }}>{d.category}</span>}
+              )}
+            </div>
+
+            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setSectionOpenAccommodation((v) => !v)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: '#f8fafc',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#475569',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {sectionOpenAccommodation ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
+                  <Home style={{ width: 18, height: 18 }} />
+                  숙소 ({accommodations.length})
+                </span>
+              </button>
+              {sectionOpenAccommodation && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => openAccommodationForm(null)}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + 숙소 추가
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {accommodations.length === 0 ? (
+                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_accommodation')}</li>
+                    ) : (
+                      accommodations.map((a) => (
+                        <li
+                          key={a.id}
+                          style={{
+                            padding: '10px 12px',
+                            marginBottom: 6,
+                            background: '#f8fafc',
+                            borderRadius: 8,
+                            border: '1px solid #e2e8f0',
+                            fontSize: 14,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{a.name}</div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{a.check_in_date} ~ {a.check_out_date}</div>
+                            {a.address && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.address}</div>}
+                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                              등록: {getDisplayName(a.created_by)}
+                              {a.updated_by != null && ` · 수정: ${getDisplayName(a.updated_by)}`}
+                            </div>
                           </div>
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                            등록: {getDisplayName(d.created_by)}
-                            {d.updated_by != null && ` · 수정: ${getDisplayName(d.updated_by)}`}
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                            {getGoogleMapsUrl(a) && (
+                              <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
+                                <MapPin style={{ width: 14, height: 14 }} />
+                              </a>
+                            )}
+                            <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
+                              <Pencil style={{ width: 14, height: 14 }} />
+                            </button>
+                            <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
+                              <Trash2 style={{ width: 14, height: 14 }} />
+                            </button>
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                          {getGoogleMapsUrl(d) && (
-                            <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
-                              <MapPin style={{ width: 14, height: 14 }} />
-                            </a>
-                          )}
-                          <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
-                            <Pencil style={{ width: 14, height: 14 }} />
-                          </button>
-                          <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
-                            <Trash2 style={{ width: 14, height: 14 }} />
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setSectionOpenTransport((v) => !v)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  background: '#f8fafc',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#475569',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {sectionOpenTransport ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
+                  <Car style={{ width: 18, height: 18 }} />
+                  교통 ({sortedItineraries.filter(i => !i.source_type && ['transport_air', 'transport_car', 'transport_bike'].includes(i.place_type as string)).length})
+                </span>
+              </button>
+              {sectionOpenTransport && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => openItineraryForm(null, 'transport_air')}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + 비행기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openItineraryForm(null, 'transport_car')}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + 자동차
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openItineraryForm(null, 'transport_bike')}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#9333ea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + 바이크
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {sortedItineraries.filter(i => !i.source_type && ['transport_air', 'transport_car', 'transport_bike'].includes(i.place_type as string)).length === 0 ? (
+                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 교통편이 없습니다.</li>
+                    ) : (
+                      sortedItineraries.filter(i => !i.source_type && ['transport_air', 'transport_car', 'transport_bike'].includes(i.place_type as string)).map((i) => (
+                        <li
+                          key={i.id}
+                          style={{
+                            padding: '10px 12px',
+                            marginBottom: 6,
+                            background: '#f8fafc',
+                            borderRadius: 8,
+                            border: '1px solid #e2e8f0',
+                            fontSize: 14,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                              <span style={{ marginRight: 6 }}>{i.place_type === 'transport_air' ? '✈️' : i.place_type === 'transport_car' ? '🚗' : '🚲'}</span>
+                              {i.title}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                              {i.day_date}
+                              {(i.start_time || i.end_time) && <span style={{ marginLeft: 6 }}>· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
+                            </div>
+                            {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
+                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(i.created_by)}{i.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(i.updated_by)}`}</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                            {getGoogleMapsUrl(i) && (
+                              <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
+                            )}
+                            <button type="button" onClick={() => openItineraryForm(i)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                            <button type="button" onClick={() => handleDeleteItinerary(i)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                          </div>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
             </div>
 
             {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY && (
