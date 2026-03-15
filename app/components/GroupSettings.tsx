@@ -409,118 +409,131 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   {gst('invite_code')}
                 </th>
                 <td style={{ padding: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <input
-                      type="text"
-                      value={inviteCode}
-                      readOnly
-                      style={{
-                        minWidth: '220px',
-                        padding: '10px 12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        backgroundColor: '#f8fafc',
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                        textAlign: 'center',
-                        fontSize: '16px',
-                        letterSpacing: '0.12em',
-                        flex: 1,
-                      }}
-                    />
-                    <button
-                      onClick={handleCopyInviteCode}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#2563eb',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                      aria-label={gst('invite_copy_aria')}
-                    >
-                      {copied ? (
-                        <>
-                          <CheckCircle style={{ width: '16px', height: '16px' }} />
-                          {gst('copied')}
-                        </>
-                      ) : (
-                        <>
-                          <Copy style={{ width: '16px', height: '16px' }} />
-                          {gst('copy_btn')}
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleCopyInviteLink}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#059669',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                      aria-label={gst('invite_link_copy_aria')}
-                    >
-                      {copiedLink ? (
-                        <>
-                          <CheckCircle style={{ width: '16px', height: '16px' }} />
-                          {gst('copied')}
-                        </>
-                      ) : (
-                        <>
-                          <Copy style={{ width: '16px', height: '16px' }} />
-                          {gst('invite_link_copy_btn')}
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleRefreshInviteCode}
-                      disabled={refreshing}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#7c3aed',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        opacity: refreshing ? 0.6 : 1,
-                      }}
-                      aria-label={gst('invite_refresh_aria')}
-                    >
-                      {refreshing ? (
-                        <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-                      ) : (
-                        <RefreshCw style={{ width: '16px', height: '16px' }} />
-                      )}
-                      {gst('refresh_btn')}
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* 입력창 + 코드 복사 */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        value={inviteCode}
+                        readOnly
+                        style={{
+                          minWidth: '220px',
+                          padding: '10px 12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          backgroundColor: '#f8fafc',
+                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                          textAlign: 'center',
+                          fontSize: '16px',
+                          letterSpacing: '0.12em',
+                          flex: 1,
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                        <button
+                          onClick={handleCopyInviteCode}
+                          style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#2563eb',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                          aria-label={gst('invite_copy_aria')}
+                        >
+                          {copied ? (
+                            <>
+                              <CheckCircle style={{ width: '16px', height: '16px' }} />
+                              {gst('copied')}
+                            </>
+                          ) : (
+                            <>
+                              <Copy style={{ width: '16px', height: '16px' }} />
+                              {gst('copy_btn')}
+                            </>
+                          )}
+                        </button>
+                        <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                          {gst('invite_share_hint')}
+                        </p>
+                      </div>
+                    </div>
+                    {/* 초대 링크 복사 + 안내 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <button
+                        onClick={handleCopyInviteLink}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#059669',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          alignSelf: 'flex-start',
+                        }}
+                        aria-label={gst('invite_link_copy_aria')}
+                      >
+                        {copiedLink ? (
+                          <>
+                            <CheckCircle style={{ width: '16px', height: '16px' }} />
+                            {gst('copied')}
+                          </>
+                        ) : (
+                          <>
+                            <Copy style={{ width: '16px', height: '16px' }} />
+                            {gst('invite_link_copy_btn')}
+                          </>
+                        )}
+                      </button>
+                      <p style={{ fontSize: '12px', color: '#b45309', margin: 0, fontWeight: 500 }}>
+                        {gst('invite_only_family_hint')}
+                      </p>
+                    </div>
+                    {/* 갱신 + 안내 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <button
+                        onClick={handleRefreshInviteCode}
+                        disabled={refreshing}
+                        style={{
+                          padding: '8px 12px',
+                          backgroundColor: '#7c3aed',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          opacity: refreshing ? 0.6 : 1,
+                          alignSelf: 'flex-start',
+                        }}
+                        aria-label={gst('invite_refresh_aria')}
+                      >
+                        {refreshing ? (
+                          <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                        ) : (
+                          <RefreshCw style={{ width: '16px', height: '16px' }} />
+                        )}
+                        {gst('refresh_btn')}
+                      </button>
+                      <p style={{ fontSize: '12px', color: '#9333ea', margin: 0, fontWeight: 500 }}>
+                        {gst('invite_refresh_hint')}
+                      </p>
+                    </div>
                   </div>
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '8px' }}>
-                    초대 코드를 복사하여 가족 구성원에게 공유하세요.
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#b45309', marginTop: '6px', fontWeight: 500 }}>
-                    {gst('invite_only_family_hint')}
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#9333ea', marginTop: '6px', fontWeight: 500 }}>
-                    {gst('invite_refresh_hint')}
-                  </p>
                 </td>
               </tr>
             </tbody>

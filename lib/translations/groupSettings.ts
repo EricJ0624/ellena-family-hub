@@ -25,6 +25,7 @@ export type GroupSettingsTranslations = {
   copy_failed: string;
   refresh_failed: string;
   refresh_success: string;
+  invite_share_hint: string;
   invite_refresh_hint: string;
   invite_only_family_hint: string;
   saving: string;
@@ -57,6 +58,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     copy_failed: '초대 코드 복사에 실패했습니다.',
     refresh_failed: '초대 코드 갱신에 실패했습니다.',
     refresh_success: '초대 코드가 갱신되었습니다.',
+    invite_share_hint: '초대 코드를 복사하여 가족 구성원에게 공유하세요.',
     invite_refresh_hint: "가입이 끝난 후 '초대코드 갱신'을 눌러 이전 코드를 무효화하세요. 새 코드를 모르는 사람은 가입할 수 없습니다.",
     invite_only_family_hint: '초대 링크는 가족·지인에게만 보내세요. 서비스 소개만 할 때는 초대 코드 없는 주소를 공유하세요.',
     saving: '저장 중...',
@@ -87,6 +89,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     copy_failed: 'Failed to copy invite code.',
     refresh_failed: 'Failed to refresh invite code.',
     refresh_success: 'Invite code has been refreshed.',
+    invite_share_hint: 'Copy the invite code and share it with your family members.',
     invite_refresh_hint: "After everyone has joined, click 'Refresh' to invalidate the old code. Only people with the new code can join.",
     invite_only_family_hint: 'Send invite links only to family and friends. When just introducing the service, share the URL without an invite code.',
     saving: 'Saving...',
@@ -117,6 +120,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     copy_failed: '招待コードのコピーに失敗しました。',
     refresh_failed: '招待コードの再発行に失敗しました。',
     refresh_success: '招待コードを再発行しました。',
+    invite_share_hint: '招待コードをコピーして家族に共有してください。',
     invite_refresh_hint: '参加者が揃ったら「再発行」を押して古いコードを無効にしてください。新しいコードを知らない人は参加できません。',
     invite_only_family_hint: '招待リンクは家族・知人にのみ送ってください。サービス紹介だけの場合は招待コードのないURLを共有してください。',
     saving: '保存中...',
@@ -147,6 +151,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     copy_failed: '复制邀请码失败。',
     refresh_failed: '重新生成邀请码失败。',
     refresh_success: '邀请码已重新生成。',
+    invite_share_hint: '复制邀请码并分享给家人。',
     invite_refresh_hint: '所有人加入后，点击「重新生成」使旧邀请码失效。只有持有新码的人可以加入。',
     invite_only_family_hint: '邀请链接请仅发送给家人和朋友。仅介绍服务时，请分享不带邀请码的地址。',
     saving: '保存中...',
@@ -177,6 +182,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     copy_failed: '複製邀請碼失敗。',
     refresh_failed: '重新產生邀請碼失敗。',
     refresh_success: '邀請碼已重新產生。',
+    invite_share_hint: '複製邀請碼並分享給家人。',
     invite_refresh_hint: '所有人加入後，點擊「重新產生」使舊邀請碼失效。僅持有新碼的人可加入。',
     invite_only_family_hint: '邀請連結請僅傳送給家人與親友。僅介紹服務時，請分享不帶邀請碼的網址。',
     saving: '儲存中...',
