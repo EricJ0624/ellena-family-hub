@@ -82,12 +82,25 @@ export default function OnboardingPage() {
           typeof window !== 'undefined'
             ? new URLSearchParams(window.location.search).get('from') === 'admin'
             : false;
-        const inviteParam =
+        const rawInvite =
           typeof window !== 'undefined'
             ? new URLSearchParams(window.location.search).get('invite')?.trim() ||
               new URLSearchParams(window.location.search).get('invite_code')?.trim() ||
               ''
             : '';
+        // 초대 코드 형식 검증 (영숫자 1~20자)
+        const inviteParam = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : '';
+        // URL에서 invite 쿼리 제거 (Referrer/히스토리 노출 방지)
+        if (typeof window !== 'undefined' && rawInvite) {
+          try {
+            const params = new URLSearchParams(window.location.search);
+            params.delete('invite');
+            params.delete('invite_code');
+            const newSearch = params.toString();
+            const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
+            window.history.replaceState({}, '', newUrl);
+          } catch (_) {}
+        }
         setFromAdmin(fromAdminParam);
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
@@ -417,12 +430,21 @@ export default function OnboardingPage() {
         setJoinFamilyRole('');
         setCurrentGroupId(groupId);
         setShowJoinFamilyRoleModal(true);
+        try {
+          if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
+        } catch (_) {}
       } else if (groupPreview?.id) {
         setJoinedGroupId(groupPreview.id);
         setJoinFamilyRole('');
         setCurrentGroupId(groupPreview.id);
         setShowJoinFamilyRoleModal(true);
+        try {
+          if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
+        } catch (_) {}
       } else {
+        try {
+          if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
+        } catch (_) {}
         setTimeout(() => router.push('/dashboard'), 1500);
       }
     } catch (err: any) {

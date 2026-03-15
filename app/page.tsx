@@ -38,14 +38,22 @@ export default function LoginPage() {
     setIsMounted(true);
   }, []);
 
-  // 초대 링크(?invite= 또는 ?invite_code=) 쿼리 읽어서 sessionStorage에 저장 (가입/로그인 후 온보딩에서 사용)
+  // 초대 링크(?invite= 또는 ?invite_code=) 쿼리 읽어서 sessionStorage에 저장 후 URL에서 제거 (Referrer/히스토리 노출 방지)
+  // 형식 검증: 영숫자 1~20자만 저장
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const invite = params.get('invite')?.trim() || params.get('invite_code')?.trim();
-    if (invite) {
+    const raw = params.get('invite')?.trim() || params.get('invite_code')?.trim();
+    if (raw) {
       try {
-        window.sessionStorage.setItem(INVITE_STORAGE_KEY, invite);
+        if (/^[0-9A-Za-z]{1,20}$/.test(raw)) {
+          window.sessionStorage.setItem(INVITE_STORAGE_KEY, raw);
+        }
+        params.delete('invite');
+        params.delete('invite_code');
+        const newSearch = params.toString();
+        const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
+        window.history.replaceState({}, '', newUrl);
       } catch (_) {}
     }
   }, [isMounted]);

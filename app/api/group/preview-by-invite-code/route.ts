@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 
+/** 초대 코드 형식: 영숫자 1~20자 (DB는 12자 생성) */
+const INVITE_CODE_REGEX = /^[0-9A-Za-z]{1,20}$/;
+
+/** IP별 요청 횟수 (레이트 리미트용, 메모리) */
+const previewRateLimit = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1분
+const RATE_LIMIT_MAX = 30; // 1분당 최대 30회
+
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  );
+}
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = previewRateLimit.get(ip);
+  if (!entry) {
+    previewRateLimit.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (now >= entry.resetAt) {
+    previewRateLimit.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= RATE_LIMIT_MAX;
+}
+
 /**
  * 초대 코드로 그룹 미리보기 조회 (비멤버용).
  * 서버에서 service role로 groups 조회하여 RLS 우회.
@@ -14,15 +45,23 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json().catch(() => ({}));
-    const inviteCode = typeof body?.invite_code === 'string' ? body.invite_code.trim() : '';
+    const ip = getClientIp(request);
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.' },
+        { status: 429 }
+      );
+    }
 
-    if (!inviteCode) {
+    const body = await request.json().catch(() => ({}));
+    const rawCode = typeof body?.invite_code === 'string' ? body.invite_code.trim() : '';
+    if (!rawCode || !INVITE_CODE_REGEX.test(rawCode)) {
       return NextResponse.json(
         { error: '올바른 초대 코드를 입력해 주세요.' },
         { status: 400 }
       );
     }
+    const inviteCode = rawCode;
 
     const supabase = getSupabaseServerClient();
 
