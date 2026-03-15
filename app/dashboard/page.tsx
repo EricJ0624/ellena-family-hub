@@ -90,9 +90,9 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 };
 
 // --- [TYPES] 타입 안정성 추가 ---
-type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; supabaseId?: string | number };
+type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; assigned_to_user_id?: string; supabaseId?: string | number };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
-type Message = { id: string | number; user: string; text: string; time: string };
+type Message = { id: string | number; user: string; text: string; time: string; sender_id?: string };
 type Photo = {
   id: number | string; // 로컬 임시 id 또는 Supabase UUID
   data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시) 또는 플레이스홀더 (큰 파일)
@@ -2258,7 +2258,7 @@ export default function FamilyHub() {
               setState(prev => ({
                 ...prev,
                 messages: prev.messages.map(m =>
-                  m.id === updatedMessage.id ? { id: updatedMessage.id, user: '사용자', text: decryptedText, time: timeStr } : m
+                  m.id === updatedMessage.id ? { id: updatedMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: updatedMessage.sender_id } : m
                 )
               }));
               return;
@@ -2291,7 +2291,7 @@ export default function FamilyHub() {
                   return {
                     ...prev,
                     messages: prev.messages.map(m =>
-                      m.id === recentDuplicate.id ? { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr } : m
+                      m.id === recentDuplicate.id ? { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id } : m
                     )
                   };
                 }
@@ -2300,7 +2300,7 @@ export default function FamilyHub() {
               }
               return {
                 ...prev,
-                messages: [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr }]
+                messages: [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id }]
               };
             });
           }
@@ -2422,10 +2422,11 @@ export default function FamilyHub() {
               decryptedText = msg.message_text;
             }
             return {
-              id: msg.id, // 메시지 ID 저장 (DELETE를 위해 필요)
-              user: '사용자', // sender_name 컬럼이 없으므로 기본값 사용 (실제로는 sender_id로 조인 필요)
+              id: msg.id,
+              user: '사용자',
               text: decryptedText,
-              time: timeStr
+              time: timeStr,
+              sender_id: msg.sender_id
             };
           });
           
@@ -2498,12 +2499,14 @@ export default function FamilyHub() {
               }
             }
             
+            const assignedToUserId = task.assigned_to && typeof task.assigned_to === 'string' && task.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? task.assigned_to : undefined;
             return {
               id: task.id,
               text: decryptedText,
               assignee: decryptedAssignee,
-              done: task.is_completed || false, // is_completed 컬럼 사용
-              created_by: task.created_by || undefined // 생성자 ID 저장
+              done: task.is_completed || false,
+              created_by: task.created_by || undefined,
+              assigned_to_user_id: assignedToUserId
             };
           });
           
@@ -2680,11 +2683,12 @@ export default function FamilyHub() {
               } else if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string') {
                 decryptedAssignee = updatedTask.assigned_to;
               }
+              const updatedAssignedToUserId = updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? updatedTask.assigned_to : undefined;
               setState(prev => ({
                 ...prev,
                 todos: prev.todos.map(t =>
                   t.id === updatedTask.id
-                    ? { id: updatedTask.id, text: decryptedText, assignee: decryptedAssignee || t.assignee, done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done }
+                    ? { ...t, id: updatedTask.id, text: decryptedText, assignee: decryptedAssignee || t.assignee, done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done, assigned_to_user_id: updatedAssignedToUserId ?? t.assigned_to_user_id }
                     : t
                 )
               }));
@@ -2773,6 +2777,7 @@ export default function FamilyHub() {
               }
             }
             
+            const newAssignedToUserId = newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? newTask.assigned_to : undefined;
             setState(prev => {
               // 기준 1: 같은 ID를 가진 할일이 이미 있으면 추가하지 않음 (모든 사용자 동일)
               const existingTaskById = prev.todos?.find(t => String(t.id) === String(newTask.id));
@@ -2792,17 +2797,11 @@ export default function FamilyHub() {
                 });
                 
                 if (recentDuplicate) {
-                  // 임시 항목을 Supabase ID로 교체
                   return {
                     ...prev,
                     todos: prev.todos.map(t => 
                       t.id === recentDuplicate.id 
-                        ? {
-                            id: newTask.id,
-                            text: decryptedText,
-                            assignee: decryptedAssignee,
-                            done: newTask.is_completed || false
-                          }
+                        ? { ...t, id: newTask.id, text: decryptedText, assignee: decryptedAssignee, done: newTask.is_completed || false, assigned_to_user_id: newAssignedToUserId ?? t.assigned_to_user_id }
                         : t
                     )
                   };
@@ -2818,14 +2817,15 @@ export default function FamilyHub() {
                 }
               }
               
-              // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
               return {
                 ...prev,
                 todos: [{
                   id: newTask.id,
                   text: decryptedText,
                   assignee: decryptedAssignee,
-                  done: newTask.is_completed || false
+                  done: newTask.is_completed || false,
+                  created_by: newTask.created_by,
+                  assigned_to_user_id: newAssignedToUserId
                 }, ...prev.todos]
               };
             });
@@ -3438,9 +3438,11 @@ export default function FamilyHub() {
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId, currentGroupId]); // familyId 변경 시 데이터 재로드
 
-  // 일정 작성자 별명 로드 (표시용)
+  // 일정/채팅 작성자 별명 로드 (표시용)
   useEffect(() => {
-    const authorIds = [...new Set((state.events || []).map(e => e.created_by).filter(Boolean))] as string[];
+    const eventAuthorIds = (state.events || []).map(e => e.created_by).filter(Boolean) as string[];
+    const messageSenderIds = (state.messages || []).map(m => m.sender_id).filter(Boolean) as string[];
+    const authorIds = [...new Set([...eventAuthorIds, ...messageSenderIds])];
     if (authorIds.length === 0) {
       setEventAuthorNames({});
       return;
@@ -3453,7 +3455,7 @@ export default function FamilyHub() {
       });
       setEventAuthorNames(map);
     })();
-  }, [state.events]);
+  }, [state.events, state.messages]);
 
   // 현재 그룹 멤버의 가족 표시( family_role ) 로드 — 앱 전반 표시용
   useEffect(() => {
@@ -6246,10 +6248,11 @@ export default function FamilyHub() {
     
     // 임시 ID로 메시지 추가 (Realtime으로 Supabase ID가 들어오면 교체됨)
     updateState('ADD_MESSAGE', { 
-      id: Date.now(), // 임시 ID (Realtime으로 Supabase ID가 들어오면 교체)
+      id: Date.now(),
       user: "나", 
       text: sanitizedText, 
-      time: timeStr 
+      time: timeStr,
+      sender_id: userId ?? undefined
     });
     input.value = "";
   };
@@ -6594,7 +6597,10 @@ export default function FamilyHub() {
                             {t.text}
                           </span>
                           {t.assignee && (
-                            <span className="todo-assignee">{t.assignee === '누구나' ? ct('anyone') : t.assignee}</span>
+                            <span className="todo-assignee">
+                              {t.assigned_to_user_id && familyRoleByUserId[t.assigned_to_user_id] ? getFamilyRoleEmoji(familyRoleByUserId[t.assigned_to_user_id]) + ' ' : ''}
+                              {t.assignee === '누구나' ? ct('anyone') : t.assignee}
+                            </span>
                           )}
                   </div>
                 </div>
@@ -7105,7 +7111,10 @@ export default function FamilyHub() {
               {(state.messages || []).map((m, idx) => (
                   <div key={idx} className="message-item">
                     <div className="message-header">
-                      <span className="message-user">{m.user === '사용자' ? ct('user') : m.user}</span>
+                      <span className="message-user">
+                        {m.sender_id && familyRoleByUserId[m.sender_id] ? getFamilyRoleEmoji(familyRoleByUserId[m.sender_id]) + ' ' : ''}
+                        {m.sender_id === userId ? (m.user === '나' ? m.user : ct('me')) : (eventAuthorNames[m.sender_id!] ?? (m.user === '사용자' ? ct('user') : m.user))}
+                      </span>
                       <span className="message-time">{m.time}</span>
                   </div>
                     <div className="message-bubble">
