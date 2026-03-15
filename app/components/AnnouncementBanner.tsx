@@ -123,9 +123,10 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
             </span>
           </div>
 
-          {/* 스크롤 영역 */}
+          {/* 스크롤 영역 (minWidth: 0으로 flex 오버플로우 시 줄어들 수 있게) */}
           <div style={{
             flex: 1,
+            minWidth: 0,
             overflow: 'hidden',
             position: 'relative',
             marginLeft: '2px',

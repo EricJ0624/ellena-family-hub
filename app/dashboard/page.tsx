@@ -1096,7 +1096,7 @@ export default function FamilyHub() {
     const cancelled = { current: false };
     let ro: ResizeObserver | null = null;
     let rafId: number = 0;
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const timeouts: (ReturnType<typeof setTimeout> | (() => void))[] = [];
 
     const fit = (el: HTMLHeadingElement) => {
       const w = el.clientWidth;
@@ -1137,11 +1137,28 @@ export default function FamilyHub() {
       timeouts.push(setTimeout(runFitForEl, 0));
       ro = new ResizeObserver(runFitForEl);
       ro.observe(el);
-      document.fonts.ready.then(runFitForEl);
+      // 폰트 로드 직후·늦은 로드 대비: ready 후 추가 재실행 + 보험용 늦은 한 번 더
+      document.fonts.ready.then(() => {
+        runFitForEl();
+        timeouts.push(setTimeout(runFitForEl, 500));
+        timeouts.push(setTimeout(runFitForEl, 1500));
+      });
       timeouts.push(setTimeout(runFitForEl, 100));
       timeouts.push(setTimeout(runFitForEl, 400));
       timeouts.push(setTimeout(runFitForEl, 1200));
       timeouts.push(setTimeout(runFitForEl, 2500));
+      timeouts.push(setTimeout(runFitForEl, 3500)); // 느린/재접속 후 폰트 로드 대비
+      // 재접속 시 폰트 로드 후 타이틀 다시 맞춤 (인터넷 끊겼다 되면 조절 복구)
+      const handleOnline = () => {
+        if (cancelled.current) return;
+        document.fonts.ready.then(() => {
+          if (cancelled.current) return;
+          const currentEl = dashboardTitleRef.current;
+          if (currentEl) runFit(currentEl);
+        });
+      };
+      window.addEventListener('online', handleOnline);
+      timeouts.push(() => window.removeEventListener('online', handleOnline));
     };
 
     const tryRun = (retryCount: number) => {
@@ -1161,7 +1178,10 @@ export default function FamilyHub() {
       cancelled.current = true;
       cancelAnimationFrame(rafId);
       ro?.disconnect();
-      timeouts.forEach((t) => clearTimeout(t));
+      timeouts.forEach((t) => {
+        if (typeof t === 'function') (t as () => void)();
+        else clearTimeout(t as ReturnType<typeof setTimeout>);
+      });
     };
   }, [titleFitMaxFontSize, dashboardTitleText, showAdminForTitleFit, isGroupLoadingForTitleFit, lang]);
 
