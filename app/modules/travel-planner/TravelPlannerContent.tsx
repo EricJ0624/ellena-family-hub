@@ -80,6 +80,7 @@ export function TravelPlannerContent() {
   const [accPlaceName, setAccPlaceName] = useState('');
   const [diningPlaceName, setDiningPlaceName] = useState('');
   const [itineraryPlaceName, setItineraryPlaceName] = useState('');
+  const [itineraryPlaceType, setItineraryPlaceType] = useState<'' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike'>('attraction');
 
   const [formTitle, setFormTitle] = useState('');
   const [formDestination, setFormDestination] = useState('');
@@ -252,7 +253,8 @@ export function TravelPlannerContent() {
       const bounds = new g.maps.LatLngBounds();
       let hasAny = false;
 
-      const addMarker = (lat: number, lng: number, title: string, label?: string) => {
+      // 이모지 마커: 🏨 숙소 🍽️ 식당 🏛️ 관광지 ✈️ 비행기 🚗 자동차 🚲 바이크
+      const addMarker = (lat: number, lng: number, title: string, emoji?: string) => {
         const pos = { lat, lng };
         bounds.extend(pos);
         hasAny = true;
@@ -260,25 +262,32 @@ export function TravelPlannerContent() {
           map,
           position: pos,
           title,
-          label: label ? { text: label, color: 'white', fontSize: '11px' } : undefined,
-          icon: label
-            ? undefined
-            : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+          label: emoji ? { text: emoji, color: '#333', fontSize: '18px' } : undefined,
+          icon: emoji ? undefined : 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
         });
-        if (label === tt('marker_accommodation')) marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
-        else if (label === tt('marker_dining')) marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png');
-        else if (label === tt('marker_place')) marker.setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
         travelMapMarkersRef.current.push(marker);
+      };
+      const getItineraryEmoji = (i: TravelItinerary) => {
+        if (i.source_type) return undefined; // 숙소/먹거리 연동 일정은 지도에 별도 마커 생략(중복 방지)
+        switch (i.place_type) {
+          case 'transport_air': return '✈️';
+          case 'transport_car': return '🚗';
+          case 'transport_bike': return '🚲';
+          default: return '🏛️'; // attraction or null
+        }
       };
 
       accommodations.forEach((a) => {
-        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, tt('marker_accommodation'));
+        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, '🏨');
       });
       dining.forEach((d) => {
-        if (d.latitude != null && d.longitude != null) addMarker(d.latitude, d.longitude, d.name, tt('marker_dining'));
+        if (d.latitude != null && d.longitude != null) addMarker(d.latitude, d.longitude, d.name, '🍽️');
       });
       itineraries.forEach((i) => {
-        if (i.latitude != null && i.longitude != null) addMarker(i.latitude, i.longitude, i.title, i.source_type ? undefined : tt('marker_place'));
+        if (i.latitude != null && i.longitude != null) {
+          const emoji = getItineraryEmoji(i);
+          addMarker(i.latitude, i.longitude, i.title, emoji);
+        }
       });
 
       if (hasAny && map) map.fitBounds(bounds);
@@ -767,6 +776,7 @@ export function TravelPlannerContent() {
       setItineraryLatitude(item.latitude != null ? String(item.latitude) : '');
       setItineraryLongitude(item.longitude != null ? String(item.longitude) : '');
       setItineraryPlaceName('');
+      setItineraryPlaceType((item.place_type as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike') || 'attraction');
     } else {
       setEditingItinerary(null);
       setItineraryDayDate('');
@@ -778,6 +788,7 @@ export function TravelPlannerContent() {
       setItineraryLatitude('');
       setItineraryLongitude('');
       setItineraryPlaceName('');
+      setItineraryPlaceType('attraction');
     }
     setShowItineraryForm(true);
   };
@@ -801,6 +812,7 @@ export function TravelPlannerContent() {
           description: itineraryDescription.trim() || undefined,
           start_time: itineraryStartTime.trim() || undefined,
           end_time: itineraryEndTime.trim() || undefined,
+          place_type: itineraryPlaceType || undefined,
           address: itineraryAddress.trim() || undefined,
           latitude: itineraryLatitude.trim() ? Number(itineraryLatitude) : undefined,
           longitude: itineraryLongitude.trim() ? Number(itineraryLongitude) : undefined,
@@ -836,6 +848,7 @@ export function TravelPlannerContent() {
           description: itineraryDescription.trim() || null,
           start_time: itineraryStartTime.trim() || null,
           end_time: itineraryEndTime.trim() || null,
+          place_type: itineraryPlaceType || null,
           address: itineraryAddress.trim() || null,
           latitude: itineraryLatitude.trim() ? Number(itineraryLatitude) : null,
           longitude: itineraryLongitude.trim() ? Number(itineraryLongitude) : null,
@@ -1490,7 +1503,10 @@ export function TravelPlannerContent() {
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{i.title}</div>
+                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                          <span style={{ marginRight: 6 }}>{i.source_type === 'accommodation' ? '🏨' : i.source_type === 'dining' ? '🍽️' : i.place_type === 'transport_air' ? '✈️' : i.place_type === 'transport_car' ? '🚗' : i.place_type === 'transport_bike' ? '🚲' : '🏛️'}</span>
+                          {i.title}
+                        </div>
                         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
                           {i.day_date}
                           {(i.start_time || i.end_time) && <span style={{ marginLeft: 6 }}>· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
@@ -2222,6 +2238,26 @@ export function TravelPlannerContent() {
                   resize: 'vertical',
                 }}
               />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_place_type')}</label>
+              <select
+                value={itineraryPlaceType}
+                onChange={(e) => setItineraryPlaceType(e.target.value as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike')}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
+                  padding: '10px 12px',
+                  marginBottom: 12,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  fontSize: 14,
+                }}
+              >
+                <option value="attraction">{tt('place_type_attraction')} 🏛️</option>
+                <option value="transport_air">{tt('place_type_transport_air')} ✈️</option>
+                <option value="transport_car">{tt('place_type_transport_car')} 🚗</option>
+                <option value="transport_bike">{tt('place_type_transport_bike')} 🚲</option>
+              </select>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
                 ref={itineraryAddressInputRef}

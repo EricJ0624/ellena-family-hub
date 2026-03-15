@@ -69,7 +69,7 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { day_date, title, description, sort_order, start_time, end_time, source_type, source_id, address, latitude, longitude } = body as {
+    const { day_date, title, description, sort_order, start_time, end_time, source_type, source_id, place_type, address, latitude, longitude } = body as {
       day_date?: string;
       title?: string;
       description?: string;
@@ -78,6 +78,7 @@ export async function POST(
       end_time?: string;
       source_type?: string;
       source_id?: string;
+      place_type?: string;
       address?: string;
       latitude?: number;
       longitude?: number;
@@ -120,6 +121,9 @@ export async function POST(
     if (end_time != null && String(end_time).trim()) insertPayload.end_time = String(end_time).trim().substring(0, 5);
     if (source_type != null && String(source_type).trim()) insertPayload.source_type = String(source_type).trim();
     if (source_id != null && String(source_id).trim()) insertPayload.source_id = String(source_id).trim();
+    if (place_type != null && ['attraction', 'transport_air', 'transport_car', 'transport_bike'].includes(String(place_type).trim())) {
+      insertPayload.place_type = String(place_type).trim();
+    }
     if (address != null) insertPayload.address = address ? String(address).trim() : null;
     if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
     if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;

@@ -3466,7 +3466,7 @@ export default function FamilyHub() {
         .from('memberships')
         .select('user_id, family_role')
         .eq('group_id', currentGroupId);
-      const map: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'other' | null> = {};
+      const map: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null> = {};
       (data || []).forEach((m: { user_id: string; family_role?: string | null }) => {
         map[m.user_id] = (m.family_role as 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other') ?? null;
       });

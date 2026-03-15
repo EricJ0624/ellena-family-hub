@@ -99,6 +99,11 @@ export type TravelTranslations = {
   marker_accommodation: string;
   marker_dining: string;
   marker_place: string;
+  label_place_type: string;
+  place_type_attraction: string;
+  place_type_transport_air: string;
+  place_type_transport_car: string;
+  place_type_transport_bike: string;
   map_hint: string;
   link_google_search: string;
   show_map_btn: string;
@@ -206,7 +211,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_accommodation: '숙',
     marker_dining: '식',
     marker_place: '관',
-    map_hint: '숙소·먹거리·일정에 위도/경도를 입력하면 지도에 표시됩니다. 파란색: 숙소, 초록색: 먹거리, 빨간색: 관광지',
+    label_place_type: '일정 구분',
+    place_type_attraction: '관광지',
+    place_type_transport_air: '비행기',
+    place_type_transport_car: '자동차',
+    place_type_transport_bike: '바이크',
+    map_hint: '숙소·먹거리·일정에 위도/경도를 입력하면 지도에 이모지로 표시됩니다. 🏨 숙소 🍽️ 먹거리 🏛️ 관광지 ✈️ 비행기 🚗 자동차 🚲 바이크',
     link_google_search: '구글에서 검색',
     show_map_btn: '지도 보기',
     hide_map_btn: '지도 숨기기',
@@ -311,7 +321,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_accommodation: 'A',
     marker_dining: 'D',
     marker_place: 'P',
-    map_hint: 'Enter latitude/longitude in accommodation, dining, or itinerary to show on the map. Blue: accommodation, Green: dining, Red: places.',
+    label_place_type: 'Type',
+    place_type_attraction: 'Attraction',
+    place_type_transport_air: 'Flight',
+    place_type_transport_car: 'Car',
+    place_type_transport_bike: 'Bike',
+    map_hint: 'Enter lat/lng to show on map. 🏨 Accommodation 🍽️ Dining 🏛️ Attraction ✈️ Flight 🚗 Car 🚲 Bike',
     link_google_search: 'Search on Google',
     show_map_btn: 'Show map',
     hide_map_btn: 'Hide map',
@@ -416,7 +431,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_accommodation: '宿',
     marker_dining: '食',
     marker_place: '観',
-    map_hint: '宿泊・食事・スケジュールに緯度・経度を入力すると地図に表示されます。青: 宿泊、緑: 食事、赤: 観光地',
+    label_place_type: '区分',
+    place_type_attraction: '観光地',
+    place_type_transport_air: '飛行機',
+    place_type_transport_car: '車',
+    place_type_transport_bike: 'バイク',
+    map_hint: '緯度・経度を入力すると地図に表示。🏨 宿泊 🍽️ 食事 🏛️ 観光地 ✈️ 飛行機 🚗 車 🚲 バイク',
     link_google_search: 'Googleで検索',
     show_map_btn: '地図を表示',
     hide_map_btn: '地図を隠す',
@@ -521,7 +541,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_accommodation: '宿',
     marker_dining: '食',
     marker_place: '观',
-    map_hint: '在住宿、餐饮或日程中输入经纬度即可在地图上显示。蓝色：住宿，绿色：餐饮，红色：景点',
+    label_place_type: '类型',
+    place_type_attraction: '观光',
+    place_type_transport_air: '飞机',
+    place_type_transport_car: '汽车',
+    place_type_transport_bike: '自行车',
+    map_hint: '输入经纬度可在地图显示。🏨 住宿 🍽️ 餐饮 🏛️ 观光 ✈️ 飞机 🚗 汽车 🚲 自行车',
     link_google_search: '在 Google 上搜索',
     show_map_btn: '显示地图',
     hide_map_btn: '隐藏地图',
@@ -626,7 +651,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     marker_accommodation: '宿',
     marker_dining: '食',
     marker_place: '觀',
-    map_hint: '在住宿、餐飲或行程中輸入經緯度即可在地圖上顯示。藍色：住宿，綠色：餐飲，紅色：景點',
+    label_place_type: '類型',
+    place_type_attraction: '觀光',
+    place_type_transport_air: '飛機',
+    place_type_transport_car: '汽車',
+    place_type_transport_bike: '自行車',
+    map_hint: '輸入經緯度可在地圖顯示。🏨 住宿 🍽️ 餐飲 🏛️ 觀光 ✈️ 飛機 🚗 汽車 🚲 自行車',
     link_google_search: '在 Google 上搜尋',
     show_map_btn: '顯示地圖',
     hide_map_btn: '隱藏地圖',
