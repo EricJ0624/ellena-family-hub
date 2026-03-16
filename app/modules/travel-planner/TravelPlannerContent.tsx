@@ -72,6 +72,8 @@ export function TravelPlannerContent() {
   const [showDiningForm, setShowDiningForm] = useState(false);
   /** 일정 추가 시 구분 선택 (숙소/먹거리/관광지/교통/기타) → 해당 폼 열기 */
   const [showScheduleAddTypePicker, setShowScheduleAddTypePicker] = useState(false);
+  const [accommodationFormFromSchedule, setAccommodationFormFromSchedule] = useState(false);
+  const [diningFormFromSchedule, setDiningFormFromSchedule] = useState(false);
   const [editingDining, setEditingDining] = useState<TravelDining | null>(null);
   const [diningName, setDiningName] = useState('');
   const [diningDayDate, setDiningDayDate] = useState('');
@@ -1153,6 +1155,7 @@ export function TravelPlannerContent() {
       setAccLongitude('');
       setAccPlaceName('');
     }
+    setAccommodationFormFromSchedule(false);
     setShowAccommodationForm(true);
   };
 
@@ -1276,6 +1279,7 @@ export function TravelPlannerContent() {
       setDiningLongitude('');
       setDiningPlaceName('');
     }
+    setDiningFormFromSchedule(false);
     setShowDiningForm(true);
   };
 
@@ -2109,9 +2113,24 @@ export function TravelPlannerContent() {
                       </div>
                       <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                         {getGoogleMapsUrl(i) && (
-                          <a href={getGoogleMapsUrl(i)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
+                          <a
+                            href={getGoogleMapsUrl(i)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                            title={tt('view_on_map')}
+                          >
+                            <MapPin style={{ width: 14, height: 14 }} />
+                          </a>
                         )}
-                        <button type="button" onClick={() => handleRemoveFromItinerary(i)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title="일정에서 제거"><Trash2 style={{ width: 14, height: 14 }} /></button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFromItinerary(i)}
+                          style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
+                          title={tt('remove_from_itinerary')}
+                        >
+                          <Trash2 style={{ width: 14, height: 14 }} />
+                        </button>
                       </div>
                     </li>
                   ))
@@ -3005,8 +3024,28 @@ export function TravelPlannerContent() {
               <button type="button" onClick={() => setShowScheduleAddTypePicker(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X style={{ width: 20, height: 20 }} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); setShowAccommodationForm(true); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🏨 {tt('add_accommodation')}</button>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); setShowDiningForm(true); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🍽️ {tt('add_dining')}</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowScheduleAddTypePicker(false);
+                  setAccommodationFormFromSchedule(true);
+                  setShowAccommodationForm(true);
+                }}
+                style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                🏨 {tt('add_accommodation')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowScheduleAddTypePicker(false);
+                  setDiningFormFromSchedule(true);
+                  setShowDiningForm(true);
+                }}
+                style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                🍽️ {tt('add_dining')}
+              </button>
               <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'attraction'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🏛️ {tt('place_type_attraction')}</button>
               <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_air'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>✈️ {tt('place_type_transport_air')}</button>
               <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_car'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🚗 {tt('place_type_transport_car')}</button>
@@ -3522,6 +3561,19 @@ export function TravelPlannerContent() {
                     {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
                     {tt('save')}
                   </button>
+                ) : accommodationFormFromSchedule ? (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={(e) => {
+                      handleCreateAccommodation(e, true);
+                      setAccommodationFormFromSchedule(false);
+                    }}
+                    style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    {tt('add')}
+                  </button>
                 ) : (
                   <>
                     <button type="button" disabled={submitting} onClick={(e) => handleCreateAccommodation(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -3626,7 +3678,7 @@ export function TravelPlannerContent() {
               )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>위도</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
                   <input
                     type="number"
                     step="any"
@@ -3637,7 +3689,7 @@ export function TravelPlannerContent() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>경도</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lng_map')}</label>
                   <input
                     type="number"
                     step="any"
@@ -3661,6 +3713,19 @@ export function TravelPlannerContent() {
                   <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
                     {tt('save')}
+                  </button>
+                ) : diningFormFromSchedule ? (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={(e) => {
+                      handleCreateDining(e, true);
+                      setDiningFormFromSchedule(false);
+                    }}
+                    style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    {tt('add')}
                   </button>
                 ) : (
                   <>
@@ -3725,7 +3790,7 @@ export function TravelPlannerContent() {
                 value={attractionName}
                 onChange={(e) => setAttractionName(e.target.value)}
                 disabled={submitting}
-                placeholder="관광지명"
+                placeholder={tt('placeholder_attraction_name')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
                 required
               />
@@ -3766,7 +3831,7 @@ export function TravelPlannerContent() {
                 value={attractionAddress}
                 onChange={(e) => setAttractionAddress(e.target.value)}
                 disabled={submitting}
-                placeholder="주소"
+                placeholder={tt('placeholder_address')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>설명</label>
@@ -3774,7 +3839,7 @@ export function TravelPlannerContent() {
                 value={attractionDescription}
                 onChange={(e) => setAttractionDescription(e.target.value)}
                 disabled={submitting}
-                placeholder="설명"
+                placeholder={tt('placeholder_description')}
                 rows={3}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box', resize: 'vertical' }}
               />
@@ -3890,7 +3955,7 @@ export function TravelPlannerContent() {
                 value={transportDeparture}
                 onChange={(e) => setTransportDeparture(e.target.value)}
                 disabled={submitting}
-                placeholder="출발지"
+                placeholder={tt('placeholder_departure')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>도착지</label>
@@ -3899,7 +3964,7 @@ export function TravelPlannerContent() {
                 value={transportArrival}
                 onChange={(e) => setTransportArrival(e.target.value)}
                 disabled={submitting}
-                placeholder="도착지"
+                placeholder={tt('placeholder_arrival')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>거리 (km)</label>
@@ -3908,7 +3973,7 @@ export function TravelPlannerContent() {
                 value={transportDistanceKm}
                 onChange={(e) => setTransportDistanceKm(e.target.value)}
                 disabled={submitting}
-                placeholder="거리"
+                placeholder={tt('placeholder_distance_km')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
@@ -3916,7 +3981,7 @@ export function TravelPlannerContent() {
                 value={transportMemo}
                 onChange={(e) => setTransportMemo(e.target.value)}
                 disabled={submitting}
-                placeholder="메모"
+                placeholder={tt('placeholder_memo')}
                 rows={2}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box', resize: 'vertical' }}
               />

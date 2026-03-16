@@ -112,6 +112,7 @@ export type TravelTranslations = {
   show_map_btn: string;
   hide_map_btn: string;
   map_placeholder_desc: string;
+  remove_from_itinerary: string;
   schedule_add_type_prompt: string;
   section_attraction: string;
   section_transport: string;
@@ -132,6 +133,9 @@ export type TravelTranslations = {
   placeholder_departure: string;
   placeholder_arrival: string;
   placeholder_distance_km: string;
+  placeholder_address: string;
+  placeholder_description: string;
+  placeholder_memo: string;
   alert_attraction_required: string;
   alert_transport_required: string;
   attraction_add_failed: string;
@@ -260,6 +264,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     show_map_btn: '지도 보기',
     hide_map_btn: '지도 숨기기',
     map_placeholder_desc: '지도를 열면 숙소·먹거리·관광지 위치를 볼 수 있습니다.',
+    remove_from_itinerary: '일정에서 제거',
     schedule_add_type_prompt: '추가할 구분을 선택하세요',
     section_attraction: '관광지',
     section_transport: '교통',
@@ -280,6 +285,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     placeholder_departure: '예: 서울역',
     placeholder_arrival: '예: 부산역',
     placeholder_distance_km: '예: 417',
+    placeholder_address: '예: 주소를 입력하세요',
+    placeholder_description: '예: 설명을 입력하세요',
+    placeholder_memo: '예: 메모를 입력하세요',
     alert_attraction_required: '이름과 날짜를 입력해주세요.',
     alert_transport_required: '교통수단과 날짜를 입력해주세요.',
     attraction_add_failed: '관광지 추가 실패',
@@ -406,6 +414,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     show_map_btn: 'Show map',
     hide_map_btn: 'Hide map',
     map_placeholder_desc: 'Open the map to see accommodation, dining, and place locations.',
+    remove_from_itinerary: 'Remove from itinerary',
     schedule_add_type_prompt: 'Select type to add',
     section_attraction: 'Attractions',
     section_transport: 'Transportation',
@@ -426,6 +435,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     placeholder_departure: 'e.g., Seoul Station',
     placeholder_arrival: 'e.g., Busan Station',
     placeholder_distance_km: 'e.g., 417',
+    placeholder_address: 'e.g., Enter address',
+    placeholder_description: 'e.g., Enter description',
+    placeholder_memo: 'e.g., Enter memo',
     alert_attraction_required: 'Please enter name and date.',
     alert_transport_required: 'Please select transportation type and enter date.',
     attraction_add_failed: 'Failed to add attraction',
@@ -552,6 +564,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     show_map_btn: '地図を表示',
     hide_map_btn: '地図を隠す',
     map_placeholder_desc: '地図を開くと宿泊・食事・観光地の位置を確認できます。',
+    remove_from_itinerary: '日程から削除',
     schedule_add_type_prompt: '追加する区分を選択',
     section_attraction: '観光地',
     section_transport: '交通',
@@ -572,6 +585,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     placeholder_departure: '例: ソウル駅',
     placeholder_arrival: '例: 釜山駅',
     placeholder_distance_km: '例: 417',
+    placeholder_address: '例: 住所を入力してください',
+    placeholder_description: '例: 説明を入力してください',
+    placeholder_memo: '例: メモを入力してください',
     alert_attraction_required: '名前と日付を入力してください。',
     alert_transport_required: '交通手段と日付を入力してください。',
     attraction_add_failed: '観光地の追加に失敗しました',
@@ -698,6 +714,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     show_map_btn: '显示地图',
     hide_map_btn: '隐藏地图',
     map_placeholder_desc: '打开地图可查看住宿、餐饮与景点位置。',
+    remove_from_itinerary: '从行程中移除',
     schedule_add_type_prompt: '选择要添加的类型',
     section_attraction: '观光地',
     section_transport: '交通',
@@ -718,6 +735,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     placeholder_departure: '例如：首尔站',
     placeholder_arrival: '例如：釜山站',
     placeholder_distance_km: '例如：417',
+    placeholder_address: '例如：请输入地址',
+    placeholder_description: '例如：请输入说明',
+    placeholder_memo: '例如：请输入备注',
     alert_attraction_required: '请输入名称和日期。',
     alert_transport_required: '请选择交通工具并输入日期。',
     attraction_add_failed: '添加观光地失败',
@@ -844,6 +864,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     show_map_btn: '顯示地圖',
     hide_map_btn: '隱藏地圖',
     map_placeholder_desc: '開啟地圖可查看住宿、餐飲與景點位置。',
+    remove_from_itinerary: '從行程中移除',
     schedule_add_type_prompt: '選擇要新增的類型',
     section_attraction: '觀光地',
     section_transport: '交通',
@@ -864,6 +885,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     placeholder_departure: '例如：首爾站',
     placeholder_arrival: '例如：釜山站',
     placeholder_distance_km: '例如：417',
+    placeholder_address: '例如：請輸入地址',
+    placeholder_description: '例如：請輸入說明',
+    placeholder_memo: '例如：請輸入備註',
     alert_attraction_required: '請輸入名稱和日期。',
     alert_transport_required: '請選擇交通工具並輸入日期。',
     attraction_add_failed: '新增觀光地失敗',
