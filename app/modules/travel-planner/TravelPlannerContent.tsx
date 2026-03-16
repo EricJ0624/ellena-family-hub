@@ -1029,6 +1029,26 @@ export function TravelPlannerContent() {
     }
   };
 
+  const handleEditFromItinerary = (item: typeof sortedItineraries[0]) => {
+    if (!selectedTrip) return;
+    if (item.type === 'accommodation') {
+      const acc = accommodations.find((a) => a.id === item.id);
+      if (acc) openAccommodationForm(acc);
+    } else if (item.type === 'dining') {
+      const d = dining.find((x) => x.id === item.id);
+      if (d) openDiningForm(d);
+    } else if (item.type === 'attraction') {
+      const a = attractions.find((x) => x.id === item.id);
+      if (a) openAttractionForm(a);
+    } else if (item.type === 'transport') {
+      const t = transports.find((x) => x.id === item.id);
+      if (t) openTransportForm(t);
+    } else {
+      const it = itineraries.find((x) => x.id === item.id);
+      if (it) openItineraryForm(it, (it.place_type as ItineraryPlaceTypeOption | null) ?? 'other');
+    }
+  };
+
   const openExpenseForm = (item: TravelExpense | null, defaultEntryType?: 'addition' | 'expense') => {
     if (item) {
       setEditingExpense(item);
@@ -2123,6 +2143,14 @@ export function TravelPlannerContent() {
                             <MapPin style={{ width: 14, height: 14 }} />
                           </a>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleEditFromItinerary(i)}
+                          style={{ padding: 6, background: '#e0f2fe', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#0369a1' }}
+                          title={tt('edit_itinerary')}
+                        >
+                          <Pencil style={{ width: 14, height: 14 }} />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleRemoveFromItinerary(i)}
