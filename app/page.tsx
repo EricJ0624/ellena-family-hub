@@ -39,7 +39,8 @@ export default function LoginPage() {
   }, []);
 
   // 초대 링크(?invite= 또는 ?invite_code=) 쿼리 읽어서 sessionStorage에 저장 후 URL에서 제거 (Referrer/히스토리 노출 방지)
-  // 형식 검증: 영숫자 1~20자만 저장. 초대 링크로 들어온 경우 가입하기 탭으로 전환
+  // 형식 검증: 영숫자 1~20자만 저장.
+  // A안: 이 기기에서 예전에 로그인한 이메일이 있으면 로그인 탭으로, 아니면 가입하기 탭으로 전환
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -48,7 +49,13 @@ export default function LoginPage() {
       try {
         if (/^[0-9A-Za-z]{1,20}$/.test(raw)) {
           window.sessionStorage.setItem(INVITE_STORAGE_KEY, raw);
-          setMode('signup');
+          const lastEmail = window.localStorage.getItem(LAST_EMAIL_KEY);
+          if (lastEmail) {
+            setEmail(lastEmail);
+            setMode('login');
+          } else {
+            setMode('signup');
+          }
         }
         params.delete('invite');
         params.delete('invite_code');
@@ -57,7 +64,13 @@ export default function LoginPage() {
         window.history.replaceState({}, '', newUrl);
       } catch (_) {}
     } else if (window.sessionStorage.getItem(INVITE_STORAGE_KEY)) {
-      setMode('signup');
+      const lastEmail = window.localStorage.getItem(LAST_EMAIL_KEY);
+      if (lastEmail) {
+        setEmail(lastEmail);
+        setMode('login');
+      } else {
+        setMode('signup');
+      }
     }
   }, [isMounted]);
 
