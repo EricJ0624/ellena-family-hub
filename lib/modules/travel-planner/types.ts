@@ -32,12 +32,12 @@ export interface TravelItinerary {
   start_time?: string | null;
   /** 종료 시간 'HH:mm' (선택) */
   end_time?: string | null;
-  /** accommodation | dining (숙소/먹거리에서 자동 생성된 일정) */
+  /** @deprecated 더 이상 사용 안 함 (레거시 호환용) */
   source_type?: string | null;
-  /** 연결된 travel_accommodations.id 또는 travel_dining.id */
+  /** @deprecated 더 이상 사용 안 함 (레거시 호환용) */
   source_id?: string | null;
-  /** 지도 마커 구분: attraction(관광지), transport_air(비행기), transport_car(자동차), transport_bike(바이크), other(기타 무연동) */
-  place_type?: 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other' | null;
+  /** 항상 'other' 또는 null. 이제 기타 일정 전용 테이블 */
+  place_type?: 'other' | null;
   /** 주소 (지도 표시용) */
   address?: string | null;
   latitude?: number | null;
@@ -93,6 +93,8 @@ export interface TravelAccommodation {
   memo: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  /** 일정 뷰에 표시 여부 */
+  show_in_itinerary: boolean;
   created_at: string;
   updated_at: string;
   created_by?: string | null;
@@ -113,6 +115,8 @@ export interface TravelDining {
   address: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  /** 일정 뷰에 표시 여부 */
+  show_in_itinerary: boolean;
   created_at: string;
   updated_at: string;
   created_by?: string | null;
@@ -126,3 +130,49 @@ export type TravelExpenseInsert = Omit<TravelExpense, 'id' | 'created_at' | 'upd
   created_at?: string;
   updated_at?: string;
 };
+
+export interface TravelAttraction {
+  id: string;
+  trip_id: string;
+  group_id: string;
+  name: string;
+  day_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  address: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  description: string | null;
+  /** 일정 뷰에 표시 여부 */
+  show_in_itinerary: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export interface TravelTransport {
+  id: string;
+  trip_id: string;
+  group_id: string;
+  /** air(비행기), train(기차), car(자동차), bike(바이크) */
+  transport_type: 'air' | 'train' | 'car' | 'bike';
+  day_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  departure: string | null;
+  arrival: string | null;
+  /** 이동 거리(km) */
+  distance_km: number | null;
+  memo: string | null;
+  /** 일정 뷰에 표시 여부 */
+  show_in_itinerary: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}

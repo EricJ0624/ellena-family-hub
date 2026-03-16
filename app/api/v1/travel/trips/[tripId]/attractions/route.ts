@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
 import { checkPermission } from '@/lib/permissions';
 
-/** GET: 해당 여행의 먹거리 목록 */
+/** GET: 해당 여행의 관광지 목록 */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
@@ -36,27 +36,26 @@ export async function GET(
     }
 
     const { data, error } = await supabase
-      .from('travel_dining')
+      .from('travel_attractions')
       .select('*')
       .eq('trip_id', tripId)
       .eq('group_id', groupId)
       .is('deleted_at', null)
-      .order('day_date', { ascending: true })
-      .order('time_at', { ascending: true });
+      .order('day_date', { ascending: true });
 
     if (error) {
-      console.error('travel_dining GET:', error);
-      return NextResponse.json({ error: '먹거리 조회에 실패했습니다.' }, { status: 500 });
+      console.error('travel_attractions GET:', error);
+      return NextResponse.json({ error: '관광지 조회에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data: data ?? [] });
   } catch (e: any) {
-    console.error('GET /api/v1/travel/trips/[tripId]/dining:', e);
+    console.error('GET /api/v1/travel/trips/[tripId]/attractions:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });
   }
 }
 
-/** POST: 먹거리 추가 */
+/** POST: 관광지 추가 */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
@@ -69,13 +68,13 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, day_date, time_at, category, memo, address, latitude, longitude, show_in_itinerary } = body as {
+    const { name, day_date, start_time, end_time, address, description, latitude, longitude, show_in_itinerary } = body as {
       name?: string;
       day_date?: string;
-      time_at?: string;
-      category?: string;
-      memo?: string;
+      start_time?: string;
+      end_time?: string;
       address?: string;
+      description?: string;
       latitude?: number;
       longitude?: number;
       /** 일정 뷰에 표시 여부 */
@@ -114,27 +113,27 @@ export async function POST(
       show_in_itinerary: show_in_itinerary === true,
       created_by: user.id,
     };
-    if (time_at != null && String(time_at).trim()) insertPayload.time_at = String(time_at).trim().substring(0, 5);
-    if (category != null && String(category).trim()) insertPayload.category = String(category).trim();
-    if (memo != null && String(memo).trim()) insertPayload.memo = String(memo).trim();
-    if (address != null) insertPayload.address = address ? String(address).trim() : null;
+    if (start_time) insertPayload.start_time = String(start_time).trim().substring(0, 5);
+    if (end_time) insertPayload.end_time = String(end_time).trim().substring(0, 5);
+    if (address) insertPayload.address = String(address).trim();
+    if (description) insertPayload.description = String(description).trim();
     if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
     if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
 
     const { data, error } = await supabase
-      .from('travel_dining')
+      .from('travel_attractions')
       .insert(insertPayload)
       .select()
       .single();
 
     if (error) {
-      console.error('travel_dining POST:', error);
-      return NextResponse.json({ error: '먹거리 추가에 실패했습니다.' }, { status: 500 });
+      console.error('travel_attractions POST:', error);
+      return NextResponse.json({ error: '관광지 추가에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
-    console.error('POST /api/v1/travel/trips/[tripId]/dining:', e);
+    console.error('POST /api/v1/travel/trips/[tripId]/attractions:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });
   }
 }

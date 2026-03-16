@@ -120,6 +120,31 @@ export type TravelTranslations = {
   add_attraction: string;
   add_transport: string;
   view_itinerary_pdf: string;
+  load_attraction_failed: string;
+  load_transport_failed: string;
+  edit_attraction: string;
+  edit_transport: string;
+  label_transport_type: string;
+  label_departure: string;
+  label_arrival: string;
+  label_distance_km: string;
+  placeholder_attraction_name: string;
+  placeholder_departure: string;
+  placeholder_arrival: string;
+  placeholder_distance_km: string;
+  alert_attraction_required: string;
+  alert_transport_required: string;
+  attraction_add_failed: string;
+  attraction_update_failed: string;
+  attraction_delete_failed: string;
+  transport_add_failed: string;
+  transport_update_failed: string;
+  transport_delete_failed: string;
+  transport_type_air: string;
+  transport_type_train: string;
+  transport_type_car: string;
+  transport_type_bike: string;
+  place_type_train: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -243,6 +268,31 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '관광지 추가',
     add_transport: '교통 추가',
     view_itinerary_pdf: '일정 PDF로 보기',
+    load_attraction_failed: '관광지 조회 실패',
+    load_transport_failed: '교통 조회 실패',
+    edit_attraction: '관광지 수정',
+    edit_transport: '교통 수정',
+    label_transport_type: '교통수단 *',
+    label_departure: '출발지',
+    label_arrival: '도착지',
+    label_distance_km: '거리(km)',
+    placeholder_attraction_name: '예: 관광지 이름',
+    placeholder_departure: '예: 서울역',
+    placeholder_arrival: '예: 부산역',
+    placeholder_distance_km: '예: 417',
+    alert_attraction_required: '이름과 날짜를 입력해주세요.',
+    alert_transport_required: '교통수단과 날짜를 입력해주세요.',
+    attraction_add_failed: '관광지 추가 실패',
+    attraction_update_failed: '관광지 수정 실패',
+    attraction_delete_failed: '관광지 삭제 실패',
+    transport_add_failed: '교통 추가 실패',
+    transport_update_failed: '교통 수정 실패',
+    transport_delete_failed: '교통 삭제 실패',
+    transport_type_air: '비행기',
+    transport_type_train: '기차',
+    transport_type_car: '자동차',
+    transport_type_bike: '바이크',
+    place_type_train: '기차',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -364,6 +414,31 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: 'Add Attraction',
     add_transport: 'Add Transportation',
     view_itinerary_pdf: 'View Itinerary PDF',
+    load_attraction_failed: 'Failed to load attractions',
+    load_transport_failed: 'Failed to load transportation',
+    edit_attraction: 'Edit Attraction',
+    edit_transport: 'Edit Transportation',
+    label_transport_type: 'Transportation Type *',
+    label_departure: 'Departure',
+    label_arrival: 'Arrival',
+    label_distance_km: 'Distance(km)',
+    placeholder_attraction_name: 'e.g., Attraction Name',
+    placeholder_departure: 'e.g., Seoul Station',
+    placeholder_arrival: 'e.g., Busan Station',
+    placeholder_distance_km: 'e.g., 417',
+    alert_attraction_required: 'Please enter name and date.',
+    alert_transport_required: 'Please select transportation type and enter date.',
+    attraction_add_failed: 'Failed to add attraction',
+    attraction_update_failed: 'Failed to update attraction',
+    attraction_delete_failed: 'Failed to delete attraction',
+    transport_add_failed: 'Failed to add transportation',
+    transport_update_failed: 'Failed to update transportation',
+    transport_delete_failed: 'Failed to delete transportation',
+    transport_type_air: 'Airplane',
+    transport_type_train: 'Train',
+    transport_type_car: 'Car',
+    transport_type_bike: 'Bike',
+    place_type_train: 'Train',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -485,6 +560,31 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '観光地追加',
     add_transport: '交通追加',
     view_itinerary_pdf: '日程をPDFで見る',
+    load_attraction_failed: '観光地の読み込みに失敗しました',
+    load_transport_failed: '交通の読み込みに失敗しました',
+    edit_attraction: '観光地を編集',
+    edit_transport: '交通を編集',
+    label_transport_type: '交通手段 *',
+    label_departure: '出発地',
+    label_arrival: '到着地',
+    label_distance_km: '距離(km)',
+    placeholder_attraction_name: '例: 観光地名',
+    placeholder_departure: '例: ソウル駅',
+    placeholder_arrival: '例: 釜山駅',
+    placeholder_distance_km: '例: 417',
+    alert_attraction_required: '名前と日付を入力してください。',
+    alert_transport_required: '交通手段と日付を入力してください。',
+    attraction_add_failed: '観光地の追加に失敗しました',
+    attraction_update_failed: '観光地の更新に失敗しました',
+    attraction_delete_failed: '観光地の削除に失敗しました',
+    transport_add_failed: '交通の追加に失敗しました',
+    transport_update_failed: '交通の更新に失敗しました',
+    transport_delete_failed: '交通の削除に失敗しました',
+    transport_type_air: '飛行機',
+    transport_type_train: '列車',
+    transport_type_car: '自動車',
+    transport_type_bike: 'バイク',
+    place_type_train: '列車',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -606,6 +706,31 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '添加观光地',
     add_transport: '添加交通',
     view_itinerary_pdf: '查看行程PDF',
+    load_attraction_failed: '加载观光地失败',
+    load_transport_failed: '加载交通失败',
+    edit_attraction: '编辑观光地',
+    edit_transport: '编辑交通',
+    label_transport_type: '交通工具 *',
+    label_departure: '出发地',
+    label_arrival: '目的地',
+    label_distance_km: '距离(公里)',
+    placeholder_attraction_name: '例如：景点名称',
+    placeholder_departure: '例如：首尔站',
+    placeholder_arrival: '例如：釜山站',
+    placeholder_distance_km: '例如：417',
+    alert_attraction_required: '请输入名称和日期。',
+    alert_transport_required: '请选择交通工具并输入日期。',
+    attraction_add_failed: '添加观光地失败',
+    attraction_update_failed: '更新观光地失败',
+    attraction_delete_failed: '删除观光地失败',
+    transport_add_failed: '添加交通失败',
+    transport_update_failed: '更新交通失败',
+    transport_delete_failed: '删除交通失败',
+    transport_type_air: '飞机',
+    transport_type_train: '火车',
+    transport_type_car: '汽车',
+    transport_type_bike: '摩托车',
+    place_type_train: '火车',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -727,6 +852,31 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '新增觀光地',
     add_transport: '新增交通',
     view_itinerary_pdf: '查看行程PDF',
+    load_attraction_failed: '載入觀光地失敗',
+    load_transport_failed: '載入交通失敗',
+    edit_attraction: '編輯觀光地',
+    edit_transport: '編輯交通',
+    label_transport_type: '交通工具 *',
+    label_departure: '出發地',
+    label_arrival: '目的地',
+    label_distance_km: '距離(公里)',
+    placeholder_attraction_name: '例如：景點名稱',
+    placeholder_departure: '例如：首爾站',
+    placeholder_arrival: '例如：釜山站',
+    placeholder_distance_km: '例如：417',
+    alert_attraction_required: '請輸入名稱和日期。',
+    alert_transport_required: '請選擇交通工具並輸入日期。',
+    attraction_add_failed: '新增觀光地失敗',
+    attraction_update_failed: '更新觀光地失敗',
+    attraction_delete_failed: '刪除觀光地失敗',
+    transport_add_failed: '新增交通失敗',
+    transport_update_failed: '更新交通失敗',
+    transport_delete_failed: '刪除交通失敗',
+    transport_type_air: '飛機',
+    transport_type_train: '火車',
+    transport_type_car: '汽車',
+    transport_type_bike: '摩托車',
+    place_type_train: '火車',
   },
 };
 
