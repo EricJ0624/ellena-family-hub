@@ -25,7 +25,7 @@ import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
-import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
+import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X, MessageSquare, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
@@ -6278,6 +6278,43 @@ export default function FamilyHub() {
   // 그룹 정보 로딩 중인지 확인
   const isGroupLoading = groupLoading && !currentGroupId;
 
+  // --- 멤버 문의 (일반 멤버 <-> 그룹 관리자) ---
+  const [memberSupportTickets, setMemberSupportTickets] = useState<any[]>([]);
+  const [memberTicketTitle, setMemberTicketTitle] = useState('');
+  const [memberTicketContent, setMemberTicketContent] = useState('');
+  const [showMemberTicketModal, setShowMemberTicketModal] = useState(false);
+  const [memberTicketLoading, setMemberTicketLoading] = useState(false);
+
+  const loadMemberSupportTickets = useCallback(async () => {
+    if (!currentGroupId) return;
+    try {
+      setMemberTicketLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch(`/api/support-tickets?group_id=${currentGroupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '문의 조회에 실패했습니다.');
+      setMemberSupportTickets(json.data || []);
+    } catch (e) {
+      console.error('멤버 문의 로드 오류:', e);
+      setMemberSupportTickets([]);
+    } finally {
+      setMemberTicketLoading(false);
+    }
+  }, [currentGroupId]);
+
+  useEffect(() => {
+    if (!currentGroupId) return;
+    loadMemberSupportTickets();
+  }, [currentGroupId, loadMemberSupportTickets]);
+
   return (
     <div className="app-container">
       {/* Todo Modal - Chalkboard Style */}
@@ -6540,6 +6577,205 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div className="sections-container">
+          {/* 멤버 문의 섹션 (일반 멤버 <-> 그룹 관리자) */}
+          <section
+            className="content-section"
+            style={{
+              background: 'linear-gradient(135deg, #fff7ed 0%, #f8fafc 60%, #eff6ff 100%)',
+              borderRadius: '16px',
+              padding: '14px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              marginBottom: '14px',
+            }}
+          >
+            <div
+              className="section-header"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '10px',
+              }}
+            >
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                <MessageSquare style={{ width: '22px', height: '22px', color: '#f97316' }} />
+                문의하기
+              </h3>
+              <button
+                onClick={() => {
+                  setShowMemberTicketModal(true);
+                  setMemberTicketTitle('');
+                  setMemberTicketContent('');
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  backgroundColor: '#f97316',
+                  border: 'none',
+                  color: 'white',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                문의 작성
+              </button>
+            </div>
+
+            <div className="section-body">
+              {memberTicketLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#64748b', padding: '10px 4px' }}>
+                  <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                  불러오는 중...
+                </div>
+              ) : memberSupportTickets.length === 0 ? (
+                <div style={{ color: '#94a3b8', padding: '8px 4px' }}>
+                  아직 문의가 없어요. 필요한 내용을 문의로 남겨주세요.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {memberSupportTickets.slice(0, 5).map((t) => (
+                    <div
+                      key={t.id}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        backgroundColor: t.status === 'pending' ? '#fff7ed' : '#f8fafc',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                        <div style={{ fontWeight: 800, color: '#0f172a' }}>{t.title}</div>
+                        <span
+                          style={{
+                            padding: '3px 10px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            fontWeight: 900,
+                            color: 'white',
+                            backgroundColor: t.status === 'pending' ? '#f59e0b' : t.status === 'answered' ? '#10b981' : '#94a3b8',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {t.status === 'pending' ? '대기중' : t.status === 'answered' ? '답변완료' : '종료'}
+                        </span>
+                      </div>
+                      <div style={{ marginTop: '8px', color: '#475569', whiteSpace: 'pre-wrap', fontSize: '13px' }}>
+                        {t.content}
+                      </div>
+                      {t.answer && (
+                        <div style={{ marginTop: '10px', padding: '10px', borderRadius: '10px', border: '1px solid #bae6fd', backgroundColor: '#f0f9ff' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 900, color: '#0369a1', marginBottom: '6px' }}>답변</div>
+                          <div style={{ color: '#0f172a', whiteSpace: 'pre-wrap', fontSize: '13px' }}>{t.answer}</div>
+                        </div>
+                      )}
+                      <div style={{ marginTop: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                        {new Date(t.created_at).toLocaleString('ko-KR')}
+                        {t.answered_at ? ` | 답변: ${new Date(t.answered_at).toLocaleString('ko-KR')}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                  {memberSupportTickets.length > 5 && (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', paddingLeft: '4px' }}>
+                      최신 5개만 표시 중입니다.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* 멤버 문의 작성 모달 */}
+          {showMemberTicketModal && (
+            <div className="modal-overlay" onClick={() => setShowMemberTicketModal(false)} style={{ zIndex: 1000 }}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <h3 className="modal-title" style={{ marginBottom: '10px' }}>
+                  <span className="modal-icon">💬</span>
+                  문의 작성
+                </h3>
+                <div className="modal-form">
+                  <div className="form-field">
+                    <label className="form-label">제목</label>
+                    <input
+                      className="form-input"
+                      value={memberTicketTitle}
+                      onChange={(e) => setMemberTicketTitle(e.target.value)}
+                      placeholder="제목을 입력하세요"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">내용</label>
+                    <textarea
+                      className="form-input"
+                      value={memberTicketContent}
+                      onChange={(e) => setMemberTicketContent(e.target.value)}
+                      placeholder="내용을 입력하세요"
+                      style={{ minHeight: '180px' }}
+                      maxLength={1000}
+                    />
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button onClick={() => setShowMemberTicketModal(false)} className="btn-secondary">
+                    {ct('cancel')}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!currentGroupId) return;
+                      if (!memberTicketTitle.trim() || !memberTicketContent.trim()) {
+                        alert('제목과 내용을 입력해주세요.');
+                        return;
+                      }
+                      try {
+                        setMemberTicketLoading(true);
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session?.access_token) {
+                          alert('인증이 필요합니다.');
+                          return;
+                        }
+                        const res = await fetch('/api/support-tickets', {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            group_id: currentGroupId,
+                            title: memberTicketTitle,
+                            content: memberTicketContent,
+                          }),
+                        });
+                        const json = await res.json();
+                        if (!res.ok) throw new Error(json.error || '문의 작성에 실패했습니다.');
+                        alert('문의가 등록되었습니다.');
+                        setShowMemberTicketModal(false);
+                        setMemberTicketTitle('');
+                        setMemberTicketContent('');
+                        loadMemberSupportTickets();
+                      } catch (e: any) {
+                        console.error('멤버 문의 작성 오류:', e);
+                        alert(e.message || '문의 작성에 실패했습니다.');
+                      } finally {
+                        setMemberTicketLoading(false);
+                      }
+                    }}
+                    className="btn-primary"
+                    style={{ backgroundColor: '#f97316' }}
+                    disabled={memberTicketLoading}
+                  >
+                    등록
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Family Tasks Section - Chalkboard Style */}
           <section className="chalkboard-container">
             {/* Chalkboard Decorations - Top Right */}

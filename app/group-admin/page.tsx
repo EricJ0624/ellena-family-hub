@@ -95,6 +95,20 @@ interface SupportTicketInfo {
   updated_at: string;
 }
 
+interface MemberSupportTicketInfo {
+  id: string;
+  group_id: string;
+  created_by: string;
+  title: string;
+  content: string;
+  status: 'pending' | 'answered' | 'closed';
+  answer: string | null;
+  answered_by: string | null;
+  answered_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface DashboardAccessRequestInfo {
   id: string;
   group_id: string;
@@ -143,7 +157,7 @@ export default function GroupAdminPage() {
   
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'members' | 'settings' | 'content' | 'announcements' | 'support-tickets' | 'dashboard-access-requests'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'members' | 'settings' | 'content' | 'announcements' | 'support-tickets' | 'member-support-tickets' | 'dashboard-access-requests'>('dashboard');
   const [stats, setStats] = useState<GroupStats | null>(null);
   const [photos, setPhotos] = useState<PhotoInfo[]>([]);
   const [locations, setLocations] = useState<LocationInfo[]>([]);
@@ -156,12 +170,15 @@ export default function GroupAdminPage() {
   // ??�쎈�?????�쏙???? ??�쎈�?? ???�쎌??????�쎌?�占???�승??????�쏙????
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
+  const [memberSupportTickets, setMemberSupportTickets] = useState<MemberSupportTicketInfo[]>([]);
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
   const [ticketTitle, setTicketTitle] = useState('');
   const [ticketContent, setTicketContent] = useState('');
   const [accessRequestReason, setAccessRequestReason] = useState('');
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [showAccessRequestForm, setShowAccessRequestForm] = useState(false);
+  const [editingMemberTicket, setEditingMemberTicket] = useState<MemberSupportTicketInfo | null>(null);
+  const [memberTicketAnswer, setMemberTicketAnswer] = useState('');
 
   // ?�밸챶占???�승???�싼?�쁽 �?��??��????�쎌???
   useEffect(() => {
@@ -457,6 +474,44 @@ export default function GroupAdminPage() {
     }
   }, [currentGroupId]);
 
+  // 멤버 문의 로드 (그룹 관리자)
+  const loadMemberSupportTickets = useCallback(async () => {
+    if (!currentGroupId) return;
+
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError('인증이 필요합니다.');
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch(`/api/group-admin/member-support-tickets?group_id=${currentGroupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || '문의 조회에 실패했습니다.');
+      }
+
+      setMemberSupportTickets(result.data || []);
+    } catch (err: any) {
+      console.error('멤버 문의 로드 오류:', err);
+      setError(err.message || '멤버 문의를 불러오지 못했습니다.');
+      setMemberSupportTickets([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, [currentGroupId]);
+
   // ???�쎌??????�쎌?�占?筌뤴뫖占??�≪뮆占?(?�밸챶占???�승???�싼?�쁽??
   const loadAccessRequests = useCallback(async () => {
     if (!currentGroupId) return;
@@ -515,6 +570,8 @@ export default function GroupAdminPage() {
       loadLocations();
     } else if (activeTab === 'support-tickets') {
       loadSupportTickets();
+    } else if (activeTab === 'member-support-tickets') {
+      loadMemberSupportTickets();
     } else if (activeTab === 'dashboard-access-requests') {
       loadAccessRequests();
     }
@@ -823,6 +880,23 @@ export default function GroupAdminPage() {
           >
             <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             문의하기
+          </button>
+          <button
+            onClick={() => setActiveTab('member-support-tickets')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'member-support-tickets' ? '3px solid #3b82f6' : '3px solid transparent',
+              color: activeTab === 'member-support-tickets' ? '#3b82f6' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'member-support-tickets' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            멤버 문의
           </button>
           <button
             onClick={() => setActiveTab('dashboard-access-requests')}
@@ -1713,6 +1787,276 @@ export default function GroupAdminPage() {
                           }}
                         >
                           작성
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 멤버 문의 (일반멤버 <-> 그룹관리자) */}
+            {activeTab === 'member-support-tickets' && (
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '24px',
+                }}>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    margin: 0,
+                  }}>
+                    멤버 문의
+                  </h2>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}>
+                  {memberSupportTickets.map((ticket) => (
+                    <motion.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: '20px',
+                        backgroundColor: ticket.status === 'pending' ? '#fef3c7' : '#f8fafc',
+                        borderRadius: '12px',
+                        border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '8px',
+                          }}>
+                            <h3 style={{
+                              fontSize: '18px',
+                              fontWeight: '600',
+                              color: '#1e293b',
+                              margin: 0,
+                            }}>
+                              {ticket.title}
+                            </h3>
+                            <span style={{
+                              padding: '4px 12px',
+                              backgroundColor: ticket.status === 'pending' ? '#fbbf24' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
+                              color: 'white',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                            }}>
+                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '종료'}
+                            </span>
+                          </div>
+                          <p style={{
+                            fontSize: '14px',
+                            color: '#64748b',
+                            margin: '0 0 12px 0',
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            {ticket.content}
+                          </p>
+                          {ticket.answer && (
+                            <div style={{
+                              marginTop: '16px',
+                              padding: '16px',
+                              backgroundColor: '#f0f9ff',
+                              borderRadius: '8px',
+                              border: '1px solid #bae6fd',
+                            }}>
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#0369a1',
+                                marginBottom: '8px',
+                              }}>
+                                답변:
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {ticket.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {ticket.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                          <button
+                            onClick={() => {
+                              setEditingMemberTicket(ticket);
+                              setMemberTicketAnswer(ticket.answer || '');
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            답변하기
+                          </button>
+                        </div>
+                      )}
+
+                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>
+                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {memberSupportTickets.length === 0 && (
+                    <div style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>
+                      <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                      <p>멤버 문의가 없습니다.</p>
+                    </div>
+                  )}
+                </div>
+
+                {editingMemberTicket && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1000,
+                    }}
+                    onClick={() => setEditingMemberTicket(null)}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        padding: '24px',
+                        width: '90%',
+                        maxWidth: '600px',
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>
+                        답변 작성
+                      </h3>
+                      <textarea
+                        value={memberTicketAnswer}
+                        onChange={(e) => setMemberTicketAnswer(e.target.value)}
+                        placeholder="답변 내용을 입력하세요"
+                        style={{
+                          width: '100%',
+                          minHeight: '220px',
+                          padding: '12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
+                          marginBottom: '16px',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => {
+                            setEditingMemberTicket(null);
+                            setMemberTicketAnswer('');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#e2e8f0',
+                            color: '#475569',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!editingMemberTicket || !memberTicketAnswer.trim()) {
+                              alert('답변 내용을 입력해주세요.');
+                              return;
+                            }
+                            if (!currentGroupId) return;
+                            try {
+                              setLoadingData(true);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert('인증이 필요합니다.');
+                                return;
+                              }
+                              const response = await fetch('/api/group-admin/member-support-tickets', {
+                                method: 'PUT',
+                                headers: {
+                                  'Authorization': `Bearer ${session.access_token}`,
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  id: editingMemberTicket.id,
+                                  group_id: currentGroupId,
+                                  answer: memberTicketAnswer,
+                                  status: 'answered',
+                                }),
+                              });
+                              const result = await response.json();
+                              if (!response.ok) {
+                                throw new Error(result.error || '답변 저장에 실패했습니다.');
+                              }
+                              alert('답변이 저장되었습니다.');
+                              setEditingMemberTicket(null);
+                              setMemberTicketAnswer('');
+                              loadMemberSupportTickets();
+                            } catch (e: any) {
+                              console.error('멤버 문의 답변 저장 오류:', e);
+                              alert(e.message || '답변 저장에 실패했습니다.');
+                            } finally {
+                              setLoadingData(false);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          저장
                         </button>
                       </div>
                     </div>
