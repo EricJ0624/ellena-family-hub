@@ -212,6 +212,7 @@ export function GroupAdminPanel({
   const [showAccessRequestForm, setShowAccessRequestForm] = useState(false);
   const [editingMemberTicket, setEditingMemberTicket] = useState<MemberSupportTicketInfo | null>(null);
   const [memberTicketAnswer, setMemberTicketAnswer] = useState('');
+  const [deletingMemberTicketId, setDeletingMemberTicketId] = useState<string | null>(null);
 
   const [piggyArchivesSnapshots, setPiggyArchivesSnapshots] = useState<Array<{
     id: string;
@@ -656,6 +657,43 @@ export function GroupAdminPanel({
       setLoadingData(false);
     }
   }, [effectiveGroupId]);
+
+  const handleDeleteMemberSupportTicket = async (ticketId: string) => {
+    if (!effectiveGroupId) return;
+    if (
+      !confirm(
+        '이 문의를 삭제할까요? 그룹 관리자 삭제는 감사 로그(시스템 관리자 화면)에 기록됩니다.'
+      )
+    ) {
+      return;
+    }
+    setDeletingMemberTicketId(ticketId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('인증이 필요합니다.');
+        return;
+      }
+      const res = await fetch(
+        `/api/support-tickets?id=${encodeURIComponent(ticketId)}&group_id=${encodeURIComponent(effectiveGroupId)}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(typeof json.error === 'string' ? json.error : '문의 삭제에 실패했습니다.');
+        return;
+      }
+      setMemberSupportTickets((prev) => prev.filter((t) => t.id !== ticketId));
+    } catch (e) {
+      console.error('멤버 문의 삭제 오류:', e);
+      alert('문의 삭제에 실패했습니다.');
+    } finally {
+      setDeletingMemberTicketId(null);
+    }
+  };
 
   // ???�쎌??????�쎌?�占?筌뤴뫖占??�≪뮆占?(?�밸챶占???�승???�싼?�쁽??
   const loadAccessRequests = useCallback(async () => {
@@ -2102,9 +2140,38 @@ export function GroupAdminPanel({
                         </div>
                       )}
 
-                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>
-                        작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          marginTop: '12px',
+                        }}
+                      >
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
+                          {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={deletingMemberTicketId === ticket.id}
+                          onClick={() => void handleDeleteMemberSupportTicket(ticket.id)}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#b91c1c',
+                            backgroundColor: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            cursor: deletingMemberTicketId === ticket.id ? 'not-allowed' : 'pointer',
+                            opacity: deletingMemberTicketId === ticket.id ? 0.7 : 1,
+                          }}
+                        >
+                          {deletingMemberTicketId === ticket.id ? '삭제 중…' : '삭제'}
+                        </button>
                       </div>
                     </motion.div>
                   ))}

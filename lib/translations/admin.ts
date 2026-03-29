@@ -13,6 +13,7 @@ export type AdminTranslations = {
   tab_support: string;
   tab_access_requests: string;
   tab_audit_log: string;
+  tab_member_inquiries: string;
   error_stats: string;
   error_session_expired: string;
   error_auth: string;
@@ -26,6 +27,7 @@ export type AdminTranslations = {
   error_locations: string;
   error_announcements: string;
   error_support: string;
+  error_member_inquiries: string;
   error_access_requests: string;
   error_audit_log: string;
   error_revoke: string;
@@ -148,6 +150,7 @@ export type AdminTranslations = {
   kick_done: string;
   error_kick_msg: string;
   kick_btn: string;
+  confirm_delete_member_inquiry: string;
   confirm_delete_piggy_archive: string;
   error_piggy_archive_fetch: string;
   error_piggy_archive_list: string;
@@ -192,6 +195,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     tab_support: '전체 문의',
     tab_access_requests: '접근 요청 관리',
     tab_audit_log: '감사 로그',
+    tab_member_inquiries: '멤버 문의(그룹)',
     error_stats: '통계를 불러오는데 실패했습니다.',
     error_session_expired: '인증 세션이 만료되었습니다. 다시 로그인해주세요.',
     error_auth: '인증 정보를 가져올 수 없습니다.',
@@ -205,6 +209,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_locations: '위치 데이터를 불러오는데 실패했습니다.',
     error_announcements: '공지사항을 불러오는데 실패했습니다.',
     error_support: '문의를 불러오는데 실패했습니다.',
+    error_member_inquiries: '멤버 문의를 불러오는데 실패했습니다.',
     error_access_requests: '접근 요청을 불러오는데 실패했습니다.',
     error_audit_log: '감사 로그를 불러오는데 실패했습니다.',
     error_revoke: '권한 해제에 실패했습니다.',
@@ -327,6 +332,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: '멤버가 그룹에서 추방되었습니다.',
     error_kick_msg: '멤버 추방 중 오류가 발생했습니다.',
     kick_btn: '추방',
+    confirm_delete_member_inquiry: '이 멤버 문의를 삭제할까요? 감사 로그에 기록됩니다.',
     confirm_delete_piggy_archive: '이 보관 내역을 삭제하시겠습니까? 삭제된 거래 기록은 복구할 수 없습니다.',
     error_piggy_archive_fetch: '보관 내역 조회 실패',
     error_piggy_archive_list: '저금통 보관 내역 조회에 실패했습니다.',
@@ -367,6 +373,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     tab_support: 'Support',
     tab_access_requests: 'Access requests',
     tab_audit_log: 'Audit log',
+    tab_member_inquiries: 'Member inquiries',
     error_stats: 'Failed to load stats.',
     error_session_expired: 'Session expired. Please log in again.',
     error_auth: 'Could not get auth.',
@@ -380,6 +387,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_locations: 'Failed to load locations.',
     error_announcements: 'Failed to load announcements.',
     error_support: 'Failed to load support tickets.',
+    error_member_inquiries: 'Failed to load member inquiries.',
     error_access_requests: 'Failed to load access requests.',
     error_audit_log: 'Failed to load audit log.',
     error_revoke: 'Failed to revoke.',
@@ -502,6 +510,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: 'Member has been removed from the group.',
     error_kick_msg: 'Failed to remove member from group.',
     kick_btn: 'Remove',
+    confirm_delete_member_inquiry: 'Delete this member inquiry? This will be recorded in the audit log.',
     confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
     error_piggy_archive_fetch: 'Failed to fetch archive.',
     error_piggy_archive_list: 'Failed to load piggy archives.',
@@ -542,6 +551,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     tab_support: 'お問い合わせ',
     tab_access_requests: 'アクセス申請',
     tab_audit_log: '監査ログ',
+    tab_member_inquiries: 'メンバーお問い合わせ',
     error_stats: '統計の読み込みに失敗しました。',
     error_session_expired: 'セッションの有効期限が切れました。再度ログインしてください。',
     error_auth: '認証情報を取得できません。',
@@ -555,6 +565,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_locations: '位置データの読み込みに失敗しました。',
     error_announcements: 'お知らせの読み込みに失敗しました。',
     error_support: 'お問い合わせの読み込みに失敗しました。',
+    error_member_inquiries: 'メンバーお問い合わせの読み込みに失敗しました。',
     error_access_requests: 'アクセス申請の読み込みに失敗しました。',
     error_audit_log: '監査ログの読み込みに失敗しました。',
     error_revoke: '権限の解除に失敗しました。',
@@ -677,6 +688,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: 'メンバーをグループから削除しました。',
     error_kick_msg: 'メンバーの削除に失敗しました。',
     kick_btn: '削除',
+    confirm_delete_member_inquiry: 'このメンバーお問い合わせを削除しますか？監査ログに記録されます。',
     confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
     error_piggy_archive_fetch: 'Failed to fetch archive.',
     error_piggy_archive_list: 'Failed to load piggy archives.',
@@ -717,6 +729,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     tab_support: '工单',
     tab_access_requests: '访问请求',
     tab_audit_log: '审计日志',
+    tab_member_inquiries: '成员咨询(群组)',
     error_stats: '加载统计失败。',
     error_session_expired: '登录已过期，请重新登录。',
     error_auth: '无法获取认证信息。',
@@ -730,6 +743,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_locations: '加载位置数据失败。',
     error_announcements: '加载公告失败。',
     error_support: '加载工单失败。',
+    error_member_inquiries: '加载成员咨询失败。',
     error_access_requests: '加载访问请求失败。',
     error_audit_log: '加载审计日志失败。',
     error_revoke: '解除权限失败。',
@@ -852,6 +866,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: '已将该成员移出群组。',
     error_kick_msg: '移除成员失败。',
     kick_btn: '移除',
+    confirm_delete_member_inquiry: '要删除这条成员咨询吗？将记入审计日志。',
     confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
     error_piggy_archive_fetch: 'Failed to fetch archive.',
     error_piggy_archive_list: 'Failed to load piggy archives.',
@@ -892,6 +907,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     tab_support: '工單',
     tab_access_requests: '存取請求',
     tab_audit_log: '稽核紀錄',
+    tab_member_inquiries: '成員諮詢(群組)',
     error_stats: '載入統計失敗。',
     error_session_expired: '登入已過期，請重新登入。',
     error_auth: '無法取得認證資訊。',
@@ -905,6 +921,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     error_locations: '載入位置資料失敗。',
     error_announcements: '載入公告失敗。',
     error_support: '載入工單失敗。',
+    error_member_inquiries: '載入成員諮詢失敗。',
     error_access_requests: '載入存取請求失敗。',
     error_audit_log: '載入稽核紀錄失敗。',
     error_revoke: '解除權限失敗。',
@@ -1027,6 +1044,7 @@ const admin: Record<LangCode, AdminTranslations> = {
     kick_done: '已將該成員移出群組。',
     error_kick_msg: '移除成員失敗。',
     kick_btn: '移除',
+    confirm_delete_member_inquiry: '要刪除這則成員諮詢嗎？將記入稽核紀錄。',
     confirm_delete_piggy_archive: 'Delete this archive? Deleted transaction records cannot be recovered.',
     error_piggy_archive_fetch: 'Failed to fetch archive.',
     error_piggy_archive_list: 'Failed to load piggy archives.',

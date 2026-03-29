@@ -147,6 +147,20 @@ interface SupportTicketInfo {
   };
 }
 
+/** 멤버↔그룹관리자 문의 (member_support_tickets) */
+interface MemberGroupInquiryInfo {
+  id: string;
+  group_id: string;
+  created_by: string;
+  title: string;
+  content: string;
+  status: string;
+  answer: string | null;
+  created_at: string;
+  answered_at: string | null;
+  groups?: { id: string; name: string };
+}
+
 interface DashboardAccessRequestInfo {
   id: string;
   group_id: string;
@@ -192,7 +206,7 @@ export default function AdminPage() {
   }, []);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'member-inquiries' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
@@ -208,6 +222,8 @@ export default function AdminPage() {
   // 공지사항, 문의, 접근 요청 관련 상태
   const [announcements, setAnnouncements] = useState<AnnouncementInfo[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicketInfo[]>([]);
+  const [memberGroupInquiries, setMemberGroupInquiries] = useState<MemberGroupInquiryInfo[]>([]);
+  const [deletingMemberInquiryId, setDeletingMemberInquiryId] = useState<string | null>(null);
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null | undefined>(undefined);
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
@@ -690,6 +706,8 @@ export default function AdminPage() {
       loadAnnouncements();
     } else if (activeTab === 'all-support-tickets') {
       loadAllSupportTickets();
+    } else if (activeTab === 'member-inquiries') {
+      loadMemberGroupInquiries();
     } else if (activeTab === 'support-tickets') {
       loadSupportTickets();
     } else if (activeTab === 'dashboard-access-requests') {
@@ -737,6 +755,75 @@ export default function AdminPage() {
       setLoadingData(false);
     }
   }, []);
+
+  const loadMemberGroupInquiries = useCallback(async () => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError(at('error_session_expired'));
+        setLoadingData(false);
+        return;
+      }
+
+      const response = await fetch('/api/admin/member-support-tickets', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || at('error_member_inquiries'));
+      }
+
+      setMemberGroupInquiries(result.data || []);
+    } catch (err: unknown) {
+      console.error('멤버 문의(전체) 로드 오류:', err);
+      setError(err instanceof Error ? err.message : at('error_member_inquiries'));
+      setMemberGroupInquiries([]);
+    } finally {
+      setLoadingData(false);
+    }
+  }, [at]);
+
+  const handleDeleteMemberGroupInquiry = useCallback(
+    async (ticket: MemberGroupInquiryInfo) => {
+      if (!confirm(at('confirm_delete_member_inquiry'))) return;
+      setDeletingMemberInquiryId(ticket.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          alert(at('error_session_expired'));
+          return;
+        }
+        const res = await fetch(
+          `/api/support-tickets?id=${encodeURIComponent(ticket.id)}&group_id=${encodeURIComponent(ticket.group_id)}`,
+          {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }
+        );
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(typeof json.error === 'string' ? json.error : at('error_member_inquiries'));
+          return;
+        }
+        setMemberGroupInquiries((prev) => prev.filter((t) => t.id !== ticket.id));
+      } catch (e) {
+        console.error('멤버 문의 삭제 오류:', e);
+        alert(at('error_member_inquiries'));
+      } finally {
+        setDeletingMemberInquiryId(null);
+      }
+    },
+    [at]
+  );
 
   // 공지사항 로드
   const loadAnnouncements = useCallback(async () => {
@@ -1279,6 +1366,39 @@ export default function AdminPage() {
                 fontWeight: '600',
               }}>
                 {supportTickets.filter(t => t.status === 'pending').length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('member-inquiries')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'member-inquiries' ? '3px solid #9333ea' : '3px solid transparent',
+              color: activeTab === 'member-inquiries' ? '#9333ea' : '#64748b',
+              fontSize: '16px',
+              fontWeight: activeTab === 'member-inquiries' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              position: 'relative',
+            }}
+          >
+            <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            {at('tab_member_inquiries')}
+            {memberGroupInquiries.filter((t) => t.status === 'pending').length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                backgroundColor: '#f97316',
+                color: 'white',
+                borderRadius: '10px',
+                padding: '2px 6px',
+                fontSize: '11px',
+                fontWeight: '600',
+              }}>
+                {memberGroupInquiries.filter((t) => t.status === 'pending').length}
               </span>
             )}
           </button>
@@ -3420,6 +3540,156 @@ export default function AdminPage() {
               </div>
             )}
 
+            {activeTab === 'member-inquiries' && (
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '24px',
+                }}>
+                  <h2 style={{
+                    fontSize: '20px',
+                    fontWeight: '600',
+                    color: '#1e293b',
+                    margin: 0,
+                  }}>
+                    {at('tab_member_inquiries')} ({memberGroupInquiries.filter((t) => t.status === 'pending').length}{adminLang === 'en' ? ' pending' : '건 미답변'})
+                  </h2>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}>
+                  {memberGroupInquiries.map((ticket) => (
+                    <motion.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: '20px',
+                        backgroundColor: ticket.status === 'pending' ? '#fff7ed' : '#f8fafc',
+                        borderRadius: '12px',
+                        border: `1px solid ${ticket.status === 'pending' ? '#fed7aa' : '#e2e8f0'}`,
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        marginBottom: '12px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            flexWrap: 'wrap',
+                            marginBottom: '8px',
+                          }}>
+                            <h3 style={{
+                              fontSize: '18px',
+                              fontWeight: '600',
+                              color: '#1e293b',
+                              margin: 0,
+                            }}>
+                              {ticket.title}
+                            </h3>
+                            {ticket.groups && (
+                              <span style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#f3f4f6',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                color: '#4b5563',
+                              }}>
+                                📁 {ticket.groups.name}
+                              </span>
+                            )}
+                            <span style={{
+                              padding: '4px 12px',
+                              backgroundColor: ticket.status === 'pending' ? '#f97316' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
+                              color: 'white',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                            }}>
+                              {ticket.status === 'pending' ? at('status_pending') : ticket.status === 'answered' ? at('status_answered') : at('status_closed')}
+                            </span>
+                          </div>
+                          <p style={{
+                            fontSize: '14px',
+                            color: '#64748b',
+                            margin: '0 0 12px 0',
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            {ticket.content}
+                          </p>
+                          {ticket.answer && (
+                            <div style={{
+                              marginTop: '12px',
+                              padding: '14px',
+                              backgroundColor: '#f0f9ff',
+                              borderRadius: '8px',
+                              border: '1px solid #bae6fd',
+                            }}>
+                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369a1', marginBottom: '6px' }}>
+                                {at('answer_label')}
+                              </div>
+                              <p style={{ fontSize: '14px', color: '#1e293b', margin: 0, whiteSpace: 'pre-wrap' }}>
+                                {ticket.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        marginTop: '12px',
+                      }}>
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          {at('written_at')} {new Date(ticket.created_at).toLocaleString(adminLang === 'en' ? 'en-US' : 'ko-KR')}
+                          {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString(adminLang === 'en' ? 'en-US' : 'ko-KR')}`}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={deletingMemberInquiryId === ticket.id}
+                          onClick={() => void handleDeleteMemberGroupInquiry(ticket)}
+                          style={{
+                            padding: '8px 14px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: '#b91c1c',
+                            backgroundColor: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            cursor: deletingMemberInquiryId === ticket.id ? 'not-allowed' : 'pointer',
+                            opacity: deletingMemberInquiryId === ticket.id ? 0.7 : 1,
+                          }}
+                        >
+                          {deletingMemberInquiryId === ticket.id ? '…' : ct('delete')}
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {memberGroupInquiries.length === 0 && !loadingData && (
+                    <div style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>
+                      <p>{at('no_inquiries')}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'support-tickets' && (
               <div>
                 <h2 style={{
@@ -4278,6 +4548,7 @@ console.error(at('error_revoke_failed'), error);
                     <option value="announcement">공지</option>
                     <option value="dashboard_access_request">접근 요청</option>
                     <option value="support_ticket">문의</option>
+                    <option value="member_support_ticket">멤버 문의(그룹)</option>
                     <option value="system_admin">시스템 관리자</option>
                   </select>
                   <input

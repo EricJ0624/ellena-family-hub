@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { requireAuthUser, requireGroupAdmin, requireGroupMember } from '@/lib/api-guards';
+import { isSystemAdmin } from '@/lib/permissions';
+import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
  * 멤버 문의 목록 조회 (본인 작성 + 해당 그룹)
@@ -98,7 +100,11 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * 멤버 문의 삭제 (본인 작성 건만)
+ * 멤버 문의 삭제
+ * - 작성자 본인(그룹 멤버)
+ * - 시스템 관리자(해당 그룹 문의)
+ * - 그룹 관리자·소유자(해당 그룹 문의)
+ * 관리자가 타인 문의를 삭제한 경우 admin_audit_log에 기록합니다.
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -116,14 +122,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const memberCheck = await requireGroupMember(user.id, groupId);
-    if (memberCheck instanceof NextResponse) return memberCheck;
-
     const supabase = getSupabaseServerClient();
 
     const { data: row, error: fetchErr } = await supabase
       .from('member_support_tickets')
-      .select('id, created_by, group_id')
+      .select('id, created_by, group_id, title')
       .eq('id', ticketId)
       .maybeSingle();
 
@@ -134,8 +137,21 @@ export async function DELETE(request: NextRequest) {
     if (!row) {
       return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
     }
-    if (row.group_id !== groupId || row.created_by !== user.id) {
-      return NextResponse.json({ error: '삭제 권한이 없습니다.' }, { status: 403 });
+    if (row.group_id !== groupId) {
+      return NextResponse.json({ error: '그룹 정보가 일치하지 않습니다.' }, { status: 400 });
+    }
+
+    const isAuthor = row.created_by === user.id;
+    const actingSystemAdmin = await isSystemAdmin(user.id);
+
+    if (isAuthor) {
+      const memberCheck = await requireGroupMember(user.id, groupId);
+      if (memberCheck instanceof NextResponse) return memberCheck;
+    } else if (actingSystemAdmin) {
+      // 시스템 관리자는 그룹 미가입이어도 삭제 가능
+    } else {
+      const adminCheck = await requireGroupAdmin(user.id, groupId);
+      if (adminCheck instanceof NextResponse) return adminCheck;
     }
 
     const { error: delErr } = await supabase
@@ -146,6 +162,24 @@ export async function DELETE(request: NextRequest) {
     if (delErr) {
       console.error('멤버 문의 삭제 오류:', delErr);
       return NextResponse.json({ error: '문의 삭제에 실패했습니다.' }, { status: 500 });
+    }
+
+    if (!isAuthor) {
+      const { ipAddress, userAgent } = getAuditRequestMeta(request);
+      await writeAdminAuditLog(supabase, {
+        adminId: user.id,
+        action: 'DELETE',
+        resourceType: 'member_support_ticket',
+        resourceId: ticketId,
+        groupId: row.group_id,
+        targetUserId: row.created_by,
+        details: {
+          actor: actingSystemAdmin ? 'system_admin' : 'group_admin',
+          title: row.title,
+        },
+        ipAddress,
+        userAgent,
+      });
     }
 
     return NextResponse.json({ success: true });
