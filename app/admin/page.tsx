@@ -39,6 +39,7 @@ import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import type { LangCode } from '@/lib/language-fonts';
+import { parseMessageThread } from '@/lib/support-ticket-thread';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -139,6 +140,7 @@ interface SupportTicketInfo {
   answer: string | null;
   answered_by: string | null;
   answered_at: string | null;
+  message_thread?: unknown;
   created_at: string;
   updated_at: string;
   groups?: {
@@ -232,6 +234,7 @@ export default function AdminPage() {
   const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
   const [announcementLangTab, setAnnouncementLangTab] = useState<LangCode>('ko');
   const [ticketAnswer, setTicketAnswer] = useState('');
+  const [deletingSystemSupportTicketId, setDeletingSystemSupportTicketId] = useState<string | null>(null);
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
   const [showNewAccessRequestModal, setShowNewAccessRequestModal] = useState(false);
   const [newAccessRequestGroupId, setNewAccessRequestGroupId] = useState('');
@@ -3260,13 +3263,15 @@ export default function AdminPage() {
                         alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         marginBottom: '12px',
+                        gap: '12px',
                       }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
                             marginBottom: '8px',
+                            flexWrap: 'wrap',
                           }}>
                             <h3 style={{
                               fontSize: '18px',
@@ -3333,7 +3338,92 @@ export default function AdminPage() {
                               </p>
                             </div>
                           )}
+                          {parseMessageThread(ticket.message_thread).map((entry, idx) => (
+                            <div
+                              key={`${entry.created_at}-${idx}`}
+                              style={{
+                                marginTop: '12px',
+                                padding: '14px',
+                                backgroundColor: entry.role === 'group_admin' ? '#fffbeb' : '#f0f9ff',
+                                borderRadius: '8px',
+                                border: `1px solid ${entry.role === 'group_admin' ? '#fde68a' : '#bae6fd'}`,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: entry.role === 'group_admin' ? '#b45309' : '#0369a1',
+                                marginBottom: '6px',
+                              }}>
+                                {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {entry.body}
+                              </p>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                        <button
+                          type="button"
+                          disabled={deletingSystemSupportTicketId === ticket.id}
+                          onClick={async () => {
+                            if (!confirm('이 문의를 삭제할까요?')) return;
+                            try {
+                              setDeletingSystemSupportTicketId(ticket.id);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert(at('error_auth'));
+                                return;
+                              }
+                              const response = await fetch(
+                                `/api/admin/support-tickets?id=${encodeURIComponent(ticket.id)}`,
+                                {
+                                  method: 'DELETE',
+                                  headers: { Authorization: `Bearer ${session.access_token}` },
+                                }
+                              );
+                              const result = await response.json();
+                              if (!response.ok) {
+                                throw new Error(result.error || '삭제에 실패했습니다.');
+                              }
+                              loadAllSupportTickets();
+                            } catch (e: unknown) {
+                              alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+                            } finally {
+                              setDeletingSystemSupportTicketId(null);
+                            }
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: deletingSystemSupportTicketId === ticket.id ? 'wait' : 'pointer',
+                            flexShrink: 0,
+                            height: 'fit-content',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          {deletingSystemSupportTicketId === ticket.id ? (
+                            <Loader2 style={{ width: '14px', height: '14px' }} className="animate-spin" />
+                          ) : (
+                            <Trash2 style={{ width: '14px', height: '14px' }} />
+                          )}
+                          삭제
+                        </button>
                       </div>
                       {ticket.status === 'pending' && (
                         <div style={{
@@ -3342,9 +3432,9 @@ export default function AdminPage() {
                           marginTop: '16px',
                         }}>
                           <button
-                            onClick={async () => {
+                            onClick={() => {
                               setEditingTicket(ticket);
-                              setTicketAnswer(ticket.answer || '');
+                              setTicketAnswer('');
                             }}
                             style={{
                               padding: '8px 16px',
@@ -3438,6 +3528,20 @@ export default function AdminPage() {
                         }}>
                           {editingTicket.content}
                         </div>
+                        {editingTicket.answer && (
+                          <div style={{ marginTop: '12px', fontSize: '12px', color: '#0369a1' }}>
+                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>첫 답변</div>
+                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap' }}>{editingTicket.answer}</div>
+                          </div>
+                        )}
+                        {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
+                          <div key={`m-${idx}`} style={{ marginTop: '10px', fontSize: '12px' }}>
+                            <div style={{ fontWeight: '600', color: entry.role === 'group_admin' ? '#b45309' : '#0369a1' }}>
+                              {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                            </div>
+                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap' }}>{entry.body}</div>
+                          </div>
+                        ))}
                       </div>
                       <textarea
                         value={ticketAnswer}
@@ -3493,7 +3597,7 @@ export default function AdminPage() {
                               }
 
                               const response = await fetch('/api/admin/support-tickets', {
-                                method: 'PUT',
+                                method: 'POST',
                                 headers: {
                                   'Authorization': `Bearer ${session.access_token}`,
                                   'Content-Type': 'application/json',
@@ -3723,13 +3827,15 @@ export default function AdminPage() {
                         alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         marginBottom: '12px',
+                        gap: '12px',
                       }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
                             marginBottom: '8px',
+                            flexWrap: 'wrap',
                           }}>
                             <h3 style={{
                               fontSize: '18px',
@@ -3792,7 +3898,92 @@ export default function AdminPage() {
                               </p>
                             </div>
                           )}
+                          {parseMessageThread(ticket.message_thread).map((entry, idx) => (
+                            <div
+                              key={`st-${entry.created_at}-${idx}`}
+                              style={{
+                                marginTop: '12px',
+                                padding: '14px',
+                                backgroundColor: entry.role === 'group_admin' ? '#fffbeb' : '#f0f9ff',
+                                borderRadius: '8px',
+                                border: `1px solid ${entry.role === 'group_admin' ? '#fde68a' : '#bae6fd'}`,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: entry.role === 'group_admin' ? '#b45309' : '#0369a1',
+                                marginBottom: '6px',
+                              }}>
+                                {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {entry.body}
+                              </p>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                              </div>
+                            </div>
+                          ))}
                         </div>
+                        <button
+                          type="button"
+                          disabled={deletingSystemSupportTicketId === ticket.id}
+                          onClick={async () => {
+                            if (!confirm('이 문의를 삭제할까요?')) return;
+                            try {
+                              setDeletingSystemSupportTicketId(ticket.id);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert(at('error_auth'));
+                                return;
+                              }
+                              const response = await fetch(
+                                `/api/admin/support-tickets?id=${encodeURIComponent(ticket.id)}`,
+                                {
+                                  method: 'DELETE',
+                                  headers: { Authorization: `Bearer ${session.access_token}` },
+                                }
+                              );
+                              const result = await response.json();
+                              if (!response.ok) {
+                                throw new Error(result.error || '삭제에 실패했습니다.');
+                              }
+                              loadSupportTickets();
+                            } catch (e: unknown) {
+                              alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+                            } finally {
+                              setDeletingSystemSupportTicketId(null);
+                            }
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: deletingSystemSupportTicketId === ticket.id ? 'wait' : 'pointer',
+                            flexShrink: 0,
+                            height: 'fit-content',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          {deletingSystemSupportTicketId === ticket.id ? (
+                            <Loader2 style={{ width: '14px', height: '14px' }} className="animate-spin" />
+                          ) : (
+                            <Trash2 style={{ width: '14px', height: '14px' }} />
+                          )}
+                          삭제
+                        </button>
                       </div>
                       {ticket.status === 'pending' && (
                         <div style={{
@@ -3801,9 +3992,9 @@ export default function AdminPage() {
                           marginTop: '16px',
                         }}>
                           <button
-                            onClick={async () => {
+                            onClick={() => {
                               setEditingTicket(ticket);
-                              setTicketAnswer(ticket.answer || '');
+                              setTicketAnswer('');
                             }}
                             style={{
                               padding: '8px 16px',
@@ -3877,6 +4068,41 @@ export default function AdminPage() {
                       }}>
                         {at('submit_answer_btn')}
                       </h3>
+                      <div style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                      }}>
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#1e293b',
+                          marginBottom: '4px',
+                        }}>
+                          {editingTicket.title}
+                        </div>
+                        <div style={{
+                          fontSize: '13px',
+                          color: '#64748b',
+                        }}>
+                          {editingTicket.content}
+                        </div>
+                        {editingTicket.answer && (
+                          <div style={{ marginTop: '12px', fontSize: '12px', color: '#0369a1' }}>
+                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>첫 답변</div>
+                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap' }}>{editingTicket.answer}</div>
+                          </div>
+                        )}
+                        {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
+                          <div key={`modal2-${idx}`} style={{ marginTop: '10px', fontSize: '12px' }}>
+                            <div style={{ fontWeight: '600', color: entry.role === 'group_admin' ? '#b45309' : '#0369a1' }}>
+                              {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                            </div>
+                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap' }}>{entry.body}</div>
+                          </div>
+                        ))}
+                      </div>
                       <textarea
                         value={ticketAnswer}
                         onChange={(e) => setTicketAnswer(e.target.value)}
@@ -3938,7 +4164,7 @@ export default function AdminPage() {
                                 },
                                 body: JSON.stringify({
                                   id: editingTicket.id,
-                                  answer: ticketAnswer,
+                                  answer: ticketAnswer.trim(),
                                   status: 'answered',
                                 }),
                               });

@@ -33,6 +33,7 @@ import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAdminTranslation } from '@/lib/translations/admin';
+import { parseMessageThread } from '@/lib/support-ticket-thread';
 
 export type GroupAdminPanelVariant = 'standalone' | 'embedded';
 
@@ -101,6 +102,7 @@ interface SupportTicketInfo {
   answer: string | null;
   answered_by: string | null;
   answered_at: string | null;
+  message_thread?: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -213,6 +215,9 @@ export function GroupAdminPanel({
   const [editingMemberTicket, setEditingMemberTicket] = useState<MemberSupportTicketInfo | null>(null);
   const [memberTicketAnswer, setMemberTicketAnswer] = useState('');
   const [deletingMemberTicketId, setDeletingMemberTicketId] = useState<string | null>(null);
+  const [followUpForTicket, setFollowUpForTicket] = useState<SupportTicketInfo | null>(null);
+  const [followUpBody, setFollowUpBody] = useState('');
+  const [deletingSupportTicketId, setDeletingSupportTicketId] = useState<string | null>(null);
 
   const [piggyArchivesSnapshots, setPiggyArchivesSnapshots] = useState<Array<{
     id: string;
@@ -1767,13 +1772,15 @@ export function GroupAdminPanel({
                         alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         marginBottom: '12px',
+                        gap: '12px',
                       }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
                             marginBottom: '8px',
+                            flexWrap: 'wrap',
                           }}>
                             <h3 style={{
                               fontSize: '18px',
@@ -1828,6 +1835,118 @@ export function GroupAdminPanel({
                               </p>
                             </div>
                           )}
+                          {parseMessageThread(ticket.message_thread).map((entry, idx) => (
+                            <div
+                              key={`${entry.created_at}-${idx}`}
+                              style={{
+                                marginTop: '12px',
+                                padding: '14px',
+                                backgroundColor: entry.role === 'group_admin' ? '#fffbeb' : '#f0f9ff',
+                                borderRadius: '8px',
+                                border: `1px solid ${entry.role === 'group_admin' ? '#fde68a' : '#bae6fd'}`,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: entry.role === 'group_admin' ? '#b45309' : '#0369a1',
+                                marginBottom: '6px',
+                              }}>
+                                {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {entry.body}
+                              </p>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                          {(ticket.status === 'answered' || ticket.status === 'closed') && ticket.answer && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFollowUpForTicket(ticket);
+                                setFollowUpBody('');
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                backgroundColor: '#0ea5e9',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              추가 문의
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={deletingSupportTicketId === ticket.id}
+                            onClick={async () => {
+                              if (!effectiveGroupId) {
+                                alert(gat('alert_group_info'));
+                                return;
+                              }
+                              if (!confirm('이 문의를 삭제할까요?')) return;
+                              try {
+                                setDeletingSupportTicketId(ticket.id);
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session?.access_token) {
+                                  alert(gat('alert_auth'));
+                                  return;
+                                }
+                                const response = await fetch(
+                                  `/api/group-admin/support-tickets?id=${encodeURIComponent(ticket.id)}&group_id=${encodeURIComponent(effectiveGroupId)}`,
+                                  {
+                                    method: 'DELETE',
+                                    headers: { Authorization: `Bearer ${session.access_token}` },
+                                  }
+                                );
+                                const result = await response.json();
+                                if (!response.ok) {
+                                  throw new Error(result.error || '삭제에 실패했습니다.');
+                                }
+                                loadSupportTickets();
+                              } catch (e: unknown) {
+                                alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+                              } finally {
+                                setDeletingSupportTicketId(null);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: '#fee2e2',
+                              color: '#b91c1c',
+                              border: '1px solid #fecaca',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: deletingSupportTicketId === ticket.id ? 'wait' : 'pointer',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            {deletingSupportTicketId === ticket.id ? (
+                              <Loader2 style={{ width: '14px', height: '14px' }} className="animate-spin" />
+                            ) : (
+                              <Trash2 style={{ width: '14px', height: '14px' }} />
+                            )}
+                            삭제
+                          </button>
                         </div>
                       </div>
                       <div style={{
@@ -2004,6 +2123,146 @@ export function GroupAdminPanel({
                           }}
                         >
                           작성
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {followUpForTicket && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                  }}
+                  onClick={() => {
+                    setFollowUpForTicket(null);
+                    setFollowUpBody('');
+                  }}
+                  >
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '24px',
+                      width: '90%',
+                      maxWidth: '560px',
+                      maxHeight: '80vh',
+                      overflow: 'auto',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        marginBottom: '12px',
+                      }}>
+                        추가 문의
+                      </h3>
+                      <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px' }}>
+                        {followUpForTicket.title}
+                      </p>
+                      <textarea
+                        value={followUpBody}
+                        onChange={(e) => setFollowUpBody(e.target.value)}
+                        placeholder="추가로 남길 내용을 입력하세요."
+                        style={{
+                          width: '100%',
+                          minHeight: '160px',
+                          padding: '12px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'inherit',
+                          marginBottom: '16px',
+                        }}
+                      />
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        justifyContent: 'flex-end',
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFollowUpForTicket(null);
+                            setFollowUpBody('');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#e2e8f0',
+                            color: '#475569',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          취소
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!followUpBody.trim()) {
+                              alert('내용을 입력해 주세요.');
+                              return;
+                            }
+                            if (!effectiveGroupId || !followUpForTicket) {
+                              alert(gat('alert_group_info'));
+                              return;
+                            }
+                            try {
+                              setLoadingData(true);
+                              const { data: { session } } = await supabase.auth.getSession();
+                              if (!session?.access_token) {
+                                alert(gat('alert_auth'));
+                                return;
+                              }
+                              const response = await fetch('/api/group-admin/support-tickets', {
+                                method: 'PATCH',
+                                headers: {
+                                  Authorization: `Bearer ${session.access_token}`,
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  id: followUpForTicket.id,
+                                  group_id: effectiveGroupId,
+                                  follow_up: followUpBody.trim(),
+                                }),
+                              });
+                              const result = await response.json();
+                              if (!response.ok) {
+                                throw new Error(result.error || '추가 문의 전송에 실패했습니다.');
+                              }
+                              setFollowUpForTicket(null);
+                              setFollowUpBody('');
+                              loadSupportTickets();
+                            } catch (e: unknown) {
+                              alert(e instanceof Error ? e.message : '추가 문의 전송에 실패했습니다.');
+                            } finally {
+                              setLoadingData(false);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#0ea5e9',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          보내기
                         </button>
                       </div>
                     </div>

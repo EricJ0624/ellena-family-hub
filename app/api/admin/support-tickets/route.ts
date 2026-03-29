@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { parseMessageThread } from '@/lib/support-ticket-thread';
 
 /**
  * 문의 목록 조회 (시스템 관리자용)
@@ -101,21 +102,69 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 문의에 답변
-    const { data: ticket, error } = await supabase
+    const { data: existing, error: fetchErr } = await supabase
       .from('support_tickets')
-      .update({
-        answer: answer.trim(),
-        answered_by: user.id,
-        answered_at: new Date().toISOString(),
-        status: status || 'answered',
-      })
+      .select('*')
       .eq('id', id)
-      .select()
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      console.error('문의 답변 오류:', error);
+    if (fetchErr) {
+      console.error('문의 조회 오류(답변 전):', fetchErr);
+      return NextResponse.json(
+        { error: '문의를 확인할 수 없습니다.' },
+        { status: 500 }
+      );
+    }
+    if (!existing) {
+      return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const trimmed = answer.trim();
+    const answeredAt = new Date().toISOString();
+    const nextStatus = (status || 'answered') as 'pending' | 'answered' | 'closed';
+
+    let ticket: typeof existing;
+    let updateError: { message: string } | null = null;
+
+    if (!existing.answer) {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .update({
+          answer: trimmed,
+          answered_by: user.id,
+          answered_at: answeredAt,
+          status: nextStatus,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      ticket = data;
+      updateError = error;
+    } else {
+      const thread = parseMessageThread(existing.message_thread);
+      thread.push({
+        role: 'system_admin',
+        user_id: user.id,
+        body: trimmed,
+        created_at: answeredAt,
+      });
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .update({
+          message_thread: thread,
+          answered_by: user.id,
+          answered_at: answeredAt,
+          status: nextStatus,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      ticket = data;
+      updateError = error;
+    }
+
+    if (updateError) {
+      console.error('문의 답변 오류:', updateError);
       return NextResponse.json(
         { error: '문의 답변에 실패했습니다.' },
         { status: 500 }
@@ -129,7 +178,7 @@ export async function POST(request: NextRequest) {
       resourceType: 'support_ticket',
       resourceId: id,
       groupId: ticket?.group_id ?? null,
-      details: { status: status || 'answered' },
+      details: { status: nextStatus, followUp: !!existing.answer },
       ipAddress,
       userAgent,
     });
@@ -218,5 +267,66 @@ export async function PUT(request: NextRequest) {
       { error: errorMessage },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * 문의 삭제 (시스템 관리자용)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const { user } = authResult;
+
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: '문의 ID가 필요합니다.' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServerClient();
+
+    const { data: row, error: fetchErr } = await supabase
+      .from('support_tickets')
+      .select('id, group_id, title')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      console.error('문의 조회 오류(삭제 전):', fetchErr);
+      return NextResponse.json({ error: '문의를 확인할 수 없습니다.' }, { status: 500 });
+    }
+    if (!row) {
+      return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const { error: delErr } = await supabase.from('support_tickets').delete().eq('id', id);
+
+    if (delErr) {
+      console.error('문의 삭제 오류:', delErr);
+      return NextResponse.json({ error: '문의 삭제에 실패했습니다.' }, { status: 500 });
+    }
+
+    const { ipAddress, userAgent } = getAuditRequestMeta(request);
+    await writeAdminAuditLog(supabase, {
+      adminId: user.id,
+      action: 'DELETE',
+      resourceType: 'support_ticket',
+      resourceId: id,
+      groupId: row.group_id,
+      details: { title: row.title },
+      ipAddress,
+      userAgent,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '문의 삭제 중 오류가 발생했습니다.';
+    console.error('문의 삭제 오류:', error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -610,6 +610,7 @@ export interface Database {
           answer: string | null
           answered_by: string | null
           answered_at: string | null
+          message_thread: Json
           created_at: string
           updated_at: string
         }
@@ -623,6 +624,7 @@ export interface Database {
           answer?: string | null
           answered_by?: string | null
           answered_at?: string | null
+          message_thread?: Json
           created_at?: string
           updated_at?: string
         }
@@ -636,6 +638,7 @@ export interface Database {
           answer?: string | null
           answered_by?: string | null
           answered_at?: string | null
+          message_thread?: Json
           created_at?: string
           updated_at?: string
         }
