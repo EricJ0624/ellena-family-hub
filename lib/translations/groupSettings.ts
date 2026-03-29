@@ -3,6 +3,17 @@ import type { LangCode } from '@/lib/language-fonts';
 export type GroupSettingsTranslations = {
   select_group_first: string;
   admin_only: string;
+  theme_picker_label: string;
+  theme_warm_home: string;
+  theme_midnight_sky: string;
+  theme_forest_walk: string;
+  theme_lavender_garden: string;
+  theme_sunset_glow: string;
+  theme_ocean_breeze: string;
+  theme_rose_petal: string;
+  theme_golden_harvest: string;
+  theme_cozy_cocoa: string;
+  theme_winter_hearth: string;
   group_settings_title: string;
   group_name: string;
   group_name_placeholder: string;
@@ -36,6 +47,17 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
   ko: {
     select_group_first: '그룹을 선택해주세요.',
     admin_only: '그룹 설정은 관리자만 변경할 수 있습니다.',
+    theme_picker_label: '앱 테마',
+    theme_warm_home: '따뜻한 우리집',
+    theme_midnight_sky: '한밤의 하늘',
+    theme_forest_walk: '숲속 산책',
+    theme_lavender_garden: '라벤더 정원',
+    theme_sunset_glow: '노을 빛',
+    theme_ocean_breeze: '시원한 바다',
+    theme_rose_petal: '장미 꽃잎',
+    theme_golden_harvest: '황금빛 수확',
+    theme_cozy_cocoa: '코지한 코코아',
+    theme_winter_hearth: '겨울 벽난로',
     group_settings_title: '그룹 설정',
     group_name: '그룹 이름',
     group_name_placeholder: '그룹 이름을 입력하세요',
@@ -67,6 +89,17 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
   en: {
     select_group_first: 'Please select a group.',
     admin_only: 'Only group admins can change group settings.',
+    theme_picker_label: 'App theme',
+    theme_warm_home: 'Warm home',
+    theme_midnight_sky: 'Midnight sky',
+    theme_forest_walk: 'Forest walk',
+    theme_lavender_garden: 'Lavender garden',
+    theme_sunset_glow: 'Sunset glow',
+    theme_ocean_breeze: 'Ocean breeze',
+    theme_rose_petal: 'Rose petal',
+    theme_golden_harvest: 'Golden harvest',
+    theme_cozy_cocoa: 'Cozy cocoa',
+    theme_winter_hearth: 'Winter hearth',
     group_settings_title: 'Group settings',
     group_name: 'Group name',
     group_name_placeholder: 'Enter group name',
@@ -98,6 +131,17 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
   ja: {
     select_group_first: 'グループを選択してください。',
     admin_only: 'グループ設定は管理者のみ変更できます。',
+    theme_picker_label: 'アプリのテーマ',
+    theme_warm_home: 'ぬくもりの我が家',
+    theme_midnight_sky: '真夜中の空',
+    theme_forest_walk: '森の散歩',
+    theme_lavender_garden: 'ラベンダーの庭',
+    theme_sunset_glow: '夕焼け',
+    theme_ocean_breeze: '海風',
+    theme_rose_petal: 'バラの花びら',
+    theme_golden_harvest: '黄金の収穫',
+    theme_cozy_cocoa: 'コージーココア',
+    theme_winter_hearth: '冬の暖炉',
     group_settings_title: 'グループ設定',
     group_name: 'グループ名',
     group_name_placeholder: 'グループ名を入力',
@@ -129,6 +173,17 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
   'zh-CN': {
     select_group_first: '请先选择群组。',
     admin_only: '仅群组管理员可修改群组设置。',
+    theme_picker_label: '应用主题',
+    theme_warm_home: '温暖的家',
+    theme_midnight_sky: '午夜天空',
+    theme_forest_walk: '林间漫步',
+    theme_lavender_garden: '薰衣草园',
+    theme_sunset_glow: '晚霞',
+    theme_ocean_breeze: '海风',
+    theme_rose_petal: '玫瑰花瓣',
+    theme_golden_harvest: '金色收获',
+    theme_cozy_cocoa: '可可暖冬',
+    theme_winter_hearth: '冬日炉火',
     group_settings_title: '群组设置',
     group_name: '群组名称',
     group_name_placeholder: '请输入群组名称',
@@ -160,6 +215,17 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
   'zh-TW': {
     select_group_first: '請先選擇群組。',
     admin_only: '僅群組管理員可修改群組設定。',
+    theme_picker_label: '應用程式主題',
+    theme_warm_home: '溫暖的家',
+    theme_midnight_sky: '午夜天空',
+    theme_forest_walk: '林間漫步',
+    theme_lavender_garden: '薰衣草園',
+    theme_sunset_glow: '晚霞',
+    theme_ocean_breeze: '海風',
+    theme_rose_petal: '玫瑰花瓣',
+    theme_golden_harvest: '金色收穫',
+    theme_cozy_cocoa: '可可暖冬',
+    theme_winter_hearth: '冬日爐火',
     group_settings_title: '群組設定',
     group_name: '群組名稱',
     group_name_placeholder: '請輸入群組名稱',

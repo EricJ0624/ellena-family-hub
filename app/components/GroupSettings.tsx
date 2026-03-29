@@ -15,6 +15,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getGroupSettingsTranslation, type GroupSettingsTranslations } from '@/lib/translations/groupSettings';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { ThemePicker } from '@/app/components/ThemePicker';
 import type { TitleStyle } from '@/app/components/TitlePage';
 import type { LangCode } from '@/lib/language-fonts';
 
@@ -262,25 +263,28 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2 bg-purple-100 rounded-lg shrink-0">
             <Settings className="w-6 h-6 text-purple-600" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold text-gray-900">{gst('group_settings_title')}</h2>
             <p className="text-sm text-gray-500">
               {currentGroup?.name || gst('group_settings_title')}
             </p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label={ct('close')}
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
+          <ThemePicker className="flex-wrap justify-end" />
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label={ct('close')}
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-6">
