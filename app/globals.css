@@ -31,7 +31,9 @@
   --destructive-foreground: 0 0% 100%;
   --input: 30 20% 88%;
   --ring: 18 65% 55%;
-  
+  --popover: 35 30% 98%;
+  --popover-foreground: 20 25% 15%;
+
   /* Existing custom variables */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --spacing-xs: 0.5rem;
@@ -62,6 +64,18 @@
   --card-foreground: 220 15% 92%;
   --border: 225 18% 22%;
   --accent: 200 50% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 225 16% 20%;
+  --secondary-foreground: 220 15% 92%;
+  --muted: 225 18% 18%;
+  --muted-foreground: 220 12% 65%;
+  --accent-foreground: 210 40% 96%;
+  --destructive: 0 72% 58%;
+  --destructive-foreground: 230 25% 10%;
+  --input: 225 18% 24%;
+  --ring: 220 70% 55%;
+  --popover: 225 22% 16%;
+  --popover-foreground: 220 15% 92%;
 }
 
 [data-theme='forest-walk'] {
@@ -72,6 +86,18 @@
   --card-foreground: 140 25% 15%;
   --border: 130 15% 85%;
   --accent: 90 40% 85%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 120 12% 92%;
+  --secondary-foreground: 140 25% 15%;
+  --muted: 125 14% 94%;
+  --muted-foreground: 140 18% 42%;
+  --accent-foreground: 140 30% 18%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 130 15% 85%;
+  --ring: 145 45% 40%;
+  --popover: 125 18% 98%;
+  --popover-foreground: 140 25% 15%;
 }
 
 [data-theme='lavender-garden'] {
@@ -82,6 +108,18 @@
   --card-foreground: 280 20% 18%;
   --border: 270 18% 88%;
   --accent: 290 45% 88%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 270 16% 93%;
+  --secondary-foreground: 280 20% 18%;
+  --muted: 272 18% 95%;
+  --muted-foreground: 280 15% 45%;
+  --accent-foreground: 280 22% 20%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 270 18% 88%;
+  --ring: 275 50% 55%;
+  --popover: 272 25% 98%;
+  --popover-foreground: 280 20% 18%;
 }
 
 [data-theme='sunset-glow'] {
@@ -92,6 +130,18 @@
   --card-foreground: 15 30% 15%;
   --border: 35 25% 86%;
   --accent: 45 70% 85%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 35 22% 92%;
+  --secondary-foreground: 15 30% 15%;
+  --muted: 38 28% 94%;
+  --muted-foreground: 20 20% 42%;
+  --accent-foreground: 15 35% 18%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 35 25% 86%;
+  --ring: 25 80% 55%;
+  --popover: 38 35% 97%;
+  --popover-foreground: 15 30% 15%;
 }
 
 [data-theme='ocean-breeze'] {
@@ -102,6 +152,18 @@
   --card-foreground: 200 30% 15%;
   --border: 195 20% 87%;
   --accent: 180 45% 85%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 195 18% 93%;
+  --secondary-foreground: 200 30% 15%;
+  --muted: 192 22% 95%;
+  --muted-foreground: 200 18% 42%;
+  --accent-foreground: 200 28% 18%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 195 20% 87%;
+  --ring: 190 55% 45%;
+  --popover: 192 28% 98%;
+  --popover-foreground: 200 30% 15%;
 }
 
 [data-theme='rose-petal'] {
@@ -112,6 +174,18 @@
   --card-foreground: 345 25% 18%;
   --border: 350 20% 88%;
   --accent: 340 50% 88%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 350 20% 93%;
+  --secondary-foreground: 345 25% 18%;
+  --muted: 352 22% 95%;
+  --muted-foreground: 345 18% 45%;
+  --accent-foreground: 345 28% 20%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 350 20% 88%;
+  --ring: 350 60% 58%;
+  --popover: 352 28% 98%;
+  --popover-foreground: 345 25% 18%;
 }
 
 [data-theme='golden-harvest'] {
@@ -122,6 +196,18 @@
   --card-foreground: 35 30% 15%;
   --border: 42 22% 85%;
   --accent: 50 55% 80%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 45 24% 92%;
+  --secondary-foreground: 35 30% 15%;
+  --muted: 48 26% 94%;
+  --muted-foreground: 35 22% 42%;
+  --accent-foreground: 35 32% 18%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 42 22% 85%;
+  --ring: 40 70% 48%;
+  --popover: 48 30% 97%;
+  --popover-foreground: 35 30% 15%;
 }
 
 [data-theme='cozy-cocoa'] {
@@ -132,6 +218,18 @@
   --card-foreground: 20 25% 12%;
   --border: 25 15% 85%;
   --accent: 30 35% 82%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 25 14% 92%;
+  --secondary-foreground: 20 25% 12%;
+  --muted: 28 16% 94%;
+  --muted-foreground: 20 18% 42%;
+  --accent-foreground: 20 28% 14%;
+  --destructive: 0 72% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 25 15% 85%;
+  --ring: 22 45% 42%;
+  --popover: 28 20% 97%;
+  --popover-foreground: 20 25% 12%;
 }
 
 [data-theme='winter-hearth'] {
@@ -142,6 +240,18 @@
   --card-foreground: 215 20% 15%;
   --border: 210 12% 88%;
   --accent: 8 50% 88%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 14% 93%;
+  --secondary-foreground: 215 20% 15%;
+  --muted: 212 16% 95%;
+  --muted-foreground: 215 16% 42%;
+  --accent-foreground: 215 22% 18%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 210 12% 88%;
+  --ring: 0 60% 52%;
+  --popover: 212 18% 98%;
+  --popover-foreground: 215 20% 15%;
 }
 
 .dark {
@@ -163,7 +273,9 @@
   --border: 217 33% 17%;
   --input: 217 33% 17%;
   --ring: 234 89% 74%;
-  
+  --popover: 217 33% 17%;
+  --popover-foreground: 210 40% 98%;
+
   /* Glass effect for dark mode */
   --glass-bg: rgba(30, 41, 59, 0.7);
 }
