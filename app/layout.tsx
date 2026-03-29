@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { GroupProviderWrapper } from "./providers/GroupProviderWrapper";
+import { ThemeProvider } from "./providers/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Hearth: Family Haven",
@@ -54,7 +55,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body>
-        <GroupProviderWrapper>{children}</GroupProviderWrapper>
+        <ThemeProvider>
+          <GroupProviderWrapper>{children}</GroupProviderWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );
