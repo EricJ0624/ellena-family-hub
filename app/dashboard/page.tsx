@@ -8214,17 +8214,18 @@ export default function FamilyHub() {
         </div>
       )}
 
-      {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 */}
+      {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 (작게·간격 축소·모서리에 붙여 지도 가림 최소화) */}
       <div
         style={{
           position: 'fixed',
-          bottom: '20px',
-          right: '20px',
+          bottom: 'calc(4px + env(safe-area-inset-bottom, 0px))',
+          right: 'calc(6px + env(safe-area-inset-right, 0px))',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
+          gap: '6px',
           zIndex: 1000,
           alignItems: 'flex-end',
+          pointerEvents: 'none',
         }}
       >
         {showMemberInquiryFab && (
@@ -8236,17 +8237,19 @@ export default function FamilyHub() {
               setShowMemberTicketModal(true);
             }}
             style={{
-              padding: '10px 14px',
+              padding: '5px 9px',
               backgroundColor: '#f97316',
               color: 'white',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '13px',
+              borderRadius: '8px',
+              fontSize: '11px',
               fontWeight: 700,
+              lineHeight: 1.25,
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(249, 115, 22, 0.35)',
+              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.28)',
               whiteSpace: 'nowrap',
-              maxWidth: 'min(92vw, 280px)',
+              maxWidth: 'min(88vw, 220px)',
+              pointerEvents: 'auto',
             }}
           >
             관리자에게 문의하기
@@ -8255,34 +8258,34 @@ export default function FamilyHub() {
         <button
           onClick={() => handleDeleteAccount()}
           style={{
-            padding: '8px 12px',
+            padding: '5px 9px',
             backgroundColor: 'rgba(139, 69, 19, 0.9)',
             color: 'white',
             border: 'none',
-            borderRadius: '12px',
-            fontSize: '12px',
+            borderRadius: '8px',
+            fontSize: '11px',
             fontWeight: '600',
+            lineHeight: 1.25,
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(139, 69, 19, 0.4)',
-            transition: 'all 0.3s ease',
+            boxShadow: '0 2px 8px rgba(139, 69, 19, 0.32)',
+            transition: 'all 0.2s ease',
             whiteSpace: 'nowrap',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '4px',
+            pointerEvents: 'auto',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 1)';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 69, 19, 0.5)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 3px 10px rgba(139, 69, 19, 0.45)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.9)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 69, 19, 0.4)';
-            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(139, 69, 19, 0.32)';
           }}
           aria-label={dt('delete_account_aria')}
         >
-          <span style={{ fontSize: '14px' }}>🗑️</span>
+          <span style={{ fontSize: '12px', lineHeight: 1 }} aria-hidden>🗑️</span>
           {dt('delete_account_btn')}
         </button>
       </div>
