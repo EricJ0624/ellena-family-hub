@@ -1,4 +1,5 @@
 import type { LangCode } from '@/lib/language-fonts';
+import { LANG_CODES } from '@/lib/language-fonts';
 
 export type CommonTranslations = {
   app_title: string; // 브라우저 탭 제목
@@ -129,6 +130,19 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: '略過',
   },
 };
+
+/** DB·그룹 설정에 저장될 수 있는 기본 앱 타이틀 문자열(모든 UI 언어 + 레거시 영문 기본값) */
+const DEFAULT_APP_TITLE_VARIANTS: ReadonlySet<string> = new Set([
+  ...LANG_CODES.map((l) => common[l].app_title),
+  'Hearth: Family Haven', // GroupSettings·온보딩 등에서 쓰던 영문 기본
+]);
+
+/** 저장된 문구가 기본 앱 타이틀인지 — 언어와 무관히 동일 취급 */
+export function isDefaultAppTitleText(text: string | null | undefined): boolean {
+  if (text == null) return false;
+  const t = text.trim();
+  return t.length > 0 && DEFAULT_APP_TITLE_VARIANTS.has(t);
+}
 
 export function getCommonTranslation(lang: LangCode, key: keyof CommonTranslations): string {
   return common[lang]?.[key] ?? common.en[key] ?? (common.ko[key] as string) ?? key;

@@ -19,7 +19,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
-import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
+import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
@@ -1068,8 +1068,11 @@ export default function FamilyHub() {
     };
   }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle, ct]);
 
-  const dashboardTitleText = effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || ct('app_title');
-  const isDefaultDashboardTitle = dashboardTitleText === ct('app_title');
+  const rawDashboardTitle =
+    effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || ct('app_title');
+  // 그룹에 저장된 기본 타이틀이 다른 언어(예: 영문)로만 저장된 경우에도 현재 UI 언어로 표시
+  const dashboardTitleText = isDefaultAppTitleText(rawDashboardTitle) ? ct('app_title') : rawDashboardTitle;
+  const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
   // 사용자가 지정한 폰트 크기가 있으면 그 값을 상한으로, 없으면 기본/커스텀별 기본 상한 사용
   const titleFitMaxFontSize = typeof effectiveTitleStyle?.fontSize === 'number'
     ? effectiveTitleStyle.fontSize
