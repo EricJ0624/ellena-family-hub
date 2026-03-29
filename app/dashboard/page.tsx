@@ -27,6 +27,7 @@ import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -35,40 +36,6 @@ const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
 const getStorageKey = (userId: string, groupId?: string | null) =>
   groupId ? `${CONFIG.STORAGE}_${userId}_${groupId}` : `${CONFIG.STORAGE}_${userId}`;
 const getAuthKey = (userId: string) => `${CONFIG.AUTH}_${userId}`;
-
-/** 멤버 문의 답변 확인 여부 (티켓 id 목록, 사용자별 localStorage) */
-const MEMBER_SUPPORT_SEEN_KEY = (userId: string) => `member_support_seen:${userId}`;
-
-function readSeenMemberTicketIds(userId: string): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = localStorage.getItem(MEMBER_SUPPORT_SEEN_KEY(userId));
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw) as unknown;
-    if (!Array.isArray(arr)) return new Set();
-    return new Set(arr.filter((x): x is string => typeof x === 'string'));
-  } catch {
-    return new Set();
-  }
-}
-
-function markMemberTicketsSeen(userId: string, ticketIds: string[]) {
-  if (typeof window === 'undefined' || !ticketIds.length) return;
-  const s = readSeenMemberTicketIds(userId);
-  ticketIds.forEach((id) => s.add(id));
-  localStorage.setItem(MEMBER_SUPPORT_SEEN_KEY(userId), JSON.stringify([...s]));
-}
-
-interface MemberSupportTicketRow {
-  id: string;
-  group_id: string;
-  title: string;
-  content: string;
-  status: string;
-  answer: string | null;
-  answered_at: string | null;
-  created_at: string;
-}
 
 const CryptoService = {
   encrypt: (data: any, key: string) => CryptoJS.AES.encrypt(JSON.stringify(data), key).toString(),
@@ -6291,14 +6258,9 @@ export default function FamilyHub() {
     input.value = "";
   };
 
-  // 일반 멤버 → 그룹 관리자 문의: 하단 FAB + 모달만 사용 (카드 섹션 없음)
+  // 일반 멤버 → 그룹 관리자 문의: 하단 FAB → /dashboard/member-support (미읽답 배지용 목록만 로드)
   // Rules of Hooks: 조기 return보다 위에 둠.
-  const [memberTicketTitle, setMemberTicketTitle] = useState('');
-  const [memberTicketContent, setMemberTicketContent] = useState('');
-  const [showMemberTicketModal, setShowMemberTicketModal] = useState(false);
-  const [memberTicketLoading, setMemberTicketLoading] = useState(false);
   const [memberSupportTickets, setMemberSupportTickets] = useState<MemberSupportTicketRow[]>([]);
-  const [showMemberReplyModal, setShowMemberReplyModal] = useState(false);
 
   const loadMemberSupportTickets = useCallback(async () => {
     if (!currentGroupId || !userId) return;
@@ -8192,189 +8154,6 @@ export default function FamilyHub() {
         </div>
       )}
 
-      {/* 일반 멤버: 그룹 관리자에게 문의 (하단 오른쪽) + 작성 모달 */}
-      {showMemberInquiryFab && showMemberTicketModal && (
-        <div className="modal-overlay" onClick={() => setShowMemberTicketModal(false)} style={{ zIndex: 1100 }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal-title" style={{ marginBottom: '10px' }}>
-              <span className="modal-icon">💬</span>
-              관리자에게 문의하기
-            </h3>
-            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b' }}>
-              그룹 관리자에게만 전달됩니다. 시스템 관리자 문의는 그룹 관리자 페이지의 문의하기 탭을 이용해 주세요.
-            </p>
-            <div className="modal-form">
-              <div className="form-field">
-                <label className="form-label">제목</label>
-                <input
-                  className="form-input"
-                  value={memberTicketTitle}
-                  onChange={(e) => setMemberTicketTitle(e.target.value)}
-                  placeholder="제목을 입력하세요"
-                  maxLength={100}
-                />
-              </div>
-              <div className="form-field">
-                <label className="form-label">내용</label>
-                <textarea
-                  className="form-input"
-                  value={memberTicketContent}
-                  onChange={(e) => setMemberTicketContent(e.target.value)}
-                  placeholder="내용을 입력하세요"
-                  style={{ minHeight: '160px' }}
-                  maxLength={1000}
-                />
-              </div>
-            </div>
-            <div className="modal-actions">
-              <button type="button" onClick={() => setShowMemberTicketModal(false)} className="btn-secondary">
-                {ct('cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!currentGroupId) return;
-                  if (!memberTicketTitle.trim() || !memberTicketContent.trim()) {
-                    alert('제목과 내용을 입력해주세요.');
-                    return;
-                  }
-                  try {
-                    setMemberTicketLoading(true);
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (!session?.access_token) {
-                      alert('인증이 필요합니다.');
-                      return;
-                    }
-                    const res = await fetch('/api/support-tickets', {
-                      method: 'POST',
-                      headers: {
-                        Authorization: `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        group_id: currentGroupId,
-                        title: memberTicketTitle.trim(),
-                        content: memberTicketContent.trim(),
-                      }),
-                    });
-                    const json = await res.json();
-                    if (!res.ok) throw new Error(json.error || '문의 작성에 실패했습니다.');
-                    alert('문의가 등록되었습니다.');
-                    setShowMemberTicketModal(false);
-                    setMemberTicketTitle('');
-                    setMemberTicketContent('');
-                    await loadMemberSupportTickets();
-                  } catch (e: unknown) {
-                    console.error('멤버 문의 작성 오류:', e);
-                    alert(e instanceof Error ? e.message : '문의 작성에 실패했습니다.');
-                  } finally {
-                    setMemberTicketLoading(false);
-                  }
-                }}
-                className="btn-primary"
-                style={{ backgroundColor: '#f97316' }}
-                disabled={memberTicketLoading}
-              >
-                {memberTicketLoading ? '등록 중…' : '등록'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 일반 멤버: 관리자 답변 확인 모달 */}
-      {showMemberInquiryFab && showMemberReplyModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => {
-            setShowMemberReplyModal(false);
-            if (userId) {
-              const ids = memberSupportTickets
-                .filter((t) => t.answer && String(t.answer).trim() !== '')
-                .map((t) => t.id);
-              markMemberTicketsSeen(userId, ids);
-            }
-            loadMemberSupportTickets();
-          }}
-          style={{ zIndex: 1100 }}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 'min(92vw, 420px)', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 className="modal-title" style={{ marginBottom: '10px' }}>
-              <span className="modal-icon">✅</span>
-              관리자 답변
-            </h3>
-            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b' }}>
-              그룹 관리자가 남긴 답변입니다.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {[...memberSupportTickets]
-                .filter((t) => t.answer && String(t.answer).trim() !== '')
-                .sort((a, b) => {
-                  const ta = a.answered_at ? new Date(a.answered_at).getTime() : 0;
-                  const tb = b.answered_at ? new Date(b.answered_at).getTime() : 0;
-                  return tb - ta;
-                })
-                .map((t) => (
-                  <div
-                    key={t.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '10px',
-                      padding: '12px',
-                      backgroundColor: '#f8fafc',
-                    }}
-                  >
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>{t.title}</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', whiteSpace: 'pre-wrap' }}>{t.content}</div>
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        padding: '10px',
-                        backgroundColor: '#ecfdf5',
-                        borderRadius: '8px',
-                        border: '1px solid #a7f3d0',
-                        fontSize: '13px',
-                        color: '#065f46',
-                        whiteSpace: 'pre-wrap',
-                      }}
-                    >
-                      <strong style={{ display: 'block', marginBottom: '4px' }}>답변</strong>
-                      {t.answer}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
-                      {t.answered_at
-                        ? `답변일: ${new Date(t.answered_at).toLocaleString('ko-KR')}`
-                        : ''}
-                    </div>
-                  </div>
-                ))}
-              {memberSupportTickets.filter((t) => t.answer && String(t.answer).trim() !== '').length === 0 && (
-                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>표시할 답변이 없습니다. 잠시 후 다시 시도해 주세요.</p>
-              )}
-            </div>
-            <div className="modal-actions" style={{ marginTop: '16px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMemberReplyModal(false);
-                  if (userId) {
-                    const ids = memberSupportTickets
-                      .filter((t) => t.answer && String(t.answer).trim() !== '')
-                      .map((t) => t.id);
-                    markMemberTicketsSeen(userId, ids);
-                  }
-                  loadMemberSupportTickets();
-                }}
-                className="btn-primary"
-                style={{ backgroundColor: '#059669' }}
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 (작게·간격 축소·모서리에 붙여 지도 가림 최소화) */}
       <div
         style={{
@@ -8392,20 +8171,11 @@ export default function FamilyHub() {
         {showMemberInquiryFab && (
           <button
             type="button"
-            onClick={() => {
-              if (hasUnreadAdminReply) {
-                setShowMemberTicketModal(false);
-                setShowMemberReplyModal(true);
-                return;
-              }
-              setMemberTicketTitle('');
-              setMemberTicketContent('');
-              setShowMemberReplyModal(false);
-              setShowMemberTicketModal(true);
-            }}
+            onClick={() => router.push('/dashboard/member-support')}
             style={{
+              position: 'relative',
               padding: '5px 9px',
-              backgroundColor: hasUnreadAdminReply ? '#059669' : '#f97316',
+              backgroundColor: '#f97316',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -8413,15 +8183,34 @@ export default function FamilyHub() {
               fontWeight: 700,
               lineHeight: 1.25,
               cursor: 'pointer',
-              boxShadow: hasUnreadAdminReply
-                ? '0 2px 8px rgba(5, 150, 105, 0.35)'
-                : '0 2px 8px rgba(249, 115, 22, 0.28)',
+              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.28)',
               whiteSpace: 'nowrap',
               maxWidth: 'min(88vw, 220px)',
               pointerEvents: 'auto',
             }}
+            aria-label={
+              hasUnreadAdminReply
+                ? `${dt('member_support_fab')} (${dt('member_support_fab_aria_unread')})`
+                : dt('member_support_fab')
+            }
           >
-            {hasUnreadAdminReply ? '관리자 답변 확인하기' : '관리자에게 문의하기'}
+            {dt('member_support_fab')}
+            {hasUnreadAdminReply && (
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: '#22c55e',
+                  border: '2px solid #fff',
+                  boxSizing: 'content-box',
+                }}
+              />
+            )}
           </button>
         )}
         <button

@@ -1,0 +1,465 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { useGroup } from '@/app/contexts/GroupContext';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import type { LangCode } from '@/lib/language-fonts';
+import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
+import { getCommonTranslation } from '@/lib/translations/common';
+import {
+  markMemberTicketsSeen,
+  type MemberSupportTicketRow,
+} from '@/lib/member-support';
+
+function dateLocaleForLang(lang: LangCode): string {
+  const map: Record<LangCode, string> = {
+    ko: 'ko-KR',
+    en: 'en-US',
+    ja: 'ja-JP',
+    'zh-CN': 'zh-CN',
+    'zh-TW': 'zh-TW',
+  };
+  return map[lang];
+}
+
+export default function MemberSupportPage() {
+  const router = useRouter();
+  const {
+    currentGroupId,
+    loading: groupLoading,
+    userRole,
+    isOwner,
+  } = useGroup();
+
+  const { lang } = useLanguage();
+  const dt = (key: keyof DashboardTranslations) =>
+    getDashboardTranslation(lang, key);
+
+  const [isMounted, setIsMounted] = useState(false);
+  const [authOk, setAuthOk] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
+  const [adminResolved, setAdminResolved] = useState(false);
+
+  const [tickets, setTickets] = useState<MemberSupportTicketRow[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+
+  const isGroupAdmin =
+    (userRole === 'ADMIN' || isOwner) && currentGroupId !== null;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.title = `${getDashboardTranslation(lang, 'member_support_title')} · ${getCommonTranslation(lang, 'app_title')}`;
+  }, [lang]);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace('/');
+        return;
+      }
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        router.replace('/');
+        return;
+      }
+      setUserId(user.id);
+      setAuthOk(true);
+    })();
+  }, [isMounted, router]);
+
+  useEffect(() => {
+    if (!authOk || !userId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('is_system_admin', {
+          user_id_param: userId,
+        });
+        if (error) {
+          setIsSystemAdmin(false);
+        } else {
+          setIsSystemAdmin(data === true);
+        }
+      } catch {
+        setIsSystemAdmin(false);
+      } finally {
+        setAdminResolved(true);
+      }
+    })();
+  }, [authOk, userId]);
+
+  useEffect(() => {
+    if (!adminResolved) return;
+    if (isSystemAdmin || isGroupAdmin) {
+      router.replace('/dashboard');
+    }
+  }, [adminResolved, isSystemAdmin, isGroupAdmin, router]);
+
+  const loadTickets = useCallback(async () => {
+    if (!currentGroupId || !userId) return;
+    if (isSystemAdmin || isGroupAdmin) return;
+    setListLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(
+        `/api/support-tickets?group_id=${encodeURIComponent(currentGroupId)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      const json = await res.json();
+      if (!res.ok) return;
+      setTickets(Array.isArray(json.data) ? json.data : []);
+    } catch (e) {
+      console.error('멤버 문의 목록 로드 오류:', e);
+    } finally {
+      setListLoading(false);
+    }
+  }, [currentGroupId, userId, isSystemAdmin, isGroupAdmin]);
+
+  useEffect(() => {
+    if (!authOk || !adminResolved) return;
+    if (isSystemAdmin || isGroupAdmin) return;
+    loadTickets();
+  }, [authOk, adminResolved, isSystemAdmin, isGroupAdmin, loadTickets]);
+
+  useEffect(() => {
+    if (!userId || tickets.length === 0) return;
+    const answeredIds = tickets
+      .filter((t) => t.answer && String(t.answer).trim() !== '')
+      .map((t) => t.id);
+    if (answeredIds.length) markMemberTicketsSeen(userId, answeredIds);
+  }, [userId, tickets]);
+
+  const sortedTickets = [...tickets].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  const handleSubmit = async () => {
+    if (!currentGroupId) return;
+    if (!title.trim() || !content.trim()) {
+      alert(dt('member_support_alert_fill'));
+      return;
+    }
+    setSubmitLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert(dt('member_support_alert_auth'));
+        return;
+      }
+      const res = await fetch('/api/support-tickets', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          group_id: currentGroupId,
+          title: title.trim(),
+          content: content.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || dt('member_support_alert_submit_failed'));
+      alert(dt('member_support_alert_registered'));
+      setTitle('');
+      setContent('');
+      await loadTickets();
+    } catch (e: unknown) {
+      console.error('멤버 문의 작성 오류:', e);
+      alert(e instanceof Error ? e.message : dt('member_support_alert_submit_failed'));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  if (!isMounted) return null;
+
+  if (!authOk || !adminResolved) {
+    return (
+      <div className="app-container" style={{ padding: '24px 16px' }}>
+        <p style={{ color: '#64748b', fontSize: '14px' }}>{dt('member_support_loading_page')}</p>
+      </div>
+    );
+  }
+
+  if (isSystemAdmin || isGroupAdmin) {
+    return null;
+  }
+
+  const waitingGroup = groupLoading && !currentGroupId;
+
+  return (
+    <div className="app-container" style={{ padding: '16px 16px 120px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <Link
+          href="/dashboard"
+          style={{
+            fontSize: '14px',
+            color: '#2563eb',
+            textDecoration: 'none',
+            fontWeight: 600,
+          }}
+        >
+          {dt('member_support_back_dashboard')}
+        </Link>
+      </div>
+
+      <h1
+        style={{
+          fontSize: '22px',
+          fontWeight: 700,
+          color: '#1e293b',
+          margin: '0 0 8px 0',
+        }}
+      >
+        {dt('member_support_title')}
+      </h1>
+      <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: '#64748b' }}>
+        {dt('member_support_intro')}
+      </p>
+
+      {waitingGroup ? (
+        <p style={{ color: '#64748b', fontSize: '14px' }}>{dt('member_support_loading_group')}</p>
+      ) : !currentGroupId ? (
+        <p style={{ color: '#64748b', fontSize: '14px' }}>
+          {dt('member_support_no_group')}
+        </p>
+      ) : (
+        <>
+          <section style={{ marginBottom: '28px' }}>
+            <h2
+              style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#1e293b',
+                margin: '0 0 12px 0',
+              }}
+            >
+              {dt('member_support_my_requests')}
+            </h2>
+            {listLoading ? (
+              <p style={{ color: '#64748b', fontSize: '14px' }}>{dt('member_support_loading_list')}</p>
+            ) : sortedTickets.length === 0 ? (
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+                {dt('member_support_empty_list')}
+              </p>
+            ) : (
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+              >
+                {sortedTickets.map((t) => {
+                  const answered =
+                    t.answer != null && String(t.answer).trim() !== '';
+                  return (
+                    <div
+                      key={t.id}
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '14px',
+                        backgroundColor: '#f8fafc',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: '8px',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '15px',
+                            fontWeight: 700,
+                            color: '#1e293b',
+                          }}
+                        >
+                          {t.title}
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            whiteSpace: 'nowrap',
+                            backgroundColor: answered ? '#d1fae5' : '#fef3c7',
+                            color: answered ? '#065f46' : '#92400e',
+                          }}
+                        >
+                          {answered ? dt('member_support_status_answered') : dt('member_support_status_pending')}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: '#94a3b8',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        {new Date(t.created_at).toLocaleString(dateLocaleForLang(lang))}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          color: '#475569',
+                          whiteSpace: 'pre-wrap',
+                          marginBottom: answered ? '12px' : 0,
+                        }}
+                      >
+                        {t.content}
+                      </div>
+                      {answered && (
+                        <div
+                          style={{
+                            padding: '12px',
+                            backgroundColor: '#ecfdf5',
+                            borderRadius: '10px',
+                            border: '1px solid #a7f3d0',
+                            fontSize: '13px',
+                            color: '#065f46',
+                            whiteSpace: 'pre-wrap',
+                          }}
+                        >
+                          <strong
+                            style={{ display: 'block', marginBottom: '6px' }}
+                          >
+                            {dt('member_support_admin_reply')}
+                          </strong>
+                          {t.answer}
+                          {t.answered_at && (
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                color: '#059669',
+                                marginTop: '8px',
+                              }}
+                            >
+                              {dt('member_support_answered_at_prefix')}{' '}
+                              {new Date(t.answered_at).toLocaleString(dateLocaleForLang(lang))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section
+            style={{
+              borderTop: '1px solid #e2e8f0',
+              paddingTop: '24px',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#1e293b',
+                margin: '0 0 14px 0',
+              }}
+            >
+              {dt('member_support_new_request')}
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#475569',
+                    marginBottom: '6px',
+                  }}
+                >
+                  {dt('member_support_field_title')}
+                </label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={dt('member_support_field_title_ph')}
+                  maxLength={100}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#475569',
+                    marginBottom: '6px',
+                  }}
+                >
+                  {dt('member_support_field_content')}
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder={dt('member_support_field_content_ph')}
+                  maxLength={1000}
+                  rows={6}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    minHeight: '140px',
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={submitLoading}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f97316',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  cursor: submitLoading ? 'not-allowed' : 'pointer',
+                  opacity: submitLoading ? 0.7 : 1,
+                }}
+              >
+                {submitLoading ? dt('member_support_submitting') : dt('member_support_submit')}
+              </button>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

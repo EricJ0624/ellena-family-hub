@@ -163,6 +163,33 @@ export type DashboardTranslations = {
   calendar_weekday_6: string;
   calendar_prev_month: string;
   calendar_next_month: string;
+  // Member support (inquiry to group admin)
+  member_support_title: string;
+  member_support_back_dashboard: string;
+  member_support_intro: string;
+  member_support_my_requests: string;
+  member_support_loading_page: string;
+  member_support_loading_group: string;
+  member_support_no_group: string;
+  member_support_loading_list: string;
+  member_support_empty_list: string;
+  member_support_status_answered: string;
+  member_support_status_pending: string;
+  member_support_admin_reply: string;
+  member_support_answered_at_prefix: string;
+  member_support_new_request: string;
+  member_support_field_title: string;
+  member_support_field_title_ph: string;
+  member_support_field_content: string;
+  member_support_field_content_ph: string;
+  member_support_submit: string;
+  member_support_submitting: string;
+  member_support_alert_fill: string;
+  member_support_alert_auth: string;
+  member_support_alert_registered: string;
+  member_support_alert_submit_failed: string;
+  member_support_fab: string;
+  member_support_fab_aria_unread: string;
 };
 
 const dashboard: Record<LangCode, DashboardTranslations> = {
@@ -314,6 +341,34 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '토',
     calendar_prev_month: '이전 달',
     calendar_next_month: '다음 달',
+    member_support_title: '관리자에게 문의',
+    member_support_back_dashboard: '← 대시보드로',
+    member_support_intro:
+      '그룹 관리자에게만 전달됩니다. 시스템 관리자 문의는 그룹 관리자 페이지의 문의하기 탭을 이용해 주세요.',
+    member_support_my_requests: '내 문의 내역',
+    member_support_loading_page: '불러오는 중…',
+    member_support_loading_group: '그룹 정보를 불러오는 중…',
+    member_support_no_group: '참여 중인 그룹이 없습니다. 그룹에 가입한 뒤 이용해 주세요.',
+    member_support_loading_list: '목록을 불러오는 중…',
+    member_support_empty_list:
+      '등록된 문의가 없습니다. 아래에서 새 문의를 남길 수 있습니다.',
+    member_support_status_answered: '답변 완료',
+    member_support_status_pending: '답변 대기',
+    member_support_admin_reply: '관리자 답변',
+    member_support_answered_at_prefix: '답변일:',
+    member_support_new_request: '새 문의 작성',
+    member_support_field_title: '제목',
+    member_support_field_title_ph: '제목을 입력하세요',
+    member_support_field_content: '내용',
+    member_support_field_content_ph: '내용을 입력하세요',
+    member_support_submit: '문의 등록',
+    member_support_submitting: '등록 중…',
+    member_support_alert_fill: '제목과 내용을 입력해주세요.',
+    member_support_alert_auth: '인증이 필요합니다.',
+    member_support_alert_registered: '문의가 등록되었습니다.',
+    member_support_alert_submit_failed: '문의 작성에 실패했습니다.',
+    member_support_fab: '관리자에게 문의',
+    member_support_fab_aria_unread: '새 답변 있음',
   },
   en: {
     todo_modal_title: 'New task',
@@ -463,6 +518,34 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: 'Sat',
     calendar_prev_month: 'Previous month',
     calendar_next_month: 'Next month',
+    member_support_title: 'Contact group admin',
+    member_support_back_dashboard: '← Back to dashboard',
+    member_support_intro:
+      'Messages go to your group admins only. For system admin matters, use the Support tab on the group admin page.',
+    member_support_my_requests: 'My requests',
+    member_support_loading_page: 'Loading…',
+    member_support_loading_group: 'Loading group…',
+    member_support_no_group: 'You are not in a group. Join a group to use this page.',
+    member_support_loading_list: 'Loading list…',
+    member_support_empty_list:
+      'No requests yet. You can submit a new one below.',
+    member_support_status_answered: 'Answered',
+    member_support_status_pending: 'Pending',
+    member_support_admin_reply: 'Admin reply',
+    member_support_answered_at_prefix: 'Answered:',
+    member_support_new_request: 'New request',
+    member_support_field_title: 'Title',
+    member_support_field_title_ph: 'Enter a title',
+    member_support_field_content: 'Message',
+    member_support_field_content_ph: 'Enter your message',
+    member_support_submit: 'Submit',
+    member_support_submitting: 'Submitting…',
+    member_support_alert_fill: 'Please enter a title and message.',
+    member_support_alert_auth: 'Authentication required.',
+    member_support_alert_registered: 'Your request has been submitted.',
+    member_support_alert_submit_failed: 'Failed to submit your request.',
+    member_support_fab: 'Contact admin',
+    member_support_fab_aria_unread: 'New reply',
   },
   ja: {
     todo_modal_title: '新しいタスク',
@@ -612,6 +695,34 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '土',
     calendar_prev_month: '前月',
     calendar_next_month: '翌月',
+    member_support_title: '管理者へのお問い合わせ',
+    member_support_back_dashboard: '← ダッシュボードへ',
+    member_support_intro:
+      'グループ管理者のみに届きます。システム管理者へのお問い合わせは、グループ管理ページの「お問い合わせ」タブをご利用ください。',
+    member_support_my_requests: '自分のお問い合わせ',
+    member_support_loading_page: '読み込み中…',
+    member_support_loading_group: 'グループ情報を読み込み中…',
+    member_support_no_group: '参加中のグループがありません。グループに参加してからご利用ください。',
+    member_support_loading_list: '一覧を読み込み中…',
+    member_support_empty_list:
+      'お問い合わせはまだありません。下から新規にお送りいただけます。',
+    member_support_status_answered: '回答済み',
+    member_support_status_pending: '回答待ち',
+    member_support_admin_reply: '管理者の回答',
+    member_support_answered_at_prefix: '回答日:',
+    member_support_new_request: '新しいお問い合わせ',
+    member_support_field_title: '件名',
+    member_support_field_title_ph: '件名を入力',
+    member_support_field_content: '内容',
+    member_support_field_content_ph: '内容を入力',
+    member_support_submit: '送信',
+    member_support_submitting: '送信中…',
+    member_support_alert_fill: '件名と内容を入力してください。',
+    member_support_alert_auth: '認証が必要です。',
+    member_support_alert_registered: 'お問い合わせを受け付けました。',
+    member_support_alert_submit_failed: '送信に失敗しました。',
+    member_support_fab: '管理者へ',
+    member_support_fab_aria_unread: '新しい回答',
   },
   'zh-CN': {
     todo_modal_title: '新建任务',
@@ -761,6 +872,33 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '六',
     calendar_prev_month: '上月',
     calendar_next_month: '下月',
+    member_support_title: '联系群组管理员',
+    member_support_back_dashboard: '← 返回控制面板',
+    member_support_intro:
+      '仅会发送给群组管理员。如需联系系统管理员，请使用群组管理页的「咨询」标签。',
+    member_support_my_requests: '我的咨询记录',
+    member_support_loading_page: '加载中…',
+    member_support_loading_group: '正在加载群组信息…',
+    member_support_no_group: '您尚未加入群组。请先加入群组后再使用。',
+    member_support_loading_list: '正在加载列表…',
+    member_support_empty_list: '暂无咨询。您可以在下方提交新的咨询。',
+    member_support_status_answered: '已回复',
+    member_support_status_pending: '待回复',
+    member_support_admin_reply: '管理员回复',
+    member_support_answered_at_prefix: '回复时间：',
+    member_support_new_request: '新建咨询',
+    member_support_field_title: '标题',
+    member_support_field_title_ph: '请输入标题',
+    member_support_field_content: '内容',
+    member_support_field_content_ph: '请输入内容',
+    member_support_submit: '提交咨询',
+    member_support_submitting: '提交中…',
+    member_support_alert_fill: '请填写标题和内容。',
+    member_support_alert_auth: '需要登录。',
+    member_support_alert_registered: '咨询已提交。',
+    member_support_alert_submit_failed: '提交失败。',
+    member_support_fab: '联系管理员',
+    member_support_fab_aria_unread: '有新回复',
   },
   'zh-TW': {
     todo_modal_title: '新任務',
@@ -910,6 +1048,33 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '六',
     calendar_prev_month: '上月',
     calendar_next_month: '下月',
+    member_support_title: '聯絡群組管理員',
+    member_support_back_dashboard: '← 返回控制台',
+    member_support_intro:
+      '僅會傳送給群組管理員。如需聯絡系統管理員，請使用群組管理頁的「諮詢」分頁。',
+    member_support_my_requests: '我的諮詢紀錄',
+    member_support_loading_page: '載入中…',
+    member_support_loading_group: '正在載入群組資訊…',
+    member_support_no_group: '您尚未加入群組。請先加入群組後再使用。',
+    member_support_loading_list: '正在載入清單…',
+    member_support_empty_list: '尚無諮詢。您可以在下方提交新的諮詢。',
+    member_support_status_answered: '已回覆',
+    member_support_status_pending: '待回覆',
+    member_support_admin_reply: '管理員回覆',
+    member_support_answered_at_prefix: '回覆時間：',
+    member_support_new_request: '新增諮詢',
+    member_support_field_title: '標題',
+    member_support_field_title_ph: '請輸入標題',
+    member_support_field_content: '內容',
+    member_support_field_content_ph: '請輸入內容',
+    member_support_submit: '送出諮詢',
+    member_support_submitting: '送出中…',
+    member_support_alert_fill: '請填寫標題與內容。',
+    member_support_alert_auth: '需要登入。',
+    member_support_alert_registered: '諮詢已送出。',
+    member_support_alert_submit_failed: '送出失敗。',
+    member_support_fab: '聯絡管理員',
+    member_support_fab_aria_unread: '有新回覆',
   },
 };
 
