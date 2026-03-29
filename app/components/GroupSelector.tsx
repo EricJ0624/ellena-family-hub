@@ -167,9 +167,9 @@ const GroupSelector: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg">
-        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-        <span className="text-sm text-gray-500">{ct('loading')}</span>
+      <div className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/80" />
+        <span className="text-sm text-muted-foreground">{ct('loading')}</span>
       </div>
     );
   }
@@ -178,7 +178,7 @@ const GroupSelector: React.FC = () => {
     return (
       <>
         <div className="space-y-2">
-          <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 text-center">
+          <div className="px-4 py-3 bg-muted border border-border rounded-lg text-sm text-muted-foreground text-center">
             {ot('no_groups')}
           </div>
           <div className="flex gap-2">
@@ -188,7 +188,7 @@ const GroupSelector: React.FC = () => {
                 setError(null);
                 setSuccess(null);
               }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium whitespace-nowrap"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors text-sm font-medium whitespace-nowrap"
               aria-label={ot('create_group')}
             >
               <Plus className="w-4 h-4 flex-shrink-0" />
@@ -200,7 +200,7 @@ const GroupSelector: React.FC = () => {
                 setError(null);
                 setSuccess(null);
               }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
               aria-label={ot('join_invite')}
             >
               <UserPlus className="w-4 h-4" />
@@ -230,9 +230,9 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{ot('create_group')}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{ot('create_group')}</h3>
                     <button
                       onClick={() => {
                         setShowCreateModal(false);
@@ -240,7 +240,7 @@ const GroupSelector: React.FC = () => {
                         setError(null);
                         setSuccess(null);
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground/80 hover:text-muted-foreground"
                       aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
@@ -249,7 +249,7 @@ const GroupSelector: React.FC = () => {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         그룹 이름
                       </label>
                       <input
@@ -260,7 +260,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                         }}
                         placeholder={ot('group_name_placeholder')}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         disabled={creating}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && !creating) {
@@ -271,13 +271,13 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         {ot('display_language')}
                       </label>
                       <select
                         value={groupPreferredLanguage}
                         onChange={(e) => setGroupPreferredLanguage(e.target.value as LangCode)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         disabled={creating}
                       >
                         <option value="ko">한국어</option>
@@ -289,13 +289,13 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         {mmt('family_role_label')}
                       </label>
                       <select
                         value={createFamilyRole}
                         onChange={(e) => setCreateFamilyRole((e.target.value || '') as '' | 'mom' | 'dad')}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         disabled={creating}
                       >
                         <option value="">{mmt('family_role_none')}</option>
@@ -305,14 +305,14 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     {error && (
-                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-sm text-destructive">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {success && (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/10 text-sm text-primary">
                         <CheckCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{success}</span>
                       </div>
@@ -326,7 +326,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                           setSuccess(null);
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
                         disabled={creating}
                       >
                         {ct('cancel')}
@@ -334,7 +334,7 @@ const GroupSelector: React.FC = () => {
                       <button
                         onClick={handleCreateGroup}
                         disabled={creating || !groupName.trim()}
-                        className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {creating ? (
                           <>
@@ -374,9 +374,9 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{ot('join_invite')}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{ot('join_invite')}</h3>
                     <button
                       onClick={() => {
                         setShowJoinModal(false);
@@ -384,7 +384,7 @@ const GroupSelector: React.FC = () => {
                         setError(null);
                         setSuccess(null);
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground/80 hover:text-muted-foreground"
                       aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
@@ -393,7 +393,7 @@ const GroupSelector: React.FC = () => {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         {ot('invite_code')}
                       </label>
                       <input
@@ -404,7 +404,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                         }}
                         placeholder={ot('invite_placeholder')}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground font-mono text-center text-lg tracking-wider"
                         disabled={joining}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && !joining) {
@@ -415,14 +415,14 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     {error && (
-                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-sm text-destructive">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {success && (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/10 text-sm text-primary">
                         <CheckCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{success}</span>
                       </div>
@@ -436,7 +436,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                           setSuccess(null);
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
                         disabled={joining}
                       >
                         {ct('cancel')}
@@ -444,7 +444,7 @@ const GroupSelector: React.FC = () => {
                       <button
                         onClick={handleJoinGroup}
                         disabled={joining || !inviteCode.trim()}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {joining ? (
                           <>
@@ -485,9 +485,9 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{mmt('family_role_label')}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{mmt('family_role_label')}</h3>
                     <button
                       onClick={() => {
                         setShowJoinFamilyRoleModal(false);
@@ -496,18 +496,18 @@ const GroupSelector: React.FC = () => {
                         setJoinFamilyRole('');
                         refreshGroups();
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground/80 hover:text-muted-foreground"
                       aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
+                  <p className="text-sm text-muted-foreground mb-4">{mmt('family_role_modal_description')}</p>
                   <div className="space-y-4">
                     <select
                       value={joinFamilyRole}
                       onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                     >
                       <option value="">{mmt('family_role_none')}</option>
                       <option value="son">{mmt('family_role_son')}</option>
@@ -525,7 +525,7 @@ const GroupSelector: React.FC = () => {
                           setJoinFamilyRole('');
                           await refreshGroups();
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted"
                       >
                         {ct('skip')}
                       </button>
@@ -557,7 +557,7 @@ const GroupSelector: React.FC = () => {
                           setJoinFamilyRole('');
                           await refreshGroups();
                         }}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
                       >
                         {ct('save')}
                       </button>
@@ -576,17 +576,17 @@ const GroupSelector: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors w-full"
+        className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:bg-muted transition-colors w-full"
         aria-label={ot('select_group')}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <Users className="w-4 h-4 text-gray-500" />
-        <span className="flex-1 text-left font-medium text-gray-900">
+        <Users className="w-4 h-4 text-muted-foreground" />
+        <span className="flex-1 text-left font-medium text-foreground">
           {currentGroup?.name || ot('select_group')}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -602,7 +602,7 @@ const GroupSelector: React.FC = () => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto"
+              className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto"
               role="listbox"
             >
               {groups.map((group) => (
@@ -612,15 +612,15 @@ const GroupSelector: React.FC = () => {
                     setCurrentGroupId(group.id);
                     setIsOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                    currentGroupId === group.id ? 'bg-purple-50 text-purple-900' : ''
+                  className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors ${
+                    currentGroupId === group.id ? 'bg-primary/10 text-foreground' : ''
                   }`}
                   role="option"
                   aria-selected={currentGroupId === group.id}
                 >
                   <div className="font-medium">{group.name}</div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-gray-500 font-mono">
+                    <span className="text-xs text-muted-foreground font-mono">
                       {group.invite_code}
                     </span>
                     <button
@@ -630,16 +630,16 @@ const GroupSelector: React.FC = () => {
                           // 간단한 피드백 (선택사항)
                         }).catch(console.error);
                       }}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      className="p-1 hover:bg-muted rounded transition-colors"
                       aria-label={ot('copy_title')}
                       title={ot('copy_title')}
                     >
-                      <Copy className="w-3 h-3 text-gray-400" />
+                      <Copy className="w-3 h-3 text-muted-foreground/80" />
                     </button>
                   </div>
                 </button>
               ))}
-              <div className="border-t border-gray-200 p-2">
+              <div className="border-t border-border p-2">
                 <button
                   onClick={() => {
                     setIsOpen(false);
@@ -647,7 +647,7 @@ const GroupSelector: React.FC = () => {
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded transition-colors whitespace-nowrap"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors whitespace-nowrap"
                   aria-label={ot('create_group')}
                 >
                   <Plus className="w-4 h-4 flex-shrink-0" />
@@ -660,7 +660,7 @@ const GroupSelector: React.FC = () => {
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors mt-1"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors mt-1"
                   aria-label={ot('join_invite')}
                 >
                   <UserPlus className="w-4 h-4" />
@@ -693,9 +693,9 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{ot('create_group')}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{ot('create_group')}</h3>
                     <button
                       onClick={() => {
                         setShowCreateModal(false);
@@ -703,7 +703,7 @@ const GroupSelector: React.FC = () => {
                         setError(null);
                         setSuccess(null);
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground/80 hover:text-muted-foreground"
                       aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
@@ -712,7 +712,7 @@ const GroupSelector: React.FC = () => {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         그룹 이름
                       </label>
                       <input
@@ -723,7 +723,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                         }}
                         placeholder={ot('group_name_placeholder')}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         disabled={creating}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && !creating) {
@@ -734,13 +734,13 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         {ot('display_language')}
                       </label>
                       <select
                         value={groupPreferredLanguage}
                         onChange={(e) => setGroupPreferredLanguage(e.target.value as LangCode)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         disabled={creating}
                       >
                         <option value="ko">한국어</option>
@@ -752,14 +752,14 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     {error && (
-                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-sm text-destructive">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {success && (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/10 text-sm text-primary">
                         <CheckCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{success}</span>
                       </div>
@@ -773,7 +773,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                           setSuccess(null);
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
                         disabled={creating}
                       >
                         {ct('cancel')}
@@ -781,7 +781,7 @@ const GroupSelector: React.FC = () => {
                       <button
                         onClick={handleCreateGroup}
                         disabled={creating || !groupName.trim()}
-                        className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {creating ? (
                           <>
@@ -821,9 +821,9 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{ot('join_invite')}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{ot('join_invite')}</h3>
                     <button
                       onClick={() => {
                         setShowJoinModal(false);
@@ -831,7 +831,7 @@ const GroupSelector: React.FC = () => {
                         setError(null);
                         setSuccess(null);
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground/80 hover:text-muted-foreground"
                       aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
@@ -840,7 +840,7 @@ const GroupSelector: React.FC = () => {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         {ot('invite_code')}
                       </label>
                       <input
@@ -851,7 +851,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                         }}
                         placeholder={ot('invite_placeholder')}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
+                        className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground font-mono text-center text-lg tracking-wider"
                         disabled={joining}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && !joining) {
@@ -862,14 +862,14 @@ const GroupSelector: React.FC = () => {
                     </div>
 
                     {error && (
-                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-sm text-destructive">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {success && (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/10 text-sm text-primary">
                         <CheckCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{success}</span>
                       </div>
@@ -883,7 +883,7 @@ const GroupSelector: React.FC = () => {
                           setError(null);
                           setSuccess(null);
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
                         disabled={joining}
                       >
                         {ct('cancel')}
@@ -891,7 +891,7 @@ const GroupSelector: React.FC = () => {
                       <button
                         onClick={handleJoinGroup}
                         disabled={joining || !inviteCode.trim()}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {joining ? (
                           <>
@@ -932,9 +932,9 @@ const GroupSelector: React.FC = () => {
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl max-w-md w-full p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{mmt('family_role_label')}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{mmt('family_role_label')}</h3>
                     <button
                       onClick={() => {
                         setShowJoinFamilyRoleModal(false);
@@ -943,18 +943,18 @@ const GroupSelector: React.FC = () => {
                         setJoinFamilyRole('');
                         refreshGroups();
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-muted-foreground/80 hover:text-muted-foreground"
                       aria-label={ct('close')}
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
+                  <p className="text-sm text-muted-foreground mb-4">{mmt('family_role_modal_description')}</p>
                   <div className="space-y-4">
                     <select
                       value={joinFamilyRole}
                       onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                     >
                       <option value="">{mmt('family_role_none')}</option>
                       <option value="son">{mmt('family_role_son')}</option>
@@ -972,7 +972,7 @@ const GroupSelector: React.FC = () => {
                           setJoinFamilyRole('');
                           await refreshGroups();
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted"
                       >
                         {ct('skip')}
                       </button>
@@ -1004,7 +1004,7 @@ const GroupSelector: React.FC = () => {
                           setJoinFamilyRole('');
                           await refreshGroups();
                         }}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
                       >
                         {ct('save')}
                       </button>

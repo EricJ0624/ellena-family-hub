@@ -560,24 +560,24 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
     >
       {/* 그라데이션 헤더 */}
       <div 
-        className="relative px-6 py-5 text-white"
+        className="relative px-6 py-5 text-primary-foreground"
         style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)',
         }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+            <div className="p-2 bg-primary-foreground/20 rounded-lg backdrop-blur-sm">
               <Palette className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-lg font-bold">{tp('design_edit_title')}</h3>
-              <p className="text-xs text-white/80">{tp('design_edit_subtitle')}</p>
+              <p className="text-xs text-primary-foreground opacity-90">{tp('design_edit_subtitle')}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+            className="p-2 rounded-lg hover:bg-primary-foreground/15 transition-colors"
             aria-label={ct('close')}
           >
             <X className="w-5 h-5" />
@@ -586,32 +586,32 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
       </div>
       
       {/* 컨텐츠 영역 */}
-      <div className="bg-white p-6 space-y-5">
+      <div className="bg-card text-card-foreground p-6 space-y-5">
         {/* 글자 내용 */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+          <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
             {tp('content_label')}
           </label>
           <input
             type="text"
             value={localStyle.content}
             onChange={(e) => handleChange('content', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+            className="w-full px-4 py-3 border-2 border-border rounded-xl bg-background text-foreground focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25 transition-all"
             placeholder={tp('title_placeholder')}
           />
         </div>
         
         {/* 글꼴 선택 */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+          <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
             글꼴
           </label>
           <select
             value={localStyle.fontFamily || 'Inter'}
             onChange={(e) => handleChange('fontFamily', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all appearance-none bg-white cursor-pointer"
+            className="w-full px-4 py-3 border-2 border-border rounded-xl bg-background text-foreground focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25 transition-all appearance-none cursor-pointer"
             style={{
               fontFamily: localStyle.fontFamily || 'Inter',
             }}
@@ -626,8 +626,8 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         
         {/* 색상 선택 */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+          <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
             색상
           </label>
           <div className="flex items-center gap-3">
@@ -636,7 +636,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
                 type="color"
                 value={localStyle.color}
                 onChange={(e) => handleChange('color', e.target.value)}
-                className="w-16 h-16 rounded-xl border-2 border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                className="w-16 h-16 rounded-xl border-2 border-border cursor-pointer hover:scale-105 transition-transform"
                 style={{
                   WebkitAppearance: 'none',
                   MozAppearance: 'none',
@@ -647,7 +647,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               type="text"
               value={localStyle.color}
               onChange={(e) => handleChange('color', e.target.value)}
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all font-mono text-sm"
+              className="flex-1 px-4 py-3 border-2 border-border rounded-xl bg-background text-foreground focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25 transition-all font-mono text-sm"
               placeholder="#9333ea"
             />
           </div>
@@ -656,11 +656,11 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         {/* 폰트 크기 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+            <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
               폰트 크기
             </label>
-            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
+            <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-lg">
               {localStyle.fontSize}px
             </span>
           </div>
@@ -671,13 +671,13 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               max="72"
               value={localStyle.fontSize}
               onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
-              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="w-full h-3 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
               style={{
-                background: `linear-gradient(to right, #667eea 0%, #667eea ${fontSizeProgress}%, #e5e7eb ${fontSizeProgress}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${fontSizeProgress}%, hsl(var(--muted)) ${fontSizeProgress}%, hsl(var(--muted)) 100%)`,
               }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>24px</span>
             <span>72px</span>
           </div>
@@ -685,14 +685,14 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         
         {/* 폰트 두께 */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+          <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
             {tp('font_weight_label')}
           </label>
           <select
             value={localStyle.fontWeight}
             onChange={(e) => handleChange('fontWeight', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer"
+            className="w-full px-4 py-3 border-2 border-border rounded-xl bg-background text-foreground focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/25 transition-all cursor-pointer"
           >
             <option value="300">{tp('font_weight_300')}</option>
             <option value="400">{tp('font_weight_400')}</option>
@@ -707,11 +707,11 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
         {/* 자간 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+            <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
               {tp('letter_spacing_label')}
             </label>
-            <span className="text-sm font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-lg">
+            <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-lg">
               {localStyle.letterSpacing}px
             </span>
           </div>
@@ -723,13 +723,13 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               step="0.5"
               value={localStyle.letterSpacing}
               onChange={(e) => handleChange('letterSpacing', parseFloat(e.target.value))}
-              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="w-full h-3 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
               style={{
-                background: `linear-gradient(to right, #667eea 0%, #667eea ${letterSpacingProgress}%, #e5e7eb ${letterSpacingProgress}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${letterSpacingProgress}%, hsl(var(--muted)) ${letterSpacingProgress}%, hsl(var(--muted)) 100%)`,
               }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>-2px</span>
             <span>10px</span>
           </div>
@@ -770,12 +770,12 @@ const FloatingPetals: React.FC = () => {
           <div
             className={`w-3 h-3 rounded-full ${
               index % 4 === 0
-                ? 'bg-pink-300'
+                ? 'bg-primary/50'
                 : index % 4 === 1
-                ? 'bg-blue-300'
+                ? 'bg-accent/60'
                 : index % 4 === 2
-                ? 'bg-purple-300'
-                : 'bg-yellow-300'
+                ? 'bg-secondary'
+                : 'bg-muted-foreground/35'
             }`}
             style={{
               clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',

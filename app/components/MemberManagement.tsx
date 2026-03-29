@@ -351,8 +351,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
   if (!currentGroupId) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+      <div className="p-6 text-center text-muted-foreground">
+        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground/80" />
         <p>{mmt('select_group_first')}</p>
       </div>
     );
@@ -461,15 +461,15 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       {/* 로딩 상태 */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
-          <span className="ml-3 text-gray-600">{mmt('loading_members')}</span>
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <span className="ml-3 text-muted-foreground">{mmt('loading_members')}</span>
         </div>
       )}
 
       {/* 에러 상태 */}
       {error && !loading && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
-          <div className="flex items-center gap-2 text-red-800">
+        <div className="p-4 rounded-lg border border-destructive/30 bg-destructive/10 mb-4">
+          <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="w-5 h-5" />
             <p>{error}</p>
           </div>
@@ -743,7 +743,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
               className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-gray-100">
+              <div className="bg-card text-card-foreground rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-border">
                 <GroupSettings onClose={() => setShowGroupSettings(false)} />
               </div>
             </motion.div>

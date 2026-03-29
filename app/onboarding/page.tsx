@@ -1806,9 +1806,9 @@ export default function OnboardingPage() {
                     className="fixed inset-0 z-[101] flex items-center justify-center p-4"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <div className="bg-card text-card-foreground rounded-lg shadow-xl max-w-md w-full p-6 border border-border">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">{mmt('family_role_label')}</h3>
+                        <h3 className="text-lg font-semibold text-foreground">{mmt('family_role_label')}</h3>
                         <button
                           onClick={() => {
                             setShowJoinFamilyRoleModal(false);
@@ -1816,18 +1816,18 @@ export default function OnboardingPage() {
                             setJoinFamilyRole('');
                             router.push('/dashboard');
                           }}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-muted-foreground hover:text-foreground"
                           aria-label={ct('close')}
                         >
                           <X className="w-5 h-5" />
                         </button>
                       </div>
-                      <p className="text-sm text-gray-600 mb-4">{mmt('family_role_modal_description')}</p>
+                      <p className="text-sm text-muted-foreground mb-4">{mmt('family_role_modal_description')}</p>
                       <div className="space-y-4">
                         <select
                           value={joinFamilyRole}
                           onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
                         >
                           <option value="">{mmt('family_role_none')}</option>
                           <option value="son">{mmt('family_role_son')}</option>
@@ -1844,7 +1844,7 @@ export default function OnboardingPage() {
                               setJoinFamilyRole('');
                               router.push('/dashboard');
                             }}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                            className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted"
                           >
                             {ct('skip')}
                           </button>
@@ -1875,7 +1875,7 @@ export default function OnboardingPage() {
                               setJoinFamilyRole('');
                               router.push('/dashboard');
                             }}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
                           >
                             {ct('save')}
                           </button>

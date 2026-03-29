@@ -238,8 +238,8 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
   if (!currentGroupId) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+      <div className="p-6 text-center text-muted-foreground">
+        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground/80" />
         <p>{gst('select_group_first')}</p>
       </div>
     );
@@ -247,12 +247,12 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
   if (!isAdmin) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+      <div className="p-6 text-center text-muted-foreground">
+        <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground/80" />
         <p>{gst('admin_only')}</p>
         <button
           onClick={onClose}
-          className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          className="mt-4 px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors"
         >
           {ct('close')}
         </button>
@@ -261,16 +261,16 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="w-full max-w-4xl mx-auto p-6 text-foreground">
       {/* 헤더 */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 bg-purple-100 rounded-lg shrink-0">
-            <Settings className="w-6 h-6 text-purple-600" />
+          <div className="p-2 bg-primary/15 rounded-lg shrink-0">
+            <Settings className="w-6 h-6 text-primary" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold text-gray-900">{gst('group_settings_title')}</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-2xl font-bold text-foreground">{gst('group_settings_title')}</h2>
+            <p className="text-sm text-muted-foreground">
               {currentGroup?.name || gst('group_settings_title')}
             </p>
           </div>
@@ -279,33 +279,23 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
           <ThemePicker className="flex-wrap justify-end" />
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
             aria-label={ct('close')}
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
       </div>
 
       <div className="space-y-6">
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <tbody>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
-                >
+              <tr className="border-b border-border">
+                <th className="p-3 text-left text-sm font-semibold text-muted-foreground w-40 bg-muted align-top">
                   {gst('group_name')}
                 </th>
-                <td style={{ padding: '12px' }}>
+                <td className="p-3">
                   <input
                     type="text"
                     value={groupName}
@@ -314,79 +304,39 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                       setError(null);
                     }}
                     placeholder={gst('group_name_placeholder')}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
                     disabled={saving}
                   />
                 </td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
-                >
+              <tr className="border-b border-border">
+                <th className="p-3 text-left text-sm font-semibold text-muted-foreground w-40 bg-muted align-top">
                   {gst('dashboard_title_label')}
                 </th>
-                <td style={{ padding: '12px' }}>
+                <td className="p-3">
                   <input
                     type="text"
                     value={titleStyle.content ?? ''}
                     onChange={(e) => setTitleStyle((prev) => ({ ...prev, content: e.target.value }))}
                     disabled={saving}
                     placeholder={gst('dashboard_title_placeholder')}
-                    style={{
-                      width: '100%',
-                      maxWidth: '320px',
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      color: '#1e293b',
-                    }}
+                    className="w-full max-w-[320px] px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
                   />
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <p className="text-xs text-muted-foreground mt-1.5">
                     {gst('dashboard_title_hint')}
                   </p>
                 </td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
-                >
+              <tr className="border-b border-border">
+                <th className="p-3 text-left text-sm font-semibold text-muted-foreground w-40 bg-muted align-top">
                   {gst('display_language')}
                 </th>
-                <td style={{ padding: '12px' }}>
+                <td className="p-3">
                   <select
                     value={preferredLanguage}
                     onChange={(e) => setPreferredLanguage(e.target.value as LangCode)}
                     disabled={saving}
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      minWidth: '160px',
-                    }}
+                    className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm min-w-[160px]"
                   >
                     <option value="ko">한국어</option>
                     <option value="en">English</option>
@@ -394,44 +344,22 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     <option value="zh-CN">简体中文</option>
                     <option value="zh-TW">繁體中文</option>
                   </select>
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <p className="text-xs text-muted-foreground mt-1.5">
                     {gst('language_hint')}
                   </p>
                 </td>
               </tr>
               <tr>
-                <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    backgroundColor: '#f8fafc',
-                  }}
-                >
+                <th className="p-3 text-left text-sm font-semibold text-muted-foreground bg-muted align-top">
                   {gst('invite_code')}
                 </th>
-                <td style={{ padding: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <td className="p-3">
+                  <div className="flex flex-col gap-4">
                     {/* 복사 버튼 + 안내 (다른 버튼들과 왼쪽 정렬) */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="flex flex-col gap-1">
                       <button
                         onClick={handleCopyInviteCode}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#2563eb',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          alignSelf: 'flex-start',
-                        }}
+                        className="inline-flex items-center gap-1.5 self-start px-3 py-2 rounded-lg text-[13px] font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                         aria-label={gst('invite_copy_aria')}
                       >
                         {copied ? (
@@ -446,48 +374,24 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                           </>
                         )}
                       </button>
-                      <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                      <p className="text-xs text-muted-foreground m-0">
                         {gst('invite_share_hint')}
                       </p>
                     </div>
                     {/* 초대 코드 입력창 */}
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="flex items-center flex-wrap">
                       <input
                         type="text"
                         value={inviteCode}
                         readOnly
-                        style={{
-                          minWidth: '220px',
-                          maxWidth: '100%',
-                          padding: '10px 12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          backgroundColor: '#f8fafc',
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                          textAlign: 'center',
-                          fontSize: '16px',
-                          letterSpacing: '0.12em',
-                        }}
+                        className="min-w-[220px] max-w-full px-3 py-2 rounded-lg border border-border bg-muted text-foreground font-mono text-center text-base tracking-wider"
                       />
                     </div>
                     {/* 초대 링크 복사 + 안내 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="flex flex-col gap-1">
                       <button
                         onClick={handleCopyInviteLink}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#059669',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          alignSelf: 'flex-start',
-                        }}
+                        className="inline-flex items-center gap-1.5 self-start px-3 py-2 rounded-lg text-[13px] font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                         aria-label={gst('invite_link_copy_aria')}
                       >
                         {copiedLink ? (
@@ -502,30 +406,16 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                           </>
                         )}
                       </button>
-                      <p style={{ fontSize: '12px', color: '#b45309', margin: 0, fontWeight: 500 }}>
+                      <p className="text-xs text-primary m-0 font-medium">
                         {gst('invite_only_family_hint')}
                       </p>
                     </div>
                     {/* 갱신 + 안내 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="flex flex-col gap-1">
                       <button
                         onClick={handleRefreshInviteCode}
                         disabled={refreshing}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#7c3aed',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          opacity: refreshing ? 0.6 : 1,
-                          alignSelf: 'flex-start',
-                        }}
+                        className="inline-flex items-center gap-1.5 self-start px-3 py-2 rounded-lg text-[13px] font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
                         aria-label={gst('invite_refresh_aria')}
                       >
                         {refreshing ? (
@@ -535,7 +425,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                         )}
                         {gst('refresh_btn')}
                       </button>
-                      <p style={{ fontSize: '12px', color: '#9333ea', margin: 0, fontWeight: 500 }}>
+                      <p className="text-xs text-primary m-0 font-medium">
                         {gst('invite_refresh_hint')}
                       </p>
                     </div>
@@ -548,7 +438,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
         {/* 에러 메시지 */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-sm text-destructive">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -556,17 +446,17 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
         {/* 성공 메시지 */}
         {success && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/10 text-sm text-primary">
             <CheckCircle className="w-5 h-5 flex-shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         {/* 액션 버튼 */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
+        <div className="flex gap-3 pt-4 border-t border-border">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
             disabled={saving}
           >
             취소
@@ -574,7 +464,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
           <button
             onClick={handleSave}
             disabled={saving || !groupName.trim()}
-            className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
