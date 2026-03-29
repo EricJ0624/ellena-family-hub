@@ -6257,28 +6257,9 @@ export default function FamilyHub() {
     input.value = "";
   };
 
-  // --- [RENDER] ---
-  
-  if (!isMounted) return null; // Hydration mismatch 방지
-
-  // Supabase 세션이 없으면 로그인 페이지로 리다이렉트 (렌더링 전 처리)
-  if (!isAuthenticated && isMounted) {
-    return null; // useEffect에서 리다이렉트 처리 중
-  }
-
-  const piggyLabel = (() => {
-    const rawName = piggySummary?.name?.trim() || 'Ellena Piggy Bank';
-    const base = rawName.replace(/piggy\s*bank/gi, '').trim();
-    return base || rawName;
-  })();
-  const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
-  const showAdminButton = isSystemAdmin || isGroupAdmin;
-  const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
-  
-  // 그룹 정보 로딩 중인지 확인
-  const isGroupLoading = groupLoading && !currentGroupId;
-
   // --- 멤버 문의 (일반 멤버 <-> 그룹 관리자) ---
+  // Rules of Hooks: 조기 return(아래 RENDER 섹션)보다 반드시 위에 두어야 함.
+  // 그렇지 않으면 isMounted/isAuthenticated 상태에 따라 훅 개수가 달라져 React #310이 발생함.
   const [memberSupportTickets, setMemberSupportTickets] = useState<any[]>([]);
   const [memberTicketTitle, setMemberTicketTitle] = useState('');
   const [memberTicketContent, setMemberTicketContent] = useState('');
@@ -6314,6 +6295,27 @@ export default function FamilyHub() {
     if (!currentGroupId) return;
     loadMemberSupportTickets();
   }, [currentGroupId, loadMemberSupportTickets]);
+
+  // --- [RENDER] ---
+
+  if (!isMounted) return null; // Hydration mismatch 방지
+
+  // Supabase 세션이 없으면 로그인 페이지로 리다이렉트 (렌더링 전 처리)
+  if (!isAuthenticated && isMounted) {
+    return null; // useEffect에서 리다이렉트 처리 중
+  }
+
+  const piggyLabel = (() => {
+    const rawName = piggySummary?.name?.trim() || 'Ellena Piggy Bank';
+    const base = rawName.replace(/piggy\s*bank/gi, '').trim();
+    return base || rawName;
+  })();
+  const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
+  const showAdminButton = isSystemAdmin || isGroupAdmin;
+  const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
+
+  // 그룹 정보 로딩 중인지 확인
+  const isGroupLoading = groupLoading && !currentGroupId;
 
   return (
     <div className="app-container">
