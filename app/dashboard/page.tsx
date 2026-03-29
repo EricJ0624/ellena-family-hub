@@ -36,6 +36,40 @@ const getStorageKey = (userId: string, groupId?: string | null) =>
   groupId ? `${CONFIG.STORAGE}_${userId}_${groupId}` : `${CONFIG.STORAGE}_${userId}`;
 const getAuthKey = (userId: string) => `${CONFIG.AUTH}_${userId}`;
 
+/** 멤버 문의 답변 확인 여부 (티켓 id 목록, 사용자별 localStorage) */
+const MEMBER_SUPPORT_SEEN_KEY = (userId: string) => `member_support_seen:${userId}`;
+
+function readSeenMemberTicketIds(userId: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(MEMBER_SUPPORT_SEEN_KEY(userId));
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.filter((x): x is string => typeof x === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function markMemberTicketsSeen(userId: string, ticketIds: string[]) {
+  if (typeof window === 'undefined' || !ticketIds.length) return;
+  const s = readSeenMemberTicketIds(userId);
+  ticketIds.forEach((id) => s.add(id));
+  localStorage.setItem(MEMBER_SUPPORT_SEEN_KEY(userId), JSON.stringify([...s]));
+}
+
+interface MemberSupportTicketRow {
+  id: string;
+  group_id: string;
+  title: string;
+  content: string;
+  status: string;
+  answer: string | null;
+  answered_at: string | null;
+  created_at: string;
+}
+
 const CryptoService = {
   encrypt: (data: any, key: string) => CryptoJS.AES.encrypt(JSON.stringify(data), key).toString(),
   decrypt: (cipher: string, key: string) => {
@@ -6263,6 +6297,39 @@ export default function FamilyHub() {
   const [memberTicketContent, setMemberTicketContent] = useState('');
   const [showMemberTicketModal, setShowMemberTicketModal] = useState(false);
   const [memberTicketLoading, setMemberTicketLoading] = useState(false);
+  const [memberSupportTickets, setMemberSupportTickets] = useState<MemberSupportTicketRow[]>([]);
+  const [showMemberReplyModal, setShowMemberReplyModal] = useState(false);
+
+  const loadMemberSupportTickets = useCallback(async () => {
+    if (!currentGroupId || !userId) return;
+    if (isSystemAdmin) return;
+    if (groupUserRole === 'ADMIN' || groupIsOwner) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(
+        `/api/support-tickets?group_id=${encodeURIComponent(currentGroupId)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      const json = await res.json();
+      if (!res.ok) return;
+      setMemberSupportTickets(Array.isArray(json.data) ? json.data : []);
+    } catch (e) {
+      console.error('멤버 문의 목록 로드 오류:', e);
+    }
+  }, [currentGroupId, userId, isSystemAdmin, groupUserRole, groupIsOwner]);
+
+  useEffect(() => {
+    loadMemberSupportTickets();
+  }, [loadMemberSupportTickets]);
+
+  const hasUnreadAdminReply = useMemo(() => {
+    if (!userId || memberSupportTickets.length === 0) return false;
+    const seen = readSeenMemberTicketIds(userId);
+    return memberSupportTickets.some(
+      (t) => t.answer && String(t.answer).trim() !== '' && !seen.has(t.id)
+    );
+  }, [memberSupportTickets, userId]);
 
   // --- [RENDER] ---
 
@@ -8196,6 +8263,7 @@ export default function FamilyHub() {
                     setShowMemberTicketModal(false);
                     setMemberTicketTitle('');
                     setMemberTicketContent('');
+                    await loadMemberSupportTickets();
                   } catch (e: unknown) {
                     console.error('멤버 문의 작성 오류:', e);
                     alert(e instanceof Error ? e.message : '문의 작성에 실패했습니다.');
@@ -8208,6 +8276,99 @@ export default function FamilyHub() {
                 disabled={memberTicketLoading}
               >
                 {memberTicketLoading ? '등록 중…' : '등록'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일반 멤버: 관리자 답변 확인 모달 */}
+      {showMemberInquiryFab && showMemberReplyModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowMemberReplyModal(false);
+            if (userId) {
+              const ids = memberSupportTickets
+                .filter((t) => t.answer && String(t.answer).trim() !== '')
+                .map((t) => t.id);
+              markMemberTicketsSeen(userId, ids);
+            }
+            loadMemberSupportTickets();
+          }}
+          style={{ zIndex: 1100 }}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 'min(92vw, 420px)', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 className="modal-title" style={{ marginBottom: '10px' }}>
+              <span className="modal-icon">✅</span>
+              관리자 답변
+            </h3>
+            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748b' }}>
+              그룹 관리자가 남긴 답변입니다.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[...memberSupportTickets]
+                .filter((t) => t.answer && String(t.answer).trim() !== '')
+                .sort((a, b) => {
+                  const ta = a.answered_at ? new Date(a.answered_at).getTime() : 0;
+                  const tb = b.answered_at ? new Date(b.answered_at).getTime() : 0;
+                  return tb - ta;
+                })
+                .map((t) => (
+                  <div
+                    key={t.id}
+                    style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      backgroundColor: '#f8fafc',
+                    }}
+                  >
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>{t.title}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', whiteSpace: 'pre-wrap' }}>{t.content}</div>
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '10px',
+                        backgroundColor: '#ecfdf5',
+                        borderRadius: '8px',
+                        border: '1px solid #a7f3d0',
+                        fontSize: '13px',
+                        color: '#065f46',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>답변</strong>
+                      {t.answer}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                      {t.answered_at
+                        ? `답변일: ${new Date(t.answered_at).toLocaleString('ko-KR')}`
+                        : ''}
+                    </div>
+                  </div>
+                ))}
+              {memberSupportTickets.filter((t) => t.answer && String(t.answer).trim() !== '').length === 0 && (
+                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>표시할 답변이 없습니다. 잠시 후 다시 시도해 주세요.</p>
+              )}
+            </div>
+            <div className="modal-actions" style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMemberReplyModal(false);
+                  if (userId) {
+                    const ids = memberSupportTickets
+                      .filter((t) => t.answer && String(t.answer).trim() !== '')
+                      .map((t) => t.id);
+                    markMemberTicketsSeen(userId, ids);
+                  }
+                  loadMemberSupportTickets();
+                }}
+                className="btn-primary"
+                style={{ backgroundColor: '#059669' }}
+              >
+                확인
               </button>
             </div>
           </div>
@@ -8232,13 +8393,19 @@ export default function FamilyHub() {
           <button
             type="button"
             onClick={() => {
+              if (hasUnreadAdminReply) {
+                setShowMemberTicketModal(false);
+                setShowMemberReplyModal(true);
+                return;
+              }
               setMemberTicketTitle('');
               setMemberTicketContent('');
+              setShowMemberReplyModal(false);
               setShowMemberTicketModal(true);
             }}
             style={{
               padding: '5px 9px',
-              backgroundColor: '#f97316',
+              backgroundColor: hasUnreadAdminReply ? '#059669' : '#f97316',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -8246,13 +8413,15 @@ export default function FamilyHub() {
               fontWeight: 700,
               lineHeight: 1.25,
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.28)',
+              boxShadow: hasUnreadAdminReply
+                ? '0 2px 8px rgba(5, 150, 105, 0.35)'
+                : '0 2px 8px rgba(249, 115, 22, 0.28)',
               whiteSpace: 'nowrap',
               maxWidth: 'min(88vw, 220px)',
               pointerEvents: 'auto',
             }}
           >
-            관리자에게 문의하기
+            {hasUnreadAdminReply ? '관리자 답변 확인하기' : '관리자에게 문의하기'}
           </button>
         )}
         <button
