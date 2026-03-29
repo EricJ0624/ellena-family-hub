@@ -193,6 +193,12 @@ export type DashboardTranslations = {
   member_support_delete_confirm: string;
   member_support_delete_failed: string;
   member_support_deleting: string;
+  member_support_follow_up: string;
+  member_support_follow_up_placeholder: string;
+  member_support_follow_up_submit: string;
+  member_support_follow_up_success: string;
+  member_support_follow_up_error: string;
+  member_support_thread_extra: string;
 };
 
 const dashboard: Record<LangCode, DashboardTranslations> = {
@@ -375,6 +381,12 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_delete_confirm: '이 문의를 삭제할까요?',
     member_support_delete_failed: '문의를 삭제하지 못했습니다.',
     member_support_deleting: '삭제 중…',
+    member_support_follow_up: '추가 문의',
+    member_support_follow_up_placeholder: '추가로 남길 내용을 입력하세요.',
+    member_support_follow_up_submit: '보내기',
+    member_support_follow_up_success: '추가 문의가 등록되었습니다.',
+    member_support_follow_up_error: '추가 문의 등록에 실패했습니다.',
+    member_support_thread_extra: '추가 문의',
   },
   en: {
     todo_modal_title: 'New task',
@@ -555,6 +567,12 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_delete_confirm: 'Delete this request?',
     member_support_delete_failed: 'Could not delete the request.',
     member_support_deleting: 'Deleting…',
+    member_support_follow_up: 'Follow-up',
+    member_support_follow_up_placeholder: 'Type your follow-up message.',
+    member_support_follow_up_submit: 'Send',
+    member_support_follow_up_success: 'Your follow-up was sent.',
+    member_support_follow_up_error: 'Could not send follow-up.',
+    member_support_thread_extra: 'Follow-up',
   },
   ja: {
     todo_modal_title: '新しいタスク',
@@ -735,6 +753,12 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_delete_confirm: 'このお問い合わせを削除しますか？',
     member_support_delete_failed: '削除できませんでした。',
     member_support_deleting: '削除中…',
+    member_support_follow_up: '追加のお問い合わせ',
+    member_support_follow_up_placeholder: '追加の内容を入力してください。',
+    member_support_follow_up_submit: '送信',
+    member_support_follow_up_success: '追加のお問い合わせを受け付けました。',
+    member_support_follow_up_error: '送信に失敗しました。',
+    member_support_thread_extra: '追加のお問い合わせ',
   },
   'zh-CN': {
     todo_modal_title: '新建任务',
@@ -914,6 +938,12 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_delete_confirm: '要删除这条咨询吗？',
     member_support_delete_failed: '无法删除咨询。',
     member_support_deleting: '删除中…',
+    member_support_follow_up: '追加咨询',
+    member_support_follow_up_placeholder: '请输入追加内容。',
+    member_support_follow_up_submit: '发送',
+    member_support_follow_up_success: '追加咨询已提交。',
+    member_support_follow_up_error: '发送失败。',
+    member_support_thread_extra: '追加咨询',
   },
   'zh-TW': {
     todo_modal_title: '新任務',
@@ -1093,6 +1123,12 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_delete_confirm: '要刪除這則諮詢嗎？',
     member_support_delete_failed: '無法刪除諮詢。',
     member_support_deleting: '刪除中…',
+    member_support_follow_up: '追加諮詢',
+    member_support_follow_up_placeholder: '請輸入追加內容。',
+    member_support_follow_up_submit: '送出',
+    member_support_follow_up_success: '追加諮詢已送出。',
+    member_support_follow_up_error: '送出失敗。',
+    member_support_thread_extra: '追加諮詢',
   },
 };
 

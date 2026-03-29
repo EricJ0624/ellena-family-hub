@@ -14,6 +14,7 @@ import {
   removeMemberTicketFromSeen,
   type MemberSupportTicketRow,
 } from '@/lib/member-support';
+import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
 function dateLocaleForLang(lang: LangCode): string {
   const map: Record<LangCode, string> = {
@@ -52,6 +53,9 @@ export default function MemberSupportPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [followUpTicketId, setFollowUpTicketId] = useState<string | null>(null);
+  const [followUpText, setFollowUpText] = useState('');
+  const [followUpLoading, setFollowUpLoading] = useState(false);
 
   const isGroupAdmin =
     (userRole === 'ADMIN' || isOwner) && currentGroupId !== null;
@@ -189,6 +193,49 @@ export default function MemberSupportPage() {
     }
   };
 
+  const handleFollowUpSubmit = async () => {
+    if (!currentGroupId || !followUpTicketId) return;
+    const text = followUpText.trim();
+    if (!text) {
+      alert(dt('member_support_alert_fill'));
+      return;
+    }
+    setFollowUpLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert(dt('member_support_alert_auth'));
+        return;
+      }
+      const res = await fetch('/api/support-tickets', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: followUpTicketId,
+          group_id: currentGroupId,
+          follow_up: text,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof json.error === 'string' ? json.error : dt('member_support_follow_up_error')
+        );
+      }
+      alert(dt('member_support_follow_up_success'));
+      setFollowUpTicketId(null);
+      setFollowUpText('');
+      await loadTickets();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : dt('member_support_follow_up_error'));
+    } finally {
+      setFollowUpLoading(false);
+    }
+  };
+
   const handleDeleteTicket = async (ticketId: string) => {
     if (!currentGroupId || !userId) return;
     if (!confirm(dt('member_support_delete_confirm'))) return;
@@ -299,8 +346,13 @@ export default function MemberSupportPage() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
               >
                 {sortedTickets.map((t) => {
-                  const answered =
+                  const hasFirstAnswer =
                     t.answer != null && String(t.answer).trim() !== '';
+                  const isPending = t.status === 'pending';
+                  const showFollowUpBtn =
+                    hasFirstAnswer &&
+                    (t.status === 'answered' || t.status === 'closed');
+                  const thread = parseMemberSupportMessageThread(t.message_thread);
                   return (
                     <div
                       key={t.id}
@@ -336,11 +388,13 @@ export default function MemberSupportPage() {
                             padding: '2px 8px',
                             borderRadius: '6px',
                             whiteSpace: 'nowrap',
-                            backgroundColor: answered ? '#d1fae5' : '#fef3c7',
-                            color: answered ? '#065f46' : '#92400e',
+                            backgroundColor: isPending ? '#fef3c7' : '#d1fae5',
+                            color: isPending ? '#92400e' : '#065f46',
                           }}
                         >
-                          {answered ? dt('member_support_status_answered') : dt('member_support_status_pending')}
+                          {isPending
+                            ? dt('member_support_status_pending')
+                            : dt('member_support_status_answered')}
                         </span>
                       </div>
                       <div
@@ -357,12 +411,12 @@ export default function MemberSupportPage() {
                           fontSize: '13px',
                           color: '#475569',
                           whiteSpace: 'pre-wrap',
-                          marginBottom: answered ? '12px' : 0,
+                          marginBottom: hasFirstAnswer ? '12px' : 0,
                         }}
                       >
                         {t.content}
                       </div>
-                      {answered && (
+                      {hasFirstAnswer && (
                         <div
                           style={{
                             padding: '12px',
@@ -394,15 +448,73 @@ export default function MemberSupportPage() {
                           )}
                         </div>
                       )}
+                      {thread.map((entry, idx) => (
+                        <div
+                          key={`${entry.created_at}-${idx}`}
+                          style={{
+                            marginTop: '10px',
+                            padding: '12px',
+                            backgroundColor:
+                              entry.role === 'member' ? '#fffbeb' : '#ecfdf5',
+                            borderRadius: '10px',
+                            border:
+                              entry.role === 'member'
+                                ? '1px solid #fde68a'
+                                : '1px solid #a7f3d0',
+                            fontSize: '13px',
+                            color: entry.role === 'member' ? '#92400e' : '#065f46',
+                            whiteSpace: 'pre-wrap',
+                          }}
+                        >
+                          <strong style={{ display: 'block', marginBottom: '6px' }}>
+                            {entry.role === 'member'
+                              ? dt('member_support_thread_extra')
+                              : dt('member_support_admin_reply')}
+                          </strong>
+                          {entry.body}
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              opacity: 0.85,
+                              marginTop: '8px',
+                            }}
+                          >
+                            {new Date(entry.created_at).toLocaleString(dateLocaleForLang(lang))}
+                          </div>
+                        </div>
+                      ))}
                       <div
                         style={{
                           display: 'flex',
                           justifyContent: 'flex-end',
+                          flexWrap: 'wrap',
+                          gap: '8px',
                           marginTop: '12px',
                           paddingTop: '12px',
                           borderTop: '1px solid #e2e8f0',
                         }}
                       >
+                        {showFollowUpBtn && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFollowUpTicketId(t.id);
+                              setFollowUpText('');
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              color: '#fff',
+                              backgroundColor: '#0ea5e9',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {dt('member_support_follow_up')}
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={deletingId === t.id}
@@ -523,6 +635,106 @@ export default function MemberSupportPage() {
               </button>
             </div>
           </section>
+
+          {followUpTicketId && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.45)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1200,
+                padding: '16px',
+              }}
+              onClick={() => {
+                if (followUpLoading) return;
+                setFollowUpTicketId(null);
+                setFollowUpText('');
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: '#fff',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  width: '100%',
+                  maxWidth: '480px',
+                  boxSizing: 'border-box',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3
+                  style={{
+                    fontSize: '17px',
+                    fontWeight: 700,
+                    color: '#1e293b',
+                    margin: '0 0 12px 0',
+                  }}
+                >
+                  {dt('member_support_follow_up')}
+                </h3>
+                <textarea
+                  value={followUpText}
+                  onChange={(e) => setFollowUpText(e.target.value)}
+                  placeholder={dt('member_support_follow_up_placeholder')}
+                  rows={5}
+                  maxLength={2000}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    marginBottom: '14px',
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <button
+                    type="button"
+                    disabled={followUpLoading}
+                    onClick={() => {
+                      setFollowUpTicketId(null);
+                      setFollowUpText('');
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#475569',
+                      backgroundColor: '#e2e8f0',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: followUpLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {ct('cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={followUpLoading}
+                    onClick={() => void handleFollowUpSubmit()}
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#fff',
+                      backgroundColor: '#0ea5e9',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: followUpLoading ? 'not-allowed' : 'pointer',
+                      opacity: followUpLoading ? 0.75 : 1,
+                    }}
+                  >
+                    {followUpLoading ? dt('member_support_submitting') : dt('member_support_follow_up_submit')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

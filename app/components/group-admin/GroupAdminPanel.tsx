@@ -34,6 +34,7 @@ import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAdminTranslation } from '@/lib/translations/admin';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
+import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
 export type GroupAdminPanelVariant = 'standalone' | 'embedded';
 
@@ -117,6 +118,7 @@ interface MemberSupportTicketInfo {
   answer: string | null;
   answered_by: string | null;
   answered_at: string | null;
+  message_thread?: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -2373,6 +2375,38 @@ export function GroupAdminPanel({
                               </p>
                             </div>
                           )}
+                          {parseMemberSupportMessageThread(ticket.message_thread).map((entry, idx) => (
+                            <div
+                              key={`mst-${entry.created_at}-${idx}`}
+                              style={{
+                                marginTop: '12px',
+                                padding: '14px',
+                                backgroundColor: entry.role === 'member' ? '#fffbeb' : '#f0f9ff',
+                                borderRadius: '8px',
+                                border: `1px solid ${entry.role === 'member' ? '#fde68a' : '#bae6fd'}`,
+                              }}
+                            >
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: entry.role === 'member' ? '#b45309' : '#0369a1',
+                                marginBottom: '6px',
+                              }}>
+                                {entry.role === 'member' ? '추가 문의' : '답변'}
+                              </div>
+                              <p style={{
+                                fontSize: '14px',
+                                color: '#1e293b',
+                                margin: 0,
+                                whiteSpace: 'pre-wrap',
+                              }}>
+                                {entry.body}
+                              </p>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
@@ -2381,7 +2415,7 @@ export function GroupAdminPanel({
                           <button
                             onClick={() => {
                               setEditingMemberTicket(ticket);
-                              setMemberTicketAnswer(ticket.answer || '');
+                              setMemberTicketAnswer('');
                             }}
                             style={{
                               padding: '8px 16px',
@@ -2474,6 +2508,26 @@ export function GroupAdminPanel({
                       <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>
                         답변 작성
                       </h3>
+                      {editingMemberTicket && (
+                        <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '13px', color: '#475569' }}>
+                          <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>{editingMemberTicket.title}</div>
+                          <div style={{ whiteSpace: 'pre-wrap', marginBottom: '8px' }}>{editingMemberTicket.content}</div>
+                          {editingMemberTicket.answer && (
+                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 600, color: '#0369a1' }}>첫 답변</span>
+                              <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>{editingMemberTicket.answer}</div>
+                            </div>
+                          )}
+                          {parseMemberSupportMessageThread(editingMemberTicket.message_thread).map((entry, i) => (
+                            <div key={`emt-${i}`} style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 600, color: entry.role === 'member' ? '#b45309' : '#0369a1' }}>
+                                {entry.role === 'member' ? '추가 문의' : '이전 답변'}
+                              </span>
+                              <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>{entry.body}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <textarea
                         value={memberTicketAnswer}
                         onChange={(e) => setMemberTicketAnswer(e.target.value)}
@@ -2531,7 +2585,7 @@ export function GroupAdminPanel({
                                 body: JSON.stringify({
                                   id: editingMemberTicket.id,
                                   group_id: effectiveGroupId,
-                                  answer: memberTicketAnswer,
+                                  answer: memberTicketAnswer.trim(),
                                   status: 'answered',
                                 }),
                               });

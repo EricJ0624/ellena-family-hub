@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin, requireGroupMember } from '@/lib/api-guards';
 import { isSystemAdmin } from '@/lib/permissions';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
 /**
  * 멤버 문의 목록 조회 (본인 작성 + 해당 그룹)
@@ -187,6 +188,101 @@ export async function DELETE(request: NextRequest) {
     const errorMessage =
       error instanceof Error ? error.message : '문의 삭제 중 오류가 발생했습니다.';
     console.error('멤버 문의 삭제 오류:', error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
+
+/**
+ * 첫 답변 이후 멤버 추가 문의 (작성자만)
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const { user } = authResult;
+
+    const body = await request.json();
+    const { id, group_id, follow_up } = body || {};
+
+    if (!id || !group_id || !follow_up || !String(follow_up).trim()) {
+      return NextResponse.json(
+        { error: '문의 ID, 그룹 ID, 추가 문의 내용은 필수입니다.' },
+        { status: 400 }
+      );
+    }
+
+    const memberCheck = await requireGroupMember(user.id, group_id);
+    if (memberCheck instanceof NextResponse) return memberCheck;
+
+    const supabase = getSupabaseServerClient();
+
+    const { data: existing, error: fetchErr } = await supabase
+      .from('member_support_tickets')
+      .select('*')
+      .eq('id', id)
+      .eq('group_id', group_id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      console.error('멤버 문의 조회 오류(추가 문의 전):', fetchErr);
+      return NextResponse.json({ error: '문의를 확인할 수 없습니다.' }, { status: 500 });
+    }
+    if (!existing) {
+      return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    if (existing.created_by !== user.id) {
+      return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 });
+    }
+
+    if (!existing.answer) {
+      return NextResponse.json(
+        { error: '첫 답변이 완료된 뒤에만 추가 문의를 남길 수 있습니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (existing.status === 'pending') {
+      return NextResponse.json(
+        { error: '답변 대기 중에는 추가 문의를 남길 수 없습니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (!['answered', 'closed'].includes(String(existing.status))) {
+      return NextResponse.json({ error: '추가 문의를 남길 수 없는 상태입니다.' }, { status: 400 });
+    }
+
+    const thread = parseMemberSupportMessageThread(existing.message_thread);
+    const createdAt = new Date().toISOString();
+    thread.push({
+      role: 'member',
+      user_id: user.id,
+      body: String(follow_up).trim(),
+      created_at: createdAt,
+    });
+
+    const { data: ticket, error } = await supabase
+      .from('member_support_tickets')
+      .update({
+        message_thread: thread,
+        status: 'pending',
+      })
+      .eq('id', id)
+      .eq('group_id', group_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('멤버 추가 문의 저장 오류:', error);
+      return NextResponse.json({ error: '추가 문의 저장에 실패했습니다.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data: ticket });
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : '추가 문의 처리 중 오류가 발생했습니다.';
+    console.error('멤버 추가 문의 오류:', error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

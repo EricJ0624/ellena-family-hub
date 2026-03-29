@@ -40,6 +40,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import type { LangCode } from '@/lib/language-fonts';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
+import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -160,6 +161,7 @@ interface MemberGroupInquiryInfo {
   answer: string | null;
   created_at: string;
   answered_at: string | null;
+  message_thread?: unknown;
   groups?: { id: string; name: string };
 }
 
@@ -3749,6 +3751,25 @@ export default function AdminPage() {
                               </p>
                             </div>
                           )}
+                          {parseMemberSupportMessageThread(ticket.message_thread).map((entry, idx) => (
+                            <div
+                              key={`mgi-${entry.created_at}-${idx}`}
+                              style={{
+                                marginTop: '10px',
+                                padding: '12px',
+                                backgroundColor: entry.role === 'member' ? '#fffbeb' : '#f0f9ff',
+                                borderRadius: '8px',
+                                border: `1px solid ${entry.role === 'member' ? '#fde68a' : '#bae6fd'}`,
+                              }}
+                            >
+                              <div style={{ fontSize: '12px', fontWeight: '600', color: entry.role === 'member' ? '#b45309' : '#0369a1', marginBottom: '4px' }}>
+                                {entry.role === 'member' ? (adminLang === 'en' ? 'Follow-up' : '추가 문의') : at('answer_label')}
+                              </div>
+                              <p style={{ fontSize: '13px', color: '#1e293b', margin: 0, whiteSpace: 'pre-wrap' }}>
+                                {entry.body}
+                              </p>
+                            </div>
+                          ))}
                         </div>
                       </div>
                       <div style={{
