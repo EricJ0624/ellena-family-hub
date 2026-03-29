@@ -88,8 +88,15 @@ export default function OnboardingPage() {
               new URLSearchParams(window.location.search).get('invite_code')?.trim() ||
               ''
             : '';
-        // 초대 코드 형식 검증 (영숫자 1~20자)
-        const inviteParam = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : '';
+        const storedInvite =
+          typeof window !== 'undefined'
+            ? window.sessionStorage.getItem('SFH_INVITE_CODE')?.trim() || ''
+            : '';
+        // 초대 코드 형식 검증 (영숫자 1~20자). URL 우선, 없으면 로그인 페이지가 넣은 sessionStorage
+        const inviteFromUrl = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : '';
+        const inviteFromStorage =
+          !inviteFromUrl && storedInvite && /^[0-9A-Za-z]{1,20}$/.test(storedInvite) ? storedInvite : '';
+        const inviteParam = inviteFromUrl || inviteFromStorage;
         // URL에서 invite 쿼리 제거 (Referrer/히스토리 노출 방지)
         if (typeof window !== 'undefined' && rawInvite) {
           try {
@@ -170,7 +177,8 @@ export default function OnboardingPage() {
           });
         }
 
-        if (allGroups.length > 0 && !fromAdminParam) {
+        // 이미 소속 그룹이 있어도 초대 링크로 들어온 경우에는 먼저 해당 그룹 가입 플로우(join)로 보냄
+        if (allGroups.length > 0 && !fromAdminParam && !inviteParam) {
           // 그룹이 있으면 선택 화면 표시 (1개여도 선택 화면 표시)
           setUserGroups(allGroups);
           setStep('choose-group');
@@ -179,8 +187,8 @@ export default function OnboardingPage() {
         }
 
         // 시스템 관리자이고 그룹이 없으면 관리자 페이지로
-        // 단, 관리자 페이지에서 온보딩으로 들어온 경우는 허용
-        if (isAdmin && !fromAdminParam) {
+        // 단, 관리자 페이지에서 온보딩으로 들어온 경우·초대 링크 진입은 허용
+        if (isAdmin && !fromAdminParam && !inviteParam) {
           router.push('/admin');
           return;
         }
