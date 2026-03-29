@@ -80,13 +80,13 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
 
   return (
     <>
-      {/* 배너 */}
-      <div className="sticky top-0 z-[100] border-b border-primary/20 bg-primary/10 py-3 overflow-hidden shadow-sm">
+      {/* 배너 — 공지는 ‘알림’ 패턴이라 테마 primary와 무관하게 고정 앰버 톤 유지 (기존 인라인 디자인과 동일) */}
+      <div className="sticky top-0 z-[100] border-b-2 border-amber-200 bg-amber-50 py-3 overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
         <div className="flex items-center justify-between max-w-[1400px] mx-auto px-3 pr-6">
           {/* 아이콘 + 라벨 (최소 폭 없이 필요한 만큼만 사용) */}
           <div className="flex items-center gap-1 shrink-0">
-            <Megaphone className="w-5 h-5 text-primary shrink-0" aria-hidden />
-            <span className="text-sm font-semibold text-foreground">
+            <Megaphone className="w-5 h-5 text-amber-500 shrink-0" aria-hidden />
+            <span className="text-sm font-semibold text-amber-800">
               {label}
             </span>
           </div>
@@ -107,15 +107,15 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
                 <div
                   key={`${announcement.id}-${index}`}
                   onClick={() => handleAnnouncementClick(announcement)}
-                  className="flex items-center gap-2 cursor-pointer whitespace-nowrap text-sm text-foreground transition-colors hover:text-primary"
+                  className="flex items-center gap-2 cursor-pointer whitespace-nowrap text-sm text-amber-900 transition-colors hover:text-amber-800"
                 >
-                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-primary text-primary-foreground">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-400 text-white">
                     NEW
                   </span>
                   <span className="font-semibold">
                     {announcement.title}
                   </span>
-                  <span className="text-muted-foreground">
+                  <span className="text-amber-700">
                     {announcement.content.length > 80 
                       ? `${announcement.content.substring(0, 80)}...` 
                       : announcement.content}
@@ -129,46 +129,46 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
           <button
             type="button"
             onClick={() => setIsVisible(false)}
-            className="p-1 rounded border-0 bg-transparent cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
+            className="p-1 rounded border-0 bg-transparent cursor-pointer text-amber-800 hover:bg-amber-200 flex items-center justify-center transition-colors"
           >
             <X className="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
 
-      {/* 상세 보기 모달 */}
+      {/* 상세 보기 모달 — 본문 카드·버튼도 테마와 무관한 고정 팔레트 (예전 보라 확인 버튼 유지) */}
       {selectedAnnouncement && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-foreground/40"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
           onClick={() => setSelectedAnnouncement(null)}
         >
           <div
-            className="bg-card text-card-foreground rounded-xl p-6 w-[90%] max-w-[600px] max-h-[80vh] overflow-auto shadow-xl border border-border"
+            className="bg-white text-slate-800 rounded-xl p-6 w-[90%] max-w-[600px] max-h-[80vh] overflow-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-foreground m-0">
+              <h3 className="text-xl font-semibold text-slate-800 m-0">
                 {selectedAnnouncement.title}
               </h3>
               <button
                 type="button"
                 onClick={() => setSelectedAnnouncement(null)}
-                className="p-1 border-0 bg-transparent cursor-pointer text-muted-foreground hover:text-foreground rounded flex items-center justify-center"
+                className="p-1 border-0 bg-transparent cursor-pointer text-slate-500 hover:text-slate-800 rounded flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="text-xs text-muted-foreground mb-4">
+            <div className="text-xs text-slate-400 mb-4">
               {new Date(selectedAnnouncement.created_at).toLocaleString('ko-KR')}
             </div>
-            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+            <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
               {selectedAnnouncement.content}
             </div>
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
                 onClick={() => setSelectedAnnouncement(null)}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer bg-primary text-primary-foreground hover:opacity-90 border-0"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold cursor-pointer bg-violet-600 text-white hover:bg-violet-700 border-0"
               >
                 확인
               </button>

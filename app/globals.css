@@ -325,6 +325,15 @@ body {
     align-items: center;
     min-height: 100vh;
   }
+
+  /* 시스템 관리자·그룹 관리자 전용 페이지는 예전처럼 평면 배경(대시보드 앱 프레임과 분리) */
+  body:has(.admin-page),
+  body:has(.group-admin-page) {
+    background: #f5f7fa;
+    display: block;
+    align-items: unset;
+    justify-content: unset;
+  }
 }
 
 @media (max-width: 768px) {
