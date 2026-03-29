@@ -1641,7 +1641,9 @@ export default function OnboardingPage() {
               <button
                 onClick={() => {
                   if (selectedGroupId) {
-                    localStorage.setItem('currentGroupId', selectedGroupId);
+                    // localStorage만 바꾸면 GroupContext의 currentGroupId는 refreshGroups가 고른 첫 그룹에 머물러
+                    // 대시보드가 이전 그룹으로 열리는 버그가 난다. 컨텍스트와 동기화 필수.
+                    setCurrentGroupId(selectedGroupId);
                     router.push('/dashboard');
                   }
                 }}
