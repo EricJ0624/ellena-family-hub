@@ -275,8 +275,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
-          <ThemePicker className="flex-wrap justify-end" />
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
           <button
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -347,6 +346,14 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                   <p className="text-xs text-muted-foreground mt-1.5">
                     {gst('language_hint')}
                   </p>
+                </td>
+              </tr>
+              <tr className="border-b border-border">
+                <th className="p-3 text-left text-sm font-semibold text-muted-foreground w-40 bg-muted align-top">
+                  {gst('theme_change_row')}
+                </th>
+                <td className="p-3">
+                  <ThemePicker showLabel={false} className="max-w-md" />
                 </td>
               </tr>
               <tr>

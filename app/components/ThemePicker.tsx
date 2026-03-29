@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useId } from 'react';
 import { useTheme } from 'next-themes';
 import { Palette } from 'lucide-react';
 import { APP_THEMES, type AppTheme } from '@/app/providers/ThemeProvider';
@@ -23,10 +23,18 @@ const THEME_LABEL_KEY: Record<AppTheme, keyof GroupSettingsTranslations> = {
   'winter-hearth': 'theme_winter_hearth',
 };
 
-export function ThemePicker({ className = '' }: { className?: string }) {
+export function ThemePicker({
+  className = '',
+  /** 표 행 등에서 왼쪽에 별도 라벨이 있을 때 상단 라벨·아이콘 숨김 */
+  showLabel = true,
+}: {
+  className?: string;
+  showLabel?: boolean;
+}) {
   const { lang } = useLanguage();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const selectId = useId();
 
   useEffect(() => {
     setMounted(true);
@@ -51,26 +59,30 @@ export function ThemePicker({ className = '' }: { className?: string }) {
         className={`flex items-center gap-2 ${className}`}
         aria-hidden
       >
-        <div className="h-9 w-[min(100%,14rem)] rounded-lg bg-muted animate-pulse" />
+        <div
+          className={`h-9 rounded-lg bg-muted animate-pulse ${showLabel ? 'w-[min(100%,14rem)]' : 'w-full max-w-md'}`}
+        />
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <label
-        htmlFor="app-theme-select"
-        className="flex items-center gap-1.5 shrink-0 text-sm font-medium text-muted-foreground"
-      >
-        <Palette className="w-4 h-4 text-primary" aria-hidden />
-        <span className="hidden sm:inline">{gst('theme_picker_label')}</span>
-      </label>
+    <div className={`flex items-center gap-2 ${showLabel ? '' : 'w-full justify-end'} ${className}`}>
+      {showLabel && (
+        <label
+          htmlFor={selectId}
+          className="flex items-center gap-1.5 shrink-0 text-sm font-medium text-muted-foreground"
+        >
+          <Palette className="w-4 h-4 text-primary" aria-hidden />
+          <span className="hidden sm:inline">{gst('theme_picker_label')}</span>
+        </label>
+      )}
       <select
-        id="app-theme-select"
+        id={selectId}
         value={current}
         onChange={(e) => setTheme(e.target.value)}
         aria-label={gst('theme_picker_label')}
-        className="min-w-[10rem] max-w-[16rem] rounded-lg border border-border bg-card py-2 pl-3 pr-8 text-sm font-medium text-foreground shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+        className={`rounded-lg border border-border bg-card py-2 pl-3 pr-8 text-sm font-medium text-foreground shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${showLabel ? 'min-w-[10rem] max-w-[16rem]' : 'w-full max-w-md min-w-0'}`}
       >
         {APP_THEMES.map((id) => (
           <option key={id} value={id}>

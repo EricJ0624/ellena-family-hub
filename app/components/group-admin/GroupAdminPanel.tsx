@@ -806,16 +806,10 @@ export function GroupAdminPanel({
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f7fa',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>{gat('checking_permission')}</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-primary" />
+          <p className="text-muted-foreground text-base">{gat('checking_permission')}</p>
         </div>
       </div>
     );
@@ -832,25 +826,9 @@ export function GroupAdminPanel({
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
 
   return (
-    <div
-      className="group-admin-page"
-      style={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f7fa',
-        padding: '20px',
-      }}
-    >
+    <div className="group-admin-page min-h-screen bg-background text-foreground p-5">
       {/* ???�쎌???*/}
-      <div
-        className="group-admin-header"
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          marginBottom: '24px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}
-      >
+      <div className="group-admin-header bg-card border border-border rounded-xl p-6 mb-6 shadow-sm">
         <div
           className="group-admin-header-top"
           style={{
@@ -861,28 +839,14 @@ export function GroupAdminPanel({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#3b82f6',
-              borderRadius: '12px',
-              color: 'white',
-            }}>
+            <div className="p-3 bg-primary text-primary-foreground rounded-xl">
               <Shield style={{ width: '24px', height: '24px' }} />
             </div>
             <div>
-              <h1 style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                color: '#1e293b',
-                margin: 0,
-              }}>
+              <h1 className="text-2xl font-bold text-foreground m-0">
                 그룹 관리자 페이지
               </h1>
-              <p style={{
-                fontSize: '14px',
-                color: '#64748b',
-                margin: '4px 0 0 0',
-              }}>
+              <p className="text-sm text-muted-foreground mt-1 m-0">
                 {displayGroupName || gat('group_label')} {gat('group_manage')}
               </p>
             </div>
@@ -895,19 +859,7 @@ export function GroupAdminPanel({
               }
               router.push('/dashboard');
             }}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#e2e8f0',
-              color: '#475569',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
+            className="px-4 py-2 rounded-lg border-0 bg-muted text-foreground text-sm font-semibold cursor-pointer inline-flex items-center gap-2 hover:opacity-90"
           >
             <X style={{ width: '16px', height: '16px' }} />
             닫기
@@ -915,8 +867,8 @@ export function GroupAdminPanel({
         </div>
 
         {canSwitchAdminGroups && (
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+          <div className="mb-4">
+            <div className="text-xs text-muted-foreground mb-1.5">
               관리할 그룹 선택
             </div>
             <select
@@ -928,17 +880,7 @@ export function GroupAdminPanel({
                   setActiveTab('dashboard');
                 }
               }}
-              style={{
-                width: '100%',
-                maxWidth: '320px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                backgroundColor: '#f8fafc',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#1e293b',
-              }}
+              className="w-full max-w-xs px-3 py-2 rounded-lg border border-border bg-background text-foreground text-[13px] font-semibold"
             >
               {adminGroups.map((group: any) => (
                 <option key={group.id} value={group.id}>
@@ -958,7 +900,7 @@ export function GroupAdminPanel({
             rowGap: '8px',
             flexWrap: 'wrap',
             overflowX: 'auto',
-            borderBottom: '2px solid #e2e8f0',
+            borderBottom: '2px solid hsl(var(--border))',
           }}
         >
           <button
@@ -1137,15 +1079,7 @@ export function GroupAdminPanel({
       </div>
 
       {/* ??�쎌�??�썲?????�쎌?�占?*/}
-      <div
-        className="group-admin-content"
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}
-      >
+      <div className="group-admin-content bg-card text-card-foreground border border-border rounded-xl p-6 shadow-sm">
         {error && (
           <div style={{
             padding: '12px 16px',

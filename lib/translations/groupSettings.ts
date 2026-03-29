@@ -22,6 +22,7 @@ export type GroupSettingsTranslations = {
   dashboard_title_hint: string;
   display_language: string;
   language_hint: string;
+  theme_change_row: string;
   invite_code: string;
   invite_copy_aria: string;
   invite_link_copy_btn: string;
@@ -66,6 +67,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: '대시보드 상단에 표시되는 문구입니다. 글자 크기는 화면에 맞게 자동 조정됩니다.',
     display_language: '표시 언어',
     language_hint: '그룹 대시보드의 타이틀·본문 폰트에 적용됩니다.',
+    theme_change_row: '테마변경',
     invite_code: '초대 코드',
     invite_copy_aria: '초대 코드 복사',
     invite_link_copy_btn: '초대 링크 복사',
@@ -108,6 +110,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: 'This text is shown at the top of the dashboard. Font size adjusts automatically.',
     display_language: 'Display language',
     language_hint: 'Applied to title and body fonts on the group dashboard.',
+    theme_change_row: 'Theme',
     invite_code: 'Invite code',
     invite_copy_aria: 'Copy invite code',
     invite_link_copy_btn: 'Copy invite link',
@@ -150,6 +153,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: 'ダッシュボード上部に表示されます。文字サイズは自動調整されます。',
     display_language: '表示言語',
     language_hint: 'グループのダッシュボードのタイトル・本文フォントに適用されます。',
+    theme_change_row: 'テーマ',
     invite_code: '招待コード',
     invite_copy_aria: '招待コードをコピー',
     invite_link_copy_btn: '招待リンクをコピー',
@@ -192,6 +196,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: '显示在仪表盘顶部。字号将自动调整。',
     display_language: '显示语言',
     language_hint: '应用于群组仪表盘的标题与正文字体。',
+    theme_change_row: '主题',
     invite_code: '邀请码',
     invite_copy_aria: '复制邀请码',
     invite_link_copy_btn: '复制邀请链接',
@@ -234,6 +239,7 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: '顯示在儀表板頂部。字型大小會自動調整。',
     display_language: '顯示語言',
     language_hint: '套用於群組儀表板的標題與內文字型。',
+    theme_change_row: '主題',
     invite_code: '邀請碼',
     invite_copy_aria: '複製邀請碼',
     invite_link_copy_btn: '複製邀請連結',
