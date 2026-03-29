@@ -35,3 +35,14 @@ export function markMemberTicketsSeen(userId: string, ticketIds: string[]) {
     JSON.stringify([...s])
   );
 }
+
+/** 삭제된 티켓 id를 읽음 목록에서 제거 */
+export function removeMemberTicketFromSeen(userId: string, ticketId: string) {
+  if (typeof window === 'undefined' || !ticketId) return;
+  const s = readSeenMemberTicketIds(userId);
+  if (!s.delete(ticketId)) return;
+  localStorage.setItem(
+    memberSupportSeenStorageKey(userId),
+    JSON.stringify([...s])
+  );
+}

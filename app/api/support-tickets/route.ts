@@ -97,3 +97,62 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * 멤버 문의 삭제 (본인 작성 건만)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const { user } = authResult;
+
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('group_id');
+    const ticketId = searchParams.get('id');
+    if (!groupId || !ticketId) {
+      return NextResponse.json(
+        { error: '그룹 ID와 문의 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
+
+    const supabase = getSupabaseServerClient();
+
+    const { data: row, error: fetchErr } = await supabase
+      .from('member_support_tickets')
+      .select('id, created_by, group_id')
+      .eq('id', ticketId)
+      .maybeSingle();
+
+    if (fetchErr) {
+      console.error('멤버 문의 조회 오류(삭제 전):', fetchErr);
+      return NextResponse.json({ error: '문의를 확인할 수 없습니다.' }, { status: 500 });
+    }
+    if (!row) {
+      return NextResponse.json({ error: '문의를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (row.group_id !== groupId || row.created_by !== user.id) {
+      return NextResponse.json({ error: '삭제 권한이 없습니다.' }, { status: 403 });
+    }
+
+    const { error: delErr } = await supabase
+      .from('member_support_tickets')
+      .delete()
+      .eq('id', ticketId);
+
+    if (delErr) {
+      console.error('멤버 문의 삭제 오류:', delErr);
+      return NextResponse.json({ error: '문의 삭제에 실패했습니다.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : '문의 삭제 중 오류가 발생했습니다.';
+    console.error('멤버 문의 삭제 오류:', error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}

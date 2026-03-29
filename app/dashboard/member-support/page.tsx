@@ -8,9 +8,10 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import type { LangCode } from '@/lib/language-fonts';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
-import { getCommonTranslation } from '@/lib/translations/common';
+import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
 import {
   markMemberTicketsSeen,
+  removeMemberTicketFromSeen,
   type MemberSupportTicketRow,
 } from '@/lib/member-support';
 
@@ -37,6 +38,7 @@ export default function MemberSupportPage() {
   const { lang } = useLanguage();
   const dt = (key: keyof DashboardTranslations) =>
     getDashboardTranslation(lang, key);
+  const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
 
   const [isMounted, setIsMounted] = useState(false);
   const [authOk, setAuthOk] = useState(false);
@@ -49,6 +51,7 @@ export default function MemberSupportPage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isGroupAdmin =
     (userRole === 'ADMIN' || isOwner) && currentGroupId !== null;
@@ -183,6 +186,40 @@ export default function MemberSupportPage() {
       alert(e instanceof Error ? e.message : dt('member_support_alert_submit_failed'));
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!currentGroupId || !userId) return;
+    if (!confirm(dt('member_support_delete_confirm'))) return;
+    setDeletingId(ticketId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert(dt('member_support_alert_auth'));
+        return;
+      }
+      const res = await fetch(
+        `/api/support-tickets?id=${encodeURIComponent(ticketId)}&group_id=${encodeURIComponent(currentGroupId)}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(
+          typeof json.error === 'string' ? json.error : dt('member_support_delete_failed')
+        );
+        return;
+      }
+      removeMemberTicketFromSeen(userId, ticketId);
+      setTickets((prev) => prev.filter((x) => x.id !== ticketId));
+    } catch (e) {
+      console.error('멤버 문의 삭제 오류:', e);
+      alert(dt('member_support_delete_failed'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -357,6 +394,34 @@ export default function MemberSupportPage() {
                           )}
                         </div>
                       )}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          marginTop: '12px',
+                          paddingTop: '12px',
+                          borderTop: '1px solid #e2e8f0',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          disabled={deletingId === t.id}
+                          onClick={() => void handleDeleteTicket(t.id)}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#b91c1c',
+                            backgroundColor: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '8px',
+                            cursor: deletingId === t.id ? 'not-allowed' : 'pointer',
+                            opacity: deletingId === t.id ? 0.7 : 1,
+                          }}
+                        >
+                          {deletingId === t.id ? dt('member_support_deleting') : ct('delete')}
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

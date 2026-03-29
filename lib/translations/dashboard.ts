@@ -190,6 +190,9 @@ export type DashboardTranslations = {
   member_support_alert_submit_failed: string;
   member_support_fab: string;
   member_support_fab_aria_unread: string;
+  member_support_delete_confirm: string;
+  member_support_delete_failed: string;
+  member_support_deleting: string;
 };
 
 const dashboard: Record<LangCode, DashboardTranslations> = {
@@ -369,6 +372,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_alert_submit_failed: '문의 작성에 실패했습니다.',
     member_support_fab: '관리자에게 문의',
     member_support_fab_aria_unread: '새 답변 있음',
+    member_support_delete_confirm: '이 문의를 삭제할까요?',
+    member_support_delete_failed: '문의를 삭제하지 못했습니다.',
+    member_support_deleting: '삭제 중…',
   },
   en: {
     todo_modal_title: 'New task',
@@ -546,6 +552,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_alert_submit_failed: 'Failed to submit your request.',
     member_support_fab: 'Contact admin',
     member_support_fab_aria_unread: 'New reply',
+    member_support_delete_confirm: 'Delete this request?',
+    member_support_delete_failed: 'Could not delete the request.',
+    member_support_deleting: 'Deleting…',
   },
   ja: {
     todo_modal_title: '新しいタスク',
@@ -723,6 +732,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_alert_submit_failed: '送信に失敗しました。',
     member_support_fab: '管理者へ',
     member_support_fab_aria_unread: '新しい回答',
+    member_support_delete_confirm: 'このお問い合わせを削除しますか？',
+    member_support_delete_failed: '削除できませんでした。',
+    member_support_deleting: '削除中…',
   },
   'zh-CN': {
     todo_modal_title: '新建任务',
@@ -899,6 +911,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_alert_submit_failed: '提交失败。',
     member_support_fab: '联系管理员',
     member_support_fab_aria_unread: '有新回复',
+    member_support_delete_confirm: '要删除这条咨询吗？',
+    member_support_delete_failed: '无法删除咨询。',
+    member_support_deleting: '删除中…',
   },
   'zh-TW': {
     todo_modal_title: '新任務',
@@ -1075,6 +1090,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_alert_submit_failed: '送出失敗。',
     member_support_fab: '聯絡管理員',
     member_support_fab_aria_unread: '有新回覆',
+    member_support_delete_confirm: '要刪除這則諮詢嗎？',
+    member_support_delete_failed: '無法刪除諮詢。',
+    member_support_deleting: '刪除中…',
   },
 };
 
