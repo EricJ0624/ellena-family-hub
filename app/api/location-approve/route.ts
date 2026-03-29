@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { authenticateUser } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,10 +18,8 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 // 위치 요청 승인/거부/취소 API
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { requestId, userId, action, silent, groupId } = await request.json();
@@ -48,19 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      'MEMBER',
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 접근 권한이 없습니다.' },
-        { status: 403 }
-      );
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
       auth: {
@@ -158,10 +144,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data }, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('위치 요청 승인 API 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error.message },
+      { error: '서버 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

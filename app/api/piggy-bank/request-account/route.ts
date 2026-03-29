@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 /** 멤버 전용: 저금통 생성 요청. 이미 pending이 있으면 무시. */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json().catch(() => ({}));
@@ -18,12 +16,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'groupId가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
-    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const { role, isOwner } = memberCheck;
+    const isAdmin = role === 'ADMIN' || isOwner;
     if (isAdmin) {
       return NextResponse.json({ error: '관리자는 저금통 요청을 할 수 없습니다.' }, { status: 403 });
     }
@@ -57,10 +54,11 @@ export async function POST(request: NextRequest) {
       data: data || { id: null, status: 'pending' },
       message: '요청이 전달되었습니다.',
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '저금통 요청에 실패했습니다.';
     console.error('Piggy account request 오류:', error);
     return NextResponse.json(
-      { error: error.message || '저금통 요청에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

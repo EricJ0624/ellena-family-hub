@@ -1,7 +1,7 @@
 // Web Push 토큰 등록/업데이트 API (Supabase 사용)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { authenticateUser } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,10 +19,8 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 // Web Push 토큰 등록 또는 업데이트
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { userId, token, deviceInfo } = await request.json();
@@ -104,10 +102,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Push 토큰이 등록되었습니다.'
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('Push 토큰 등록 API 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error.message },
+      { error: '서버 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }
@@ -116,10 +115,8 @@ export async function POST(request: NextRequest) {
 // Push 토큰 삭제 (로그아웃 시)
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -166,10 +163,11 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: 'Push 토큰이 삭제되었습니다.'
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('Push 토큰 삭제 API 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error.message },
+      { error: '서버 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

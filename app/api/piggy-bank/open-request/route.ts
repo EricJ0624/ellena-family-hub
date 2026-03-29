@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
 
 function parseAmount(raw: any): number | null {
@@ -12,10 +12,8 @@ function parseAmount(raw: any): number | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -34,10 +32,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'destination은 wallet 또는 cash여야 합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
     const account = await ensurePiggyAccountForUser(groupId, user.id);
@@ -69,10 +65,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: requestData,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '개봉 요청에 실패했습니다.';
     console.error('Piggy open request 오류:', error);
     return NextResponse.json(
-      { error: error.message || '개봉 요청에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

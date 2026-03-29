@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import sharp from 'sharp';
 
 // 서버 사이드용 Supabase 클라이언트 (DB 작업용)
 // Service Role Key 사용: RLS 정책 우회하여 서버 사이드에서 모든 작업 수행 가능
@@ -103,7 +102,7 @@ function getS3Client(): S3Client {
 }
 
 // --- [AUTHENTICATION] Supabase 인증 확인 (중복 제거) ---
-export async function authenticateUser(request: NextRequest): Promise<{ user: any } | NextResponse> {
+export async function authenticateUser(request: NextRequest): Promise<{ user: { id: string; email?: string } } | NextResponse> {
   const authHeader = request.headers.get('authorization');
   if (!authHeader) {
     return NextResponse.json(
@@ -139,10 +138,11 @@ export async function authenticateUser(request: NextRequest): Promise<{ user: an
     }
 
     return { user };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('인증 처리 오류:', error);
     return NextResponse.json(
-      { error: '인증 처리 중 오류가 발생했습니다.', details: error.message },
+      { error: '인증 처리 중 오류가 발생했습니다.', details: errorMessage },
       { status: 401 }
     );
   }
@@ -165,20 +165,6 @@ export function getS3ClientInstance(): S3Client {
   return getS3Client();
 }
 
-// --- [UTILITY] S3 Key 생성 로직 (중복 제거) ---
-export function generateS3Key(
-  fileName: string,
-  mimeType: string,
-  userId: string
-): string {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const fileType = mimeType.startsWith('image/') ? 'photos' : 'videos';
-  const fileExtension = fileName.split('.').pop() || 'jpg';
-  const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-  return `originals/${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
-}
 
 // --- [UTILITY] S3 URL 생성 (중복 제거) ---
 export function generateS3Url(s3Key: string): string {
@@ -225,7 +211,8 @@ export async function downloadFromS3(s3Key: string): Promise<Blob> {
 
   // Stream을 Blob으로 변환
   const chunks: Uint8Array[] = [];
-  for await (const chunk of response.Body as any) {
+  const stream = response.Body as AsyncIterable<Uint8Array>;
+  for await (const chunk of stream) {
     chunks.push(chunk);
   }
   const buffer = Buffer.concat(chunks);
@@ -259,122 +246,12 @@ export async function deleteFromS3(s3Key: string): Promise<boolean> {
 
     await s3Client.send(command);
     return true;
-  } catch (error: any) {
+  } catch (error) {
     console.error('S3 삭제 오류:', error);
     return false; // 삭제 실패해도 계속 진행
   }
 }
 
-// ============================================
-// Multi-tenant 아키텍처: active_group_id 검증
-// ============================================
-
-/**
- * API 요청에서 active_group_id 검증 및 추출
- * 
- * @param request - NextRequest 객체
- * @param userId - 인증된 사용자 ID
- * @returns groupId 또는 에러 응답
- */
-export async function validateActiveGroupId(
-  request: NextRequest,
-  userId: string
-): Promise<{ groupId: string } | NextResponse> {
-  // 1. 요청 본문에서 groupId 추출
-  let body;
-  try {
-    body = await request.json().catch(() => ({})); // JSON 파싱 실패 시 빈 객체
-  } catch {
-    // JSON이 없는 경우 (GET 요청 등) 쿼리 파라미터에서 추출
-    const searchParams = request.nextUrl.searchParams;
-    const groupIdFromQuery = searchParams.get('groupId');
-    
-    if (groupIdFromQuery) {
-      const { checkPermission } = await import('@/lib/permissions');
-      const permissionResult = await checkPermission(
-        userId,
-        groupIdFromQuery,
-        null, // MEMBER 이상 권한 필요
-        userId
-      );
-      
-      if (!permissionResult.success) {
-        return NextResponse.json(
-          { error: '그룹 접근 권한이 없습니다.' },
-          { status: 403 }
-        );
-      }
-      
-      return { groupId: groupIdFromQuery };
-    }
-    
-    return NextResponse.json(
-      { error: 'groupId가 필요합니다.' },
-      { status: 400 }
-    );
-  }
-
-  const { groupId } = body || {};
-
-  // 2. groupId 필수 검증
-  if (!groupId) {
-    return NextResponse.json(
-      { error: 'groupId가 필요합니다.' },
-      { status: 400 }
-    );
-  }
-
-  // 3. UUID 형식 검증
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(groupId)) {
-    return NextResponse.json(
-      { error: '유효하지 않은 groupId 형식입니다.' },
-      { status: 400 }
-    );
-  }
-
-  // 4. 그룹 멤버십 권한 검증
-  const { checkPermission } = await import('@/lib/permissions');
-  const permissionResult = await checkPermission(
-    userId,
-    groupId,
-    null, // MEMBER 이상 권한 필요
-    userId
-  );
-
-  if (!permissionResult.success) {
-    return NextResponse.json(
-      { error: '그룹 접근 권한이 없습니다.' },
-      { status: 403 }
-    );
-  }
-
-  return { groupId };
-}
-
-/**
- * Supabase 쿼리에 groupId 필터 추가 (보안 강화)
- * 
- * @param query - Supabase 쿼리 빌더
- * @param groupId - 그룹 ID (필수)
- * @returns 필터링된 쿼리
- */
-export function ensureGroupIdFilter<T>(
-  query: any,
-  groupId: string | null | undefined
-): any {
-  if (!groupId) {
-    throw new Error('groupId는 필수입니다. Multi-tenant 아키텍처에서는 모든 데이터 조회에 groupId가 필요합니다.');
-  }
-  
-  // UUID 형식 검증
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(groupId)) {
-    throw new Error('유효하지 않은 groupId 형식입니다.');
-  }
-  
-  return query.eq('group_id', groupId);
-}
 
 // ============================================
 // 그룹 권한 메타데이터 포함 업로드 함수들
@@ -424,13 +301,6 @@ export async function checkS3ObjectExists(s3Key: string): Promise<boolean> {
   }
 }
 
-/**
- * 레거시: 일반(normal) 표시용 API 프록시 경로.
- * proxy는 CloudFront → S3 직링크로 302 (Cloudinary 제거).
- */
-export function getNormalImageProxyPath(s3Key: string): string {
-  return `/api/photo/proxy?key=${encodeURIComponent(s3Key)}`;
-}
 
 /**
  * S3에 파일 업로드 (그룹 권한 메타데이터 포함)
@@ -483,215 +353,4 @@ export async function uploadToS3WithGroup(
   return { url: publicUrl, key: s3Key };
 }
 
-/**
- * S3에 파일 업로드 (Key 지정)
- */
-export async function uploadToS3WithGroupAndKey(
-  file: Buffer,
-  key: string,
-  mimeType: string,
-  userId: string,
-  groupId?: string
-): Promise<{ url: string; key: string }> {
-  const bucketName = process.env.AWS_S3_BUCKET_NAME;
-  if (!bucketName) {
-    throw new Error('AWS_S3_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
-  }
 
-  const s3Client = getS3ClientInstance();
-  const metadata: Record<string, string> = {};
-  if (groupId) {
-    metadata['groupId'] = groupId;
-    metadata['userId'] = userId;
-  }
-
-  const upload = new Upload({
-    client: s3Client,
-    params: {
-      Bucket: bucketName,
-      Key: key,
-      Body: file,
-      ContentType: mimeType,
-      Metadata: metadata,
-      ACL: 'private',
-    },
-  });
-
-  await upload.done();
-  const publicUrl = generatePublicAssetUrl(key);
-  return { url: publicUrl, key };
-}
-
-export function replaceFileExtension(fileName: string, newExtension: string): string {
-  const baseName = fileName.replace(/\.[^.]+$/, '');
-  return `${baseName}.${newExtension}`;
-}
-
-export function getMimeTypeFromFormat(format?: string, fallback?: string): string {
-  if (!format) return fallback || 'image/jpeg';
-  return `image/${format}`;
-}
-
-export async function downloadFromUrl(url: string): Promise<Buffer> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`원격 파일 다운로드 실패: ${response.status}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-}
-
-export async function getImageMetadata(buffer: Buffer): Promise<{ width?: number; height?: number; format?: string }> {
-  const metadata = await sharp(buffer).metadata();
-  return { width: metadata.width, height: metadata.height, format: metadata.format };
-}
-
-export async function resizeImageBuffer(
-  buffer: Buffer,
-  maxDimension: number,
-  format: string,
-  quality: number
-): Promise<Buffer> {
-  const pipeline = sharp(buffer).resize({
-    width: maxDimension,
-    height: maxDimension,
-    fit: 'inside',
-    withoutEnlargement: true,
-  });
-
-  switch (format) {
-    case 'png':
-      return pipeline.png({ quality, progressive: true }).toBuffer();
-    case 'webp':
-      return pipeline.webp({ quality }).toBuffer();
-    case 'avif':
-      return pipeline.avif({ quality }).toBuffer();
-    default:
-      return pipeline.jpeg({ quality, progressive: true }).toBuffer();
-  }
-}
-
-// ============================================
-// 🔒 SECURITY: 데이터 격리 및 권한 검증 헬퍼 함수
-// ============================================
-
-/**
- * ✅ SECURITY: 그룹 소속 및 권한 검증 (통합 헬퍼)
- * 
- * 모든 API에서 사용하여 IDOR 공격 방지 및 데이터 격리 보장
- * 
- * @param userId - 검증할 사용자 ID
- * @param groupId - 검증할 그룹 ID
- * @param requiredRole - 필요한 최소 권한 ('ADMIN' | 'MEMBER' | null)
- * @returns PermissionResult 또는 NextResponse (권한 없음)
- * 
- * @example
- * ```typescript
- * const permissionCheck = await verifyGroupAccess(user.id, groupId, 'ADMIN');
- * if (permissionCheck instanceof NextResponse) {
- *   return permissionCheck; // 권한 없음 응답 반환
- * }
- * // permissionCheck는 PermissionResult 타입
- * ```
- */
-export async function verifyGroupAccess(
-  userId: string,
-  groupId: string,
-  requiredRole: 'ADMIN' | 'MEMBER' | null = null
-): Promise<import('@/lib/permissions').PermissionResult | NextResponse> {
-  const { checkPermission } = await import('@/lib/permissions');
-  
-  const permissionResult = await checkPermission(
-    userId,
-    groupId,
-    requiredRole,
-    userId // IDOR 방지
-  );
-
-  if (!permissionResult.success) {
-    return NextResponse.json(
-      { 
-        error: '그룹 접근 권한이 없습니다.',
-        details: permissionResult.error,
-        groupId,
-      },
-      { status: 403 }
-    );
-  }
-
-  return permissionResult;
-}
-
-/**
- * ✅ SECURITY: 리소스가 특정 그룹에 속하는지 검증
- * 
- * IDOR 공격 방지: 사용자가 접근 권한이 없는 그룹의 리소스에 접근하는 것을 차단
- * 
- * @param tableName - 테이블 이름 (예: 'memory_vault', 'family_tasks')
- * @param resourceId - 리소스 ID
- * @param expectedGroupId - 예상되는 그룹 ID
- * @returns boolean - 검증 성공 여부
- */
-export async function verifyResourceBelongsToGroup(
-  tableName: string,
-  resourceId: string,
-  expectedGroupId: string
-): Promise<boolean> {
-  try {
-    const supabase = getSupabaseServerClient();
-    
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('group_id')
-      .eq('id', resourceId)
-      .single();
-
-    if (error || !data) {
-      console.error(`리소스 그룹 검증 실패 (${tableName}):`, error);
-      return false;
-    }
-
-    return data.group_id === expectedGroupId;
-  } catch (error) {
-    console.error('리소스 그룹 검증 중 오류:', error);
-    return false;
-  }
-}
-
-/**
- * ✅ SECURITY: 시스템 관리자가 특정 그룹에 임시 접근 권한이 있는지 확인
- * 
- * 시스템 관리자는 그룹 멤버가 아니더라도 승인된 접근 요청이 있으면 임시로 접근 가능
- * 
- * @param adminId - 시스템 관리자 ID
- * @param groupId - 그룹 ID
- * @returns boolean - 접근 가능 여부
- */
-export async function canSystemAdminAccessGroup(
-  adminId: string,
-  groupId: string
-): Promise<boolean> {
-  try {
-    const supabase = getSupabaseServerClient();
-    
-    // 1. 시스템 관리자 여부 확인
-    const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-      user_id_param: adminId,
-    });
-    
-    if (!isAdmin) {
-      return false;
-    }
-    
-    // 2. 접근 권한 확인
-    const { data: canAccess } = await supabase.rpc('can_access_group_dashboard', {
-      group_id_param: groupId,
-      admin_id_param: adminId,
-    });
-    
-    return canAccess === true;
-  } catch (error) {
-    console.error('시스템 관리자 접근 권한 확인 중 오류:', error);
-    return false;
-  }
-}

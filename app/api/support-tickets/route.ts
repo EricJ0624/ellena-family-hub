@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 /**
  * 멤버 문의 목록 조회 (본인 작성 + 해당 그룹)
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -17,10 +17,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '그룹 ID가 필요합니다.' }, { status: 400 });
     }
 
-    const permission = await checkPermission(user.id, groupId, null, user.id);
-    if (!permission.success) {
-      return NextResponse.json({ error: '그룹 접근 권한이 없습니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -37,10 +35,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: tickets || [] });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '문의 조회 중 오류가 발생했습니다.';
     console.error('멤버 문의 조회 오류:', error);
     return NextResponse.json(
-      { error: error.message || '문의 조회 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -51,7 +50,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -65,10 +64,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const permission = await checkPermission(user.id, group_id, null, user.id);
-    if (!permission.success) {
-      return NextResponse.json({ error: '그룹 접근 권한이 없습니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, group_id);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -90,10 +87,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: ticket });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '문의 작성 중 오류가 발생했습니다.';
     console.error('멤버 문의 작성 오류:', error);
     return NextResponse.json(
-      { error: error.message || '문의 작성 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

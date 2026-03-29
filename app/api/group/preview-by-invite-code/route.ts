@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /** 초대 코드 형식: 영숫자 1~20자 (DB는 12자 생성) */
 const INVITE_CODE_REGEX = /^[0-9A-Za-z]{1,20}$/;
@@ -40,10 +41,8 @@ function checkRateLimit(ip: string): boolean {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
 
     const ip = getClientIp(request);
     if (!checkRateLimit(ip)) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 // type → 한글 라벨 매핑
 const WALLET_TYPE_LABELS: Record<string, string> = {
@@ -27,10 +27,8 @@ function formatDate(dateString: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -46,13 +44,11 @@ export async function GET(request: NextRequest) {
     // 대상 사용자 결정: 관리자가 childId 지정하면 해당 아이, 아니면 본인
     const targetUserId = childId || user.id;
 
-    // 권한 확인: 본인이거나 관리자만 조회 가능
-    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
-    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const { role, isOwner } = memberCheck;
+    const isAdmin = role === 'ADMIN' || isOwner;
     
     // 관리자가 아니면 본인 것만 조회 가능
     if (!isAdmin && targetUserId !== user.id) {
@@ -139,10 +135,11 @@ export async function GET(request: NextRequest) {
         bankTransactions: formattedBankTransactions,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '거래 내역을 불러오지 못했습니다.';
     console.error('Piggy transactions 오류:', error);
     return NextResponse.json(
-      { error: error.message || '거래 내역을 불러오지 못했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

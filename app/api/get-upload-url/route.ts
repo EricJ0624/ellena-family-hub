@@ -2,21 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
-  authenticateUser,
   getS3ClientInstance,
   generateS3KeyWithGroup,
   generatePublicAssetUrl
 } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { getGroupStorageStats } from '@/lib/storage-quota';
 
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -29,19 +25,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      'MEMBER',
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 접근 권한이 없습니다.' },
-        { status: 403 }
-      );
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     // 용량 제한: 모두 20MB 통일
     const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -234,31 +219,31 @@ export async function POST(request: NextRequest) {
       expiresIn: 900, // 15분
     });
 
-  } catch (error: any) {
+  } catch (error) {
     // 상세한 에러 정보 로깅
     console.error('Presigned URL 생성 최상위 오류:', {
-      message: error.message,
-      name: error.name,
-      code: error.code,
-      stack: error.stack?.substring(0, 500),
+      message: error instanceof Error ? error.message : String(error),
+      name: (error as any).name,
+      code: (error as any).code,
+      stack: (error as any).stack?.substring(0, 500),
       type: typeof error,
-      constructor: error.constructor?.name,
+      constructor: (error as any).constructor?.name,
     });
     
     // 에러 타입별 상세 메시지
-    let errorMessage = error.message || 'Presigned URL 생성 중 오류가 발생했습니다.';
+    let errorMessage = error instanceof Error ? error.message : 'Presigned URL 생성 중 오류가 발생했습니다.';
     let errorDetails: any = {};
     
     // JSON 파싱 오류
-    if (error instanceof SyntaxError || error.message?.includes('JSON') || error.message?.includes('parse')) {
+    if (error instanceof SyntaxError || (error instanceof Error && (error.message?.includes('JSON') || error.message?.includes('parse')))) {
       errorMessage = '요청 데이터 파싱 오류';
       errorDetails = {
         hint: '요청 본문이 올바른 JSON 형식인지 확인하세요.',
-        originalError: error.message
+        originalError: error instanceof Error ? error.message : undefined
       };
     }
     // 인증 오류
-    else if (error.message?.includes('인증') || error.message?.includes('authentication') || error.message?.includes('unauthorized')) {
+    else if (error instanceof Error && (error.message?.includes('인증') || error.message?.includes('authentication') || error.message?.includes('unauthorized'))) {
       errorMessage = '인증 오류';
       errorDetails = {
         hint: '로그인 상태를 확인하거나 세션을 갱신해주세요.',
@@ -266,19 +251,19 @@ export async function POST(request: NextRequest) {
       };
     }
     // AWS SDK 에러 처리
-    else if (error.name === 'CredentialsError' || error.code === 'CredentialsError') {
+    else if ((error as any).name === 'CredentialsError' || (error as any).code === 'CredentialsError') {
       errorMessage = 'AWS 자격 증명 오류: 환경 변수를 확인해주세요.';
       errorDetails = {
         missing: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION'],
         hint: '환경 변수가 올바르게 설정되었는지 확인하세요.'
       };
-    } else if (error.name === 'InvalidRegion' || error.code === 'InvalidRegion') {
+    } else if ((error as any).name === 'InvalidRegion' || (error as any).code === 'InvalidRegion') {
       errorMessage = `AWS 리전 오류: ${process.env.AWS_REGION || '설정되지 않음'}`;
       errorDetails = {
         currentRegion: process.env.AWS_REGION,
         hint: 'AWS_REGION이 올바른 형식인지 확인하세요. (예: ap-southeast-2)'
       };
-    } else if (error.message?.includes('AWS') || error.message?.includes('S3')) {
+    } else if (error instanceof Error && (error.message?.includes('AWS') || error.message?.includes('S3'))) {
       errorMessage = `AWS 설정 오류: ${error.message}`;
       errorDetails = {
         originalError: error.message,
@@ -290,8 +275,8 @@ export async function POST(request: NextRequest) {
       { 
         error: errorMessage,
         details: errorDetails,
-        originalError: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        errorCode: error.code || error.name || 'UNKNOWN'
+        originalError: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined,
+        errorCode: (error as any).code || (error as any).name || 'UNKNOWN'
       },
       { status: 500 }
     );

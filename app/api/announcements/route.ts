@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /**
  * 공지사항 목록 조회 (일반 멤버용 - ALL_MEMBERS 공지만)
  */
 export async function GET(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -93,10 +91,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: announcementsWithReadStatus || [],
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '공지사항 조회 중 오류가 발생했습니다.';
     console.error('공지사항 조회 오류:', error);
     return NextResponse.json(
-      { error: error.message || '공지사항 조회 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -107,11 +106,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -162,10 +158,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '공지사항 읽음 처리 중 오류가 발생했습니다.';
     console.error('공지사항 읽음 처리 오류:', error);
     return NextResponse.json(
-      { error: error.message || '공지사항 읽음 처리 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

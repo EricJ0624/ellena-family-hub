@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  authenticateUser,
   getSupabaseServerClient,
   deleteFromS3,
 } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /**
  * 회원탈퇴 API
@@ -15,11 +15,8 @@ import {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const supabaseServer = getSupabaseServerClient();
@@ -201,10 +198,11 @@ export async function DELETE(request: NextRequest) {
       message: '회원탈퇴가 완료되었습니다.',
     });
 
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('회원탈퇴 처리 오류:', error);
     return NextResponse.json(
-      { error: '회원탈퇴 처리 중 오류가 발생했습니다.', details: error.message },
+      { error: '회원탈퇴 처리 중 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -17,13 +15,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'group_id가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
-    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const { role, isOwner } = memberCheck;
+    const isAdmin = role === 'ADMIN' || isOwner;
 
     let query = supabase
       .from('piggy_open_requests')
@@ -42,10 +39,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: requests || [] });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '요청 목록을 불러오지 못했습니다.';
     console.error('Piggy requests 오류:', error);
     return NextResponse.json(
-      { error: error.message || '요청 목록을 불러오지 못했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

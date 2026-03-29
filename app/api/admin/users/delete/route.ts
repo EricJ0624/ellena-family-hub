@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { isSystemAdmin } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 export async function DELETE(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
     const { userId } = body;
@@ -68,10 +59,10 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: '사용자가 삭제되었습니다.',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('사용자 삭제 오류:', error);
-    const message = error?.message || '사용자 삭제 중 오류가 발생했습니다.';
-    const status = error?.status >= 400 ? error.status : 500;
+    const message = error instanceof Error ? error.message : '사용자 삭제 중 오류가 발생했습니다.';
+    const status = (error as any)?.status >= 400 ? (error as any).status : 500;
     return NextResponse.json(
       { error: message },
       { status }

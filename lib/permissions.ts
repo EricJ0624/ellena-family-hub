@@ -6,6 +6,7 @@
  */
 
 import { getSupabaseServerClient } from './api-helpers';
+import { isValidUUID } from './validation';
 import type { MembershipRole } from '@/types/db';
 
 /**
@@ -86,8 +87,7 @@ export async function checkPermission(
     }
 
     // UUID 형식 검증 (보안 강화)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(userId) || !uuidRegex.test(groupId)) {
+    if (!isValidUUID(userId) || !isValidUUID(groupId)) {
       return {
         success: false,
         error: PermissionError.USER_NOT_FOUND,
@@ -190,62 +190,13 @@ export async function checkPermission(
       role: effectiveRole,
       isOwner,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error('권한 검증 중 오류:', error);
     return {
       success: false,
       error: PermissionError.DATABASE_ERROR,
     };
   }
-}
-
-/**
- * 그룹 멤버 여부 확인 (권한 레벨 무관)
- * 
- * @param userId - 확인할 사용자 ID
- * @param groupId - 그룹 ID
- * @returns boolean - 멤버 여부
- */
-export async function isGroupMember(
-  userId: string,
-  groupId: string
-): Promise<boolean> {
-  const result = await checkPermission(userId, groupId, null);
-  return result.success;
-}
-
-/**
- * 그룹 ADMIN 권한 확인
- * 
- * ✅ SECURITY: 그룹 내 실제 역할에만 의존 (소유자 또는 ADMIN 역할)
- * 시스템 관리자 여부와 무관하게 해당 그룹에서의 실제 권한만 확인
- * 
- * @param userId - 확인할 사용자 ID
- * @param groupId - 그룹 ID
- * @returns boolean - ADMIN 권한 여부
- */
-export async function isGroupAdmin(
-  userId: string,
-  groupId: string
-): Promise<boolean> {
-  // 그룹 내 실제 권한만 확인 (소유자 또는 ADMIN 역할)
-  const result = await checkPermission(userId, groupId, 'ADMIN');
-  return result.success && result.role === 'ADMIN';
-}
-
-/**
- * 그룹 소유자 확인
- * 
- * @param userId - 확인할 사용자 ID
- * @param groupId - 그룹 ID
- * @returns boolean - 소유자 여부
- */
-export async function isGroupOwner(
-  userId: string,
-  groupId: string
-): Promise<boolean> {
-  const result = await checkPermission(userId, groupId, null);
-  return result.success && result.isOwner;
 }
 
 /**
@@ -281,7 +232,7 @@ export async function isSystemAdmin(userId?: string): Promise<boolean> {
     }
     
     return data === true;
-  } catch (error: any) {
+  } catch (error) {
     console.error('시스템 관리자 확인 중 오류:', error);
     return false;
   }

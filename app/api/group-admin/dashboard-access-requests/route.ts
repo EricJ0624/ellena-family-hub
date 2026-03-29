@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 
 /**
  * 접근 요청 목록 조회 (그룹 관리자용 - 해당 그룹의 모든 접근 요청)
  */
 export async function GET(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -24,20 +21,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 권한 확인
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      'ADMIN',
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireGroupAdmin(user.id, groupId);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -60,10 +45,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: requests || [],
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 요청 조회 중 오류가 발생했습니다.';
     console.error('접근 요청 조회 오류:', error);
     return NextResponse.json(
-      { error: error.message || '접근 요청 조회 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -74,11 +60,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -98,20 +81,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 권한 확인
-    const permissionResult = await checkPermission(
-      user.id,
-      group_id,
-      'ADMIN',
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireGroupAdmin(user.id, group_id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -159,10 +130,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: accessRequest,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 요청 처리 중 오류가 발생했습니다.';
     console.error('접근 요청 처리 오류:', error);
     return NextResponse.json(
-      { error: error.message || '접근 요청 처리 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -173,11 +145,8 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -190,20 +159,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 권한 확인
-    const permissionResult = await checkPermission(
-      user.id,
-      group_id,
-      'ADMIN',
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireGroupAdmin(user.id, group_id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -231,10 +188,11 @@ export async function PUT(request: NextRequest) {
       success: true,
       data: accessRequest,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 권한 취소 중 오류가 발생했습니다.';
     console.error('접근 권한 취소 오류:', error);
     return NextResponse.json(
-      { error: error.message || '접근 권한 취소 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

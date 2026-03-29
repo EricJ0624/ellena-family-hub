@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  authenticateUser, 
   getSupabaseServerClient,
   deleteFromS3,
 } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 export async function DELETE(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     // 요청 본문에서 photoId 추출
@@ -34,20 +30,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 그룹 권한 검증
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      null, // MEMBER 이상 권한 필요
-      user.id
-    );
-
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 접근 권한이 없습니다.' },
-        { status: 403 }
-      );
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
+    const { role, isOwner: isGroupOwner } = memberCheck;
 
     // Supabase에서 파일 정보 조회 (삭제 전에)
     const supabaseServer = getSupabaseServerClient();
@@ -67,7 +52,7 @@ export async function DELETE(request: NextRequest) {
 
     // 권한 확인: 업로드한 사용자 또는 그룹 ADMIN만 삭제 가능
     const isOwner = photoData.uploader_id === user.id;
-    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const isAdmin = role === 'ADMIN' || isGroupOwner;
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
@@ -107,10 +92,11 @@ export async function DELETE(request: NextRequest) {
       message: '사진이 삭제되었습니다.'
     });
 
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '사진 삭제 중 오류가 발생했습니다.';
     console.error('사진 삭제 오류:', error);
     return NextResponse.json(
-      { error: error.message || '사진 삭제 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

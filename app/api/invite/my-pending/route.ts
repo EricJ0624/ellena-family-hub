@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /**
  * 인증된 사용자의 대기 중인 초대 코드 조회 후 삭제.
@@ -7,10 +8,8 @@ import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
     const email = user?.email?.trim()?.toLowerCase();
     if (!email) {

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser, ensurePiggyWallet } from '@/lib/piggy-bank';
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -18,10 +16,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'groupId와 requestId가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
-    }
+    const memberCheck2 = await requireGroupMember(user.id, groupId);
+    if (memberCheck2 instanceof NextResponse) return memberCheck2;
 
     const supabase = getSupabaseServerClient();
 
@@ -41,7 +37,8 @@ export async function POST(request: NextRequest) {
     }
 
     const isRequester = requestData.child_id === user.id;
-    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const { role, isOwner } = memberCheck2;
+    const isAdmin = role === 'ADMIN' || isOwner;
 
     if (isRequester) {
       return NextResponse.json({ error: '아이는 승인할 수 없습니다.' }, { status: 403 });
@@ -141,10 +138,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: { status: 'approved' } });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '승인 처리에 실패했습니다.';
     console.error('Piggy open approve 오류:', error);
     return NextResponse.json(
-      { error: error.message || '승인 처리에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

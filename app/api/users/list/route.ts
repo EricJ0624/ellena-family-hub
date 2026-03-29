@@ -1,8 +1,7 @@
 // 모든 사용자 목록 조회 API (로그인 사용자 기준으로 profiles 테이블의 사용자)
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { authenticateUser } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,10 +18,8 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -45,13 +42,8 @@ export async function GET(request: NextRequest) {
 
     // groupId가 있으면 요청자가 해당 그룹 멤버인지 검사 (비멤버가 다른 그룹 멤버 목록 조회 방지)
     if (groupId) {
-      const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-      if (!permissionResult.success) {
-        return NextResponse.json(
-          { error: '해당 그룹의 멤버만 목록을 조회할 수 있습니다.' },
-          { status: 403 }
-        );
-      }
+      const memberCheck = await requireGroupMember(user.id, groupId);
+      if (memberCheck instanceof NextResponse) return memberCheck;
     }
 
     // Service role key를 사용하여 RLS 우회 (서버 사이드에서 모든 사용자 조회)
@@ -156,10 +148,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: sortedData }, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('사용자 목록 API 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error.message },
+      { error: '서버 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

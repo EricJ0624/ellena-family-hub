@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /**
  * 그룹 탈퇴 API
@@ -7,11 +8,8 @@ import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
  */
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -81,10 +79,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `${group.name} 그룹에서 탈퇴했습니다.`,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '그룹 탈퇴 중 오류가 발생했습니다.';
     console.error('그룹 탈퇴 오류:', error);
     return NextResponse.json(
-      { error: error.message || '그룹 탈퇴 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

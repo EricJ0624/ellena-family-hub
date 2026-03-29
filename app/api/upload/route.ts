@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  authenticateUser,
   base64ToBlob,
   checkS3Config,
   generatePublicAssetUrl,
   getSupabaseServerClient,
   uploadToS3WithGroup,
 } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { getGroupStorageStats } from '@/lib/storage-quota';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -18,7 +17,7 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -63,18 +62,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      null,
-      user.id
-    );
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '그룹 접근 권한이 없습니다.' },
-        { status: 403 }
-      );
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const estimatedSize = (originalData.length * 3) / 4;
     if (estimatedSize > MAX_BODY_SIZE) {
@@ -163,10 +152,11 @@ export async function POST(request: NextRequest) {
       fileType,
       upload_mode: mode,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '업로드 중 오류가 발생했습니다.';
     console.error('업로드 오류:', error);
     return NextResponse.json(
-      { error: error.message || '업로드 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

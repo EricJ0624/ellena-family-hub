@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 import { ensurePiggyWallet } from '@/lib/piggy-bank';
 
 function parseAmount(raw: any): number | null {
@@ -12,10 +12,8 @@ function parseAmount(raw: any): number | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -30,10 +28,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '유효한 금액을 입력해주세요.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
-    }
+    const adminCheck = await requireGroupAdmin(user.id, groupId);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
     const wallet = await ensurePiggyWallet(groupId, childId);
@@ -69,10 +65,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: { balance: newBalance },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '용돈 지급에 실패했습니다.';
     console.error('Piggy allowance 오류:', error);
     return NextResponse.json(
-      { error: error.message || '용돈 지급에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

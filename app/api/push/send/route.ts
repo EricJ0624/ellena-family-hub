@@ -123,10 +123,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error('Web Push 알림 API 오류:', error);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.', details: error.message },
+      { error: '서버 오류가 발생했습니다.', details: errorMessage },
       { status: 500 }
     );
   }

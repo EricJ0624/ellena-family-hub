@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { isSystemAdmin } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
@@ -8,21 +8,12 @@ import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
  */
 export async function GET(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -44,10 +35,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: announcements || [],
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '공지사항 조회 중 오류가 발생했습니다.';
     console.error('공지사항 조회 오류:', error);
     return NextResponse.json(
-      { error: error.message || '공지사항 조회 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -58,21 +50,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
     const { title, content, title_i18n, content_i18n, is_active, target } = body;
@@ -154,10 +137,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: announcement,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '공지사항 작성 중 오류가 발생했습니다.';
     console.error('공지사항 작성 오류:', error);
     return NextResponse.json(
-      { error: error.message || '공지사항 작성 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -168,21 +152,12 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
     const { id, title, content, title_i18n, content_i18n, is_active, target } = body;
@@ -269,10 +244,11 @@ export async function PUT(request: NextRequest) {
       success: true,
       data: announcement,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '공지사항 수정 중 오류가 발생했습니다.';
     console.error('공지사항 수정 오류:', error);
     return NextResponse.json(
-      { error: error.message || '공지사항 수정 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -285,21 +261,12 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -396,10 +363,11 @@ export async function DELETE(request: NextRequest) {
         message: '공지사항이 비활성화되었습니다.',
       });
     }
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '공지사항 삭제 중 오류가 발생했습니다.';
     console.error('공지사항 삭제 오류:', error);
     return NextResponse.json(
-      { error: error.message || '공지사항 삭제 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { isSystemAdmin } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
 /**
@@ -8,21 +8,12 @@ import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
  */
 export async function GET(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -70,10 +61,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: requestsWithGroups,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 요청 조회 중 오류가 발생했습니다.';
     console.error('접근 요청 조회 오류:', error);
     return NextResponse.json(
-      { error: error.message || '접근 요청 조회 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -84,21 +76,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
     const { group_id, reason } = body;
@@ -152,10 +135,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: accessRequest,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 요청 작성 중 오류가 발생했습니다.';
     console.error('접근 요청 작성 오류:', error);
     return NextResponse.json(
-      { error: error.message || '접근 요청 작성 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -166,21 +150,12 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // 인증 확인
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
-    // 시스템 관리자 확인
-    const admin = await isSystemAdmin(user.id);
-    if (!admin) {
-      return NextResponse.json(
-        { error: '시스템 관리자 권한이 필요합니다.' },
-        { status: 403 }
-      );
-    }
+    const adminCheck = await requireSystemAdmin(user.id);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -246,10 +221,11 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '접근 요청 취소 중 오류가 발생했습니다.';
     console.error('접근 요청 취소 오류:', error);
     return NextResponse.json(
-      { error: error.message || '접근 요청 취소 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

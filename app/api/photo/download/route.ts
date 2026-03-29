@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  authenticateUser,
   getSupabaseServerClient,
   downloadFromS3,
 } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 /**
  * 사진 파일 다운로드 (S3 → 스트림, Content-Disposition: attachment)
@@ -13,10 +12,8 @@ import { checkPermission } from '@/lib/permissions';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const id = request.nextUrl.searchParams.get('id');
@@ -49,18 +46,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const permissionResult = await checkPermission(
-      user.id,
-      groupId,
-      null,
-      user.id
-    );
-    if (!permissionResult.success) {
-      return NextResponse.json(
-        { error: '해당 사진을 볼 권한이 없습니다.' },
-        { status: 403 }
-      );
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const s3Key = row.s3_key as string | null;
     if (!s3Key) {

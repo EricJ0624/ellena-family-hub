@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /** GET: place_id로 캐시 조회. 있으면 { place_id, name, latitude, longitude, formatted_address } 반환 */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
 
     const placeId = request.nextUrl.searchParams.get('placeId');
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 /** POST: Place Details 결과를 캐시에 저장(upsert). 영구 보관 */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
 
     const body = await request.json();

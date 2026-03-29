@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 
 const WALLET_TYPE_LABELS: Record<string, string> = {
   allowance: '용돈 지급',
@@ -26,7 +26,7 @@ function formatDate(dateString: string): string {
 /** 그룹 관리자 전용: 해당 그룹의 삭제된 저금통 보관 내역 조회 */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -38,10 +38,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '그룹 ID가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 관리자 권한이 필요합니다.' }, { status: 403 });
-    }
+    const adminCheck = await requireGroupAdmin(user.id, groupId);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -157,10 +155,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: { snapshots: list },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '보관 내역 조회에 실패했습니다.';
     console.error('Group admin piggy archives 오류:', error);
     return NextResponse.json(
-      { error: error.message || '보관 내역 조회에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -169,7 +168,7 @@ export async function GET(request: NextRequest) {
 /** 그룹 관리자 전용: 보관된 저금통 거래 내역(스냅샷) 삭제. 해당 스냅샷의 아카이브 거래 행도 cascade 삭제됨. */
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -181,10 +180,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'group_id와 snapshot_id가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 관리자 권한이 필요합니다.' }, { status: 403 });
-    }
+    const adminCheck = await requireGroupAdmin(user.id, groupId);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
 
@@ -208,10 +205,11 @@ export async function DELETE(request: NextRequest) {
     if (delErr) throw delErr;
 
     return NextResponse.json({ success: true, message: '보관 내역이 삭제되었습니다.' });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '보관 내역 삭제에 실패했습니다.';
     console.error('Group admin piggy archives delete 오류:', error);
     return NextResponse.json(
-      { error: error.message || '보관 내역 삭제에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

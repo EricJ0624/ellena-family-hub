@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 import { checkPermission } from '@/lib/permissions';
 import type { FamilyRole } from '@/types/db';
 
@@ -13,7 +14,7 @@ const VALID_FAMILY_ROLES: (FamilyRole | null)[] = [null, 'mom', 'dad', 'son', 'd
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -118,10 +119,11 @@ export async function PATCH(request: NextRequest) {
       success: true,
       data: { targetUserId, groupId, family_role: value },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '가족 역할 설정 중 오류가 발생했습니다.';
     console.error('가족 역할 설정 오류:', error);
     return NextResponse.json(
-      { error: error.message || '가족 역할 설정 중 오류가 발생했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser, ensurePiggyWallet, getPiggyAccountForUserIfExists, getPiggyWalletForUserIfExists, getGroupMembers } from '@/lib/piggy-bank';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const { searchParams } = new URL(request.url);
@@ -19,13 +17,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'group_id가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, null, user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '그룹 멤버 권한이 필요합니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
-    const isAdmin = permissionResult.role === 'ADMIN' || permissionResult.isOwner;
+    const { role, isOwner } = memberCheck;
+    const isAdmin = role === 'ADMIN' || isOwner;
 
     if (isAdmin && childId) {
       // 관리자가 특정 아이 조회 시: 있으면 반환(잔고 0 포함), 없으면 null (저금통 추가 버튼용)
@@ -52,8 +49,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          role: permissionResult.role,
-          isOwner: permissionResult.isOwner,
+          role,
+          isOwner,
           account: account ? { ...account, ownerNickname } : null,
           wallet,
           pendingRequests: pendingRequests || [],
@@ -125,8 +122,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          role: permissionResult.role,
-          isOwner: permissionResult.isOwner,
+          role,
+          isOwner,
           memberPiggies,
           pendingRequests: pendingRequests || [],
           pendingAccountRequests: pendingAccountRequestsWithNick,
@@ -172,18 +169,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        role: permissionResult.role,
-        isOwner: permissionResult.isOwner,
+        role,
+        isOwner,
         account: account ? { ...account, ownerNickname } : null,
         wallet: wallet ?? null,
         pendingRequests: pendingRequests || [],
         pendingAccountRequest,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '요약 정보를 불러오지 못했습니다.';
     console.error('Piggy summary 오류:', error);
     return NextResponse.json(
-      { error: error.message || '요약 정보를 불러오지 못했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

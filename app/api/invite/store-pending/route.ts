@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /** 초대 코드 형식: 영숫자 1~20자 */
 const INVITE_CODE_REGEX = /^[0-9A-Za-z]{1,20}$/;

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateUser(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+    const authResult = await requireAuthUser(request);
+    if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
     const body = await request.json();
@@ -17,10 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'groupId와 requestId가 필요합니다.' }, { status: 400 });
     }
 
-    const permissionResult = await checkPermission(user.id, groupId, 'ADMIN', user.id);
-    if (!permissionResult.success) {
-      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 });
-    }
+    const adminCheck = await requireGroupAdmin(user.id, groupId);
+    if (adminCheck instanceof NextResponse) return adminCheck;
 
     const supabase = getSupabaseServerClient();
     const now = new Date().toISOString();
@@ -40,10 +36,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '거절 처리에 실패했습니다.';
     console.error('Piggy reject 오류:', error);
     return NextResponse.json(
-      { error: error.message || '거절 처리에 실패했습니다.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

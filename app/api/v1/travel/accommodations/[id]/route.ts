@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateUser, getSupabaseServerClient } from '@/lib/api-helpers';
-import { checkPermission } from '@/lib/permissions';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 
 /** PATCH: 숙소 수정 */
 export async function PATCH(
@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -19,10 +19,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'groupId와 id가 필요합니다.' }, { status: 400 });
     }
 
-    const perm = await checkPermission(user.id, groupId, null, user.id);
-    if (!perm.success) {
-      return NextResponse.json({ error: '그룹 접근 권한이 없습니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
     const updatePayload: Record<string, unknown> = {
@@ -65,7 +63,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await authenticateUser(request);
+    const authResult = await requireAuthUser(request);
     if (authResult instanceof NextResponse) return authResult;
     const { user } = authResult;
 
@@ -75,10 +73,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'groupId와 id가 필요합니다.' }, { status: 400 });
     }
 
-    const perm = await checkPermission(user.id, groupId, null, user.id);
-    if (!perm.success) {
-      return NextResponse.json({ error: '그룹 접근 권한이 없습니다.' }, { status: 403 });
-    }
+    const memberCheck = await requireGroupMember(user.id, groupId);
+    if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
     const now = new Date().toISOString();
