@@ -1494,14 +1494,19 @@ export default function GroupAdminPage() {
                   justifyContent: 'space-between',
                   marginBottom: '24px',
                 }}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: 0,
-                  }}>
-                    문의하기
-                  </h2>
+                  <div>
+                    <h2 style={{
+                      fontSize: '20px',
+                      fontWeight: '600',
+                      color: '#1e293b',
+                      margin: 0,
+                    }}>
+                      문의하기
+                    </h2>
+                    <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                      시스템 관리자에게 보내는 문의입니다. 가족 멤버 문의는 &quot;멤버 문의&quot; 탭에서 확인하세요.
+                    </p>
+                  </div>
                   <button
                     onClick={() => {
                       setShowTicketForm(true);
@@ -1520,10 +1525,11 @@ export default function GroupAdminPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '8px',
+                      flexShrink: 0,
                     }}
                   >
                     <Plus style={{ width: '18px', height: '18px' }} />
-                    문의 작성
+                    시스템 관리자에게 문의
                   </button>
                 </div>
 
