@@ -6354,7 +6354,8 @@ export default function FamilyHub() {
       setChatPendingFiles([]);
       if (chatFileInputRef.current) chatFileInputRef.current.value = '';
       if (chatCameraInputRef.current) chatCameraInputRef.current.value = '';
-      await loadChatAttachments();
+      // state 업데이트 완료 대기 후 첨부 파일 로드
+      setTimeout(() => loadChatAttachments(), 150);
     } finally {
       setChatUploading(false);
       chatUploadAbortRef.current = null;
@@ -7396,12 +7397,11 @@ export default function FamilyHub() {
                       <span className="message-time">{m.time}</span>
                   </div>
                     <div className="message-bubble">
-                      <p className="message-text">{m.text}</p>
                       {(() => {
                         const rows = chatAttachmentsByMessage[String(m.id)] || [];
                         if (rows.length === 0) return null;
                         return (
-                          <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
+                          <div style={{ marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
                             {rows.map((att) => (
                               <div key={att.id} style={{ position: 'relative' }}>
                                 <a href={att.image_url} target="_blank" rel="noopener noreferrer">
@@ -7449,6 +7449,7 @@ export default function FamilyHub() {
                           </div>
                         );
                       })()}
+                      <p className="message-text">{m.text}</p>
                   </div>
                 </div>
               ))}
