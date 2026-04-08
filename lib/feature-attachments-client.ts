@@ -22,7 +22,6 @@ export type UploadedAttachment = {
   created_at: string;
 };
 
-export type UploadCompressionPreset = 'original' | 'balanced' | 'aggressive';
 export type UploadJobStatus = 'queued' | 'uploading' | 'success' | 'failed' | 'cancelled';
 export type UploadJob = {
   id: string;
@@ -57,11 +56,10 @@ function fileToImageBitmap(file: Blob): Promise<ImageBitmap> {
   return createImageBitmap(file);
 }
 
-async function compressImageByPreset(file: File, preset: UploadCompressionPreset): Promise<File> {
-  if (preset === 'original') return file;
+async function compressImageAuto(file: File): Promise<File> {
   const bitmap = await fileToImageBitmap(file);
-  const maxEdge = preset === 'balanced' ? 2200 : 1600;
-  const quality = preset === 'balanced' ? 0.86 : 0.72;
+  const maxEdge = 2200;
+  const quality = 0.86;
   const ratio = Math.min(maxEdge / bitmap.width, maxEdge / bitmap.height, 1);
   const w = Math.max(1, Math.round(bitmap.width * ratio));
   const h = Math.max(1, Math.round(bitmap.height * ratio));
@@ -120,12 +118,10 @@ export async function uploadFeatureAttachment(params: {
   entityId: string;
   file: File;
   signal?: AbortSignal;
-  compressionPreset?: UploadCompressionPreset;
   onProgress?: (progress: number) => void;
 }) {
   const { groupId, featureType, entityType, entityId, signal, onProgress } = params;
-  const compressionPreset = params.compressionPreset ?? 'balanced';
-  const file = await compressImageByPreset(params.file, compressionPreset);
+  const file = await compressImageAuto(params.file);
   const validationError = validateAttachmentFile(file);
   if (validationError) throw new Error(validationError);
   onProgress?.(10);
@@ -186,7 +182,6 @@ export async function uploadFeatureAttachments(params: {
   files: File[];
   maxConcurrent?: number;
   retryCount?: number;
-  compressionPreset?: UploadCompressionPreset;
   onJobsChange?: (jobs: UploadJob[]) => void;
   signal?: AbortSignal;
 }) {
@@ -197,7 +192,6 @@ export async function uploadFeatureAttachments(params: {
     entityId,
     files,
     signal,
-    compressionPreset = 'balanced',
   } = params;
   const maxConcurrent = Math.max(1, params.maxConcurrent ?? 3);
   const retryCount = Math.max(0, params.retryCount ?? 1);
@@ -235,7 +229,6 @@ export async function uploadFeatureAttachments(params: {
             entityId,
             file,
             signal,
-            compressionPreset,
             onProgress: (p) => {
               job.progress = p;
               emit();
