@@ -101,7 +101,7 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 // --- [TYPES] 타입 안정성 추가 ---
 type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; assigned_to_user_id?: string; supabaseId?: string | number };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
-type Message = { id: string | number; user: string; text: string; time: string; sender_id?: string };
+type Message = { id: string; user: string; text: string; time: string; sender_id?: string };
 type ChatAttachment = UploadedAttachment;
 type Photo = {
   id: number | string; // 로컬 임시 id 또는 Supabase UUID
@@ -304,6 +304,7 @@ export default function FamilyHub() {
     presence: any;
     locations: any;
     locationRequests: any;
+    attachments: any;
   }>({
     messages: null,
     tasks: null,
@@ -311,7 +312,8 @@ export default function FamilyHub() {
     photos: null,
     presence: null,
     locations: null,
-    locationRequests: null
+    locationRequests: null,
+    attachments: null
   });
 
   // Inputs Ref (Uncontrolled inputs for cleaner handlers similar to original)
@@ -2301,25 +2303,11 @@ export default function FamilyHub() {
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
             setState(prev => {
+              // ID 기반 중복 체크 (optimistic update로 이미 추가된 메시지 무시)
               const existingMessage = prev.messages?.find(m => String(m.id) === String(newMessage.id));
               if (existingMessage) return prev;
-              if (newMessage.sender_id === userId) {
-                const recentDuplicate = prev.messages?.find(m => {
-                  const isTempId = typeof m.id === 'number';
-                  const isRecent = isTempId && (m.id as number) > (Date.now() - 30000);
-                  return isRecent && m.text === decryptedText;
-                });
-                if (recentDuplicate) {
-                  return {
-                    ...prev,
-                    messages: prev.messages.map(m =>
-                      m.id === recentDuplicate.id ? { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id } : m
-                    )
-                  };
-                }
-                const duplicateByContent = prev.messages?.find(m => m.text === decryptedText && String(m.id) !== String(newMessage.id));
-                if (duplicateByContent) return prev;
-              }
+              
+              // 새 메시지 추가
               return {
                 ...prev,
                 messages: [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id }]
@@ -2339,6 +2327,43 @@ export default function FamilyHub() {
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             console.warn('⚠️ Realtime 메시지 subscription 연결 실패:', status);
             // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
+          }
+        });
+
+      // 📷 첨부 파일 Realtime 구독 (INSERT 시 자동 UI 갱신)
+      console.log('📷 첨부 파일 subscription 설정 중...');
+      const attachmentsSubscription = supabase
+        .channel(`feature_attachments_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'feature_attachments' },
+          (payload: any) => {
+            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
+            const record = payload.new || payload.old;
+            if (!record) return;
+            if (record.group_id != null && record.group_id !== currentGroupId) return;
+
+            // 채팅 첨부만 처리 (Piggy, Travel은 해당 화면에서 직접 처리)
+            if (record.feature_type !== 'chat' || record.entity_type !== 'chat_message') return;
+
+            if (ev === 'INSERT') {
+              // 새 첨부 파일이 추가되면 해당 메시지의 첨부 목록 갱신
+              void loadChatAttachments();
+            } else if (ev === 'DELETE') {
+              // 첨부 파일이 삭제되면 해당 메시지의 첨부 목록 갱신
+              void loadChatAttachments();
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          console.log('📷 Realtime 첨부 파일 subscription 상태:', status);
+          if (err) {
+            console.error('❌ Realtime 첨부 파일 subscription 오류:', err);
+          }
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime 첨부 파일 subscription 연결 성공');
+            subscriptionsRef.current.attachments = attachmentsSubscription;
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn('⚠️ Realtime 첨부 파일 subscription 연결 실패:', status);
           }
         });
     };
@@ -3456,6 +3481,10 @@ export default function FamilyHub() {
       if (subscriptionsRef.current.locationRequests) {
         supabase.removeChannel(subscriptionsRef.current.locationRequests);
         subscriptionsRef.current.locationRequests = null;
+      }
+      if (subscriptionsRef.current.attachments) {
+        supabase.removeChannel(subscriptionsRef.current.attachments);
+        subscriptionsRef.current.attachments = null;
       }
     };
   }, [isAuthenticated, userId, masterKey, userName, familyId, currentGroupId]); // familyId 변경 시 데이터 재로드
@@ -6372,32 +6401,10 @@ export default function FamilyHub() {
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    if (!hasFiles) {
-      // 임시 ID로 메시지 추가 (Realtime으로 Supabase ID가 들어오면 교체됨)
-      updateState('ADD_MESSAGE', { 
-        id: Date.now(),
-        user: "나", 
-        text: sanitizedText, 
-        time: timeStr,
-        sender_id: userId ?? undefined
-      });
-      input.value = "";
-      return;
-    }
-
-    // A안: 첨부 전송은 "사진만" 또는 "사진+메시지"를 사용자 확인 후 처리
+    // 파일 첨부 여부와 관계없이 DB에 먼저 저장하여 UUID 확보 (첨부 entity_id 일관성 유지)
     void (async () => {
       if (!currentGroupId) return;
       try {
-        let includeMessage = sanitizedText.length > 0;
-        if (!sanitizedText) {
-          const onlyPhoto = window.confirm('메시지 없이 사진만 업로드할까요?');
-          if (!onlyPhoto) return;
-          includeMessage = false;
-        } else {
-          includeMessage = window.confirm('사진과 메시지를 함께 보낼까요?\n취소를 누르면 사진만 업로드됩니다.');
-        }
-
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           alert(dt('auth_session_expired'));
@@ -6408,6 +6415,43 @@ export default function FamilyHub() {
           sessionStorage.getItem(getAuthKey(userId)) ||
           process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
           'ellena_family_shared_key_2024';
+
+        if (!hasFiles) {
+          // 파일 없음: 일반 텍스트 메시지만 전송
+          const encryptedText = CryptoService.encrypt(sanitizedText, currentKey);
+          const { data: inserted, error } = await supabase
+            .from('family_messages')
+            .insert({
+              group_id: currentGroupId,
+              sender_id: userId,
+              message_text: encryptedText,
+            })
+            .select('id')
+            .single();
+          if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
+
+          // Realtime을 기다리지 않고 즉시 화면 반영 (optimistic update)
+          updateState('ADD_MESSAGE', {
+            id: inserted.id,
+            user: "나",
+            text: sanitizedText,
+            time: timeStr,
+            sender_id: userId ?? undefined,
+          });
+          input.value = "";
+          return;
+        }
+
+        // 파일 첨부 있음: "사진만" 또는 "사진+메시지"를 사용자 확인 후 처리
+        let includeMessage = sanitizedText.length > 0;
+        if (!sanitizedText) {
+          const onlyPhoto = window.confirm('메시지 없이 사진만 업로드할까요?');
+          if (!onlyPhoto) return;
+          includeMessage = false;
+        } else {
+          includeMessage = window.confirm('사진과 메시지를 함께 보낼까요?\n취소를 누르면 사진만 업로드됩니다.');
+        }
+
         const textForStore = includeMessage ? sanitizedText : `📷 사진 ${chatPendingFiles.length}장`;
         const encryptedText = CryptoService.encrypt(textForStore, currentKey);
         const { data: inserted, error } = await supabase
@@ -6433,8 +6477,8 @@ export default function FamilyHub() {
         await uploadChatAttachments(String(inserted.id));
         if (includeMessage) input.value = '';
       } catch (e) {
-        console.error('채팅 첨부 업로드 오류:', e);
-        alert(e instanceof Error ? e.message : '채팅 첨부 업로드에 실패했습니다.');
+        console.error('채팅 메시지 전송 오류:', e);
+        alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
       }
     })();
   };

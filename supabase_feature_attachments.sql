@@ -95,3 +95,6 @@ using (
       and g.owner_id = auth.uid()
   )
 );
+
+-- Enable Realtime for feature_attachments (for real-time attachment updates)
+alter publication supabase_realtime add table public.feature_attachments;
