@@ -33,7 +33,6 @@ import {
   listAttachments,
   uploadFeatureAttachments,
   validateAttachmentFile,
-  type UploadCompressionPreset,
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
@@ -353,7 +352,6 @@ export default function FamilyHub() {
   const [chatPendingFiles, setChatPendingFiles] = useState<File[]>([]);
   const [chatUploading, setChatUploading] = useState(false);
   const [chatUploadJobs, setChatUploadJobs] = useState<UploadJob[]>([]);
-  const [chatCompressionPreset, setChatCompressionPreset] = useState<UploadCompressionPreset>('balanced');
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
   const chatUploadAbortRef = useRef<AbortController | null>(null);
@@ -6312,7 +6310,6 @@ export default function FamilyHub() {
         files: chatPendingFiles,
         maxConcurrent: 3,
         retryCount: 1,
-        compressionPreset: chatCompressionPreset,
         signal: abort.signal,
         onJobsChange: setChatUploadJobs,
       });
@@ -7449,16 +7446,7 @@ export default function FamilyHub() {
             {chatPendingFiles.length > 0 && (
               <div style={{ marginTop: '8px' }}>
                 <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>압축</label>
-                  <select
-                    value={chatCompressionPreset}
-                    onChange={(e) => setChatCompressionPreset(e.target.value as UploadCompressionPreset)}
-                    style={{ border: '1px solid #cbd5e1', borderRadius: 6, padding: '2px 6px', fontSize: 12 }}
-                  >
-                    <option value="original">원본</option>
-                    <option value="balanced">균형</option>
-                    <option value="aggressive">강압축</option>
-                  </select>
+                  <span style={{ fontSize: 12, color: '#64748b' }}>자동 최적화 업로드</span>
                   {chatUploading && (
                     <button
                       type="button"

@@ -30,7 +30,6 @@ import {
   listAttachments,
   uploadFeatureAttachments,
   validateAttachmentFile,
-  type UploadCompressionPreset,
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
@@ -138,7 +137,6 @@ export function TravelPlannerContent() {
   const [travelAttachmentUploading, setTravelAttachmentUploading] = useState(false);
   const [travelAttachmentJobs, setTravelAttachmentJobs] = useState<UploadJob[]>([]);
   const [travelAttachmentFilter, setTravelAttachmentFilter] = useState('');
-  const [travelCompressionPreset, setTravelCompressionPreset] = useState<UploadCompressionPreset>('balanced');
   const travelAttachmentInputRef = useRef<HTMLInputElement | null>(null);
   const travelAttachmentAbortRef = useRef<AbortController | null>(null);
 
@@ -740,7 +738,6 @@ export function TravelPlannerContent() {
         files,
         maxConcurrent: 2,
         retryCount: 1,
-        compressionPreset: travelCompressionPreset,
         signal: abort.signal,
         onJobsChange: setTravelAttachmentJobs,
       });
@@ -2085,15 +2082,7 @@ export function TravelPlannerContent() {
                 >
                   {travelAttachmentUploading ? '업로드 중…' : '사진 추가'}
                 </button>
-                <select
-                  value={travelCompressionPreset}
-                  onChange={(e) => setTravelCompressionPreset(e.target.value as UploadCompressionPreset)}
-                  style={{ marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1' }}
-                >
-                  <option value="original">원본</option>
-                  <option value="balanced">균형</option>
-                  <option value="aggressive">강압축</option>
-                </select>
+                <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>자동 최적화 업로드</span>
                 {travelAttachmentUploading && (
                   <button
                     type="button"

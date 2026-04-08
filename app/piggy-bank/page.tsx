@@ -11,7 +11,6 @@ import {
   listAttachments,
   uploadFeatureAttachments,
   validateAttachmentFile,
-  type UploadCompressionPreset,
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
@@ -137,7 +136,6 @@ export default function PiggyBankPage() {
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentJobs, setAttachmentJobs] = useState<UploadJob[]>([]);
   const [attachmentFilter, setAttachmentFilter] = useState('');
-  const [attachmentCompressionPreset, setAttachmentCompressionPreset] = useState<UploadCompressionPreset>('balanced');
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentAbortRef = useRef<AbortController | null>(null);
 
@@ -411,7 +409,6 @@ export default function PiggyBankPage() {
         files,
         maxConcurrent: 2,
         retryCount: 1,
-        compressionPreset: attachmentCompressionPreset,
         signal: abort.signal,
         onJobsChange: setAttachmentJobs,
       });
@@ -1229,15 +1226,7 @@ export default function PiggyBankPage() {
           >
             {attachmentUploading ? '업로드 중…' : '사진 추가'}
           </button>
-          <select
-            value={attachmentCompressionPreset}
-            onChange={(e) => setAttachmentCompressionPreset(e.target.value as UploadCompressionPreset)}
-            style={{ marginLeft: 8, padding: '7px 8px', borderRadius: 8, border: '1px solid #cbd5e1' }}
-          >
-            <option value="original">원본</option>
-            <option value="balanced">균형</option>
-            <option value="aggressive">강압축</option>
-          </select>
+          <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>자동 최적화 업로드</span>
           {attachmentUploading && (
             <button
               type="button"
