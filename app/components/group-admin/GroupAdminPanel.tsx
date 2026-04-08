@@ -33,6 +33,7 @@ import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAdminTranslation } from '@/lib/translations/admin';
+import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
@@ -86,6 +87,8 @@ interface AnnouncementInfo {
   id: string;
   title: string;
   content: string;
+  title_i18n?: Record<string, string> | null;
+  content_i18n?: Record<string, string> | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1180,7 +1183,10 @@ export function GroupAdminPanel({
               <div>
                 {/* 공지사항 배너 */}
                 <AnnouncementBanner 
-                  announcements={announcements}
+                  announcements={announcements.map((announcement) => ({
+                    ...announcement,
+                    ...getAnnouncementTexts(announcement, lang),
+                  }))}
                   label={gat('announcements_tab')}
                   onMarkAsRead={async (announcementId) => {
                     try {
@@ -1655,7 +1661,7 @@ export function GroupAdminPanel({
                               color: '#1e293b',
                               margin: 0,
                             }}>
-                              {announcement.title}
+                              {getAnnouncementTexts(announcement, lang).title || announcement.title}
                             </h3>
                             {!announcement.is_read && (
                               <span style={{
@@ -1676,7 +1682,7 @@ export function GroupAdminPanel({
                             margin: 0,
                             whiteSpace: 'pre-wrap',
                           }}>
-                            {announcement.content}
+                            {getAnnouncementTexts(announcement, lang).content || announcement.content}
                           </p>
                         </div>
                       </div>
