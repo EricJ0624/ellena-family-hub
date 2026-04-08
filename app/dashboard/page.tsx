@@ -6355,7 +6355,8 @@ export default function FamilyHub() {
       if (chatFileInputRef.current) chatFileInputRef.current.value = '';
       if (chatCameraInputRef.current) chatCameraInputRef.current.value = '';
       // state 업데이트 완료 대기 후 첨부 파일 로드
-      setTimeout(() => loadChatAttachments(), 150);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      await loadChatAttachments();
     } finally {
       setChatUploading(false);
       chatUploadAbortRef.current = null;
@@ -6476,7 +6477,7 @@ export default function FamilyHub() {
         });
 
         await uploadChatAttachments(String(inserted.id));
-        if (includeMessage) input.value = '';
+        input.value = '';
       } catch (e) {
         console.error('채팅 메시지 전송 오류:', e);
         alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
@@ -7449,7 +7450,14 @@ export default function FamilyHub() {
                           </div>
                         );
                       })()}
-                      <p className="message-text">{m.text}</p>
+                      {(() => {
+                        const rows = chatAttachmentsByMessage[String(m.id)] || [];
+                        const hasAttachments = rows.length > 0;
+                        const isPhotoPlaceholder = /^📷 사진 \d+장$/.test(m.text);
+                        // 첨부 파일이 있고 플레이스홀더 텍스트면 숨김
+                        if (hasAttachments && isPhotoPlaceholder) return null;
+                        return <p className="message-text">{m.text}</p>;
+                      })()}
                   </div>
                 </div>
               ))}
