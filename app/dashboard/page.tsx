@@ -6269,7 +6269,10 @@ export default function FamilyHub() {
   // Chat Handlers
   const loadChatAttachments = useCallback(async () => {
     if (!currentGroupId) return;
-    const ids = (state.messages || []).map((m) => String(m.id)).filter(Boolean);
+    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const ids = (state.messages || [])
+      .map((m) => String(m.id))
+      .filter((id) => uuidLike.test(id));
     if (ids.length === 0) {
       setChatAttachmentsByMessage({});
       return;

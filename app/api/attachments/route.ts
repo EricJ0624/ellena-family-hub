@@ -10,6 +10,8 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'travel_expense',
 ]);
 
+const UUID_V4_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
@@ -61,7 +63,9 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED_ENTITY_TYPES.has(String(entityType))) {
       return NextResponse.json({ error: '지원하지 않는 entityType 입니다.' }, { status: 400 });
     }
-    const ids = entityIds.map((id: unknown) => String(id)).filter(Boolean);
+    const ids = entityIds
+      .map((id: unknown) => String(id))
+      .filter((id) => UUID_V4_LIKE.test(id));
     if (ids.length === 0) return NextResponse.json({ success: true, data: [] });
 
     const memberCheck = await requireGroupMember(user.id, String(groupId));
