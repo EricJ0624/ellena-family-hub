@@ -7215,7 +7215,14 @@ export default function FamilyHub() {
               ) : travelTripsLoading ? (
                 <div style={{ fontSize: '13px', color: '#64748b' }}>여행 목록 불러오는 중...</div>
               ) : travelTrips.length === 0 ? (
-                <div style={{ fontSize: '13px', color: '#475569' }}>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: '#475569',
+                    lineHeight: '1.6',
+                    wordBreak: 'keep-all',
+                  }}
+                >
                   여행 일정과 경비를 함께 관리해 보세요. 여행을 추가해 보세요.
                 </div>
               ) : (
