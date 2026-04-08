@@ -6389,7 +6389,6 @@ export default function FamilyHub() {
           return;
         }
         const currentKey =
-          encryptionKey ||
           masterKey ||
           sessionStorage.getItem(getAuthKey(userId)) ||
           process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
