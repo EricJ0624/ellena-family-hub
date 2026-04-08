@@ -1744,6 +1744,7 @@ export default function OnboardingPage() {
                     justifyContent: 'center',
                     gap: '6px',
                     transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#f0fdf4';
@@ -1752,8 +1753,8 @@ export default function OnboardingPage() {
                     e.currentTarget.style.backgroundColor = 'white';
                   }}
                 >
-                  <Users style={{ width: '16px', height: '16px' }} />
-                  {ot('join_invite')}
+                  <Users style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                  <span>{ot('join_invite')}</span>
                 </button>
               </div>
             </motion.div>

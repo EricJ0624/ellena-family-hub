@@ -200,11 +200,11 @@ const GroupSelector: React.FC = () => {
                 setError(null);
                 setSuccess(null);
               }}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
               aria-label={ot('join_invite')}
             >
-              <UserPlus className="w-4 h-4" />
-              {ot('join_invite')}
+              <UserPlus className="w-4 h-4 flex-shrink-0" />
+              <span>{ot('join_invite')}</span>
             </button>
           </div>
         </div>
@@ -660,11 +660,11 @@ const GroupSelector: React.FC = () => {
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors mt-1"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors mt-1 whitespace-nowrap"
                   aria-label={ot('join_invite')}
                 >
-                  <UserPlus className="w-4 h-4" />
-                  {ot('join_invite')}
+                  <UserPlus className="w-4 h-4 flex-shrink-0" />
+                  <span>{ot('join_invite')}</span>
                 </button>
               </div>
             </motion.div>
