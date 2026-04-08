@@ -6302,7 +6302,7 @@ export default function FamilyHub() {
     const abort = new AbortController();
     chatUploadAbortRef.current = abort;
     try {
-      await uploadFeatureAttachments({
+      const jobs = await uploadFeatureAttachments({
         groupId: currentGroupId,
         featureType: 'chat',
         entityType: 'chat_message',
@@ -6313,6 +6313,12 @@ export default function FamilyHub() {
         signal: abort.signal,
         onJobsChange: setChatUploadJobs,
       });
+      const failed = jobs.filter((j) => j.status === 'failed');
+      if (failed.length > 0) {
+        const failedNameSet = new Set(failed.map((j) => j.fileName));
+        setChatPendingFiles((prev) => prev.filter((f) => failedNameSet.has(f.name)));
+        throw new Error(`사진 ${failed.length}장 업로드에 실패했습니다. 다시 시도해 주세요.`);
+      }
       setChatPendingFiles([]);
       if (chatFileInputRef.current) chatFileInputRef.current.value = '';
       if (chatCameraInputRef.current) chatCameraInputRef.current.value = '';
@@ -6376,10 +6382,19 @@ export default function FamilyHub() {
       return;
     }
 
-    // 첨부가 포함된 경우는 DB에 먼저 저장해 message id를 확보한 뒤 첨부를 연결
+    // A안: 첨부 전송은 "사진만" 또는 "사진+메시지"를 사용자 확인 후 처리
     void (async () => {
       if (!currentGroupId) return;
       try {
+        let includeMessage = sanitizedText.length > 0;
+        if (!sanitizedText) {
+          const onlyPhoto = window.confirm('메시지 없이 사진만 업로드할까요?');
+          if (!onlyPhoto) return;
+          includeMessage = false;
+        } else {
+          includeMessage = window.confirm('사진과 메시지를 함께 보낼까요?\n취소를 누르면 사진만 업로드됩니다.');
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           alert(dt('auth_session_expired'));
@@ -6390,7 +6405,7 @@ export default function FamilyHub() {
           sessionStorage.getItem(getAuthKey(userId)) ||
           process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
           'ellena_family_shared_key_2024';
-        const textForStore = sanitizedText || `📷 사진 ${chatPendingFiles.length}장`;
+        const textForStore = includeMessage ? sanitizedText : `📷 사진 ${chatPendingFiles.length}장`;
         const encryptedText = CryptoService.encrypt(textForStore, currentKey);
         const { data: inserted, error } = await supabase
           .from('family_messages')
@@ -6403,7 +6418,7 @@ export default function FamilyHub() {
           .single();
         if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
         await uploadChatAttachments(String(inserted.id));
-        input.value = '';
+        if (includeMessage) input.value = '';
       } catch (e) {
         console.error('채팅 첨부 업로드 오류:', e);
         alert(e instanceof Error ? e.message : '채팅 첨부 업로드에 실패했습니다.');
@@ -7381,18 +7396,20 @@ export default function FamilyHub() {
                 </div>
               ))}
             </div>
-              <div className="chat-input-wrapper">
+              <div className="chat-input-wrapper" style={{ gap: '6px' }}>
               <input 
                 ref={chatInputRef}
                 type="text" 
                 onKeyPress={(e) => e.key === 'Enter' && sendChat()}
                   className="chat-input" 
                 placeholder={dt('chat_placeholder')}
+                style={{ flex: 1, minWidth: 0, padding: '11px 12px' }}
               />
               <button 
                 onClick={sendChat}
                   className="btn-send"
                   disabled={chatUploading}
+                  style={{ padding: '8px 12px', fontSize: '12px' }}
               >
                 {chatUploading ? '업로드 중…' : dt('chat_send')}
               </button>
@@ -7400,12 +7417,12 @@ export default function FamilyHub() {
                 type="button"
                 onClick={() => chatFileInputRef.current?.click()}
                 style={{
-                  marginLeft: '8px',
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
-                  padding: '8px 10px',
+                  padding: '7px 9px',
                   background: '#f8fafc',
                   fontWeight: 600,
+                  fontSize: '12px',
                   cursor: 'pointer',
                 }}
               >
@@ -7415,12 +7432,12 @@ export default function FamilyHub() {
                 type="button"
                 onClick={() => chatCameraInputRef.current?.click()}
                 style={{
-                  marginLeft: '8px',
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
-                  padding: '8px 10px',
+                  padding: '7px 9px',
                   background: '#f8fafc',
                   fontWeight: 600,
+                  fontSize: '12px',
                   cursor: 'pointer',
                 }}
               >
