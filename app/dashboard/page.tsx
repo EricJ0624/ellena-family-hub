@@ -6123,18 +6123,28 @@ export default function FamilyHub() {
       // 4. 가족 표시(family_role) 저장
       if (currentGroupId && userId) {
         try {
-          const roleRes = await fetch('/api/groups/members/family-role', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              targetUserId: userId,
-              groupId: currentGroupId,
-              familyRole: nicknameModalFamilyRole,
-            }),
-          });
-          const roleResult = await roleRes.json();
-          if (roleRes.ok && roleResult.success) {
-            setFamilyRoleByUserId((prev) => ({ ...prev, [userId]: nicknameModalFamilyRole }));
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const roleRes = await fetch('/api/groups/members/family-role', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                targetUserId: userId,
+                groupId: currentGroupId,
+                familyRole: nicknameModalFamilyRole,
+              }),
+            });
+            const roleResult = await roleRes.json();
+            if (roleRes.ok && roleResult.success) {
+              setFamilyRoleByUserId((prev) => ({ ...prev, [userId]: nicknameModalFamilyRole }));
+            } else {
+              console.warn('가족 표시 저장 실패:', roleResult?.error || roleRes.statusText);
+            }
+          } else {
+            console.warn('가족 표시 저장 건너뜀: 세션 없음');
           }
         } catch (roleErr) {
           console.warn('가족 표시 저장 실패 (무시):', roleErr);
