@@ -333,35 +333,31 @@ export default function AdminPage() {
       setLoadingData(true);
       setError(null);
 
-      // 전체 사용자 수
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setError(at('error_auth'));
+        setLoadingData(false);
+        return;
+      }
 
-      // 전체 그룹 수
-      const { count: totalGroups } = await supabase
-        .from('groups')
-        .select('*', { count: 'exact', head: true });
+      const response = await fetch('/api/admin/stats', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // 활성 사용자 수 (최근 30일 내 활동)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { count: activeUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('updated_at', thirtyDaysAgo.toISOString());
-
-      // 시스템 관리자 수
-      const { count: totalAdmins } = await supabase
-        .from('system_admins')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || at('error_stats'));
+      }
 
       setStats({
-        totalUsers: totalUsers || 0,
-        totalGroups: totalGroups || 0,
-        activeUsers: activeUsers || 0,
-        totalAdmins: totalAdmins || 0,
+        totalUsers: Number(result?.data?.totalUsers || 0),
+        totalGroups: Number(result?.data?.totalGroups || 0),
+        activeUsers: Number(result?.data?.activeUsers || 0),
+        totalAdmins: Number(result?.data?.totalAdmins || 0),
       });
     } catch (err: any) {
       console.error('통계 로드 오류:', err);
