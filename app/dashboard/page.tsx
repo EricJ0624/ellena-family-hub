@@ -28,6 +28,15 @@ import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
+import {
+  deleteAttachment,
+  listAttachments,
+  uploadFeatureAttachments,
+  validateAttachmentFile,
+  type UploadCompressionPreset,
+  type UploadJob,
+  type UploadedAttachment,
+} from '@/lib/feature-attachments-client';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -94,6 +103,7 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; assigned_to_user_id?: string; supabaseId?: string | number };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
 type Message = { id: string | number; user: string; text: string; time: string; sender_id?: string };
+type ChatAttachment = UploadedAttachment;
 type Photo = {
   id: number | string; // 로컬 임시 id 또는 Supabase UUID
   data: string; // 리사이징된 이미지 (표시용) 또는 Cloudinary/S3 URL (업로드 완료 시) 또는 플레이스홀더 (큰 파일)
@@ -309,6 +319,9 @@ export default function FamilyHub() {
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const chatCameraInputRef = useRef<HTMLInputElement>(null);
+  const chatDropRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
@@ -337,6 +350,13 @@ export default function FamilyHub() {
     fontFamily: 'Inter',
   });
   const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null); // 한 줄 맞춤 시 적용할 폰트 크기(px)
+  const [chatPendingFiles, setChatPendingFiles] = useState<File[]>([]);
+  const [chatUploading, setChatUploading] = useState(false);
+  const [chatUploadJobs, setChatUploadJobs] = useState<UploadJob[]>([]);
+  const [chatCompressionPreset, setChatCompressionPreset] = useState<UploadCompressionPreset>('balanced');
+  const [chatDragOver, setChatDragOver] = useState(false);
+  const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
+  const chatUploadAbortRef = useRef<AbortController | null>(null);
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -6249,26 +6269,150 @@ export default function FamilyHub() {
   };
 
   // Chat Handlers
+  const loadChatAttachments = useCallback(async () => {
+    if (!currentGroupId) return;
+    const ids = (state.messages || []).map((m) => String(m.id)).filter(Boolean);
+    if (ids.length === 0) {
+      setChatAttachmentsByMessage({});
+      return;
+    }
+    try {
+      const rows = await listAttachments({
+        groupId: currentGroupId,
+        entityType: 'chat_message',
+        entityIds: ids,
+      });
+      const grouped: Record<string, ChatAttachment[]> = {};
+      for (const row of rows) {
+        const key = String(row.entity_id);
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(row);
+      }
+      setChatAttachmentsByMessage(grouped);
+    } catch (e) {
+      console.error('채팅 첨부 조회 오류:', e);
+    }
+  }, [currentGroupId, state.messages]);
+
+  useEffect(() => {
+    loadChatAttachments();
+  }, [loadChatAttachments]);
+
+  const uploadChatAttachments = async (messageId: string) => {
+    if (!currentGroupId || chatPendingFiles.length === 0) return;
+    setChatUploading(true);
+    const abort = new AbortController();
+    chatUploadAbortRef.current = abort;
+    try {
+      await uploadFeatureAttachments({
+        groupId: currentGroupId,
+        featureType: 'chat',
+        entityType: 'chat_message',
+        entityId: messageId,
+        files: chatPendingFiles,
+        maxConcurrent: 3,
+        retryCount: 1,
+        compressionPreset: chatCompressionPreset,
+        signal: abort.signal,
+        onJobsChange: setChatUploadJobs,
+      });
+      setChatPendingFiles([]);
+      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+      if (chatCameraInputRef.current) chatCameraInputRef.current.value = '';
+      await loadChatAttachments();
+    } finally {
+      setChatUploading(false);
+      chatUploadAbortRef.current = null;
+    }
+  };
+
+  const handleQueueChatFiles = (picked: File[]) => {
+    if (picked.length === 0) return;
+    if (picked.length > 10) {
+      alert('한 번에 최대 10장까지 선택할 수 있습니다.');
+      return;
+    }
+    if (picked.length > 3) {
+      alert('채팅 첨부는 최대 3장까지 가능합니다.');
+      return;
+    }
+    for (const file of picked) {
+      const error = validateAttachmentFile(file);
+      if (error) {
+        alert(error);
+        return;
+      }
+    }
+    setChatPendingFiles(picked);
+  };
+
+  const handlePickChatFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleQueueChatFiles(Array.from(e.target.files ?? []));
+  };
+
+  const cancelChatUpload = () => {
+    chatUploadAbortRef.current?.abort();
+  };
+
   const sendChat = () => {
     const input = chatInputRef.current;
-    if (!input || !input.value.trim()) return;
+    if (!input) return;
     
-    // 보안: 입력 검증
-    const sanitizedText = sanitizeInput(input.value, 500);
-    if (!sanitizedText) return;
+    const rawText = input.value.trim();
+    const sanitizedText = sanitizeInput(rawText, 500);
+    const hasFiles = chatPendingFiles.length > 0;
+    if (!sanitizedText && !hasFiles) return;
     
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-    
-    // 임시 ID로 메시지 추가 (Realtime으로 Supabase ID가 들어오면 교체됨)
-    updateState('ADD_MESSAGE', { 
-      id: Date.now(),
-      user: "나", 
-      text: sanitizedText, 
-      time: timeStr,
-      sender_id: userId ?? undefined
-    });
-    input.value = "";
+
+    if (!hasFiles) {
+      // 임시 ID로 메시지 추가 (Realtime으로 Supabase ID가 들어오면 교체됨)
+      updateState('ADD_MESSAGE', { 
+        id: Date.now(),
+        user: "나", 
+        text: sanitizedText, 
+        time: timeStr,
+        sender_id: userId ?? undefined
+      });
+      input.value = "";
+      return;
+    }
+
+    // 첨부가 포함된 경우는 DB에 먼저 저장해 message id를 확보한 뒤 첨부를 연결
+    void (async () => {
+      if (!currentGroupId) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          alert(dt('auth_session_expired'));
+          return;
+        }
+        const currentKey =
+          encryptionKey ||
+          masterKey ||
+          sessionStorage.getItem(getAuthKey(userId)) ||
+          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+          'ellena_family_shared_key_2024';
+        const textForStore = sanitizedText || `📷 사진 ${chatPendingFiles.length}장`;
+        const encryptedText = CryptoService.encrypt(textForStore, currentKey);
+        const { data: inserted, error } = await supabase
+          .from('family_messages')
+          .insert({
+            group_id: currentGroupId,
+            sender_id: userId,
+            message_text: encryptedText,
+          })
+          .select('id')
+          .single();
+        if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
+        await uploadChatAttachments(String(inserted.id));
+        input.value = '';
+      } catch (e) {
+        console.error('채팅 첨부 업로드 오류:', e);
+        alert(e instanceof Error ? e.message : '채팅 첨부 업로드에 실패했습니다.');
+      }
+    })();
   };
 
   // 일반 멤버 → 그룹 관리자 문의: 하단 FAB → /dashboard/member-support (미읽답 배지용 목록만 로드)
@@ -6627,7 +6771,22 @@ export default function FamilyHub() {
               {dt('todo_add_btn')}
             </button>
           </div>
-            <div className="section-body">
+            <div
+              className="section-body"
+              ref={chatDropRef}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setChatDragOver(true);
+              }}
+              onDragLeave={() => setChatDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setChatDragOver(false);
+                const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
+                handleQueueChatFiles(files);
+              }}
+              style={chatDragOver ? { outline: '2px dashed #6366f1', outlineOffset: '4px', borderRadius: '10px' } : undefined}
+            >
               {(state.todos || []).length > 0 ? (
                 <div className="todo-list">
                   {(state.todos || []).map(t => (
@@ -7170,6 +7329,58 @@ export default function FamilyHub() {
                   </div>
                     <div className="message-bubble">
                       <p className="message-text">{m.text}</p>
+                      {(() => {
+                        const rows = chatAttachmentsByMessage[String(m.id)] || [];
+                        if (rows.length === 0) return null;
+                        return (
+                          <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
+                            {rows.map((att) => (
+                              <div key={att.id} style={{ position: 'relative' }}>
+                                <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={att.thumbnail_url || att.image_url}
+                                    alt={att.original_filename}
+                                    style={{ width: '100%', height: '84px', objectFit: 'cover', borderRadius: '8px' }}
+                                  />
+                                </a>
+                                {m.sender_id === userId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!currentGroupId) return;
+                                      void (async () => {
+                                        try {
+                                          await deleteAttachment(currentGroupId, att.id);
+                                          await loadChatAttachments();
+                                        } catch (e) {
+                                          alert(e instanceof Error ? e.message : '첨부 삭제 실패');
+                                        }
+                                      })();
+                                    }}
+                                    style={{
+                                      position: 'absolute',
+                                      top: 4,
+                                      right: 4,
+                                      width: 18,
+                                      height: 18,
+                                      borderRadius: '999px',
+                                      border: 'none',
+                                      background: 'rgba(239,68,68,0.95)',
+                                      color: '#fff',
+                                      fontSize: 11,
+                                      cursor: 'pointer',
+                                      lineHeight: '18px',
+                                      padding: 0,
+                                    }}
+                                  >
+                                    x
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                   </div>
                 </div>
               ))}
@@ -7185,10 +7396,113 @@ export default function FamilyHub() {
               <button 
                 onClick={sendChat}
                   className="btn-send"
+                  disabled={chatUploading}
               >
-                {dt('chat_send')}
+                {chatUploading ? '업로드 중…' : dt('chat_send')}
               </button>
+              <button
+                type="button"
+                onClick={() => chatFileInputRef.current?.click()}
+                style={{
+                  marginLeft: '8px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  padding: '8px 10px',
+                  background: '#f8fafc',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                앨범
+              </button>
+              <button
+                type="button"
+                onClick={() => chatCameraInputRef.current?.click()}
+                style={{
+                  marginLeft: '8px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  padding: '8px 10px',
+                  background: '#f8fafc',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                카메라
+              </button>
+              <input
+                ref={chatFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                multiple
+                onChange={handlePickChatFiles}
+                style={{ display: 'none' }}
+              />
+              <input
+                ref={chatCameraInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                capture="environment"
+                onChange={handlePickChatFiles}
+                style={{ display: 'none' }}
+              />
             </div>
+            {chatPendingFiles.length > 0 && (
+              <div style={{ marginTop: '8px' }}>
+                <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>압축</label>
+                  <select
+                    value={chatCompressionPreset}
+                    onChange={(e) => setChatCompressionPreset(e.target.value as UploadCompressionPreset)}
+                    style={{ border: '1px solid #cbd5e1', borderRadius: 6, padding: '2px 6px', fontSize: 12 }}
+                  >
+                    <option value="original">원본</option>
+                    <option value="balanced">균형</option>
+                    <option value="aggressive">강압축</option>
+                  </select>
+                  {chatUploading && (
+                    <button
+                      type="button"
+                      onClick={cancelChatUpload}
+                      style={{ marginLeft: 8, border: 'none', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}
+                    >
+                      업로드 취소
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {chatPendingFiles.map((f) => (
+                  <span
+                    key={`${f.name}-${f.size}`}
+                    style={{
+                      fontSize: '12px',
+                      color: '#475569',
+                      background: '#f1f5f9',
+                      borderRadius: '999px',
+                      padding: '4px 8px',
+                    }}
+                  >
+                    {f.name}
+                  </span>
+                ))}
+                </div>
+                {chatUploadJobs.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                    {chatUploadJobs.map((job) => (
+                      <div key={job.id} style={{ fontSize: 12, color: '#475569' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{job.fileName}</span>
+                          <span>{job.status === 'uploading' ? `${Math.round(job.progress)}%` : job.status}</span>
+                        </div>
+                        <div style={{ height: 4, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ width: `${job.progress}%`, height: '100%', background: job.status === 'failed' ? '#ef4444' : '#6366f1' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           </section>
 

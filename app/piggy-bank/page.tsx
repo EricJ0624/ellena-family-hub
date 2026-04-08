@@ -6,6 +6,15 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getPiggyTranslation } from '@/lib/translations/piggy';
+import {
+  deleteAttachment,
+  listAttachments,
+  uploadFeatureAttachments,
+  validateAttachmentFile,
+  type UploadCompressionPreset,
+  type UploadJob,
+  type UploadedAttachment,
+} from '@/lib/feature-attachments-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +59,8 @@ type Transaction = {
   dateLabel: string;
   actor_nickname: string;
 };
+
+type PiggyAttachment = UploadedAttachment;
 
 const LOCALE_MAP: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
 
@@ -121,6 +132,14 @@ export default function PiggyBankPage() {
   const [saveSubmitting, setSaveSubmitting] = useState(false);
   const [spendSubmitting, setSpendSubmitting] = useState(false);
   const [openRequestSubmitting, setOpenRequestSubmitting] = useState(false);
+  const [selectedAttachmentTarget, setSelectedAttachmentTarget] = useState<{ entityType: 'piggy_wallet_tx' | 'piggy_bank_tx'; entityId: string } | null>(null);
+  const [targetAttachments, setTargetAttachments] = useState<PiggyAttachment[]>([]);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [attachmentJobs, setAttachmentJobs] = useState<UploadJob[]>([]);
+  const [attachmentFilter, setAttachmentFilter] = useState('');
+  const [attachmentCompressionPreset, setAttachmentCompressionPreset] = useState<UploadCompressionPreset>('balanced');
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentAbortRef = useRef<AbortController | null>(null);
 
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
@@ -200,6 +219,16 @@ export default function PiggyBankPage() {
     setBankTransactions(result.data?.bankTransactions || []);
   };
 
+  const loadTargetAttachments = async (entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', entityId: string) => {
+    if (!currentGroupId) return;
+    const rows = await listAttachments({
+      groupId: currentGroupId,
+      entityType,
+      entityIds: [entityId],
+    });
+    setTargetAttachments(rows);
+  };
+
   useEffect(() => {
     if (!currentGroupId) {
       return;
@@ -210,6 +239,14 @@ export default function PiggyBankPage() {
       .catch((err) => setError(err.message || pt('load_error')))
       .finally(() => setLoading(false));
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
+
+  useEffect(() => {
+    if (!selectedAttachmentTarget) {
+      setTargetAttachments([]);
+      return;
+    }
+    void loadTargetAttachments(selectedAttachmentTarget.entityType, selectedAttachmentTarget.entityId);
+  }, [selectedAttachmentTarget, currentGroupId]);
 
   /** 실시간 반영: 테이블당 채널 1개만 사용 (한 채널에 여러 postgres_changes 시 server/client bindings mismatch 방지) */
   useEffect(() => {
@@ -348,6 +385,44 @@ export default function PiggyBankPage() {
     const member = members.find((m) => m.user_id === userId);
     if (!member) return pt('child_label');
     return member.nickname || pt('child_label');
+  };
+
+  const handlePickAttachment = async (e: { target: HTMLInputElement }) => {
+    if (!selectedAttachmentTarget || !currentGroupId) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    for (const file of files) {
+      const err = validateAttachmentFile(file);
+      if (err) {
+        alert(err);
+        e.target.value = '';
+        return;
+      }
+    }
+    setAttachmentUploading(true);
+    const abort = new AbortController();
+    attachmentAbortRef.current = abort;
+    try {
+      await uploadFeatureAttachments({
+        groupId: currentGroupId,
+        featureType: 'piggy',
+        entityType: selectedAttachmentTarget.entityType,
+        entityId: selectedAttachmentTarget.entityId,
+        files,
+        maxConcurrent: 2,
+        retryCount: 1,
+        compressionPreset: attachmentCompressionPreset,
+        signal: abort.signal,
+        onJobsChange: setAttachmentJobs,
+      });
+      await loadTargetAttachments(selectedAttachmentTarget.entityType, selectedAttachmentTarget.entityId);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : pt('request_failed'));
+    } finally {
+      setAttachmentUploading(false);
+      attachmentAbortRef.current = null;
+      e.target.value = '';
+    }
   };
 
   if (loading) {
@@ -643,6 +718,23 @@ export default function PiggyBankPage() {
                     {tx.memo && (
                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAttachmentTarget({ entityType: 'piggy_wallet_tx', entityId: tx.id })}
+                      style={{
+                        marginTop: '6px',
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#f8fafc',
+                        color: '#334155',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      영수증 첨부
+                    </button>
                   </div>
                   <div
                     style={{
@@ -694,6 +786,23 @@ export default function PiggyBankPage() {
                     {tx.memo && (
                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAttachmentTarget({ entityType: 'piggy_bank_tx', entityId: tx.id })}
+                      style={{
+                        marginTop: '6px',
+                        padding: '4px 8px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#f8fafc',
+                        color: '#334155',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      영수증 첨부
+                    </button>
                   </div>
                   <div
                     style={{
@@ -1090,6 +1199,101 @@ export default function PiggyBankPage() {
             </div>
           </div>
         </>
+      )}
+
+      {selectedAttachmentTarget && (
+        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h2 style={{ margin: 0, fontSize: '16px' }}>첨부 보기</h2>
+            <button
+              type="button"
+              onClick={() => setSelectedAttachmentTarget(null)}
+              style={{ border: 'none', background: '#e2e8f0', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer' }}
+            >
+              닫기
+            </button>
+          </div>
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            capture="environment"
+            onChange={handlePickAttachment}
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            onClick={() => attachmentInputRef.current?.click()}
+            disabled={attachmentUploading}
+            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600, cursor: 'pointer' }}
+          >
+            {attachmentUploading ? '업로드 중…' : '사진 추가'}
+          </button>
+          <select
+            value={attachmentCompressionPreset}
+            onChange={(e) => setAttachmentCompressionPreset(e.target.value as UploadCompressionPreset)}
+            style={{ marginLeft: 8, padding: '7px 8px', borderRadius: 8, border: '1px solid #cbd5e1' }}
+          >
+            <option value="original">원본</option>
+            <option value="balanced">균형</option>
+            <option value="aggressive">강압축</option>
+          </select>
+          {attachmentUploading && (
+            <button
+              type="button"
+              onClick={() => attachmentAbortRef.current?.abort()}
+              style={{ marginLeft: 8, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600 }}
+            >
+              취소
+            </button>
+          )}
+          <input
+            value={attachmentFilter}
+            onChange={(e) => setAttachmentFilter(e.target.value)}
+            placeholder="파일명 필터"
+            style={{ marginLeft: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1', minWidth: 140 }}
+          />
+          {attachmentJobs.length > 0 && (
+            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+              {attachmentJobs.map((job) => (
+                <div key={job.id} style={{ fontSize: 12, color: '#475569' }}>
+                  {job.fileName} · {job.status}{job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+            {targetAttachments
+              .filter((att) => !attachmentFilter || att.original_filename.toLowerCase().includes(attachmentFilter.toLowerCase()))
+              .map((att) => (
+              <div key={att.id} style={{ position: 'relative' }}>
+                <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                  <img src={att.thumbnail_url || att.image_url} alt={att.original_filename} style={{ width: '100%', height: '92px', objectFit: 'cover', borderRadius: '8px' }} />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!currentGroupId) return;
+                    void (async () => {
+                      try {
+                        await deleteAttachment(currentGroupId, att.id);
+                        if (selectedAttachmentTarget) {
+                          await loadTargetAttachments(selectedAttachmentTarget.entityType, selectedAttachmentTarget.entityId);
+                        }
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : '삭제 실패');
+                      }
+                    })();
+                  }}
+                  style={{ position: 'absolute', top: 4, right: 4, border: 'none', borderRadius: '999px', width: 18, height: 18, background: 'rgba(239,68,68,0.95)', color: '#fff', cursor: 'pointer' }}
+                >
+                  x
+                </button>
+              </div>
+            ))}
+            {targetAttachments.length === 0 && <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>첨부된 영수증이 없습니다.</p>}
+          </div>
+        </div>
       )}
 
       <button

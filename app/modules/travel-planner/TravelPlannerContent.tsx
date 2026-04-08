@@ -25,6 +25,15 @@ import {
   ChevronRight,
   FileDown,
 } from 'lucide-react';
+import {
+  deleteAttachment,
+  listAttachments,
+  uploadFeatureAttachments,
+  validateAttachmentFile,
+  type UploadCompressionPreset,
+  type UploadJob,
+  type UploadedAttachment,
+} from '@/lib/feature-attachments-client';
 
 const API_BASE = '/api/v1/travel';
 
@@ -124,6 +133,14 @@ export function TravelPlannerContent() {
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
   const [formBudget, setFormBudget] = useState('');
+  const [travelAttachmentTarget, setTravelAttachmentTarget] = useState<{ entityType: 'travel_trip' | 'travel_expense'; entityId: string } | null>(null);
+  const [travelAttachments, setTravelAttachments] = useState<UploadedAttachment[]>([]);
+  const [travelAttachmentUploading, setTravelAttachmentUploading] = useState(false);
+  const [travelAttachmentJobs, setTravelAttachmentJobs] = useState<UploadJob[]>([]);
+  const [travelAttachmentFilter, setTravelAttachmentFilter] = useState('');
+  const [travelCompressionPreset, setTravelCompressionPreset] = useState<UploadCompressionPreset>('balanced');
+  const travelAttachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const travelAttachmentAbortRef = useRef<AbortController | null>(null);
 
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
@@ -261,6 +278,16 @@ export function TravelPlannerContent() {
       setTransports([]);
     }
   }, [currentGroupId, getAuthHeaders]);
+
+  const loadTravelAttachments = useCallback(async (entityType: 'travel_trip' | 'travel_expense', entityId: string) => {
+    if (!currentGroupId) return;
+    const rows = await listAttachments({
+      groupId: currentGroupId,
+      entityType,
+      entityIds: [entityId],
+    });
+    setTravelAttachments(rows);
+  }, [currentGroupId]);
 
   useEffect(() => {
     if (currentGroupId) {
@@ -681,6 +708,51 @@ export function TravelPlannerContent() {
       setTransports([]);
     }
   }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports]);
+
+  useEffect(() => {
+    if (!travelAttachmentTarget) {
+      setTravelAttachments([]);
+      return;
+    }
+    void loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
+  }, [travelAttachmentTarget, loadTravelAttachments]);
+
+  const handlePickTravelAttachment = async (e: { target: HTMLInputElement }) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0 || !currentGroupId || !travelAttachmentTarget) return;
+    for (const file of files) {
+      const err = validateAttachmentFile(file);
+      if (err) {
+        alert(err);
+        e.target.value = '';
+        return;
+      }
+    }
+    setTravelAttachmentUploading(true);
+    const abort = new AbortController();
+    travelAttachmentAbortRef.current = abort;
+    try {
+      await uploadFeatureAttachments({
+        groupId: currentGroupId,
+        featureType: 'travel',
+        entityType: travelAttachmentTarget.entityType,
+        entityId: travelAttachmentTarget.entityId,
+        files,
+        maxConcurrent: 2,
+        retryCount: 1,
+        compressionPreset: travelCompressionPreset,
+        signal: abort.signal,
+        onJobsChange: setTravelAttachmentJobs,
+      });
+      await loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : tt('load_failed'));
+    } finally {
+      setTravelAttachmentUploading(false);
+      travelAttachmentAbortRef.current = null;
+      e.target.value = '';
+    }
+  };
 
   /** 실시간 반영: 테이블당 채널 1개만 사용 (한 채널에 여러 postgres_changes 시 server/client bindings mismatch) */
   useEffect(() => {
@@ -1927,6 +1999,22 @@ export function TravelPlannerContent() {
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button
                     type="button"
+                    onClick={() => setTravelAttachmentTarget({ entityType: 'travel_trip', entityId: selectedTrip.id })}
+                    style={{
+                      padding: '8px 12px',
+                      background: '#eff6ff',
+                      color: '#1d4ed8',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    사진
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setFormTitle(selectedTrip.title);
                       setFormDestination(selectedTrip.destination ?? '');
@@ -1974,6 +2062,94 @@ export function TravelPlannerContent() {
                   </button>
                 </div>
               </div>
+
+            {travelAttachmentTarget && (
+              <div style={{ marginTop: 12, marginBottom: 12, padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <strong style={{ fontSize: 13, color: '#334155' }}>첨부 사진</strong>
+                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} style={{ border: 'none', background: '#e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>닫기</button>
+                </div>
+                <input
+                  ref={travelAttachmentInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic"
+                  capture="environment"
+                  onChange={handlePickTravelAttachment}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => travelAttachmentInputRef.current?.click()}
+                  disabled={travelAttachmentUploading}
+                  style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                >
+                  {travelAttachmentUploading ? '업로드 중…' : '사진 추가'}
+                </button>
+                <select
+                  value={travelCompressionPreset}
+                  onChange={(e) => setTravelCompressionPreset(e.target.value as UploadCompressionPreset)}
+                  style={{ marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                >
+                  <option value="original">원본</option>
+                  <option value="balanced">균형</option>
+                  <option value="aggressive">강압축</option>
+                </select>
+                {travelAttachmentUploading && (
+                  <button
+                    type="button"
+                    onClick={() => travelAttachmentAbortRef.current?.abort()}
+                    style={{ marginLeft: 8, padding: '6px 10px', borderRadius: 6, border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                  >
+                    취소
+                  </button>
+                )}
+                <input
+                  value={travelAttachmentFilter}
+                  onChange={(e) => setTravelAttachmentFilter(e.target.value)}
+                  placeholder="파일명 필터"
+                  style={{ marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1', minWidth: 120 }}
+                />
+                {travelAttachmentJobs.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'grid', gap: 4, width: '100%' }}>
+                    {travelAttachmentJobs.map((job) => (
+                      <div key={job.id} style={{ fontSize: 12, color: '#475569' }}>
+                        {job.fileName} · {job.status}{job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+                  {travelAttachments
+                    .filter((att) => !travelAttachmentFilter || att.original_filename.toLowerCase().includes(travelAttachmentFilter.toLowerCase()))
+                    .map((att) => (
+                    <div key={att.id} style={{ position: 'relative' }}>
+                      <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                        <img src={att.thumbnail_url || att.image_url} alt={att.original_filename} style={{ width: '100%', height: 78, objectFit: 'cover', borderRadius: 6 }} />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!currentGroupId) return;
+                          void (async () => {
+                            try {
+                              await deleteAttachment(currentGroupId, att.id);
+                              if (travelAttachmentTarget) {
+                                await loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
+                              }
+                            } catch (e) {
+                              alert(e instanceof Error ? e.message : tt('load_failed'));
+                            }
+                          })();
+                        }}
+                        style={{ position: 'absolute', top: 4, right: 4, border: 'none', borderRadius: '999px', width: 18, height: 18, background: 'rgba(239,68,68,0.95)', color: '#fff', cursor: 'pointer' }}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginTop: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -2036,6 +2212,7 @@ export function TravelPlannerContent() {
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title="사진">📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
@@ -2057,6 +2234,7 @@ export function TravelPlannerContent() {
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title="사진">📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
