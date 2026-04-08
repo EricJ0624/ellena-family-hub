@@ -6420,6 +6420,16 @@ export default function FamilyHub() {
           .select('id')
           .single();
         if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
+
+        // 사진 전송 경로도 Realtime 수신을 기다리지 않고 즉시 화면 반영
+        updateState('ADD_MESSAGE', {
+          id: inserted.id,
+          user: "나",
+          text: textForStore,
+          time: timeStr,
+          sender_id: userId ?? undefined,
+        });
+
         await uploadChatAttachments(String(inserted.id));
         if (includeMessage) input.value = '';
       } catch (e) {
