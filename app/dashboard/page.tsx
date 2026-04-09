@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
 import {
   deleteAttachment,
+  getAttachmentsForEntity,
   listAttachments,
   uploadFeatureAttachments,
   validateAttachmentFile,
@@ -2303,9 +2304,24 @@ export default function FamilyHub() {
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
             setState(prev => {
-              // ID 기반 중복 체크 (optimistic update로 이미 추가된 메시지 무시)
+              // 1. ID 기반 중복 체크 (optimistic update로 이미 추가된 메시지 무시)
               const existingMessage = prev.messages?.find(m => String(m.id) === String(newMessage.id));
               if (existingMessage) return prev;
+              
+              // 2. 본인이 보낸 메시지가 3초 이내에 같은 내용으로 있는지 체크 (중복 방지)
+              if (newMessage.sender_id === userId) {
+                const now = Date.now();
+                const messageTime = new Date(newMessage.created_at).getTime();
+                const recentDuplicate = prev.messages?.find(m => 
+                  m.sender_id === userId && 
+                  m.text === decryptedText &&
+                  (now - messageTime) < 3000
+                );
+                if (recentDuplicate) {
+                  console.log('⚠️ 중복 메시지 감지, 무시:', decryptedText);
+                  return prev;
+                }
+              }
               
               // 새 메시지 추가
               return {
@@ -6354,9 +6370,23 @@ export default function FamilyHub() {
       setChatPendingFiles([]);
       if (chatFileInputRef.current) chatFileInputRef.current.value = '';
       if (chatCameraInputRef.current) chatCameraInputRef.current.value = '';
-      // state 업데이트 완료 대기 후 첨부 파일 로드
-      await new Promise(resolve => setTimeout(resolve, 200));
-      await loadChatAttachments();
+      
+      // 옵션 A: 해당 메시지의 첨부 파일만 직접 조회 (state 업데이트 대기 불필요)
+      try {
+        const attachments = await getAttachmentsForEntity({
+          groupId: currentGroupId,
+          entityType: 'chat_message',
+          entityId: messageId,
+        });
+        setChatAttachmentsByMessage(prev => ({
+          ...prev,
+          [messageId]: attachments,
+        }));
+        console.log(`✅ 메시지 ${messageId}의 첨부 ${attachments.length}개 즉시 로드 완료`);
+      } catch (e) {
+        console.error('첨부 파일 즉시 로드 실패:', e);
+        // 실패 시 Realtime 구독이 자동으로 처리하므로 에러 무시
+      }
     } finally {
       setChatUploading(false);
       chatUploadAbortRef.current = null;

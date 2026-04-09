@@ -273,6 +273,22 @@ export async function listAttachments(params: { groupId: string; entityType: Fea
   return (json.data ?? []) as UploadedAttachment[];
 }
 
+export async function getAttachmentsForEntity(params: { groupId: string; entityType: FeatureEntityType; entityId: string }) {
+  const headers = await getAuthHeaders();
+  const url = new URL('/api/attachments', window.location.origin);
+  url.searchParams.set('groupId', params.groupId);
+  url.searchParams.set('entityType', params.entityType);
+  url.searchParams.set('entityId', params.entityId);
+  
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    headers,
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || '첨부 조회 실패');
+  return (json.data ?? []) as UploadedAttachment[];
+}
+
 export async function deleteAttachment(groupId: string, attachmentId: string) {
   const headers = await getAuthHeaders();
   const res = await fetch('/api/attachments', {
