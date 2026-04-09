@@ -7421,9 +7421,20 @@ export default function FamilyHub() {
               {(state.messages || []).map((m, idx) => (
                   <div key={idx} className="message-item">
                     <div className="message-header">
-                      <span className="message-user">
-                        {m.sender_id && familyRoleByUserId[m.sender_id] ? getFamilyRoleEmoji(familyRoleByUserId[m.sender_id]) + ' ' : ''}
-                        {m.sender_id === userId ? (m.user === '나' ? m.user : ct('me')) : (eventAuthorNames[m.sender_id!] ?? (m.user === '사용자' ? ct('user') : m.user))}
+                      <span className="message-user" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {m.sender_id && familyRoleByUserId[m.sender_id] && (
+                          <>
+                            <span style={{ fontSize: '20px', lineHeight: '1' }}>
+                              {getFamilyRoleEmoji(familyRoleByUserId[m.sender_id])}
+                            </span>
+                            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                              {getFamilyRoleLabel(familyRoleByUserId[m.sender_id])}
+                            </span>
+                          </>
+                        )}
+                        <span>
+                          {m.sender_id === userId ? (m.user === '나' ? m.user : ct('me')) : (eventAuthorNames[m.sender_id!] ?? (m.user === '사용자' ? ct('user') : m.user))}
+                        </span>
                       </span>
                       <span className="message-time">{m.time}</span>
                   </div>
@@ -7586,21 +7597,6 @@ export default function FamilyHub() {
                   </span>
                 ))}
                 </div>
-                {chatUploadJobs.length > 0 && (
-                  <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                    {chatUploadJobs.map((job) => (
-                      <div key={job.id} style={{ fontSize: 12, color: '#475569' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>{job.fileName}</span>
-                          <span>{job.status === 'uploading' ? `${Math.round(job.progress)}%` : job.status}</span>
-                        </div>
-                        <div style={{ height: 4, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
-                          <div style={{ width: `${job.progress}%`, height: '100%', background: job.status === 'failed' ? '#ef4444' : '#6366f1' }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
