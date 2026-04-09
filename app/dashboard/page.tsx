@@ -2292,6 +2292,14 @@ export default function FamilyHub() {
             const newMessage = payload.new;
             if (!newMessage || !newMessage.id) return;
             if (newMessage.group_id != null && newMessage.group_id !== currentGroupId) return;
+            
+            // 본인이 보낸 메시지는 Realtime에서 무시 (이미 Optimistic update로 화면에 표시됨)
+            if (newMessage.sender_id === userId) {
+              console.log('📨 본인 메시지 Realtime 수신 무시 (이미 표시됨):', newMessage.id);
+              return;
+            }
+            
+            // 상대방이 보낸 메시지만 처리
             const messageText = newMessage.message_text || '';
             let decryptedText = messageText;
             const messageKey = getCurrentKey();
@@ -2304,20 +2312,10 @@ export default function FamilyHub() {
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
             setState(prev => {
-              // 1. ID 기반 중복 체크 (optimistic update로 이미 추가된 메시지 무시)
+              // ID 기반 중복 체크 (만약을 위한 안전장치)
               const existingMessage = prev.messages?.find(m => String(m.id) === String(newMessage.id));
-              if (existingMessage) return prev;
-              
-              // 2. 발신자 + 내용 + 시간 기반 중복 체크 (모든 메시지에 대해)
-              const now = Date.now();
-              const messageTime = new Date(newMessage.created_at).getTime();
-              const recentDuplicate = prev.messages?.find(m => 
-                m.sender_id === newMessage.sender_id &&  // 같은 발신자
-                m.text === decryptedText &&              // 같은 내용
-                (now - messageTime) < 3000               // 3초 이내
-              );
-              if (recentDuplicate) {
-                console.log('⚠️ 중복 메시지 감지, 무시:', { sender: newMessage.sender_id, text: decryptedText });
+              if (existingMessage) {
+                console.log('⚠️ 이미 존재하는 메시지, 무시:', newMessage.id);
                 return prev;
               }
               
