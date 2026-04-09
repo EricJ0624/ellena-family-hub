@@ -298,6 +298,8 @@ export default function FamilyHub() {
   const realtimeStaggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   /** 구독 설정 중 플래그 (중복 방지) */
   const isSettingUpSubscriptionsRef = useRef<boolean>(false);
+  /** 처리된 메시지 ID 추적 (중복 방지) - 최근 100개만 유지 */
+  const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
   const subscriptionsRef = useRef<{
     messages: any;
@@ -2295,11 +2297,22 @@ export default function FamilyHub() {
             if (!newMessage || !newMessage.id) return;
             if (newMessage.group_id != null && newMessage.group_id !== currentGroupId) return;
             
-            // 본인이 보낸 메시지는 Realtime에서 무시 (이미 Optimistic update로 화면에 표시됨)
-            if (newMessage.sender_id === userId) {
-              console.log('📨 본인 메시지 Realtime 수신 무시 (이미 표시됨):', newMessage.id);
+            const messageId = String(newMessage.id);
+            
+            // ✅ 전역 중복 체크 (가장 강력한 방어선)
+            if (processedMessageIdsRef.current.has(messageId)) {
+              console.log('🚫 이미 처리된 메시지 ID, 완전 무시:', messageId, '(중복 구독 감지)');
               return;
             }
+            
+            // 본인이 보낸 메시지는 Realtime에서 무시 (이미 Optimistic update로 화면에 표시됨)
+            if (newMessage.sender_id === userId) {
+              console.log('📨 본인 메시지 Realtime 수신 무시 (이미 표시됨):', messageId);
+              processedMessageIdsRef.current.add(messageId);
+              return;
+            }
+            
+            console.log('✅ 새 메시지 Realtime 수신:', messageId, 'sender:', newMessage.sender_id);
             
             // 상대방이 보낸 메시지만 처리
             const messageText = newMessage.message_text || '';
@@ -2313,14 +2326,25 @@ export default function FamilyHub() {
             }
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
+            
+            // 처리된 메시지로 마킹
+            processedMessageIdsRef.current.add(messageId);
+            
+            // Set 크기 제한 (메모리 관리 - 최근 100개만 유지)
+            if (processedMessageIdsRef.current.size > 100) {
+              const arr = Array.from(processedMessageIdsRef.current);
+              processedMessageIdsRef.current = new Set(arr.slice(-100));
+            }
+            
             setState(prev => {
-              // ID 기반 중복 체크 (만약을 위한 안전장치)
-              const existingMessage = prev.messages?.find(m => String(m.id) === String(newMessage.id));
+              // State 내 중복 체크 (안전장치)
+              const existingMessage = prev.messages?.find(m => String(m.id) === messageId);
               if (existingMessage) {
-                console.log('⚠️ 이미 존재하는 메시지, 무시:', newMessage.id);
+                console.log('⚠️ State에 이미 존재하는 메시지, 무시:', messageId);
                 return prev;
               }
               
+              console.log('📝 State에 메시지 추가:', messageId, decryptedText);
               // 새 메시지 추가
               return {
                 ...prev,
@@ -3513,6 +3537,7 @@ export default function FamilyHub() {
       console.log('🧹 Realtime subscription 정리 중...');
       locationLoadStartedRef.current = false;
       isSettingUpSubscriptionsRef.current = false;  // ✅ 플래그 리셋
+      processedMessageIdsRef.current.clear();  // ✅ 처리된 메시지 ID 초기화
       realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
       realtimeStaggerTimeoutsRef.current = [];
       if (sessionWaitIntervalRef.current) {
@@ -6513,6 +6538,7 @@ export default function FamilyHub() {
           if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
           // Realtime을 기다리지 않고 즉시 화면 반영 (optimistic update)
+          processedMessageIdsRef.current.add(String(inserted.id));  // ✅ 처리된 메시지로 마킹
           updateState('ADD_MESSAGE', {
             id: inserted.id,
             user: "나",
@@ -6520,6 +6546,7 @@ export default function FamilyHub() {
             time: timeStr,
             sender_id: userId ?? undefined,
           });
+          console.log('✅ 메시지 전송 완료 (텍스트만):', inserted.id);
           input.value = "";
           return;
         }
@@ -6548,6 +6575,7 @@ export default function FamilyHub() {
         if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
         // 사진 전송 경로도 Realtime 수신을 기다리지 않고 즉시 화면 반영
+        processedMessageIdsRef.current.add(String(inserted.id));  // ✅ 처리된 메시지로 마킹
         updateState('ADD_MESSAGE', {
           id: inserted.id,
           user: "나",
@@ -6555,6 +6583,7 @@ export default function FamilyHub() {
           time: timeStr,
           sender_id: userId ?? undefined,
         });
+        console.log('✅ 메시지 전송 완료 (사진+텍스트):', inserted.id);
 
         await uploadChatAttachments(String(inserted.id));
         input.value = '';
