@@ -3343,12 +3343,48 @@ export default function FamilyHub() {
         console.log('setupRealtimeSubscriptions - final currentKey:', currentKey ? '있음' : '없음');
       }
 
+      // ✅ 중복 구독 방지: 기존 구독을 먼저 모두 제거
+      console.log('🧹 기존 Realtime 구독 정리 중...');
+      if (subscriptionsRef.current.messages) {
+        supabase.removeChannel(subscriptionsRef.current.messages);
+        subscriptionsRef.current.messages = null;
+      }
+      if (subscriptionsRef.current.tasks) {
+        supabase.removeChannel(subscriptionsRef.current.tasks);
+        subscriptionsRef.current.tasks = null;
+      }
+      if (subscriptionsRef.current.events) {
+        supabase.removeChannel(subscriptionsRef.current.events);
+        subscriptionsRef.current.events = null;
+      }
+      if (subscriptionsRef.current.photos) {
+        supabase.removeChannel(subscriptionsRef.current.photos);
+        subscriptionsRef.current.photos = null;
+      }
+      if (subscriptionsRef.current.presence) {
+        supabase.removeChannel(subscriptionsRef.current.presence);
+        subscriptionsRef.current.presence = null;
+      }
+      if (subscriptionsRef.current.locations) {
+        supabase.removeChannel(subscriptionsRef.current.locations);
+        subscriptionsRef.current.locations = null;
+      }
+      if (subscriptionsRef.current.locationRequests) {
+        supabase.removeChannel(subscriptionsRef.current.locationRequests);
+        subscriptionsRef.current.locationRequests = null;
+      }
+      if (subscriptionsRef.current.attachments) {
+        supabase.removeChannel(subscriptionsRef.current.attachments);
+        subscriptionsRef.current.attachments = null;
+      }
+
       // 이전 순차 구독 타이머 정리
       realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
       realtimeStaggerTimeoutsRef.current = [];
 
       // 채널명 재사용 방지 (effect 재실행 시 새 ID로 바인딩 중복 방지)
       realtimeSubscriptionIdRef.current = Date.now();
+      console.log('✅ 새로운 Realtime 구독 시작 - ID:', realtimeSubscriptionIdRef.current);
 
       setupPresenceSubscription();
 
