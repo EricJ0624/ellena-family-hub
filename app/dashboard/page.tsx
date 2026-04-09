@@ -296,6 +296,8 @@ export default function FamilyHub() {
   const realtimeSubscriptionIdRef = useRef<number>(0);
   /** 순차 구독 지연 타이머 정리용 */
   const realtimeStaggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  /** 구독 설정 중 플래그 (중복 방지) */
+  const isSettingUpSubscriptionsRef = useRef<boolean>(false);
 
   const subscriptionsRef = useRef<{
     messages: any;
@@ -3334,6 +3336,15 @@ export default function FamilyHub() {
         return;
       }
 
+      // ✅ 구독 설정 중이면 중복 실행 방지
+      if (isSettingUpSubscriptionsRef.current) {
+        console.log('⚠️ 이미 구독 설정 중, 중복 실행 방지');
+        return;
+      }
+      
+      isSettingUpSubscriptionsRef.current = true;
+      console.log('🚀 Realtime 구독 설정 시작');
+
       if (process.env.NODE_ENV === 'development') {
         console.log('setupRealtimeSubscriptions - userId:', userId);
         console.log('setupRealtimeSubscriptions - masterKey from state:', masterKey);
@@ -3385,6 +3396,12 @@ export default function FamilyHub() {
       // 채널명 재사용 방지 (effect 재실행 시 새 ID로 바인딩 중복 방지)
       realtimeSubscriptionIdRef.current = Date.now();
       console.log('✅ 새로운 Realtime 구독 시작 - ID:', realtimeSubscriptionIdRef.current);
+      
+      // 구독 설정 완료 후 플래그 해제 (약간의 지연 후 - 모든 구독 완료 대기)
+      setTimeout(() => {
+        isSettingUpSubscriptionsRef.current = false;
+        console.log('✅ Realtime 구독 설정 완료');
+      }, 3000);
 
       setupPresenceSubscription();
 
@@ -3495,6 +3512,7 @@ export default function FamilyHub() {
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
       locationLoadStartedRef.current = false;
+      isSettingUpSubscriptionsRef.current = false;  // ✅ 플래그 리셋
       realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
       realtimeStaggerTimeoutsRef.current = [];
       if (sessionWaitIntervalRef.current) {
