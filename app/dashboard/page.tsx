@@ -357,6 +357,7 @@ export default function FamilyHub() {
   const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null); // 한 줄 맞춤 시 적용할 폰트 크기(px)
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
+  const chatPhotoUploadingRef = useRef(false); // 사진 업로드 중복 방지
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -6447,6 +6448,12 @@ export default function FamilyHub() {
   const uploadChatPhotos = async (files: File[]) => {
     if (files.length === 0) return;
     
+    // ✅ 중복 호출 방지
+    if (chatPhotoUploadingRef.current) {
+      console.log('⚠️ 이미 사진 업로드 중, 중복 호출 무시');
+      return;
+    }
+    
     if (files.length > 3) {
       alert('채팅 첨부는 최대 3장까지 가능합니다.');
       return;
@@ -6462,6 +6469,9 @@ export default function FamilyHub() {
 
     // 파일 선택 즉시 업로드 (카카오톡 방식)
     if (!currentGroupId) return;
+    
+    chatPhotoUploadingRef.current = true;
+    console.log('🔒 사진 업로드 시작, 중복 방지 플래그 설정');
     
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -6532,11 +6542,15 @@ export default function FamilyHub() {
     } catch (error) {
       console.error('사진 전송 오류:', error);
       alert(error instanceof Error ? error.message : '사진 전송에 실패했습니다.');
+    } finally {
+      chatPhotoUploadingRef.current = false;
+      console.log('🔓 사진 업로드 완료, 중복 방지 플래그 해제');
     }
   };
 
   const handlePickChatFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
+    console.log('📂 handlePickChatFiles 호출됨, 파일 수:', files.length, '파일명:', files.map(f => f.name));
     await uploadChatPhotos(files);
     if (e.target) e.target.value = ''; // 입력 초기화
   };
