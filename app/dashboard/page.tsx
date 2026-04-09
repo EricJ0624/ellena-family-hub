@@ -2303,16 +2303,24 @@ export default function FamilyHub() {
               alreadyProcessed: processedMessageIdsRef.current.has(messageId)
             });
             
-            // ✅ 전역 중복 체크 (가장 강력한 방어선)
+            // ✅ 전역 중복 체크 및 즉시 마킹 (원자적 처리로 경쟁 조건 방지)
             if (processedMessageIdsRef.current.has(messageId)) {
               console.log('🚫 이미 처리된 메시지 ID, 완전 무시:', messageId, '(중복 구독 감지)');
               return;
+            }
+            // 체크 통과 즉시 마킹 (다른 이벤트가 동시에 들어와도 차단)
+            processedMessageIdsRef.current.add(messageId);
+            console.log('🔒 메시지 ID 마킹 완료:', messageId);
+            
+            // Set 크기 제한 (메모리 관리 - 최근 100개만 유지)
+            if (processedMessageIdsRef.current.size > 100) {
+              const arr = Array.from(processedMessageIdsRef.current);
+              processedMessageIdsRef.current = new Set(arr.slice(-100));
             }
             
             // 본인이 보낸 메시지는 Realtime에서 무시 (이미 Optimistic update로 화면에 표시됨)
             if (newMessage.sender_id === userId) {
               console.log('📨 본인 메시지 Realtime 수신 무시 (이미 표시됨):', messageId);
-              processedMessageIdsRef.current.add(messageId);
               return;
             }
             
@@ -2330,15 +2338,6 @@ export default function FamilyHub() {
             }
             const createdAt = new Date(newMessage.created_at);
             const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            
-            // 처리된 메시지로 마킹
-            processedMessageIdsRef.current.add(messageId);
-            
-            // Set 크기 제한 (메모리 관리 - 최근 100개만 유지)
-            if (processedMessageIdsRef.current.size > 100) {
-              const arr = Array.from(processedMessageIdsRef.current);
-              processedMessageIdsRef.current = new Set(arr.slice(-100));
-            }
             
             setState(prev => {
               // State 내 중복 체크 (안전장치)
@@ -2360,17 +2359,24 @@ export default function FamilyHub() {
           }
         )
         .subscribe((status, err) => {
-          console.log('📨 Realtime 메시지 subscription 상태:', status);
+          console.log('📨 Realtime 메시지 subscription 상태:', status, 'Channel:', channelName);
           if (err) {
             console.error('❌ Realtime 메시지 subscription 오류:', err);
-            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
           if (status === 'SUBSCRIBED') {
             console.log('✅ Realtime 메시지 subscription 연결 성공');
             subscriptionsRef.current.messages = messagesSubscription;
+            
+            // 연결 후 전체 채널 확인 (디버깅)
+            const activeChannels = supabase.getChannels();
+            console.log('📡 구독 후 전체 활성 채널 수:', activeChannels.length);
+            const messageChannels = activeChannels.filter(ch => ch.topic.includes('family_messages'));
+            console.log('📨 메시지 관련 채널 수:', messageChannels.length);
+            if (messageChannels.length > 1) {
+              console.error('🚨 경고: 메시지 채널이 중복되어 있습니다!', messageChannels.map(ch => ch.topic));
+            }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             console.warn('⚠️ Realtime 메시지 subscription 연결 실패:', status);
-            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
           }
         });
 
@@ -3386,7 +3392,16 @@ export default function FamilyHub() {
 
       // ✅ 중복 구독 방지: 기존 구독을 먼저 모두 제거
       console.log('🧹 기존 Realtime 구독 정리 중...');
+      
+      // 현재 활성 채널 확인 (디버깅)
+      const allChannels = supabase.getChannels();
+      console.log('📡 현재 활성 채널 수:', allChannels.length);
+      allChannels.forEach(ch => {
+        console.log('  - 채널:', ch.topic, '상태:', ch.state);
+      });
+      
       if (subscriptionsRef.current.messages) {
+        console.log('🗑️ messages 구독 제거 중...');
         supabase.removeChannel(subscriptionsRef.current.messages);
         subscriptionsRef.current.messages = null;
       }
@@ -3418,6 +3433,10 @@ export default function FamilyHub() {
         supabase.removeChannel(subscriptionsRef.current.attachments);
         subscriptionsRef.current.attachments = null;
       }
+      
+      // 제거 완료 확인
+      const remainingChannels = supabase.getChannels();
+      console.log('✅ 구독 제거 후 남은 채널 수:', remainingChannels.length);
 
       // 이전 순차 구독 타이머 정리
       realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
