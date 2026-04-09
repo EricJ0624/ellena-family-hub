@@ -34,7 +34,6 @@ import {
   listAttachments,
   uploadFeatureAttachments,
   validateAttachmentFile,
-  type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 
@@ -356,12 +355,8 @@ export default function FamilyHub() {
     fontFamily: 'Inter',
   });
   const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null); // 한 줄 맞춤 시 적용할 폰트 크기(px)
-  const [chatPendingFiles, setChatPendingFiles] = useState<File[]>([]);
-  const [chatUploading, setChatUploading] = useState(false);
-  const [chatUploadJobs, setChatUploadJobs] = useState<UploadJob[]>([]);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
-  const chatUploadAbortRef = useRef<AbortController | null>(null);
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -6419,81 +6414,106 @@ export default function FamilyHub() {
     loadChatAttachments();
   }, [loadChatAttachments]);
 
-  const uploadChatAttachments = async (messageId: string) => {
-    if (!currentGroupId || chatPendingFiles.length === 0) return;
-    setChatUploading(true);
-    const abort = new AbortController();
-    chatUploadAbortRef.current = abort;
-    try {
-      const jobs = await uploadFeatureAttachments({
-        groupId: currentGroupId,
-        featureType: 'chat',
-        entityType: 'chat_message',
-        entityId: messageId,
-        files: chatPendingFiles,
-        maxConcurrent: 3,
-        retryCount: 1,
-        signal: abort.signal,
-        onJobsChange: setChatUploadJobs,
-      });
-      const failed = jobs.filter((j) => j.status === 'failed');
-      if (failed.length > 0) {
-        const failedNameSet = new Set(failed.map((j) => j.fileName));
-        setChatPendingFiles((prev) => prev.filter((f) => failedNameSet.has(f.name)));
-        throw new Error(`사진 ${failed.length}장 업로드에 실패했습니다. 다시 시도해 주세요.`);
-      }
-      setChatPendingFiles([]);
-      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
-      if (chatCameraInputRef.current) chatCameraInputRef.current.value = '';
-      
-      // 옵션 A: 해당 메시지의 첨부 파일만 직접 조회 (state 업데이트 대기 불필요)
-      try {
-        const attachments = await getAttachmentsForEntity({
-          groupId: currentGroupId,
-          entityType: 'chat_message',
-          entityId: messageId,
-        });
-        setChatAttachmentsByMessage(prev => ({
-          ...prev,
-          [messageId]: attachments,
-        }));
-        console.log(`✅ 메시지 ${messageId}의 첨부 ${attachments.length}개 즉시 로드 완료`);
-      } catch (e) {
-        console.error('첨부 파일 즉시 로드 실패:', e);
-        // 실패 시 Realtime 구독이 자동으로 처리하므로 에러 무시
-      }
-    } finally {
-      setChatUploading(false);
-      chatUploadAbortRef.current = null;
-    }
-  };
-
-  const handleQueueChatFiles = (picked: File[]) => {
-    if (picked.length === 0) return;
-    if (picked.length > 10) {
-      alert('한 번에 최대 10장까지 선택할 수 있습니다.');
-      return;
-    }
-    if (picked.length > 3) {
+  const uploadChatPhotos = async (files: File[]) => {
+    if (files.length === 0) return;
+    
+    if (files.length > 3) {
       alert('채팅 첨부는 최대 3장까지 가능합니다.');
       return;
     }
-    for (const file of picked) {
+    
+    for (const file of files) {
       const error = validateAttachmentFile(file);
       if (error) {
         alert(error);
         return;
       }
     }
-    setChatPendingFiles(picked);
+
+    // 파일 선택 즉시 업로드 (카카오톡 방식)
+    if (!currentGroupId) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert(dt('auth_session_expired'));
+        return;
+      }
+      const currentKey =
+        masterKey ||
+        sessionStorage.getItem(getAuthKey(userId)) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+        'ellena_family_shared_key_2024';
+
+      // DB에 메시지 생성 (사진 X장)
+      const textForStore = `📷 사진 ${files.length}장`;
+      const encryptedText = CryptoService.encrypt(textForStore, currentKey);
+      const { data: inserted, error } = await supabase
+        .from('family_messages')
+        .insert({
+          group_id: currentGroupId,
+          sender_id: userId,
+          message_text: encryptedText,
+        })
+        .select('id')
+        .single();
+      if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
+
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      // 즉시 화면 반영
+      processedMessageIdsRef.current.add(String(inserted.id));
+      updateState('ADD_MESSAGE', {
+        id: inserted.id,
+        user: "나",
+        text: textForStore,
+        time: timeStr,
+        sender_id: userId ?? undefined,
+      });
+      console.log('✅ 사진 메시지 즉시 전송:', inserted.id);
+
+      // 파일 업로드
+      const jobs = await uploadFeatureAttachments({
+        groupId: currentGroupId,
+        featureType: 'chat',
+        entityType: 'chat_message',
+        entityId: String(inserted.id),
+        files,
+        maxConcurrent: 3,
+        retryCount: 1,
+      });
+      
+      const failed = jobs.filter((j) => j.status === 'failed');
+      if (failed.length > 0) {
+        throw new Error(`사진 ${failed.length}장 업로드 실패`);
+      }
+
+      // 첨부 파일 즉시 조회
+      const attachments = await getAttachmentsForEntity({
+        groupId: currentGroupId,
+        entityType: 'chat_message',
+        entityId: String(inserted.id),
+      });
+      setChatAttachmentsByMessage(prev => ({
+        ...prev,
+        [String(inserted.id)]: attachments,
+      }));
+      console.log(`✅ 사진 ${attachments.length}개 업로드 완료:`, inserted.id);
+    } catch (error) {
+      console.error('사진 전송 오류:', error);
+      alert(error instanceof Error ? error.message : '사진 전송에 실패했습니다.');
+    }
   };
 
-  const handlePickChatFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleQueueChatFiles(Array.from(e.target.files ?? []));
+  const handlePickChatFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    await uploadChatPhotos(files);
+    if (e.target) e.target.value = ''; // 입력 초기화
   };
 
-  const cancelChatUpload = () => {
-    chatUploadAbortRef.current?.abort();
+  const handleDropChatFiles = async (files: File[]) => {
+    await uploadChatPhotos(files);
   };
 
   const sendChat = () => {
@@ -6502,13 +6522,12 @@ export default function FamilyHub() {
     
     const rawText = input.value.trim();
     const sanitizedText = sanitizeInput(rawText, 500);
-    const hasFiles = chatPendingFiles.length > 0;
-    if (!sanitizedText && !hasFiles) return;
+    if (!sanitizedText) return;
     
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // 파일 첨부 여부와 관계없이 DB에 먼저 저장하여 UUID 확보 (첨부 entity_id 일관성 유지)
+    // 텍스트 메시지만 전송 (사진은 파일 선택 즉시 전송됨)
     void (async () => {
       if (!currentGroupId) return;
       try {
@@ -6523,46 +6542,7 @@ export default function FamilyHub() {
           process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
           'ellena_family_shared_key_2024';
 
-        if (!hasFiles) {
-          // 파일 없음: 일반 텍스트 메시지만 전송
-          const encryptedText = CryptoService.encrypt(sanitizedText, currentKey);
-          const { data: inserted, error } = await supabase
-            .from('family_messages')
-            .insert({
-              group_id: currentGroupId,
-              sender_id: userId,
-              message_text: encryptedText,
-            })
-            .select('id')
-            .single();
-          if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
-
-          // Realtime을 기다리지 않고 즉시 화면 반영 (optimistic update)
-          processedMessageIdsRef.current.add(String(inserted.id));  // ✅ 처리된 메시지로 마킹
-          updateState('ADD_MESSAGE', {
-            id: inserted.id,
-            user: "나",
-            text: sanitizedText,
-            time: timeStr,
-            sender_id: userId ?? undefined,
-          });
-          console.log('✅ 메시지 전송 완료 (텍스트만):', inserted.id);
-          input.value = "";
-          return;
-        }
-
-        // 파일 첨부 있음: "사진만" 또는 "사진+메시지"를 사용자 확인 후 처리
-        let includeMessage = sanitizedText.length > 0;
-        if (!sanitizedText) {
-          const onlyPhoto = window.confirm('메시지 없이 사진만 업로드할까요?');
-          if (!onlyPhoto) return;
-          includeMessage = false;
-        } else {
-          includeMessage = window.confirm('사진과 메시지를 함께 보낼까요?\n취소를 누르면 사진만 업로드됩니다.');
-        }
-
-        const textForStore = includeMessage ? sanitizedText : `📷 사진 ${chatPendingFiles.length}장`;
-        const encryptedText = CryptoService.encrypt(textForStore, currentKey);
+        const encryptedText = CryptoService.encrypt(sanitizedText, currentKey);
         const { data: inserted, error } = await supabase
           .from('family_messages')
           .insert({
@@ -6574,21 +6554,19 @@ export default function FamilyHub() {
           .single();
         if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
-        // 사진 전송 경로도 Realtime 수신을 기다리지 않고 즉시 화면 반영
-        processedMessageIdsRef.current.add(String(inserted.id));  // ✅ 처리된 메시지로 마킹
+        // 즉시 화면 반영 (optimistic update)
+        processedMessageIdsRef.current.add(String(inserted.id));
         updateState('ADD_MESSAGE', {
           id: inserted.id,
           user: "나",
-          text: textForStore,
+          text: sanitizedText,
           time: timeStr,
           sender_id: userId ?? undefined,
         });
-        console.log('✅ 메시지 전송 완료 (사진+텍스트):', inserted.id);
-
-        await uploadChatAttachments(String(inserted.id));
-        input.value = '';
+        console.log('✅ 텍스트 메시지 전송 완료:', inserted.id);
+        input.value = "";
       } catch (e) {
-        console.error('채팅 메시지 전송 오류:', e);
+        console.error('메시지 전송 오류:', e);
         alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
       }
     })();
@@ -6962,7 +6940,7 @@ export default function FamilyHub() {
                 e.preventDefault();
                 setChatDragOver(false);
                 const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
-                handleQueueChatFiles(files);
+                handleDropChatFiles(files);
               }}
               style={chatDragOver ? { outline: '2px dashed #6366f1', outlineOffset: '4px', borderRadius: '10px' } : undefined}
             >
@@ -7594,10 +7572,9 @@ export default function FamilyHub() {
               <button 
                 onClick={sendChat}
                   className="btn-send"
-                  disabled={chatUploading}
                   style={{ padding: '8px 12px', fontSize: '12px' }}
               >
-                {chatUploading ? '업로드 중…' : dt('chat_send')}
+                {dt('chat_send')}
               </button>
               <button
                 type="button"
