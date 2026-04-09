@@ -2308,19 +2308,17 @@ export default function FamilyHub() {
               const existingMessage = prev.messages?.find(m => String(m.id) === String(newMessage.id));
               if (existingMessage) return prev;
               
-              // 2. 본인이 보낸 메시지가 3초 이내에 같은 내용으로 있는지 체크 (중복 방지)
-              if (newMessage.sender_id === userId) {
-                const now = Date.now();
-                const messageTime = new Date(newMessage.created_at).getTime();
-                const recentDuplicate = prev.messages?.find(m => 
-                  m.sender_id === userId && 
-                  m.text === decryptedText &&
-                  (now - messageTime) < 3000
-                );
-                if (recentDuplicate) {
-                  console.log('⚠️ 중복 메시지 감지, 무시:', decryptedText);
-                  return prev;
-                }
+              // 2. 발신자 + 내용 + 시간 기반 중복 체크 (모든 메시지에 대해)
+              const now = Date.now();
+              const messageTime = new Date(newMessage.created_at).getTime();
+              const recentDuplicate = prev.messages?.find(m => 
+                m.sender_id === newMessage.sender_id &&  // 같은 발신자
+                m.text === decryptedText &&              // 같은 내용
+                (now - messageTime) < 3000               // 3초 이내
+              );
+              if (recentDuplicate) {
+                console.log('⚠️ 중복 메시지 감지, 무시:', { sender: newMessage.sender_id, text: decryptedText });
+                return prev;
               }
               
               // 새 메시지 추가
