@@ -7646,38 +7646,6 @@ export default function FamilyHub() {
                 style={{ display: 'none' }}
               />
             </div>
-            {chatPendingFiles.length > 0 && (
-              <div style={{ marginTop: '8px' }}>
-                <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: '#64748b' }}>자동 최적화 업로드</span>
-                  {chatUploading && (
-                    <button
-                      type="button"
-                      onClick={cancelChatUpload}
-                      style={{ marginLeft: 8, border: 'none', background: '#fee2e2', color: '#b91c1c', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}
-                    >
-                      업로드 취소
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {chatPendingFiles.map((f) => (
-                  <span
-                    key={`${f.name}-${f.size}`}
-                    style={{
-                      fontSize: '12px',
-                      color: '#475569',
-                      background: '#f1f5f9',
-                      borderRadius: '999px',
-                      padding: '4px 8px',
-                    }}
-                  >
-                    {f.name}
-                  </span>
-                ))}
-                </div>
-              </div>
-            )}
           </div>
           </section>
 
