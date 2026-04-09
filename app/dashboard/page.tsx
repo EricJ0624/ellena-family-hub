@@ -7428,7 +7428,7 @@ export default function FamilyHub() {
                               {getFamilyRoleEmoji(familyRoleByUserId[m.sender_id])}
                             </span>
                             <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                              {getFamilyRoleLabel(familyRoleByUserId[m.sender_id])}
+                              {getFamilyRoleLabel(lang, familyRoleByUserId[m.sender_id])}
                             </span>
                           </>
                         )}
