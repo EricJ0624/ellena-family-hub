@@ -2247,9 +2247,10 @@ export default function FamilyHub() {
       }
 
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 방지)
-      console.log('📨 메시지 subscription 설정 중...');
+      const channelName = `family_messages_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
+      console.log('📨 메시지 subscription 설정 중... Channel:', channelName);
       const messagesSubscription = supabase
-        .channel(`family_messages_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
+        .channel(channelName)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'family_messages' },
           (payload: any) => {
@@ -2294,6 +2295,14 @@ export default function FamilyHub() {
             
             const messageId = String(newMessage.id);
             
+            console.log('🔔 Realtime INSERT 이벤트 수신:', {
+              messageId,
+              sender: newMessage.sender_id,
+              currentUser: userId,
+              subscriptionId: realtimeSubscriptionIdRef.current,
+              alreadyProcessed: processedMessageIdsRef.current.has(messageId)
+            });
+            
             // ✅ 전역 중복 체크 (가장 강력한 방어선)
             if (processedMessageIdsRef.current.has(messageId)) {
               console.log('🚫 이미 처리된 메시지 ID, 완전 무시:', messageId, '(중복 구독 감지)');
@@ -2307,7 +2316,7 @@ export default function FamilyHub() {
               return;
             }
             
-            console.log('✅ 새 메시지 Realtime 수신:', messageId, 'sender:', newMessage.sender_id);
+            console.log('✅ 새 메시지 Realtime 처리 시작:', messageId, 'sender:', newMessage.sender_id);
             
             // 상대방이 보낸 메시지만 처리
             const messageText = newMessage.message_text || '';
@@ -2339,11 +2348,13 @@ export default function FamilyHub() {
                 return prev;
               }
               
-              console.log('📝 State에 메시지 추가:', messageId, decryptedText);
+              console.log('📝 State에 메시지 추가:', messageId, decryptedText, '현재 메시지 수:', prev.messages.length);
               // 새 메시지 추가
+              const newMessages = [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id }];
+              console.log('✅ 메시지 추가 완료, 새 메시지 수:', newMessages.length);
               return {
                 ...prev,
-                messages: [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id }]
+                messages: newMessages
               };
             });
           }
@@ -6445,9 +6456,8 @@ export default function FamilyHub() {
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
         'ellena_family_shared_key_2024';
 
-      // DB에 메시지 생성 (사진 X장)
-      const textForStore = `📷 사진 ${files.length}장`;
-      const encryptedText = CryptoService.encrypt(textForStore, currentKey);
+      // DB에 메시지 생성 (텍스트 없이 첨부만)
+      const encryptedText = CryptoService.encrypt('', currentKey);
       const { data: inserted, error } = await supabase
         .from('family_messages')
         .insert({
@@ -6462,16 +6472,16 @@ export default function FamilyHub() {
       const now = new Date();
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
       
-      // 즉시 화면 반영
+      // 즉시 화면 반영 (빈 텍스트로)
       processedMessageIdsRef.current.add(String(inserted.id));
       updateState('ADD_MESSAGE', {
         id: inserted.id,
         user: "나",
-        text: textForStore,
+        text: '',
         time: timeStr,
         sender_id: userId ?? undefined,
       });
-      console.log('✅ 사진 메시지 즉시 전송:', inserted.id);
+      console.log('✅ 사진 메시지 즉시 전송 (텍스트 없음):', inserted.id);
 
       // 파일 업로드
       const jobs = await uploadFeatureAttachments({
@@ -7548,14 +7558,7 @@ export default function FamilyHub() {
                           </div>
                         );
                       })()}
-                      {(() => {
-                        const rows = chatAttachmentsByMessage[String(m.id)] || [];
-                        const hasAttachments = rows.length > 0;
-                        const isPhotoPlaceholder = /^📷 사진 \d+장$/.test(m.text);
-                        // 첨부 파일이 있고 플레이스홀더 텍스트면 숨김
-                        if (hasAttachments && isPhotoPlaceholder) return null;
-                        return <p className="message-text">{m.text}</p>;
-                      })()}
+                      {m.text && <p className="message-text">{m.text}</p>}
                   </div>
                 </div>
               ))}
