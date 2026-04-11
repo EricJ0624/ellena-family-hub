@@ -17,6 +17,7 @@ import {
   isRawFileExtension,
 } from '@/lib/photo-upload-utils';
 import { supabase } from '@/lib/supabase';
+import * as exifr from 'exifr';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB 통일
 const COMPRESSION_OPTIONS = {
@@ -51,6 +52,50 @@ function parseTakenAtFromFilename(filename: string): string | null {
   const date = new Date(year, month, day);
   if (isNaN(date.getTime())) return null;
   return date.toISOString();
+}
+
+/** EXIF 데이터에서 촬영 날짜 추출. ISO 문자열 또는 null */
+async function extractTakenAtFromExif(file: File): Promise<string | null> {
+  try {
+    // EXIF 데이터 읽기 (DateTimeOriginal, DateTime, CreateDate 순으로 시도)
+    const exif = await exifr.parse(file, {
+      pick: ['DateTimeOriginal', 'DateTime', 'CreateDate'],
+    });
+    
+    if (!exif) return null;
+    
+    // DateTimeOriginal이 가장 정확한 촬영 날짜
+    const dateValue = exif.DateTimeOriginal || exif.DateTime || exif.CreateDate;
+    
+    if (!dateValue) return null;
+    
+    // Date 객체로 변환 (exifr이 이미 Date 객체로 변환해줌)
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    
+    if (isNaN(date.getTime())) return null;
+    
+    return date.toISOString();
+  } catch (error) {
+    // EXIF 데이터가 없거나 읽기 실패 시 null 반환
+    if (process.env.NODE_ENV === 'development') {
+      console.log('EXIF 읽기 실패:', error);
+    }
+    return null;
+  }
+}
+
+/** 사진 촬영 날짜 추출 (EXIF 우선, 파일명 보조). ISO 문자열 또는 null */
+async function extractTakenAt(file: File): Promise<string | null> {
+  // 1순위: EXIF 데이터에서 추출
+  const exifDate = await extractTakenAtFromExif(file);
+  if (exifDate) return exifDate;
+  
+  // 2순위: 파일명에서 추출
+  const filenameDate = parseTakenAtFromFilename(file.name);
+  if (filenameDate) return filenameDate;
+  
+  // 둘 다 없으면 null
+  return null;
 }
 
 export default function MemoriesPage() {
@@ -288,7 +333,7 @@ export default function MemoriesPage() {
     const uploadFileName = file.name;
     const uploadMimeType = mimeType;
     const uploadFileSize = file.size;
-    const takenAt = parseTakenAtFromFilename(uploadFileName);
+    const takenAt = await extractTakenAt(file);
     const photoId = Date.now();
     addPhoto({
       id: photoId,
