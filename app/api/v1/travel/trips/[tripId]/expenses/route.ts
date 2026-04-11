@@ -32,7 +32,8 @@ export async function GET(
       .eq('trip_id', tripId)
       .eq('group_id', groupId)
       .is('deleted_at', null)
-      .order('expense_date', { ascending: false });
+      .order('expense_date', { ascending: true })
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('travel_expenses GET:', error);

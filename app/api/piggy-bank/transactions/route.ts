@@ -105,8 +105,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 5. 응답 데이터 포맷팅
-    const formattedWalletTransactions = (walletTransactions || []).map((tx) => ({
+    // 5. 응답 데이터 포맷팅 (최근 N건을 가져온 뒤, 화면에는 기입 순 오래된 것 → 최신 순으로 표시)
+    const walletRowsChronological = [...(walletTransactions || [])].reverse();
+    const bankRowsChronological = [...(bankTransactions || [])].reverse();
+
+    const formattedWalletTransactions = walletRowsChronological.map((tx) => ({
       id: tx.id,
       amount: tx.amount,
       type: tx.type,
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
       actor_nickname: actorNicknames[tx.actor_id] || '멤버',
     }));
 
-    const formattedBankTransactions = (bankTransactions || []).map((tx) => ({
+    const formattedBankTransactions = bankRowsChronological.map((tx) => ({
       id: tx.id,
       amount: tx.amount,
       type: tx.type,
