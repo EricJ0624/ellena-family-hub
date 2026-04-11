@@ -4235,6 +4235,21 @@ export default function FamilyHub() {
           (membershipData || []).forEach((m: any) => familyRoleMap.set(m.user_id, m.family_role ?? null));
         }
 
+        // 지도 마커 표시명: Presence(onlineUsers)만 쓰면 오프라인·동기 지연 시 "사용자 xxxxxxxx"로 떨어짐 → profiles 우선
+        const profileDisplayByUserId = new Map<string, string>();
+        if (otherUserIds.length > 0) {
+          const { data: profilesForMarkers } = await supabase
+            .from('profiles')
+            .select('id, nickname, email')
+            .in('id', otherUserIds);
+          (profilesForMarkers || []).forEach((p: { id: string; nickname: string | null; email: string | null }) => {
+            const nick = p.nickname?.trim();
+            const mail = p.email?.trim();
+            const label = nick || mail;
+            if (label) profileDisplayByUserId.set(p.id, label);
+          });
+        }
+
         // ✅ 승인된 다른 사용자 위치만 표시 (본인 위치는 제외)
         console.log('🔍 [loadFamilyLocations] 필터링 시작 - 총', data.length, '개 위치');
         const locations = data
@@ -4262,7 +4277,10 @@ export default function FamilyHub() {
           })
           .map((loc: any) => {
             const onlineUser = onlineUsers.find(u => u.id === loc.user_id);
-            const userName = onlineUser?.name || `사용자 ${loc.user_id.substring(0, 8)}`;
+            const userName =
+              profileDisplayByUserId.get(loc.user_id) ||
+              onlineUser?.name ||
+              `사용자 ${loc.user_id.substring(0, 8)}`;
             const familyRole = familyRoleMap.get(loc.user_id) ?? null;
             
             // Geocoding 미사용 — 저장된 주소만 사용, 없으면 빈 문자열 (좌표로 지도/링크 표시)
