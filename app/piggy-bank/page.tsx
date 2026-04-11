@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -62,6 +62,10 @@ type Transaction = {
 type PiggyAttachment = UploadedAttachment;
 
 const LOCALE_MAP: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
+
+function piggyTxAttachmentKey(entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', entityId: string) {
+  return `${entityType}:${entityId}`;
+}
 
 export default function PiggyBankPage() {
   const router = useRouter();
@@ -131,12 +135,12 @@ export default function PiggyBankPage() {
   const [saveSubmitting, setSaveSubmitting] = useState(false);
   const [spendSubmitting, setSpendSubmitting] = useState(false);
   const [openRequestSubmitting, setOpenRequestSubmitting] = useState(false);
-  const [selectedAttachmentTarget, setSelectedAttachmentTarget] = useState<{ entityType: 'piggy_wallet_tx' | 'piggy_bank_tx'; entityId: string } | null>(null);
-  const [targetAttachments, setTargetAttachments] = useState<PiggyAttachment[]>([]);
+  const [txAttachmentsByKey, setTxAttachmentsByKey] = useState<Record<string, PiggyAttachment[]>>({});
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentJobs, setAttachmentJobs] = useState<UploadJob[]>([]);
-  const [attachmentFilter, setAttachmentFilter] = useState('');
-  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const [receiptUploadingKey, setReceiptUploadingKey] = useState<string | null>(null);
+  const pendingAttachmentUploadRef = useRef<{ entityType: 'piggy_wallet_tx' | 'piggy_bank_tx'; entityId: string } | null>(null);
+  const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentAbortRef = useRef<AbortController | null>(null);
 
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
@@ -217,15 +221,30 @@ export default function PiggyBankPage() {
     setBankTransactions(result.data?.bankTransactions || []);
   };
 
-  const loadTargetAttachments = async (entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', entityId: string) => {
+  const loadAllTxAttachments = useCallback(async () => {
     if (!currentGroupId) return;
-    const rows = await listAttachments({
-      groupId: currentGroupId,
-      entityType,
-      entityIds: [entityId],
-    });
-    setTargetAttachments(rows);
-  };
+    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const walletIds = walletTransactions.map((t) => String(t.id)).filter((id) => uuidLike.test(id));
+    const bankIds = bankTransactions.map((t) => String(t.id)).filter((id) => uuidLike.test(id));
+    try {
+      const [walletRows, bankRows] = await Promise.all([
+        walletIds.length ? listAttachments({ groupId: currentGroupId, entityType: 'piggy_wallet_tx', entityIds: walletIds }) : Promise.resolve([]),
+        bankIds.length ? listAttachments({ groupId: currentGroupId, entityType: 'piggy_bank_tx', entityIds: bankIds }) : Promise.resolve([]),
+      ]);
+      const next: Record<string, PiggyAttachment[]> = {};
+      for (const row of walletRows) {
+        const k = piggyTxAttachmentKey('piggy_wallet_tx', String(row.entity_id));
+        (next[k] ??= []).push(row);
+      }
+      for (const row of bankRows) {
+        const k = piggyTxAttachmentKey('piggy_bank_tx', String(row.entity_id));
+        (next[k] ??= []).push(row);
+      }
+      setTxAttachmentsByKey(next);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [currentGroupId, walletTransactions, bankTransactions]);
 
   useEffect(() => {
     if (!currentGroupId) {
@@ -239,12 +258,8 @@ export default function PiggyBankPage() {
   }, [currentGroupId, isAdmin, selectedChildIdForAdmin]);
 
   useEffect(() => {
-    if (!selectedAttachmentTarget) {
-      setTargetAttachments([]);
-      return;
-    }
-    void loadTargetAttachments(selectedAttachmentTarget.entityType, selectedAttachmentTarget.entityId);
-  }, [selectedAttachmentTarget, currentGroupId]);
+    void loadAllTxAttachments();
+  }, [loadAllTxAttachments]);
 
   /** 실시간 반영: 테이블당 채널 1개만 사용 (한 채널에 여러 postgres_changes 시 server/client bindings mismatch 방지) */
   useEffect(() => {
@@ -386,17 +401,28 @@ export default function PiggyBankPage() {
   };
 
   const handlePickAttachment = async (e: { target: HTMLInputElement }) => {
-    if (!selectedAttachmentTarget || !currentGroupId) return;
+    const pending = pendingAttachmentUploadRef.current;
+    if (!pending || !currentGroupId) {
+      e.target.value = '';
+      return;
+    }
     const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      pendingAttachmentUploadRef.current = null;
+      e.target.value = '';
+      return;
+    }
     for (const file of files) {
       const err = validateAttachmentFile(file);
       if (err) {
         alert(err);
         e.target.value = '';
+        pendingAttachmentUploadRef.current = null;
         return;
       }
     }
+    const mapKey = piggyTxAttachmentKey(pending.entityType, pending.entityId);
+    setReceiptUploadingKey(mapKey);
     setAttachmentUploading(true);
     const abort = new AbortController();
     attachmentAbortRef.current = abort;
@@ -404,20 +430,31 @@ export default function PiggyBankPage() {
       await uploadFeatureAttachments({
         groupId: currentGroupId,
         featureType: 'piggy',
-        entityType: selectedAttachmentTarget.entityType,
-        entityId: selectedAttachmentTarget.entityId,
+        entityType: pending.entityType,
+        entityId: pending.entityId,
         files,
         maxConcurrent: 2,
         retryCount: 1,
         signal: abort.signal,
         onJobsChange: setAttachmentJobs,
       });
-      await loadTargetAttachments(selectedAttachmentTarget.entityType, selectedAttachmentTarget.entityId);
+      const rows = await listAttachments({
+        groupId: currentGroupId,
+        entityType: pending.entityType,
+        entityIds: [pending.entityId],
+      });
+      setTxAttachmentsByKey((prev) => ({ ...prev, [mapKey]: rows }));
     } catch (error) {
-      alert(error instanceof Error ? error.message : pt('request_failed'));
+      if (error instanceof Error && error.name === 'AbortError') {
+        // 사용자 취소 — 무시
+      } else {
+        alert(error instanceof Error ? error.message : pt('request_failed'));
+      }
     } finally {
       setAttachmentUploading(false);
+      setReceiptUploadingKey(null);
       attachmentAbortRef.current = null;
+      pendingAttachmentUploadRef.current = null;
       e.target.value = '';
     }
   };
@@ -666,6 +703,15 @@ export default function PiggyBankPage() {
         </div>
       )}
 
+      <input
+        ref={receiptFileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic"
+        multiple
+        onChange={handlePickAttachment}
+        style={{ display: 'none' }}
+      />
+
       <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
         <div style={{ background: '#eff6ff', borderRadius: '14px', padding: '16px', border: '1px solid #bfdbfe' }}>
           <div style={{ fontSize: '13px', color: '#1d4ed8' }}>{pt('wallet_balance')}</div>
@@ -690,6 +736,10 @@ export default function PiggyBankPage() {
           <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {walletTransactions.map((tx) => {
               const isNegative = tx.type === 'spend' || tx.type === 'child_save';
+              const receiptKey = piggyTxAttachmentKey('piggy_wallet_tx', tx.id);
+              const receipts = txAttachmentsByKey[receiptKey] ?? [];
+              const showReceiptSection =
+                receipts.length > 0 || (receiptUploadingKey === receiptKey && (attachmentUploading || attachmentJobs.length > 0));
               return (
                 <div
                   key={tx.id}
@@ -698,50 +748,142 @@ export default function PiggyBankPage() {
                     borderRadius: '12px',
                     padding: '12px',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
-                    </div>
-                    {tx.actor_nickname && tx.type === 'allowance' && (
-                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                        {tx.actor_nickname}{pt('paid_by_suffix')}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
                       </div>
-                    )}
-                    {tx.memo && (
-                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedAttachmentTarget({ entityType: 'piggy_wallet_tx', entityId: tx.id })}
+                      {tx.actor_nickname && tx.type === 'allowance' && (
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                          {tx.actor_nickname}{pt('paid_by_suffix')}
+                        </div>
+                      )}
+                      {tx.memo && (
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          pendingAttachmentUploadRef.current = { entityType: 'piggy_wallet_tx', entityId: tx.id };
+                          receiptFileInputRef.current?.click();
+                        }}
+                        style={{
+                          marginTop: '6px',
+                          padding: '4px 8px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#f8fafc',
+                          color: '#334155',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        영수증 첨부
+                      </button>
+                    </div>
+                    <div
                       style={{
-                        marginTop: '6px',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#f8fafc',
-                        color: '#334155',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        color: isNegative ? '#b91c1c' : '#16a34a',
                       }}
                     >
-                      영수증 첨부
-                    </button>
+                      {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: '16px',
-                      fontWeight: 700,
-                      color: isNegative ? '#b91c1c' : '#16a34a',
-                    }}
-                  >
-                    {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
-                  </div>
+                  {showReceiptSection && (
+                    <div style={{ width: '100%', paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+                      {receipts.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+                          {receipts.map((att) => (
+                            <div key={att.id} style={{ position: 'relative', width: 72, height: 72 }}>
+                              <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={att.thumbnail_url || att.image_url}
+                                  alt={att.original_filename}
+                                  style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                                />
+                              </a>
+                              <button
+                                type="button"
+                                aria-label="삭제"
+                                onClick={() => {
+                                  if (!currentGroupId) return;
+                                  void (async () => {
+                                    try {
+                                      await deleteAttachment(currentGroupId, att.id);
+                                      const rows = await listAttachments({
+                                        groupId: currentGroupId,
+                                        entityType: 'piggy_wallet_tx',
+                                        entityIds: [tx.id],
+                                      });
+                                      setTxAttachmentsByKey((prev) => ({ ...prev, [receiptKey]: rows }));
+                                    } catch (err) {
+                                      alert(err instanceof Error ? err.message : '삭제 실패');
+                                    }
+                                  })();
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: 4,
+                                  right: 4,
+                                  border: 'none',
+                                  borderRadius: '999px',
+                                  width: 20,
+                                  height: 20,
+                                  fontSize: 12,
+                                  lineHeight: 1,
+                                  padding: 0,
+                                  background: 'rgba(239,68,68,0.95)',
+                                  color: '#fff',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {receiptUploadingKey === receiptKey && attachmentJobs.length > 0 && (
+                        <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                          {attachmentJobs.map((job) => (
+                            <div key={job.id} style={{ fontSize: 11, color: '#64748b' }}>
+                              {job.fileName} · {job.status}
+                              {job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {receiptUploadingKey === receiptKey && attachmentUploading && (
+                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, color: '#475569' }}>업로드 중…</span>
+                          <button
+                            type="button"
+                            onClick={() => attachmentAbortRef.current?.abort()}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 8,
+                              border: 'none',
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: 12,
+                            }}
+                          >
+                            취소
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -758,6 +900,10 @@ export default function PiggyBankPage() {
           <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
             {bankTransactions.map((tx) => {
               const isNegative = tx.type === 'withdraw_cash' || tx.type === 'withdraw_to_wallet';
+              const receiptKey = piggyTxAttachmentKey('piggy_bank_tx', tx.id);
+              const receipts = txAttachmentsByKey[receiptKey] ?? [];
+              const showReceiptSection =
+                receipts.length > 0 || (receiptUploadingKey === receiptKey && (attachmentUploading || attachmentJobs.length > 0));
               return (
                 <div
                   key={tx.id}
@@ -766,50 +912,142 @@ export default function PiggyBankPage() {
                     borderRadius: '12px',
                     padding: '12px',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
-                    </div>
-                    {tx.actor_nickname && tx.type === 'parent_deposit' && (
-                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-                        {tx.actor_nickname}{pt('deposited_by_suffix')}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
                       </div>
-                    )}
-                    {tx.memo && (
-                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedAttachmentTarget({ entityType: 'piggy_bank_tx', entityId: tx.id })}
+                      {tx.actor_nickname && tx.type === 'parent_deposit' && (
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                          {tx.actor_nickname}{pt('deposited_by_suffix')}
+                        </div>
+                      )}
+                      {tx.memo && (
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          pendingAttachmentUploadRef.current = { entityType: 'piggy_bank_tx', entityId: tx.id };
+                          receiptFileInputRef.current?.click();
+                        }}
+                        style={{
+                          marginTop: '6px',
+                          padding: '4px 8px',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          background: '#f8fafc',
+                          color: '#334155',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        영수증 첨부
+                      </button>
+                    </div>
+                    <div
                       style={{
-                        marginTop: '6px',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        background: '#f8fafc',
-                        color: '#334155',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        color: isNegative ? '#b91c1c' : '#16a34a',
                       }}
                     >
-                      영수증 첨부
-                    </button>
+                      {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: '16px',
-                      fontWeight: 700,
-                      color: isNegative ? '#b91c1c' : '#16a34a',
-                    }}
-                  >
-                    {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
-                  </div>
+                  {showReceiptSection && (
+                    <div style={{ width: '100%', paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+                      {receipts.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+                          {receipts.map((att) => (
+                            <div key={att.id} style={{ position: 'relative', width: 72, height: 72 }}>
+                              <a href={att.image_url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={att.thumbnail_url || att.image_url}
+                                  alt={att.original_filename}
+                                  style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                                />
+                              </a>
+                              <button
+                                type="button"
+                                aria-label="삭제"
+                                onClick={() => {
+                                  if (!currentGroupId) return;
+                                  void (async () => {
+                                    try {
+                                      await deleteAttachment(currentGroupId, att.id);
+                                      const rows = await listAttachments({
+                                        groupId: currentGroupId,
+                                        entityType: 'piggy_bank_tx',
+                                        entityIds: [tx.id],
+                                      });
+                                      setTxAttachmentsByKey((prev) => ({ ...prev, [receiptKey]: rows }));
+                                    } catch (err) {
+                                      alert(err instanceof Error ? err.message : '삭제 실패');
+                                    }
+                                  })();
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: 4,
+                                  right: 4,
+                                  border: 'none',
+                                  borderRadius: '999px',
+                                  width: 20,
+                                  height: 20,
+                                  fontSize: 12,
+                                  lineHeight: 1,
+                                  padding: 0,
+                                  background: 'rgba(239,68,68,0.95)',
+                                  color: '#fff',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {receiptUploadingKey === receiptKey && attachmentJobs.length > 0 && (
+                        <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                          {attachmentJobs.map((job) => (
+                            <div key={job.id} style={{ fontSize: 11, color: '#64748b' }}>
+                              {job.fileName} · {job.status}
+                              {job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {receiptUploadingKey === receiptKey && attachmentUploading && (
+                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, color: '#475569' }}>업로드 중…</span>
+                          <button
+                            type="button"
+                            onClick={() => attachmentAbortRef.current?.abort()}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 8,
+                              border: 'none',
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: 12,
+                            }}
+                          >
+                            취소
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1196,93 +1434,6 @@ export default function PiggyBankPage() {
             </div>
           </div>
         </>
-      )}
-
-      {selectedAttachmentTarget && (
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h2 style={{ margin: 0, fontSize: '16px' }}>첨부 보기</h2>
-            <button
-              type="button"
-              onClick={() => setSelectedAttachmentTarget(null)}
-              style={{ border: 'none', background: '#e2e8f0', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer' }}
-            >
-              닫기
-            </button>
-          </div>
-          <input
-            ref={attachmentInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
-            capture="environment"
-            onChange={handlePickAttachment}
-            style={{ display: 'none' }}
-          />
-          <button
-            type="button"
-            onClick={() => attachmentInputRef.current?.click()}
-            disabled={attachmentUploading}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 600, cursor: 'pointer' }}
-          >
-            {attachmentUploading ? '업로드 중…' : '사진 추가'}
-          </button>
-          <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>자동 최적화 업로드</span>
-          {attachmentUploading && (
-            <button
-              type="button"
-              onClick={() => attachmentAbortRef.current?.abort()}
-              style={{ marginLeft: 8, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600 }}
-            >
-              취소
-            </button>
-          )}
-          <input
-            value={attachmentFilter}
-            onChange={(e) => setAttachmentFilter(e.target.value)}
-            placeholder="파일명 필터"
-            style={{ marginLeft: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1', minWidth: 140 }}
-          />
-          {attachmentJobs.length > 0 && (
-            <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-              {attachmentJobs.map((job) => (
-                <div key={job.id} style={{ fontSize: 12, color: '#475569' }}>
-                  {job.fileName} · {job.status}{job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
-            {targetAttachments
-              .filter((att) => !attachmentFilter || att.original_filename.toLowerCase().includes(attachmentFilter.toLowerCase()))
-              .map((att) => (
-              <div key={att.id} style={{ position: 'relative' }}>
-                <a href={att.image_url} target="_blank" rel="noopener noreferrer">
-                  <img src={att.thumbnail_url || att.image_url} alt={att.original_filename} style={{ width: '100%', height: '92px', objectFit: 'cover', borderRadius: '8px' }} />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!currentGroupId) return;
-                    void (async () => {
-                      try {
-                        await deleteAttachment(currentGroupId, att.id);
-                        if (selectedAttachmentTarget) {
-                          await loadTargetAttachments(selectedAttachmentTarget.entityType, selectedAttachmentTarget.entityId);
-                        }
-                      } catch (e) {
-                        alert(e instanceof Error ? e.message : '삭제 실패');
-                      }
-                    })();
-                  }}
-                  style={{ position: 'absolute', top: 4, right: 4, border: 'none', borderRadius: '999px', width: 18, height: 18, background: 'rgba(239,68,68,0.95)', color: '#fff', cursor: 'pointer' }}
-                >
-                  x
-                </button>
-              </div>
-            ))}
-            {targetAttachments.length === 0 && <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>첨부된 영수증이 없습니다.</p>}
-          </div>
-        </div>
       )}
 
       <button

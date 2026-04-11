@@ -268,6 +268,8 @@ export default function FamilyHub() {
   const [piggyLoaded, setPiggyLoaded] = useState(false);
   const [pendingAccountRequests, setPendingAccountRequests] = useState<Array<{ id: string; user_id: string; nickname: string | null }>>([]);
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
+  const loadPiggySummaryRef = useRef<() => Promise<void>>(async () => {});
+  const piggyAccountRequestsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [travelTrips, setTravelTrips] = useState<Array<{ id: string; title: string; start_date: string; end_date: string }>>([]);
   const [travelTripsLoading, setTravelTripsLoading] = useState(false);
   const [locationRequests, setLocationRequests] = useState<Array<{
@@ -943,10 +945,59 @@ export default function FamilyHub() {
     }
   }, [isAuthenticated, currentGroupId]);
 
+  loadPiggySummaryRef.current = loadPiggySummary;
+
   // Piggy Bank 요약 정보 로드 (그룹 선택 시)
   useEffect(() => {
     loadPiggySummary();
   }, [loadPiggySummary]);
+
+  // 관리자: piggy_account_requests 변경 시 요약(생성 요청 목록) 실시간 갱신
+  const isPiggyGroupAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isAuthenticated || !currentGroupId || !isPiggyGroupAdmin) return;
+
+    const gid = currentGroupId;
+    const scheduleReload = () => {
+      if (piggyAccountRequestsDebounceRef.current) {
+        clearTimeout(piggyAccountRequestsDebounceRef.current);
+      }
+      piggyAccountRequestsDebounceRef.current = setTimeout(() => {
+        piggyAccountRequestsDebounceRef.current = null;
+        void loadPiggySummaryRef.current();
+      }, 220);
+    };
+
+    const channel = supabase
+      .channel(`dashboard_piggy_account_requests:${gid}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'piggy_account_requests',
+          filter: `group_id=eq.${gid}`,
+        },
+        () => scheduleReload()
+      )
+      .subscribe((status, err) => {
+        if (err && process.env.NODE_ENV === 'development') {
+          console.warn('저금통 생성 요청 Realtime:', err);
+        }
+        if (process.env.NODE_ENV === 'development' && status === 'SUBSCRIBED') {
+          console.log('✅ dashboard piggy_account_requests Realtime 구독됨');
+        }
+      });
+
+    return () => {
+      if (piggyAccountRequestsDebounceRef.current) {
+        clearTimeout(piggyAccountRequestsDebounceRef.current);
+        piggyAccountRequestsDebounceRef.current = null;
+      }
+      void supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, currentGroupId, isPiggyGroupAdmin]);
 
   // 관리자: 대시보드에서 멤버에게 저금통 추가
   const handleDashboardAddPiggy = useCallback(async (childId: string) => {
