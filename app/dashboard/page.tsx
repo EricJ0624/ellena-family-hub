@@ -2278,7 +2278,8 @@ export default function FamilyHub() {
               if (updateMessageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
                 try {
                   const decrypted = CryptoService.decrypt(messageText, updateMessageKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
+                  // 빈 문자열(사진 전용 메시지 등)도 정상 복호화 — length > 0 조건이면 암호문이 그대로 노출됨
+                  if (typeof decrypted === 'string') decryptedText = decrypted;
                 } catch (_) {}
               }
               const timeStr = `${new Date(updatedMessage.created_at).getHours()}:${String(new Date(updatedMessage.created_at).getMinutes()).padStart(2, '0')}`;
@@ -2335,7 +2336,7 @@ export default function FamilyHub() {
             if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
               try {
                 const decrypted = CryptoService.decrypt(messageText, messageKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
+                if (typeof decrypted === 'string') decryptedText = decrypted;
               } catch (_) {}
             }
             const createdAt = new Date(newMessage.created_at);
@@ -2502,14 +2503,12 @@ export default function FamilyHub() {
               if (isEncrypted) {
                 try {
                   const decrypted = CryptoService.decrypt(msg.message_text, currentKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
+                  if (typeof decrypted === 'string') {
                     decryptedText = decrypted;
                   } else {
-                    // 복호화 실패 - 원본 텍스트 사용
                     decryptedText = msg.message_text;
                   }
                 } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
                   decryptedText = msg.message_text;
                 }
               } else {
@@ -7575,7 +7574,7 @@ export default function FamilyHub() {
                         return (
                           <div style={{ marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
                             {rows.map((att) => (
-                              <div key={att.id} style={{ position: 'relative' }}>
+                              <div key={att.id} className="chat-attachment-cell" style={{ position: 'relative' }}>
                                 <a href={att.image_url} target="_blank" rel="noopener noreferrer">
                                   <img
                                     src={att.thumbnail_url || att.image_url}
@@ -7586,6 +7585,7 @@ export default function FamilyHub() {
                                 {m.sender_id === userId && (
                                   <button
                                     type="button"
+                                    className="chat-attachment-delete-btn"
                                     onClick={() => {
                                       if (!currentGroupId) return;
                                       void (async () => {
@@ -7612,6 +7612,7 @@ export default function FamilyHub() {
                                       lineHeight: '18px',
                                       padding: 0,
                                     }}
+                                    aria-label="첨부 삭제"
                                   >
                                     x
                                   </button>
@@ -7621,7 +7622,10 @@ export default function FamilyHub() {
                           </div>
                         );
                       })()}
-                      {m.text && <p className="message-text">{m.text}</p>}
+                      {m.text &&
+                        !String(m.text).startsWith('U2FsdGVkX1') && (
+                          <p className="message-text">{m.text}</p>
+                        )}
                   </div>
                 </div>
               ))}

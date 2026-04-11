@@ -1183,6 +1183,17 @@ body {
   word-break: break-all;
 }
 
+/* 채팅 첨부 삭제: 데스크톱은 썸네일 호버 시에만 표시 (전송된 메시지가 초안처럼 보이지 않도록) */
+@media (hover: hover) and (pointer: fine) {
+  .chat-attachment-cell .chat-attachment-delete-btn {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .chat-attachment-cell:hover .chat-attachment-delete-btn {
+    opacity: 1;
+  }
+}
+
 .chat-input-wrapper {
   display: flex;
   align-items: center;
