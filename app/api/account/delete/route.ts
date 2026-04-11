@@ -182,7 +182,14 @@ export async function DELETE(request: NextRequest) {
       console.warn('메모리 볼트 데이터 삭제 실패 (무시):', memoryError);
     }
 
-    // 7. auth.users 삭제 (CASCADE로 profiles, memberships 등 자동 삭제)
+    // 7. 공지 읽음 기록 명시 삭제 (FK CASCADE가 있어도 이중 안전, 누락된 FK 환경 대비)
+    try {
+      await supabaseServer.from('announcement_reads').delete().eq('user_id', user.id);
+    } catch (readCleanupError) {
+      console.warn('announcement_reads 삭제 실패 (무시):', readCleanupError);
+    }
+
+    // 8. auth.users 삭제 (CASCADE로 profiles, memberships 등 자동 삭제)
     const { error: deleteUserError } = await supabaseServer.auth.admin.deleteUser(user.id);
 
     if (deleteUserError) {

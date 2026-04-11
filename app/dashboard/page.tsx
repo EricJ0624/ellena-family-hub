@@ -5148,9 +5148,11 @@ export default function FamilyHub() {
         const body = await response.json().catch(() => ({}));
         if (process.env.NODE_ENV === 'development') {
           console.warn('[공지] 조회 실패:', response.status, body?.error || response.statusText);
-          if (response.status === 403 && retryCount < 1) {
-            setTimeout(() => loadAnnouncements(retryCount + 1), 1500);
-          }
+        }
+        // 계정 전환 직후 이전 사용자의 관리자 플래그로 group-admin API를 호출하면 403이 날 수 있음 → 멤버 API로 재시도
+        // 멤버십 반영 지연 시에도 동일. 프로덕션에서도 제한적 재시도
+        if (response.status === 403 && retryCount < 1) {
+          setTimeout(() => loadAnnouncements(retryCount + 1), 1200);
         }
       }
     } catch (error) {

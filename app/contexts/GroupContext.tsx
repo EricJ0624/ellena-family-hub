@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Group, Membership, MembershipRole } from '@/types/db';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
@@ -32,6 +32,21 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const prevUserIdRef = useRef<string | null>(null);
+  /** 로그인 계정 전환 직후 자식(대시보드)이 이전 사용자의 isOwner/userRole로 API를 호출하지 않도록, paint 전에 권한 상태를 비움 */
+  const lastUserIdForRoleRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!userId) {
+      lastUserIdForRoleRef.current = null;
+      return;
+    }
+    const prev = lastUserIdForRoleRef.current;
+    if (prev !== null && prev !== userId) {
+      setUserRole(null);
+      setIsOwner(false);
+    }
+    lastUserIdForRoleRef.current = userId;
+  }, [userId]);
 
   // 그룹 목록 로드
   const refreshGroups = useCallback(async () => {
@@ -261,6 +276,8 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     }
     if (userId && prevUserIdRef.current && prevUserIdRef.current !== userId) {
       setCurrentGroupIdState(null);
+      setUserRole(null);
+      setIsOwner(false);
       if (typeof window !== 'undefined') {
         localStorage.removeItem('currentGroupId');
       }
