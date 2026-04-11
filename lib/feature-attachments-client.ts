@@ -58,8 +58,8 @@ function fileToImageBitmap(file: Blob): Promise<ImageBitmap> {
 
 async function compressImageAuto(file: File): Promise<File> {
   const bitmap = await fileToImageBitmap(file);
-  const maxEdge = 2200;
-  const quality = 0.86;
+  const maxEdge = 1920;
+  const quality = 0.82;
   const ratio = Math.min(maxEdge / bitmap.width, maxEdge / bitmap.height, 1);
   const w = Math.max(1, Math.round(bitmap.width * ratio));
   const h = Math.max(1, Math.round(bitmap.height * ratio));

@@ -370,6 +370,12 @@ export default function FamilyHub() {
   const [chatLoadingOlder, setChatLoadingOlder] = useState(false);
   const chatPhotoUploadingRef = useRef(false); // 사진 업로드 중복 방지
   const chatTextSendingRef = useRef(false); // 텍스트 메시지 전송 중복 방지
+  /** Realtime 첨부 핸들러가 항상 최신 loadChatAttachments를 호출하도록 */
+  const loadChatAttachmentsRef = useRef<() => Promise<void>>(async () => {});
+  const chatAttachmentsLoadGenRef = useRef(0);
+  const chatAttachmentsDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 본인 업로드 중 로컬 미리보기(blob URL) */
+  const [chatOutgoingPreviews, setChatOutgoingPreviews] = useState<Record<string, string[]>>({});
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -638,6 +644,10 @@ export default function FamilyHub() {
       });
       setChatHasMoreOlder(false);
       setChatLoadingOlder(false);
+      setChatOutgoingPreviews((p) => {
+        Object.values(p).flat().forEach((u) => URL.revokeObjectURL(u));
+        return {};
+      });
       
       // 1. 모든 상태 초기화 (이전 그룹의 데이터 제거)
       setState({
@@ -2072,6 +2082,42 @@ export default function FamilyHub() {
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
     };
 
+    const scheduleLoadChatAttachments = () => {
+      if (chatAttachmentsDebounceTimerRef.current) {
+        clearTimeout(chatAttachmentsDebounceTimerRef.current);
+      }
+      chatAttachmentsDebounceTimerRef.current = setTimeout(() => {
+        chatAttachmentsDebounceTimerRef.current = null;
+        void loadChatAttachmentsRef.current();
+      }, 280);
+    };
+
+    /** 상대 사진 메시지: 메시지 행은 먼저 오고 첨부 INSERT가 늦을 때 보강 */
+    const pollIncomingChatPhotos = (messageId: string) => {
+      const gid = currentGroupId;
+      if (!gid) return;
+      let attempts = 0;
+      const maxAttempts = 14;
+      const run = () => {
+        if (attempts >= maxAttempts) return;
+        attempts += 1;
+        void getAttachmentsForEntity({
+          groupId: gid,
+          entityType: 'chat_message',
+          entityId: messageId,
+        })
+          .then((atts) => {
+            if (atts.length > 0) {
+              void loadChatAttachmentsRef.current();
+              return;
+            }
+            setTimeout(run, 380);
+          })
+          .catch(() => setTimeout(run, 380));
+      };
+      setTimeout(run, 200);
+    };
+
     // ========== 기능별 구독 함수 분리 ==========
     
     // 1. Presence 구독 설정 (온라인 사용자 추적)
@@ -2402,6 +2448,11 @@ export default function FamilyHub() {
                 messages: newMessages
               };
             });
+            // 사진 전용 메시지는 첨부 행이 늦게 생김 — 디바운스 일괄 로드 + 짧은 폴링(Realtime 클로저 지연 보강)
+            if (!String(decryptedText || '').trim()) {
+              scheduleLoadChatAttachments();
+              pollIncomingChatPhotos(messageId);
+            }
           }
         )
         .subscribe((status, err) => {
@@ -2442,11 +2493,9 @@ export default function FamilyHub() {
             if (record.feature_type !== 'chat' || record.entity_type !== 'chat_message') return;
 
             if (ev === 'INSERT') {
-              // 새 첨부 파일이 추가되면 해당 메시지의 첨부 목록 갱신
-              void loadChatAttachments();
+              scheduleLoadChatAttachments();
             } else if (ev === 'DELETE') {
-              // 첨부 파일이 삭제되면 해당 메시지의 첨부 목록 갱신
-              void loadChatAttachments();
+              scheduleLoadChatAttachments();
             }
           }
         )
@@ -3579,6 +3628,10 @@ export default function FamilyHub() {
     // 정리 함수
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
+      if (chatAttachmentsDebounceTimerRef.current) {
+        clearTimeout(chatAttachmentsDebounceTimerRef.current);
+        chatAttachmentsDebounceTimerRef.current = null;
+      }
       locationLoadStartedRef.current = false;
       isSettingUpSubscriptionsRef.current = false;  // ✅ 플래그 리셋
       processedMessageIdsRef.current.clear();  // ✅ 처리된 메시지 ID 초기화
@@ -6443,20 +6496,24 @@ export default function FamilyHub() {
   // Chat Handlers
   const loadChatAttachments = useCallback(async () => {
     if (!currentGroupId) return;
-    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const ids = (state.messages || [])
       .map((m) => String(m.id))
       .filter((id) => uuidLike.test(id));
     if (ids.length === 0) {
+      chatAttachmentsLoadGenRef.current += 1;
       setChatAttachmentsByMessage({});
       return;
     }
+    chatAttachmentsLoadGenRef.current += 1;
+    const gen = chatAttachmentsLoadGenRef.current;
     try {
       const rows = await listAttachments({
         groupId: currentGroupId,
         entityType: 'chat_message',
         entityIds: ids,
       });
+      if (gen !== chatAttachmentsLoadGenRef.current) return;
       const grouped: Record<string, ChatAttachment[]> = {};
       for (const row of rows) {
         const key = String(row.entity_id);
@@ -6468,6 +6525,8 @@ export default function FamilyHub() {
       console.error('채팅 첨부 조회 오류:', e);
     }
   }, [currentGroupId, state.messages]);
+
+  loadChatAttachmentsRef.current = loadChatAttachments;
 
   useEffect(() => {
     loadChatAttachments();
@@ -6535,8 +6594,8 @@ export default function FamilyHub() {
       return;
     }
     
-    if (files.length > 3) {
-      alert('채팅 첨부는 최대 3장까지 가능합니다.');
+    if (files.length > 4) {
+      alert('채팅 첨부는 최대 4장까지 가능합니다.');
       return;
     }
     
@@ -6553,7 +6612,18 @@ export default function FamilyHub() {
     
     chatPhotoUploadingRef.current = true;
     console.log('🔒 사진 업로드 시작, 중복 방지 플래그 설정');
-    
+
+    const revokeOutgoingPreviews = (mid: string) => {
+      setChatOutgoingPreviews((prev) => {
+        const next = { ...prev };
+        const urls = next[mid];
+        if (urls) urls.forEach((u) => URL.revokeObjectURL(u));
+        delete next[mid];
+        return next;
+      });
+    };
+
+    let outgoingPreviewMessageId: string | null = null;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -6579,11 +6649,13 @@ export default function FamilyHub() {
         .single();
       if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
+      const mid = String(inserted.id);
+      outgoingPreviewMessageId = mid;
       const now = new Date();
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
       
       // 즉시 화면 반영 (빈 텍스트로)
-      processedMessageIdsRef.current.add(String(inserted.id));
+      processedMessageIdsRef.current.add(mid);
       updateState('ADD_MESSAGE', {
         id: inserted.id,
         user: "나",
@@ -6595,12 +6667,15 @@ export default function FamilyHub() {
       });
       console.log('✅ 사진 메시지 즉시 전송 (텍스트 없음):', inserted.id);
 
+      const previewUrls = files.map((f) => URL.createObjectURL(f));
+      setChatOutgoingPreviews((prev) => ({ ...prev, [mid]: previewUrls }));
+
       // 파일 업로드
       const jobs = await uploadFeatureAttachments({
         groupId: currentGroupId,
         featureType: 'chat',
         entityType: 'chat_message',
-        entityId: String(inserted.id),
+        entityId: mid,
         files,
         maxConcurrent: 3,
         retryCount: 1,
@@ -6615,15 +6690,22 @@ export default function FamilyHub() {
       const attachments = await getAttachmentsForEntity({
         groupId: currentGroupId,
         entityType: 'chat_message',
-        entityId: String(inserted.id),
+        entityId: mid,
       });
       setChatAttachmentsByMessage(prev => ({
         ...prev,
-        [String(inserted.id)]: attachments,
+        [mid]: attachments,
       }));
+      revokeOutgoingPreviews(mid);
+      outgoingPreviewMessageId = null;
+      void loadChatAttachmentsRef.current();
       console.log(`✅ 사진 ${attachments.length}개 업로드 완료:`, inserted.id);
     } catch (error) {
       console.error('사진 전송 오류:', error);
+      if (outgoingPreviewMessageId) {
+        revokeOutgoingPreviews(outgoingPreviewMessageId);
+        outgoingPreviewMessageId = null;
+      }
       alert(error instanceof Error ? error.message : '사진 전송에 실패했습니다.');
     } finally {
       chatPhotoUploadingRef.current = false;
@@ -7660,9 +7742,49 @@ export default function FamilyHub() {
                     <div className="message-bubble">
                       {(() => {
                         const rows = chatAttachmentsByMessage[String(m.id)] || [];
-                        if (rows.length === 0) return null;
+                        const previews = chatOutgoingPreviews[String(m.id)] || [];
+                        const showLocalPreviews = previews.length > 0 && rows.length === 0;
+                        if (rows.length === 0 && !showLocalPreviews) return null;
                         return (
                           <div style={{ marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
+                            {showLocalPreviews &&
+                              previews.map((src, pi) => (
+                                <div
+                                  key={`pv-${pi}`}
+                                  className="chat-attachment-cell"
+                                  style={{ position: 'relative' }}
+                                  title="업로드 중"
+                                >
+                                  <img
+                                    src={src}
+                                    alt=""
+                                    style={{
+                                      width: '100%',
+                                      height: '84px',
+                                      objectFit: 'cover',
+                                      borderRadius: '8px',
+                                      opacity: 0.92,
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      position: 'absolute',
+                                      inset: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      color: '#fff',
+                                      background: 'rgba(15,23,42,0.35)',
+                                      borderRadius: '8px',
+                                      pointerEvents: 'none',
+                                    }}
+                                  >
+                                    …
+                                  </span>
+                                </div>
+                              ))}
                             {rows.map((att) => (
                               <div key={att.id} className="chat-attachment-cell" style={{ position: 'relative' }}>
                                 <a href={att.image_url} target="_blank" rel="noopener noreferrer">

@@ -10,7 +10,8 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'travel_expense',
 ]);
 
-const UUID_V4_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/* v4 전용이 아닌 일반 UUID(버전·variant 혼용 DB 대비) */
+const UUID_ANY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
     const ids = entityIds
       .map((id: unknown) => String(id))
-      .filter((id) => UUID_V4_LIKE.test(id));
+      .filter((id) => UUID_ANY.test(id));
     if (ids.length === 0) return NextResponse.json({ success: true, data: [] });
 
     const memberCheck = await requireGroupMember(user.id, String(groupId));
