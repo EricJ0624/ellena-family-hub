@@ -47,6 +47,10 @@ import { FamilyTasksSection } from '@/app/features/family-tasks/components/Famil
 import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
 import type { FamilyEvent } from '@/app/features/family-calendar/types';
+import { FamilyChatSection } from '@/app/features/family-chat/components/FamilyChatSection';
+import type { ChatUiMessage } from '@/app/features/family-chat/types';
+import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
+import type { FamilyLocation, LocationRequest } from '@/app/features/family-location/types';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -6055,228 +6059,45 @@ export default function FamilyHub() {
           />
 
           {/* Family Chat Section */}
-          <section className="content-section">
-            <div className="section-header">
-              <h3 className="section-title">{dt('section_title_chat')}</h3>
-          </div>
-            <div className="section-body">
-              <div ref={chatBoxRef} className="chat-messages">
-              {chatHasMoreOlder && (
-                <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-                  <button
-                    type="button"
-                    onClick={() => void loadOlderChatMessages()}
-                    disabled={chatLoadingOlder}
-                    style={{
-                      padding: '6px 14px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: '#4f46e5',
-                      background: '#eef2ff',
-                      border: '1px solid #c7d2fe',
-                      borderRadius: '999px',
-                      cursor: chatLoadingOlder ? 'wait' : 'pointer',
-                      opacity: chatLoadingOlder ? 0.75 : 1,
-                    }}
-                  >
-                    {chatLoadingOlder ? dt('chat_loading_older') : dt('chat_load_older')}
-                  </button>
-                </div>
-              )}
-              {(state.messages || []).map((m) => (
-                  <div key={String(m.id)} className="message-item">
-                    <div className="message-header">
-                      <span className="message-user" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {m.sender_id && familyRoleByUserId[m.sender_id] && (
-                          <>
-                            <span style={{ fontSize: '20px', lineHeight: '1' }}>
-                              {getFamilyRoleEmoji(familyRoleByUserId[m.sender_id])}
-                            </span>
-                            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                              {getFamilyRoleLabel(lang, familyRoleByUserId[m.sender_id])}
-                            </span>
-                          </>
-                        )}
-                        <span>
-                          {m.sender_id === userId ? (m.user === '나' ? m.user : ct('me')) : (eventAuthorNames[m.sender_id!] ?? (m.user === '사용자' ? ct('user') : m.user))}
-                        </span>
-                      </span>
-                      <span className="message-time">{m.time}</span>
-                  </div>
-                    <div className="message-bubble">
-                      {(() => {
-                        const rows = chatAttachmentsByMessage[String(m.id)] || [];
-                        const previews = chatOutgoingPreviews[String(m.id)] || [];
-                        const showLocalPreviews = previews.length > 0 && rows.length === 0;
-                        if (rows.length === 0 && !showLocalPreviews) return null;
-                        return (
-                          <div style={{ marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
-                            {showLocalPreviews &&
-                              previews.map((src, pi) => (
-                                <div
-                                  key={`pv-${pi}`}
-                                  className="chat-attachment-cell"
-                                  style={{ position: 'relative' }}
-                                  title="업로드 중"
-                                >
-                                  <img
-                                    src={src}
-                                    alt=""
-                                    style={{
-                                      width: '100%',
-                                      height: '84px',
-                                      objectFit: 'cover',
-                                      borderRadius: '8px',
-                                      opacity: 0.92,
-                                    }}
-                                  />
-                                  <span
-                                    style={{
-                                      position: 'absolute',
-                                      inset: 0,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      fontSize: '11px',
-                                      fontWeight: 700,
-                                      color: '#fff',
-                                      background: 'rgba(15,23,42,0.35)',
-                                      borderRadius: '8px',
-                                      pointerEvents: 'none',
-                                    }}
-                                  >
-                                    …
-                                  </span>
-                                </div>
-                              ))}
-                            {rows.map((att) => (
-                              <div key={att.id} className="chat-attachment-cell" style={{ position: 'relative' }}>
-                                <a href={att.image_url} target="_blank" rel="noopener noreferrer">
-                                  <img
-                                    src={att.thumbnail_url || att.image_url}
-                                    alt={att.original_filename}
-                                    style={{ width: '100%', height: '84px', objectFit: 'cover', borderRadius: '8px' }}
-                                  />
-                                </a>
-                                {m.sender_id === userId && (
-                                  <button
-                                    type="button"
-                                    className="chat-attachment-delete-btn"
-                                    onClick={() => {
-                                      if (!currentGroupId) return;
-                                      void (async () => {
-                                        try {
-                                          await deleteAttachment(currentGroupId, att.id);
-                                          await loadChatAttachments();
-                                        } catch (e) {
-                                          alert(e instanceof Error ? e.message : '첨부 삭제 실패');
-                                        }
-                                      })();
-                                    }}
-                                    style={{
-                                      position: 'absolute',
-                                      top: 4,
-                                      right: 4,
-                                      width: 18,
-                                      height: 18,
-                                      borderRadius: '999px',
-                                      border: 'none',
-                                      background: 'rgba(239,68,68,0.95)',
-                                      color: '#fff',
-                                      fontSize: 11,
-                                      cursor: 'pointer',
-                                      lineHeight: '18px',
-                                      padding: 0,
-                                    }}
-                                    aria-label="첨부 삭제"
-                                  >
-                                    x
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                      {m.text &&
-                        !String(m.text).startsWith('U2FsdGVkX1') && (
-                          <p className="message-text">{m.text}</p>
-                        )}
-                  </div>
-                </div>
-              ))}
-            </div>
-              <div className="chat-input-wrapper" style={{ gap: '6px' }}>
-              <input 
-                ref={chatInputRef}
-                type="text" 
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter' || e.shiftKey) return;
-                  if (e.nativeEvent.isComposing) return;
-                  e.preventDefault();
-                  sendChat();
-                }}
-                  className="chat-input" 
-                placeholder={dt('chat_placeholder')}
-                style={{ flex: 1, minWidth: 0, padding: '11px 12px' }}
-              />
-              <button 
-                type="button"
-                onClick={sendChat}
-                  className="btn-send"
-                  style={{ padding: '8px 12px', fontSize: '12px' }}
-              >
-                {dt('chat_send')}
-              </button>
-              <button
-                type="button"
-                onClick={() => chatFileInputRef.current?.click()}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  padding: '7px 9px',
-                  background: '#f8fafc',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                }}
-              >
-                앨범
-              </button>
-              <button
-                type="button"
-                onClick={() => chatCameraInputRef.current?.click()}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  padding: '7px 9px',
-                  background: '#f8fafc',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                }}
-              >
-                카메라
-              </button>
-              <input
-                ref={chatFileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                multiple
-                onChange={handlePickChatFiles}
-                style={{ display: 'none' }}
-              />
-              <input
-                ref={chatCameraInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic"
-                capture="environment"
-                onChange={handlePickChatFiles}
-                style={{ display: 'none' }}
-              />
-            </div>
-          </div>
-          </section>
+          <FamilyChatSection
+            messages={state.messages}
+            userId={userId}
+            currentGroupId={currentGroupId}
+            onSendMessage={sendChat}
+            chatBoxRef={chatBoxRef}
+            chatInputRef={chatInputRef}
+            chatFileInputRef={chatFileInputRef}
+            chatCameraInputRef={chatCameraInputRef}
+            chatHasMoreOlder={chatHasMoreOlder}
+            chatLoadingOlder={chatLoadingOlder}
+            onLoadOlderMessages={loadOlderChatMessages}
+            onPickFiles={handlePickChatFiles}
+            chatAttachmentsByMessage={chatAttachmentsByMessage}
+            chatOutgoingPreviews={chatOutgoingPreviews}
+            onDeleteAttachment={async (attachmentId: string) => {
+              if (!currentGroupId) return;
+              try {
+                await deleteAttachment(currentGroupId, attachmentId);
+                await loadChatAttachments();
+              } catch (e) {
+                alert(e instanceof Error ? e.message : '첨부 삭제 실패');
+              }
+            }}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            eventAuthorNames={eventAuthorNames}
+            lang={lang}
+            translations={{
+              section_title_chat: dt('section_title_chat'),
+              chat_placeholder: dt('chat_placeholder'),
+              chat_send: dt('chat_send'),
+              chat_load_older: dt('chat_load_older'),
+              chat_loading_older: dt('chat_loading_older'),
+              me: ct('me'),
+              user: ct('user'),
+            }}
+          />
 
           {/* 가족 여행 플래너 Section */}
           <section className="content-section">
