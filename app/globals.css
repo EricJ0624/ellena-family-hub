@@ -100,6 +100,19 @@ body {
   touch-action: pan-y pinch-zoom;
 }
 
+/*
+ * 고정 밝은 카드(#fff) 위에 border 만 있는 인라인 input/textarea 는 배경이 비어 있음.
+ * OS/문서가 dark color-scheme 이면 UA 가 폼 컨트롤을 어둡게 그려 "검은 박스"로 보임.
+ * (next-themes enableColorScheme 끔 + 아래로 이중 방어)
+ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="color"]):not(.chalkboard-form-input):not(.form-input):not(.chat-input),
+textarea:not(.chalkboard-form-input),
+select {
+  background-color: #ffffff;
+  color: #1e293b;
+  color-scheme: light;
+}
+
 ::-webkit-scrollbar {
   display: none;
 }
