@@ -21,6 +21,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
+import { formatMoneyAmount } from '@/lib/format-currency';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
@@ -186,7 +187,7 @@ export default function FamilyHub() {
   let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
   let refreshGroups: (() => Promise<void>) | null = null;
   let refreshMemberships: (() => Promise<void>) | null = null;
-  let currentGroup: { family_name?: string | null; title_style?: unknown } | null = null;
+  let currentGroup: { family_name?: string | null; title_style?: unknown; piggy_currency?: string } | null = null;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
@@ -243,6 +244,7 @@ export default function FamilyHub() {
     walletBalance: number;
     bankBalance: number;
     ownerNickname?: string | null;
+    currency?: string;
   } | null>(null);
   const [piggyAccounts, setPiggyAccounts] = useState<Array<{
     id: string;
@@ -263,6 +265,7 @@ export default function FamilyHub() {
     name: string;
     balance: number;
     walletBalance: number;
+    currency?: string;
     noAccount: false;
   }> | null>(null);
   const [piggyLoaded, setPiggyLoaded] = useState(false);
@@ -927,6 +930,7 @@ export default function FamilyHub() {
           walletBalance: result.data.wallet?.balance ?? 0,
           bankBalance: result.data.account.balance ?? 0,
           ownerNickname: result.data.account.ownerNickname || null,
+          currency: result.data.account.currency,
         });
         setPiggyAccounts(null);
         setPiggyMemberPiggies(null);
@@ -5750,6 +5754,12 @@ export default function FamilyHub() {
     const base = rawName.replace(/piggy\s*bank/gi, '').trim();
     return base || rawName;
   })();
+  const piggyMoneyLocale =
+    lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : lang === 'zh-CN' ? 'zh-CN' : lang === 'zh-TW' ? 'zh-TW' : 'en-US';
+  const formatDashboardPiggy = (amount: number, currencyCode?: string | null) => {
+    const cur = (currencyCode || piggySummary?.currency || currentGroup?.piggy_currency || 'KRW').trim().toUpperCase() || 'KRW';
+    return formatMoneyAmount(amount, cur, piggyMoneyLocale);
+  };
   const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
   const showAdminButton = isSystemAdmin || isGroupAdmin;
   const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
@@ -6325,13 +6335,13 @@ export default function FamilyHub() {
                                   <div style={{ backgroundColor: '#fef2f2', borderRadius: '8px', padding: '10px', border: '1px solid #fecaca' }}>
                                     <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>용돈 잔액</div>
                                     <div style={{ fontSize: '16px', fontWeight: 700, color: '#b91c1c' }}>
-                                      {(p.walletBalance ?? 0).toLocaleString('ko-KR')}원
+                                      {formatDashboardPiggy(p.walletBalance ?? 0, p.currency)}
                                     </div>
                                   </div>
                                   <div style={{ backgroundColor: '#fff7ed', borderRadius: '8px', padding: '10px', border: '1px solid #fed7aa' }}>
                                     <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>저금통 잔액</div>
                                     <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>
-                                      {(p.balance ?? 0).toLocaleString('ko-KR')}원
+                                      {formatDashboardPiggy(p.balance ?? 0, p.currency)}
                                     </div>
                                   </div>
                                 </div>
@@ -6347,13 +6357,13 @@ export default function FamilyHub() {
                       <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
                         <div style={{ fontSize: '12px', color: '#b91c1c' }}>{piggyLabel} 용돈 잔액</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
-                          {piggySummary.walletBalance.toLocaleString('ko-KR')}원
+                          {formatDashboardPiggy(piggySummary.walletBalance, piggySummary.currency)}
                         </div>
                       </div>
                       <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
                         <div style={{ fontSize: '12px', color: '#9a3412' }}>{piggyLabel} 저금통 잔액</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
-                          {piggySummary.bankBalance.toLocaleString('ko-KR')}원
+                          {formatDashboardPiggy(piggySummary.bankBalance, piggySummary.currency)}
                         </div>
                       </div>
                     </div>
