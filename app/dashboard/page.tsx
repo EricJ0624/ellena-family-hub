@@ -48,12 +48,8 @@ import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-t
 import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
 import type { FamilyEvent } from '@/app/features/family-calendar/types';
 import { FamilyChatSection } from '@/app/features/family-chat/components/FamilyChatSection';
-import { FamilyLocationDashboardBundle } from '@/app/features/family-location/components/FamilyLocationDashboardBundle';
-import {
-  getDashboardWidgetOrder,
-  isFamilyLocationFeatureEnabled,
-  type DashboardWidgetId,
-} from '@/app/features/dashboard/dashboard-layout';
+import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
+import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
