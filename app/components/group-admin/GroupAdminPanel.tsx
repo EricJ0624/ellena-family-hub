@@ -36,6 +36,7 @@ import { getAdminTranslation } from '@/lib/translations/admin';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
+import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 
 export type GroupAdminPanelVariant = 'standalone' | 'embedded';
 
@@ -74,6 +75,7 @@ interface LocationInfo {
   last_updated: string;
   email: string | null;
   nickname: string | null;
+  familyRole?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null;
 }
 
 interface GroupStats {
@@ -534,12 +536,21 @@ export function GroupAdminPanel({
         .select('id, email, nickname')
         .in('id', userIds);
 
+      // memberships 테이블에서 family_role 정보 가져오기
+      const { data: membershipsData } = await supabase
+        .from('memberships')
+        .select('user_id, family_role')
+        .eq('group_id', effectiveGroupId)
+        .in('user_id', userIds);
+
       const locationsWithProfiles: LocationInfo[] = (locationsData || []).map(location => {
         const profile = profilesData?.find(p => p.id === location.user_id);
+        const membership = membershipsData?.find(m => m.user_id === location.user_id);
         return {
           ...location,
           email: profile?.email || null,
           nickname: profile?.nickname || null,
+          familyRole: membership?.family_role || null,
         };
       });
 
@@ -1546,6 +1557,11 @@ export function GroupAdminPanel({
                             color: '#1e293b',
                           }}>
                             {location.nickname || location.email || gat('no_name')}
+                            {location.familyRole && (
+                              <span style={{ marginLeft: '6px' }}>
+                                {getFamilyRoleEmoji(location.familyRole)} {getFamilyRoleLabel(lang, location.familyRole)}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div style={{

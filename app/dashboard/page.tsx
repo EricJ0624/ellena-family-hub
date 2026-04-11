@@ -6418,6 +6418,10 @@ export default function FamilyHub() {
             }}
             cancelLabel={ct('cancel')}
             rejectLabel={dt('piggy_reject_btn')}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            lang={lang}
           />
 
         <FamilyLocationRequestModal
@@ -6454,6 +6458,10 @@ export default function FamilyHub() {
             location_modal_refresh: dt('location_modal_refresh'),
           }}
           closeLabel={ct('close')}
+          familyRoleByUserId={familyRoleByUserId}
+          getFamilyRoleEmoji={getFamilyRoleEmoji}
+          getFamilyRoleLabel={getFamilyRoleLabel}
+          lang={lang}
         />
       </div>
               </div>

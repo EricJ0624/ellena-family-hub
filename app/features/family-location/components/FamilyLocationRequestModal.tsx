@@ -36,6 +36,10 @@ type Props = {
   onRefreshUsers: () => void;
   t: FamilyLocationRequestModalTranslations;
   closeLabel: string;
+  familyRoleByUserId: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>;
+  getFamilyRoleEmoji: (role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
+  getFamilyRoleLabel: (lang: any, role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
+  lang: any;
 };
 
 function fillN(s: string, n: number) {
@@ -58,6 +62,10 @@ export function FamilyLocationRequestModal({
   onRefreshUsers,
   t,
   closeLabel,
+  familyRoleByUserId,
+  getFamilyRoleEmoji,
+  getFamilyRoleLabel,
+  lang,
 }: Props) {
   if (!open) return null;
 
@@ -150,6 +158,11 @@ export function FamilyLocationRequestModal({
                             {user.nickname ||
                               user.email ||
                               fillId(t.location_modal_user_fallback, user.id.substring(0, 8))}
+                            {familyRoleByUserId[user.id] && (
+                              <span style={{ marginLeft: '6px' }}>
+                                {getFamilyRoleEmoji(familyRoleByUserId[user.id])} {getFamilyRoleLabel(lang, familyRoleByUserId[user.id])}
+                              </span>
+                            )}
                             {isOnline && (
                               <span style={{ fontSize: '10px', color: '#10b981', marginLeft: '6px' }}>
                                 {t.location_modal_online}

@@ -66,6 +66,10 @@ type Props = {
   translations: FamilyLocationSectionTranslations;
   cancelLabel: string;
   rejectLabel: string;
+  familyRoleByUserId: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>;
+  getFamilyRoleEmoji: (role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
+  getFamilyRoleLabel: (lang: any, role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
+  lang: any;
 };
 
 function fillHm(template: string, h: number, m: number) {
@@ -90,6 +94,10 @@ export function FamilyLocationSection({
   translations: t,
   cancelLabel,
   rejectLabel,
+  familyRoleByUserId,
+  getFamilyRoleEmoji,
+  getFamilyRoleLabel,
+  lang,
 }: Props) {
   const lat = myLocation.latitude ?? 0;
   const lng = myLocation.longitude ?? 0;
@@ -357,6 +365,9 @@ export function FamilyLocationSection({
                   const otherUser = isRequester ? req.target : req.requester;
                   const otherUserName =
                     otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
+                  const otherUserId = otherUser?.id;
+                  const otherUserRole = otherUserId && familyRoleByUserId[otherUserId];
+                  const roleDisplay = otherUserRole ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}` : '';
                   const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
                   const now = new Date();
                   const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
@@ -377,7 +388,7 @@ export function FamilyLocationSection({
                     >
                       <div>
                         <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-                          {isRequester ? `→ ${otherUserName}` : `← ${otherUserName}`}
+                          {isRequester ? `→ ${otherUserName}${roleDisplay}` : `← ${otherUserName}${roleDisplay}`}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
                           {isRequester ? t.piggy_request_sent : t.piggy_request_received}
@@ -461,6 +472,9 @@ export function FamilyLocationSection({
                   const otherUser = isRequester ? req.target : req.requester;
                   const otherUserName =
                     otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
+                  const otherUserId = otherUser?.id;
+                  const otherUserRole = otherUserId && familyRoleByUserId[otherUserId];
+                  const roleDisplay = otherUserRole ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}` : '';
                   const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
                   const now = new Date();
                   const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
@@ -481,7 +495,7 @@ export function FamilyLocationSection({
                     >
                       <div>
                         <div style={{ fontWeight: '500', marginBottom: '4px', color: '#059669' }}>
-                          {fillName(t.location_ui_sharing_with, otherUserName)}
+                          {fillName(t.location_ui_sharing_with, otherUserName + roleDisplay)}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
                           {!isExpired && timeLeft > 0 ? (
