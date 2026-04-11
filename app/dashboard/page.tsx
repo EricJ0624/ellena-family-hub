@@ -3901,6 +3901,10 @@ export default function FamilyHub() {
             console.warn('ADD_MESSAGE: currentGroupId가 없어 메시지를 저장하지 않습니다.');
             break;
           }
+          // sendChat / uploadChatPhotos 가 이미 family_messages 에 insert 한 뒤 UI만 반영하는 경우 — 재삽입하면 행이 2개 생겨 상대 화면에 중복 표시됨
+          if (payload?.alreadyPersisted === true) {
+            break;
+          }
           // 메시지 암호화
           const encryptedText = CryptoService.encrypt(payload.text, currentKey);
           
@@ -4509,11 +4513,13 @@ export default function FamilyHub() {
             });
           break;
         }
-        case 'ADD_MESSAGE':
-          newState.messages = [...(prev.messages || []), payload].slice(-50);
-          // Supabase에 저장
+        case 'ADD_MESSAGE': {
+          const { alreadyPersisted: _ap, ...messageForState } = payload as Record<string, unknown> & { alreadyPersisted?: boolean };
+          newState.messages = [...(prev.messages || []), messageForState as Message].slice(-50);
+          // Supabase에 저장 (이미 insert 된 메시지는 saveToSupabase 에서 건너뜀)
           saveToSupabase('ADD_MESSAGE', payload, userId, currentKey);
           break;
+        }
         case 'UPDATE_PHOTO_ID':
           // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
           newState.album = prev.album.map(photo => {
@@ -6519,6 +6525,7 @@ export default function FamilyHub() {
         text: '',
         time: timeStr,
         sender_id: userId ?? undefined,
+        alreadyPersisted: true,
       });
       console.log('✅ 사진 메시지 즉시 전송 (텍스트 없음):', inserted.id);
 
@@ -6624,6 +6631,7 @@ export default function FamilyHub() {
           text: sanitizedText,
           time: timeStr,
           sender_id: userId ?? undefined,
+          alreadyPersisted: true,
         });
         console.log('✅ 텍스트 메시지 전송 완료:', inserted.id);
         input.value = "";
