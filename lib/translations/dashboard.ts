@@ -61,6 +61,8 @@ export type DashboardTranslations = {
   event_submit_btn: string; // "추가" in event modal
   chat_placeholder: string;
   chat_send: string;
+  chat_load_older: string;
+  chat_loading_older: string;
   map_error_no_key: string;
   map_error_check_env: string;
   map_error_domain: string;
@@ -256,6 +258,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_submit_btn: '추가',
     chat_placeholder: '메시지 입력...',
     chat_send: '전송',
+    chat_load_older: '이전 메시지 불러오기',
+    chat_loading_older: '불러오는 중…',
     map_error_no_key: 'Google Maps API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.',
     map_error_check_env: 'Google Maps API 키 설정 오류: Google Cloud Console에서 API 키의 도메인 제한 설정을 확인하고, Maps JavaScript API가 활성화되어 있는지 확인해주세요.',
     map_error_domain: '현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 API 키의 HTTP 리퍼러(웹사이트) 제한에 Vercel 도메인을 추가해주세요.',
@@ -442,6 +446,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_submit_btn: 'Add',
     chat_placeholder: 'Type a message...',
     chat_send: 'Send',
+    chat_load_older: 'Load older messages',
+    chat_loading_older: 'Loading…',
     map_error_no_key: 'Google Maps API key is not set. Check your environment variables.',
     map_error_check_env: 'Google Maps API error: Check API key domain restrictions and enable Maps JavaScript API in Google Cloud Console.',
     map_error_domain: 'Google Maps API is not available on this domain. Add your domain to the API key HTTP referrer restrictions in Google Cloud Console.',
@@ -628,6 +634,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_submit_btn: '追加',
     chat_placeholder: 'メッセージを入力...',
     chat_send: '送信',
+    chat_load_older: '過去のメッセージを読み込む',
+    chat_loading_older: '読み込み中…',
     map_error_no_key: 'Google Maps APIキーが設定されていません。環境変数を確認してください。',
     map_error_check_env: 'Google Maps APIエラー: Google Cloud ConsoleでAPIキーの制限とMaps JavaScript APIの有効化を確認してください。',
     map_error_domain: 'このドメインではGoogle Maps APIを使用できません。Google Cloud ConsoleでAPIキーのHTTPリファラ制限にドメインを追加してください。',
@@ -814,6 +822,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_submit_btn: '添加',
     chat_placeholder: '输入消息...',
     chat_send: '发送',
+    chat_load_older: '加载更早的消息',
+    chat_loading_older: '加载中…',
     map_error_no_key: '未设置 Google Maps API 密钥。请检查环境变量。',
     map_error_check_env: 'Google Maps API 错误：请在 Google Cloud Console 中检查 API 密钥限制并启用 Maps JavaScript API。',
     map_error_domain: '当前域名无法使用 Google Maps API。请在 Google Cloud Console 的 API 密钥 HTTP 引荐来源限制中添加域名。',
@@ -999,6 +1009,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_submit_btn: '新增',
     chat_placeholder: '輸入訊息...',
     chat_send: '傳送',
+    chat_load_older: '載入更早的訊息',
+    chat_loading_older: '載入中…',
     map_error_no_key: '未設定 Google Maps API 金鑰。請檢查環境變數。',
     map_error_check_env: 'Google Maps API 錯誤：請在 Google Cloud Console 中檢查 API 金鑰限制並啟用 Maps JavaScript API。',
     map_error_domain: '目前網域無法使用 Google Maps API。請在 Google Cloud Console 的 API 金鑰 HTTP 參照限制中新增網域。',

@@ -29,6 +29,13 @@ import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } fr
 import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
 import {
+  CHAT_PAGE_SIZE,
+  formatFamilyMessagesFromRows,
+  trimMessagesToMax,
+  type ChatMessageRow,
+  type ChatUiMessage,
+} from '@/lib/chat-messages';
+import {
   deleteAttachment,
   getAttachmentsForEntity,
   listAttachments,
@@ -101,7 +108,7 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 // --- [TYPES] 타입 안정성 추가 ---
 type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; assigned_to_user_id?: string; supabaseId?: string | number };
 type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
-type Message = { id: string; user: string; text: string; time: string; sender_id?: string };
+type Message = ChatUiMessage;
 type ChatAttachment = UploadedAttachment;
 type Photo = {
   id: number | string; // 로컬 임시 id 또는 Supabase UUID
@@ -328,6 +335,8 @@ export default function FamilyHub() {
   const chatCameraInputRef = useRef<HTMLInputElement>(null);
   const chatDropRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<Message[]>([]);
+  const chatScrollRestoreRef = useRef<{ sh: number; st: number } | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
   const geolocationWatchIdRef = useRef<number | null>(null);
@@ -357,6 +366,8 @@ export default function FamilyHub() {
   const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null); // 한 줄 맞춤 시 적용할 폰트 크기(px)
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
+  const [chatHasMoreOlder, setChatHasMoreOlder] = useState(false);
+  const [chatLoadingOlder, setChatLoadingOlder] = useState(false);
   const chatPhotoUploadingRef = useRef(false); // 사진 업로드 중복 방지
   const chatTextSendingRef = useRef(false); // 텍스트 메시지 전송 중복 방지
 
@@ -625,6 +636,8 @@ export default function FamilyHub() {
         newGroupId: currentGroupId,
         timestamp: new Date().toISOString(),
       });
+      setChatHasMoreOlder(false);
+      setChatLoadingOlder(false);
       
       // 1. 모든 상태 초기화 (이전 그룹의 데이터 제거)
       setState({
@@ -1422,11 +1435,22 @@ export default function FamilyHub() {
     }
   };
 
-  // 3. Scroll Chat to Bottom
   useEffect(() => {
-    if (chatBoxRef.current) {
-      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+    messagesRef.current = state.messages;
+  }, [state.messages]);
+
+  // 채팅 스크롤: 이전 메시지 prepend 시 위치 유지, 그 외에는 맨 아래
+  useLayoutEffect(() => {
+    const el = chatBoxRef.current;
+    if (!el || !isAuthenticated) return;
+    const p = chatScrollRestoreRef.current;
+    if (p) {
+      const delta = el.scrollHeight - p.sh;
+      el.scrollTop = p.st + delta;
+      chatScrollRestoreRef.current = null;
+      return;
     }
+    el.scrollTop = el.scrollHeight;
   }, [state.messages, isAuthenticated]);
 
   // ✅ 지도 마커 업데이트 함수 (재사용 가능, useCallback으로 외부에서도 호출 가능)
@@ -2286,7 +2310,16 @@ export default function FamilyHub() {
               setState(prev => ({
                 ...prev,
                 messages: prev.messages.map(m =>
-                  m.id === updatedMessage.id ? { id: updatedMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: updatedMessage.sender_id } : m
+                  m.id === updatedMessage.id
+                    ? {
+                        id: updatedMessage.id,
+                        user: '사용자',
+                        text: decryptedText,
+                        time: timeStr,
+                        sender_id: updatedMessage.sender_id,
+                        created_at: updatedMessage.created_at,
+                      }
+                    : m
                 )
               }));
               return;
@@ -2352,7 +2385,17 @@ export default function FamilyHub() {
               
               console.log('📝 State에 메시지 추가:', messageId, decryptedText, '현재 메시지 수:', prev.messages.length);
               // 새 메시지 추가
-              const newMessages = [...prev.messages, { id: newMessage.id, user: '사용자', text: decryptedText, time: timeStr, sender_id: newMessage.sender_id }];
+              const newMessages = trimMessagesToMax([
+                ...prev.messages,
+                {
+                  id: newMessage.id,
+                  user: '사용자',
+                  text: decryptedText,
+                  time: timeStr,
+                  sender_id: newMessage.sender_id,
+                  created_at: newMessage.created_at,
+                },
+              ]);
               console.log('✅ 메시지 추가 완료, 새 메시지 수:', newMessages.length);
               return {
                 ...prev,
@@ -2484,59 +2527,25 @@ export default function FamilyHub() {
 
         // 메시지 로드 (그룹별: currentGroupId 있을 때만 해당 그룹 메시지만 로드)
         if (currentGroupId) {
-          const { data: messagesData, error: messagesError } = await supabase
+          // 최신 CHAT_PAGE_SIZE개 — 내림차순 + limit 후 시간순으로 뒤집어 표시
+          const { data: messagesDataRaw, error: messagesError } = await supabase
             .from('family_messages')
             .select('*')
             .eq('group_id', currentGroupId)
-            .order('created_at', { ascending: true })
-            .limit(50);
-
-          if (!messagesError && messagesData) {
-          const formattedMessages: Message[] = messagesData.map((msg: any) => {
-            const createdAt = new Date(msg.created_at);
-            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            // 암호화된 메시지 복호화 (암호화된 형식인 경우에만)
-            let decryptedText = msg.message_text || '';
-            if (currentKey && msg.message_text) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = msg.message_text.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(msg.message_text, currentKey);
-                  if (typeof decrypted === 'string') {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = msg.message_text;
-                  }
-                } catch (e: any) {
-                  decryptedText = msg.message_text;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = msg.message_text;
-              }
-            } else {
-              // masterKey가 없으면 원본 텍스트 사용
-              decryptedText = msg.message_text;
-            }
-            return {
-              id: msg.id,
-              user: '사용자',
-              text: decryptedText,
-              time: timeStr,
-              sender_id: msg.sender_id
-            };
-          });
-          
-          // Supabase 메시지가 있으면 사용
-          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
-          if (formattedMessages.length > 0) {
-            setState(prev => ({
+            .order('created_at', { ascending: false })
+            .limit(CHAT_PAGE_SIZE);
+          if (!messagesError && messagesDataRaw != null) {
+            const chronological =
+              messagesDataRaw.length > 0 ? [...messagesDataRaw].reverse() : [];
+            const formattedMessages = formatFamilyMessagesFromRows(
+              chronological as ChatMessageRow[],
+              currentKey
+            );
+            setChatHasMoreOlder(messagesDataRaw.length >= CHAT_PAGE_SIZE);
+            setState((prev) => ({
               ...prev,
-              messages: formattedMessages
+              messages: formattedMessages,
             }));
-          }
-          // Supabase에 메시지가 없고 localStorage 데이터도 없으면 초기 상태 유지
           }
         }
 
@@ -3530,41 +3539,41 @@ export default function FamilyHub() {
       }, SESSION_POLL_MS);
     });
     
-    // 모바일/데스크톱 호환성: 앱이 다시 포그라운드로 올 때 Realtime 재연결
+    // 백그라운드/절전 중에는 Realtime(WebSocket) 이벤트를 놓치기 쉬움 → 포그라운드에서 DB와 다시 맞춤
+    let lastFocusDataSync = 0;
+    const FOCUS_SYNC_MIN_INTERVAL_MS = 2500;
+
+    const syncDataAfterReconnect = (reason: string) => {
+      const now = Date.now();
+      if (now - lastFocusDataSync < FOCUS_SYNC_MIN_INTERVAL_MS) return;
+      lastFocusDataSync = now;
+      console.log(`🔄 ${reason} — Supabase 데이터 재동기화 (채팅·할일·일정)`);
+      void loadSupabaseData().catch((err) => console.warn('포그라운드 동기화 실패:', err));
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('📱 앱이 포그라운드로 복귀, Realtime 연결 상태 확인...');
-        // Realtime subscription 상태 확인 및 필요시 재연결
-        const checkAndReconnect = () => {
-          // subscription이 존재하는지 확인 (null이면 연결이 끊어진 것으로 간주)
-          const hasSubscriptions = 
-            subscriptionsRef.current.messages !== null &&
-            subscriptionsRef.current.tasks !== null &&
-            subscriptionsRef.current.events !== null;
-          
-          // 재연결 로직 제거 (무한 루프 방지)
-          // useEffect가 자동으로 재실행되므로 별도 재연결 불필요
-          if (hasSubscriptions && process.env.NODE_ENV === 'development') {
-            console.log('✅ Realtime 연결 상태 정상');
-          }
-        };
-        
-        // 짧은 지연 후 확인 (연결 상태 업데이트 시간 고려)
-        setTimeout(checkAndReconnect, 1000);
+        console.log('📱 앱이 포그라운드로 복귀');
+        setTimeout(() => syncDataAfterReconnect('포그라운드 복귀'), 400);
       }
     };
-    
-    // 네트워크 재연결 시 Realtime 재연결 제거 (무한 루프 방지)
-    // useEffect가 자동으로 재실행되므로 별도 재연결 불필요
+
     const handleOnline = () => {
       console.log('🌐 네트워크 연결 복구');
-      // 재연결은 useEffect 의존성 배열이 자동으로 처리
+      setTimeout(() => syncDataAfterReconnect('네트워크 복구'), 400);
+    };
+
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setTimeout(() => syncDataAfterReconnect('bfcache 복원'), 400);
+      }
     };
     
     // 이벤트 리스너 등록
     if (typeof window !== 'undefined') {
       document.addEventListener('visibilitychange', handleVisibilityChange);
       window.addEventListener('online', handleOnline);
+      window.addEventListener('pageshow', handlePageShow);
     }
     
     // 정리 함수
@@ -3582,6 +3591,7 @@ export default function FamilyHub() {
       if (typeof window !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.removeEventListener('online', handleOnline);
+        window.removeEventListener('pageshow', handlePageShow);
       }
       // subscriptionsRef를 통해 모든 구독 정리 (기능별 분리 관리)
       if (subscriptionsRef.current.messages) {
@@ -4514,7 +4524,10 @@ export default function FamilyHub() {
         }
         case 'ADD_MESSAGE': {
           const { alreadyPersisted: _ap, ...messageForState } = payload as Record<string, unknown> & { alreadyPersisted?: boolean };
-          newState.messages = [...(prev.messages || []), messageForState as Message].slice(-50);
+          newState.messages = trimMessagesToMax([
+            ...(prev.messages || []),
+            messageForState as Message,
+          ]);
           // Supabase에 저장 (이미 insert 된 메시지는 saveToSupabase 에서 건너뜀)
           saveToSupabase('ADD_MESSAGE', payload, userId, currentKey);
           break;
@@ -6460,6 +6473,59 @@ export default function FamilyHub() {
     loadChatAttachments();
   }, [loadChatAttachments]);
 
+  const loadOlderChatMessages = useCallback(async () => {
+    if (!currentGroupId || !userId || chatLoadingOlder || !chatHasMoreOlder) return;
+    const first = messagesRef.current[0];
+    if (!first?.created_at) {
+      setChatHasMoreOlder(false);
+      return;
+    }
+    const el = chatBoxRef.current;
+    if (el) {
+      chatScrollRestoreRef.current = { sh: el.scrollHeight, st: el.scrollTop };
+    }
+    setChatLoadingOlder(true);
+    try {
+      const authKey = getAuthKey(userId);
+      const currentKey =
+        masterKey ||
+        sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+        'ellena_family_shared_key_2024';
+      const { data: raw, error } = await supabase
+        .from('family_messages')
+        .select('*')
+        .eq('group_id', currentGroupId)
+        .lt('created_at', first.created_at)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(CHAT_PAGE_SIZE);
+      if (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('이전 채팅 로드 실패:', error);
+        }
+        chatScrollRestoreRef.current = null;
+        return;
+      }
+      const batch = raw && raw.length > 0 ? [...raw].reverse() : [];
+      const formatted = formatFamilyMessagesFromRows(batch as ChatMessageRow[], currentKey);
+      const existing = new Set(messagesRef.current.map((m) => String(m.id)));
+      const uniqueOlder = formatted.filter((m) => !existing.has(String(m.id)));
+      setChatHasMoreOlder((raw?.length ?? 0) >= CHAT_PAGE_SIZE);
+      if (uniqueOlder.length === 0) {
+        setChatHasMoreOlder(false);
+        chatScrollRestoreRef.current = null;
+        return;
+      }
+      setState((prev) => ({
+        ...prev,
+        messages: trimMessagesToMax([...uniqueOlder, ...prev.messages]),
+      }));
+    } finally {
+      setChatLoadingOlder(false);
+    }
+  }, [currentGroupId, userId, chatLoadingOlder, chatHasMoreOlder, masterKey]);
+
   const uploadChatPhotos = async (files: File[]) => {
     if (files.length === 0) return;
     
@@ -6524,6 +6590,7 @@ export default function FamilyHub() {
         text: '',
         time: timeStr,
         sender_id: userId ?? undefined,
+        created_at: now.toISOString(),
         alreadyPersisted: true,
       });
       console.log('✅ 사진 메시지 즉시 전송 (텍스트 없음):', inserted.id);
@@ -6630,6 +6697,7 @@ export default function FamilyHub() {
           text: sanitizedText,
           time: timeStr,
           sender_id: userId ?? undefined,
+          created_at: new Date().toISOString(),
           alreadyPersisted: true,
         });
         console.log('✅ 텍스트 메시지 전송 완료:', inserted.id);
@@ -7547,8 +7615,30 @@ export default function FamilyHub() {
           </div>
             <div className="section-body">
               <div ref={chatBoxRef} className="chat-messages">
-              {(state.messages || []).map((m, idx) => (
-                  <div key={idx} className="message-item">
+              {chatHasMoreOlder && (
+                <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => void loadOlderChatMessages()}
+                    disabled={chatLoadingOlder}
+                    style={{
+                      padding: '6px 14px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#4f46e5',
+                      background: '#eef2ff',
+                      border: '1px solid #c7d2fe',
+                      borderRadius: '999px',
+                      cursor: chatLoadingOlder ? 'wait' : 'pointer',
+                      opacity: chatLoadingOlder ? 0.75 : 1,
+                    }}
+                  >
+                    {chatLoadingOlder ? dt('chat_loading_older') : dt('chat_load_older')}
+                  </button>
+                </div>
+              )}
+              {(state.messages || []).map((m) => (
+                  <div key={String(m.id)} className="message-item">
                     <div className="message-header">
                       <span className="message-user" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {m.sender_id && familyRoleByUserId[m.sender_id] && (
