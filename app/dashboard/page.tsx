@@ -48,12 +48,6 @@ import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-t
 import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
 import type { FamilyEvent } from '@/app/features/family-calendar/types';
 import { FamilyChatSection } from '@/app/features/family-chat/components/FamilyChatSection';
-import { FamilyLocationDashboardBundle } from '@/app/features/family-location/components/FamilyLocationDashboardBundle';
-import {
-  getDashboardWidgetOrder,
-  isFamilyLocationFeatureEnabled,
-  type DashboardWidgetId,
-} from '@/app/features/dashboard/dashboard-layout';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -6371,94 +6365,562 @@ export default function FamilyHub() {
             </div>
           </section>
 
-          <FamilyLocationSection
-            onOpenRequestModal={() => setShowLocationRequestModal(true)}
-            myLocation={state.location}
-            extractLocationAddress={extractLocationAddress}
-            isLocationSharing={isLocationSharing}
-            mapError={mapError}
-            hasGoogleMapsApiKey={Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY)}
-            locationRequests={locationRequests}
-            userId={userId}
-            onLocationRequestAction={handleLocationRequestAction}
-            onEndLocationSharing={endLocationSharing}
-            translations={{
-              section_title_location: dt('section_title_location'),
-              location_where_btn: dt('location_where_btn'),
-              piggy_request_sent: dt('piggy_request_sent'),
-              piggy_request_received: dt('piggy_request_received'),
-              location_share_btn: dt('location_share_btn'),
-              location_ui_address_prefix: dt('location_ui_address_prefix'),
-              location_ui_map_title: dt('location_ui_map_title'),
-              location_ui_map_hint_off: dt('location_ui_map_hint_off'),
-              location_ui_gmaps_error_title: dt('location_ui_gmaps_error_title'),
-              location_ui_troubleshoot_title: dt('location_ui_troubleshoot_title'),
-              location_ui_troubleshoot_1: dt('location_ui_troubleshoot_1'),
-              location_ui_troubleshoot_2: dt('location_ui_troubleshoot_2'),
-              location_ui_troubleshoot_3: dt('location_ui_troubleshoot_3'),
-              location_ui_troubleshoot_4: dt('location_ui_troubleshoot_4'),
-              location_ui_troubleshoot_note: dt('location_ui_troubleshoot_note'),
-              location_ui_open_in_gmaps: dt('location_ui_open_in_gmaps'),
-              location_ui_api_key_title: dt('location_ui_api_key_title'),
-              location_ui_api_setup_title: dt('location_ui_api_setup_title'),
-              location_ui_api_li1_before: dt('location_ui_api_li1_before'),
-              location_ui_api_li1_after: dt('location_ui_api_li1_after'),
-              location_ui_api_li2_intro: dt('location_ui_api_li2_intro'),
-              location_ui_api_env_example: dt('location_ui_api_env_example'),
-              location_ui_api_li3_before: dt('location_ui_api_li3_before'),
-              location_ui_api_li3_after: dt('location_ui_api_li3_after'),
-              location_ui_api_hint_before: dt('location_ui_api_hint_before'),
-              location_ui_api_hint_after: dt('location_ui_api_hint_after'),
-              location_ui_or_maps_before: dt('location_ui_or_maps_before'),
-              location_ui_or_maps_link: dt('location_ui_or_maps_link'),
-              location_ui_requests_heading: dt('location_ui_requests_heading'),
-              location_ui_unknown_user: dt('location_ui_unknown_user'),
-              location_ui_dot_time_left: dt('location_ui_dot_time_left'),
-              location_ui_expired_suffix: dt('location_ui_expired_suffix'),
-              location_ui_pin_time_left: dt('location_ui_pin_time_left'),
-              location_ui_pin_expired: dt('location_ui_pin_expired'),
-              location_ui_sharing_with: dt('location_ui_sharing_with'),
-              location_ui_end_sharing: dt('location_ui_end_sharing'),
-            }}
-            cancelLabel={ct('cancel')}
-            rejectLabel={dt('piggy_reject_btn')}
-          />
+          {/* Location Section */}
+          <section className="content-section">
+            <div className="section-header">
+              <h3 className="section-title">{dt('section_title_location')}</h3>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    setShowLocationRequestModal(true);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📍</span>
+                  <span>{dt('location_where_btn')}</span>
+                </button>
+        </div>
+            </div>
+            <div className="section-body">
+              {state.location.address && (state.location.latitude !== 0 || state.location.longitude !== 0) && (
+                <div style={{ marginBottom: '16px' }}>
+                  <p className="location-text" style={{ marginBottom: '12px' }}>
+                    내 위치: {extractLocationAddress(state.location.address)}
+                  </p>
+                </div>
+              )}
+              
+              {/* 구글맵: 위치 공유 ON일 때만 로드 (OFF일 때는 비용 0) */}
+              {!isLocationSharing ? (
+                <div style={{
+                  width: '100%',
+                  height: '400px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  marginTop: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundImage: 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  color: '#64748b',
+                  padding: '20px',
+                }}>
+                  <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>
+                    📍 지도
+                  </p>
+                  <p style={{ fontSize: '13px', lineHeight: '1.5', textAlign: 'center', maxWidth: '320px' }}>
+                    위치 공유를 켜면 지도에서 가족 위치를 볼 수 있습니다.
+                  </p>
+                </div>
+              ) : process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
+                mapError ? (
+                  <div style={{
+                    width: '100%',
+                    height: '400px',
+                    borderRadius: '12px',
+                    border: '1px solid #fecaca',
+                    marginTop: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fef2f2',
+                    color: '#991b1b',
+                    padding: '20px'
+                  }}>
+                    <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+                      <p style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#dc2626' }}>
+                        ⚠️ Google Maps 오류
+                      </p>
+                      <p style={{ fontSize: '14px', marginBottom: '16px', lineHeight: '1.6' }}>
+                        {mapError}
+                      </p>
+                      <div style={{ 
+                        backgroundColor: '#fee2e2', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        marginBottom: '16px',
+                        fontSize: '13px',
+                        lineHeight: '1.6'
+                      }}>
+                        <p style={{ fontWeight: '600', marginBottom: '8px' }}>해결 방법 (무료 할당량 사용):</p>
+                        <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                          <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#dc2626', textDecoration: 'underline' }}>Google Cloud Console</a>에 접속</li>
+                          <li>프로젝트 선택 → <strong>결제 계정 연결</strong> (신용카드 등록 필요)</li>
+                          <li>Maps JavaScript API 활성화 확인</li>
+                          <li><strong>월 $200 무료 크레딧</strong>이 자동으로 제공됩니다 (개발/테스트 용도로 충분)</li>
+                        </ol>
+                        <p style={{ marginTop: '8px', fontSize: '12px', color: '#991b1b' }}>
+                          💡 참고: 무료 크레딧은 매월 자동으로 충전되며, 사용하지 않으면 소멸됩니다.
+                        </p>
+          </div>
+                      {(state.location.latitude !== 0 || state.location.longitude !== 0) && (
+                        <a 
+                          href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ 
+                            color: '#dc2626', 
+                            textDecoration: 'underline',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Google 지도에서 위치 보기
+                        </a>
+                      )}
+        </div>
+                  </div>
+                ) : (
+                  <div 
+                    id="map" 
+                    style={{ 
+                      width: '100%', 
+                      height: '400px', 
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      marginTop: '12px'
+                    }}
+                  />
+                )
+              ) : null}
+              {isLocationSharing && !process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY ? (
+                <div style={{
+                  width: '100%',
+                  height: '400px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  marginTop: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#f8fafc',
+                  color: '#64748b',
+                  padding: '20px'
+                }}>
+                  <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+                    <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1e293b' }}>
+                      📍 Google Maps API 키가 필요합니다
+                    </p>
+                    <div style={{ fontSize: '13px', textAlign: 'left', backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                      <p style={{ marginBottom: '8px', fontWeight: '600' }}>설정 방법:</p>
+                      <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                        <li>프로젝트 루트에 <code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>.env.local</code> 파일 생성</li>
+                        <li>다음 내용 추가:<br />
+                          <code style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', display: 'inline-block', marginTop: '4px' }}>
+                            NEXT_PUBLIC_GOOGLE_MAP_API_KEY=여기에_API_키_입력
+                          </code>
+                        </li>
+                        <li>개발 서버 재시작 (<code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>npm run dev</code>)</li>
+                      </ol>
+                      <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
+                        💡 API 키 발급: <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6' }}>Google Cloud Console</a> → Maps JavaScript API 활성화
+                      </p>
+                    </div>
+                    {(state.location.latitude !== 0 || state.location.longitude !== 0) && (
+                      <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                        또는 <a href={`https://www.google.com/maps?q=${state.location.latitude},${state.location.longitude}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Google 지도에서 보기</a>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              
 
-        <FamilyLocationRequestModal
-          open={showLocationRequestModal}
-          userId={userId}
-          loadingUsers={loadingUsers}
-          allUsers={allUsers}
-          onlineUsers={onlineUsers}
-          locationRequests={locationRequests}
-          onBackdropClose={() => {
-            setShowLocationRequestModal(false);
-            setSelectedUserForRequest(null);
-            setLoadingUsers(false);
-            setAllUsers([]);
-            loadingUsersRef.current = false;
-            modalOpenedRef.current = false;
-          }}
-          onSendLocationRequest={sendLocationRequest}
-          onRefreshUsers={() => {
-            loadAllUsers(0, currentGroupId ? { groupId: currentGroupId } : undefined);
-          }}
-          t={{
-            location_modal_send_title: dt('location_modal_send_title'),
-            location_modal_loading_users: dt('location_modal_loading_users'),
-            location_modal_all_users_count: dt('location_modal_all_users_count'),
-            location_modal_online: dt('location_modal_online'),
-            location_modal_user_fallback: dt('location_modal_user_fallback'),
-            location_modal_id_prefix: dt('location_modal_id_prefix'),
-            location_modal_btn_send: dt('location_modal_btn_send'),
-            location_already_approved: dt('location_already_approved'),
-            location_request_pending: dt('location_request_pending'),
-            location_modal_empty: dt('location_modal_empty'),
-            location_modal_empty_hint: dt('location_modal_empty_hint'),
-            location_modal_refresh: dt('location_modal_refresh'),
-          }}
-          closeLabel={ct('close')}
-        />
+              {/* 위치 요청 목록 */}
+              {locationRequests.length > 0 && (
+                <div style={{ marginTop: '20px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
+                    위치 요청
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Pending 요청 */}
+                    {locationRequests
+                      .filter(req => req.status === 'pending')
+                      .map((req) => {
+                        const isRequester = req.requester_id === userId;
+                        const otherUser = isRequester ? req.target : req.requester;
+                        const otherUserName = otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || '알 수 없음';
+                        const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
+                        const now = new Date();
+                        const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
+                        const isExpired = expiresAt ? expiresAt < now : false;
+
+                        return (
+                          <div
+                            key={req.id}
+                            style={{
+                              padding: '12px',
+                              backgroundColor: isExpired ? '#fee2e2' : '#f8fafc',
+                              borderRadius: '8px',
+                              border: `1px solid ${isExpired ? '#fca5a5' : '#e2e8f0'}`,
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                                {isRequester ? `→ ${otherUserName}` : `← ${otherUserName}`}
+          </div>
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                                {isRequester ? dt('piggy_request_sent') : dt('piggy_request_received')}
+                                {!isExpired && timeLeft > 0 && (
+                                  <span style={{ marginLeft: '8px'}}>
+                                    · {Math.floor(timeLeft / 60)}시간 {timeLeft % 60}분 남음
+                                  </span>
+                                )}
+                                {isExpired && <span style={{ marginLeft: '8px', color: '#ef4444' }}>· 만료됨</span>}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {isRequester ? (
+                <button 
+                                  onClick={() => handleLocationRequestAction(req.id, 'cancel')}
+                                  style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  취소
+                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleLocationRequestAction(req.id, 'accept')}
+                                    disabled={isExpired}
+                                    style={{
+                                      padding: '8px 16px',
+                                      backgroundColor: isExpired ? '#cbd5e1' : '#10b981',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '14px',
+                                      fontWeight: '500',
+                                      cursor: isExpired ? 'not-allowed' : 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      opacity: isExpired ? 0.6 : 1
+                                    }}
+                                  >
+                                    <span>📍</span>
+                                    <span>{dt('location_share_btn')}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleLocationRequestAction(req.id, 'reject')}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: '#ef4444',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    거부
+                                  </button>
+                                </>
+                              )}
+              </div>
+                          </div>
+                        );
+                      })}
+                    
+                    {/* Accepted 요청 (활성 위치 공유) */}
+                    {locationRequests
+                      .filter(req => req.status === 'accepted')
+                      .map((req) => {
+                        const isRequester = req.requester_id === userId;
+                        const otherUser = isRequester ? req.target : req.requester;
+                        const otherUserName = otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || '알 수 없음';
+                        const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
+                        const now = new Date();
+                        const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
+                        const isExpired = expiresAt ? expiresAt < now : false;
+
+                        return (
+                          <div
+                            key={req.id}
+                            style={{
+                              padding: '12px',
+                              backgroundColor: isExpired ? '#fee2e2' : '#d1fae5',
+                              borderRadius: '8px',
+                              border: `1px solid ${isExpired ? '#fca5a5' : '#10b981'}`,
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', marginBottom: '4px', color: '#059669' }}>
+                                ✓ {otherUserName}와(과) 위치 공유 중
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                                {!isExpired && timeLeft > 0 ? (
+                                  <span>📍 {Math.floor(timeLeft / 60)}시간 {timeLeft % 60}분 남음</span>
+                                ) : (
+                                  <span style={{ color: '#ef4444' }}>📍 만료됨</span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => endLocationSharing(req.id)}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              종료
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
+              </div>
+            )}
+          </div>
+        </section>
+        
+        {/* 위치 요청 모달 */}
+        {showLocationRequestModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}
+            onClick={() => {
+              setShowLocationRequestModal(false);
+              setSelectedUserForRequest(null);
+              // 모달 닫을 때 상태 초기화 (useEffect에서도 처리되지만 명시적으로)
+              setLoadingUsers(false);
+              setAllUsers([]);
+              loadingUsersRef.current = false;
+              modalOpenedRef.current = false;
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                maxWidth: '500px',
+                width: '90%',
+                maxHeight: '80vh',
+                overflow: 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                위치 공유 요청 보내기
+              </h3>
+              {loadingUsers ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  사용자 목록을 불러오는 중...
+      </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+                  {/* 모든 사용자 목록 (온라인/오프라인 모두) */}
+                  {allUsers.length > 0 ? (
+                    <div
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '16px'
+                      }}
+                    >
+                      <div 
+                        style={{ 
+                          fontSize: '14px', 
+                          color: '#1e293b', 
+                          marginBottom: '12px', 
+                          fontWeight: '600',
+                          paddingBottom: '8px',
+                          borderBottom: '1px solid #e2e8f0'
+                        }}
+                      >
+                        모든 사용자 ({allUsers.length}명)
+    </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {allUsers.map((user) => {
+                        const isOnline = onlineUsers.some(onlineUser => onlineUser.id === user.id);
+                        const hasAcceptedRequest = locationRequests.some(
+                          req =>
+                            ((req.requester_id === userId && req.target_id === user.id) ||
+                             (req.requester_id === user.id && req.target_id === userId)) &&
+                            req.status === 'accepted'
+                        );
+                        const hasPendingRequest = locationRequests.some(
+                          req =>
+                            ((req.requester_id === userId && req.target_id === user.id) ||
+                             (req.requester_id === user.id && req.target_id === userId)) &&
+                            req.status === 'pending'
+                        );
+
+                        return (
+                          <div
+                            key={user.id}
+                            style={{
+                              padding: '12px',
+                              backgroundColor: hasAcceptedRequest ? '#d1fae5' : '#f8fafc',
+                              borderRadius: '8px',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '8px'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500' }}>
+                                {user.nickname || user.email || `사용자 ${user.id.substring(0, 8)}`}
+                                {isOnline && (
+                                  <span style={{ fontSize: '10px', color: '#10b981', marginLeft: '6px' }}>● 온라인</span>
+                                )}
+                              </div>
+                              {user.nickname && user.email && (
+                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                  {user.email}
+                                </div>
+                              )}
+                              {!user.nickname && user.email && (
+                                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                  ID: {user.id.substring(0, 8)}...
+                                </div>
+                              )}
+                              {hasAcceptedRequest && (
+                                <div style={{ fontSize: '12px', color: '#059669' }}>
+                                  {dt('location_already_approved')}
+                                </div>
+                              )}
+                              {hasPendingRequest && (
+                                <div style={{ fontSize: '12px', color: '#f59e0b' }}>
+                                  {dt('location_request_pending')}
+                                </div>
+                              )}
+                            </div>
+                            {!hasAcceptedRequest && !hasPendingRequest && (
+                              <button
+                                onClick={() => sendLocationRequest(user.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                요청 보내기
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <p style={{ color: '#64748b', margin: 0, marginBottom: '8px' }}>
+                        요청할 수 있는 사용자가 없습니다.
+                      </p>
+                      <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                        다른 사용자가 가입하면 여기에 표시됩니다.
+                      </p>
+                      <button
+                        onClick={() => {
+                          console.log('사용자 목록 새로고침 (그룹 멤버만)');
+                          loadAllUsers(0, currentGroupId ? { groupId: currentGroupId } : undefined);
+                        }}
+                        style={{
+                          marginTop: '12px',
+                          padding: '6px 12px',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        새로고침
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  setShowLocationRequestModal(false);
+                  setSelectedUserForRequest(null);
+                  // 모달 닫을 때 상태 초기화
+                  setLoadingUsers(false);
+                  setAllUsers([]);
+                  loadingUsersRef.current = false;
+                  modalOpenedRef.current = false;
+                }}
+                style={{
+                  marginTop: '16px',
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#e2e8f0',
+                  color: '#1e293b',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        )}
       </div>
               </div>
       

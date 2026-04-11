@@ -1,116 +1,100 @@
 /**
- * 가족 위치 섹션 UI — 지도는 `#map` div만 제공하고 초기화·마커 로직은 대시보드에 유지
+ * 가족 위치(Family Location) 섹션 컴포넌트
+ * 
+ * 주의: Google Maps 로직과 복잡한 상태 관리는 dashboard에 남겨두고,
+ * 이 컴포넌트는 UI 렌더링만 담당합니다.
  */
 
 'use client';
 
 import React from 'react';
-import type { DashboardLocationRequestRow } from '../types';
-import type { DashboardTranslations } from '@/lib/translations/dashboard';
+import type { FamilyLocation, LocationRequest } from '../types';
 
-export type FamilyLocationSectionTranslations = Pick<
-  DashboardTranslations,
-  | 'section_title_location'
-  | 'location_where_btn'
-  | 'piggy_request_sent'
-  | 'piggy_request_received'
-  | 'location_share_btn'
-  | 'location_ui_address_prefix'
-  | 'location_ui_map_title'
-  | 'location_ui_map_hint_off'
-  | 'location_ui_gmaps_error_title'
-  | 'location_ui_troubleshoot_title'
-  | 'location_ui_troubleshoot_1'
-  | 'location_ui_troubleshoot_2'
-  | 'location_ui_troubleshoot_3'
-  | 'location_ui_troubleshoot_4'
-  | 'location_ui_troubleshoot_note'
-  | 'location_ui_open_in_gmaps'
-  | 'location_ui_api_key_title'
-  | 'location_ui_api_setup_title'
-  | 'location_ui_api_li1_before'
-  | 'location_ui_api_li1_after'
-  | 'location_ui_api_li2_intro'
-  | 'location_ui_api_env_example'
-  | 'location_ui_api_li3_before'
-  | 'location_ui_api_li3_after'
-  | 'location_ui_api_hint_before'
-  | 'location_ui_api_hint_after'
-  | 'location_ui_or_maps_before'
-  | 'location_ui_or_maps_link'
-  | 'location_ui_requests_heading'
-  | 'location_ui_unknown_user'
-  | 'location_ui_dot_time_left'
-  | 'location_ui_expired_suffix'
-  | 'location_ui_pin_time_left'
-  | 'location_ui_pin_expired'
-  | 'location_ui_sharing_with'
-  | 'location_ui_end_sharing'
->;
-
-type Props = {
-  onOpenRequestModal: () => void;
-  myLocation: {
-    address: string;
-    latitude?: number;
-    longitude?: number;
-  };
-  extractLocationAddress: (address: string) => string;
-  isLocationSharing: boolean;
-  mapError: string | null;
-  hasGoogleMapsApiKey: boolean;
-  locationRequests: DashboardLocationRequestRow[];
+interface FamilyLocationSectionProps {
   userId: string;
-  onLocationRequestAction: (requestId: string, action: 'accept' | 'reject' | 'cancel') => void;
-  onEndLocationSharing: (requestId: string) => void;
-  translations: FamilyLocationSectionTranslations;
-  cancelLabel: string;
-  rejectLabel: string;
-};
-
-function fillHm(template: string, h: number, m: number) {
-  return template.replace(/\{h\}/g, String(h)).replace(/\{m\}/g, String(m));
-}
-
-function fillName(template: string, name: string) {
-  return template.replace(/\{name\}/g, name);
+  currentGroupId: string | null;
+  familyLocations: FamilyLocation[];
+  locationRequests: LocationRequest[];
+  isLocationSharing: boolean;
+  myLocation: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  onShareLocation: () => void;
+  onRequestAction: (requestId: string, action: 'accept' | 'reject' | 'cancel') => void;
+  onEndSharing: (requestId: string) => void;
+  onOpenRequestModal: () => void;
+  extractLocationAddress: (address: string) => string;
+  mapError: string | null;
+  requestUsers: Array<{
+    id: string;
+    nickname?: string;
+    email?: string;
+  }>;
+  translations: {
+    section_title_location: string;
+    location_where_btn: string;
+    location_share_btn: string;
+    piggy_request_sent: string;
+    piggy_request_received: string;
+  };
 }
 
 export function FamilyLocationSection({
-  onOpenRequestModal,
-  myLocation,
-  extractLocationAddress,
-  isLocationSharing,
-  mapError,
-  hasGoogleMapsApiKey,
-  locationRequests,
   userId,
-  onLocationRequestAction,
-  onEndLocationSharing,
+  currentGroupId,
+  familyLocations,
+  locationRequests,
+  isLocationSharing,
+  myLocation,
+  onShareLocation,
+  onRequestAction,
+  onEndSharing,
+  onOpenRequestModal,
+  extractLocationAddress,
+  mapError,
+  requestUsers,
   translations: t,
-  cancelLabel,
-  rejectLabel,
-}: Props) {
-  const lat = myLocation.latitude ?? 0;
-  const lng = myLocation.longitude ?? 0;
-
+}: FamilyLocationSectionProps) {
   return (
     <section className="content-section">
-      <div className="section-header">
-        <h3 className="section-title">{t.section_title_location}</h3>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <h3 className="section-title" style={{ margin: 0 }}>
+          {t.section_title_location}
+        </h3>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {currentGroupId && (
+            <button
+              onClick={onOpenRequestModal}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#f8fafc',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>📬</span>
+              <span>요청 보내기</span>
+            </button>
+          )}
           <button
-            type="button"
-            onClick={onOpenRequestModal}
+            onClick={onShareLocation}
             style={{
               padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
               backgroundColor: '#10b981',
               color: 'white',
-              border: 'none',
-              borderRadius: '8px',
+              cursor: 'pointer',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -122,14 +106,15 @@ export function FamilyLocationSection({
         </div>
       </div>
       <div className="section-body">
-        {myLocation.address && (lat !== 0 || lng !== 0) && (
+        {myLocation.address && (myLocation.latitude !== 0 || myLocation.longitude !== 0) && (
           <div style={{ marginBottom: '16px' }}>
             <p className="location-text" style={{ marginBottom: '12px' }}>
-              {t.location_ui_address_prefix} {extractLocationAddress(myLocation.address)}
+              내 위치: {extractLocationAddress(myLocation.address)}
             </p>
           </div>
         )}
 
+        {/* 지도 영역 - dashboard에서 렌더링 */}
         {!isLocationSharing ? (
           <div
             style={{
@@ -142,260 +127,91 @@ export function FamilyLocationSection({
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundImage:
-                'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
+              backgroundImage: 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               color: '#64748b',
               padding: '20px',
             }}
           >
-            <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>
-              {t.location_ui_map_title}
-            </p>
+            <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>📍 지도</p>
             <p style={{ fontSize: '13px', lineHeight: '1.5', textAlign: 'center', maxWidth: '320px' }}>
-              {t.location_ui_map_hint_off}
+              위치 공유를 켜면 지도에서 가족 위치를 볼 수 있습니다.
             </p>
           </div>
-        ) : hasGoogleMapsApiKey ? (
-          mapError ? (
-            <div
-              style={{
-                width: '100%',
-                height: '400px',
-                borderRadius: '12px',
-                border: '1px solid #fecaca',
-                marginTop: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#fef2f2',
-                color: '#991b1b',
-                padding: '20px',
-              }}
-            >
-              <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-                <p style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#dc2626' }}>
-                  {t.location_ui_gmaps_error_title}
-                </p>
-                <p style={{ fontSize: '14px', marginBottom: '16px', lineHeight: '1.6' }}>{mapError}</p>
-                <div
-                  style={{
-                    backgroundColor: '#fee2e2',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    fontSize: '13px',
-                    lineHeight: '1.6',
-                  }}
-                >
-                  <p style={{ fontWeight: '600', marginBottom: '8px' }}>{t.location_ui_troubleshoot_title}</p>
-                  <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
-                    <li>
-                      <a
-                        href="https://console.cloud.google.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: '#dc2626', textDecoration: 'underline' }}
-                      >
-                        {t.location_ui_troubleshoot_1}
-                      </a>
-                    </li>
-                    <li>{t.location_ui_troubleshoot_2}</li>
-                    <li>{t.location_ui_troubleshoot_3}</li>
-                    <li>{t.location_ui_troubleshoot_4}</li>
-                  </ol>
-                  <p style={{ marginTop: '8px', fontSize: '12px', color: '#991b1b' }}>{t.location_ui_troubleshoot_note}</p>
-                </div>
-                {(lat !== 0 || lng !== 0) && (
-                  <a
-                    href={`https://www.google.com/maps?q=${lat},${lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: '#dc2626',
-                      textDecoration: 'underline',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                    }}
-                  >
-                    {t.location_ui_open_in_gmaps}
-                  </a>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div
-              id="map"
-              style={{
-                width: '100%',
-                height: '400px',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                marginTop: '12px',
-              }}
-            />
-          )
-        ) : null}
-        {isLocationSharing && !hasGoogleMapsApiKey ? (
+        ) : mapError ? (
           <div
             style={{
               width: '100%',
               height: '400px',
               borderRadius: '12px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #fecaca',
               marginTop: '12px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#f8fafc',
-              color: '#64748b',
+              backgroundColor: '#fef2f2',
+              color: '#991b1b',
               padding: '20px',
             }}
           >
             <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-              <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1e293b' }}>
-                {t.location_ui_api_key_title}
-              </p>
-              <div
-                style={{
-                  fontSize: '13px',
-                  textAlign: 'left',
-                  backgroundColor: '#ffffff',
-                  padding: '16px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '12px',
-                }}
-              >
-                <p style={{ marginBottom: '8px', fontWeight: '600' }}>{t.location_ui_api_setup_title}</p>
-                <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
-                  <li>
-                    {t.location_ui_api_li1_before}
-                    <code
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                      }}
-                    >
-                      .env.local
-                    </code>
-                    {t.location_ui_api_li1_after}
-                  </li>
-                  <li>
-                    {t.location_ui_api_li2_intro}
-                    <br />
-                    <code
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        display: 'inline-block',
-                        marginTop: '4px',
-                      }}
-                    >
-                      {t.location_ui_api_env_example}
-                    </code>
-                  </li>
-                  <li>
-                    {t.location_ui_api_li3_before}
-                    <code
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                      }}
-                    >
-                      npm run dev
-                    </code>
-                    {t.location_ui_api_li3_after}
-                  </li>
-                </ol>
-                <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
-                  {t.location_ui_api_hint_before}
-                  <a
-                    href="https://console.cloud.google.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#3b82f6' }}
-                  >
-                    Google Cloud Console
-                  </a>
-                  {t.location_ui_api_hint_after}
-                </p>
-              </div>
-              {(lat !== 0 || lng !== 0) && (
-                <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                  {t.location_ui_or_maps_before}
-                  <a
-                    href={`https://www.google.com/maps?q=${lat},${lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: '#3b82f6', textDecoration: 'underline' }}
-                  >
-                    {t.location_ui_or_maps_link}
-                  </a>
-                </p>
+              <p style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#dc2626' }}>⚠️ Google Maps 오류</p>
+              <p style={{ fontSize: '14px', marginBottom: '16px', lineHeight: '1.6' }}>{mapError}</p>
+              {(myLocation.latitude !== 0 || myLocation.longitude !== 0) && (
+                <a
+                  href={`https://www.google.com/maps?q=${myLocation.latitude},${myLocation.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#dc2626', textDecoration: 'underline', fontSize: '14px', fontWeight: '500' }}
+                >
+                  Google 지도에서 위치 보기
+                </a>
               )}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div id="map" style={{ width: '100%', height: '400px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '12px' }} />
+        )}
 
+        {/* 위치 요청 목록 */}
         {locationRequests.length > 0 && (
           <div style={{ marginTop: '20px' }}>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>{t.location_ui_requests_heading}</h4>
+            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>위치 요청</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* Pending 요청 */}
               {locationRequests
                 .filter((req) => req.status === 'pending')
                 .map((req) => {
                   const isRequester = req.requester_id === userId;
-                  const otherUser = isRequester ? req.target : req.requester;
-                  const otherUserName =
-                    otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
-                  const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
-                  const now = new Date();
-                  const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
-                  const isExpired = expiresAt ? expiresAt < now : false;
+                  const otherUserId = isRequester ? req.target_user_id : req.requester_id;
+                  const otherUser = requestUsers.find((u) => u.id === otherUserId);
+                  const otherUserName = otherUser?.nickname || otherUser?.email || otherUserId.substring(0, 8) || '알 수 없음';
 
                   return (
                     <div
                       key={req.id}
                       style={{
                         padding: '12px',
-                        backgroundColor: isExpired ? '#fee2e2' : '#f8fafc',
+                        backgroundColor: '#f8fafc',
                         borderRadius: '8px',
-                        border: `1px solid ${isExpired ? '#fca5a5' : '#e2e8f0'}`,
+                        border: '1px solid #e2e8f0',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-                          {isRequester ? `→ ${otherUserName}` : `← ${otherUserName}`}
-                        </div>
+                        <div style={{ fontWeight: '500', marginBottom: '4px' }}>{isRequester ? `→ ${otherUserName}` : `← ${otherUserName}`}</div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
                           {isRequester ? t.piggy_request_sent : t.piggy_request_received}
-                          {!isExpired && timeLeft > 0 && (
-                            <span style={{ marginLeft: '8px' }}>
-                              {fillHm(t.location_ui_dot_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
-                            </span>
-                          )}
-                          {isExpired && (
-                            <span style={{ marginLeft: '8px', color: '#ef4444' }}>{t.location_ui_expired_suffix}</span>
-                          )}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         {isRequester ? (
                           <button
-                            type="button"
-                            onClick={() => onLocationRequestAction(req.id, 'cancel')}
+                            onClick={() => onRequestAction(req.id, 'cancel')}
                             style={{
                               padding: '6px 12px',
                               backgroundColor: '#ef4444',
@@ -406,35 +222,31 @@ export function FamilyLocationSection({
                               cursor: 'pointer',
                             }}
                           >
-                            {cancelLabel}
+                            취소
                           </button>
                         ) : (
                           <>
                             <button
-                              type="button"
-                              onClick={() => onLocationRequestAction(req.id, 'accept')}
-                              disabled={isExpired}
+                              onClick={() => onRequestAction(req.id, 'accept')}
                               style={{
                                 padding: '8px 16px',
-                                backgroundColor: isExpired ? '#cbd5e1' : '#10b981',
+                                backgroundColor: '#10b981',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
                                 fontSize: '14px',
                                 fontWeight: '500',
-                                cursor: isExpired ? 'not-allowed' : 'pointer',
+                                cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                opacity: isExpired ? 0.6 : 1,
                               }}
                             >
                               <span>📍</span>
                               <span>{t.location_share_btn}</span>
                             </button>
                             <button
-                              type="button"
-                              onClick={() => onLocationRequestAction(req.id, 'reject')}
+                              onClick={() => onRequestAction(req.id, 'reject')}
                               style={{
                                 padding: '6px 12px',
                                 backgroundColor: '#ef4444',
@@ -445,7 +257,7 @@ export function FamilyLocationSection({
                                 cursor: 'pointer',
                               }}
                             >
-                              {rejectLabel}
+                              거부
                             </button>
                           </>
                         )}
@@ -454,48 +266,34 @@ export function FamilyLocationSection({
                   );
                 })}
 
+              {/* Accepted 요청 (활성 위치 공유) */}
               {locationRequests
                 .filter((req) => req.status === 'accepted')
                 .map((req) => {
                   const isRequester = req.requester_id === userId;
-                  const otherUser = isRequester ? req.target : req.requester;
-                  const otherUserName =
-                    otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
-                  const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
-                  const now = new Date();
-                  const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
-                  const isExpired = expiresAt ? expiresAt < now : false;
+                  const otherUserId = isRequester ? req.target_user_id : req.requester_id;
+                  const otherUser = requestUsers.find((u) => u.id === otherUserId);
+                  const otherUserName = otherUser?.nickname || otherUser?.email || otherUserId.substring(0, 8) || '알 수 없음';
 
                   return (
                     <div
                       key={req.id}
                       style={{
                         padding: '12px',
-                        backgroundColor: isExpired ? '#fee2e2' : '#d1fae5',
+                        backgroundColor: '#d1fae5',
                         borderRadius: '8px',
-                        border: `1px solid ${isExpired ? '#fca5a5' : '#10b981'}`,
+                        border: '1px solid #10b981',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: '500', marginBottom: '4px', color: '#059669' }}>
-                          {fillName(t.location_ui_sharing_with, otherUserName)}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          {!isExpired && timeLeft > 0 ? (
-                            <span>
-                              {fillHm(t.location_ui_pin_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#ef4444' }}>{t.location_ui_pin_expired}</span>
-                          )}
-                        </div>
+                        <div style={{ fontWeight: '500', marginBottom: '4px', color: '#059669' }}>✓ {otherUserName}와(과) 위치 공유 중</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>📍 활성</div>
                       </div>
                       <button
-                        type="button"
-                        onClick={() => onEndLocationSharing(req.id)}
+                        onClick={() => onEndSharing(req.id)}
                         style={{
                           padding: '6px 12px',
                           backgroundColor: '#ef4444',
@@ -506,7 +304,7 @@ export function FamilyLocationSection({
                           cursor: 'pointer',
                         }}
                       >
-                        {t.location_ui_end_sharing}
+                        종료
                       </button>
                     </div>
                   );
