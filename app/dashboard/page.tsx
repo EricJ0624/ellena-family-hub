@@ -6577,23 +6577,22 @@ export default function FamilyHub() {
     const sanitizedText = sanitizeInput(rawText, 500);
     if (!sanitizedText) return;
     
-    // ✅ 중복 전송 방지
+    // ✅ 중복 전송 방지 — 플래그는 반드시 동기 구간에서 먼저 설정 (async 시작 전)
+    // 그렇지 않으면 같은 틱에서 sendChat이 2번 호출될 때 둘 다 통과해 INSERT가 2번 나감
     if (chatTextSendingRef.current) {
       console.log('⚠️ 이미 메시지 전송 중, 중복 호출 무시');
       return;
     }
+    chatTextSendingRef.current = true;
+    console.log('🔒 텍스트 메시지 전송 잠금 (동기)');
     
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     // 텍스트 메시지만 전송 (사진은 파일 선택 즉시 전송됨)
     void (async () => {
-      if (!currentGroupId) return;
-      
-      chatTextSendingRef.current = true;
-      console.log('🔒 텍스트 메시지 전송 시작, 중복 방지 플래그 설정');
-      
       try {
+        if (!currentGroupId) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           alert(dt('auth_session_expired'));
@@ -7623,12 +7622,18 @@ export default function FamilyHub() {
               <input 
                 ref={chatInputRef}
                 type="text" 
-                onKeyPress={(e) => e.key === 'Enter' && sendChat()}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' || e.shiftKey) return;
+                  if (e.nativeEvent.isComposing) return;
+                  e.preventDefault();
+                  sendChat();
+                }}
                   className="chat-input" 
                 placeholder={dt('chat_placeholder')}
                 style={{ flex: 1, minWidth: 0, padding: '11px 12px' }}
               />
               <button 
+                type="button"
                 onClick={sendChat}
                   className="btn-send"
                   style={{ padding: '8px 12px', fontSize: '12px' }}
