@@ -43,6 +43,10 @@ import {
   validateAttachmentFile,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { FamilyTasksSection } from '@/app/features/family-tasks/components/FamilyTasksSection';
+import type { FamilyTask } from '@/app/features/family-tasks/types';
+import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
+import type { FamilyEvent } from '@/app/features/family-calendar/types';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -106,8 +110,6 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
 };
 
 // --- [TYPES] 타입 안정성 추가 ---
-type Todo = { id: number; text: string; assignee: string; done: boolean; created_by?: string; assigned_to_user_id?: string; supabaseId?: string | number };
-type EventItem = { id: number; month: string; day: string; title: string; desc: string; event_date: string; created_by?: string; created_at?: string; supabaseId?: string | number; repeat_type?: 'none' | 'monthly' | 'yearly' };
 type Message = ChatUiMessage;
 type ChatAttachment = UploadedAttachment;
 type Photo = {
@@ -144,9 +146,9 @@ interface AppState {
     updatedAt: string;
     familyRole?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null;
   }>;
-  todos: Todo[];
+  todos: FamilyTask[];
   album: Photo[];
-  events: EventItem[];
+  events: FamilyEvent[];
   messages: Message[];
   titleStyle?: Partial<TitleStyle>;
 }
@@ -214,14 +216,8 @@ export default function FamilyHub() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [masterKey, setMasterKey] = useState('');
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [eventForm, setEventForm] = useState<{ title: string; month: string; day: string; desc: string; repeat_type: 'none' | 'monthly' | 'yearly' }>({ title: '', month: '', day: '', desc: '', repeat_type: 'none' });
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [eventFormDate, setEventFormDate] = useState<Date | null>(null);
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
-  const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
@@ -330,8 +326,6 @@ export default function FamilyHub() {
   });
 
   // Inputs Ref (Uncontrolled inputs for cleaner handlers similar to original)
-  const todoTextRef = useRef<HTMLInputElement>(null);
-  const todoWhoRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
   const chatCameraInputRef = useRef<HTMLInputElement>(null);
@@ -1305,54 +1299,6 @@ export default function FamilyHub() {
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
-  const eventMatchesDate = useCallback((e: EventItem, dateKey: string): boolean => {
-    if (!e.event_date) return false;
-    const keyParts = dateKey.split('-');
-    if (keyParts.length < 3) return false;
-    const keyMo = keyParts[1];
-    const keyD = keyParts[2];
-    if (!e.repeat_type || e.repeat_type === 'none') return e.event_date === dateKey;
-    const parts = e.event_date.split('-');
-    if (parts.length < 3) return false;
-    if (e.repeat_type === 'yearly') return parts[1] === keyMo && parts[2] === keyD;
-    if (e.repeat_type === 'monthly') return parts[2] === keyD;
-    return false;
-  }, []);
-
-  const calendarGrid = useMemo(() => {
-    const y = calendarMonth.getFullYear();
-    const m = calendarMonth.getMonth();
-    const firstDay = new Date(y, m, 1).getDay();
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
-    const today = new Date();
-    const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    const eventCountByDate: Record<string, number> = {};
-    for (let d = 1; d <= daysInMonth; d++) {
-      const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      eventCountByDate[key] = (state.events || []).filter(e => eventMatchesDate(e, key)).length;
-    }
-    const cells: Array<{ type: 'empty' } | { type: 'day'; date: Date; day: number; isCurrentMonth: true; isToday: boolean; eventCount: number }> = [];
-    for (let i = 0; i < firstDay; i++) cells.push({ type: 'empty' });
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(y, m, d);
-      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-      cells.push({
-        type: 'day',
-        date,
-        day: d,
-        isCurrentMonth: true,
-        isToday: key === todayKey,
-        eventCount: eventCountByDate[key] || 0
-      });
-    }
-    return { cells, year: y, month: m };
-  }, [calendarMonth, state.events, eventMatchesDate]);
-
-  const eventsOnSelectedDate = useMemo(() => {
-    if (!selectedDate) return [];
-    const key = selectedDate.getFullYear() + '-' + String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + String(selectedDate.getDate()).padStart(2, '0');
-    return (state.events || []).filter(e => eventMatchesDate(e, key));
-  }, [selectedDate, state.events, eventMatchesDate]);
 
   // 2.5. Web Push 및 백그라운드 위치 추적 초기화 (Supabase만 사용)
   useEffect(() => {
@@ -2112,6 +2058,13 @@ export default function FamilyHub() {
     };
   }, [isLocationSharing, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
 
+  // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
+  const getCurrentKey = useCallback(() => {
+    const authKey = getAuthKey(userId);
+    return masterKey || sessionStorage.getItem(authKey) || 
+      process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
+  }, [userId, masterKey]);
+
   // 5. Supabase 데이터 로드 및 Realtime 구독
   useEffect(() => {
     // SSR 보호: 클라이언트에서만 실행
@@ -2125,13 +2078,6 @@ export default function FamilyHub() {
     }
     
     console.log('✅ Realtime 구독 시작 - userId:', userId);
-
-    // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
-    const getCurrentKey = () => {
-      const authKey = getAuthKey(userId);
-      return masterKey || sessionStorage.getItem(authKey) || 
-        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-    };
 
     const scheduleLoadChatAttachments = () => {
       if (chatAttachmentsDebounceTimerRef.current) {
@@ -2649,174 +2595,9 @@ export default function FamilyHub() {
           }
         }
 
-        // 할일 로드 (Multi-tenant: group_id 필터링)
-        if (!currentGroupId) {
-          console.warn('loadInitialData: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-          return;
-        }
+        // 할일 로드는 FamilyTasksSection에서 처리됨
 
-        const { data: tasksData, error: tasksError } = await supabase
-          .from('family_tasks')
-          .select('*')
-          .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
-          .order('created_at', { ascending: false });
-
-        if (!tasksError && tasksData) {
-          const formattedTodos: Todo[] = tasksData.map((task: any) => {
-            // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
-            const taskText = task.title || task.task_text || '';
-            let decryptedText = taskText;
-            if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = taskText.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(taskText, currentKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = taskText;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = taskText;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = taskText;
-              }
-            } else {
-              decryptedText = taskText;
-            }
-            // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
-            // 담당자 정보는 title에 포함되거나 기본값 '누구나' 사용
-            let decryptedAssignee = '누구나';
-            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (UUID 타입이므로 일반적으로 NULL)
-            if (task.assigned_to && typeof task.assigned_to === 'string' && task.assigned_to !== '누구나' && !task.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-              try {
-                const decrypted = CryptoService.decrypt(task.assigned_to, currentKey);
-                if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                  decryptedAssignee = decrypted;
-                }
-    } catch (e) {
-                // 복호화 실패 시 기본값 사용
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('담당자 복호화 실패:', e);
-                }
-              }
-            }
-            
-            const assignedToUserId = task.assigned_to && typeof task.assigned_to === 'string' && task.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? task.assigned_to : undefined;
-            return {
-              id: task.id,
-              text: decryptedText,
-              assignee: decryptedAssignee,
-              done: task.is_completed || false,
-              created_by: task.created_by || undefined,
-              assigned_to_user_id: assignedToUserId
-            };
-          });
-          
-          // Supabase 할일이 있으면 사용
-          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
-          if (formattedTodos.length > 0) {
-            setState(prev => ({
-              ...prev,
-              todos: formattedTodos
-            }));
-          }
-          // Supabase에 할일이 없고 localStorage 데이터도 없으면 초기 상태 유지
-        }
-
-        // 일정 로드 (Multi-tenant: group_id 필터링)
-        const { data: eventsData, error: eventsError } = await supabase
-          .from('family_events')
-          .select('*')
-          .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
-          .order('event_date', { ascending: true }); // event_date 컬럼명 사용
-
-        if (!eventsError && eventsData) {
-          const formattedEvents: EventItem[] = eventsData.map((event: any) => {
-            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
-            const eventDateValue = event.event_date || event.date || event.event_date_time || new Date().toISOString();
-            const eventDate = new Date(eventDateValue);
-            const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-            const day = eventDate.getDate().toString();
-            // 암호화된 제목 및 설명 복호화
-            // event_title 대신 title 사용 (실제 테이블 구조에 맞게)
-            const eventTitleField = event.title || event.event_title || '';
-            const eventDescField = event.description || '';
-            let decryptedTitle = eventTitleField;
-            let decryptedDesc = eventDescField;
-            if (currentKey && currentKey.length > 0) {
-              // 제목 복호화 (암호화된 형식인 경우에만)
-              if (eventTitleField && eventTitleField.length > 0) {
-                const isEncrypted = eventTitleField.startsWith('U2FsdGVkX1');
-                if (isEncrypted) {
-                  try {
-                    const decryptedTitleData = CryptoService.decrypt(eventTitleField, currentKey);
-                    if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
-                      decryptedTitle = decryptedTitleData;
-                    } else {
-                      decryptedTitle = eventTitleField;
-                    }
-                  } catch (e: any) {
-                    decryptedTitle = eventTitleField;
-                  }
-                } else {
-                  // 이미 평문이면 그대로 사용
-                  decryptedTitle = eventTitleField;
-                }
-              }
-              // 설명 복호화 (암호화된 형식인 경우에만)
-              if (eventDescField && eventDescField.length > 0) {
-                const isEncrypted = eventDescField.startsWith('U2FsdGVkX1');
-                if (isEncrypted) {
-                  try {
-                    const decryptedDescData = CryptoService.decrypt(eventDescField, currentKey);
-                    if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
-                      decryptedDesc = decryptedDescData;
-                    } else {
-                      decryptedDesc = eventDescField;
-                    }
-                  } catch (e: any) {
-                    decryptedDesc = eventDescField;
-                  }
-                } else {
-                  // 이미 평문이면 그대로 사용
-                  decryptedDesc = eventDescField;
-                }
-              }
-            } else {
-              decryptedTitle = eventTitleField;
-              decryptedDesc = eventDescField;
-            }
-            // event_date: 로컬 날짜(YYYY-MM-DD)로 표시해 UTC 저장값도 올바른 날짜에 매칭
-            const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-            const repeatType = event.repeat_type === 'monthly' || event.repeat_type === 'yearly' ? event.repeat_type : 'none';
-            return {
-              id: event.id,
-              month: month,
-              day: day,
-              title: decryptedTitle,
-              desc: decryptedDesc,
-              event_date: eventDateStr,
-              created_by: event.created_by,
-              created_at: event.created_at,
-              repeat_type: repeatType
-            };
-          });
-          
-          // Supabase 일정이 있으면 사용
-          // localStorage가 비어있으면 Supabase 데이터로 복구, 있으면 Supabase 데이터 우선
-          if (formattedEvents.length > 0) {
-            setState(prev => ({
-              ...prev,
-              events: formattedEvents
-            }));
-          }
-          // Supabase에 일정이 없고 localStorage 데이터도 없으면 초기 상태 유지
-        }
+        // 일정 로드는 FamilyCalendarSection에서 처리됨
 
         // ✅ 사진 로드는 loadData 함수에서만 처리 (중복 방지)
         // loadData가 먼저 실행되어 사진을 로드하므로, 여기서는 사진 로드를 건너뜀
@@ -2835,465 +2616,9 @@ export default function FamilyHub() {
     };
 
 
-    // 3. 할일 구독 설정
-    const setupTasksSubscription = () => {
-      // 클라이언트에서만 실행되도록 보호
-      if (typeof window === 'undefined') {
-        return;
-      }
+    // 3. 할일 구독은 FamilyTasksSection에서 처리됨
 
-      // 기존 구독 정리
-      if (subscriptionsRef.current.tasks) {
-        supabase.removeChannel(subscriptionsRef.current.tasks);
-        subscriptionsRef.current.tasks = null;
-      }
-
-      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
-      const tasksSubscription = supabase
-        .channel(`family_tasks_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'family_tasks' },
-          (payload: any) => {
-            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
-            if (ev === 'DELETE') {
-              const deletedTask = payload.old;
-              const deletedId = deletedTask?.id;
-              if (!deletedId) return;
-              const deletedIdStr = String(deletedId).trim();
-              setState(prev => ({
-                ...prev,
-                todos: prev.todos.filter(t => {
-                  const tIdStr = String(t.id).trim();
-                  const tSupabaseId = t.supabaseId ? String(t.supabaseId).trim() : null;
-                  return tIdStr !== deletedIdStr && (!tSupabaseId || tSupabaseId !== deletedIdStr);
-                })
-              }));
-              return;
-            }
-            if (ev === 'UPDATE') {
-              const updatedTask = payload.new;
-              const taskText = updatedTask.title || updatedTask.task_text || '';
-              let decryptedText = taskText;
-              const updateTaskKey = getCurrentKey();
-              if (updateTaskKey && updateTaskKey.length > 0 && taskText && taskText.length > 0 && taskText.startsWith('U2FsdGVkX1')) {
-                try {
-                  const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
-                } catch (_) {}
-              }
-              let decryptedAssignee = '누구나';
-              if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to !== '누구나' && !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) && updatedTask.assigned_to.startsWith('U2FsdGVkX1')) {
-                try {
-                  const decrypted = CryptoService.decrypt(updatedTask.assigned_to, updateTaskKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedAssignee = decrypted;
-                } catch (_) {}
-              } else if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string') {
-                decryptedAssignee = updatedTask.assigned_to;
-              }
-              const updatedAssignedToUserId = updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string' && updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? updatedTask.assigned_to : undefined;
-              setState(prev => ({
-                ...prev,
-                todos: prev.todos.map(t =>
-                  t.id === updatedTask.id
-                    ? { ...t, id: updatedTask.id, text: decryptedText, assignee: decryptedAssignee || t.assignee, done: updatedTask.is_completed !== undefined ? updatedTask.is_completed : t.done, assigned_to_user_id: updatedAssignedToUserId ?? t.assigned_to_user_id }
-                    : t
-                )
-              }));
-              return;
-            }
-            // INSERT
-            const newTask = payload.new;
-            console.log('Realtime 할일 INSERT 이벤트 수신 (family_tasks 테이블):', payload);
-            
-            // 검증: 올바른 테이블에서 온 데이터인지 확인
-            if (!newTask || !newTask.id) {
-              console.error('Realtime 할일: 잘못된 payload:', payload);
-              return;
-            }
-            
-            // Multi-tenant 아키텍처: group_id 필터링
-            if (newTask.group_id !== currentGroupId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 할일: 다른 그룹의 데이터는 무시합니다.', {
-                  eventGroupId: newTask.group_id,
-                  currentGroupId
-                });
-              }
-              return;
-            }
-            // 암호화된 텍스트 복호화 (암호화된 형식인 경우에만)
-            const taskText = newTask.title || newTask.task_text || '';
-            let decryptedText = taskText;
-            const taskKey = getCurrentKey();
-            if (taskKey && taskKey.length > 0 && taskText && taskText.length > 0) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = taskText.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(taskText, taskKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedText = decrypted;
-                  } else {
-                    decryptedText = taskText;
-                  }
-                } catch (e: any) {
-                  // 복호화 오류 - 원본 텍스트 사용 (조용히 처리)
-                  decryptedText = taskText;
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedText = taskText;
-              }
-            } else {
-              decryptedText = taskText;
-            }
-            
-            // 담당자(assignee) 처리: assigned_to가 UUID 타입이므로 NULL일 수 있음
-            // 담당자 정보는 복호화된 텍스트에서 추출 (예: "텍스트 - Daddy" 형식)
-            let decryptedAssignee = '누구나';
-            
-            // 복호화된 텍스트에서 assignee 추출 (예: "이것도 될까? - Daddy" -> "Daddy")
-            if (decryptedText && decryptedText.includes(' - ')) {
-              const parts = decryptedText.split(' - ');
-              if (parts.length >= 2) {
-                // 마지막 부분을 assignee로 사용
-                const extractedAssignee = parts[parts.length - 1].trim();
-                if (extractedAssignee && extractedAssignee.length > 0) {
-                  decryptedAssignee = extractedAssignee;
-                }
-              }
-            }
-            
-            // assigned_to가 NULL이 아니고 문자열인 경우에만 복호화 시도 (암호화된 형식인 경우에만)
-            // 하지만 텍스트에서 추출한 assignee가 우선
-            if (decryptedAssignee === '누구나' && newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to !== '누구나' && !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-              // 암호화된 형식인지 확인 (U2FsdGVkX1로 시작하는지)
-              const isEncrypted = newTask.assigned_to.startsWith('U2FsdGVkX1');
-              if (isEncrypted) {
-                try {
-                  const decrypted = CryptoService.decrypt(newTask.assigned_to, taskKey);
-                  if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
-                    decryptedAssignee = decrypted;
-                  }
-                } catch (e) {
-                  // 복호화 실패 - 기본값 사용 (조용히 처리)
-                }
-              } else {
-                // 이미 평문이면 그대로 사용
-                decryptedAssignee = newTask.assigned_to;
-              }
-            }
-            
-            const newAssignedToUserId = newTask.assigned_to && typeof newTask.assigned_to === 'string' && newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? newTask.assigned_to : undefined;
-            setState(prev => {
-              // 기준 1: 같은 ID를 가진 할일이 이미 있으면 추가하지 않음 (모든 사용자 동일)
-              const existingTaskById = prev.todos?.find(t => String(t.id) === String(newTask.id));
-              if (existingTaskById) {
-                return prev;
-              }
-              
-              // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
-              if (newTask.created_by === userId) {
-                // 임시 ID 항목을 찾기: 같은 텍스트를 가진 임시 ID 항목 (assignee 포함 여부와 관계없이)
-                const recentDuplicate = prev.todos?.find(t => {
-                  const isTempId = typeof t.id === 'number';
-                  // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
-                  const isRecent = isTempId && (t.id as number) > (Date.now() - 30000);
-                  // 텍스트가 정확히 일치하는지 확인 (assignee 포함 여부와 관계없이)
-                  return isRecent && t.text === decryptedText;
-                });
-                
-                if (recentDuplicate) {
-                  return {
-                    ...prev,
-                    todos: prev.todos.map(t => 
-                      t.id === recentDuplicate.id 
-                        ? { ...t, id: newTask.id, text: decryptedText, assignee: decryptedAssignee, done: newTask.is_completed || false, assigned_to_user_id: newAssignedToUserId ?? t.assigned_to_user_id }
-                        : t
-                    )
-                  };
-                }
-                
-                // 임시 항목을 찾지 못했지만, 같은 텍스트를 가진 항목이 있으면 추가하지 않음 (중복 방지)
-                const duplicateByContent = prev.todos?.find(t => 
-                  t.text === decryptedText &&
-                  String(t.id) !== String(newTask.id) // 같은 ID가 아닌 경우만
-                );
-                if (duplicateByContent) {
-                  return prev; // 중복이면 추가하지 않음
-                }
-              }
-              
-              return {
-                ...prev,
-                todos: [{
-                  id: newTask.id,
-                  text: decryptedText,
-                  assignee: decryptedAssignee,
-                  done: newTask.is_completed || false,
-                  created_by: newTask.created_by,
-                  assigned_to_user_id: newAssignedToUserId
-                }, ...prev.todos]
-              };
-            });
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('📋 Realtime 할일 subscription 상태:', status);
-          if (err) {
-            console.error('❌ Realtime 할일 subscription 오류:', err);
-            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          }
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime 할일 subscription 연결 성공');
-            subscriptionsRef.current.tasks = tasksSubscription;
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('⚠️ Realtime 할일 subscription 연결 실패:', status);
-            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          }
-        });
-    };
-
-    // 4. 일정 구독 설정
-    const setupEventsSubscription = () => {
-      // 클라이언트에서만 실행되도록 보호
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      // 기존 구독 정리
-      if (subscriptionsRef.current.events) {
-        supabase.removeChannel(subscriptionsRef.current.events);
-        subscriptionsRef.current.events = null;
-      }
-      
-      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 분리 시 server/client bindings mismatch 방지)
-      console.log('📅 일정 subscription 설정 중...');
-      const eventsSubscription = supabase
-        .channel(`family_events_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'family_events' },
-          (payload: any) => {
-            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
-            if (ev === 'DELETE') {
-              const deletedEvent = payload.old;
-              const deletedId = deletedEvent?.id;
-              if (!deletedId) return;
-              const deletedIdStr = String(deletedId).trim().toLowerCase();
-              setState(prev => ({
-                ...prev,
-                events: prev.events.filter(e => {
-                  const eIdStr = String(e.id).trim().toLowerCase();
-                  const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim().toLowerCase() : null;
-                  const isMatch = eIdStr === deletedIdStr || (eSupabaseId === deletedIdStr) || eIdStr.replace(/-/g, '') === deletedIdStr.replace(/-/g, '');
-                  return !isMatch;
-                })
-              }));
-              return;
-            }
-            if (ev === 'UPDATE') {
-              const updatedEvent = payload.new;
-              const eventDateValue = updatedEvent.event_date || updatedEvent.date || updatedEvent.event_date_time || new Date().toISOString();
-              const eventDate = new Date(eventDateValue);
-              const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-              const day = eventDate.getDate().toString();
-              const updatedEventTitleField = updatedEvent.title || updatedEvent.event_title || '';
-              const updatedEventDescField = updatedEvent.description || '';
-              let decryptedTitle = updatedEventTitleField;
-              let decryptedDesc = updatedEventDescField;
-              const updateEventKey = getCurrentKey();
-              if (updateEventKey) {
-                if (updatedEventTitleField?.startsWith('U2FsdGVkX1')) {
-                  try {
-                    const d = CryptoService.decrypt(updatedEventTitleField, updateEventKey);
-                    if (d && typeof d === 'string' && d.length > 0) decryptedTitle = d;
-                  } catch (_) {}
-                }
-                if (updatedEventDescField?.startsWith('U2FsdGVkX1')) {
-                  try {
-                    const d = CryptoService.decrypt(updatedEventDescField, updateEventKey);
-                    if (d && typeof d === 'string' && d.length > 0) decryptedDesc = d;
-                  } catch (_) {}
-                }
-              }
-              const updatedDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
-              const updatedRepeatType = (updatedEvent.repeat_type === 'monthly' || updatedEvent.repeat_type === 'yearly') ? updatedEvent.repeat_type : 'none';
-              setState(prev => ({
-                ...prev,
-                events: prev.events.map(e =>
-                  e.id === updatedEvent.id
-                    ? { id: updatedEvent.id, month, day, title: decryptedTitle, desc: decryptedDesc, event_date: updatedDateStr, created_by: updatedEvent.created_by, created_at: updatedEvent.created_at, repeat_type: updatedRepeatType }
-                    : e
-                )
-              }));
-              return;
-            }
-            // INSERT
-            const newEvent = payload.new;
-            console.log('Realtime 일정 INSERT 이벤트 수신 (family_events 테이블):', payload);
-            
-            // 검증: 올바른 테이블에서 온 데이터인지 확인
-            if (!newEvent || !newEvent.id) {
-              console.error('Realtime 일정: 잘못된 payload:', payload);
-              return;
-            }
-            
-            // Multi-tenant 아키텍처: group_id 필터링
-            if (newEvent.group_id !== currentGroupId) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Realtime 일정: 다른 그룹의 데이터는 무시합니다.', {
-                  eventGroupId: newEvent.group_id,
-                  currentGroupId
-                });
-              }
-              return;
-            }
-            // event_date, date, event_date_time 등 여러 가능한 컬럼명 지원
-            const eventDateValue = newEvent.event_date || newEvent.date || newEvent.event_date_time || new Date().toISOString();
-            const eventDate = new Date(eventDateValue);
-            const month = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-            const day = eventDate.getDate().toString();
-            
-            // 암호화된 제목 및 설명 복호화
-            // event_title 대신 title 사용 (실제 테이블 구조에 맞게)
-            const newEventTitleField = newEvent.title || newEvent.event_title || '';
-            const newEventDescField = newEvent.description || '';
-            let decryptedTitle = newEventTitleField;
-            let decryptedDesc = newEventDescField;
-            const eventKey = getCurrentKey();
-            if (eventKey && eventKey.length > 0) {
-              // 제목 복호화 (암호화된 형식인 경우에만)
-              if (newEventTitleField && newEventTitleField.length > 0) {
-                const isEncrypted = newEventTitleField.startsWith('U2FsdGVkX1');
-                if (isEncrypted) {
-                  try {
-                    const decryptedTitleData = CryptoService.decrypt(newEventTitleField, eventKey);
-                    if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
-                      decryptedTitle = decryptedTitleData;
-                    } else {
-                      decryptedTitle = newEventTitleField;
-                    }
-                  } catch (e: any) {
-                    decryptedTitle = newEventTitleField;
-                  }
-                } else {
-                  // 이미 평문이면 그대로 사용
-                  decryptedTitle = newEventTitleField;
-                }
-              }
-              // 설명 복호화 (암호화된 형식인 경우에만)
-              if (newEventDescField && newEventDescField.length > 0) {
-                const isEncrypted = newEventDescField.startsWith('U2FsdGVkX1');
-                if (isEncrypted) {
-                  try {
-                    const decryptedDescData = CryptoService.decrypt(newEventDescField, eventKey);
-                    if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
-                      decryptedDesc = decryptedDescData;
-                    } else {
-                      decryptedDesc = newEventDescField;
-                    }
-                  } catch (e: any) {
-                    decryptedDesc = newEventDescField;
-                  }
-                } else {
-                  // 이미 평문이면 그대로 사용
-                  decryptedDesc = newEventDescField;
-                }
-              }
-            } else {
-              decryptedTitle = newEventTitleField;
-              decryptedDesc = newEventDescField;
-            }
-            
-            setState(prev => {
-              // 기준 1: 같은 ID를 가진 일정이 이미 있으면 추가하지 않음 (모든 사용자 동일)
-              const existingEventById = prev.events?.find(e => String(e.id) === String(newEvent.id));
-              if (existingEventById) {
-                return prev;
-              }
-              
-              // 기준 2: 자신이 입력한 항목이면 임시 ID 항목을 찾아서 교체 (모든 사용자 동일)
-              if (newEvent.created_by === userId) {
-                // 임시 ID 항목을 찾기: 같은 제목, 월, 일을 가진 임시 ID 항목
-                const recentDuplicate = prev.events?.find(e => {
-                  const isTempId = typeof e.id === 'number';
-                  // 30초 이내에 추가된 임시 항목만 체크 (Realtime 지연 고려)
-                  const isRecent = isTempId && (e.id as number) > (Date.now() - 30000);
-                  return isRecent && 
-                         e.title === decryptedTitle && 
-                         e.month === month && 
-                         e.day === day;
-                });
-                
-                if (recentDuplicate) {
-                  // 임시 항목을 Supabase ID로 교체
-                  return {
-                    ...prev,
-                    events: prev.events.map(e => 
-                      e.id === recentDuplicate.id 
-                        ? {
-                            id: newEvent.id,
-                            month: month,
-                            day: day,
-                            title: decryptedTitle,
-                            desc: decryptedDesc,
-                            event_date: eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '',
-                            created_by: newEvent.created_by,
-                            created_at: newEvent.created_at,
-                            repeat_type: (newEvent.repeat_type === 'monthly' || newEvent.repeat_type === 'yearly') ? newEvent.repeat_type : 'none'
-                          }
-                        : e
-                    )
-                  };
-                }
-                
-                // 임시 항목을 찾지 못했지만, 같은 제목, 월, 일을 가진 항목이 있으면 추가하지 않음 (중복 방지)
-                const duplicateByContent = prev.events?.find(e => 
-                  e.title === decryptedTitle && 
-                  e.month === month && 
-                  e.day === day &&
-                  String(e.id) !== String(newEvent.id) // 같은 ID가 아닌 경우만
-                );
-                if (duplicateByContent) {
-                  return prev; // 중복이면 추가하지 않음
-                }
-              }
-              
-              // 기준 3: 다른 사용자가 입력한 항목이거나, 자신이 입력한 항목이지만 임시 항목이 없으면 추가 (모든 사용자 동일)
-              const eventDateStr = eventDateValue ? (() => { const d = new Date(eventDateValue); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() : '';
-              const repeatType = newEvent.repeat_type === 'monthly' || newEvent.repeat_type === 'yearly' ? newEvent.repeat_type : 'none';
-              return {
-                ...prev,
-                events: [{
-                  id: newEvent.id,
-                  month: month,
-                  day: day,
-                  title: decryptedTitle,
-                  desc: decryptedDesc,
-                  event_date: eventDateStr,
-                  created_by: newEvent.created_by,
-                  created_at: newEvent.created_at,
-                  repeat_type: repeatType
-                }, ...prev.events]
-              };
-            });
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('📅 Realtime 일정 subscription 상태:', status);
-          if (err) {
-            console.error('❌ Realtime 일정 subscription 오류:', err);
-            // 오류 발생 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          }
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime 일정 subscription 연결 성공');
-            subscriptionsRef.current.events = eventsSubscription;
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('⚠️ Realtime 일정 subscription 연결 실패:', status);
-            // 연결 실패 시 상태만 업데이트 (cleanup은 useEffect return에서 수행)
-          }
-        });
-    };
+    // 4. 일정 구독은 FamilyCalendarSection에서 처리됨
 
     // 5. 사진 구독 설정 (AlbumContext에서 처리하므로 no-op)
     const setupPhotosSubscription = () => {};
@@ -3570,13 +2895,13 @@ export default function FamilyHub() {
       const INITIAL_DELAY_MS = 100;
       const STAGGER_MS = 200;
       realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupMessagesSubscription(), INITIAL_DELAY_MS));
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupTasksSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 1));
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupEventsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 3));
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 4));
+      // setupTasksSubscription은 FamilyTasksSection에서 처리됨
+      // setupEventsSubscription은 FamilyCalendarSection에서 처리됨
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 1));
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
 
       // ⭐ 모든 구독 설정 완료 후 플래그 해제 (마지막 구독 + 여유 시간)
-      const TOTAL_SETUP_TIME = INITIAL_DELAY_MS + STAGGER_MS * 4 + 1000; // 마지막 구독 + 1초 여유
+      const TOTAL_SETUP_TIME = INITIAL_DELAY_MS + STAGGER_MS * 3 + 1000; // 마지막 구독 + 1초 여유
       realtimeStaggerTimeoutsRef.current.push(setTimeout(() => {
         isSettingUpSubscriptionsRef.current = false;
         console.log('✅ Realtime 구독 설정 완료, 중복 방지 플래그 해제');
@@ -4037,314 +3362,6 @@ export default function FamilyHub() {
           }
           break;
         }
-        case 'ADD_TODO': {
-          // 검증: payload가 올바른지 확인
-          if (!payload || !payload.text) {
-            console.error('ADD_TODO: 잘못된 payload:', payload);
-            return;
-          }
-          
-          // 할일 텍스트 암호화
-          const encryptedText = CryptoService.encrypt(payload.text, currentKey);
-          
-          // Multi-tenant 아키텍처: currentGroupId 필수 검증
-          if (!currentGroupId) {
-            console.error('ADD_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-            return;
-          }
-
-          // 실제 테이블 구조에 맞게 title 컬럼 사용 (task_text가 없음)
-          // assigned_to는 UUID 타입이므로 NULL로 저장 (담당자 정보는 title에 포함하거나 별도 처리)
-          const taskData: any = {
-            group_id: currentGroupId, // Multi-tenant: group_id 필수
-            created_by: userId,
-            title: encryptedText, // 암호화된 텍스트 저장 (task_text 대신 title 사용)
-            assigned_to: null, // UUID 타입이므로 NULL로 저장 (담당자 정보는 암호화된 텍스트에 포함)
-            is_completed: payload.done || false // is_completed 컬럼 사용
-          };
-          
-          console.log('ADD_TODO: family_tasks 테이블에 저장:', { text: payload.text.substring(0, 20), assignee: payload.assignee, groupId: currentGroupId });
-          
-          const { error, data } = await supabase
-            .from('family_tasks')
-            .insert(taskData)
-            .select();
-          
-          if (error) {
-            console.error('할일 저장 오류:', error);
-            if (process.env.NODE_ENV === 'development') {
-              console.error('에러 상세:', JSON.stringify(error, null, 2));
-            }
-          } else {
-            console.log('ADD_TODO: family_tasks 테이블 저장 성공:', data);
-          }
-          break;
-        }
-        case 'TOGGLE_TODO': {
-          // 숫자 ID는 로컬 데이터이므로 Supabase 업데이트 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
-          const taskId = String(payload.id);
-          const isNumericId = typeof payload.id === 'number' || /^\d+$/.test(taskId);
-          
-          if (isNumericId) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('로컬 데이터 업데이트 (Supabase 업데이트 건너뜀):', taskId);
-            }
-            break; // 로컬 데이터는 Supabase 업데이트 시도하지 않음
-          }
-          
-          // Multi-tenant 아키텍처: currentGroupId 필수 검증
-          if (!currentGroupId) {
-            console.error('TOGGLE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-            return;
-          }
-
-          // is_completed 컬럼 사용 (실제 테이블 구조에 맞게)
-          const updateData: any = {};
-          updateData.is_completed = payload.done; // is_completed 컬럼 사용
-          
-          const { error } = await supabase
-            .from('family_tasks')
-            .update(updateData)
-            .eq('id', payload.id)
-            .eq('group_id', currentGroupId); // Multi-tenant: group_id 검증
-          
-          if (error) {
-            console.error('할일 업데이트 오류:', error);
-            if (process.env.NODE_ENV === 'development') {
-              console.error('에러 상세:', JSON.stringify(error, null, 2));
-            }
-          }
-          break;
-        }
-        case 'DELETE_TODO': {
-          // ID를 문자열로 변환하여 타입 일치 보장
-          const taskId = String(payload);
-          // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
-          const isNumericId = typeof payload === 'number' || /^\d+$/.test(taskId);
-          
-          console.log('saveToSupabase DELETE_TODO:', { taskId, isNumericId, payloadType: typeof payload, familyId: currentFamilyId });
-          
-          if (isNumericId) {
-            console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', taskId);
-            break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
-          }
-          
-          // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-          // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-          
-          console.log('Supabase 삭제 시도:', { taskId, userId });
-          
-          // Multi-tenant 아키텍처: currentGroupId 필수 검증
-          if (!currentGroupId) {
-            console.error('DELETE_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-            return;
-          }
-
-          // 삭제 전에 해당 할일이 존재하는지 확인 (그룹 내에서만)
-          const { data: existingTask } = await supabase
-            .from('family_tasks')
-            .select('id, created_by, title, group_id')
-            .eq('id', taskId)
-            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
-            .single();
-          
-          if (existingTask) {
-            console.log('삭제할 할일 확인:', {
-              id: existingTask.id,
-              created_by: existingTask.created_by,
-              title: existingTask.title?.substring(0, 30),
-              group_id: existingTask.group_id
-            });
-          }
-          
-          const { error, data } = await supabase
-            .from('family_tasks')
-            .delete()
-            .eq('id', taskId)
-            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
-            .select();
-          
-          if (error) {
-            console.error('할일 삭제 오류:', error);
-            console.error('삭제 시도한 ID:', taskId, '타입:', typeof taskId, 'userId:', userId);
-            if (process.env.NODE_ENV === 'development') {
-              console.error('에러 상세:', JSON.stringify(error, null, 2));
-            }
-            throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
-          } else {
-            const deletedCount = data?.length || 0;
-            console.log('할일 삭제 결과:', { taskId, deletedCount, deletedData: data, userId });
-            
-            // 삭제된 행이 없고, 할일이 존재한다면 RLS 정책 문제일 가능성이 높음
-            if (deletedCount === 0 && existingTask) {
-              console.error('⚠️ 할일 삭제 실패: 할일은 존재하지만 삭제 권한이 없습니다.', {
-                taskId,
-                existingTaskCreatedBy: existingTask.created_by,
-                currentUserId: userId,
-                isOwner: existingTask.created_by === userId
-              });
-              throw new Error('삭제 권한이 없습니다. 이 할일을 삭제할 수 없습니다.');
-            } else if (deletedCount === 0) {
-              console.warn('⚠️ 할일 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', taskId);
-              // 할일이 존재하지 않으면 이미 삭제된 것으로 간주하고 에러를 throw하지 않음
-            }
-          }
-          break;
-        }
-        case 'ADD_EVENT': {
-          // 검증: payload가 올바른지 확인
-          if (!payload || !payload.title || !payload.month || !payload.day) {
-            console.error('ADD_EVENT: 잘못된 payload:', payload);
-            return;
-          }
-          
-          // 일정 제목 및 설명 암호화
-          const encryptedTitle = CryptoService.encrypt(payload.title, currentKey);
-          const encryptedDesc = CryptoService.encrypt(payload.desc || '', currentKey);
-          
-          // 날짜 파싱 (예: "JAN 1" 또는 "1 JAN" -> 실제 날짜)
-          const monthMap: { [key: string]: number } = {
-            'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
-            'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
-          };
-          
-          const monthStr = payload.month.toUpperCase();
-          const month = monthMap[monthStr];
-          
-          // month가 유효한지 확인
-          if (month === undefined) {
-            console.error('유효하지 않은 월:', payload.month);
-            alert(dt('event_invalid_month'));
-            return;
-          }
-          
-          const day = parseInt(payload.day);
-          if (isNaN(day) || day < 1 || day > 31) {
-            console.error('유효하지 않은 일:', payload.day);
-            alert(dt('event_invalid_day'));
-            return;
-          }
-          
-          const currentYear = new Date().getFullYear();
-          const eventDate = new Date(currentYear, month, day);
-          
-          // Multi-tenant 아키텍처: currentGroupId 필수 검증
-          if (!currentGroupId) {
-            console.error('ADD_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-            return;
-          }
-
-          // event_date: 로컬 날짜(YYYY-MM-DD)로 저장해 타임존에 따라 하루 밀리는 현상 방지
-          const eventDateStr = payload.event_date || `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-          const repeatType = payload.repeat_type === 'monthly' || payload.repeat_type === 'yearly' ? payload.repeat_type : 'none';
-          const eventData: any = {
-            group_id: currentGroupId, // Multi-tenant: group_id 필수
-            created_by: userId,
-            title: encryptedTitle, // 암호화된 제목 저장 (event_title 대신 title 사용)
-            description: encryptedDesc, // 암호화된 설명 저장
-            event_date: eventDateStr,
-            repeat_type: repeatType
-          };
-          
-          console.log('ADD_EVENT: family_events 테이블에 저장:', { title: payload.title.substring(0, 20), month: payload.month, day: payload.day, groupId: currentGroupId });
-          
-          const { error, data } = await supabase
-            .from('family_events')
-            .insert(eventData)
-            .select();
-          
-          if (error) {
-            console.error('일정 저장 오류:', error);
-            if (process.env.NODE_ENV === 'development') {
-              console.error('에러 상세:', JSON.stringify(error, null, 2));
-            }
-            throw error; // 호출부에서 복구 및 사용자 알림 가능하도록
-          }
-          console.log('ADD_EVENT: family_events 테이블 저장 성공:', data);
-          break;
-        }
-        case 'DELETE_EVENT': {
-          // ID를 문자열로 변환하여 타입 일치 보장
-          const eventId = String(payload);
-          // 숫자 ID는 로컬 데이터이므로 Supabase 삭제 시도하지 않음 (UUID 형식만 Supabase에 저장됨)
-          const isNumericId = typeof payload === 'number' || /^\d+$/.test(eventId);
-          
-          console.log('saveToSupabase DELETE_EVENT:', { eventId, isNumericId, payloadType: typeof payload, familyId: currentFamilyId });
-          
-          if (isNumericId) {
-            console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', eventId);
-            break; // 로컬 데이터는 Supabase 삭제 시도하지 않음
-          }
-          
-          // family_id 검증 제거 (기존 데이터와의 호환성을 위해)
-          // 모든 가족 구성원이 같은 데이터를 공유하므로 family_id 검증 불필요
-          
-          console.log('Supabase 삭제 시도:', { eventId, eventIdType: typeof eventId, userId });
-          
-          // Multi-tenant 아키텍처: currentGroupId 필수 검증
-          if (!currentGroupId) {
-            console.error('DELETE_EVENT: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-            return;
-          }
-
-          // 삭제 전에 해당 이벤트가 존재하는지 확인 (그룹 내에서만)
-          const { data: existingEvent } = await supabase
-            .from('family_events')
-            .select('id, created_by, title, group_id')
-            .eq('id', eventId)
-            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
-            .single();
-          
-          if (existingEvent) {
-            console.log('삭제할 이벤트 확인:', {
-              id: existingEvent.id,
-              created_by: existingEvent.created_by,
-              title: existingEvent.title?.substring(0, 30),
-              group_id: existingEvent.group_id
-            });
-            // 작성자만 삭제 가능: 서버에서 한 번 더 검증
-            if (existingEvent.created_by != null && String(existingEvent.created_by).trim() !== String(userId).trim()) {
-              console.error('⚠️ 일정 삭제 거부: 작성자가 아님.', { eventId, created_by: existingEvent.created_by, userId });
-              throw new Error('삭제 권한이 없습니다. 이 일정을 삭제할 수 있는 것은 작성자뿐입니다.');
-            }
-          } else {
-            console.warn('⚠️ 삭제할 이벤트를 찾을 수 없음:', eventId, 'groupId:', currentGroupId);
-          }
-          
-          const { error, data } = await supabase
-            .from('family_events')
-            .delete()
-            .eq('id', eventId)
-            .eq('group_id', currentGroupId) // Multi-tenant: group_id 검증
-            .select();
-          
-          if (error) {
-            console.error('일정 삭제 오류:', error);
-            console.error('삭제 시도한 ID:', eventId, '타입:', typeof eventId, 'userId:', userId);
-            if (process.env.NODE_ENV === 'development') {
-              console.error('에러 상세:', JSON.stringify(error, null, 2));
-            }
-            throw error; // 에러를 throw하여 낙관적 업데이트 복구 가능하도록
-          } else {
-            const deletedCount = data?.length || 0;
-            console.log('일정 삭제 결과:', { eventId, deletedCount, deletedData: data, userId });
-            
-            // 삭제된 행이 없고, 이벤트가 존재한다면 RLS 정책 문제일 가능성이 높음
-            if (deletedCount === 0 && existingEvent) {
-              console.error('⚠️ 일정 삭제 실패: 이벤트는 존재하지만 삭제 권한이 없습니다.', {
-                eventId,
-                existingEventCreatedBy: existingEvent.created_by,
-                currentUserId: userId,
-                isOwner: existingEvent.created_by === userId
-              });
-              throw new Error('삭제 권한이 없습니다. 이 이벤트를 삭제할 수 없습니다.');
-            } else if (deletedCount === 0) {
-              console.warn('⚠️ 일정 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:', eventId);
-              // 이벤트가 존재하지 않으면 이미 삭제된 것으로 간주하고 에러를 throw하지 않음
-            }
-          }
-          break;
-        }
       }
     } catch (error) {
       console.error('Supabase 저장 오류:', error);
@@ -4407,72 +3424,6 @@ export default function FamilyHub() {
             }
           })();
           break;
-        case 'TOGGLE_TODO': {
-          const todo = prev.todos.find(t => t.id === payload);
-          if (todo) {
-          newState.todos = prev.todos.map(t => t.id === payload ? { ...t, done: !t.done } : t);
-            // Supabase에 저장
-            saveToSupabase('TOGGLE_TODO', { id: payload, done: !todo.done }, userId, currentKey);
-          }
-          break;
-        }
-        case 'ADD_TODO': {
-          // 중복 체크: 같은 텍스트를 가진 할일이 이미 있는지 확인
-          // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
-          // 30초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주 (Realtime 지연 고려)
-          const thirtySecondsAgo = Date.now() - 30000;
-          const duplicate = prev.todos?.find(t => {
-            // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
-            const isTempId = typeof t.id === 'number';
-            // 임시 ID이고 30초 이내에 추가된 항목인지 확인
-            const isRecent = isTempId && (t.id as number) > thirtySecondsAgo;
-            // 텍스트가 정확히 일치하는지 확인 (assignee 포함 여부와 관계없이)
-            return isRecent && t.text === payload.text;
-          });
-          
-          if (duplicate) {
-            console.log('중복 할일 감지 (updateState), 추가하지 않음:', { text: payload.text.substring(0, 20) });
-            return prev; // 중복이면 상태 변경하지 않음
-          }
-          
-          // Supabase UUID가 아닌 임시 ID로 추가 (Realtime 이벤트에서 Supabase ID로 교체됨)
-          newState.todos = [payload, ...prev.todos];
-          // Supabase에 저장
-          saveToSupabase('ADD_TODO', payload, userId, currentKey);
-          break;
-        }
-        case 'DELETE_TODO': {
-          // ID 비교를 안전하게 처리 (number와 string 모두 지원)
-          const deleteTodoId = String(payload).trim();
-          console.log('updateState DELETE_TODO 호출:', { payload, deleteTodoId, payloadType: typeof payload });
-          
-          // 낙관적 업데이트: 먼저 화면에서 제거
-          const deletedTodo = prev.todos.find(t => String(t.id).trim() === deleteTodoId);
-          newState.todos = prev.todos.filter(t => String(t.id).trim() !== deleteTodoId);
-          
-          // Supabase에 저장 (비동기, 에러 발생 시 복구)
-          saveToSupabase('DELETE_TODO', payload, userId, currentKey)
-            .catch((error) => {
-              console.error('할일 삭제 실패, 복구 중:', error);
-              // 에러 발생 시 복구: 삭제된 항목을 다시 추가
-              if (deletedTodo) {
-                setState(prevState => ({
-                  ...prevState,
-                  todos: [...prevState.todos, deletedTodo].sort((a, b) => {
-                    // ID 기준 정렬 (숫자 ID는 뒤로, UUID는 앞으로)
-                    const aIsNum = typeof a.id === 'number';
-                    const bIsNum = typeof b.id === 'number';
-                    if (aIsNum && !bIsNum) return 1;
-                    if (!aIsNum && bIsNum) return -1;
-                    return 0;
-                  })
-                }));
-              }
-              // 사용자에게 알림
-              alert(dt('delete_failed_retry'));
-            });
-          break;
-        }
         case 'ADD_PHOTO':
           newState.album = [payload, ...prev.album];
           break;
@@ -4551,81 +3502,6 @@ export default function FamilyHub() {
             }
           })();
           break;
-        case 'ADD_EVENT': {
-          // 중복 체크: 같은 제목과 날짜를 가진 일정이 이미 있는지 확인
-          // (임시 ID로 추가된 항목이 Realtime으로 다시 들어오는 경우 방지)
-          // 30초 이내에 추가된 같은 내용의 항목이 있으면 중복으로 간주 (Realtime 지연 고려)
-          const thirtySecondsAgo = Date.now() - 30000;
-          const duplicate = prev.events?.find(e => {
-            // 임시 ID (숫자)를 가진 항목만 체크 (Supabase UUID는 제외)
-            const isTempId = typeof e.id === 'number';
-            // 임시 ID이고 30초 이내에 추가된 항목인지 확인
-            const isRecent = isTempId && (e.id as number) > thirtySecondsAgo;
-            return isRecent && 
-                   e.title === payload.title && 
-                   e.month === payload.month && 
-                   e.day === payload.day;
-          });
-          
-          if (duplicate) {
-            console.log('중복 일정 감지 (updateState), 추가하지 않음:', { title: payload.title.substring(0, 20) });
-            return prev; // 중복이면 상태 변경하지 않음
-          }
-          
-          newState.events = [payload, ...prev.events];
-          // Supabase에 저장 (실패 시 낙관적 업데이트 복구 및 알림)
-          saveToSupabase('ADD_EVENT', payload, userId, currentKey)
-            .catch((error) => {
-              console.error('일정 저장 실패, 복구 중:', error);
-              setState(prevState => ({
-                ...prevState,
-                events: prevState.events.filter(e => e.id !== payload.id)
-              }));
-              alert(dt('event_save_failed'));
-            });
-          break;
-        }
-        case 'DELETE_EVENT': {
-          // ID 비교를 안전하게 처리 (number와 string 모두 지원)
-          const deleteEventId = String(payload).trim();
-          console.log('updateState DELETE_EVENT 호출:', { payload, deleteEventId, payloadType: typeof payload });
-          
-          const eventToDelete = prev.events.find(e => String(e.id).trim() === deleteEventId);
-          // 작성자만 삭제 가능: created_by가 있고 현재 사용자가 작성자가 아니면 거부
-          if (eventToDelete && eventToDelete.created_by != null && String(eventToDelete.created_by).trim() !== String(userId).trim()) {
-            alert(dt('event_delete_author_only'));
-            return prev;
-          }
-          
-          // 낙관적 업데이트: 먼저 화면에서 제거
-          const deletedEvent = eventToDelete;
-          newState.events = prev.events.filter(e => String(e.id).trim() !== deleteEventId);
-          
-          // Supabase에 저장 (비동기, 에러 발생 시 복구)
-          saveToSupabase('DELETE_EVENT', payload, userId, currentKey)
-            .catch((error) => {
-              console.error('일정 삭제 실패, 복구 중:', error);
-              // 에러 발생 시 복구: 삭제된 항목을 다시 추가
-              if (deletedEvent) {
-                setState(prevState => ({
-                  ...prevState,
-                  events: [...prevState.events, deletedEvent].sort((a, b) => {
-                    // 날짜 기준 정렬
-                    const monthOrder: { [key: string]: number } = {
-                      'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
-                      'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
-                    };
-                    const monthDiff = (monthOrder[a.month] || 0) - (monthOrder[b.month] || 0);
-                    if (monthDiff !== 0) return monthDiff;
-                    return parseInt(a.day) - parseInt(b.day);
-                  })
-                }));
-              }
-              // 사용자에게 알림
-              alert(dt('delete_failed_retry'));
-            });
-          break;
-        }
         case 'ADD_MESSAGE': {
           const { alreadyPersisted: _ap, ...messageForState } = payload as Record<string, unknown> & { alreadyPersisted?: boolean };
           newState.messages = trimMessagesToMax([
@@ -6462,87 +5338,6 @@ export default function FamilyHub() {
     }
   };
 
-  // Todo Handlers
-  const submitNewTodo = () => {
-    const text = todoTextRef.current?.value;
-    const who = todoWhoRef.current?.value;
-    if (!text?.trim()) return alert(dt('todo_required'));
-    
-    // 보안: 입력 검증
-    const sanitizedText = sanitizeInput(text, 100);
-    const sanitizedWho = sanitizeInput(who, 20);
-    
-    if (!sanitizedText) return alert(dt('invalid_input'));
-    
-    // assignee를 텍스트에 포함시켜서 저장 (Realtime 핸들러에서 추출)
-    const textWithAssignee = sanitizedWho && sanitizedWho !== "누구나" 
-      ? `${sanitizedText} - ${sanitizedWho}`
-      : sanitizedText;
-    
-    updateState('ADD_TODO', { 
-      id: Date.now(), 
-      text: textWithAssignee, 
-      assignee: sanitizedWho || "누구나", 
-      done: false 
-    });
-    
-    // Clear & Close
-    if (todoTextRef.current) todoTextRef.current.value = "";
-    if (todoWhoRef.current) todoWhoRef.current.value = "";
-    setIsTodoModalOpen(false);
-  };
-
-  // Event Handlers
-  const openEventModal = () => {
-    const d = selectedDate || new Date();
-    setEventFormDate(d);
-    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-    const day = d.getDate().toString();
-    setEventForm({ title: '', month, day, desc: '', repeat_type: 'none' });
-    setShowEventModal(true);
-  };
-
-  const closeEventModal = () => {
-    setShowEventModal(false);
-    setEventFormDate(null);
-    setEventForm({ title: '', month: '', day: '', desc: '', repeat_type: 'none' });
-  };
-
-  const handleEventSubmit = () => {
-    if (!eventForm.title.trim()) {
-      alert(dt('event_title_required'));
-      return;
-    }
-    // 날짜는 openEventModal에서 달력 선택일(또는 오늘)로 설정됨
-    const dayNum = parseInt(eventForm.day, 10);
-    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
-      alert(dt('event_date_invalid'));
-      return;
-    }
-    const sanitizedTitle = sanitizeInput(eventForm.title, 100);
-    const sanitizedMonth = sanitizeInput(eventForm.month, 10);
-    const sanitizedDay = dayNum.toString();
-    const sanitizedDesc = sanitizeInput(eventForm.desc, 200);
-    
-    if (!sanitizedTitle) {
-      alert(dt('event_title_invalid'));
-      return;
-    }
-    const eventDateStr = eventFormDate
-      ? `${eventFormDate.getFullYear()}-${String(eventFormDate.getMonth() + 1).padStart(2, '0')}-${String(eventFormDate.getDate()).padStart(2, '0')}`
-      : '';
-    updateState('ADD_EVENT', { 
-      id: Date.now(), 
-      month: sanitizedMonth, 
-      day: sanitizedDay, 
-      title: sanitizedTitle, 
-      desc: sanitizedDesc,
-      event_date: eventDateStr,
-      repeat_type: eventForm.repeat_type || 'none'
-    });
-    
-    closeEventModal();
-  };
 
   // Chat Handlers
   const loadChatAttachments = useCallback(async () => {
@@ -6905,51 +5700,6 @@ export default function FamilyHub() {
 
   return (
     <div className="app-container">
-      {/* Todo Modal - Chalkboard Style */}
-      {isTodoModalOpen && (
-        <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
-          <div className="chalkboard-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="chalkboard-modal-title">
-              <span className="chalkboard-modal-icon">📝</span>
-              {dt('todo_modal_title')}
-          </h3>
-            <div className="chalkboard-modal-form">
-              <div className="chalkboard-form-field">
-                <label className="chalkboard-form-label">{dt('todo_what_label')}</label>
-              <input 
-                ref={todoTextRef}
-                type="text" 
-                  className="chalkboard-form-input" 
-                placeholder={dt('todo_what_placeholder')}
-              />
-            </div>
-              <div className="chalkboard-form-field">
-                <label className="chalkboard-form-label">{dt('todo_who_label')}</label>
-              <input 
-                ref={todoWhoRef}
-                type="text" 
-                  className="chalkboard-form-input" 
-                placeholder={dt('todo_who_placeholder')}
-              />
-            </div>
-          </div>
-            <div className="chalkboard-modal-actions">
-              <button 
-                onClick={() => setIsTodoModalOpen(false)} 
-                className="chalkboard-btn-secondary"
-              >
-                {ct('cancel')}
-              </button>
-            <button 
-              onClick={submitNewTodo} 
-                className="chalkboard-btn-primary"
-            >
-              {dt('todo_register_btn')}
-            </button>
-          </div>
-        </div>
-      </div>
-      )}
 
       {/* Nickname Modal */}
       {isNicknameModalOpen && (
@@ -7165,581 +5915,101 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div className="sections-container">
-          {/* Family Tasks Section - Chalkboard Style */}
-          <section className="chalkboard-container">
-            {/* Chalkboard Decorations - Top Right */}
-            <div className="chalkboard-decorations">
-              {/* House Icon */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-              </svg>
-              {/* Sun Icon */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-              </svg>
-              {/* Heart Icon */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-              </svg>
-            </div>
-
-            <div className="chalkboard-header">
-              <h3 className="chalkboard-title">{dt('todo_section_title')}</h3>
-            <button 
-              onClick={() => setIsTodoModalOpen(true)} 
-                className="chalkboard-btn-add"
-            >
-              {dt('todo_add_btn')}
-            </button>
-          </div>
-            <div
-              className="section-body"
-              ref={chatDropRef}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setChatDragOver(true);
-              }}
-              onDragLeave={() => setChatDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setChatDragOver(false);
-                const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
-                handleDropChatFiles(files);
-              }}
-              style={chatDragOver ? { outline: '2px dashed #6366f1', outlineOffset: '4px', borderRadius: '10px' } : undefined}
-            >
-              {(state.todos || []).length > 0 ? (
-                <div className="todo-list">
-                  {(state.todos || []).map(t => (
-                    <div key={t.id} className="todo-item">
-                      <div 
-                        onClick={() => updateState('TOGGLE_TODO', t.id)} 
-                        className="todo-content"
-                      >
-                        <div className={`todo-checkbox ${t.done ? 'todo-checkbox-checked' : ''}`}>
-                          {t.done && (
-                            <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path d="M5 13l4 4L19 7"></path>
-                            </svg>
-                          )}
-                  </div>
-                        <div className="todo-text-wrapper">
-                          <span className={`todo-text ${t.done ? 'todo-text-done' : ''}`}>
-                            {t.text}
-                          </span>
-                          {t.assignee && (
-                            <span className="todo-assignee">
-                              {t.assigned_to_user_id && familyRoleByUserId[t.assigned_to_user_id] ? getFamilyRoleEmoji(familyRoleByUserId[t.assigned_to_user_id]) + ' ' : ''}
-                              {t.assignee === '누구나' ? ct('anyone') : t.assignee}
-                            </span>
-                          )}
-                  </div>
-                </div>
-                      {(t.created_by === userId || !t.created_by) && (
-                        <button 
-                          onClick={() => confirm(ct('delete_confirm')) && updateState('DELETE_TODO', t.id)} 
-                          className="chalkboard-btn-delete"
-                        >
-                          <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-                          </svg>
-                </button>
-            )}
-          </div>
-                  ))}
-        </div>
-              ) : (
-                <p className="chalkboard-empty-state">{dt('todo_empty_state')}</p>
-              )}
-            </div>
-          </section>
-
-          {/* Family Calendar Section - 월별 달력 + 날짜별 상세 (디자인 강화) */}
-          <section
-            className="content-section"
-            style={{
-              background: 'linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f0f9ff 100%)',
-              borderRadius: '16px',
-              padding: '14px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          {/* Family Tasks Section */}
+          <FamilyTasksSection
+            tasks={state.todos}
+            onTasksChange={(tasks) => setState(prev => ({ ...prev, todos: tasks }))}
+            userId={userId}
+            currentGroupId={currentGroupId}
+            getCurrentKey={getCurrentKey}
+            CryptoService={CryptoService}
+            sanitizeInput={sanitizeInput}
+            realtimeSubscriptionId={String(realtimeSubscriptionIdRef.current)}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            translations={{
+              todo_section_title: dt('todo_section_title'),
+              todo_add_btn: dt('todo_add_btn'),
+              todo_empty_state: dt('todo_empty_state'),
+              todo_modal_title: dt('todo_modal_title'),
+              todo_what_label: dt('todo_what_label'),
+              todo_what_placeholder: dt('todo_what_placeholder'),
+              todo_who_label: dt('todo_who_label'),
+              todo_who_placeholder: dt('todo_who_placeholder'),
+              todo_register_btn: dt('todo_register_btn'),
+              todo_required: dt('todo_required'),
+              invalid_input: dt('invalid_input'),
+              anyone: ct('anyone'),
+              cancel: ct('cancel'),
+              delete_confirm: ct('delete_confirm'),
             }}
-          >
-            <div className="section-header" style={{ marginBottom: '10px' }}>
-              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
-                <Calendar style={{ width: '24px', height: '24px', color: '#7c3aed' }} />
-                {dt('section_title_calendar')}
-              </h3>
-            </div>
-            <div className="section-body">
-              <motion.div
-                key={`${calendarGrid.year}-${calendarGrid.month}`}
-                initial={{ opacity: 0.7 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                style={{ marginBottom: '10px' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>
-                    {calendarGrid.year}년 {calendarGrid.month + 1}월
-                  </h4>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
-                      style={{
-                        padding: '8px 14px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '10px',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f5f3ff';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.2)';
-                        e.currentTarget.style.borderColor = '#c4b5fd';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#fff';
-                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                      }}
-                    >
-                      <ChevronLeft style={{ width: '18px', height: '18px' }} />
-                      {dt('calendar_prev_month')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
-                      style={{
-                        padding: '8px 14px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '10px',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f5f3ff';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.2)';
-                        e.currentTarget.style.borderColor = '#c4b5fd';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#fff';
-                        e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                      }}
-                    >
-                      {dt('calendar_next_month')}
-                      <ChevronRight style={{ width: '18px', height: '18px' }} />
-                    </button>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '42px', gap: '4px', textAlign: 'center', fontSize: '12px' }}>
-                  {([0, 1, 2, 3, 4, 5, 6] as const).map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        padding: '6px 2px',
-                        minHeight: '34px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '700',
-                        color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#64748b',
-                        backgroundColor: i === 0 || i === 6 ? 'rgba(0,0,0,0.03)' : 'transparent',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                      }}
-                    >
-                      {dt(`calendar_weekday_${i}` as keyof DashboardTranslations)}
-                    </div>
-                  ))}
-                  {calendarGrid.cells.map((cell, idx) => {
-                    if (cell.type === 'empty') {
-                      return <div key={'e-' + idx} style={{ padding: '4px 2px', minHeight: '34px' }} />;
-                    }
-                    const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
-                    const isWeekend = cell.date.getDay() === 0 || cell.date.getDay() === 6;
-                    return (
-                      <button
-                        key={'d-' + idx}
-                        type="button"
-                        onClick={() => setSelectedDate(cell.date)}
-                        style={{
-                          padding: '4px 2px',
-                          minHeight: '34px',
-                          border: isSelected ? '2px solid #7c3aed' : '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          background: isSelected
-                            ? 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
-                            : cell.isToday
-                              ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
-                              : cell.eventCount > 0
-                                ? 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)'
-                                : '#fff',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: cell.isToday ? '700' : '500',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '2px',
-                          boxShadow: isSelected ? '0 4px 12px rgba(124, 58, 237, 0.25)' : '0 1px 2px rgba(0,0,0,0.05)',
-                          transition: 'all 0.2s ease',
-                          color: isWeekend && !isSelected && !cell.isToday ? '#64748b' : '#1e293b',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (isSelected) return;
-                          e.currentTarget.style.transform = 'scale(1.05)';
-                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)';
-                          e.currentTarget.style.borderColor = '#c4b5fd';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (isSelected) return;
-                          e.currentTarget.style.transform = 'scale(1)';
-                          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                        }}
-                      >
-                        <span>{cell.day}</span>
-                        {cell.isToday && (
-                          <span style={{ fontSize: '9px', fontWeight: '600', color: '#b45309' }}>{dt('event_today')}</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
+            chatDragOver={chatDragOver}
+            chatDropRef={chatDropRef}
+            onChatDragOver={(e) => {
+              e.preventDefault();
+              setChatDragOver(true);
+            }}
+            onChatDragLeave={() => setChatDragOver(false)}
+            onChatDrop={(e) => {
+              e.preventDefault();
+              setChatDragOver(false);
+              const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
+              handleDropChatFiles(files);
+            }}
+          />
 
-              <AnimatePresence mode="wait">
-                {selectedDate && (
-                  <motion.div
-                    key={selectedDate.getTime()}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.25 }}
-                    style={{
-                      marginTop: '14px',
-                      padding: '14px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(255,255,255,0.8)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <CalendarDays style={{ width: '20px', height: '20px', color: '#7c3aed' }} />
-                        {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 일정
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDate(null)}
-                        style={{
-                          padding: '8px 12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '10px',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#f1f5f9';
-                          e.currentTarget.style.borderColor = '#cbd5e1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#fff';
-                          e.currentTarget.style.borderColor = '#e2e8f0';
-                        }}
-                      >
-                        <X style={{ width: '16px', height: '16px' }} />
-                        {ct('close')}
-                      </button>
-                    </div>
-                    {eventsOnSelectedDate.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {eventsOnSelectedDate.map((e, i) => (
-                          <motion.div
-                            key={e.id}
-                            initial={{ opacity: 0, x: -8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.05, duration: 0.2 }}
-                            style={{
-                              padding: '14px 14px 14px 18px',
-                              background: '#fff',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '12px',
-                              borderLeft: '4px solid #7c3aed',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                              transition: 'all 0.2s ease',
-                            }}
-                            onMouseEnter={(el) => {
-                              el.currentTarget.style.boxShadow = '0 8px 24px rgba(124, 58, 237, 0.12)';
-                              el.currentTarget.style.transform = 'translateY(-2px)';
-                            }}
-                            onMouseLeave={(el) => {
-                              el.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-                              el.currentTarget.style.transform = 'translateY(0)';
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                              <div style={{ flex: 1 }}>
-                                <h5 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{e.title}</h5>
-                                {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
-                                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#7c3aed' }}>
-                                    {e.repeat_type === 'monthly' ? dt('event_repeat_monthly') : dt('event_repeat_yearly')}
-                                  </p>
-                                )}
-                                {e.created_by != null && (
-                                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}>
-                                    {dt('event_author')}: {e.created_by === userId ? ct('me') : (eventAuthorNames[e.created_by] ?? ct('unknown'))}
-                                    {familyRoleByUserId[e.created_by] ? ` ${getFamilyRoleEmoji(familyRoleByUserId[e.created_by])} ${getFamilyRoleLabel(lang, familyRoleByUserId[e.created_by])}` : ''}
-                                  </p>
-                                )}
-                                {e.desc && <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.desc}</p>}
-                                {e.created_at && (
-                                  <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
-                                    등록: {new Date(e.created_at).toLocaleString('ko-KR')}
-                                  </p>
-                                )}
-                              </div>
-                              {/* 삭제 버튼: 작성자만 표시 (created_by가 있을 때만 작성자일 경우 노출) */}
-                              {e.created_by != null && String(e.created_by).trim() === String(userId).trim() && (
-                                <button
-                                  type="button"
-                                  onClick={() => confirm(ct('delete_confirm')) && updateState('DELETE_EVENT', e.id)}
-                                  style={{ flexShrink: 0, padding: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444', borderRadius: '6px' }}
-                                  aria-label={ct('delete')}
-                                  onMouseEnter={(el) => { el.currentTarget.style.background = '#fef2f2'; }}
-                                  onMouseLeave={(el) => { el.currentTarget.style.background = 'transparent'; }}
-                                >
-                                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                              )}
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '24px 16px' }}>
-                        <Calendar style={{ width: '48px', height: '48px', color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
-                        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{dt('event_no_events')}</p>
-                        <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>{dt('event_add_hint')}</p>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <button
-                onClick={openEventModal}
-                className="btn-calendar-add"
-                style={{
-                  marginTop: '14px',
-                  padding: '10px 16px',
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.5)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <Plus style={{ width: '20px', height: '20px' }} />
-                {dt('event_add_btn')}
-              </button>
-            </div>
-          </section>
-
-          {/* 일정 추가 모달 */}
-          {showEventModal && (
-            <div 
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000
-              }}
-              onClick={closeEventModal}
-            >
-              <div 
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '12px',
-                  padding: '24px',
-                  width: '90%',
-                  maxWidth: '500px',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '20px', fontWeight: '600' }}>
-                  {dt('event_add_title')}
-                </h3>
-                {eventFormDate && (
-                  <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b' }}>
-                    {eventFormDate.getFullYear()}년 {eventFormDate.getMonth() + 1}월 {eventFormDate.getDate()}일
-                  </p>
-                )}
-                
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                    {dt('event_title_label')}
-                  </label>
-                  <input
-                    type="text"
-                    value={eventForm.title}
-                    onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                    placeholder={dt('event_title_placeholder')}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '15px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                    {dt('event_desc_label')}
-                  </label>
-                  <textarea
-                    value={eventForm.desc}
-                    onChange={(e) => setEventForm({ ...eventForm, desc: e.target.value })}
-                    placeholder={dt('event_desc_placeholder')}
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '15px',
-                      boxSizing: 'border-box',
-                      resize: 'vertical',
-                      fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                    {dt('event_repeat_label')}
-                  </label>
-                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
-                      <input
-                        type="radio"
-                        name="repeat_type"
-                        checked={eventForm.repeat_type === 'none'}
-                        onChange={() => setEventForm({ ...eventForm, repeat_type: 'none' })}
-                      />
-                      {dt('event_repeat_none')}
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
-                      <input
-                        type="radio"
-                        name="repeat_type"
-                        checked={eventForm.repeat_type === 'monthly'}
-                        onChange={() => setEventForm({ ...eventForm, repeat_type: 'monthly' })}
-                      />
-                      {dt('event_repeat_monthly')}
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
-                      <input
-                        type="radio"
-                        name="repeat_type"
-                        checked={eventForm.repeat_type === 'yearly'}
-                        onChange={() => setEventForm({ ...eventForm, repeat_type: 'yearly' })}
-                      />
-                      {dt('event_repeat_yearly')}
-                    </label>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={closeEventModal}
-                    style={{
-                      padding: '10px 20px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      backgroundColor: 'white',
-                      color: '#64748b',
-                      fontSize: '15px',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {ct('cancel')}
-                  </button>
-                  <button
-                    onClick={handleEventSubmit}
-                    style={{
-                      padding: '10px 20px',
-                      border: 'none',
-                      borderRadius: '8px',
-                      backgroundColor: '#667eea',
-                      color: 'white',
-                      fontSize: '15px',
-                      cursor: 'pointer',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {dt('event_submit_btn')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Family Calendar Section */}
+          <FamilyCalendarSection
+            events={state.events}
+            onEventsChange={(events) => setState(prev => ({ ...prev, events }))}
+            userId={userId}
+            currentGroupId={currentGroupId}
+            getCurrentKey={getCurrentKey}
+            CryptoService={CryptoService}
+            sanitizeInput={sanitizeInput}
+            realtimeSubscriptionId={String(realtimeSubscriptionIdRef.current)}
+            eventAuthorNames={eventAuthorNames}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            lang={lang}
+            translations={{
+              section_title_calendar: dt('section_title_calendar'),
+              calendar_prev_month: dt('calendar_prev_month'),
+              calendar_next_month: dt('calendar_next_month'),
+              calendar_sun: dt('calendar_weekday_0'),
+              calendar_mon: dt('calendar_weekday_1'),
+              calendar_tue: dt('calendar_weekday_2'),
+              calendar_wed: dt('calendar_weekday_3'),
+              calendar_thu: dt('calendar_weekday_4'),
+              calendar_fri: dt('calendar_weekday_5'),
+              calendar_sat: dt('calendar_weekday_6'),
+              event_add_title: dt('event_add_title'),
+              event_title_label: dt('event_title_label'),
+              event_title_placeholder: dt('event_title_placeholder'),
+              event_desc_label: dt('event_desc_label'),
+              event_desc_placeholder: dt('event_desc_placeholder'),
+              event_repeat_label: dt('event_repeat_label'),
+              event_repeat_none: dt('event_repeat_none'),
+              event_repeat_monthly: dt('event_repeat_monthly'),
+              event_repeat_yearly: dt('event_repeat_yearly'),
+              event_submit_btn: dt('event_submit_btn'),
+              event_title_required: dt('event_title_required'),
+              event_date_invalid: dt('event_date_invalid'),
+              event_title_invalid: dt('event_title_invalid'),
+              event_author: dt('event_author'),
+              event_no_events: dt('event_no_events'),
+              event_add_hint: dt('event_add_hint'),
+              event_save_failed: dt('event_save_failed'),
+              delete_failed_retry: dt('delete_failed_retry'),
+              me: ct('me'),
+              unknown: ct('unknown'),
+              cancel: ct('cancel'),
+              close: ct('close'),
+              delete: ct('delete'),
+              delete_confirm: ct('delete_confirm'),
+            }}
+          />
 
           {/* Family Chat Section */}
           <section className="content-section">
