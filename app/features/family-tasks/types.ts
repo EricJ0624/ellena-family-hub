@@ -18,3 +18,9 @@ export type FamilyTaskPayload = {
   assignee: string;
   done: boolean;
 };
+
+/** 가족 임무 담당자 선택용(그룹 멤버, 본인 포함) */
+export type FamilyTaskMemberOption = {
+  userId: string;
+  nickname: string;
+};

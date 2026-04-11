@@ -5,10 +5,17 @@
  * - 암호화/복호화 처리
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { FamilyTask } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+
+const ASSIGNED_TO_USER_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isAssignedToUserUuid(value: string | null | undefined): value is string {
+  return typeof value === 'string' && ASSIGNED_TO_USER_UUID_RE.test(value);
+}
 
 interface UseFamilyTasksProps {
   currentGroupId: string | null;
@@ -21,6 +28,8 @@ interface UseFamilyTasksProps {
   onTasksChange: (tasks: FamilyTask[]) => void;
   currentTasks: FamilyTask[];
   realtimeSubscriptionId: string;
+  /** assigned_to 가 사용자 UUID일 때 표시 문자열(닉네임·가족표시·이모지) */
+  assigneeDisplayFromUserIdRef: MutableRefObject<(userId: string) => string>;
 }
 
 export function useFamilyTasks({
@@ -31,11 +40,18 @@ export function useFamilyTasks({
   onTasksChange,
   currentTasks,
   realtimeSubscriptionId,
+  assigneeDisplayFromUserIdRef,
 }: UseFamilyTasksProps) {
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
 
   // ADD TODO
-  const addTask = async (payload: { id: number; text: string; assignee: string; done: boolean }) => {
+  const addTask = async (payload: {
+    id: number;
+    text: string;
+    assignee: string;
+    done: boolean;
+    assignedToUserId?: string | null;
+  }) => {
     if (!payload || !payload.text) {
       console.error('ADD_TODO: 잘못된 payload:', payload);
       return;
@@ -52,13 +68,14 @@ export function useFamilyTasks({
       group_id: currentGroupId,
       created_by: userId,
       title: encryptedText,
-      assigned_to: null,
+      assigned_to: payload.assignedToUserId && isAssignedToUserUuid(payload.assignedToUserId) ? payload.assignedToUserId : null,
       is_completed: payload.done || false,
     };
 
     console.log('ADD_TODO: family_tasks 테이블에 저장:', {
       text: payload.text.substring(0, 20),
       assignee: payload.assignee,
+      assignedToUserId: payload.assignedToUserId,
       groupId: currentGroupId,
     });
 
@@ -219,12 +236,16 @@ export function useFamilyTasks({
             decryptedText = taskText;
           }
 
+          const assignedToUserId = isAssignedToUserUuid(task.assigned_to) ? task.assigned_to : undefined;
+
           let decryptedAssignee = '누구나';
-          if (
+          if (assignedToUserId) {
+            decryptedAssignee = assigneeDisplayFromUserIdRef.current(assignedToUserId);
+          } else if (
             task.assigned_to &&
             typeof task.assigned_to === 'string' &&
             task.assigned_to !== '누구나' &&
-            !task.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+            !isAssignedToUserUuid(task.assigned_to)
           ) {
             try {
               const decrypted = CryptoService.decrypt(task.assigned_to, currentKey);
@@ -237,13 +258,6 @@ export function useFamilyTasks({
               }
             }
           }
-
-          const assignedToUserId =
-            task.assigned_to &&
-            typeof task.assigned_to === 'string' &&
-            task.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-              ? task.assigned_to
-              : undefined;
 
           return {
             id: task.id,
@@ -262,7 +276,7 @@ export function useFamilyTasks({
     };
 
     loadTasks();
-  }, [currentGroupId, userId, getCurrentKey, CryptoService, onTasksChange]);
+  }, [currentGroupId, userId, getCurrentKey, CryptoService, onTasksChange, assigneeDisplayFromUserIdRef]);
 
   // Realtime 구독
   useEffect(() => {
@@ -310,12 +324,17 @@ export function useFamilyTasks({
             } catch (_) {}
           }
 
+          const updatedAssignedToUserId = isAssignedToUserUuid(updatedTask.assigned_to)
+            ? updatedTask.assigned_to
+            : undefined;
+
           let decryptedAssignee = '누구나';
-          if (
+          if (updatedAssignedToUserId) {
+            decryptedAssignee = assigneeDisplayFromUserIdRef.current(updatedAssignedToUserId);
+          } else if (
             updatedTask.assigned_to &&
             typeof updatedTask.assigned_to === 'string' &&
             updatedTask.assigned_to !== '누구나' &&
-            !updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) &&
             updatedTask.assigned_to.startsWith('U2FsdGVkX1')
           ) {
             try {
@@ -325,13 +344,6 @@ export function useFamilyTasks({
           } else if (updatedTask.assigned_to && typeof updatedTask.assigned_to === 'string') {
             decryptedAssignee = updatedTask.assigned_to;
           }
-
-          const updatedAssignedToUserId =
-            updatedTask.assigned_to &&
-            typeof updatedTask.assigned_to === 'string' &&
-            updatedTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-              ? updatedTask.assigned_to
-              : undefined;
 
           onTasksChange(
             currentTasks.map((t) =>
@@ -393,9 +405,12 @@ export function useFamilyTasks({
           decryptedText = taskText;
         }
 
-        let decryptedAssignee = '누구나';
+        const newAssignedToUserId = isAssignedToUserUuid(newTask.assigned_to) ? newTask.assigned_to : undefined;
 
-        if (decryptedText && decryptedText.includes(' - ')) {
+        let decryptedAssignee = '누구나';
+        if (newAssignedToUserId) {
+          decryptedAssignee = assigneeDisplayFromUserIdRef.current(newAssignedToUserId);
+        } else if (decryptedText && decryptedText.includes(' - ')) {
           const parts = decryptedText.split(' - ');
           if (parts.length >= 2) {
             const extractedAssignee = parts[parts.length - 1].trim();
@@ -410,7 +425,7 @@ export function useFamilyTasks({
           newTask.assigned_to &&
           typeof newTask.assigned_to === 'string' &&
           newTask.assigned_to !== '누구나' &&
-          !newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+          !isAssignedToUserUuid(newTask.assigned_to)
         ) {
           const isEncrypted = newTask.assigned_to.startsWith('U2FsdGVkX1');
           if (isEncrypted) {
@@ -424,13 +439,6 @@ export function useFamilyTasks({
             decryptedAssignee = newTask.assigned_to;
           }
         }
-
-        const newAssignedToUserId =
-          newTask.assigned_to &&
-          typeof newTask.assigned_to === 'string' &&
-          newTask.assigned_to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-            ? newTask.assigned_to
-            : undefined;
 
         const existingTaskById = currentTasks?.find((t) => String(t.id) === String(newTask.id));
         if (existingTaskById) {
@@ -502,7 +510,16 @@ export function useFamilyTasks({
         subscriptionRef.current = null;
       }
     };
-  }, [currentGroupId, realtimeSubscriptionId, userId, currentTasks, getCurrentKey, CryptoService, onTasksChange]);
+  }, [
+    currentGroupId,
+    realtimeSubscriptionId,
+    userId,
+    currentTasks,
+    getCurrentKey,
+    CryptoService,
+    onTasksChange,
+    assigneeDisplayFromUserIdRef,
+  ]);
 
   return {
     addTask,

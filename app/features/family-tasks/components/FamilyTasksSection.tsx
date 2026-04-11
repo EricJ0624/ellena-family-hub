@@ -4,8 +4,8 @@
 
 'use client';
 
-import React, { useRef, useState } from 'react';
-import type { FamilyTask } from '../types';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 
 interface FamilyTasksSectionProps {
@@ -22,6 +22,13 @@ interface FamilyTasksSectionProps {
   realtimeSubscriptionId: string;
   familyRoleByUserId: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>;
   getFamilyRoleEmoji: (role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
+  getFamilyRoleLabel: (
+    lang: any,
+    role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
+  ) => string;
+  lang: any;
+  /** 현재 그룹 멤버(소유자·멤버십, 본인 포함) — 닉네임 표시용 */
+  taskMembers: FamilyTaskMemberOption[];
   translations: {
     todo_section_title: string;
     todo_add_btn: string;
@@ -56,6 +63,9 @@ export function FamilyTasksSection({
   realtimeSubscriptionId,
   familyRoleByUserId,
   getFamilyRoleEmoji,
+  getFamilyRoleLabel,
+  lang,
+  taskMembers,
   translations: t,
   chatDragOver,
   chatDropRef,
@@ -65,7 +75,38 @@ export function FamilyTasksSection({
 }: FamilyTasksSectionProps) {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
-  const todoWhoRef = useRef<HTMLInputElement>(null);
+  const todoWhoRef = useRef<HTMLSelectElement>(null);
+
+  const formatAssigneeDisplay = useCallback(
+    (uid: string) => {
+      const member = taskMembers.find((m) => m.userId === uid);
+      const nick = member?.nickname ?? uid.slice(0, 8);
+      const role = familyRoleByUserId[uid] ?? null;
+      if (!role) return nick;
+      return `${getFamilyRoleEmoji(role)} ${nick} - ${getFamilyRoleLabel(lang, role)}`;
+    },
+    [taskMembers, familyRoleByUserId, lang, getFamilyRoleEmoji, getFamilyRoleLabel]
+  );
+
+  const assigneeDisplayFromUserIdRef = useRef(formatAssigneeDisplay);
+  assigneeDisplayFromUserIdRef.current = formatAssigneeDisplay;
+
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
+
+  useEffect(() => {
+    const cur = tasksRef.current;
+    const resolve = assigneeDisplayFromUserIdRef.current;
+    let changed = false;
+    const next = cur.map((task) => {
+      if (!task.assigned_to_user_id) return task;
+      const nextAssignee = resolve(task.assigned_to_user_id);
+      if (nextAssignee === task.assignee) return task;
+      changed = true;
+      return { ...task, assignee: nextAssignee };
+    });
+    if (changed) onTasksChange(next);
+  }, [taskMembers, familyRoleByUserId, lang, onTasksChange]);
 
   const { addTask, toggleTask, deleteTask } = useFamilyTasks({
     currentGroupId,
@@ -75,68 +116,69 @@ export function FamilyTasksSection({
     onTasksChange,
     currentTasks: tasks,
     realtimeSubscriptionId,
+    assigneeDisplayFromUserIdRef,
   });
 
   const handleToggleTask = (taskId: number | string) => {
-    const task = tasks.find((t) => t.id === taskId);
+    const task = tasks.find((x) => x.id === taskId);
     if (!task) return;
 
-    // 낙관적 업데이트
-    onTasksChange(tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)));
+    onTasksChange(tasks.map((x) => (x.id === taskId ? { ...x, done: !x.done } : x)));
 
-    // Supabase 업데이트
     toggleTask(taskId, !task.done);
   };
 
   const handleDeleteTask = async (taskId: number | string) => {
     if (!confirm(t.delete_confirm)) return;
 
-    // 낙관적 업데이트
     const previousTasks = tasks;
-    onTasksChange(tasks.filter((t) => t.id !== taskId));
+    onTasksChange(tasks.filter((x) => x.id !== taskId));
 
     try {
       await deleteTask(taskId);
     } catch (error) {
-      // 에러 시 롤백
       onTasksChange(previousTasks);
       alert('삭제에 실패했습니다.');
     }
   };
 
+  const openTodoModal = () => {
+    setIsTodoModalOpen(true);
+    requestAnimationFrame(() => {
+      if (todoTextRef.current) todoTextRef.current.value = '';
+      if (todoWhoRef.current) todoWhoRef.current.value = '';
+    });
+  };
+
   const submitNewTodo = () => {
     const text = todoTextRef.current?.value;
-    const who = todoWhoRef.current?.value;
-
     if (!text?.trim()) return alert(t.todo_required);
 
     const sanitizedText = sanitizeInput(text, 100);
-    const sanitizedWho = sanitizeInput(who, 20);
-
     if (!sanitizedText) return alert(t.invalid_input);
 
-    const textWithAssignee =
-      sanitizedWho && sanitizedWho !== '누구나' ? `${sanitizedText} - ${sanitizedWho}` : sanitizedText;
+    const selectedUserId = (todoWhoRef.current?.value ?? '').trim();
+    const assignedToUserId = selectedUserId.length > 0 ? selectedUserId : null;
+    const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
 
     const newTask: FamilyTask = {
       id: Date.now(),
-      text: textWithAssignee,
-      assignee: sanitizedWho || '누구나',
+      text: sanitizedText,
+      assignee: assigneeStr,
       done: false,
+      assigned_to_user_id: assignedToUserId ?? undefined,
     };
 
-    // 낙관적 업데이트
     onTasksChange([newTask, ...tasks]);
 
-    // Supabase 추가
     addTask({
       id: newTask.id as number,
-      text: textWithAssignee,
-      assignee: sanitizedWho || '누구나',
+      text: sanitizedText,
+      assignee: assigneeStr,
       done: false,
+      assignedToUserId: assignedToUserId,
     });
 
-    // Clear & Close
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
     setIsTodoModalOpen(false);
@@ -144,7 +186,6 @@ export function FamilyTasksSection({
 
   return (
     <>
-      {/* Todo Modal - Chalkboard Style */}
       {isTodoModalOpen && (
         <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
           <div className="chalkboard-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -164,19 +205,26 @@ export function FamilyTasksSection({
               </div>
               <div className="chalkboard-form-field">
                 <label className="chalkboard-form-label">{t.todo_who_label}</label>
-                <input
+                <select
                   ref={todoWhoRef}
-                  type="text"
                   className="chalkboard-form-input"
-                  placeholder={t.todo_who_placeholder}
-                />
+                  defaultValue=""
+                  aria-label={t.todo_who_label}
+                >
+                  <option value="">{t.todo_who_placeholder || t.anyone}</option>
+                  {taskMembers.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {formatAssigneeDisplay(m.userId)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="chalkboard-modal-actions">
-              <button onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
+              <button type="button" onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
                 {t.cancel}
               </button>
-              <button onClick={submitNewTodo} className="chalkboard-btn-primary">
+              <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
                 {t.todo_register_btn}
               </button>
             </div>
@@ -184,11 +232,8 @@ export function FamilyTasksSection({
         </div>
       )}
 
-      {/* Family Tasks Section - Chalkboard Style */}
       <section className="chalkboard-container">
-        {/* Chalkboard Decorations - Top Right */}
         <div className="chalkboard-decorations">
-          {/* House Icon */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -200,7 +245,6 @@ export function FamilyTasksSection({
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
-          {/* Sun Icon */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -219,7 +263,6 @@ export function FamilyTasksSection({
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
-          {/* Heart Icon */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -234,7 +277,7 @@ export function FamilyTasksSection({
 
         <div className="chalkboard-header">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>
-          <button onClick={() => setIsTodoModalOpen(true)} className="chalkboard-btn-add">
+          <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
             {t.todo_add_btn}
           </button>
         </div>
@@ -264,16 +307,13 @@ export function FamilyTasksSection({
                       <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
                       {task.assignee && (
                         <span className="todo-assignee">
-                          {task.assigned_to_user_id && familyRoleByUserId[task.assigned_to_user_id]
-                            ? getFamilyRoleEmoji(familyRoleByUserId[task.assigned_to_user_id]) + ' '
-                            : ''}
                           {task.assignee === '누구나' ? t.anyone : task.assignee}
                         </span>
                       )}
                     </div>
                   </div>
                   {(task.created_by === userId || !task.created_by) && (
-                    <button onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
+                    <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
                       <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>

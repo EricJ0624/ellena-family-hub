@@ -44,7 +44,7 @@ import {
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 import { FamilyTasksSection } from '@/app/features/family-tasks/components/FamilyTasksSection';
-import type { FamilyTask } from '@/app/features/family-tasks/types';
+import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
 import type { FamilyEvent } from '@/app/features/family-calendar/types';
 
@@ -231,6 +231,7 @@ export default function FamilyHub() {
   const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
+  const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -3092,6 +3093,45 @@ export default function FamilyHub() {
     })();
   }, [currentGroupId]);
 
+  // 가족 임무 담당자 선택용: 그룹 멤버(소유자·멤버십, 본인 포함) + 프로필 닉네임
+  useEffect(() => {
+    if (!currentGroupId) {
+      setFamilyTaskMembers([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: groupRow } = await supabase.from('groups').select('owner_id').eq('id', currentGroupId).single();
+      const { data: memRows } = await supabase.from('memberships').select('user_id').eq('group_id', currentGroupId);
+      const ids = new Set<string>();
+      if (groupRow?.owner_id) ids.add(groupRow.owner_id as string);
+      (memRows || []).forEach((r: { user_id: string }) => ids.add(r.user_id));
+      const idList = Array.from(ids);
+      if (idList.length === 0) {
+        if (!cancelled) setFamilyTaskMembers([]);
+        return;
+      }
+      const { data: profiles } = await supabase.from('profiles').select('id, nickname, email').in('id', idList);
+      const byId: Record<string, { nickname: string | null; email: string | null }> = {};
+      (profiles || []).forEach((p: { id: string; nickname?: string | null; email?: string | null }) => {
+        byId[p.id] = { nickname: p.nickname ?? null, email: p.email ?? null };
+      });
+      const members: FamilyTaskMemberOption[] = idList.map((memberUserId) => {
+        const p = byId[memberUserId];
+        const nickname =
+          (p?.nickname && String(p.nickname).trim()) ||
+          (p?.email && String(p.email).trim()) ||
+          memberUserId.slice(0, 8);
+        return { userId: memberUserId, nickname };
+      });
+      members.sort((a, b) => a.nickname.localeCompare(b.nickname, undefined, { sensitivity: 'base' }));
+      if (!cancelled) setFamilyTaskMembers(members);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentGroupId, userName]);
+
   // 시스템 관리자 권한 확인
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -5927,6 +5967,9 @@ export default function FamilyHub() {
             realtimeSubscriptionId={String(realtimeSubscriptionIdRef.current)}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            lang={lang}
+            taskMembers={familyTaskMembers}
             translations={{
               todo_section_title: dt('todo_section_title'),
               todo_add_btn: dt('todo_add_btn'),
