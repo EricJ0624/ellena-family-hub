@@ -3379,9 +3379,9 @@ export default function FamilyHub() {
         console.log('⚠️ 이미 구독 설정 중, 중복 실행 방지');
         return;
       }
-      
+
       isSettingUpSubscriptionsRef.current = true;
-      console.log('🚀 Realtime 구독 설정 시작');
+      console.log('🚀 Realtime 구독 설정 시작 - userId:', userId, 'groupId:', currentGroupId);
 
       if (process.env.NODE_ENV === 'development') {
         console.log('setupRealtimeSubscriptions - userId:', userId);
@@ -3402,38 +3402,46 @@ export default function FamilyHub() {
         console.log('  - 채널:', ch.topic, '상태:', ch.state);
       });
       
+      // ⭐ 모든 구독을 동기적으로 제거 (Promise.all 사용)
+      const removePromises: Promise<any>[] = [];
+      
       if (subscriptionsRef.current.messages) {
         console.log('🗑️ messages 구독 제거 중...');
-        supabase.removeChannel(subscriptionsRef.current.messages);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.messages));
         subscriptionsRef.current.messages = null;
       }
       if (subscriptionsRef.current.tasks) {
-        supabase.removeChannel(subscriptionsRef.current.tasks);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.tasks));
         subscriptionsRef.current.tasks = null;
       }
       if (subscriptionsRef.current.events) {
-        supabase.removeChannel(subscriptionsRef.current.events);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.events));
         subscriptionsRef.current.events = null;
       }
       if (subscriptionsRef.current.photos) {
-        supabase.removeChannel(subscriptionsRef.current.photos);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.photos));
         subscriptionsRef.current.photos = null;
       }
       if (subscriptionsRef.current.presence) {
-        supabase.removeChannel(subscriptionsRef.current.presence);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.presence));
         subscriptionsRef.current.presence = null;
       }
       if (subscriptionsRef.current.locations) {
-        supabase.removeChannel(subscriptionsRef.current.locations);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.locations));
         subscriptionsRef.current.locations = null;
       }
       if (subscriptionsRef.current.locationRequests) {
-        supabase.removeChannel(subscriptionsRef.current.locationRequests);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.locationRequests));
         subscriptionsRef.current.locationRequests = null;
       }
       if (subscriptionsRef.current.attachments) {
-        supabase.removeChannel(subscriptionsRef.current.attachments);
+        removePromises.push(supabase.removeChannel(subscriptionsRef.current.attachments));
         subscriptionsRef.current.attachments = null;
+      }
+      
+      // ⭐ 모든 채널 제거 완료까지 대기
+      if (removePromises.length > 0) {
+        console.log(`⏳ ${removePromises.length}개 채널 제거 대기 중...`);
       }
       
       // 제거 완료 확인
@@ -3447,12 +3455,6 @@ export default function FamilyHub() {
       // 채널명 재사용 방지 (effect 재실행 시 새 ID로 바인딩 중복 방지)
       realtimeSubscriptionIdRef.current = Date.now();
       console.log('✅ 새로운 Realtime 구독 시작 - ID:', realtimeSubscriptionIdRef.current);
-      
-      // 구독 설정 완료 후 플래그 해제 (약간의 지연 후 - 모든 구독 완료 대기)
-      setTimeout(() => {
-        isSettingUpSubscriptionsRef.current = false;
-        console.log('✅ Realtime 구독 설정 완료');
-      }, 3000);
 
       setupPresenceSubscription();
 
@@ -3464,6 +3466,13 @@ export default function FamilyHub() {
       realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupEventsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
       realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 3));
       realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 4));
+
+      // ⭐ 모든 구독 설정 완료 후 플래그 해제 (마지막 구독 + 여유 시간)
+      const TOTAL_SETUP_TIME = INITIAL_DELAY_MS + STAGGER_MS * 4 + 1000; // 마지막 구독 + 1초 여유
+      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => {
+        isSettingUpSubscriptionsRef.current = false;
+        console.log('✅ Realtime 구독 설정 완료, 중복 방지 플래그 해제');
+      }, TOTAL_SETUP_TIME));
 
       console.log('✅ Realtime subscription 설정 예약 완료 (순차 구독)');
     };
@@ -3605,7 +3614,7 @@ export default function FamilyHub() {
         subscriptionsRef.current.attachments = null;
       }
     };
-  }, [isAuthenticated, userId, masterKey, userName, familyId, currentGroupId]); // familyId 변경 시 데이터 재로드
+  }, [isAuthenticated, userId, currentGroupId]); // ⭐ 필수 의존성만 포함 (masterKey, userName, familyId 제거로 불필요한 재구독 방지)
 
   // 일정/채팅 작성자 별명 로드 (표시용)
   useEffect(() => {
