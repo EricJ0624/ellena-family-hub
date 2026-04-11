@@ -12,6 +12,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { normalizeGroupIdFromRpc, isValidUUID } from '@/lib/validation';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -424,14 +425,12 @@ export default function OnboardingPage() {
       if (joinError) throw joinError;
 
       setSuccess(ot('success_joined'));
-      const raw = joinedGroupIdData;
-      const resolvedId =
-        typeof raw === 'string' && raw.trim()
-          ? raw.trim()
-          : Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'string'
-            ? raw[0]
-            : null;
-      const groupId = resolvedId ?? groupPreview?.id ?? null;
+      const fromRpc = normalizeGroupIdFromRpc(joinedGroupIdData);
+      const previewNorm =
+        groupPreview?.id && isValidUUID(groupPreview.id.trim().toLowerCase())
+          ? groupPreview.id.trim().toLowerCase()
+          : null;
+      const groupId = fromRpc ?? previewNorm;
 
       if (groupId) {
         setJoinedGroupId(groupId);
@@ -492,10 +491,41 @@ export default function OnboardingPage() {
     }, 300);
   };
 
-  // 대시보드로 이동 (그룹 생성 완료 후)
+  // 대시보드로 이동 (그룹 생성 완료 후 등)
   const handleGoToDashboard = () => {
     router.push('/dashboard');
   };
+
+  // 초대 가입 완료 후 이동: 드롭다운에서 가족 표시만 고르고 별도 '저장'을 누르지 않아도 반영
+  const handleJoinCompleteGoToDashboard = async () => {
+    if (joinedGroupId && joinFamilyRole) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (user?.id && session?.access_token) {
+        try {
+          const res = await fetch('/api/groups/members/family-role', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+              targetUserId: user.id,
+              groupId: joinedGroupId,
+              familyRole: joinFamilyRole,
+            }),
+          });
+          if (!res.ok) console.warn('가족 표시 저장 실패');
+        } catch (e) {
+          console.warn('가족 표시 저장 실패', e);
+        }
+      }
+    }
+    router.push('/dashboard');
+  };
+
+  const joinFlowReady =
+    !!joinedGroupId &&
+    !!groupPreview?.id &&
+    isValidUUID(groupPreview.id.trim().toLowerCase()) &&
+    joinedGroupId === groupPreview.id.trim().toLowerCase();
 
   if (loading) {
     return (
@@ -1352,7 +1382,7 @@ export default function OnboardingPage() {
                       </div>
 
                       {/* You've joined 페이지: 가족 표시 선택 (일반 멤버: 아들/딸/기타) */}
-                      {joinedGroupId && groupPreview?.id === joinedGroupId && (
+                      {joinFlowReady && (
                         <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                           <label style={{
                             display: 'block',
@@ -1491,34 +1521,34 @@ export default function OnboardingPage() {
                         다시 입력
                       </button>
                       <button
-                        onClick={joinedGroupId && groupPreview?.id === joinedGroupId ? handleGoToDashboard : handleJoinGroup}
-                        disabled={joining && !(joinedGroupId && groupPreview?.id === joinedGroupId)}
+                        onClick={joinFlowReady ? handleJoinCompleteGoToDashboard : handleJoinGroup}
+                        disabled={joining && !joinFlowReady}
                         style={{
                           flex: 1,
                           padding: '14px 24px',
-                          backgroundColor: joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? '#94a3b8' : '#667eea',
+                          backgroundColor: joining && !joinFlowReady ? '#94a3b8' : '#667eea',
                           color: 'white',
                           border: 'none',
                           borderRadius: '12px',
                           fontSize: '14px',
                           fontWeight: '600',
-                          cursor: joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? 'not-allowed' : 'pointer',
+                          cursor: joining && !joinFlowReady ? 'not-allowed' : 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '8px',
-                          boxShadow: joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
+                          boxShadow: joining && !joinFlowReady ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
                           transition: 'all 0.3s ease',
                         }}
                       >
-                        {joining && !(joinedGroupId && groupPreview?.id === joinedGroupId) ? (
+                        {joining && !joinFlowReady ? (
                           <>
                             <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
                             가입 중...
                           </>
                         ) : (
                           <>
-                            {joinedGroupId && groupPreview?.id === joinedGroupId ? ot('go_to_group_btn') : ot('join_btn')}
+                            {joinFlowReady ? ot('go_to_group_btn') : ot('join_btn')}
                             <ArrowRight style={{ width: '18px', height: '18px' }} />
                           </>
                         )}

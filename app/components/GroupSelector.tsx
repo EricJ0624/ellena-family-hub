@@ -10,6 +10,7 @@ import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/tra
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import type { LangCode } from '@/lib/language-fonts';
+import { normalizeGroupIdFromRpc } from '@/lib/validation';
 
 const GroupSelector: React.FC = () => {
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
@@ -151,11 +152,12 @@ const GroupSelector: React.FC = () => {
       await refreshGroups();
 
       // 가입한 그룹 ID 저장 후 가족 표시 선택 모달 표시 (일반 멤버: 아들/딸/기타)
-      if (joinedGroupIdData) {
-        setJoinedGroupId(joinedGroupIdData);
+      const normalizedJoinId = normalizeGroupIdFromRpc(joinedGroupIdData);
+      if (normalizedJoinId) {
+        setJoinedGroupId(normalizedJoinId);
         setJoinFamilyRole('');
         setShowJoinFamilyRoleModal(true);
-        setCurrentGroupId(joinedGroupIdData);
+        setCurrentGroupId(normalizedJoinId);
       }
     } catch (err: any) {
       console.error('그룹 가입 오류:', err);
