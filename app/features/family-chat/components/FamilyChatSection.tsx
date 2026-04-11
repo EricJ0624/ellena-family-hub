@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useRef } from 'react';
+import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import type { ChatUiMessage } from '../types';
 
 interface FamilyChatSectionProps {
@@ -12,20 +13,15 @@ interface FamilyChatSectionProps {
   userId: string;
   currentGroupId: string | null;
   onSendMessage: (message: string) => void;
-  chatBoxRef: React.RefObject<HTMLDivElement>;
-  chatInputRef: React.RefObject<HTMLInputElement>;
-  chatFileInputRef: React.RefObject<HTMLInputElement>;
-  chatCameraInputRef: React.RefObject<HTMLInputElement>;
+  chatBoxRef: React.RefObject<HTMLDivElement | null>;
+  chatInputRef: React.RefObject<HTMLInputElement | null>;
+  chatFileInputRef: React.RefObject<HTMLInputElement | null>;
+  chatCameraInputRef: React.RefObject<HTMLInputElement | null>;
   chatHasMoreOlder: boolean;
   chatLoadingOlder: boolean;
   onLoadOlderMessages: () => void;
   onPickFiles: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  chatAttachmentsByMessage: Record<string, Array<{
-    id: string;
-    image_url: string;
-    thumbnail_url?: string;
-    original_filename: string;
-  }>>;
+  chatAttachmentsByMessage: Record<string, UploadedAttachment[]>;
   chatOutgoingPreviews: Record<string, string[]>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   familyRoleByUserId: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>;
