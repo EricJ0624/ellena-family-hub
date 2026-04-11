@@ -19,6 +19,18 @@ export type PiggyWallet = {
 const DEFAULT_PIGGY_NAME = 'Ellena Piggy Bank';
 const DEFAULT_CURRENCY = 'KRW';
 
+/** 그룹에 설정된 Piggy 통화 (컬럼 없으면 KRW). */
+export async function getGroupPiggyCurrency(groupId: string): Promise<string> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from('groups').select('piggy_currency').eq('id', groupId).maybeSingle();
+  if (error || !data) {
+    return DEFAULT_CURRENCY;
+  }
+  const row = data as { piggy_currency?: string | null };
+  const c = row.piggy_currency?.trim().toUpperCase();
+  return c && /^[A-Z]{3}$/.test(c) ? c : DEFAULT_CURRENCY;
+}
+
 /** 아이별 저금통 (group_id, user_id) 조회 또는 생성. */
 export async function ensurePiggyAccountForUser(groupId: string, userId: string): Promise<PiggyAccount> {
   const supabase = getSupabaseServerClient();
@@ -37,6 +49,8 @@ export async function ensurePiggyAccountForUser(groupId: string, userId: string)
     return data as PiggyAccount;
   }
 
+  const insertCurrency = await getGroupPiggyCurrency(groupId);
+
   const { data: created, error: createError } = await supabase
     .from('piggy_bank_accounts')
     .insert({
@@ -44,7 +58,7 @@ export async function ensurePiggyAccountForUser(groupId: string, userId: string)
       user_id: userId,
       name: DEFAULT_PIGGY_NAME,
       balance: 0,
-      currency: DEFAULT_CURRENCY,
+      currency: insertCurrency,
     })
     .select('id, group_id, user_id, name, balance, currency')
     .single();

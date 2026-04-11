@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
-import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { requireAuthUser, requireGroupMember, requireGroupAdmin } from '@/lib/api-guards';
+import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 
 /** GET: 단일 여행 조회 (tenant 일치 검증) */
 export async function GET(
@@ -72,6 +73,18 @@ export async function PATCH(
     if (body.end_date !== undefined) updatePayload.end_date = body.end_date;
     if (body.budget !== undefined) updatePayload.budget = body.budget == null ? null : Number(body.budget);
 
+    let newTripCurrency: string | null = null;
+    if (body.currency !== undefined) {
+      const adminCheck = await requireGroupAdmin(user.id, groupId);
+      if (adminCheck instanceof NextResponse) return adminCheck;
+      const c = normalizeCurrencyCode(String(body.currency));
+      if (!c || !isAllowedCurrency(c)) {
+        return NextResponse.json({ error: '유효하지 않은 통화 코드입니다.' }, { status: 400 });
+      }
+      newTripCurrency = c;
+      updatePayload.currency = c;
+    }
+
     const { data, error } = await supabase
       .from('travel_trips')
       .update(updatePayload)
@@ -82,7 +95,23 @@ export async function PATCH(
 
     if (error) {
       console.error('travel_trips PATCH:', error);
-      return NextResponse.json({ error: '여행 수정에 실패했습니다.' }, { status: 500 });
+      return NextResponse.json(
+        { error: '여행 수정에 실패했습니다. travel_trips.currency 컬럼이 있는지 확인하세요.' },
+        { status: 500 }
+      );
+    }
+
+    if (data && newTripCurrency) {
+      const now = new Date().toISOString();
+      const { error: expErr } = await supabase
+        .from('travel_expenses')
+        .update({ currency: newTripCurrency, updated_at: now, updated_by: user.id })
+        .eq('trip_id', tripId)
+        .eq('group_id', groupId)
+        .is('deleted_at', null);
+      if (expErr) {
+        console.error('travel_expenses currency sync:', expErr);
+      }
     }
 
     return NextResponse.json({ success: true, data });

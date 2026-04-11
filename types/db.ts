@@ -30,6 +30,7 @@ export interface Database {
           family_name: string | null
           title_style: Json | null
           preferred_language: string | null
+          piggy_currency: string
         }
         Insert: {
           id?: string
@@ -44,6 +45,7 @@ export interface Database {
           family_name?: string | null
           title_style?: Json | null
           preferred_language?: string | null
+          piggy_currency?: string
         }
         Update: {
           id?: string
@@ -58,6 +60,7 @@ export interface Database {
           family_name?: string | null
           title_style?: Json | null
           preferred_language?: string | null
+          piggy_currency?: string
         }
         Relationships: [
           {

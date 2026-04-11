@@ -7,6 +7,8 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
+import { getAllowedCurrencyCodes } from '@/lib/currencies';
+import { formatMoneyAmount } from '@/lib/format-currency';
 import {
   MapPin,
   ChevronLeft,
@@ -36,12 +38,23 @@ import {
 
 const API_BASE = '/api/v1/travel';
 
+const TRIP_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
+
+const LOCALE_FOR_MONEY: Record<string, string> = {
+  ko: 'ko-KR',
+  en: 'en-US',
+  ja: 'ja-JP',
+  'zh-CN': 'zh-CN',
+  'zh-TW': 'zh-TW',
+};
+
 export function TravelPlannerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { lang } = useLanguage();
   const tt = (key: keyof import('@/lib/translations/travel').TravelTranslations) => getTravelTranslation(lang, key);
-  const { currentGroupId, currentGroup } = useGroup();
+  const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
+  const isTripAdmin = userRole === 'ADMIN' || isOwner;
   const [loading, setLoading] = useState(true);
   const [trips, setTrips] = useState<TravelTrip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TravelTrip | null>(null);
@@ -132,6 +145,7 @@ export function TravelPlannerContent() {
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
   const [formBudget, setFormBudget] = useState('');
+  const [formTripCurrency, setFormTripCurrency] = useState('KRW');
   const [travelAttachmentTarget, setTravelAttachmentTarget] = useState<{ entityType: 'travel_trip' | 'travel_expense'; entityId: string } | null>(null);
   const [travelAttachments, setTravelAttachments] = useState<UploadedAttachment[]>([]);
   const [travelAttachmentUploading, setTravelAttachmentUploading] = useState(false);
@@ -173,6 +187,16 @@ export function TravelPlannerContent() {
       'Content-Type': 'application/json',
     };
   }, []);
+
+  const tripCurrencyCode = useMemo(
+    () => (selectedTrip?.currency || 'KRW').trim().toUpperCase() || 'KRW',
+    [selectedTrip?.currency],
+  );
+  const localeForMoney = LOCALE_FOR_MONEY[lang] || 'en-US';
+  const fmtTripMoney = useCallback(
+    (n: number) => formatMoneyAmount(n, tripCurrencyCode, localeForMoney),
+    [tripCurrencyCode, localeForMoney],
+  );
 
   /** 좌표 우선, 없으면 주소로 구글맵 URL 생성 */
   const getGoogleMapsUrl = useCallback((item: { address?: string | null; latitude?: number | null; longitude?: number | null }) => {
@@ -852,6 +876,7 @@ export function TravelPlannerContent() {
           destination: formDestination.trim() || undefined,
           start_date: formStartDate,
           end_date: formEndDate,
+          ...(isTripAdmin ? { currency: formTripCurrency.trim().toUpperCase() } : {}),
         }),
       });
       const json = await res.json();
@@ -860,6 +885,7 @@ export function TravelPlannerContent() {
       setFormDestination('');
       setFormStartDate('');
       setFormEndDate('');
+      setFormTripCurrency('KRW');
       setShowTripForm(false);
       await fetchTrips();
       if (json.data?.id) router.replace(`/travel?tripId=${json.data.id}`);
@@ -880,25 +906,35 @@ export function TravelPlannerContent() {
       alert(tt('alert_end_after_start'));
       return;
     }
+    const prevCur = (selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW';
+    const nextCur = formTripCurrency.trim().toUpperCase() || 'KRW';
+    if (isTripAdmin && nextCur !== prevCur) {
+      if (!confirm(tt('trip_currency_change_confirm'))) return;
+    }
     try {
       setSubmitting(true);
       const headers = await getAuthHeaders();
+      const body: Record<string, unknown> = {
+        groupId: currentGroupId,
+        title: formTitle.trim(),
+        destination: formDestination.trim() || null,
+        start_date: formStartDate,
+        end_date: formEndDate,
+        budget: formBudget.trim() ? Number(formBudget) : null,
+      };
+      if (isTripAdmin) {
+        body.currency = nextCur;
+      }
       const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({
-          groupId: currentGroupId,
-          title: formTitle.trim(),
-          destination: formDestination.trim() || null,
-          start_date: formStartDate,
-          end_date: formEndDate,
-          budget: formBudget.trim() ? Number(formBudget) : null,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || tt('update_failed'));
       if (json.data) setSelectedTrip(json.data);
       await fetchTrips();
+      await fetchExpenses(selectedTrip.id);
       setShowTripEditForm(false);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('update_failed'));
@@ -1988,6 +2024,9 @@ export function TravelPlannerContent() {
                     <Calendar style={{ width: 14, height: 14, display: 'inline', marginRight: 4 }} />
                     {selectedTrip.start_date} ~ {selectedTrip.end_date}
                   </p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                    {tt('label_trip_currency')}: <strong style={{ color: '#334155' }}>{tripCurrencyCode}</strong>
+                  </p>
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
                     등록: {getDisplayName(selectedTrip.created_by)}
                     {selectedTrip.updated_by != null && ` · 수정: ${getDisplayName(selectedTrip.updated_by)}`}
@@ -2018,6 +2057,7 @@ export function TravelPlannerContent() {
                       setFormStartDate(selectedTrip.start_date);
                       setFormEndDate(selectedTrip.end_date);
                       setFormBudget(selectedTrip.budget != null ? String(selectedTrip.budget) : '');
+                      setFormTripCurrency((selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW');
                       setShowTripEditForm(true);
                     }}
                     style={{
@@ -2182,9 +2222,12 @@ export function TravelPlannerContent() {
                 </div>
                 </div>
                 <div style={{ marginBottom: 8, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, color: '#64748b' }}>{tt('total_budget')} <strong style={{ color: '#1e293b' }}>{totalBudget.toLocaleString(lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : 'en-US')}{lang === 'ko' ? '원' : lang === 'ja' ? '円' : ''}</strong></span>
+                  <span style={{ fontSize: 15, color: '#64748b' }}>
+                    {tt('total_budget')}{' '}
+                    <strong style={{ color: '#1e293b' }}>{fmtTripMoney(totalBudget)}</strong>
+                  </span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: balance >= 0 ? '#9333ea' : '#dc2626' }}>
-                    잔액 {balance.toLocaleString('ko-KR')}원
+                    잔액 {fmtTripMoney(balance)}
                   </span>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>{tt('add_list')}</div>
@@ -2196,7 +2239,7 @@ export function TravelPlannerContent() {
                       <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#f0fdf4', borderRadius: 6, border: '1px solid #bbf7d0', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <span>{e.category || tt('addition')}</span>
-                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#15803d' }}>+{Number(e.amount).toLocaleString('ko-KR')}원</span>
+                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#15803d' }}>+{fmtTripMoney(Number(e.amount))}</span>
                           {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
@@ -2218,7 +2261,7 @@ export function TravelPlannerContent() {
                       <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#fef2f2', borderRadius: 6, border: '1px solid #fecaca', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <span>{e.category || tt('other')}</span>
-                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#b91c1c' }}>-{Number(e.amount).toLocaleString('ko-KR')}원</span>
+                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#b91c1c' }}>-{fmtTripMoney(Number(e.amount))}</span>
                           {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
@@ -2970,6 +3013,31 @@ export function TravelPlannerContent() {
                   }}
                 />
               </div>
+              {isTripAdmin && (
+                <>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_trip_currency')}</label>
+                  <select
+                    value={formTripCurrency}
+                    onChange={(e) => setFormTripCurrency(e.target.value)}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      marginBottom: 20,
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                    }}
+                  >
+                    {TRIP_CURRENCY_OPTIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
@@ -3136,12 +3204,37 @@ export function TravelPlannerContent() {
                   boxSizing: 'border-box',
                   minHeight: 40,
                   padding: '10px 12px',
-                  marginBottom: 20,
+                  marginBottom: 12,
                   border: '1px solid #e2e8f0',
                   borderRadius: 8,
                   fontSize: 14,
                 }}
               />
+              {isTripAdmin && (
+                <>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_trip_currency')}</label>
+                  <select
+                    value={formTripCurrency}
+                    onChange={(e) => setFormTripCurrency(e.target.value)}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      marginBottom: 20,
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                    }}
+                  >
+                    {TRIP_CURRENCY_OPTIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"

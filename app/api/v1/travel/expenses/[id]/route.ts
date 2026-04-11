@@ -23,14 +23,40 @@ export async function PATCH(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+
+    const { data: existingExp, error: expFetchError } = await supabase
+      .from('travel_expenses')
+      .select('trip_id')
+      .eq('id', id)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .single();
+
+    if (expFetchError || !existingExp) {
+      return NextResponse.json({ error: '경비 항목을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const { data: tripRow } = await supabase
+      .from('travel_trips')
+      .select('currency')
+      .eq('id', (existingExp as { trip_id: string }).trip_id)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .single();
+
+    const tripCurrency =
+      String((tripRow as { currency?: string } | null)?.currency || 'KRW')
+        .trim()
+        .toUpperCase() || 'KRW';
+
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
+      currency: tripCurrency,
     };
     if (body.category !== undefined) updatePayload.category = body.category ? String(body.category).trim() : null;
     if (body.entry_type !== undefined) updatePayload.entry_type = body.entry_type === 'addition' ? 'addition' : 'expense';
     if (body.amount !== undefined) updatePayload.amount = Number(body.amount);
-    if (body.currency !== undefined) updatePayload.currency = String(body.currency).trim();
     if (body.paid_by !== undefined) updatePayload.paid_by = body.paid_by || null;
     if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
     if (body.expense_date !== undefined) updatePayload.expense_date = body.expense_date;

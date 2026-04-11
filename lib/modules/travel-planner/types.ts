@@ -10,7 +10,9 @@ export interface TravelTrip {
   destination: string | null;
   start_date: string;
   end_date: string;
-  /** 여행 총 예산 (원). 잔액 = budget + 추가합계 - 지출합계 */
+  /** 여행 기준 통화 (ISO 4217). 경비·예산 표시에 사용 */
+  currency?: string;
+  /** 여행 총 예산 (기준 통화). 잔액 = budget + 추가합계 - 지출합계 */
   budget?: number | null;
   created_by: string;
   created_at: string;

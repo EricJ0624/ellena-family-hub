@@ -14,6 +14,8 @@ import {
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { getAllowedCurrencyCodes } from '@/lib/currencies';
+import { formatMoneyAmount } from '@/lib/format-currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +65,8 @@ type PiggyAttachment = UploadedAttachment;
 
 const LOCALE_MAP: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
 
+const PIGGY_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
+
 function piggyTxAttachmentKey(entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', entityId: string) {
   return `${entityType}:${entityId}`;
 }
@@ -71,17 +75,18 @@ export default function PiggyBankPage() {
   const router = useRouter();
   const { lang } = useLanguage();
   const pt = (key: keyof import('@/lib/translations/piggy').PiggyTranslations) => getPiggyTranslation(lang, key);
-  const formatAmount = (value: number) => `${value.toLocaleString(LOCALE_MAP[lang] || 'en-US')}${lang === 'ko' ? '원' : lang === 'ja' ? '円' : lang === 'zh-CN' || lang === 'zh-TW' ? '元' : ''}`;
   let currentGroupId: string | null = null;
-  let currentGroup: { name?: string | null } | null = null;
+  let currentGroup: { name?: string | null; piggy_currency?: string } | null = null;
   let userRole: 'ADMIN' | 'MEMBER' | null = null;
   let isOwner = false;
+  let refreshGroups: (() => Promise<void>) | undefined;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
     currentGroup = groupContext.currentGroup;
     userRole = groupContext.userRole;
     isOwner = groupContext.isOwner;
+    refreshGroups = groupContext.refreshGroups;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.warn('GroupProvider가 없습니다.');
@@ -99,6 +104,7 @@ export default function PiggyBankPage() {
     name: string;
     balance: number;
     walletBalance: number;
+    currency?: string;
     noAccount: false;
   };
   const [summary, setSummary] = useState<{
@@ -139,11 +145,30 @@ export default function PiggyBankPage() {
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentJobs, setAttachmentJobs] = useState<UploadJob[]>([]);
   const [receiptUploadingKey, setReceiptUploadingKey] = useState<string | null>(null);
+  const [piggyCurrencySelect, setPiggyCurrencySelect] = useState('KRW');
+  const [piggyCurrencySaving, setPiggyCurrencySaving] = useState(false);
   const pendingAttachmentUploadRef = useRef<{ entityType: 'piggy_wallet_tx' | 'piggy_bank_tx'; entityId: string } | null>(null);
   const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentAbortRef = useRef<AbortController | null>(null);
 
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
+
+  useEffect(() => {
+    const c = currentGroup?.piggy_currency?.trim().toUpperCase();
+    setPiggyCurrencySelect(c && /^[A-Z]{3}$/.test(c) ? c : 'KRW');
+  }, [currentGroup?.piggy_currency]);
+
+  const formatPiggyAmount = (value: number, currencyOverride?: string) => {
+    const cur = (
+      currencyOverride ||
+      summary?.account?.currency ||
+      currentGroup?.piggy_currency ||
+      'KRW'
+    )
+      .trim()
+      .toUpperCase() || 'KRW';
+    return formatMoneyAmount(value, cur, LOCALE_MAP[lang] || 'en-US');
+  };
 
   const getAuthHeader = async () => {
     const { data } = await supabase.auth.getSession();
@@ -219,6 +244,28 @@ export default function PiggyBankPage() {
     }
     setWalletTransactions(result.data?.walletTransactions || []);
     setBankTransactions(result.data?.bankTransactions || []);
+  };
+
+  const handleSavePiggyCurrency = async () => {
+    if (!currentGroupId) return;
+    setPiggyCurrencySaving(true);
+    setError(null);
+    try {
+      const headers = await getAuthHeader();
+      const res = await fetch(`/api/groups/${currentGroupId}/piggy-currency`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency: piggyCurrencySelect.trim().toUpperCase() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || pt('piggy_currency_save_failed'));
+      await refreshGroups?.();
+      await fetchSummary();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : pt('piggy_currency_save_failed'));
+    } finally {
+      setPiggyCurrencySaving(false);
+    }
   };
 
   const loadAllTxAttachments = useCallback(async () => {
@@ -495,6 +542,39 @@ export default function PiggyBankPage() {
           </div>
         )}
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '8px' }}>{pt('piggy_currency_admin_title')}</h2>
+          <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: '14px' }}>ISO 4217 코드 · 모든 저금통에 동일하게 적용됩니다.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+            <select
+              value={piggyCurrencySelect}
+              onChange={(e) => setPiggyCurrencySelect(e.target.value)}
+              style={{ flex: '1 1 200px', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px 12px', fontSize: '14px' }}
+            >
+              {PIGGY_CURRENCY_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={piggyCurrencySaving}
+              onClick={() => void handleSavePiggyCurrency()}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: piggyCurrencySaving ? '#cbd5e1' : '#6366f1',
+                color: '#fff',
+                fontWeight: 600,
+                cursor: piggyCurrencySaving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {piggyCurrencySaving ? '…' : pt('piggy_currency_save')}
+            </button>
+          </div>
+        </div>
+        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
           <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('select_child_title')}</h2>
           <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>{pt('select_child_hint')}</p>
           <select
@@ -505,7 +585,9 @@ export default function PiggyBankPage() {
             <option value="">{pt('select_placeholder')}</option>
             {accountsForSelect.map((acc) => (
               <option key={acc.id} value={acc.user_id || ''}>
-                {acc.ownerNickname || pt('piggy_label')} · {pt('allowance_label')} {formatAmount(acc.walletBalance ?? 0)} / {pt('piggy_label')} {formatAmount(acc.balance)}
+                {acc.ownerNickname || pt('piggy_label')} · {pt('allowance_label')}{' '}
+                {formatPiggyAmount(acc.walletBalance ?? 0, acc.currency)} / {pt('piggy_label')}{' '}
+                {formatPiggyAmount(acc.balance, acc.currency)}
               </option>
             ))}
           </select>
@@ -716,13 +798,13 @@ export default function PiggyBankPage() {
         <div style={{ background: '#eff6ff', borderRadius: '14px', padding: '16px', border: '1px solid #bfdbfe' }}>
           <div style={{ fontSize: '13px', color: '#1d4ed8' }}>{pt('wallet_balance')}</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#1d4ed8' }}>
-            {formatAmount(summary?.wallet?.balance ?? 0)}
+            {formatPiggyAmount(summary?.wallet?.balance ?? 0)}
           </div>
         </div>
         <div style={{ background: '#fff7ed', borderRadius: '14px', padding: '16px', border: '1px solid #fed7aa' }}>
           <div style={{ fontSize: '13px', color: '#9a3412' }}>{pt('piggy_balance')}</div>
           <div style={{ fontSize: '24px', fontWeight: 700, color: '#9a3412' }}>
-            {formatAmount(summary?.account?.balance ?? 0)}
+            {formatPiggyAmount(summary?.account?.balance ?? 0)}
           </div>
         </div>
       </div>
@@ -794,7 +876,7 @@ export default function PiggyBankPage() {
                         color: isNegative ? '#b91c1c' : '#16a34a',
                       }}
                     >
-                      {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
+                      {isNegative ? '-' : '+'}{formatPiggyAmount(tx.amount)}
                     </div>
                   </div>
                   {showReceiptSection && (
@@ -958,7 +1040,7 @@ export default function PiggyBankPage() {
                         color: isNegative ? '#b91c1c' : '#16a34a',
                       }}
                     >
-                      {isNegative ? '-' : '+'}{formatAmount(tx.amount)}
+                      {isNegative ? '-' : '+'}{formatPiggyAmount(tx.amount)}
                     </div>
                   </div>
                   {showReceiptSection && (
@@ -1204,7 +1286,7 @@ export default function PiggyBankPage() {
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
-                    <div style={{ color: '#475569', marginTop: '4px' }}>{formatAmount(req.amount)}</div>
+                    <div style={{ color: '#475569', marginTop: '4px' }}>{formatPiggyAmount(req.amount)}</div>
                     <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px' }}>
                       {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.reason || pt('reason_none')}
                     </div>
@@ -1423,7 +1505,7 @@ export default function PiggyBankPage() {
                       textDecoration: isInactive ? 'line-through' : undefined,
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{formatAmount(req.amount)}</div>
+                    <div style={{ fontWeight: 600 }}>{formatPiggyAmount(req.amount)}</div>
                     <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                       {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}
                     </div>

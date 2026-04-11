@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 
 /** GET: 해당 그룹의 여행 목록 (tenant = groupId) */
 export async function GET(request: NextRequest) {
@@ -45,12 +46,13 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json().catch(() => ({}));
-    const { groupId, title, destination, start_date, end_date } = body as {
+    const { groupId, title, destination, start_date, end_date, currency: bodyCurrency } = body as {
       groupId?: string;
       title?: string;
       destination?: string;
       start_date?: string;
       end_date?: string;
+      currency?: string;
     };
 
     if (!groupId || !title || !start_date || !end_date) {
@@ -63,6 +65,16 @@ export async function POST(request: NextRequest) {
     const memberCheck = await requireGroupMember(user.id, groupId);
     if (memberCheck instanceof NextResponse) return memberCheck;
 
+    const isAdmin = memberCheck.role === 'ADMIN' || memberCheck.isOwner;
+    let tripCurrency = 'KRW';
+    if (bodyCurrency != null && String(bodyCurrency).trim()) {
+      const c = normalizeCurrencyCode(String(bodyCurrency));
+      if (!c || !isAllowedCurrency(c)) {
+        return NextResponse.json({ error: '유효하지 않은 통화 코드입니다.' }, { status: 400 });
+      }
+      tripCurrency = isAdmin ? c : 'KRW';
+    }
+
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from('travel_trips')
@@ -73,6 +85,7 @@ export async function POST(request: NextRequest) {
         start_date,
         end_date,
         created_by: user.id,
+        currency: tripCurrency,
       })
       .select()
       .single();

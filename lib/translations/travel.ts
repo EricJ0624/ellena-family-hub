@@ -33,6 +33,8 @@ export type TravelTranslations = {
   label_start_date: string;
   label_end_date: string;
   label_budget: string;
+  label_trip_currency: string;
+  trip_currency_change_confirm: string;
   placeholder_trip_title: string;
   placeholder_destination: string;
   placeholder_budget: string;
@@ -184,7 +186,10 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_destination: '목적지',
     label_start_date: '출발일 *',
     label_end_date: '종료일 *',
-    label_budget: '총 예산 (원)',
+    label_budget: '총 예산 (기준 통화)',
+    label_trip_currency: '기준 통화 (ISO 코드)',
+    trip_currency_change_confirm:
+      '기준 통화를 바꾸면 기존 경비 항목의 통화 표시만 새 코드로 맞춥니다. 금액 숫자는 환산하지 않습니다. 계속할까요?',
     placeholder_trip_title: '예: 제주도 가족여행',
     placeholder_destination: '예: 제주시',
     placeholder_budget: '예: 1000000',
@@ -334,7 +339,10 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_destination: 'Destination',
     label_start_date: 'Start date *',
     label_end_date: 'End date *',
-    label_budget: 'Total budget',
+    label_budget: 'Total budget (trip currency)',
+    label_trip_currency: 'Trip currency (ISO code)',
+    trip_currency_change_confirm:
+      'Changing the trip currency updates currency codes on existing expenses only; amounts are not converted. Continue?',
     placeholder_trip_title: 'e.g. Family trip to Jeju',
     placeholder_destination: 'e.g. Jeju City',
     placeholder_budget: 'e.g. 1000000',
@@ -484,7 +492,10 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_destination: '目的地',
     label_start_date: '出発日 *',
     label_end_date: '終了日 *',
-    label_budget: '予算合計',
+    label_budget: '予算合計（基準通貨）',
+    label_trip_currency: '基準通貨（ISOコード）',
+    trip_currency_change_confirm:
+      '基準通貨を変更すると、既存の経費の通貨表示のみ新しいコードに合わせます。金額は換算しません。続行しますか？',
     placeholder_trip_title: '例：家族で済州島',
     placeholder_destination: '例：済州市',
     placeholder_budget: '例：1000000',
@@ -634,7 +645,10 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_destination: '目的地',
     label_start_date: '出发日 *',
     label_end_date: '结束日 *',
-    label_budget: '总预算',
+    label_budget: '总预算（基准货币）',
+    label_trip_currency: '基准货币（ISO代码）',
+    trip_currency_change_confirm:
+      '更改基准货币后，仅会将已有费用条目的货币代码更新为新代码，金额数字不会换算。是否继续？',
     placeholder_trip_title: '例：济州岛家庭游',
     placeholder_destination: '例：济州市',
     placeholder_budget: '例：1000000',
@@ -784,7 +798,10 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_destination: '目的地',
     label_start_date: '出發日 *',
     label_end_date: '結束日 *',
-    label_budget: '總預算',
+    label_budget: '總預算（基準貨幣）',
+    label_trip_currency: '基準貨幣（ISO代碼）',
+    trip_currency_change_confirm:
+      '變更基準貨幣後，只會將既有費用項目的貨幣代碼更新為新代碼，金額數字不會換算。是否繼續？',
     placeholder_trip_title: '例：濟州島家庭遊',
     placeholder_destination: '例：濟州市',
     placeholder_budget: '例：1000000',

@@ -90,6 +90,9 @@ export type PiggyTranslations = {
   paid_by_suffix: string;
   deposited_by_suffix: string;
   count_suffix: string;
+  piggy_currency_admin_title: string;
+  piggy_currency_save: string;
+  piggy_currency_save_failed: string;
 };
 
 const piggy: Record<LangCode, PiggyTranslations> = {
@@ -183,6 +186,9 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     paid_by_suffix: '가 지급',
     deposited_by_suffix: '가 입금',
     count_suffix: '건',
+    piggy_currency_admin_title: 'Piggy Bank 통화 (그룹)',
+    piggy_currency_save: '통화 저장',
+    piggy_currency_save_failed: '통화 저장에 실패했습니다.',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -274,6 +280,9 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     paid_by_suffix: ' paid',
     deposited_by_suffix: ' deposited',
     count_suffix: '',
+    piggy_currency_admin_title: 'Piggy Bank currency (group)',
+    piggy_currency_save: 'Save currency',
+    piggy_currency_save_failed: 'Failed to save currency.',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -365,6 +374,9 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     paid_by_suffix: 'が支給',
     deposited_by_suffix: 'が入金',
     count_suffix: '件',
+    piggy_currency_admin_title: 'Piggy Bankの通貨（グループ）',
+    piggy_currency_save: '保存',
+    piggy_currency_save_failed: '通貨の保存に失敗しました。',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -456,6 +468,9 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     paid_by_suffix: ' 发放',
     deposited_by_suffix: ' 存入',
     count_suffix: ' 条',
+    piggy_currency_admin_title: 'Piggy Bank 货币（群组）',
+    piggy_currency_save: '保存货币',
+    piggy_currency_save_failed: '保存货币失败。',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -547,6 +562,9 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     paid_by_suffix: ' 發放',
     deposited_by_suffix: ' 存入',
     count_suffix: ' 筆',
+    piggy_currency_admin_title: 'Piggy Bank 貨幣（群組）',
+    piggy_currency_save: '儲存貨幣',
+    piggy_currency_save_failed: '儲存貨幣失敗。',
   },
 };
 

@@ -59,10 +59,9 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { category, amount, currency, paid_by, memo, expense_date, entry_type } = body as {
+    const { category, amount, paid_by, memo, expense_date, entry_type } = body as {
       category?: string;
       amount?: number;
-      currency?: string;
       paid_by?: string;
       memo?: string;
       expense_date?: string;
@@ -85,6 +84,23 @@ export async function POST(
 
     const supabase = getSupabaseServerClient();
 
+    const { data: tripRow, error: tripCurError } = await supabase
+      .from('travel_trips')
+      .select('currency')
+      .eq('id', tripId)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .single();
+
+    if (tripCurError || !tripRow) {
+      return NextResponse.json({ error: '여행 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const tripCurrency =
+      String((tripRow as { currency?: string }).currency || 'KRW')
+        .trim()
+        .toUpperCase() || 'KRW';
+
     const { data, error } = await supabase
       .from('travel_expenses')
       .insert({
@@ -93,7 +109,7 @@ export async function POST(
         entry_type: resolvedEntryType,
         category: category ? String(category).trim() : null,
         amount: Number(amount),
-        currency: currency ? String(currency).trim() : 'KRW',
+        currency: tripCurrency,
         paid_by: paid_by || null,
         memo: memo ? String(memo).trim() : null,
         expense_date,
