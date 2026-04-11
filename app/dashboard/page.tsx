@@ -358,6 +358,7 @@ export default function FamilyHub() {
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
   const chatPhotoUploadingRef = useRef(false); // 사진 업로드 중복 방지
+  const chatTextSendingRef = useRef(false); // 텍스트 메시지 전송 중복 방지
 
   // --- [HANDLERS] App 객체 메서드 이식 ---
   
@@ -6567,12 +6568,22 @@ export default function FamilyHub() {
     const sanitizedText = sanitizeInput(rawText, 500);
     if (!sanitizedText) return;
     
+    // ✅ 중복 전송 방지
+    if (chatTextSendingRef.current) {
+      console.log('⚠️ 이미 메시지 전송 중, 중복 호출 무시');
+      return;
+    }
+    
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     // 텍스트 메시지만 전송 (사진은 파일 선택 즉시 전송됨)
     void (async () => {
       if (!currentGroupId) return;
+      
+      chatTextSendingRef.current = true;
+      console.log('🔒 텍스트 메시지 전송 시작, 중복 방지 플래그 설정');
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -6611,6 +6622,9 @@ export default function FamilyHub() {
       } catch (e) {
         console.error('메시지 전송 오류:', e);
         alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
+      } finally {
+        chatTextSendingRef.current = false;
+        console.log('🔓 텍스트 메시지 전송 완료, 중복 방지 플래그 해제');
       }
     })();
   };
