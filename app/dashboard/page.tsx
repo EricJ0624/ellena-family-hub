@@ -1177,8 +1177,10 @@ export default function FamilyHub() {
     : (isDefaultDashboardTitle ? 68 : 28);
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
-    flex: 1,
+    // basis 0% + minWidth 0 → 남는 너비만 쓰도록 고정 (내용 너비로 행이 밀리며 fit 측정이 어긋나는 것 방지)
+    flex: '1 1 0%',
     minWidth: 0,
+    maxWidth: '100%',
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
     textOverflow: 'clip',
@@ -1210,7 +1212,19 @@ export default function FamilyHub() {
     const timeouts: (ReturnType<typeof setTimeout> | (() => void))[] = [];
 
     const fit = (el: HTMLHeadingElement) => {
-      const w = el.clientWidth;
+      const row = dashboardTitleRowRef.current;
+      let w = el.clientWidth;
+      if (row) {
+        const rowStyle = getComputedStyle(row);
+        const gapPx = parseFloat(rowStyle.columnGap || rowStyle.gap || '12') || 12;
+        let usedBySiblings = 0;
+        for (const child of Array.from(row.children)) {
+          if (child !== el) usedBySiblings += (child as HTMLElement).offsetWidth;
+        }
+        const gapTotal = Math.max(0, row.children.length - 1) * gapPx;
+        const fromRow = Math.floor(row.clientWidth - usedBySiblings - gapTotal);
+        if (fromRow > 0) w = fromRow;
+      }
       if (w <= 0) return;
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
@@ -5852,7 +5866,20 @@ export default function FamilyHub() {
         )}
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
-        <div ref={dashboardTitleRowRef} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 4px', minHeight: '48px' }}>
+        <div
+          ref={dashboardTitleRowRef}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '0 4px',
+            minHeight: '48px',
+            width: '100%',
+            minWidth: 0,
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
           <h1
             ref={dashboardTitleRef}
             style={{
