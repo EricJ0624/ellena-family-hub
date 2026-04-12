@@ -57,9 +57,10 @@ interface FamilyChatSectionProps {
 const BUBBLE_TEXT_MAX_PX = 22;
 const BUBBLE_TEXT_MIN_PX = 7;
 
-/** 다언어 섹션 타이틀 — 헤더 가용 너비에 맞춤 */
-const CHAT_TITLE_MAX_PX = 16;
+/** 다언어 섹션 타이틀: 너비에 맞게 축소, 높이·절대 상한 내에서 가능한 크게 */
+const CHAT_TITLE_ABS_MAX_PX = 26;
 const CHAT_TITLE_MIN_PX = 7;
+const CHAT_TITLE_LINE_HEIGHT = 1.2;
 
 export function FamilyChatSection({
   messages,
@@ -84,6 +85,7 @@ export function FamilyChatSection({
   lang,
   translations: t,
 }: FamilyChatSectionProps) {
+  const chatHeaderRowRef = useRef<HTMLDivElement>(null);
   const chatTitleBoxRef = useRef<HTMLDivElement>(null);
   const chatTitleRef = useRef<HTMLHeadingElement>(null);
   const chatBubbleWrapRef = useRef<HTMLDivElement>(null);
@@ -93,6 +95,7 @@ export function FamilyChatSection({
   const [bubbleGreetingFontPx, setBubbleGreetingFontPx] = useState<number | null>(null);
 
   useLayoutEffect(() => {
+    const row = chatHeaderRowRef.current;
     const box = chatTitleBoxRef.current;
     const el = chatTitleRef.current;
     if (!box || !el) return;
@@ -100,7 +103,17 @@ export function FamilyChatSection({
     const fitTitle = () => {
       const w = box.clientWidth;
       if (w <= 0) return;
-      let fs = CHAT_TITLE_MAX_PX;
+
+      const rowH = row?.clientHeight ?? 0;
+      const maxFromHeight =
+        rowH > 0
+          ? Math.min(
+              CHAT_TITLE_ABS_MAX_PX,
+              Math.max(12, Math.floor((rowH * 0.72) / CHAT_TITLE_LINE_HEIGHT))
+            )
+          : CHAT_TITLE_ABS_MAX_PX;
+
+      let fs = maxFromHeight;
       el.style.fontSize = `${fs}px`;
       void el.offsetHeight;
       while (el.scrollWidth > w + 1 && fs > CHAT_TITLE_MIN_PX) {
@@ -114,8 +127,10 @@ export function FamilyChatSection({
     const ro = new ResizeObserver(() => {
       requestAnimationFrame(fitTitle);
     });
+    if (row) ro.observe(row);
     ro.observe(box);
     fitTitle();
+    requestAnimationFrame(() => requestAnimationFrame(fitTitle));
     void document.fonts.ready.then(() => requestAnimationFrame(fitTitle));
 
     return () => ro.disconnect();
@@ -183,6 +198,7 @@ export function FamilyChatSection({
       }}
     >
       <div
+        ref={chatHeaderRowRef}
         className="section-header"
         style={{
           justifyContent: 'flex-start',
@@ -198,6 +214,7 @@ export function FamilyChatSection({
           style={{
             flex: '1 1 0%',
             minWidth: 0,
+            alignSelf: 'stretch',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
@@ -211,12 +228,12 @@ export function FamilyChatSection({
               fontSize:
                 sectionTitleFontPx != null
                   ? `${sectionTitleFontPx}px`
-                  : `${CHAT_TITLE_MAX_PX}px`,
+                  : `${CHAT_TITLE_ABS_MAX_PX}px`,
               letterSpacing: '0.16em',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              lineHeight: 1.2,
+              lineHeight: CHAT_TITLE_LINE_HEIGHT,
             }}
           >
             {t.section_title_chat}
