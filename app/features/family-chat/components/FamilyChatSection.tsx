@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import type { ChatUiMessage } from '../types';
@@ -54,6 +54,9 @@ interface FamilyChatSectionProps {
   };
 }
 
+const BUBBLE_TEXT_MAX_PX = 22;
+const BUBBLE_TEXT_MIN_PX = 7;
+
 export function FamilyChatSection({
   messages,
   userId,
@@ -77,6 +80,47 @@ export function FamilyChatSection({
   lang,
   translations: t,
 }: FamilyChatSectionProps) {
+  const chatBubbleWrapRef = useRef<HTMLDivElement>(null);
+  const chatBubbleTextBoxRef = useRef<HTMLDivElement>(null);
+  const chatBubbleTextRef = useRef<HTMLSpanElement>(null);
+  const [bubbleGreetingFontPx, setBubbleGreetingFontPx] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const wrap = chatBubbleWrapRef.current;
+    const box = chatBubbleTextBoxRef.current;
+    const textEl = chatBubbleTextRef.current;
+    if (!wrap || !box || !textEl) return;
+
+    const fit = () => {
+      const bw = box.clientWidth;
+      const bh = box.clientHeight;
+      if (bw <= 0 || bh <= 0) return;
+
+      let fs = BUBBLE_TEXT_MAX_PX;
+      textEl.style.fontSize = `${fs}px`;
+      void textEl.offsetHeight;
+      while (
+        (textEl.scrollWidth > bw + 1 || textEl.scrollHeight > bh + 1) &&
+        fs > BUBBLE_TEXT_MIN_PX
+      ) {
+        fs -= 0.5;
+        textEl.style.fontSize = `${fs}px`;
+        void textEl.offsetHeight;
+      }
+      setBubbleGreetingFontPx(fs);
+    };
+
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(fit);
+    });
+    ro.observe(wrap);
+    ro.observe(box);
+    fit();
+    void document.fonts.ready.then(() => requestAnimationFrame(fit));
+
+    return () => ro.disconnect();
+  }, [t.section_chat_bubble_greeting, lang]);
+
   const handleSendClick = () => {
     const input = chatInputRef.current;
     if (!input || !input.value.trim()) return;
@@ -93,7 +137,15 @@ export function FamilyChatSection({
   };
 
   return (
-    <section className="content-section">
+    <section
+      className="content-section"
+      style={{
+        paddingTop: '0.65rem',
+        paddingBottom: '0.65rem',
+        paddingLeft: 'var(--spacing-lg)',
+        paddingRight: 'var(--spacing-lg)',
+      }}
+    >
       <div
         className="section-header"
         style={{
@@ -101,19 +153,30 @@ export function FamilyChatSection({
           alignItems: 'center',
           gap: 'clamp(2px, 1.2vw, 8px)',
           columnGap: '6px',
+          marginBottom: '0.5rem',
+          marginTop: 0,
         }}
       >
-        <h3 className="section-title" style={{ margin: 0, flexShrink: 0 }}>
+        <h3
+          className="section-title"
+          style={{
+            margin: 0,
+            flexShrink: 0,
+            fontSize: 'clamp(0.82rem, 2.6vw, 0.98rem)',
+            letterSpacing: '0.16em',
+          }}
+        >
           {t.section_title_chat}
         </h3>
         <div
+          ref={chatBubbleWrapRef}
           style={{
             position: 'relative',
             flexShrink: 0,
             width: FAMILY_CHAT_BUBBLE_LAYOUT.width,
             height: FAMILY_CHAT_BUBBLE_LAYOUT.height,
             marginLeft: '-4px',
-            transform: 'translateY(-14px)',
+            transform: 'translateY(-22px)',
           }}
         >
           <Image
@@ -125,31 +188,42 @@ export function FamilyChatSection({
             priority={false}
           />
           <div
+            ref={chatBubbleTextBoxRef}
             style={{
               position: 'absolute',
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
               width: '82%',
-              maxWidth: '100%',
+              height: '46%',
+              maxHeight: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               textAlign: 'center',
-              fontSize: 'clamp(11px, 3.4vw, 17px)',
-              fontWeight: 900,
-              letterSpacing: '0.04em',
-              lineHeight: 1,
-              color: '#ea580c',
-              textShadow:
-                '1.5px 0 0 #0f172a, -1.5px 0 0 #0f172a, 0 1.5px 0 #0f172a, 0 -1.5px 0 #0f172a, 2px 2px 0 rgba(15,23,42,0.2)',
-              whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
               pointerEvents: 'none',
+              boxSizing: 'border-box',
             }}
           >
-            {t.section_chat_bubble_greeting}
+            <span
+              ref={chatBubbleTextRef}
+              style={{
+                fontSize: bubbleGreetingFontPx != null ? `${bubbleGreetingFontPx}px` : `${BUBBLE_TEXT_MAX_PX}px`,
+                fontWeight: 900,
+                letterSpacing: '0.04em',
+                lineHeight: 1.05,
+                color: '#ea580c',
+                textShadow:
+                  '1.5px 0 0 #0f172a, -1.5px 0 0 #0f172a, 0 1.5px 0 #0f172a, 0 -1.5px 0 #0f172a, 2px 2px 0 rgba(15,23,42,0.2)',
+                whiteSpace: 'nowrap',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {t.section_chat_bubble_greeting}
+            </span>
           </div>
         </div>
       </div>
