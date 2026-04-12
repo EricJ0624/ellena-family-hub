@@ -2182,7 +2182,7 @@ export default function FamilyHub() {
         if (userId) {
           usersList.push({
             id: userId,
-            name: userName || '나',
+            name: userName?.trim() || '',
             isCurrentUser: true
           });
         }
@@ -2260,7 +2260,7 @@ export default function FamilyHub() {
         if (userId) {
           usersList.push({
             id: userId,
-            name: userName || '나',
+            name: userName?.trim() || '',
             isCurrentUser: true
           });
         }
@@ -2292,7 +2292,7 @@ export default function FamilyHub() {
         if (userId) {
           usersList.push({
             id: userId,
-            name: userName || '나',
+            name: userName?.trim() || '',
             isCurrentUser: true
           });
         }
@@ -2323,7 +2323,7 @@ export default function FamilyHub() {
           // 현재 사용자의 presence 전송
           await presenceSubscription.track({
             userId: userId,
-            userName: userName || '나',
+            userName: userName?.trim() || '',
             groupId: currentGroupId,
             onlineAt: new Date().toISOString()
           });
@@ -5969,7 +5969,14 @@ export default function FamilyHub() {
               <span className="status-dot-core"></span>
             </span>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {onlineUsers.map((user) => (
+              {onlineUsers.map((user) => {
+                const nicknamePart = (
+                  user.isCurrentUser ? (userName?.trim() || user.name.trim()) : user.name.trim()
+                ) || '';
+                const rolePart = familyRoleByUserId[user.id]
+                  ? `${getFamilyRoleEmoji(familyRoleByUserId[user.id])} ${getFamilyRoleLabel(lang, familyRoleByUserId[user.id])}`
+                  : '';
+                return (
                 <div 
                   key={user.id}
                   className="user-info" 
@@ -5984,16 +5991,32 @@ export default function FamilyHub() {
                 >
                   <span className="user-icon" style={{ fontSize: '12px' }}>👤</span>
                   <p className="user-name" style={{ margin: 0, fontSize: '12px', fontWeight: user.isCurrentUser ? '600' : '500' }}>
-                    {user.name}
-                    {familyRoleByUserId[user.id] ? ` ${getFamilyRoleEmoji(familyRoleByUserId[user.id])} ${getFamilyRoleLabel(lang, familyRoleByUserId[user.id])}` : ''}
+                    {nicknamePart ? `${nicknamePart} ` : ''}
+                    {rolePart}
                     {user.isCurrentUser && ct('me_suffix')}
                   </p>
                 </div>
-              ))}
+                );
+              })}
               {onlineUsers.length === 0 && (
                 <div className="user-info" onClick={() => setIsNicknameModalOpen(true)} style={{ cursor: 'pointer' }}>
                   <span className="user-icon">👤</span>
-                  <p className="user-name">{userName || ct('loading')}</p>
+                  <p className="user-name">
+                    {(() => {
+                      const nick = userName?.trim() || '';
+                      const role = familyRoleByUserId[userId]
+                        ? `${getFamilyRoleEmoji(familyRoleByUserId[userId])} ${getFamilyRoleLabel(lang, familyRoleByUserId[userId])}`
+                        : '';
+                      if (!nick && !role) return ct('loading');
+                      return (
+                        <>
+                          {nick ? `${nick} ` : ''}
+                          {role}
+                          {ct('me_suffix')}
+                        </>
+                      );
+                    })()}
+                  </p>
                 </div>
               )}
             </div>
