@@ -5,11 +5,18 @@
 'use client';
 
 import React, { useRef } from 'react';
-
-/** 헤더에서 제목 오른쪽에 붙는 장식 이모지 (디자인 변경 시 이 값만 조정) */
-export const FAMILY_CHAT_HEADER_DECOR_EMOJI = '💬' as const;
+import Image from 'next/image';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import type { ChatUiMessage } from '../types';
+
+/** `public/images` 기준 말풍선 일러스트 (교체 시 파일명만 맞추면 됨) */
+export const FAMILY_CHAT_BUBBLE_IMAGE_SRC = '/images/family-chat-hello-bubble.png' as const;
+
+/** 헤더 말풍선 박스 크기 — 한곳에서 조절 */
+export const FAMILY_CHAT_BUBBLE_LAYOUT = {
+  width: 'clamp(104px, 28vw, 176px)',
+  height: 'clamp(80px, 21vw, 132px)',
+} as const;
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -35,7 +42,6 @@ interface FamilyChatSectionProps {
   translations: {
     section_title_chat: string;
     section_chat_bubble_greeting: string;
-    section_chat_decor_aria: string;
     chat_placeholder: string;
     chat_send: string;
     chat_load_older: string;
@@ -94,46 +100,44 @@ export function FamilyChatSection({
         </h3>
         <div
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 'clamp(6px, 1.5vw, 10px)',
+            position: 'relative',
             flexShrink: 0,
+            width: FAMILY_CHAT_BUBBLE_LAYOUT.width,
+            height: FAMILY_CHAT_BUBBLE_LAYOUT.height,
           }}
         >
+          <Image
+            src={FAMILY_CHAT_BUBBLE_IMAGE_SRC}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 28vw, 176px"
+            style={{ objectFit: 'contain', objectPosition: 'center' }}
+            priority={false}
+          />
           <div
             style={{
-              position: 'relative',
-              background: 'linear-gradient(180deg, #fde68a 0%, #facc15 100%)',
-              border: '2px solid #0f172a',
-              borderRadius: '14px',
-              padding: '5px 12px 6px',
-              fontSize: 'clamp(10px, 2.4vw, 13px)',
-              fontWeight: 800,
-              letterSpacing: '0.04em',
-              color: '#ea580c',
-              lineHeight: 1.15,
-              boxShadow: '3px 3px 0 rgba(15, 23, 42, 0.12)',
-              maxWidth: 'min(42vw, 200px)',
+              position: 'absolute',
+              left: '50%',
+              top: '44%',
+              transform: 'translate(-50%, -50%)',
+              width: '58%',
+              maxWidth: '100%',
               textAlign: 'center',
+              fontSize: 'clamp(8px, 2.1vw, 12px)',
+              fontWeight: 900,
+              letterSpacing: '0.05em',
+              lineHeight: 1.05,
+              color: '#ea580c',
+              textShadow:
+                '1.5px 0 0 #0f172a, -1.5px 0 0 #0f172a, 0 1.5px 0 #0f172a, 0 -1.5px 0 #0f172a, 2px 2px 0 rgba(15,23,42,0.2)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              pointerEvents: 'none',
             }}
           >
             {t.section_chat_bubble_greeting}
           </div>
-          <span
-            role="img"
-            aria-label={t.section_chat_decor_aria}
-            style={{
-              fontSize: 'clamp(1.2rem, 3.5vw, 1.65rem)',
-              lineHeight: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
-          >
-            {FAMILY_CHAT_HEADER_DECOR_EMOJI}
-          </span>
         </div>
       </div>
       <div className="section-body">

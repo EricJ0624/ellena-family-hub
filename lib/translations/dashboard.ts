@@ -124,8 +124,6 @@ export type DashboardTranslations = {
   section_title_chat: string;
   /** 가족 채팅 헤더 말풍선 안 짧은 인사 (언어별) */
   section_chat_bubble_greeting: string;
-  /** 가족 채팅 헤더 오른쪽 장식 이모지용 접근성 라벨 */
-  section_chat_decor_aria: string;
   section_title_location: string;
   section_title_calendar: string;
   announcements_label: string;
@@ -382,7 +380,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '가족 앨범',
     section_title_chat: '가족 채팅',
     section_chat_bubble_greeting: '안녕!',
-    section_chat_decor_aria: '채팅',
     section_title_location: '가족 위치',
     section_title_calendar: '가족 일정',
     announcements_label: '공지사항',
@@ -633,7 +630,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: 'Family Memories',
     section_title_chat: 'Family Chat',
     section_chat_bubble_greeting: 'HELLO!',
-    section_chat_decor_aria: 'Chat',
     section_title_location: 'Family Location',
     section_title_calendar: 'Family Calendar',
     announcements_label: 'Announcements',
@@ -884,7 +880,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '家族アルバム',
     section_title_chat: '家族チャット',
     section_chat_bubble_greeting: 'こんにちは！',
-    section_chat_decor_aria: 'チャット',
     section_title_location: '家族の位置',
     section_title_calendar: '家族カレンダー',
     announcements_label: 'お知らせ',
@@ -1135,7 +1130,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '家庭相册',
     section_title_chat: '家庭聊天',
     section_chat_bubble_greeting: '你好！',
-    section_chat_decor_aria: '聊天',
     section_title_location: '家庭位置',
     section_title_calendar: '家庭日历',
     announcements_label: '公告',
@@ -1384,7 +1378,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     section_title_memories: '家庭相簿',
     section_title_chat: '家庭聊天',
     section_chat_bubble_greeting: '你好！',
-    section_chat_decor_aria: '聊天',
     section_title_location: '家庭位置',
     section_title_calendar: '家庭日曆',
     announcements_label: '公告',
