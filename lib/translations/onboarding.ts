@@ -5,6 +5,9 @@ export type OnboardingTranslations = {
   title: string;
   subtitle: string;
   create_group: string;
+  create_group_subtitle: string;
+  /** `{name}` — 그룹 이름 치환 */
+  group_created_heading: string;
   join_invite: string;
   first_member: string;
   already_family: string;
@@ -50,6 +53,9 @@ export type OnboardingTranslations = {
   role_member: string;
   no_groups: string;
   select_group: string;
+  choose_group_subtitle: string;
+  go_to_selected_group: string;
+  or_divider: string;
   creating: string;
   create_short: string; // "생성" button
   joining: string; // "가입 중..."
@@ -62,6 +68,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     title: '가족 그룹 설정',
     subtitle: '시작하기 전에 가족 그룹을 만들어주세요',
     create_group: '새 그룹 만들기',
+    create_group_subtitle: '가족 그룹의 이름을 입력해주세요',
+    group_created_heading: '\'{name}\' 그룹이 생성되었습니다!',
     join_invite: '초대 코드로 가입',
     first_member: '첫 가족 구성원이 되시나요?',
     already_family: '이미 가족이 있으신가요?',
@@ -107,6 +115,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     role_member: '멤버 (아이 또는 가족 구성원)',
     no_groups: '가입한 그룹이 없습니다.',
     select_group: '그룹 선택',
+    choose_group_subtitle: '접속할 그룹을 선택해주세요',
+    go_to_selected_group: '선택한 그룹으로 이동',
+    or_divider: '또는',
     creating: '생성 중...',
     create_short: '생성',
     joining: '가입 중...',
@@ -117,6 +128,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     title: 'Family group setup',
     subtitle: 'Create a family group to get started',
     create_group: 'Create new group',
+    create_group_subtitle: 'Enter a name for your family group',
+    group_created_heading: 'Group "{name}" has been created!',
     join_invite: 'Join with invite code',
     first_member: 'Are you the first member?',
     already_family: 'Already have a family?',
@@ -162,6 +175,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     role_member: 'Member (child or family)',
     no_groups: 'No groups yet.',
     select_group: 'Select group',
+    choose_group_subtitle: 'Choose which group to open',
+    go_to_selected_group: 'Continue with selected group',
+    or_divider: 'or',
     creating: 'Creating...',
     create_short: 'Create',
     joining: 'Joining...',
@@ -172,6 +188,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     title: 'ファミリーグループ設定',
     subtitle: '始める前にファミリーグループを作成してください',
     create_group: '新規グループ作成',
+    create_group_subtitle: 'ファミリーグループの名前を入力してください',
+    group_created_heading: '「{name}」グループが作成されました！',
     join_invite: '招待コードで参加',
     first_member: '最初のメンバーですか？',
     already_family: 'すでにファミリーがありますか？',
@@ -217,6 +235,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     role_member: 'メンバー（子供または家族）',
     no_groups: '参加しているグループがありません。',
     select_group: 'グループを選択',
+    choose_group_subtitle: '開くグループを選んでください',
+    go_to_selected_group: '選択したグループへ進む',
+    or_divider: 'または',
     creating: '作成中...',
     create_short: '作成',
     joining: '参加中...',
@@ -227,6 +248,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     title: '家庭群组设置',
     subtitle: '请先创建家庭群组',
     create_group: '创建新群组',
+    create_group_subtitle: '请输入家庭群组的名称',
+    group_created_heading: '「{name}」群组已创建！',
     join_invite: '邀请码加入',
     first_member: '您是第一位成员吗？',
     already_family: '已有家庭群组？',
@@ -272,6 +295,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     role_member: '成员（孩子或家人）',
     no_groups: '暂无加入的群组。',
     select_group: '选择群组',
+    choose_group_subtitle: '请选择要进入的群组',
+    go_to_selected_group: '进入所选群组',
+    or_divider: '或',
     creating: '创建中...',
     create_short: '创建',
     joining: '加入中...',
@@ -282,6 +308,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     title: '家庭群組設定',
     subtitle: '請先建立家庭群組',
     create_group: '建立新群組',
+    create_group_subtitle: '請輸入家庭群組的名稱',
+    group_created_heading: '「{name}」群組已建立！',
     join_invite: '邀請碼加入',
     first_member: '您是第一位成員嗎？',
     already_family: '已有家庭群組？',
@@ -327,6 +355,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     role_member: '成員（孩子或家人）',
     no_groups: '尚無加入的群組。',
     select_group: '選擇群組',
+    choose_group_subtitle: '請選擇要進入的群組',
+    go_to_selected_group: '前往所選群組',
+    or_divider: '或',
     creating: '建立中...',
     create_short: '建立',
     joining: '加入中...',

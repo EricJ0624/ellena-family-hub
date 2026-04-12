@@ -2,13 +2,18 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { type LangCode, localeToLangCode } from '@/lib/language-fonts';
+import { type LangCode } from '@/lib/language-fonts';
 
 const STORAGE_KEY = 'app_preferred_language';
 
+/** `updateCurrentGroup`: false 이면 앱/UI·localStorage만 바꾸고 현재 그룹 `preferred_language`는 건드리지 않음 (온보딩·새 그룹 생성 모달 등) */
+export type SetLanguageOptions = {
+  updateCurrentGroup?: boolean;
+};
+
 interface LanguageContextType {
   lang: LangCode;
-  setLanguage: (lang: LangCode) => Promise<void>;
+  setLanguage: (lang: LangCode, options?: SetLanguageOptions) => Promise<void>;
   loading: boolean;
 }
 
@@ -46,8 +51,8 @@ export function LanguageProvider({ children, currentGroup, currentGroupId, isGro
     if (langFromGroup) return langFromGroup;
     const stored = getStoredLang();
     if (stored) return stored;
-    if (typeof navigator !== 'undefined') return localeToLangCode(navigator.language);
-    return 'ko';
+    // 사용자가 저장한 언어·그룹 설정이 없을 때는 브라우저 locale 대신 영어를 기본으로 둠
+    return 'en';
   });
 
   const loading = false;
@@ -63,16 +68,14 @@ export function LanguageProvider({ children, currentGroup, currentGroupId, isGro
       setLangState(stored);
       return;
     }
-    if (typeof navigator !== 'undefined') {
-      const code = localeToLangCode(navigator.language);
-      setLangState(code);
-    }
+    setLangState('en');
   }, [langFromGroup]);
 
-  const setLanguage = useCallback(async (newLang: LangCode) => {
+  const setLanguage = useCallback(async (newLang: LangCode, options?: SetLanguageOptions) => {
+    const syncGroup = options?.updateCurrentGroup !== false;
     setLangState(newLang);
     setStoredLang(newLang);
-    if (currentGroupId && isGroupAdmin) {
+    if (syncGroup && currentGroupId && isGroupAdmin) {
       try {
         await supabase.from('groups').update({ preferred_language: newLang }).eq('id', currentGroupId);
         await refreshGroups();

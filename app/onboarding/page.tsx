@@ -17,6 +17,14 @@ import { normalizeGroupIdFromRpc, isValidUUID } from '@/lib/validation';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
 
+const DISPLAY_LANG_OPTIONS: { code: LangCode; label: string }[] = [
+  { code: 'ko', label: '한국어' },
+  { code: 'en', label: 'English' },
+  { code: 'ja', label: '日本語' },
+  { code: 'zh-CN', label: '简体中文' },
+  { code: 'zh-TW', label: '繁體中文' },
+];
+
 interface GroupPreview {
   id: string;
   name: string;
@@ -34,12 +42,8 @@ interface UserGroup {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { lang } = useLanguage();
+  const { lang, setLanguage } = useLanguage();
   const { setCurrentGroupId } = useGroup();
-  const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
-  const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
-    getMemberManagementTranslation(lang, key);
-  const ct = (key: 'save' | 'close' | 'cancel' | 'skip') => getCommonTranslation(lang, key);
   const [fromAdmin, setFromAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'select' | 'create' | 'join' | 'choose-group'>('select');
@@ -47,7 +51,15 @@ export default function OnboardingPage() {
   
   // 그룹 생성 관련 상태
   const [groupName, setGroupName] = useState('');
-  const [groupPreferredLanguage, setGroupPreferredLanguage] = useState<LangCode>('ko');
+
+  const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
+  const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
+    getMemberManagementTranslation(lang, key);
+  const ct = (key: 'save' | 'close' | 'cancel' | 'skip') => getCommonTranslation(lang, key);
+
+  const setAppLanguage = (code: LangCode) => {
+    void setLanguage(code, { updateCurrentGroup: false });
+  };
   const [creating, setCreating] = useState(false);
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
@@ -317,8 +329,8 @@ export default function OnboardingPage() {
 
       if (fetchError) throw fetchError;
 
-      // 그룹 표시 언어 설정
-      await supabase.from('groups').update({ preferred_language: groupPreferredLanguage }).eq('id', data.id);
+      // 그룹 표시 언어 설정 (UI에서 선택한 언어 = 전역 lang)
+      await supabase.from('groups').update({ preferred_language: lang }).eq('id', data.id);
 
       // 그룹 생성자(소유자) 가족 표시 설정 (아빠/엄마)
       if (createFamilyRole && user) {
@@ -618,6 +630,28 @@ export default function OnboardingPage() {
                 }}>
                   {ot('subtitle')}
                 </p>
+                <div style={{ marginTop: '20px', textAlign: 'left', maxWidth: '320px', marginLeft: 'auto', marginRight: 'auto' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
+                    {ot('display_language')}
+                  </label>
+                  <select
+                    value={lang}
+                    onChange={(e) => setAppLanguage(e.target.value as LangCode)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      fontSize: '15px',
+                      color: '#1e293b',
+                      backgroundColor: '#fff',
+                    }}
+                  >
+                    {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* 선택 카드 */}
@@ -798,7 +832,7 @@ export default function OnboardingPage() {
                     color: '#64748b',
                     margin: 0,
                   }}>
-                    가족 그룹의 이름을 입력해주세요
+                    {ot('create_group_subtitle')}
                   </p>
                 </div>
 
@@ -812,7 +846,7 @@ export default function OnboardingPage() {
                       color: '#1a202c',
                       margin: '0 0 16px 0',
                     }}>
-                      '{groupName}' 그룹이 생성되었습니다!
+                      {ot('group_created_heading').replace(/\{name\}/g, groupName)}
                     </h3>
                     
                     {/* 초대 코드 표시 */}
@@ -999,8 +1033,8 @@ export default function OnboardingPage() {
                         {ot('display_language')}
                       </label>
                       <select
-                        value={groupPreferredLanguage}
-                        onChange={(e) => setGroupPreferredLanguage(e.target.value as LangCode)}
+                        value={lang}
+                        onChange={(e) => setAppLanguage(e.target.value as LangCode)}
                         style={{
                           width: '100%',
                           padding: '12px 14px',
@@ -1011,11 +1045,9 @@ export default function OnboardingPage() {
                           backgroundColor: '#fff',
                         }}
                       >
-                        <option value="ko">한국어</option>
-                        <option value="en">English</option>
-                        <option value="ja">日本語</option>
-                        <option value="zh-CN">简体中文</option>
-                        <option value="zh-TW">繁體中文</option>
+                        {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                          <option key={code} value={code}>{label}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1106,7 +1138,7 @@ export default function OnboardingPage() {
                       {creating ? (
                         <>
                           <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
-                          생성 중...
+                          {ot('creating')}
                         </>
                       ) : (
                         <>
@@ -1169,6 +1201,28 @@ export default function OnboardingPage() {
                     <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
                     {ot('back')}
                   </button>
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
+                      {ot('display_language')}
+                    </label>
+                    <select
+                      value={lang}
+                      onChange={(e) => setAppLanguage(e.target.value as LangCode)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        fontSize: '15px',
+                        color: '#1e293b',
+                        backgroundColor: '#fff',
+                      }}
+                    >
+                      {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                        <option key={code} value={code}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
                   {!groupPreview && (
                     <>
                       <h2 style={{
@@ -1592,15 +1646,37 @@ export default function OnboardingPage() {
                   color: '#1e293b',
                   marginBottom: '8px',
                 }}>
-                  그룹 선택
+                  {ot('select_group')}
                 </h2>
                 <p style={{
                   fontSize: '14px',
                   color: '#64748b',
                   margin: 0,
                 }}>
-                  접속할 그룹을 선택해주세요
+                  {ot('choose_group_subtitle')}
                 </p>
+                <div style={{ marginTop: '20px', textAlign: 'left' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
+                    {ot('display_language')}
+                  </label>
+                  <select
+                    value={lang}
+                    onChange={(e) => setAppLanguage(e.target.value as LangCode)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      fontSize: '15px',
+                      color: '#1e293b',
+                      backgroundColor: '#fff',
+                    }}
+                  >
+                    {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div style={{
@@ -1697,7 +1773,7 @@ export default function OnboardingPage() {
                   marginBottom: '16px',
                 }}
               >
-                선택한 그룹으로 이동
+                {ot('go_to_selected_group')}
                 <ArrowRight style={{ width: '18px', height: '18px' }} />
               </button>
 
@@ -1710,7 +1786,7 @@ export default function OnboardingPage() {
               }}>
                 <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
                 <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
-                  또는
+                  {ot('or_divider')}
                 </span>
                 <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
               </div>
