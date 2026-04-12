@@ -57,6 +57,10 @@ interface FamilyChatSectionProps {
 const BUBBLE_TEXT_MAX_PX = 22;
 const BUBBLE_TEXT_MIN_PX = 7;
 
+/** 다언어 섹션 타이틀 — 헤더 가용 너비에 맞춤 */
+const CHAT_TITLE_MAX_PX = 16;
+const CHAT_TITLE_MIN_PX = 7;
+
 export function FamilyChatSection({
   messages,
   userId,
@@ -80,10 +84,42 @@ export function FamilyChatSection({
   lang,
   translations: t,
 }: FamilyChatSectionProps) {
+  const chatTitleBoxRef = useRef<HTMLDivElement>(null);
+  const chatTitleRef = useRef<HTMLHeadingElement>(null);
   const chatBubbleWrapRef = useRef<HTMLDivElement>(null);
   const chatBubbleTextBoxRef = useRef<HTMLDivElement>(null);
   const chatBubbleTextRef = useRef<HTMLSpanElement>(null);
+  const [sectionTitleFontPx, setSectionTitleFontPx] = useState<number | null>(null);
   const [bubbleGreetingFontPx, setBubbleGreetingFontPx] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const box = chatTitleBoxRef.current;
+    const el = chatTitleRef.current;
+    if (!box || !el) return;
+
+    const fitTitle = () => {
+      const w = box.clientWidth;
+      if (w <= 0) return;
+      let fs = CHAT_TITLE_MAX_PX;
+      el.style.fontSize = `${fs}px`;
+      void el.offsetHeight;
+      while (el.scrollWidth > w + 1 && fs > CHAT_TITLE_MIN_PX) {
+        fs -= 0.5;
+        el.style.fontSize = `${fs}px`;
+        void el.offsetHeight;
+      }
+      setSectionTitleFontPx(fs);
+    };
+
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(fitTitle);
+    });
+    ro.observe(box);
+    fitTitle();
+    void document.fonts.ready.then(() => requestAnimationFrame(fitTitle));
+
+    return () => ro.disconnect();
+  }, [t.section_title_chat, lang]);
 
   useLayoutEffect(() => {
     const wrap = chatBubbleWrapRef.current;
@@ -157,17 +193,35 @@ export function FamilyChatSection({
           marginTop: 0,
         }}
       >
-        <h3
-          className="section-title"
+        <div
+          ref={chatTitleBoxRef}
           style={{
-            margin: 0,
-            flexShrink: 0,
-            fontSize: 'clamp(0.82rem, 2.6vw, 0.98rem)',
-            letterSpacing: '0.16em',
+            flex: '1 1 0%',
+            minWidth: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
           }}
         >
-          {t.section_title_chat}
-        </h3>
+          <h3
+            ref={chatTitleRef}
+            className="section-title"
+            style={{
+              margin: 0,
+              fontSize:
+                sectionTitleFontPx != null
+                  ? `${sectionTitleFontPx}px`
+                  : `${CHAT_TITLE_MAX_PX}px`,
+              letterSpacing: '0.16em',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              lineHeight: 1.2,
+            }}
+          >
+            {t.section_title_chat}
+          </h3>
+        </div>
         <div
           ref={chatBubbleWrapRef}
           style={{
