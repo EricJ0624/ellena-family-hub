@@ -7,6 +7,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
   getPushToken, 
   registerServiceWorker,
@@ -22,6 +23,7 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
+import { travelPlannerHeaderDecorTheme } from '@/lib/travel-planner-header-theme';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
@@ -6199,28 +6201,65 @@ export default function FamilyHub() {
 
           {/* 가족 여행 플래너 Section */}
           <section className="content-section">
-            <div className="section-header">
-              <h3 className="section-title">{tt('title')}</h3>
-              {currentGroupId && (
-                <button
-                  onClick={() => router.push('/travel?openAdd=1')}
+            <div
+              className="section-header"
+              style={{ columnGap: travelPlannerHeaderDecorTheme.slotGap }}
+            >
+              <h3 className="section-title" style={{ margin: 0, flexShrink: 0 }}>
+                {tt('title')}
+              </h3>
+              <div
+                aria-hidden
+                style={{
+                  flex: '1 1 0%',
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingLeft: travelPlannerHeaderDecorTheme.slotGap,
+                  paddingRight: travelPlannerHeaderDecorTheme.slotGap,
+                }}
+              >
+                <div
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#9333ea',
-                    color: '#fff',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
+                    position: 'relative',
+                    width: '100%',
+                    maxWidth: travelPlannerHeaderDecorTheme.frameMaxWidth,
+                    height: travelPlannerHeaderDecorTheme.frameHeight,
                   }}
                 >
-                  <Plus style={{ width: 16, height: 16 }} />
-                  {tt('add_trip')}
-                </button>
-              )}
+                  <Image
+                    src={travelPlannerHeaderDecorTheme.imageSrc}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 55vw, 320px"
+                    style={{ objectFit: 'contain', objectPosition: 'center' }}
+                  />
+                </div>
+              </div>
+              <div style={{ flexShrink: 0, minWidth: currentGroupId ? undefined : 0 }}>
+                {currentGroupId ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push('/travel?openAdd=1')}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: '#9333ea',
+                      color: '#fff',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Plus style={{ width: 16, height: 16 }} />
+                    {tt('add_trip')}
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div className="section-body">
               {!currentGroupId ? (
