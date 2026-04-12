@@ -1186,7 +1186,9 @@ export default function FamilyHub() {
     minWidth: 0,
     maxWidth: '100%',
     whiteSpace: 'nowrap' as const,
-    overflow: 'hidden',
+    // 가로만 숨김 — 세로는 visible 유지(그라데이션 클립 텍스트와 overflow:hidden 동시 적용 시 일부 브라우저에서 이상 동작 방지)
+    overflowX: 'hidden',
+    overflowY: 'visible',
     textOverflow: 'clip',
     // fit 적용 전: 읽기 좋은 기본 크기, fit 실행 후 fittedTitleFontSize로 덮어씀
     fontSize: 28,
@@ -1209,7 +1211,9 @@ export default function FamilyHub() {
   // 한 줄 맞춤: 모든 화면 크기·언어에서 동일하게 동작. useLayoutEffect로 DOM 직후 측정, ResizeObserver로 리사이즈 대응
   useLayoutEffect(() => {
     const MAX_FS = Math.max(14, Math.min(120, titleFitMaxFontSize));
-    const MIN_FS = 14;
+    const MIN_FS = 11;
+    /** background-clip:text·서브픽셀·letter-spacing 등으로 scrollWidth가 실제보다 작게 나오는 경우 오른쪽 잘림 방지 */
+    const TITLE_FIT_WIDTH_SLACK_PX = 8;
     const cancelled = { current: false };
     let ro: ResizeObserver | null = null;
     let tryRunRafId = 0;
@@ -1227,10 +1231,12 @@ export default function FamilyHub() {
           if (child !== el) usedBySiblings += (child as HTMLElement).offsetWidth;
         }
         const gapTotal = Math.max(0, row.children.length - 1) * gapPx;
-        const fromRow = Math.floor(row.clientWidth - usedBySiblings - gapTotal);
+        const fromRow = Math.floor(
+          row.clientWidth - usedBySiblings - gapTotal - TITLE_FIT_WIDTH_SLACK_PX
+        );
         if (fromRow > 0) return fromRow;
       }
-      return el.clientWidth;
+      return Math.max(0, el.clientWidth - TITLE_FIT_WIDTH_SLACK_PX);
     };
 
     const fit = (el: HTMLHeadingElement) => {
@@ -1240,9 +1246,9 @@ export default function FamilyHub() {
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
       void el.offsetHeight; // reflow
-      // 서브픽셀 오버플로우 방지: 1px 여유 두고 수렴
+      // 1px 단위로 수렴 (그라데이션 타이틀은 scrollWidth가 보수적으로 나오기 쉬움)
       while (el.scrollWidth > w + 1 && fs > MIN_FS) {
-        fs -= 2;
+        fs -= 1;
         el.style.fontSize = `${fs}px`;
         void el.offsetHeight;
       }
