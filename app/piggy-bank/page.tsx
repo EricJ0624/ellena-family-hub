@@ -14,7 +14,7 @@ import {
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
-import { getAllowedCurrencyCodes } from '@/lib/currencies';
+import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 
 export const dynamic = 'force-dynamic';
@@ -552,7 +552,7 @@ export default function PiggyBankPage() {
             >
               {PIGGY_CURRENCY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {formatCurrencyOptionLabel(c, LOCALE_MAP[lang] || 'en-US')}
                 </option>
               ))}
             </select>

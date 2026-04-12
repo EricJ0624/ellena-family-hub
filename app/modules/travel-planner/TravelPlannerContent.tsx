@@ -7,7 +7,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
-import { getAllowedCurrencyCodes } from '@/lib/currencies';
+import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
   MapPin,
@@ -3032,7 +3032,7 @@ export function TravelPlannerContent() {
                   >
                     {TRIP_CURRENCY_OPTIONS.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {formatCurrencyOptionLabel(c, localeForMoney)}
                       </option>
                     ))}
                   </select>
@@ -3229,7 +3229,7 @@ export function TravelPlannerContent() {
                   >
                     {TRIP_CURRENCY_OPTIONS.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {formatCurrencyOptionLabel(c, localeForMoney)}
                       </option>
                     ))}
                   </select>
