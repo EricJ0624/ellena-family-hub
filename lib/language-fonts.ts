@@ -38,3 +38,15 @@ export function localeToLangCode(locale: string): LangCode {
   if (lower.startsWith('zh') || lower.startsWith('zh-cn') || lower.startsWith('zh-hans')) return 'zh-CN';
   return 'en';
 }
+
+/** Intl / toLocaleDateString용 BCP 47 태그 */
+export function intlLocaleForLang(lang: LangCode): string {
+  const map: Record<LangCode, string> = {
+    ko: 'ko-KR',
+    en: 'en-US',
+    ja: 'ja-JP',
+    'zh-CN': 'zh-CN',
+    'zh-TW': 'zh-TW',
+  };
+  return map[lang] ?? 'en-US';
+}

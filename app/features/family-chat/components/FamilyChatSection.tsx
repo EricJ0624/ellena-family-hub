@@ -35,6 +35,9 @@ interface FamilyChatSectionProps {
     chat_send: string;
     chat_load_older: string;
     chat_loading_older: string;
+    chat_album_btn: string;
+    chat_camera_btn: string;
+    chat_remove_attachment_aria: string;
     me: string;
     user: string;
   };
@@ -209,7 +212,7 @@ export function FamilyChatSection({
                                 lineHeight: '18px',
                                 padding: 0,
                               }}
-                              aria-label="첨부 삭제"
+                              aria-label={t.chat_remove_attachment_aria}
                             >
                               x
                             </button>
@@ -249,7 +252,7 @@ export function FamilyChatSection({
               cursor: 'pointer',
             }}
           >
-            앨범
+            {t.chat_album_btn}
           </button>
           <button
             type="button"
@@ -264,7 +267,7 @@ export function FamilyChatSection({
               cursor: 'pointer',
             }}
           >
-            카메라
+            {t.chat_camera_btn}
           </button>
           <input
             ref={chatFileInputRef}

@@ -53,6 +53,24 @@ export type DashboardTranslations = {
   piggy_delete_confirm: string;
   piggy_delete_failed: string;
   piggy_travel_fetch_failed: string;
+  piggy_section_admin_title: string;
+  piggy_select_group_prompt: string;
+  piggy_loading_generic: string;
+  /** `{count}` */
+  piggy_pending_requests: string;
+  piggy_no_account_holders: string;
+  piggy_member_no_account_line: string;
+  piggy_add_account_btn: string;
+  piggy_delete_account_btn: string;
+  piggy_wallet_balance_label: string;
+  piggy_bank_balance_label: string;
+  /** `{name}` = 표시 이름 */
+  piggy_wallet_balance_for_name: string;
+  piggy_bank_balance_for_name: string;
+  piggy_empty_ask_admin: string;
+  piggy_request_account_btn: string;
+  /** `{name}` */
+  piggy_card_title: string;
   // Location
   location_my: string;
   location_word: string; // "위치" / "location"
@@ -63,6 +81,9 @@ export type DashboardTranslations = {
   chat_send: string;
   chat_load_older: string;
   chat_loading_older: string;
+  chat_album_btn: string;
+  chat_camera_btn: string;
+  chat_remove_attachment_aria: string;
   map_error_no_key: string;
   map_error_check_env: string;
   map_error_domain: string;
@@ -207,6 +228,8 @@ export type DashboardTranslations = {
   calendar_weekday_6: string;
   calendar_prev_month: string;
   calendar_next_month: string;
+  /** 선택한 날짜 줄 제목. `{date}` = 로케일별 장문 날짜 */
+  calendar_day_events_title: string;
   // Member support (inquiry to group admin)
   member_support_title: string;
   member_support_back_dashboard: string;
@@ -293,6 +316,21 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     piggy_delete_confirm: '이 사용자의 저금통을 삭제하시겠습니까? 잔액 데이터가 삭제됩니다.',
     piggy_delete_failed: '삭제에 실패했습니다.',
     piggy_travel_fetch_failed: '여행 목록 조회 실패',
+    piggy_section_admin_title: 'Piggy Bank 관리',
+    piggy_select_group_prompt: 'Piggy Bank을 보려면 그룹을 선택해 주세요.',
+    piggy_loading_generic: '불러오는 중...',
+    piggy_pending_requests: '저금통 생성 요청 {count}건',
+    piggy_no_account_holders: '저금통을 소유한 사용자가 없습니다.',
+    piggy_member_no_account_line: '저금통을 소유하지 않았습니다',
+    piggy_add_account_btn: '저금통 추가',
+    piggy_delete_account_btn: '저금통 삭제',
+    piggy_wallet_balance_label: '용돈 잔액',
+    piggy_bank_balance_label: '저금통 잔액',
+    piggy_wallet_balance_for_name: '{name} 용돈 잔액',
+    piggy_bank_balance_for_name: '{name} 저금통 잔액',
+    piggy_empty_ask_admin: '저금통이 없습니다. 관리자에게 요청하세요.',
+    piggy_request_account_btn: '저금통 요청',
+    piggy_card_title: '{name} Piggy Bank',
     location_my: '내',
     location_word: '위치',
     location_of: '의 위치',
@@ -302,6 +340,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_send: '전송',
     chat_load_older: '이전 메시지 불러오기',
     chat_loading_older: '불러오는 중…',
+    chat_album_btn: '앨범',
+    chat_camera_btn: '카메라',
+    chat_remove_attachment_aria: '첨부 삭제',
     map_error_no_key: 'Google Maps API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.',
     map_error_check_env: 'Google Maps API 키 설정 오류: Google Cloud Console에서 API 키의 도메인 제한 설정을 확인하고, Maps JavaScript API가 활성화되어 있는지 확인해주세요.',
     map_error_domain: '현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 API 키의 HTTP 리퍼러(웹사이트) 제한에 Vercel 도메인을 추가해주세요.',
@@ -438,6 +479,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '토',
     calendar_prev_month: '이전 달',
     calendar_next_month: '다음 달',
+    calendar_day_events_title: '{date} 일정',
     member_support_title: '관리자에게 문의',
     member_support_back_dashboard: '← 대시보드로',
     member_support_intro:
@@ -523,6 +565,21 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     piggy_delete_confirm: 'Delete this user\'s piggy bank? Balance data will be removed.',
     piggy_delete_failed: 'Delete failed.',
     piggy_travel_fetch_failed: 'Failed to load travel list.',
+    piggy_section_admin_title: 'Manage Piggy Bank',
+    piggy_select_group_prompt: 'Select a group to use Piggy Bank.',
+    piggy_loading_generic: 'Loading…',
+    piggy_pending_requests: 'Piggy bank requests ({count})',
+    piggy_no_account_holders: 'No members have a piggy bank yet.',
+    piggy_member_no_account_line: 'No piggy bank yet',
+    piggy_add_account_btn: 'Add piggy bank',
+    piggy_delete_account_btn: 'Remove piggy bank',
+    piggy_wallet_balance_label: 'Allowance',
+    piggy_bank_balance_label: 'Savings',
+    piggy_wallet_balance_for_name: '{name} — Allowance',
+    piggy_bank_balance_for_name: '{name} — Piggy bank',
+    piggy_empty_ask_admin: 'No piggy bank yet. Ask a group admin to create one.',
+    piggy_request_account_btn: 'Request piggy bank',
+    piggy_card_title: '{name} Piggy Bank',
     location_my: 'My',
     location_word: 'location',
     location_of: '\'s location',
@@ -532,6 +589,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_send: 'Send',
     chat_load_older: 'Load older messages',
     chat_loading_older: 'Loading…',
+    chat_album_btn: 'Gallery',
+    chat_camera_btn: 'Camera',
+    chat_remove_attachment_aria: 'Remove attachment',
     map_error_no_key: 'Google Maps API key is not set. Check your environment variables.',
     map_error_check_env: 'Google Maps API error: Check API key domain restrictions and enable Maps JavaScript API in Google Cloud Console.',
     map_error_domain: 'Google Maps API is not available on this domain. Add your domain to the API key HTTP referrer restrictions in Google Cloud Console.',
@@ -668,6 +728,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: 'Sat',
     calendar_prev_month: 'Previous month',
     calendar_next_month: 'Next month',
+    calendar_day_events_title: 'Events · {date}',
     member_support_title: 'Contact group admin',
     member_support_back_dashboard: '← Back to dashboard',
     member_support_intro:
@@ -753,6 +814,21 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     piggy_delete_confirm: 'このユーザーの貯金箱を削除しますか？残高データも削除されます。',
     piggy_delete_failed: '削除に失敗しました。',
     piggy_travel_fetch_failed: '旅行リストの取得に失敗しました。',
+    piggy_section_admin_title: 'Piggy Bank 管理',
+    piggy_select_group_prompt: 'Piggy Bank を使うにはグループを選択してください。',
+    piggy_loading_generic: '読み込み中…',
+    piggy_pending_requests: '貯金箱作成リクエスト {count} 件',
+    piggy_no_account_holders: '貯金箱を持っているメンバーがいません。',
+    piggy_member_no_account_line: 'まだ貯金箱がありません',
+    piggy_add_account_btn: '貯金箱を追加',
+    piggy_delete_account_btn: '貯金箱を削除',
+    piggy_wallet_balance_label: 'おこづかい残高',
+    piggy_bank_balance_label: '貯金箱残高',
+    piggy_wallet_balance_for_name: '{name} のおこづかい残高',
+    piggy_bank_balance_for_name: '{name} の貯金箱残高',
+    piggy_empty_ask_admin: '貯金箱がありません。管理者に依頼してください。',
+    piggy_request_account_btn: '貯金箱をリクエスト',
+    piggy_card_title: '{name} の Piggy Bank',
     location_my: '自分の',
     location_word: '位置',
     location_of: 'の位置',
@@ -762,6 +838,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_send: '送信',
     chat_load_older: '過去のメッセージを読み込む',
     chat_loading_older: '読み込み中…',
+    chat_album_btn: 'アルバム',
+    chat_camera_btn: 'カメラ',
+    chat_remove_attachment_aria: '添付を削除',
     map_error_no_key: 'Google Maps APIキーが設定されていません。環境変数を確認してください。',
     map_error_check_env: 'Google Maps APIエラー: Google Cloud ConsoleでAPIキーの制限とMaps JavaScript APIの有効化を確認してください。',
     map_error_domain: 'このドメインではGoogle Maps APIを使用できません。Google Cloud ConsoleでAPIキーのHTTPリファラ制限にドメインを追加してください。',
@@ -898,6 +977,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '土',
     calendar_prev_month: '前月',
     calendar_next_month: '翌月',
+    calendar_day_events_title: '{date}の予定',
     member_support_title: '管理者へのお問い合わせ',
     member_support_back_dashboard: '← ダッシュボードへ',
     member_support_intro:
@@ -983,6 +1063,21 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     piggy_delete_confirm: '确定删除该用户的存钱罐？余额数据将被删除。',
     piggy_delete_failed: '删除失败。',
     piggy_travel_fetch_failed: '获取旅行列表失败。',
+    piggy_section_admin_title: 'Piggy Bank 管理',
+    piggy_select_group_prompt: '请先选择群组以使用 Piggy Bank。',
+    piggy_loading_generic: '加载中…',
+    piggy_pending_requests: '存钱罐创建申请 {count} 条',
+    piggy_no_account_holders: '还没有成员拥有存钱罐。',
+    piggy_member_no_account_line: '尚未开通存钱罐',
+    piggy_add_account_btn: '添加存钱罐',
+    piggy_delete_account_btn: '删除存钱罐',
+    piggy_wallet_balance_label: '零花钱余额',
+    piggy_bank_balance_label: '存钱罐余额',
+    piggy_wallet_balance_for_name: '{name} 零花钱余额',
+    piggy_bank_balance_for_name: '{name} 存钱罐余额',
+    piggy_empty_ask_admin: '还没有存钱罐。请联系管理员创建。',
+    piggy_request_account_btn: '申请存钱罐',
+    piggy_card_title: '{name} 的 Piggy Bank',
     location_my: '我的',
     location_word: '位置',
     location_of: '的位置',
@@ -992,6 +1087,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_send: '发送',
     chat_load_older: '加载更早的消息',
     chat_loading_older: '加载中…',
+    chat_album_btn: '相册',
+    chat_camera_btn: '相机',
+    chat_remove_attachment_aria: '删除附件',
     map_error_no_key: '未设置 Google Maps API 密钥。请检查环境变量。',
     map_error_check_env: 'Google Maps API 错误：请在 Google Cloud Console 中检查 API 密钥限制并启用 Maps JavaScript API。',
     map_error_domain: '当前域名无法使用 Google Maps API。请在 Google Cloud Console 的 API 密钥 HTTP 引荐来源限制中添加域名。',
@@ -1127,6 +1225,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '六',
     calendar_prev_month: '上月',
     calendar_next_month: '下月',
+    calendar_day_events_title: '{date} 的日程',
     member_support_title: '联系群组管理员',
     member_support_back_dashboard: '← 返回控制面板',
     member_support_intro:
@@ -1211,6 +1310,21 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     piggy_delete_confirm: '確定刪除該使用者的存錢筒？餘額資料將被刪除。',
     piggy_delete_failed: '刪除失敗。',
     piggy_travel_fetch_failed: '取得旅行清單失敗。',
+    piggy_section_admin_title: 'Piggy Bank 管理',
+    piggy_select_group_prompt: '請先選擇群組以使用 Piggy Bank。',
+    piggy_loading_generic: '載入中…',
+    piggy_pending_requests: '存錢筒建立申請 {count} 筆',
+    piggy_no_account_holders: '尚無成員擁有存錢筒。',
+    piggy_member_no_account_line: '尚未開通存錢筒',
+    piggy_add_account_btn: '新增存錢筒',
+    piggy_delete_account_btn: '刪除存錢筒',
+    piggy_wallet_balance_label: '零用錢餘額',
+    piggy_bank_balance_label: '存錢筒餘額',
+    piggy_wallet_balance_for_name: '{name} 零用錢餘額',
+    piggy_bank_balance_for_name: '{name} 存錢筒餘額',
+    piggy_empty_ask_admin: '尚無存錢筒。請向管理員申請開通。',
+    piggy_request_account_btn: '申請存錢筒',
+    piggy_card_title: '{name} 的 Piggy Bank',
     location_my: '我的',
     location_word: '位置',
     location_of: '的位置',
@@ -1220,6 +1334,9 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_send: '傳送',
     chat_load_older: '載入更早的訊息',
     chat_loading_older: '載入中…',
+    chat_album_btn: '相簿',
+    chat_camera_btn: '相機',
+    chat_remove_attachment_aria: '移除附件',
     map_error_no_key: '未設定 Google Maps API 金鑰。請檢查環境變數。',
     map_error_check_env: 'Google Maps API 錯誤：請在 Google Cloud Console 中檢查 API 金鑰限制並啟用 Maps JavaScript API。',
     map_error_domain: '目前網域無法使用 Google Maps API。請在 Google Cloud Console 的 API 金鑰 HTTP 參照限制中新增網域。',
@@ -1355,6 +1472,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     calendar_weekday_6: '六',
     calendar_prev_month: '上月',
     calendar_next_month: '下月',
+    calendar_day_events_title: '{date} 的行程',
     member_support_title: '聯絡群組管理員',
     member_support_back_dashboard: '← 返回控制台',
     member_support_intro:

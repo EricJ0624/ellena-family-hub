@@ -26,6 +26,10 @@ export type TravelTranslations = {
   no_accommodation: string;
   no_dining: string;
   select_or_add_trip: string;
+  /** 대시보드 카드 빈 상태 안내 */
+  dashboard_card_empty: string;
+  dashboard_select_group: string;
+  dashboard_trips_loading: string;
   add_trip: string;
   edit_trip: string;
   label_title: string;
@@ -180,6 +184,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     no_accommodation: '등록된 숙소가 없습니다.',
     no_dining: '등록된 먹거리가 없습니다.',
     select_or_add_trip: '대시보드에서 여행을 선택하거나 여행을 추가해 주세요.',
+    dashboard_card_empty: '여행 일정과 경비를 함께 관리해 보세요. 여행을 추가해 보세요.',
+    dashboard_select_group: '여행 플래너를 보려면 그룹을 선택해 주세요.',
+    dashboard_trips_loading: '여행 목록 불러오는 중...',
     add_trip: '여행 추가',
     edit_trip: '여행 수정',
     label_title: '제목 *',
@@ -333,6 +340,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     no_accommodation: 'No accommodations yet.',
     no_dining: 'No dining yet.',
     select_or_add_trip: 'Select a trip from the dashboard or add a new one.',
+    dashboard_card_empty: 'Plan trips and track expenses together. Add a trip to get started.',
+    dashboard_select_group: 'Select a group to use the travel planner.',
+    dashboard_trips_loading: 'Loading trips…',
     add_trip: 'Add trip',
     edit_trip: 'Edit trip',
     label_title: 'Title *',
@@ -486,6 +496,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     no_accommodation: '宿泊がありません。',
     no_dining: '食事がありません。',
     select_or_add_trip: 'ダッシュボードで旅行を選択するか、追加してください。',
+    dashboard_card_empty: '旅行の日程と支出を一緒に管理しましょう。旅行を追加してみてください。',
+    dashboard_select_group: '旅行プランナーを使うにはグループを選択してください。',
+    dashboard_trips_loading: '旅行一覧を読み込み中…',
     add_trip: '旅行を追加',
     edit_trip: '旅行を編集',
     label_title: 'タイトル *',
@@ -639,6 +652,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     no_accommodation: '暂无住宿。',
     no_dining: '暂无餐饮。',
     select_or_add_trip: '请在仪表盘选择旅行或添加新旅行。',
+    dashboard_card_empty: '一起管理行程与开销。试试添加一次旅行。',
+    dashboard_select_group: '请选择群组以使用旅行计划。',
+    dashboard_trips_loading: '正在加载旅行列表…',
     add_trip: '添加旅行',
     edit_trip: '编辑旅行',
     label_title: '标题 *',
@@ -792,6 +808,9 @@ const travel: Record<LangCode, TravelTranslations> = {
     no_accommodation: '尚無住宿。',
     no_dining: '尚無餐飲。',
     select_or_add_trip: '請在儀表板選擇旅行或新增旅行。',
+    dashboard_card_empty: '一起管理行程與花費。試著新增一筆旅行。',
+    dashboard_select_group: '請選擇群組以使用旅行計畫。',
+    dashboard_trips_loading: '正在載入旅行清單…',
     add_trip: '新增旅行',
     edit_trip: '編輯旅行',
     label_title: '標題 *',

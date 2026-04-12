@@ -21,6 +21,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
+import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
@@ -213,6 +214,7 @@ export default function FamilyHub() {
     [album]
   );
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
+  const tt = (key: keyof TravelTranslations) => getTravelTranslation(lang, key);
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
   const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
   const bodyFont = useMemo(() => getFontStyle(lang, 'body'), [lang]);
@@ -6087,6 +6089,7 @@ export default function FamilyHub() {
               calendar_thu: dt('calendar_weekday_4'),
               calendar_fri: dt('calendar_weekday_5'),
               calendar_sat: dt('calendar_weekday_6'),
+              calendar_day_events_title: dt('calendar_day_events_title'),
               event_add_title: dt('event_add_title'),
               event_title_label: dt('event_title_label'),
               event_title_placeholder: dt('event_title_placeholder'),
@@ -6150,6 +6153,9 @@ export default function FamilyHub() {
               chat_send: dt('chat_send'),
               chat_load_older: dt('chat_load_older'),
               chat_loading_older: dt('chat_loading_older'),
+              chat_album_btn: dt('chat_album_btn'),
+              chat_camera_btn: dt('chat_camera_btn'),
+              chat_remove_attachment_aria: dt('chat_remove_attachment_aria'),
               me: ct('me'),
               user: ct('user'),
             }}
@@ -6158,7 +6164,7 @@ export default function FamilyHub() {
           {/* 가족 여행 플래너 Section */}
           <section className="content-section">
             <div className="section-header">
-              <h3 className="section-title">가족 여행 플래너</h3>
+              <h3 className="section-title">{tt('title')}</h3>
               {currentGroupId && (
                 <button
                   onClick={() => router.push('/travel?openAdd=1')}
@@ -6176,17 +6182,17 @@ export default function FamilyHub() {
                   }}
                 >
                   <Plus style={{ width: 16, height: 16 }} />
-                  여행추가
+                  {tt('add_trip')}
                 </button>
               )}
             </div>
             <div className="section-body">
               {!currentGroupId ? (
                 <div style={{ fontSize: '13px', color: '#64748b' }}>
-                  여행 플래너를 보려면 그룹을 선택해 주세요.
+                  {tt('dashboard_select_group')}
                 </div>
               ) : travelTripsLoading ? (
-                <div style={{ fontSize: '13px', color: '#64748b' }}>여행 목록 불러오는 중...</div>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>{tt('dashboard_trips_loading')}</div>
               ) : travelTrips.length === 0 ? (
                 <div
                   style={{
@@ -6196,7 +6202,7 @@ export default function FamilyHub() {
                     wordBreak: 'keep-all',
                   }}
                 >
-                  여행 일정과 경비를 함께 관리해 보세요. 여행을 추가해 보세요.
+                  {tt('dashboard_card_empty')}
                 </div>
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -6228,8 +6234,11 @@ export default function FamilyHub() {
             <div className="section-header">
               <h3 className="section-title">
                 {piggyMemberPiggies !== null
-                  ? 'Piggy Bank 관리'
-                  : `${piggySummary?.ownerNickname || 'Ellena'} Piggy Bank`}
+                  ? dt('piggy_section_admin_title')
+                  : dt('piggy_card_title').replace(
+                      /\{name\}/g,
+                      piggySummary?.ownerNickname?.trim() || 'Ellena',
+                    )}
               </h3>
               {currentGroupId && (
                 <button
@@ -6255,7 +6264,7 @@ export default function FamilyHub() {
             <div className="section-body">
               {!currentGroupId ? (
                 <div style={{ fontSize: '13px', color: '#64748b' }}>
-                  Piggy Bank을 보려면 그룹을 선택해 주세요.
+                  {dt('piggy_select_group_prompt')}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '10px' }}>
@@ -6265,7 +6274,7 @@ export default function FamilyHub() {
                     </div>
                   )}
                   {!piggyLoaded ? (
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>불러오는 중...</div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>{dt('piggy_loading_generic')}</div>
                   ) : piggyMemberPiggies !== null ? (
                     /* 관리자: 저금통 요청 리스트 + 멤버별 카드 (또는 저금통 없음 안내) */
                     (() => {
@@ -6274,7 +6283,9 @@ export default function FamilyHub() {
                         <div style={{ display: 'grid', gap: '12px' }}>
                           {pendingAccountRequests.length > 0 && (
                             <div style={{ backgroundColor: '#fef3c7', borderRadius: '12px', padding: '12px', border: '1px solid #fcd34d', marginBottom: '4px' }}>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>저금통 생성 요청 {pendingAccountRequests.length}건</div>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>
+                                {dt('piggy_pending_requests').replace(/\{count\}/g, String(pendingAccountRequests.length))}
+                              </div>
                               {pendingAccountRequests.map((req) => (
                                 <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #fde68a' }}>
                                   <span style={{ fontSize: '13px', color: '#78350f' }}>{req.nickname || ct('member')}</span>
@@ -6288,7 +6299,7 @@ export default function FamilyHub() {
                           )}
                           {!hasAnyAccount && piggyMemberPiggies.length === 0 && (
                             <div style={{ fontSize: '14px', color: '#64748b', padding: '12px', textAlign: 'center' }}>
-                              저금통을 소유한 사용자가 없습니다.
+                              {dt('piggy_no_account_holders')}
                             </div>
                           )}
                           {piggyMemberPiggies.map((p) =>
@@ -6309,7 +6320,7 @@ export default function FamilyHub() {
                               >
                                 <div>
                                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>{p.ownerNickname || ct('member')}</div>
-                                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>저금통을 소유하지 않았습니다</div>
+                                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>{dt('piggy_member_no_account_line')}</div>
                                 </div>
                                 <button
                                   type="button"
@@ -6324,7 +6335,7 @@ export default function FamilyHub() {
                                     cursor: 'pointer',
                                   }}
                                 >
-                                  저금통 추가
+                                  {dt('piggy_add_account_btn')}
                                 </button>
                               </div>
                             ) : (
@@ -6353,22 +6364,22 @@ export default function FamilyHub() {
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                                   <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
-                                    {p.ownerNickname || 'Ellena'} Piggy Bank
+                                    {dt('piggy_card_title').replace(/\{name\}/g, p.ownerNickname?.trim() || 'Ellena')}
                                   </h4>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-                                    <button type="button" onClick={() => p.user_id && handleDashboardDeletePiggy(p.user_id)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>저금통 삭제</button>
+                                    <button type="button" onClick={() => p.user_id && handleDashboardDeletePiggy(p.user_id)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>{dt('piggy_delete_account_btn')}</button>
                                     <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
                                   </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                   <div style={{ backgroundColor: '#fef2f2', borderRadius: '8px', padding: '10px', border: '1px solid #fecaca' }}>
-                                    <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>용돈 잔액</div>
+                                    <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>{dt('piggy_wallet_balance_label')}</div>
                                     <div style={{ fontSize: '16px', fontWeight: 700, color: '#b91c1c' }}>
                                       {formatDashboardPiggy(p.walletBalance ?? 0, p.currency)}
                                     </div>
                                   </div>
                                   <div style={{ backgroundColor: '#fff7ed', borderRadius: '8px', padding: '10px', border: '1px solid #fed7aa' }}>
-                                    <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>저금통 잔액</div>
+                                    <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>{dt('piggy_bank_balance_label')}</div>
                                     <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>
                                       {formatDashboardPiggy(p.balance ?? 0, p.currency)}
                                     </div>
@@ -6384,13 +6395,13 @@ export default function FamilyHub() {
                     /* 일반 사용자: 저금통 있음 — 잔고 표시 (0 포함) */
                     <div style={{ display: 'grid', gap: '10px' }}>
                       <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
-                        <div style={{ fontSize: '12px', color: '#b91c1c' }}>{piggyLabel} 용돈 잔액</div>
+                        <div style={{ fontSize: '12px', color: '#b91c1c' }}>{dt('piggy_wallet_balance_for_name').replace(/\{name\}/g, piggyLabel)}</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
                           {formatDashboardPiggy(piggySummary.walletBalance, piggySummary.currency)}
                         </div>
                       </div>
                       <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
-                        <div style={{ fontSize: '12px', color: '#9a3412' }}>{piggyLabel} 저금통 잔액</div>
+                        <div style={{ fontSize: '12px', color: '#9a3412' }}>{dt('piggy_bank_balance_for_name').replace(/\{name\}/g, piggyLabel)}</div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
                           {formatDashboardPiggy(piggySummary.bankBalance, piggySummary.currency)}
                         </div>
@@ -6400,7 +6411,7 @@ export default function FamilyHub() {
                     /* 일반 사용자: 저금통 없음 */
                     <div style={{ padding: '16px', textAlign: 'center' }}>
                       <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
-                        저금통이 없습니다. 관리자에게 요청하세요.
+                        {dt('piggy_empty_ask_admin')}
                       </div>
                       <button
                         type="button"
@@ -6415,7 +6426,7 @@ export default function FamilyHub() {
                           cursor: 'pointer',
                         }}
                       >
-                        저금통 요청
+                        {dt('piggy_request_account_btn')}
                       </button>
                     </div>
                   )}

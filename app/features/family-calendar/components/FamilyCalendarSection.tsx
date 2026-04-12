@@ -9,6 +9,8 @@ import { Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 import type { FamilyEvent } from '../types';
 import { useFamilyCalendar } from '../hooks/useFamilyCalendar';
+import type { LangCode } from '@/lib/language-fonts';
+import { intlLocaleForLang } from '@/lib/language-fonts';
 
 interface FamilyCalendarSectionProps {
   events: FamilyEvent[];
@@ -38,6 +40,7 @@ interface FamilyCalendarSectionProps {
     calendar_thu: string;
     calendar_fri: string;
     calendar_sat: string;
+    calendar_day_events_title: string;
     event_add_title: string;
     event_title_label: string;
     event_title_placeholder: string;
@@ -81,6 +84,12 @@ export function FamilyCalendarSection({
   lang,
   translations: t,
 }: FamilyCalendarSectionProps) {
+  const intlLocale = intlLocaleForLang(lang as LangCode);
+  const formatMonthYear = (y: number, mZeroBased: number) =>
+    new Date(y, mZeroBased, 1).toLocaleDateString(intlLocale, { year: 'numeric', month: 'long' });
+  const formatLongDate = (d: Date) =>
+    d.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' });
+
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -308,7 +317,7 @@ export function FamilyCalendarSection({
             <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '20px', fontWeight: '600' }}>{t.event_add_title}</h3>
             {eventFormDate && (
               <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b' }}>
-                {eventFormDate.getFullYear()}년 {eventFormDate.getMonth() + 1}월 {eventFormDate.getDate()}일
+                {formatLongDate(eventFormDate)}
               </p>
             )}
 
@@ -454,7 +463,7 @@ export function FamilyCalendarSection({
               }}
             >
               <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>
-                {calendarGrid.year}년 {calendarGrid.month + 1}월
+                {formatMonthYear(calendarGrid.year, calendarGrid.month)}
               </h4>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -642,7 +651,7 @@ export function FamilyCalendarSection({
                 >
                   <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CalendarDays style={{ width: '20px', height: '20px', color: '#7c3aed' }} />
-                    {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 일정
+                    {t.calendar_day_events_title.replace(/\{date\}/g, formatLongDate(selectedDate))}
                   </h4>
                   <button
                     type="button"
