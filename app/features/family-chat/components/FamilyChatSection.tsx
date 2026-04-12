@@ -5,6 +5,9 @@
 'use client';
 
 import React, { useRef } from 'react';
+
+/** 헤더에서 제목 오른쪽에 붙는 장식 이모지 (디자인 변경 시 이 값만 조정) */
+export const FAMILY_CHAT_HEADER_DECOR_EMOJI = '💬' as const;
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import type { ChatUiMessage } from '../types';
 
@@ -31,6 +34,8 @@ interface FamilyChatSectionProps {
   lang: any;
   translations: {
     section_title_chat: string;
+    section_chat_bubble_greeting: string;
+    section_chat_decor_aria: string;
     chat_placeholder: string;
     chat_send: string;
     chat_load_older: string;
@@ -84,7 +89,52 @@ export function FamilyChatSection({
   return (
     <section className="content-section">
       <div className="section-header">
-        <h3 className="section-title">{t.section_title_chat}</h3>
+        <h3 className="section-title" style={{ margin: 0 }}>
+          {t.section_title_chat}
+        </h3>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 'clamp(6px, 1.5vw, 10px)',
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              background: 'linear-gradient(180deg, #fde68a 0%, #facc15 100%)',
+              border: '2px solid #0f172a',
+              borderRadius: '14px',
+              padding: '5px 12px 6px',
+              fontSize: 'clamp(10px, 2.4vw, 13px)',
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              color: '#ea580c',
+              lineHeight: 1.15,
+              boxShadow: '3px 3px 0 rgba(15, 23, 42, 0.12)',
+              maxWidth: 'min(42vw, 200px)',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {t.section_chat_bubble_greeting}
+          </div>
+          <span
+            role="img"
+            aria-label={t.section_chat_decor_aria}
+            style={{
+              fontSize: 'clamp(1.2rem, 3.5vw, 1.65rem)',
+              lineHeight: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            {FAMILY_CHAT_HEADER_DECOR_EMOJI}
+          </span>
+        </div>
       </div>
       <div className="section-body">
         <div ref={chatBoxRef} className="chat-messages">

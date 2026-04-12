@@ -6184,6 +6184,8 @@ export default function FamilyHub() {
             lang={lang}
             translations={{
               section_title_chat: dt('section_title_chat'),
+              section_chat_bubble_greeting: dt('section_chat_bubble_greeting'),
+              section_chat_decor_aria: dt('section_chat_decor_aria'),
               chat_placeholder: dt('chat_placeholder'),
               chat_send: dt('chat_send'),
               chat_load_older: dt('chat_load_older'),
