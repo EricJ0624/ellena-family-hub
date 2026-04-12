@@ -9,8 +9,8 @@ import Image from 'next/image';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import type { ChatUiMessage } from '../types';
 
-/** `public/images` 기준 말풍선 일러스트 (교체 시 파일명만 맞추면 됨) */
-export const FAMILY_CHAT_BUBBLE_IMAGE_SRC = '/images/family-chat-hello-bubble.png' as const;
+/** `public/images` 기준 말풍선 일러스트 — WebP 리사이즈본(용량 소) */
+export const FAMILY_CHAT_BUBBLE_IMAGE_SRC = '/images/family-chat-hello-bubble.webp' as const;
 
 /** 헤더 말풍선 박스 크기 — 한곳에서 조절 */
 export const FAMILY_CHAT_BUBBLE_LAYOUT = {
