@@ -94,8 +94,16 @@ export function FamilyChatSection({
 
   return (
     <section className="content-section">
-      <div className="section-header">
-        <h3 className="section-title" style={{ margin: 0 }}>
+      <div
+        className="section-header"
+        style={{
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+          gap: 'clamp(2px, 1.2vw, 8px)',
+          columnGap: '6px',
+        }}
+      >
+        <h3 className="section-title" style={{ margin: 0, flexShrink: 0 }}>
           {t.section_title_chat}
         </h3>
         <div
@@ -104,6 +112,8 @@ export function FamilyChatSection({
             flexShrink: 0,
             width: FAMILY_CHAT_BUBBLE_LAYOUT.width,
             height: FAMILY_CHAT_BUBBLE_LAYOUT.height,
+            marginLeft: '-4px',
+            transform: 'translateY(-14px)',
           }}
         >
           <Image
@@ -118,15 +128,18 @@ export function FamilyChatSection({
             style={{
               position: 'absolute',
               left: '50%',
-              top: '44%',
+              top: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '58%',
+              width: '82%',
               maxWidth: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               textAlign: 'center',
-              fontSize: 'clamp(8px, 2.1vw, 12px)',
+              fontSize: 'clamp(11px, 3.4vw, 17px)',
               fontWeight: 900,
-              letterSpacing: '0.05em',
-              lineHeight: 1.05,
+              letterSpacing: '0.04em',
+              lineHeight: 1,
               color: '#ea580c',
               textShadow:
                 '1.5px 0 0 #0f172a, -1.5px 0 0 #0f172a, 0 1.5px 0 #0f172a, 0 -1.5px 0 #0f172a, 2px 2px 0 rgba(15,23,42,0.2)',
