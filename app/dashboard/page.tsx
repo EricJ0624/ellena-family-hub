@@ -1210,13 +1210,14 @@ export default function FamilyHub() {
     const MIN_FS = 14;
     const cancelled = { current: false };
     let ro: ResizeObserver | null = null;
-    let rafId: number = 0;
+    let tryRunRafId = 0;
+    let measureRafId = 0;
     const timeouts: (ReturnType<typeof setTimeout> | (() => void))[] = [];
 
-    const fit = (el: HTMLHeadingElement) => {
+    /** flex basis 0% 등으로 h1.clientWidth가 0이어도, 행·형제 너비로 가용 폭을 구할 수 있음 */
+    const computeAvailableTitleWidth = (el: HTMLHeadingElement): number => {
       const row = dashboardTitleRowRef.current;
-      let w = el.clientWidth;
-      if (row) {
+      if (row && row.clientWidth > 0) {
         const rowStyle = getComputedStyle(row);
         const gapPx = parseFloat(rowStyle.columnGap || rowStyle.gap || '12') || 12;
         let usedBySiblings = 0;
@@ -1225,8 +1226,14 @@ export default function FamilyHub() {
         }
         const gapTotal = Math.max(0, row.children.length - 1) * gapPx;
         const fromRow = Math.floor(row.clientWidth - usedBySiblings - gapTotal);
-        if (fromRow > 0) w = fromRow;
+        if (fromRow > 0) return fromRow;
       }
+      return el.clientWidth;
+    };
+
+    const fit = (el: HTMLHeadingElement) => {
+      if (cancelled.current) return;
+      const w = computeAvailableTitleWidth(el);
       if (w <= 0) return;
       let fs = MAX_FS;
       el.style.fontSize = `${fs}px`;
@@ -1237,12 +1244,12 @@ export default function FamilyHub() {
         el.style.fontSize = `${fs}px`;
         void el.offsetHeight;
       }
-      setFittedTitleFontSize(fs);
+      if (!cancelled.current) setFittedTitleFontSize(fs);
     };
 
     const runFit = (el: HTMLHeadingElement) => {
       if (cancelled.current) return;
-      const w = el.clientWidth;
+      const w = computeAvailableTitleWidth(el);
       if (w > 0) {
         fit(el);
       } else {
@@ -1261,9 +1268,12 @@ export default function FamilyHub() {
     };
 
     const run = (el: HTMLHeadingElement) => {
-      const runFitForEl = () => runFit(el);
+      const runFitForEl = () => {
+        if (cancelled.current) return;
+        runFit(el);
+      };
       runFitForEl();
-      requestAnimationFrame(runFitForEl);
+      measureRafId = requestAnimationFrame(runFitForEl);
       timeouts.push(setTimeout(runFitForEl, 0));
       ro = new ResizeObserver(runFitForEl);
       ro.observe(el);
@@ -1272,6 +1282,7 @@ export default function FamilyHub() {
       if (rowEl) ro.observe(rowEl);
       // 폰트 로드 직후·늦은 로드 대비: ready 후 추가 재실행 + 보험용 늦은 한 번 더
       document.fonts.ready.then(() => {
+        if (cancelled.current) return;
         runFitForEl();
         timeouts.push(setTimeout(runFitForEl, 500));
         timeouts.push(setTimeout(runFitForEl, 1500));
@@ -1304,7 +1315,7 @@ export default function FamilyHub() {
       }
       // ref 미착근 시 재시도 횟수 확대 (느린 마운트·조건부 렌더 대응)
       if (retryCount < 50) {
-        rafId = requestAnimationFrame(() => tryRun(retryCount + 1));
+        tryRunRafId = requestAnimationFrame(() => tryRun(retryCount + 1));
       }
     };
 
@@ -1312,7 +1323,8 @@ export default function FamilyHub() {
 
     return () => {
       cancelled.current = true;
-      cancelAnimationFrame(rafId);
+      cancelAnimationFrame(tryRunRafId);
+      cancelAnimationFrame(measureRafId);
       ro?.disconnect();
       timeouts.forEach((t) => {
         if (typeof t === 'function') (t as () => void)();
