@@ -121,6 +121,10 @@ export type DashboardTranslations = {
   delete_warning_owner_deleted: string;
   delete_warning_owner_final: string;
   section_title_memories: string;
+  /** 대시보드 앨범 위젯: 전체보기 버튼 */
+  album_view_all: string;
+  /** 대시보드 앨범 위젯: 숨은 사진 수 `{count}` */
+  album_more_photos: string;
   section_title_chat: string;
   /** 가족 채팅 헤더 말풍선 안 짧은 인사 (언어별) */
   section_chat_bubble_greeting: string;
@@ -378,6 +382,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_deleted: '⚠️ 삭제되는 내용:\n• 소유한 그룹이 영구적으로 삭제됩니다\n• 그룹의 모든 데이터가 삭제됩니다 (사진, 일정, 메모, 저금통 등)\n• 그룹의 모든 멤버가 자동으로 탈퇴됩니다\n• 이 작업은 되돌릴 수 없습니다',
     delete_warning_owner_final: '정말로 탈퇴하시겠습니까?',
     section_title_memories: '가족 앨범',
+    album_view_all: '전체보기',
+    album_more_photos: '+{count}장 더보기',
     section_title_chat: '가족 채팅',
     section_chat_bubble_greeting: '안녕!',
     section_title_location: '가족 위치',
@@ -628,6 +634,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_deleted: '⚠️ What will be deleted:\n• Groups you own will be permanently deleted\n• All group data will be deleted (photos, events, notes, piggy bank, etc.)\n• All group members will be removed\n• This cannot be undone',
     delete_warning_owner_final: 'Do you really want to delete your account?',
     section_title_memories: 'Family Memories',
+    album_view_all: 'View all',
+    album_more_photos: '+{count} more',
     section_title_chat: 'Family Chat',
     section_chat_bubble_greeting: 'HELLO!',
     section_title_location: 'Family Location',
@@ -878,6 +886,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_deleted: '⚠️ 削除される内容：\n• 所有しているグループは完全に削除されます\n• グループのすべてのデータが削除されます（写真、予定、メモ、貯金箱など）\n• グループの全メンバーが自動的に退会します\n• この操作は元に戻せません',
     delete_warning_owner_final: '本当に退会しますか？',
     section_title_memories: '家族アルバム',
+    album_view_all: 'すべて表示',
+    album_more_photos: 'あと{count}枚',
     section_title_chat: '家族チャット',
     section_chat_bubble_greeting: 'こんにちは！',
     section_title_location: '家族の位置',
@@ -1128,6 +1138,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_deleted: '⚠️ 将被删除的内容：\n• 您拥有的群组将被永久删除\n• 群组所有数据将被删除（照片、日程、笔记、存钱罐等）\n• 群组所有成员将被移除\n• 此操作无法撤销',
     delete_warning_owner_final: '确定要注销账户吗？',
     section_title_memories: '家庭相册',
+    album_view_all: '查看全部',
+    album_more_photos: '还有{count}张',
     section_title_chat: '家庭聊天',
     section_chat_bubble_greeting: '你好！',
     section_title_location: '家庭位置',
@@ -1376,6 +1388,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     delete_warning_owner_deleted: '⚠️ 將被刪除的內容：\n• 您擁有的群組將被永久刪除\n• 群組所有資料將被刪除（照片、日程、筆記、存錢筒等）\n• 群組所有成員將被移除\n• 此操作無法復原',
     delete_warning_owner_final: '確定要刪除帳戶嗎？',
     section_title_memories: '家庭相簿',
+    album_view_all: '查看全部',
+    album_more_photos: '還有{count}張',
     section_title_chat: '家庭聊天',
     section_chat_bubble_greeting: '你好！',
     section_title_location: '家庭位置',

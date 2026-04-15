@@ -6,37 +6,7 @@
 'use client';
 
 import React from 'react';
-
-interface PiggySummary {
-  name: string;
-  walletBalance: number;
-  bankBalance: number;
-  currency: string;
-  ownerNickname?: string | null;
-}
-
-interface PiggyMember {
-  user_id: string;
-  ownerNickname: string | null;
-  noAccount: true;
-}
-
-interface PiggyAccount extends Omit<PiggyMember, 'noAccount'> {
-  id: string;
-  name: string;
-  balance: number;
-  walletBalance?: number;
-  currency: string;
-  noAccount: false;
-}
-
-type PiggyMemberOrAccount = PiggyMember | PiggyAccount;
-
-interface AccountRequest {
-  id: string;
-  user_id: string;
-  nickname: string | null;
-}
+import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '../types';
 
 interface PiggyBankSectionProps {
   currentGroupId: string | null;

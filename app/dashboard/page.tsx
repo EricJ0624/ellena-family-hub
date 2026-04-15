@@ -6275,10 +6275,10 @@ export default function FamilyHub() {
             onViewAllClick={() => router.push('/memories')}
             maxPhotos={9}
             translations={{
-              section_title: dt('section_title_album') || '가족 앨범',
-              view_all: dt('view_all_photos') || '전체보기',
-              empty_state: dt('album_empty_state') || '아직 사진이 없습니다',
-              photos_count: dt('photos_more_count') || '+{count}장 더보기',
+              section_title: dt('section_title_memories'),
+              view_all: dt('album_view_all'),
+              empty_state: dt('photo_upload_prompt'),
+              photos_count: dt('album_more_photos'),
             }}
           />
 

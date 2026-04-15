@@ -6,7 +6,7 @@ export interface PiggySummary {
   name: string;
   walletBalance: number;
   bankBalance: number;
-  currency: string;
+  currency?: string;
   ownerNickname?: string | null;
 }
 
@@ -16,12 +16,13 @@ export interface PiggyMember {
   noAccount: true;
 }
 
-export interface PiggyAccount extends Omit<PiggyMember, 'noAccount'> {
+export interface PiggyAccount extends Omit<PiggyMember, 'noAccount' | 'user_id'> {
   id: string;
+  user_id: string | null;
   name: string;
   balance: number;
   walletBalance?: number;
-  currency: string;
+  currency?: string;
   noAccount: false;
 }
 
