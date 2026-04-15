@@ -54,6 +54,9 @@ import type { FamilyEvent } from '@/app/features/family-calendar/types';
 import { FamilyChatSection } from '@/app/features/family-chat/components/FamilyChatSection';
 import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
 import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
+import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
+import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
+import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -6206,315 +6209,78 @@ export default function FamilyHub() {
           />
 
           {/* 가족 여행 플래너 Section */}
-          <section className="content-section">
-            <div
-              className="section-header"
-              style={{ columnGap: travelPlannerHeaderDecorTheme.slotGap }}
-            >
-              <h3 className="section-title" style={{ margin: 0, flexShrink: 0 }}>
-                {tt('title')}
-              </h3>
-              <div
-                aria-hidden
-                style={{
-                  flex: '1 1 0%',
-                  minWidth: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingLeft: travelPlannerHeaderDecorTheme.slotGap,
-                  paddingRight: travelPlannerHeaderDecorTheme.slotGap,
-                }}
-              >
-                <div
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    maxWidth: travelPlannerHeaderDecorTheme.frameMaxWidth,
-                    height: travelPlannerHeaderDecorTheme.frameHeight,
-                  }}
-                >
-                  <Image
-                    src={travelPlannerHeaderDecorTheme.imageSrc}
-                    alt=""
-                    fill
-                    sizes="(max-width: 768px) 55vw, 320px"
-                    style={{ objectFit: 'contain', objectPosition: 'center' }}
-                  />
-                </div>
-              </div>
-              <div style={{ flexShrink: 0, minWidth: currentGroupId ? undefined : 0 }}>
-                {currentGroupId ? (
-                  <button
-                    type="button"
-                    onClick={() => router.push('/travel?openAdd=1')}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      backgroundColor: '#9333ea',
-                      color: '#fff',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Plus style={{ width: 16, height: 16 }} />
-                    {tt('add_trip')}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-            <div className="section-body">
-              {!currentGroupId ? (
-                <div style={{ fontSize: '13px', color: '#64748b' }}>
-                  {tt('dashboard_select_group')}
-                </div>
-              ) : travelTripsLoading ? (
-                <div style={{ fontSize: '13px', color: '#64748b' }}>{tt('dashboard_trips_loading')}</div>
-              ) : travelTrips.length === 0 ? (
-                <div
-                  style={{
-                    fontSize: '13px',
-                    color: '#475569',
-                    lineHeight: '1.6',
-                    wordBreak: 'keep-all',
-                  }}
-                >
-                  {tt('dashboard_card_empty')}
-                </div>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {travelTrips.map((t) => (
-                    <li
-                      key={t.id}
-                      onClick={() => router.push(`/travel?tripId=${t.id}`)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        marginBottom: '6px',
-                        border: '1px solid #e2e8f0',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        color: '#1e293b',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600 }}>{t.title}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{t.start_date} ~ {t.end_date}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
+          <TravelPlannerSection
+            trips={travelTrips}
+            loading={travelTripsLoading}
+            currentGroupId={currentGroupId}
+            onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
+            onAddClick={() => router.push('/travel?openAdd=1')}
+            headerDecorTheme={travelPlannerHeaderDecorTheme}
+            translations={{
+              section_title: tt('title'),
+              add_trip: tt('add_trip'),
+              select_group: tt('dashboard_select_group'),
+              trips_loading: tt('dashboard_trips_loading'),
+              empty_state: tt('dashboard_card_empty'),
+            }}
+          />
 
           {/* Piggy Bank Section */}
-          <section className="content-section">
-            <div className="section-header">
-              <h3 className="section-title">
-                {piggyMemberPiggies !== null
-                  ? dt('piggy_section_admin_title')
-                  : dt('piggy_card_title').replace(
-                      /\{name\}/g,
-                      piggySummary?.ownerNickname?.trim() || 'Ellena',
-                    )}
-              </h3>
-              {currentGroupId && (
-                <button
-                  onClick={() => router.push('/piggy-bank')}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: '#ef4444',
-                    color: '#fff',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span>🐷</span>
-                  {piggyMemberPiggies !== null ? dt('piggy_manage_all') : dt('piggy_go')}
-                </button>
-              )}
-            </div>
-            <div className="section-body">
-              {!currentGroupId ? (
-                <div style={{ fontSize: '13px', color: '#64748b' }}>
-                  {dt('piggy_select_group_prompt')}
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {piggySummaryError && (
-                    <div style={{ fontSize: '12px', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '8px 10px', borderRadius: '8px' }}>
-                      {piggySummaryError}
-                    </div>
-                  )}
-                  {!piggyLoaded ? (
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>{dt('piggy_loading_generic')}</div>
-                  ) : piggyMemberPiggies !== null ? (
-                    /* 관리자: 저금통 요청 리스트 + 멤버별 카드 (또는 저금통 없음 안내) */
-                    (() => {
-                      const hasAnyAccount = piggyMemberPiggies.some((p) => !p.noAccount);
-                      return (
-                        <div style={{ display: 'grid', gap: '12px' }}>
-                          {pendingAccountRequests.length > 0 && (
-                            <div style={{ backgroundColor: '#fef3c7', borderRadius: '12px', padding: '12px', border: '1px solid #fcd34d', marginBottom: '4px' }}>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>
-                                {dt('piggy_pending_requests').replace(/\{count\}/g, String(pendingAccountRequests.length))}
-                              </div>
-                              {pendingAccountRequests.map((req) => (
-                                <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #fde68a' }}>
-                                  <span style={{ fontSize: '13px', color: '#78350f' }}>{req.nickname || ct('member')}</span>
-                                  <div style={{ display: 'flex', gap: '6px' }}>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleRejectAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{dt('piggy_reject_btn')}</button>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleApproveAccountRequest(req.id); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{dt('piggy_approve_btn')}</button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {!hasAnyAccount && piggyMemberPiggies.length === 0 && (
-                            <div style={{ fontSize: '14px', color: '#64748b', padding: '12px', textAlign: 'center' }}>
-                              {dt('piggy_no_account_holders')}
-                            </div>
-                          )}
-                          {piggyMemberPiggies.map((p) =>
-                            p.noAccount ? (
-                              <div
-                                key={p.user_id}
-                                style={{
-                                  backgroundColor: '#f8fafc',
-                                  borderRadius: '12px',
-                                  padding: '16px',
-                                  border: '1px solid #e2e8f0',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  flexWrap: 'wrap',
-                                  gap: '10px',
-                                }}
-                              >
-                                <div>
-                                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>{p.ownerNickname || ct('member')}</div>
-                                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>{dt('piggy_member_no_account_line')}</div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleDashboardAddPiggy(p.user_id); }}
-                                  style={{
-                                    padding: '8px 14px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    backgroundColor: '#22c55e',
-                                    color: '#fff',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {dt('piggy_add_account_btn')}
-                                </button>
-                              </div>
-                            ) : (
-                              <div
-                                key={p.id}
-                                style={{
-                                  backgroundColor: '#ffffff',
-                                  borderRadius: '12px',
-                                  padding: '16px',
-                                  border: '1px solid #e2e8f0',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.borderColor = '#cbd5e1';
-                                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.borderColor = '#e2e8f0';
-                                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-                                }}
-                                onClick={() => {
-                                  if (p.user_id) router.push(`/piggy-bank?child_id=${p.user_id}`);
-                                }}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
-                                    {dt('piggy_card_title').replace(/\{name\}/g, p.ownerNickname?.trim() || 'Ellena')}
-                                  </h4>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-                                    <button type="button" onClick={() => p.user_id && handleDashboardDeletePiggy(p.user_id)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>{dt('piggy_delete_account_btn')}</button>
-                                    <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
-                                  </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                  <div style={{ backgroundColor: '#fef2f2', borderRadius: '8px', padding: '10px', border: '1px solid #fecaca' }}>
-                                    <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>{dt('piggy_wallet_balance_label')}</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#b91c1c' }}>
-                                      {formatDashboardPiggy(p.walletBalance ?? 0, p.currency)}
-                                    </div>
-                                  </div>
-                                  <div style={{ backgroundColor: '#fff7ed', borderRadius: '8px', padding: '10px', border: '1px solid #fed7aa' }}>
-                                    <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>{dt('piggy_bank_balance_label')}</div>
-                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>
-                                      {formatDashboardPiggy(p.balance ?? 0, p.currency)}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          )}
-                        </div>
-                      );
-                    })()
-                  ) : piggySummary ? (
-                    /* 일반 사용자: 저금통 있음 — 잔고 표시 (0 포함) */
-                    <div style={{ display: 'grid', gap: '10px' }}>
-                      <div style={{ backgroundColor: '#fef2f2', borderRadius: '12px', padding: '12px', border: '1px solid #fecaca' }}>
-                        <div style={{ fontSize: '12px', color: '#b91c1c' }}>{dt('piggy_wallet_balance_for_name').replace(/\{name\}/g, piggyLabel)}</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
-                          {formatDashboardPiggy(piggySummary.walletBalance, piggySummary.currency)}
-                        </div>
-                      </div>
-                      <div style={{ backgroundColor: '#fff7ed', borderRadius: '12px', padding: '12px', border: '1px solid #fed7aa' }}>
-                        <div style={{ fontSize: '12px', color: '#9a3412' }}>{dt('piggy_bank_balance_for_name').replace(/\{name\}/g, piggyLabel)}</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
-                          {formatDashboardPiggy(piggySummary.bankBalance, piggySummary.currency)}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* 일반 사용자: 저금통 없음 */
-                    <div style={{ padding: '16px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
-                        {dt('piggy_empty_ask_admin')}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handlePiggyRequestAccount}
-                        style={{
-                          padding: '10px 16px',
-                          borderRadius: '8px',
-                          border: '1px solid #94a3b8',
-                          backgroundColor: '#f1f5f9',
-                          color: '#475569',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {dt('piggy_request_account_btn')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
+          <PiggyBankSection
+            currentGroupId={currentGroupId}
+            isAdmin={piggyMemberPiggies !== null}
+            piggySummary={piggySummary}
+            piggyMemberPiggies={piggyMemberPiggies}
+            piggyLoaded={piggyLoaded}
+            piggySummaryError={piggySummaryError}
+            pendingAccountRequests={pendingAccountRequests}
+            piggyLabel={piggyLabel}
+            formatAmount={formatDashboardPiggy}
+            onGoClick={() => router.push('/piggy-bank')}
+            onManageClick={() => router.push('/piggy-bank')}
+            onAddPiggy={handleDashboardAddPiggy}
+            onDeletePiggy={handleDashboardDeletePiggy}
+            onApproveRequest={handleApproveAccountRequest}
+            onRejectRequest={handleRejectAccountRequest}
+            onRequestAccount={handlePiggyRequestAccount}
+            onMemberClick={(userId) => router.push(`/piggy-bank?child_id=${userId}`)}
+            translations={{
+              section_title_admin: dt('piggy_section_admin_title'),
+              section_title_user: dt('piggy_card_title'),
+              manage_all: dt('piggy_manage_all'),
+              go: dt('piggy_go'),
+              select_group: dt('piggy_select_group_prompt'),
+              loading: dt('piggy_loading_generic'),
+              pending_requests: dt('piggy_pending_requests'),
+              no_account_holders: dt('piggy_no_account_holders'),
+              member_no_account_line: dt('piggy_member_no_account_line'),
+              add_account_btn: dt('piggy_add_account_btn'),
+              delete_account_btn: dt('piggy_delete_account_btn'),
+              reject_btn: dt('piggy_reject_btn'),
+              approve_btn: dt('piggy_approve_btn'),
+              wallet_balance_label: dt('piggy_wallet_balance_label'),
+              bank_balance_label: dt('piggy_bank_balance_label'),
+              wallet_balance_for_name: dt('piggy_wallet_balance_for_name'),
+              bank_balance_for_name: dt('piggy_bank_balance_for_name'),
+              empty_ask_admin: dt('piggy_empty_ask_admin'),
+              request_account_btn: dt('piggy_request_account_btn'),
+              member: ct('member'),
+              card_title: dt('piggy_card_title'),
+            }}
+          />
+
+          {/* Family Album Section */}
+          <FamilyAlbumSection
+            photos={stableAlbum}
+            onViewAllClick={() => router.push('/memories')}
+            maxPhotos={9}
+            translations={{
+              section_title: dt('section_title_album') || '가족 앨범',
+              view_all: dt('view_all_photos') || '전체보기',
+              empty_state: dt('album_empty_state') || '아직 사진이 없습니다',
+              photos_count: dt('photos_more_count') || '+{count}장 더보기',
+            }}
+          />
 
           <FamilyLocationSection
             onOpenRequestModal={() => setShowLocationRequestModal(true)}
