@@ -23,7 +23,6 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
-import { travelPlannerHeaderDecorTheme } from '@/lib/travel-planner-header-theme';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
@@ -6215,7 +6214,6 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
             onAddClick={() => router.push('/travel?openAdd=1')}
-            headerDecorTheme={travelPlannerHeaderDecorTheme}
             translations={{
               section_title: tt('title'),
               add_trip: tt('add_trip'),

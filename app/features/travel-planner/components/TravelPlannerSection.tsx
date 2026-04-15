@@ -6,7 +6,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Plus } from 'lucide-react';
 
 interface TravelTrip {
@@ -22,12 +21,6 @@ interface TravelPlannerSectionProps {
   currentGroupId: string | null;
   onTripClick: (tripId: string) => void;
   onAddClick: () => void;
-  headerDecorTheme: {
-    slotGap: string;
-    frameMaxWidth: string;
-    frameHeight: string;
-    imageSrc: string;
-  };
   translations: {
     section_title: string;
     add_trip: string;
@@ -43,47 +36,15 @@ export function TravelPlannerSection({
   currentGroupId,
   onTripClick,
   onAddClick,
-  headerDecorTheme,
   translations: t,
 }: TravelPlannerSectionProps) {
   return (
     <section className="content-section">
-      <div
-        className="section-header"
-        style={{ columnGap: headerDecorTheme.slotGap }}
-      >
+      <div className="section-header" style={{ columnGap: '12px' }}>
         <h3 className="section-title" style={{ margin: 0, flexShrink: 0 }}>
           {t.section_title}
         </h3>
-        <div
-          aria-hidden
-          style={{
-            flex: '1 1 0%',
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingLeft: headerDecorTheme.slotGap,
-            paddingRight: headerDecorTheme.slotGap,
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: headerDecorTheme.frameMaxWidth,
-              height: headerDecorTheme.frameHeight,
-            }}
-          >
-            <Image
-              src={headerDecorTheme.imageSrc}
-              alt=""
-              fill
-              sizes="(max-width: 768px) 55vw, 320px"
-              style={{ objectFit: 'contain', objectPosition: 'center' }}
-            />
-          </div>
-        </div>
+        <div aria-hidden style={{ flex: '1 1 auto', minWidth: 0 }} />
         <div style={{ flexShrink: 0, minWidth: currentGroupId ? undefined : 0 }}>
           {currentGroupId ? (
             <button
