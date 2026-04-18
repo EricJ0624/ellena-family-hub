@@ -289,9 +289,13 @@ export function useFamilyTasks({
 
     console.log('📋 Realtime 할일 subscription 시작:', { groupId: currentGroupId, subscriptionId: realtimeSubscriptionId });
 
+    const gid = currentGroupId;
     const tasksSubscription = supabase
-      .channel(`family_tasks_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_tasks' }, (payload: any) => {
+      .channel(`family_tasks_changes:${gid}:${realtimeSubscriptionId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'family_tasks', filter: `group_id=eq.${gid}` },
+        (payload: any) => {
         const latestTasks = currentTasksRef.current;
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 

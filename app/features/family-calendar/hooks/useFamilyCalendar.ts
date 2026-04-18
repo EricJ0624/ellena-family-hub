@@ -262,9 +262,13 @@ export function useFamilyCalendar({
 
     console.log('📅 일정 subscription 설정 중...');
 
+    const gid = currentGroupId;
     const eventsSubscription = supabase
-      .channel(`family_events_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_events' }, (payload: any) => {
+      .channel(`family_events_changes:${gid}:${realtimeSubscriptionId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'family_events', filter: `group_id=eq.${gid}` },
+        (payload: any) => {
         const latestEvents = currentEventsRef.current;
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
