@@ -484,9 +484,24 @@ export default function OnboardingPage() {
     setSuccess(null);
 
     try {
+      const inviteCodeClean = String(groupPreview.invite_code ?? '').trim();
+      if (!inviteCodeClean) {
+        setError(ot('error_invite_required'));
+        return;
+      }
+
+      const { data: { session: joinSession } } = await supabase.auth.getSession();
+      if (!joinSession?.access_token) {
+        const { data: refreshedJoin, error: refreshJoinErr } = await supabase.auth.refreshSession();
+        if (refreshJoinErr || !refreshedJoin.session?.access_token) {
+          setError(ot('error_login_required'));
+          return;
+        }
+      }
+
       const runJoin = () =>
         supabase.rpc('join_group_by_invite_code', {
-          invite_code_param: groupPreview.invite_code,
+          invite_code_param: inviteCodeClean,
         });
 
       let { data: joinedGroupIdData, error: joinError } = await runJoin();

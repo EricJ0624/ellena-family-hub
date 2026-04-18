@@ -77,14 +77,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (group.invite_code_expires_at) {
-      const expiresAt = new Date(group.invite_code_expires_at);
-      if (expiresAt <= new Date()) {
-        return NextResponse.json(
-          { error: '올바른 초대 코드를 입력해 주세요.' },
-          { status: 400 }
-        );
-      }
+    // join_group_by_invite_code 와 동일한 만료 판정(DB 함수 단일 소스)
+    const { data: inviteValid, error: validError } = await supabase.rpc('is_invite_code_valid', {
+      invite_code_param: inviteCode,
+    });
+    if (validError || inviteValid !== true) {
+      return NextResponse.json(
+        { error: '올바른 초대 코드를 입력해 주세요.' },
+        { status: 400 }
+      );
     }
 
     const { count } = await supabase

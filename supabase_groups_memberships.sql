@@ -299,6 +299,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.is_invite_code_valid(invite_code_param TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   expires_at TIMESTAMPTZ;
