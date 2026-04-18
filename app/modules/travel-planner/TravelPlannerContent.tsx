@@ -38,6 +38,23 @@ import {
 
 const API_BASE = '/api/v1/travel';
 
+/** 통합 일정·지도 툴팁 등 표시용. DB name/title은 자동완성 전체 줄일 수 있어, 주소 컬럼이 있으면 쉼표 앞만 사용 (저장 값 불변). */
+function shortItineraryTitle(
+  type: 'accommodation' | 'dining' | 'attraction' | 'transport' | 'other',
+  title: string,
+  address?: string | null,
+): string {
+  const t = (title || '').trim();
+  if (!t) return t;
+  if (type === 'transport' || type === 'other') return t;
+  const addr = typeof address === 'string' ? address.trim() : '';
+  if (!addr) return t;
+  const comma = t.indexOf(',');
+  if (comma === -1) return t;
+  const head = t.slice(0, comma).trim();
+  return head || t;
+}
+
 const TRIP_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
 
 const LOCALE_FOR_MONEY: Record<string, string> = {
@@ -673,13 +690,19 @@ export function TravelPlannerContent() {
         travelMapMarkersRef.current.push(marker);
       };
       accommodations.forEach((a) => {
-        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, '🏨');
+        if (a.latitude != null && a.longitude != null) {
+          addMarker(a.latitude, a.longitude, shortItineraryTitle('accommodation', a.name, a.address), '🏨');
+        }
       });
       dining.forEach((d) => {
-        if (d.latitude != null && d.longitude != null) addMarker(d.latitude, d.longitude, d.name, '🍽️');
+        if (d.latitude != null && d.longitude != null) {
+          addMarker(d.latitude, d.longitude, shortItineraryTitle('dining', d.name, d.address), '🍽️');
+        }
       });
       attractions.forEach((a) => {
-        if (a.latitude != null && a.longitude != null) addMarker(a.latitude, a.longitude, a.name, '🏛️');
+        if (a.latitude != null && a.longitude != null) {
+          addMarker(a.latitude, a.longitude, shortItineraryTitle('attraction', a.name, a.address), '🏛️');
+        }
       });
       transports.forEach((t) => {
         let emoji = '🚗';
@@ -695,7 +718,7 @@ export function TravelPlannerContent() {
       });
       itineraries.forEach((i) => {
         if (i.latitude != null && i.longitude != null) {
-          addMarker(i.latitude, i.longitude, i.title, '📌');
+          addMarker(i.latitude, i.longitude, shortItineraryTitle('other', i.title, i.address), '📌');
         }
       });
 
@@ -1289,7 +1312,8 @@ export function TravelPlannerContent() {
   };
 
   const handleRemoveFromItinerary = async (item: typeof sortedItineraries[0]) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`"${item.title}" 항목을 일정에서 제거할까요?`)) return;
+    const displayTitle = shortItineraryTitle(item.type, item.title, item.address);
+    if (!currentGroupId || !selectedTrip || !confirm(`"${displayTitle}" 항목을 일정에서 제거할까요?`)) return;
     try {
       const headers = await getAuthHeaders();
       let res: Response;
@@ -2310,7 +2334,8 @@ export function TravelPlannerContent() {
           }
           const label = getItineraryTypeLabel(i.type, i.transport_type);
           const timeStr = (i.start_time || i.end_time) ? `  ${i.start_time || '--'} ~ ${i.end_time || '--'}` : '';
-          doc.text(`[${label}] ${i.title}${timeStr}`, margin, y);
+          const pdfTitle = shortItineraryTitle(i.type, i.title, i.address);
+          doc.text(`[${label}] ${pdfTitle}${timeStr}`, margin, y);
           y += lineH;
           if (i.description && i.description.trim()) {
             const lines = doc.splitTextToSize(i.description.trim(), pageW - margin * 2 - 8);
@@ -2734,7 +2759,7 @@ export function TravelPlannerContent() {
                                 i.transport_type === 'bike' ? '🚲' : '🚗') : 
                              '📌'}
                           </span>
-                          {i.title}
+                          {shortItineraryTitle(i.type, i.title, i.address)}
                         </div>
                         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
                           {i.day_date}
@@ -2772,8 +2797,8 @@ export function TravelPlannerContent() {
                             <Trash2 style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
-                        {buildGoogleWebSearchUrl(i.title) && (
-                          <a href={buildGoogleWebSearchUrl(i.title)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                        {buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address)) && (
+                          <a href={buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address))!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
                             {tt('link_google_search')}
                           </a>
                         )}
