@@ -284,6 +284,8 @@ export function useFamilyTasks({
   // Realtime 구독
   useEffect(() => {
     if (!currentGroupId) return;
+    // 부모 effect보다 자식이 먼저 돌면 epoch가 아직 0 → `:0` 채널이 joining에 걸리고 바인딩 mismatch가 날 수 있음
+    if (!realtimeSubscriptionId || realtimeSubscriptionId === '0') return;
 
     console.log('📋 Realtime 할일 subscription 시작:', { groupId: currentGroupId, subscriptionId: realtimeSubscriptionId });
 
