@@ -227,6 +227,8 @@ export default function FamilyHub() {
   // --- [STATE] ---
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  /** onAuthStateChange 콜백이 오래된 클로저를 쓰지 않도록, 인증 여부는 ref로 동기화 */
+  const isAuthenticatedRef = useRef(false);
   const [masterKey, setMasterKey] = useState('');
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
@@ -723,6 +725,10 @@ export default function FamilyHub() {
     setIsMounted(true);
   }, []);
 
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   // 2. Auth Check on Load
   useEffect(() => {
     if (!isMounted) return;
@@ -894,7 +900,7 @@ export default function FamilyHub() {
       // Refresh Token 에러가 발생한 경우 자동 로그아웃
       if (event === 'SIGNED_OUT' && !session) {
         // 세션이 없으면 로그인 페이지로 리다이렉트
-        if (isAuthenticated) {
+        if (isAuthenticatedRef.current) {
           router.push('/');
         }
       }
@@ -903,7 +909,8 @@ export default function FamilyHub() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [isMounted, router, loadData, isAuthenticated]);
+    // isAuthenticated는 제외: true가 되면 effect가 재실행되며 checkAuth가 중복 실행되어 세션/라우팅 경쟁이 날 수 있음
+  }, [isMounted, router, loadData]);
 
   // Piggy Bank 요약 정보 로드 함수 (재사용 가능하도록 useCallback으로 분리)
   const loadPiggySummary = useCallback(async () => {
