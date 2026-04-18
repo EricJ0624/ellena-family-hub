@@ -16,6 +16,7 @@ import {
   resolveUserHasGroups,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
+import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -40,6 +41,8 @@ export default function LoginPage() {
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
   /** 가입 버튼 연타·이중 submit으로 signUp이 여러 번 나가 rate limit 걸리는 것 방지 */
   const signupSubmitLockRef = useRef(false);
+  /** 429 등 이후 짧은 쿨다운(같은 세션에서 연속 클릭으로 서버를 두드리지 않게) */
+  const signupCooldownUntilRef = useRef(0);
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
 
   // Hydration 오류 방지: 마운트 후에만 클라이언트 사이드 로직 실행
@@ -269,14 +272,26 @@ export default function LoginPage() {
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      // 이전 사용자 세션이 남아 있어도 signOut 실패가 회원가입 자체를 막으면 안 된다.
-      try {
-        await supabase.auth.signOut();
-      } catch (signOutErr) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[Sign up] pre-signout ignored:', signOutErr);
-        }
+
+      if (Date.now() < signupCooldownUntilRef.current) {
+        const sec = Math.ceil((signupCooldownUntilRef.current - Date.now()) / 1000);
+        setErrorMsg(`요청이 너무 잦습니다. ${sec}초 후에 다시 시도해 주세요.`);
+        return;
       }
+
+      // 다른 계정 세션이 남아 있을 때만 signOut (없을 때 불필요한 GoTrue 호출 제거 → rate limit 완화)
+      try {
+        const { data: { session: existing } } = await supabase.auth.getSession();
+        if (existing) {
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutErr) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[Sign up] pre-signout ignored:', signOutErr);
+            }
+          }
+        }
+      } catch (_) {}
 
       const signupNickname = trimmedNickname;
       
@@ -311,9 +326,7 @@ export default function LoginPage() {
 
       // Redirect URL allowlist 설정 누락 시에만 1회 무옵션 재시도 (rate limit·429에는 재호출하지 않음)
       const firstMsg = String(error?.message || '');
-      const firstCode = String((error as { code?: string })?.code || '');
-      const isRateLimited =
-        /rate|429|too many|throttl|over_request|over_email|exceeded/i.test(`${firstMsg} ${firstCode}`);
+      const isRateLimited = isSupabaseAuthRateLimitError(error);
       if (
         error &&
         !isRateLimited &&
@@ -391,32 +404,28 @@ export default function LoginPage() {
         }
       }
     } catch (error: any) {
-      // 개발 시 실제 오류 원인 확인용 (HTTP 상태, 메시지)
-      if (process.env.NODE_ENV === 'development') {
-        const status = error?.status ?? error?.code;
-        console.error('[Sign up] 오류:', {
-          status,
-          message: error?.message,
-          full: error
-        });
-      }
+      // 프로덕션에서도 코드·상태만 로그(이메일은 넣지 않음) — 실제 원인 파악용
+      console.warn('[Sign up] failed:', formatSupabaseAuthErrorForLog(error));
+
       const message = String(error?.message || '');
-      const code = String((error as { code?: string })?.code || '');
-      const combined = `${message} ${code}`.toLowerCase();
-      if (/already registered|already exists|already been registered/i.test(message)) {
+      const code = String((error as { code?: string })?.code || '').trim();
+
+      if (/already registered|already exists|already been registered|user already registered/i.test(message)) {
         setErrorMsg(t('error_email_taken'));
-      } else if (/invalid email|email.*invalid/i.test(message)) {
+      } else if (/invalid email|email.*invalid|email_address_invalid/i.test(message + ' ' + code)) {
         setErrorMsg('이메일 형식이 올바르지 않습니다.');
       } else if (/password/i.test(message) && /weak|short|minimum|at least/i.test(message)) {
         setErrorMsg(t('error_password_min'));
-      } else if (/rate|429|too many|throttl|over_request|over_email|exceeded/i.test(combined)) {
+      } else if (isSupabaseAuthRateLimitError(error)) {
+        signupCooldownUntilRef.current = Date.now() + 120_000;
         setErrorMsg(
-          '가입 요청이 너무 잦습니다. 몇 분 후 다시 시도해 주세요. (같은 Wi‑Fi에서 여러 번 가입 시도하면 인증 서버에서 잠시 막힐 수 있습니다.)'
+          '가입·인증 메일 요청이 제한되었습니다. 2~3분 후 다시 시도해 주세요. (같은 네트워크에서 반복 시도하면 Supabase 인증 서버에서 잠시 막힐 수 있습니다.)'
         );
-      } else if (/signups not allowed/i.test(message)) {
+      } else if (/signups not allowed|signup_disabled/i.test(message + ' ' + code)) {
         setErrorMsg('현재 이메일 가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.');
       } else {
-        setErrorMsg(t('error_signup_failed'));
+        const hint = code && !message.includes('@') ? ` (${code})` : '';
+        setErrorMsg(`${t('error_signup_failed')}${hint}`);
       }
     }
     } finally {
