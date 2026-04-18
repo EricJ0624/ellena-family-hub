@@ -300,95 +300,105 @@ export default function LoginPage() {
       const signupNickname = trimmedNickname;
       const pendingInviteCode = typeof window !== 'undefined' ? getSessionStoredInviteCode() : null;
 
-      // 서비스 롤 가입만 사용(확인 메일 미발송). 클라이언트 signUp 폴백은 인증 메일·429를 다시 유발하므로 하지 않음.
-      if (typeof window !== 'undefined') {
-        try {
-          const regRes = await fetch(`${window.location.origin}/api/auth/register-with-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: normalizedEmail,
-              password,
+      // 이메일 인증 후 가입: Supabase signUp(확인 메일) → 링크의 /auth/callback 에서 세션 확정
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback`
+          : '/auth/callback';
+
+      let { error, data } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: redirectTo,
+          data: {
+            nickname: signupNickname,
+            full_name: signupNickname,
+          },
+        },
+      });
+
+      const firstMsg = String(error?.message || '');
+      const isRateLimited = isSupabaseAuthRateLimitError(error);
+      if (
+        error &&
+        !isRateLimited &&
+        /redirect|email redirect|invalid redirect|not allowed/i.test(firstMsg)
+      ) {
+        const retry = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            data: {
               nickname: signupNickname,
-              ...(pendingInviteCode ? { invite_code: pendingInviteCode } : {}),
-            }),
-          });
-          const regJson = (await regRes.json().catch(() => ({}))) as { error?: string; ok?: boolean };
+              full_name: signupNickname,
+            },
+          },
+        });
+        error = retry.error;
+        data = retry.data;
+      }
 
-          if (regRes.ok && regJson.ok) {
-            if (pendingInviteCode) {
-              try {
-                await fetch(`${window.location.origin}/api/invite/store-pending`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
-                });
-              } catch (_) {}
-            }
-            window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, '1');
-            const { error: signInErr, data: signInData } = await supabase.auth.signInWithPassword({
-              email: normalizedEmail,
-              password,
+      if (error) throw error;
+
+      if (data.user) {
+        if (pendingInviteCode && typeof window !== 'undefined') {
+          try {
+            await fetch(`${window.location.origin}/api/invite/store-pending`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
             });
-            if (signInErr) throw signInErr;
-            if (!signInData.user?.email_confirmed_at) {
-              await supabase.auth.signOut();
-              setErrorMsg(t('error_email_verification'));
-              return;
-            }
-            await completeAuthRoutingAfterConfirmedUser(normalizedEmail);
-            return;
-          }
+          } catch (_) {}
+        }
 
-          if (regRes.status === 503) {
-            setErrorMsg(
-              '서버 가입을 쓸 수 없습니다. 배포 환경(Vercel 등)에 SUPABASE_SERVICE_ROLE_KEY가 설정돼 있는지 확인해 주세요.'
-            );
-            return;
-          } else if (regRes.status === 409 || regJson.error === 'email_taken') {
-            setErrorMsg(t('error_email_taken'));
-            return;
-          } else if (regRes.status === 429 || regJson.error === 'too_many_requests') {
-            setErrorMsg('잠시 후 다시 시도해 주세요. (요청이 많아 일시적으로 제한되었습니다.)');
-            return;
-          } else if (regJson.error === 'invalid_invite') {
-            setErrorMsg('유효하지 않거나 만료된 초대 코드입니다. 코드를 확인한 뒤 다시 시도해 주세요.');
-            return;
-          } else if (regJson.error === 'invalid_password') {
-            setErrorMsg(t('error_password_min'));
-            return;
-          } else if (regJson.error === 'invalid_nickname') {
-            setErrorMsg(t('error_nickname_length'));
-            return;
-          } else if (regJson.error === 'invalid_email') {
-            setErrorMsg('이메일 형식이 올바르지 않습니다.');
-            return;
-          } else if (regRes.status >= 500) {
-            setErrorMsg('가입 서버에 일시적인 오류가 있습니다. 잠시 후 다시 시도해 주세요.');
-            return;
-          } else if (regRes.status === 400 && regJson.error === 'signup_failed') {
-            setErrorMsg(t('error_signup_failed'));
-            return;
-          } else if (regRes.status === 400) {
-            setErrorMsg(t('error_signup_failed'));
-            return;
-          } else {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[Sign up] register-with-password unexpected', regRes.status, regJson);
-            }
-            setErrorMsg('가입 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-            return;
-          }
-        } catch (serverRegErr) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('[Sign up] server register fetch error:', serverRegErr);
-          }
-          setErrorMsg('가입 서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
+        const isEmailConfirmed = data.user.email_confirmed_at !== null;
+
+        try {
+          await supabase.from('profiles').upsert(
+            {
+              id: data.user.id,
+              email: normalizedEmail,
+              nickname: signupNickname,
+            },
+            { onConflict: 'id' }
+          );
+        } catch (profileError) {
+          console.warn('profiles 테이블 업데이트 실패 (무시):', profileError);
+        }
+
+        if (!isEmailConfirmed) {
+          setSuccessMsg(t('success_signup_check_email'));
+          setTimeout(() => {
+            setMode('login');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setNickname('');
+            setSuccessMsg('');
+          }, 3000);
           return;
         }
-      } else {
-        setErrorMsg('이 환경에서는 가입을 진행할 수 없습니다.');
-        return;
+
+        const session = data.session;
+        const isNewUserSession = session?.user?.id === data.user?.id;
+        if (session && isNewUserSession) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          const params =
+            typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+          const invite = resolveInviteFromUrlOrSession(params);
+          router.push(buildOnboardingPath(invite));
+        } else {
+          setSuccessMsg(t('success_signup_done'));
+          setTimeout(() => {
+            setMode('login');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setNickname('');
+            setSuccessMsg('');
+          }, 3000);
+        }
       }
     } catch (error: any) {
       // 프로덕션에서도 코드·상태만 로그(이메일은 넣지 않음) — 실제 원인 파악용
