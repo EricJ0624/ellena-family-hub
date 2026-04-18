@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.mjs";
 
 /* Google Places Autocomplete: body에 붙는 .pac-container가 모달(z-index~50) 뒤로 가면 선택 불가로 보임 */
 .pac-container {

@@ -16,7 +16,7 @@ export function AppTitleContent({ title }: { title: string }): React.ReactNode {
   const main: React.ReactNode = parenMatch ? (
     <>
       {parenMatch[1]}
-      <span style={{ fontSize: '0.65em', verticalAlign: 'baseline' }}>{parenMatch[2]}</span>
+      <span className="align-baseline text-[0.65em]">{parenMatch[2]}</span>
       {parenMatch[3]}
     </>
   ) : (
@@ -25,7 +25,7 @@ export function AppTitleContent({ title }: { title: string }): React.ReactNode {
   return (
     <>
       {main}
-      <span style={{ fontSize: '0.333em', verticalAlign: 'baseline' }}>{sub}</span>
+      <span className="align-baseline text-[0.333em]">{sub}</span>
     </>
   );
 }

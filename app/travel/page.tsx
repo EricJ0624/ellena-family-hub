@@ -10,8 +10,8 @@ function TravelLoading() {
   const { lang } = useLanguage();
   const loadingText = getCommonTranslation(lang, 'loading');
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ color: '#64748b' }}>{loadingText}</span>
+    <div className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
+      <span className="text-[#64748b]">{loadingText}</span>
     </div>
   );
 }
