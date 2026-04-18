@@ -514,11 +514,13 @@ export function useFamilyTasks({
       });
 
     return () => {
-      if (subscriptionRef.current) {
-        console.log('🔌 Realtime 할일 subscription 해제');
-        subscriptionRef.current.unsubscribe();
+      // SUBSCRIBED 콜백 전에 이펙트가 다시 돌면 subscriptionRef가 비어 unsubscribe가 스킵되어
+      // 같은 토픽 채널이 남고, 다음 마운트에서 .on() after subscribe() 오류가 남.
+      if (subscriptionRef.current === tasksSubscription) {
         subscriptionRef.current = null;
       }
+      console.log('🔌 Realtime 할일 subscription 해제');
+      void supabase.removeChannel(tasksSubscription);
     };
   }, [currentGroupId, realtimeSubscriptionId, userId, getCurrentKey, CryptoService, onTasksChange, assigneeDisplayFromUserIdRef]);
 

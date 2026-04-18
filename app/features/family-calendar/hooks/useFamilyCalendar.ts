@@ -498,11 +498,11 @@ export function useFamilyCalendar({
       });
 
     return () => {
-      if (subscriptionRef.current) {
-        console.log('🔌 Realtime 일정 subscription 해제');
-        subscriptionRef.current.unsubscribe();
+      if (subscriptionRef.current === eventsSubscription) {
         subscriptionRef.current = null;
       }
+      console.log('🔌 Realtime 일정 subscription 해제');
+      void supabase.removeChannel(eventsSubscription);
     };
   }, [currentGroupId, realtimeSubscriptionId, userId, getCurrentKey, CryptoService, onEventsChange]);
 

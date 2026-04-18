@@ -208,10 +208,10 @@ export function useFamilyChat({
       });
 
     return () => {
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
+      if (subscriptionRef.current === chatSubscription) {
         subscriptionRef.current = null;
       }
+      void supabase.removeChannel(chatSubscription);
     };
   }, [currentGroupId, userId, supabase, realtimeSubscriptionId, getCurrentKey, CryptoService, onMessagesChange, currentMessages]);
 
