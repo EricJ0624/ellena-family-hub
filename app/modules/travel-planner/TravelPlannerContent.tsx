@@ -521,7 +521,7 @@ export function TravelPlannerContent() {
 
   const attachPlacesAutocomplete = useCallback((params: {
     enabled: boolean;
-    inputRef: React.RefObject<HTMLInputElement>;
+    inputRef: React.RefObject<HTMLInputElement | null>;
     sessionTokenRef: React.MutableRefObject<unknown>;
     onSelect: (payload: { placeId: string; address: string; latitude?: number; longitude?: number; placeName: string }) => void;
   }) => {
