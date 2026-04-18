@@ -2772,8 +2772,8 @@ export function TravelPlannerContent() {
                             <Trash2 style={{ width: 14, height: 14 }} />
                           </button>
                         </div>
-                        {buildGoogleWebSearchUrl(i.title, i.address) && (
-                          <a href={buildGoogleWebSearchUrl(i.title, i.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                        {buildGoogleWebSearchUrl(i.title) && (
+                          <a href={buildGoogleWebSearchUrl(i.title)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
                             {tt('link_google_search')}
                           </a>
                         )}
@@ -2868,8 +2868,8 @@ export function TravelPlannerContent() {
                               <button type="button" onClick={() => openAttractionForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
                               <button type="button" onClick={() => handleDeleteAttraction(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                             </div>
-                            {buildGoogleWebSearchUrl(a.name, a.address) && (
-                              <a href={buildGoogleWebSearchUrl(a.name, a.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                            {buildGoogleWebSearchUrl(a.name) && (
+                              <a href={buildGoogleWebSearchUrl(a.name)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
                                 {tt('link_google_search')}
                               </a>
                             )}
@@ -2990,8 +2990,8 @@ export function TravelPlannerContent() {
                                 <Trash2 style={{ width: 14, height: 14 }} />
                               </button>
                             </div>
-                            {buildGoogleWebSearchUrl(d.name, d.address) && (
-                              <a href={buildGoogleWebSearchUrl(d.name, d.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                            {buildGoogleWebSearchUrl(d.name) && (
+                              <a href={buildGoogleWebSearchUrl(d.name)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
                                 {tt('link_google_search')}
                               </a>
                             )}
@@ -3109,8 +3109,8 @@ export function TravelPlannerContent() {
                                 <Trash2 style={{ width: 14, height: 14 }} />
                               </button>
                             </div>
-                            {buildGoogleWebSearchUrl(a.name, a.address) && (
-                              <a href={buildGoogleWebSearchUrl(a.name, a.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                            {buildGoogleWebSearchUrl(a.name) && (
+                              <a href={buildGoogleWebSearchUrl(a.name)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
                                 {tt('link_google_search')}
                               </a>
                             )}
