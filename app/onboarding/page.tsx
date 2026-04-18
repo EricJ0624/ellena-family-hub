@@ -123,16 +123,22 @@ export default function OnboardingPage() {
         }
         setFromAdmin(fromAdminParam);
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            router.push('/');
-            return;
-          }
-        }
-        const user = session?.user || (await supabase.auth.getUser()).data.user;
+        let user = session?.user ?? null;
         if (!user) {
-          router.push('/');
+          const { data: { user: fetched } } = await supabase.auth.getUser();
+          user = fetched ?? null;
+        }
+        // 미가입·미로그인: 그룹 초대 코드 가입 UI(온보딩 join)가 아니라 앱 가입/로그인(/)으로 보냄.
+        // /onboarding?invite= 로 직접 들어온 경우에도 초대 코드는 sessionStorage + ?invite= 로 전달.
+        if (!user) {
+          if (inviteParam) {
+            try {
+              window.sessionStorage.setItem('SFH_INVITE_CODE', inviteParam);
+            } catch (_) {}
+            router.push(`/?invite=${encodeURIComponent(inviteParam)}`);
+          } else {
+            router.push('/');
+          }
           return;
         }
 
