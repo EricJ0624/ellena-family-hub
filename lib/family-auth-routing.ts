@@ -122,7 +122,7 @@ export async function resolveUserHasGroups(
   if (!hasGroups && typeof window !== 'undefined') {
     const saved = window.localStorage.getItem('currentGroupId')?.trim().toLowerCase() ?? '';
     if (saved && isValidUUID(saved)) {
-      await new Promise((resolve) => setTimeout(resolve, 120));
+      await new Promise((resolve) => setTimeout(resolve, 400));
       const [mRow, oRow] = await Promise.all([
         supabase.from('memberships').select('group_id').eq('user_id', userId).eq('group_id', saved).maybeSingle(),
         supabase.from('groups').select('id').eq('id', saved).eq('owner_id', userId).maybeSingle(),

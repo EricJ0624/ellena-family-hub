@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isValidUUID } from '@/lib/validation';
 import type { Group, Membership, MembershipRole } from '@/types/db';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
@@ -68,7 +69,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setError(null);
 
       // 1. memberships 테이블에서 사용자가 속한 그룹 조회
-      const { data: membershipData, error: membershipError } = await supabase
+      let { data: membershipData, error: membershipError } = await supabase
         .from('memberships')
         .select('group_id, role, family_role')
         .eq('user_id', userId);
@@ -76,17 +77,64 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       if (membershipError) throw membershipError;
 
       // 2. groups 테이블에서 사용자가 소유한 그룹 조회
-      const { data: ownedGroupsData, error: ownedGroupsError } = await supabase
+      let { data: ownedGroupsData, error: ownedGroupsError } = await supabase
         .from('groups')
         .select('id')
         .eq('owner_id', userId);
 
       if (ownedGroupsError) throw ownedGroupsError;
 
-      // 3. 모든 그룹 ID 수집 (memberships + 소유 그룹, 중복 제거)
-      const membershipGroupIds = membershipData?.map(m => m.group_id) || [];
-      const ownedGroupIds = ownedGroupsData?.map(g => g.id) || [];
-      const allGroupIds = [...new Set([...membershipGroupIds, ...ownedGroupIds])];
+      const recomputeAllGroupIds = () => {
+        const membershipGroupIds = membershipData?.map((m) => m.group_id) || [];
+        const ownedGroupIds = ownedGroupsData?.map((g) => g.id) || [];
+        return [...new Set([...membershipGroupIds, ...ownedGroupIds])];
+      };
+
+      let allGroupIds = recomputeAllGroupIds();
+
+      const pinnedSaved =
+        typeof window !== 'undefined'
+          ? (() => {
+              const s = localStorage.getItem('currentGroupId')?.trim().toLowerCase() ?? '';
+              return s && isValidUUID(s) ? s : null;
+            })()
+          : null;
+
+      // 로그인 직후·라우트 전환 직후 PostgREST가 빈 배열을 줄 수 있음. 한 번 백오프 후 재조회.
+      if (allGroupIds.length === 0) {
+        await new Promise((r) => setTimeout(r, 450));
+        const rM = await supabase.from('memberships').select('group_id, role, family_role').eq('user_id', userId);
+        const rO = await supabase.from('groups').select('id').eq('owner_id', userId);
+        if (!rM.error && !rO.error) {
+          membershipData = rM.data;
+          ownedGroupsData = rO.data;
+          allGroupIds = recomputeAllGroupIds();
+        }
+      }
+
+      // 온보딩에서 방금 고른 그룹이 스토리지에만 있고 목록 조회가 아직 비는 경우: pinned 단일 행으로 복구
+      if (allGroupIds.length === 0 && pinnedSaved) {
+        const { data: pm } = await supabase
+          .from('memberships')
+          .select('group_id, role, family_role')
+          .eq('user_id', userId)
+          .eq('group_id', pinnedSaved)
+          .maybeSingle();
+        const { data: po } = await supabase
+          .from('groups')
+          .select('id')
+          .eq('id', pinnedSaved)
+          .eq('owner_id', userId)
+          .maybeSingle();
+        if (pm) {
+          membershipData = [pm];
+          allGroupIds = [pinnedSaved];
+        } else if (po) {
+          membershipData = [];
+          ownedGroupsData = [{ id: po.id }];
+          allGroupIds = [pinnedSaved];
+        }
+      }
 
       if (allGroupIds.length === 0) {
         setGroups([]);
@@ -112,6 +160,8 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       if (groupsError) throw groupsError;
 
       setGroups(groupsData || []);
+
+      const ownedGroupIds = ownedGroupsData?.map((g) => g.id) || [];
 
       // 현재 선택된 그룹 정보를 새로 고친 목록과 동기화 (대시보드 타이틀/스타일 등 즉시 반영)
       if (groupsData && currentGroupId) {
