@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
+import {
+  buildOnboardingPath,
+  getSessionStoredInviteCode,
+  isValidInviteCodeFormat,
+  resolveUserHasGroups,
+} from '@/lib/family-auth-routing';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 
@@ -62,20 +68,10 @@ export default function AuthCallbackPage() {
           user_id_param: user.id,
         });
 
-        // 그룹이 있는지 확인
-        const { data: memberships } = await supabase
-          .from('memberships')
-          .select('group_id')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        const { data: ownedGroups } = await supabase
-          .from('groups')
-          .select('id')
-          .eq('owner_id', user.id)
-          .limit(1);
-
-        const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+        const { hasGroups } = await resolveUserHasGroups(supabase, user.id, {
+          flakyRetry: true,
+          isSystemAdmin: Boolean(isAdmin),
+        });
         // 초대 링크로 가입한 경우: API에 임시 저장된 코드 우선 사용 (다른 탭/기기에서 인증해도 동작)
         let invite: string | null = null;
         try {
@@ -85,16 +81,16 @@ export default function AuthCallbackPage() {
             });
             const json = await res.json().catch(() => ({}));
             const fromApi = json?.invite_code;
-            if (fromApi && /^[0-9A-Za-z]{1,20}$/.test(String(fromApi))) invite = String(fromApi);
+            if (fromApi && isValidInviteCodeFormat(String(fromApi))) invite = String(fromApi);
           }
         } catch (_) {}
         if (!invite) {
           const fromMeta = user?.user_metadata?.pending_invite_code;
-          const fromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
-          if (fromMeta && /^[0-9A-Za-z]{1,20}$/.test(String(fromMeta))) invite = String(fromMeta);
+          const fromStorage = getSessionStoredInviteCode();
+          if (fromMeta && isValidInviteCodeFormat(String(fromMeta))) invite = String(fromMeta);
           else if (fromStorage) invite = fromStorage;
         }
-        const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
+        const onboardingPath = buildOnboardingPath(invite);
 
         if (isAdmin) {
           // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로

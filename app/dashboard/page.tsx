@@ -7,6 +7,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
+import { resolveUserHasGroups } from '@/lib/family-auth-routing';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
@@ -807,48 +808,10 @@ export default function FamilyHub() {
           user_id_param: currentUserId,
         });
 
-        // 그룹 확인
-        const { data: memberships, error: membershipsError } = await supabase
-          .from('memberships')
-          .select('group_id')
-          .eq('user_id', currentUserId)
-          .limit(1);
-
-        // 그룹 소유자 확인
-        const { data: ownedGroups, error: ownedGroupsError } = await supabase
-          .from('groups')
-          .select('id')
-          .eq('owner_id', currentUserId)
-          .limit(1);
-
-        let hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
-
-        // 네트워크 일시 오류/지연으로 그룹 확인이 흔들릴 수 있으므로
-        // 실패 시 즉시 온보딩으로 보내지 않고 1회 재확인한다.
-        if ((membershipsError || ownedGroupsError) || (!isAdmin && !hasGroups)) {
-          if (membershipsError || ownedGroupsError) {
-            console.warn('그룹 확인 쿼리 오류(재확인 시도):', {
-              membershipsError,
-              ownedGroupsError,
-            });
-          }
-          await new Promise((resolve) => setTimeout(resolve, 350));
-          const [{ data: membershipsRetry }, { data: ownedGroupsRetry }] = await Promise.all([
-            supabase
-              .from('memberships')
-              .select('group_id')
-              .eq('user_id', currentUserId)
-              .limit(1),
-            supabase
-              .from('groups')
-              .select('id')
-              .eq('owner_id', currentUserId)
-              .limit(1),
-          ]);
-          hasGroups =
-            (membershipsRetry && membershipsRetry.length > 0) ||
-            (ownedGroupsRetry && ownedGroupsRetry.length > 0);
-        }
+        const { hasGroups } = await resolveUserHasGroups(supabase, currentUserId, {
+          flakyRetry: true,
+          isSystemAdmin: Boolean(isAdmin),
+        });
 
         if (isAdmin && !hasGroups) {
           // 시스템 관리자이고 그룹이 없으면 관리자 페이지로 리다이렉트

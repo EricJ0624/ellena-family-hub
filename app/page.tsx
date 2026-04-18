@@ -8,11 +8,18 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
+import {
+  buildOnboardingPath,
+  getSessionStoredInviteCode,
+  isValidInviteCodeFormat,
+  resolveInviteFromUrlOrSession,
+  resolveUserHasGroups,
+  setSessionStoredInviteCode,
+} from '@/lib/family-auth-routing';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
 const LAST_EMAIL_KEY = 'SFH_LAST_EMAIL';
-const INVITE_STORAGE_KEY = 'SFH_INVITE_CODE';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,8 +56,8 @@ export default function LoginPage() {
     const raw = params.get('invite')?.trim() || params.get('invite_code')?.trim();
     if (raw) {
       try {
-        if (/^[0-9A-Za-z]{1,20}$/.test(raw)) {
-          window.sessionStorage.setItem(INVITE_STORAGE_KEY, raw);
+        if (isValidInviteCodeFormat(raw)) {
+          setSessionStoredInviteCode(raw);
           const lastEmail = window.localStorage.getItem(LAST_EMAIL_KEY);
           if (lastEmail) {
             setEmail(lastEmail);
@@ -65,7 +72,7 @@ export default function LoginPage() {
         const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
         window.history.replaceState({}, '', newUrl);
       } catch (_) {}
-    } else if (window.sessionStorage.getItem(INVITE_STORAGE_KEY)) {
+    } else if (getSessionStoredInviteCode()) {
       const lastEmail = window.localStorage.getItem(LAST_EMAIL_KEY);
       if (lastEmail) {
         setEmail(lastEmail);
@@ -123,12 +130,8 @@ export default function LoginPage() {
         if (error || !user) return;
 
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const invite =
-          (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
-          params?.get('invite')?.trim() ||
-          params?.get('invite_code')?.trim() ||
-          null;
-        router.push(invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding');
+        const invite = resolveInviteFromUrlOrSession(params);
+        router.push(buildOnboardingPath(invite));
       } catch {
         // ignore
       }
@@ -195,29 +198,14 @@ export default function LoginPage() {
             user_id_param: session.user.id,
           });
 
-          // 그룹이 있는지 확인
-          const { data: memberships } = await supabase
-            .from('memberships')
-            .select('group_id')
-            .eq('user_id', session.user.id)
-            .limit(1);
-
-          // 그룹 소유자 확인
-          const { data: ownedGroups } = await supabase
-            .from('groups')
-            .select('id')
-            .eq('owner_id', session.user.id)
-            .limit(1);
-
-          const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+          const { hasGroups } = await resolveUserHasGroups(supabase, session.user.id, {
+            flakyRetry: true,
+            isSystemAdmin: Boolean(isAdmin),
+          });
 
           const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const invite =
-            (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
-            params?.get('invite')?.trim() ||
-            params?.get('invite_code')?.trim() ||
-            null;
-          const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
+          const invite = resolveInviteFromUrlOrSession(params);
+          const onboardingPath = buildOnboardingPath(invite);
 
           if (isAdmin) {
             // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
@@ -293,8 +281,7 @@ export default function LoginPage() {
       const signupNickname = trimmedNickname;
       
       // 초대 링크로 가입 시: 이메일 인증 후 그룹 연결을 위해 API로 초대 코드 임시 저장 (user_metadata는 일부 환경에서 가입 실패 유발)
-      const rawInvite = typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null;
-      const pendingInviteCode = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : null;
+      const pendingInviteCode = typeof window !== 'undefined' ? getSessionStoredInviteCode() : null;
       if (pendingInviteCode && typeof window !== 'undefined') {
         try {
           await fetch(`${window.location.origin}/api/invite/store-pending`, {
@@ -389,12 +376,8 @@ export default function LoginPage() {
         if (session && isNewUserSession) {
           await new Promise(resolve => setTimeout(resolve, 100));
           const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const invite =
-            (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
-            params?.get('invite')?.trim() ||
-            params?.get('invite_code')?.trim() ||
-            null;
-          router.push(invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding');
+          const invite = resolveInviteFromUrlOrSession(params);
+          router.push(buildOnboardingPath(invite));
         } else {
           setSuccessMsg(t('success_signup_done'));
           setTimeout(() => {

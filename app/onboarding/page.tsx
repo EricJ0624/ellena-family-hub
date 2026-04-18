@@ -14,6 +14,12 @@ import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/tra
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { normalizeGroupIdFromRpc, isValidUUID } from '@/lib/validation';
+import {
+  clearSessionStoredInviteCode,
+  getInviteCodeFromSearchParams,
+  getSessionStoredInviteCode,
+  setSessionStoredInviteCode,
+} from '@/lib/family-auth-routing';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -104,23 +110,17 @@ export default function OnboardingPage() {
           typeof window !== 'undefined'
             ? new URLSearchParams(window.location.search).get('from') === 'admin'
             : false;
-        const rawInvite =
+        const urlParams =
+          typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const rawInviteForHistory =
           typeof window !== 'undefined'
-            ? new URLSearchParams(window.location.search).get('invite')?.trim() ||
-              new URLSearchParams(window.location.search).get('invite_code')?.trim() ||
-              ''
+            ? urlParams?.get('invite')?.trim() || urlParams?.get('invite_code')?.trim() || ''
             : '';
-        const storedInvite =
-          typeof window !== 'undefined'
-            ? window.sessionStorage.getItem('SFH_INVITE_CODE')?.trim() || ''
-            : '';
-        // 초대 코드 형식 검증 (영숫자 1~20자). URL 우선, 없으면 로그인 페이지가 넣은 sessionStorage
-        const inviteFromUrl = rawInvite && /^[0-9A-Za-z]{1,20}$/.test(rawInvite) ? rawInvite : '';
-        const inviteFromStorage =
-          !inviteFromUrl && storedInvite && /^[0-9A-Za-z]{1,20}$/.test(storedInvite) ? storedInvite : '';
-        const inviteParam = inviteFromUrl || inviteFromStorage;
+        const inviteFromUrl = urlParams ? getInviteCodeFromSearchParams(urlParams) : null;
+        const inviteFromStorage = !inviteFromUrl ? getSessionStoredInviteCode() : null;
+        const inviteParam = inviteFromUrl || inviteFromStorage || '';
         // URL에서 invite 쿼리 제거 (Referrer/히스토리 노출 방지)
-        if (typeof window !== 'undefined' && rawInvite) {
+        if (typeof window !== 'undefined' && rawInviteForHistory) {
           try {
             const params = new URLSearchParams(window.location.search);
             params.delete('invite');
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
           // 미가입·무효 세션: join UI 대신 가입/로그인(/)으로. 초대는 유지.
           if (inviteParam) {
             try {
-              window.sessionStorage.setItem('SFH_INVITE_CODE', inviteParam);
+              setSessionStoredInviteCode(inviteParam);
             } catch (_) {}
             router.push(`/?invite=${encodeURIComponent(inviteParam)}`);
           } else {
@@ -529,18 +529,18 @@ export default function OnboardingPage() {
         setCurrentGroupId(groupId);
         setShowJoinFamilyRoleModal(false);
         try {
-          if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
+          clearSessionStoredInviteCode();
         } catch (_) {}
       } else if (groupPreview?.id) {
         setJoinedGroupId(groupPreview.id);
         setCurrentGroupId(groupPreview.id);
         setShowJoinFamilyRoleModal(false);
         try {
-          if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
+          clearSessionStoredInviteCode();
         } catch (_) {}
       } else {
         try {
-          if (typeof window !== 'undefined') window.sessionStorage.removeItem('SFH_INVITE_CODE');
+          clearSessionStoredInviteCode();
         } catch (_) {}
         setTimeout(() => router.push('/dashboard'), 1500);
       }
