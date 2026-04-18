@@ -316,6 +316,8 @@ export default function FamilyHub() {
   // Realtime subscription 참조 (로그아웃 시 정리용) - 기능별 분리 관리
   /** Realtime 채널명 재사용 방지(바인딩 중복 방지). 구독 설정 시점마다 갱신 */
   const realtimeSubscriptionIdRef = useRef<number>(0);
+  /** ref만 바뀌면 리렌더가 없어 FamilyTasks/Calendar가 `subscriptionId: '0'`에 묶일 수 있음 → Realtime 바인딩 오류 유발. ref와 함께 갱신 */
+  const [realtimeSubscriptionEpoch, setRealtimeSubscriptionEpoch] = useState(0);
   /** 순차 구독 지연 타이머 정리용 */
   const realtimeStaggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   /** 구독 설정 중 플래그 (중복 방지) */
@@ -2985,8 +2987,10 @@ export default function FamilyHub() {
       realtimeStaggerTimeoutsRef.current = [];
 
       // 채널명 재사용 방지 (effect 재실행 시 새 ID로 바인딩 중복 방지)
-      realtimeSubscriptionIdRef.current = Date.now();
-      console.log('✅ 새로운 Realtime 구독 시작 - ID:', realtimeSubscriptionIdRef.current);
+      const nextRealtimeId = Date.now();
+      realtimeSubscriptionIdRef.current = nextRealtimeId;
+      setRealtimeSubscriptionEpoch(nextRealtimeId);
+      console.log('✅ 새로운 Realtime 구독 시작 - ID:', nextRealtimeId);
 
       setupPresenceSubscription();
 
@@ -6124,7 +6128,7 @@ export default function FamilyHub() {
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
             sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(realtimeSubscriptionIdRef.current)}
+            realtimeSubscriptionId={String(realtimeSubscriptionEpoch)}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
@@ -6170,7 +6174,7 @@ export default function FamilyHub() {
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
             sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(realtimeSubscriptionIdRef.current)}
+            realtimeSubscriptionId={String(realtimeSubscriptionEpoch)}
             eventAuthorNames={eventAuthorNames}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
