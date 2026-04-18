@@ -386,12 +386,18 @@ export function TravelPlannerContent() {
       longitude?: number | null;
     }) => {
       const pid = typeof item.place_id === 'string' ? item.place_id.trim() : '';
-      if (pid) {
-        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`place_id:${pid}`)}`;
-      }
       const label = (typeof item.name === 'string' ? item.name.trim() : '') || (typeof item.title === 'string' ? item.title.trim() : '');
       const addr = typeof item.address === 'string' ? item.address.trim() : '';
       const textQuery = [label, addr].filter(Boolean).join(' ').trim();
+      const coordQuery =
+        item.latitude != null && item.longitude != null ? `${item.latitude},${item.longitude}` : '';
+
+      // Maps URLs: search에는 query가 필수이며 query_place_id와 병행 시 정확히 해당 장소로 연결됨
+      // (query=place_id:... 단독은 웹에서 검색어로 처리되어 "찾을 수 없음"이 자주 남)
+      if (pid) {
+        const query = textQuery || coordQuery || pid;
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}&query_place_id=${encodeURIComponent(pid)}`;
+      }
       if (textQuery) {
         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(textQuery)}`;
       }
