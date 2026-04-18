@@ -912,13 +912,9 @@ export default function FamilyHub() {
         if (session.user.user_metadata?.titleStyle) {
           setTitleStyle(session.user.user_metadata.titleStyle);
         }
-        
-        // ✅ 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
-        try {
-          await loadData(key, currentUserId);
-        } catch (loadErr) {
-          console.error('loadData 초기화 오류:', loadErr);
-        }
+
+        // loadData는 currentGroupId가 있어야 memory_vault 등 멀티테넌트 조회가 의미 있음.
+        // 여기서 호출하면 그룹 로드 전에 경고만 나고 HTTP만 낭비됨 → 그룹 effect(전환/초기)에서만 loadData 호출.
       } catch (err) {
         console.error('checkAuth 예외:', err);
         router.push('/');
@@ -948,7 +944,7 @@ export default function FamilyHub() {
       subscription.unsubscribe();
     };
     // isAuthenticated는 제외: true가 되면 effect가 재실행되며 checkAuth가 중복 실행되어 세션/라우팅 경쟁이 날 수 있음
-  }, [isMounted, router, loadData]);
+  }, [isMounted, router]);
 
   // Piggy Bank 요약 정보 로드 함수 (재사용 가능하도록 useCallback으로 분리)
   const loadPiggySummary = useCallback(async () => {

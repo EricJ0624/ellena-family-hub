@@ -9,6 +9,71 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase 설정이 .env.local 파일에 누락되었습니다.');
 }
 
+/**
+ * 동일 호스트로 수십 개의 REST 요청이 동시에 열리면 HTTP/2에서 ERR_HTTP2_SERVER_REFUSED_STREAM이 날 수 있음.
+ * PostgREST 호출만 같은 호스트로 직렬화(동시 개수 상한)해 스트림 한도를 넘기지 않게 함.
+ */
+function createConcurrencyLimitedFetch(
+  maxConcurrent: number,
+  shouldLimit: (url: string) => boolean
+): typeof fetch {
+  let active = 0;
+  const queue: Array<() => void> = [];
+
+  const drain = () => {
+    while (active < maxConcurrent && queue.length > 0) {
+      const job = queue.shift();
+      if (job) job();
+    }
+  };
+
+  return function limitedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : (input as Request).url;
+
+    if (!shouldLimit(url)) {
+      return fetch(input, init);
+    }
+
+    return new Promise<Response>((resolve, reject) => {
+      const start = () => {
+        active++;
+        fetch(input, init)
+          .then((res) => {
+            active--;
+            drain();
+            resolve(res);
+          })
+          .catch((err) => {
+            active--;
+            drain();
+            reject(err);
+          });
+      };
+
+      if (active < maxConcurrent) {
+        start();
+      } else {
+        queue.push(start);
+      }
+    });
+  };
+}
+
+function getSupabaseRestFetch(): typeof fetch | undefined {
+  if (typeof window === 'undefined' || !supabaseUrl) return undefined;
+  try {
+    const host = new URL(supabaseUrl as string).host;
+    return createConcurrencyLimitedFetch(6, (url) => url.includes(host));
+  } catch {
+    return undefined;
+  }
+}
+
 /** 로그인 페이지 "로그인 상태 유지" 체크 시 사용. '0' = sessionStorage(탭 닫으면 로그아웃), 그 외 = localStorage(유지) */
 export const PERSIST_SESSION_FLAG_KEY = 'SFH_PERSIST_SESSION';
 export const AUTH_STORAGE_KEY = 'sb-auth-token';
@@ -62,6 +127,8 @@ const customStorage =
 
 // 이 supabase 객체를 통해 DB에 접근합니다.
 // "로그인 상태 유지" 체크 시 localStorage, 미체크 시 sessionStorage 사용.
+const supabaseRestFetch = getSupabaseRestFetch();
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -76,6 +143,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
   global: {
+    ...(supabaseRestFetch ? { fetch: supabaseRestFetch } : {}),
     headers: {
       'x-client-info': 'ellena-family-hub',
     },
