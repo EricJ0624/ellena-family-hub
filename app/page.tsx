@@ -34,8 +34,6 @@ export default function LoginPage() {
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  /** 가입만: 인증 서버 rate limit일 때 로그인 유도 UI */
-  const [signupRateLimitHint, setSignupRateLimitHint] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
@@ -246,7 +244,6 @@ export default function LoginPage() {
     signupSubmitLockRef.current = true;
     setLoading(true);
     setErrorMsg('');
-    setSignupRateLimitHint(false);
     setSuccessMsg('');
 
     try {
@@ -280,9 +277,7 @@ export default function LoginPage() {
       const cooldownUntil = signupCooldownByEmailRef.current[normalizedEmail];
       if (cooldownUntil && Date.now() < cooldownUntil) {
         const sec = Math.ceil((cooldownUntil - Date.now()) / 1000);
-        setErrorMsg(
-          `이 이메일(${normalizedEmail})로는 방금 인증 서버 제한이 걸려 ${sec}초 후에 다시 시도할 수 있습니다. 다른 이메일 주소는 지금 바로 시도해 보세요.`
-        );
+        setErrorMsg(`같은 이메일로는 ${sec}초 후에 다시 시도할 수 있습니다.`);
         return;
       }
 
@@ -424,16 +419,10 @@ export default function LoginPage() {
       } else if (/password/i.test(message) && /weak|short|minimum|at least/i.test(message)) {
         setErrorMsg(t('error_password_min'));
       } else if (isSupabaseAuthRateLimitError(error)) {
-        setSignupRateLimitHint(true);
         if (normalizedEmail) {
           signupCooldownByEmailRef.current[normalizedEmail] = Date.now() + 180_000;
         }
-        setErrorMsg(
-          [
-            '지금은 가입·인증 메일 서버(Supabase)가 요청을 일시적으로 막은 상태입니다. 테스트를 여러 번 하면 같은 Wi‑Fi에서 흔히 발생합니다.',
-            '5~10분 뒤에 다시 시도해 주세요. 이미 이 이메일로 가입한 적이 있다면 아래 버튼으로 로그인해 보세요.',
-          ].join('\n')
-        );
+        setErrorMsg('잠시 후 다시 시도해 주세요. (요청이 많아 일시적으로 제한되었습니다.)');
       } else if (/signups not allowed|signup_disabled/i.test(message + ' ' + code)) {
         setErrorMsg('현재 이메일 가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.');
       } else {
@@ -497,7 +486,6 @@ export default function LoginPage() {
   const switchMode = (newMode: Mode) => {
     setMode(newMode);
     setErrorMsg('');
-    setSignupRateLimitHint(false);
     setSuccessMsg('');
     setPassword('');
     setConfirmPassword('');
@@ -879,30 +867,6 @@ export default function LoginPage() {
             }}>
               {errorMsg}
             </div>
-          )}
-
-          {mode === 'signup' && signupRateLimitHint && (
-            <button
-              type="button"
-              onClick={() => {
-                setSignupRateLimitHint(false);
-                switchMode('login');
-              }}
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                padding: '12px 16px',
-                fontSize: '15px',
-                fontWeight: 600,
-                color: '#4f46e5',
-                backgroundColor: '#eef2ff',
-                border: '1px solid #c7d2fe',
-                borderRadius: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              이미 가입한 이메일이에요 → 로그인으로 이동
-            </button>
           )}
 
           {/* 제출 버튼 */}
