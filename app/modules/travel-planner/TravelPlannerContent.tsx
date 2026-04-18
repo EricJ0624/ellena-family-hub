@@ -1333,6 +1333,55 @@ export function TravelPlannerContent() {
     }
   };
 
+  /** 일정에만 안 넣어 둔 기존 항목을 통합 일정에 표시 */
+  const handleAddToItinerary = useCallback(
+    async (type: 'accommodation' | 'dining' | 'attraction' | 'transport', id: string) => {
+      if (!currentGroupId || !selectedTrip) return;
+      const fail =
+        type === 'accommodation'
+          ? tt('accommodation_update_failed')
+          : type === 'dining'
+            ? tt('dining_update_failed')
+            : type === 'attraction'
+              ? tt('attraction_update_failed')
+              : tt('transport_update_failed');
+      try {
+        const headers = await getAuthHeaders();
+        const path =
+          type === 'accommodation'
+            ? `${API_BASE}/accommodations/${id}`
+            : type === 'dining'
+              ? `${API_BASE}/dining/${id}`
+              : type === 'attraction'
+                ? `${API_BASE}/attractions/${id}`
+                : `${API_BASE}/transports/${id}`;
+        const res = await fetch(`${path}?groupId=${currentGroupId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ show_in_itinerary: true }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || fail);
+        if (type === 'accommodation') await fetchAccommodations(selectedTrip.id);
+        else if (type === 'dining') await fetchDining(selectedTrip.id);
+        else if (type === 'attraction') await fetchAttractions(selectedTrip.id);
+        else await fetchTransports(selectedTrip.id);
+      } catch (e: unknown) {
+        alert(e instanceof Error ? e.message : fail);
+      }
+    },
+    [
+      currentGroupId,
+      selectedTrip,
+      getAuthHeaders,
+      fetchAccommodations,
+      fetchDining,
+      fetchAttractions,
+      fetchTransports,
+      tt,
+    ],
+  );
+
   const handleEditFromItinerary = (item: typeof sortedItineraries[0]) => {
     if (!selectedTrip) return;
     if (item.type === 'accommodation') {
@@ -2818,6 +2867,24 @@ export function TravelPlannerContent() {
                                 {tt('link_google_search')}
                               </a>
                             )}
+                            {!a.show_in_itinerary && (
+                              <button
+                                type="button"
+                                onClick={() => void handleAddToItinerary('attraction', a.id)}
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#059669',
+                                  background: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: 6,
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tt('save_and_add_to_itinerary')}
+                              </button>
+                            )}
                           </div>
                         </li>
                       ))
@@ -2922,6 +2989,24 @@ export function TravelPlannerContent() {
                                 {tt('link_google_search')}
                               </a>
                             )}
+                            {!d.show_in_itinerary && (
+                              <button
+                                type="button"
+                                onClick={() => void handleAddToItinerary('dining', d.id)}
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#059669',
+                                  background: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: 6,
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tt('save_and_add_to_itinerary')}
+                              </button>
+                            )}
                           </div>
                         </li>
                       ))
@@ -3022,6 +3107,24 @@ export function TravelPlannerContent() {
                               <a href={buildGoogleWebSearchUrl(a.name, a.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
                                 {tt('link_google_search')}
                               </a>
+                            )}
+                            {!a.show_in_itinerary && (
+                              <button
+                                type="button"
+                                onClick={() => void handleAddToItinerary('accommodation', a.id)}
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#059669',
+                                  background: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: 6,
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tt('save_and_add_to_itinerary')}
+                              </button>
                             )}
                           </div>
                         </li>
@@ -3157,9 +3260,29 @@ export function TravelPlannerContent() {
                             {t.memo && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{t.memo}</div>}
                             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(t.created_by)}{t.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(t.updated_by)}`}</div>
                           </div>
-                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                            <button type="button" onClick={() => openTransportForm(t)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
-                            <button type="button" onClick={() => handleDeleteTransport(t)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <button type="button" onClick={() => openTransportForm(t)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                              <button type="button" onClick={() => handleDeleteTransport(t)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                            </div>
+                            {!t.show_in_itinerary && (
+                              <button
+                                type="button"
+                                onClick={() => void handleAddToItinerary('transport', t.id)}
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#059669',
+                                  background: '#ecfdf5',
+                                  border: '1px solid #a7f3d0',
+                                  borderRadius: 6,
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tt('save_and_add_to_itinerary')}
+                              </button>
+                            )}
                           </div>
                         </li>
                       ))
