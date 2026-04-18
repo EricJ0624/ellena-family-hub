@@ -12,6 +12,10 @@ export interface FrameConfig {
   color: string;
 }
 
+/** 모든 프레임 SVG 오버레이: 부모 기준 풀사이즈, 클릭 통과 */
+const frameSvgOverlayClass =
+  'pointer-events-none absolute inset-0 h-full w-full';
+
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
   {
@@ -56,17 +60,7 @@ interface PhotoFrameSVGProps {
 // 바로크 스타일 프레임 SVG
 const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
-    <svg
-      viewBox="0 0 400 300"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-    >
+    <svg viewBox="0 0 400 300" className={frameSvgOverlayClass}>
       <defs>
         {/* 나무 질감 그라데이션 */}
         <linearGradient id="baroqueWood" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -188,17 +182,7 @@ const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
 // 오네이트 스타일 프레임 SVG
 const OrnateFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
-    <svg
-      viewBox="0 0 400 300"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-    >
+    <svg viewBox="0 0 400 300" className={frameSvgOverlayClass}>
       <defs>
         <linearGradient id="ornateWood" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={color} />
@@ -258,17 +242,7 @@ const OrnateFrame: React.FC<{ color: string }> = ({ color }) => {
 // 빈티지 스타일 프레임 SVG
 const VintageFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
-    <svg
-      viewBox="0 0 400 300"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-    >
+    <svg viewBox="0 0 400 300" className={frameSvgOverlayClass}>
       <defs>
         <linearGradient id="vintageWood" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={color} />
@@ -297,17 +271,7 @@ const VintageFrame: React.FC<{ color: string }> = ({ color }) => {
 // 모던 스타일 프레임 SVG
 const ModernFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
-    <svg
-      viewBox="0 0 400 300"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-    >
+    <svg viewBox="0 0 400 300" className={frameSvgOverlayClass}>
       <defs>
         <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={color} />
@@ -325,17 +289,7 @@ const ModernFrame: React.FC<{ color: string }> = ({ color }) => {
 // 미니멀 스타일 프레임 SVG
 const MinimalFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
-    <svg
-      viewBox="0 0 400 300"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-    >
+    <svg viewBox="0 0 400 300" className={frameSvgOverlayClass}>
       <rect x="0" y="0" width="400" height="300" fill={color} />
       <rect x="15" y="15" width="370" height="270" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1" />
     </svg>

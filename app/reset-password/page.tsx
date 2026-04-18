@@ -79,117 +79,38 @@ export default function ResetPasswordPage() {
     }
   };
 
-  const inputStyle = {
-    width: '100%',
-    height: '60px',
-    backgroundColor: '#ffffff',
-    border: '2px solid #e2e8f0',
-    borderRadius: '16px',
-    padding: '0 20px',
-    fontSize: '16px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-    outline: 'none',
-    color: '#1a202c',
-    transition: 'all 0.3s ease',
-    boxSizing: 'border-box' as const
-  };
+  const inputClassName =
+    'box-border h-[60px] w-full rounded-2xl border-2 border-[#e2e8f0] bg-white px-5 text-base text-[#1a202c] shadow-[0_4px_12px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 ease-in-out tracking-[2px] focus:border-[#667eea] focus:shadow-[0_4px_16px_rgba(102,126,234,0.2)]';
 
-  const buttonStyle = {
-    width: '100%',
-    height: '60px',
-    background: loading 
-      ? 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)'
-      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '16px',
-    fontSize: '18px',
-    fontWeight: '700',
-    marginTop: '8px',
-    boxShadow: loading
-      ? '0 4px 12px rgba(0,0,0,0.1)'
-      : '0 8px 24px rgba(102, 126, 234, 0.4)',
-    cursor: loading ? 'not-allowed' as const : 'pointer' as const,
-    transition: 'all 0.3s ease',
-    position: 'relative' as const,
-    overflow: 'hidden' as const
-  };
+  const buttonClassName = [
+    'relative mt-2 h-[60px] w-full overflow-hidden rounded-2xl border-none text-lg font-bold text-white transition-all duration-300 ease-in-out',
+    loading
+      ? 'cursor-not-allowed bg-[linear-gradient(135deg,#94a3b8_0%,#64748b_100%)] shadow-[0_4px_12px_rgba(0,0,0,0.1)]'
+      : 'cursor-pointer bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] shadow-[0_8px_24px_rgba(102,126,234,0.4)] active:scale-[0.98] active:shadow-[0_4px_12px_rgba(102,126,234,0.3)]',
+  ].join(' ');
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      padding: '20px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5 font-[-apple-system,BlinkMacSystemFont,Segoe_UI,Roboto,Helvetica_Neue,Arial,sans-serif]">
       {/* 배경 장식 요소 */}
-      <div style={{
-        position: 'absolute',
-        top: '-50%',
-        right: '-20%',
-        width: '500px',
-        height: '500px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '-30%',
-        left: '-15%',
-        width: '400px',
-        height: '400px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(118, 75, 162, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)',
-        zIndex: 0
-      }} />
+      <div
+        className="pointer-events-none absolute -top-1/2 -right-[20%] z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]"
+        aria-hidden
+      />
 
-      <div style={{ 
-        width: '100%', 
-        maxWidth: '420px', 
-        textAlign: 'center',
-        position: 'relative',
-        zIndex: 1
-      }}>
+      <div className="relative z-[1] w-full max-w-[420px] text-center">
         {/* 로고 영역 */}
-        <div style={{ 
-          marginBottom: '40px',
-          animation: 'fadeInDown 0.6s ease-out'
-        }}>
-          <div style={{ 
-            fontSize: '100px', 
-            marginBottom: '20px',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
-          }}>🔐</div>
+        <div className="mb-10 animate-[fadeInDown_0.6s_ease-out]">
+          <div className="mb-5 text-[100px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.1)]">🔐</div>
           
-          <h1 style={{ 
-            fontSize: '42px', 
-            fontWeight: '800', 
-            color: '#1a202c', 
-            margin: '0 0 12px 0',
-            letterSpacing: '-1.5px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
+          <h1 className="m-0 mb-3 bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] bg-clip-text text-[42px] font-extrabold tracking-[-1.5px] text-transparent">
             {rpt('title')}
           </h1>
           
-          <p style={{ 
-            fontSize: '17px', 
-            color: '#64748b', 
-            fontWeight: '500', 
-            lineHeight: '1.6',
-            margin: 0,
-            letterSpacing: '0.3px'
-          }}>
+          <p className="m-0 text-[17px] font-medium leading-[1.6] tracking-[0.3px] text-[#64748b]">
             {rpt('subtitle').split('\n').map((line, i, arr) => (
               <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
             ))}
@@ -197,126 +118,57 @@ export default function ResetPasswordPage() {
         </div>
 
         {/* 입력 폼 영역 */}
-        <form 
-          onSubmit={handleResetPassword} 
-          className="fade-in"
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '20px',
-            animation: 'fadeInUp 0.6s ease-out 0.2s both'
-          }}
+        <form
+          onSubmit={handleResetPassword}
+          className="fade-in flex flex-col gap-5 [animation:fadeInUp_0.6s_ease-out_0.2s_both]"
         >
           {/* 새 비밀번호 입력 */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <input
               type="password"
               placeholder={rpt('placeholder_new_password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={{
-                ...inputStyle,
-                letterSpacing: '2px'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e2e8f0';
-                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-              }}
+              className={inputClassName}
             />
           </div>
 
           {/* 비밀번호 확인 입력 */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <input
               type="password"
               placeholder={rpt('placeholder_confirm')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              style={{
-                ...inputStyle,
-                letterSpacing: '2px'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e2e8f0';
-                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-              }}
+              className={inputClassName}
             />
           </div>
 
           {/* 성공 메시지 */}
           {successMsg && (
-            <div style={{ 
-              color: '#10b981', 
-              fontSize: '14px', 
-              marginTop: '-8px',
-              padding: '12px 16px',
-              backgroundColor: '#f0fdf4',
-              borderRadius: '12px',
-              border: '1px solid #86efac',
-              animation: 'fadeIn 0.5s ease-in-out'
-            }}>
+            <div className="-mt-2 animate-[fadeIn_0.5s_ease-in-out] rounded-xl border border-[#86efac] bg-[#f0fdf4] px-4 py-3 text-sm text-[#10b981]">
               {successMsg}
             </div>
           )}
 
           {/* 에러 메시지 */}
           {errorMsg && (
-            <div style={{ 
-              color: '#ef4444', 
-              fontSize: '14px', 
-              marginTop: '-8px',
-              padding: '12px 16px',
-              backgroundColor: '#fef2f2',
-              borderRadius: '12px',
-              border: '1px solid #fecaca',
-              animation: 'shake 0.5s ease-in-out'
-            }}>
+            <div className="-mt-2 animate-[shake_0.5s_ease-in-out] rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm text-[#ef4444]">
               {errorMsg}
             </div>
           )}
 
           {/* 제출 버튼 */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={buttonStyle}
-            onMouseDown={(e) => {
-              if (!loading) {
-                e.currentTarget.style.transform = 'scale(0.98)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-              }
-            }}
-            onMouseUp={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
-            }}
-          >
+          <button type="submit" disabled={loading} className={buttonClassName}>
             {loading ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span className="flex items-center justify-center gap-2">
                 <span>{rpt('btn_loading')}</span>
-                <span style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderTop: '2px solid #ffffff',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  display: 'inline-block'
-                }} />
+                <span
+                  className="inline-block h-4 w-4 animate-[spin_0.8s_linear_infinite] rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-white"
+                  aria-hidden
+                />
               </span>
             ) : (
               <>{rpt('btn_submit')}</>
@@ -325,9 +177,8 @@ export default function ResetPasswordPage() {
         </form>
         
         {/* 하단 여백 */}
-        <div style={{ height: '40px' }} />
+        <div className="h-10" />
       </div>
     </div>
   );
 }
-

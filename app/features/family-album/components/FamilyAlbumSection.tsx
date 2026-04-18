@@ -38,19 +38,7 @@ export function FamilyAlbumSection({
         <button
           type="button"
           onClick={onViewAllClick}
-          style={{
-            padding: '8px 12px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: '#8b5cf6',
-            color: '#fff',
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
-            fontSize: '12px',
-          }}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#8b5cf6] px-3 py-2 text-xs font-bold text-white"
         >
           📸 {t.view_all}
           {photos.length > 0 && ` (${photos.length})`}
@@ -58,71 +46,25 @@ export function FamilyAlbumSection({
       </div>
       <div className="section-body">
         {displayPhotos.length === 0 ? (
-          <p
-            style={{
-              fontSize: '13px',
-              color: '#64748b',
-              textAlign: 'center',
-              padding: '32px 16px',
-            }}
-          >
+          <p className="px-4 py-8 text-center text-[13px] text-[#64748b]">
             {t.empty_state}
           </p>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-              gap: '8px',
-              padding: '4px',
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 p-1">
             {displayPhotos.map((photo) => (
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                style={{
-                  position: 'relative',
-                  aspectRatio: '1',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  backgroundColor: '#f1f5f9',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                className="relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-[#f1f5f9] transition-[transform,box-shadow] duration-200 ease-in-out hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
               >
                 <img
                   src={photo.data}
                   alt={photo.description || ''}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
+                  className="h-full w-full object-cover"
                   loading="lazy"
                 />
                 {photo.isUploading && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                      color: '#fff',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                    }}
-                  >
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs font-semibold text-white">
                     업로드 중...
                   </div>
                 )}
@@ -131,20 +73,11 @@ export function FamilyAlbumSection({
           </div>
         )}
         {hasMore && (
-          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+          <div className="mt-4 text-center">
             <button
               type="button"
               onClick={onViewAllClick}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#f8fafc',
-                color: '#475569',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
+              className="cursor-pointer rounded-lg border border-solid border-[#cbd5e1] bg-[#f8fafc] px-5 py-2.5 text-[13px] font-semibold text-[#475569]"
             >
               {t.photos_count.replace('{count}', String(photos.length - maxPhotos))}
             </button>

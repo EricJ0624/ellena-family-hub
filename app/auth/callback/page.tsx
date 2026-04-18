@@ -116,50 +116,23 @@ export default function AuthCallbackPage() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f7fa',
-        flexDirection: 'column',
-        gap: '16px',
-      }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          border: '4px solid #e2e8f0',
-          borderTop: '4px solid #9333ea',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }} />
-        <p style={{ color: '#64748b', fontSize: '16px' }}>인증 처리 중...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5f7fa]">
+        <div
+          className="h-12 w-12 animate-spin rounded-full border-4 border-[#e2e8f0] border-t-[#9333ea]"
+          aria-hidden
+        />
+        <p className="text-base text-[#64748b]">인증 처리 중...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f7fa',
-        flexDirection: 'column',
-        gap: '16px',
-        padding: '20px',
-      }}>
-        <div style={{
-          padding: '16px',
-          backgroundColor: '#fee2e2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          color: '#991b1b',
-        }}>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5f7fa] p-5">
+        <div className="rounded-lg border border-[#fecaca] bg-[#fee2e2] p-4 text-[#991b1b]">
           {error}
         </div>
-        <p style={{ color: '#64748b', fontSize: '14px' }}>{act('redirect_message')}</p>
+        <p className="text-sm text-[#64748b]">{act('redirect_message')}</p>
       </div>
     );
   }
