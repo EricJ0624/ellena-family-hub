@@ -166,6 +166,10 @@ export interface TravelTransport {
   end_time: string | null;
   departure: string | null;
   arrival: string | null;
+  /** 출발지 Place ID (자동완성 선택 시) */
+  departure_place_id?: string | null;
+  /** 도착지 Place ID (자동완성 선택 시) */
+  arrival_place_id?: string | null;
   /** 이동 거리(km) */
   distance_km: number | null;
   memo: string | null;

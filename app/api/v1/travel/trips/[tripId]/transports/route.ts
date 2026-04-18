@@ -59,13 +59,15 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { transport_type, day_date, start_time, end_time, departure, arrival, distance_km, memo, show_in_itinerary } = body as {
+    const { transport_type, day_date, start_time, end_time, departure, arrival, departure_place_id, arrival_place_id, distance_km, memo, show_in_itinerary } = body as {
       transport_type?: 'air' | 'train' | 'car' | 'bike';
       day_date?: string;
       start_time?: string;
       end_time?: string;
       departure?: string;
       arrival?: string;
+      departure_place_id?: string | null;
+      arrival_place_id?: string | null;
       distance_km?: number;
       memo?: string;
       /** 일정 뷰에 표시 여부 */
@@ -106,6 +108,8 @@ export async function POST(
     if (end_time) insertPayload.end_time = String(end_time).trim().substring(0, 5);
     if (departure) insertPayload.departure = String(departure).trim();
     if (arrival) insertPayload.arrival = String(arrival).trim();
+    if (departure_place_id !== undefined) insertPayload.departure_place_id = departure_place_id ? String(departure_place_id).trim() : null;
+    if (arrival_place_id !== undefined) insertPayload.arrival_place_id = arrival_place_id ? String(arrival_place_id).trim() : null;
     if (distance_km != null && typeof distance_km === 'number') insertPayload.distance_km = distance_km;
     if (memo) insertPayload.memo = String(memo).trim();
 

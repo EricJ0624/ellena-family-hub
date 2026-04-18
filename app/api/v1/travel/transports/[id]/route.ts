@@ -41,6 +41,8 @@ export async function PATCH(
     if (body.end_time !== undefined) updatePayload.end_time = body.end_time ? String(body.end_time).trim().substring(0, 5) : null;
     if (body.departure !== undefined) updatePayload.departure = body.departure ? String(body.departure).trim() : null;
     if (body.arrival !== undefined) updatePayload.arrival = body.arrival ? String(body.arrival).trim() : null;
+    if (body.departure_place_id !== undefined) updatePayload.departure_place_id = body.departure_place_id ? String(body.departure_place_id).trim() : null;
+    if (body.arrival_place_id !== undefined) updatePayload.arrival_place_id = body.arrival_place_id ? String(body.arrival_place_id).trim() : null;
     if (body.distance_km !== undefined) updatePayload.distance_km = body.distance_km == null ? null : Number(body.distance_km);
     if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
     if (body.show_in_itinerary !== undefined) updatePayload.show_in_itinerary = body.show_in_itinerary === true;
