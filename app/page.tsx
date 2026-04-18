@@ -492,12 +492,12 @@ export default function LoginPage() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
       padding: '20px',
       fontFamily: getFontStyle(lang, 'body').fontFamily,
       position: 'relative',
-      overflow: 'hidden'
+      overflowX: 'hidden',
+      overflowY: 'auto',
     }}>
       {/* 배경 장식 요소 */}
       <div style={{

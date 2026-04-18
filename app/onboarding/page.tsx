@@ -546,7 +546,6 @@ export default function OnboardingPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
       }}>
         <div style={{ textAlign: 'center' }}>
@@ -569,7 +568,8 @@ export default function OnboardingPage() {
       padding: '20px',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       position: 'relative',
-      overflow: 'hidden'
+      overflowX: 'hidden',
+      overflowY: 'auto',
     }}>
       {/* 배경 장식 요소 */}
       <div style={{
