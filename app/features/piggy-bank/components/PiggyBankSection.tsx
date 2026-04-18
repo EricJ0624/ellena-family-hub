@@ -84,18 +84,7 @@ export function PiggyBankSection({
         {currentGroupId && (
           <button
             onClick={isAdmin ? onManageClick : onGoClick}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#ef4444',
-              color: '#fff',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-            }}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#ef4444] px-3 py-2 font-bold text-white"
           >
             <span>🐷</span>
             {buttonText}
@@ -104,83 +93,45 @@ export function PiggyBankSection({
       </div>
       <div className="section-body">
         {!currentGroupId ? (
-          <div style={{ fontSize: '13px', color: '#64748b' }}>
+          <div className="text-[13px] text-[#64748b]">
             {t.select_group}
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: '10px' }}>
+          <div className="grid gap-2.5">
             {piggySummaryError && (
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: '#b91c1c',
-                  backgroundColor: '#fee2e2',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                }}
-              >
+              <div className="rounded-lg bg-[#fee2e2] px-2.5 py-2 text-xs text-[#b91c1c]">
                 {piggySummaryError}
               </div>
             )}
             {!piggyLoaded ? (
-              <div style={{ fontSize: '13px', color: '#64748b' }}>{t.loading}</div>
+              <div className="text-[13px] text-[#64748b]">{t.loading}</div>
             ) : isAdmin && piggyMemberPiggies !== null ? (
               /* 관리자: 저금통 요청 리스트 + 멤버별 카드 */
               (() => {
                 const hasAnyAccount = piggyMemberPiggies.some((p) => !p.noAccount);
                 return (
-                  <div style={{ display: 'grid', gap: '12px' }}>
+                  <div className="grid gap-3">
                     {pendingAccountRequests.length > 0 && (
-                      <div
-                        style={{
-                          backgroundColor: '#fef3c7',
-                          borderRadius: '12px',
-                          padding: '12px',
-                          border: '1px solid #fcd34d',
-                          marginBottom: '4px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: '#92400e',
-                            marginBottom: '8px',
-                          }}
-                        >
+                      <div className="mb-1 rounded-xl border border-[#fcd34d] bg-[#fef3c7] p-3">
+                        <div className="mb-2 text-[13px] font-bold text-[#92400e]">
                           {t.pending_requests.replace(/\{count\}/g, String(pendingAccountRequests.length))}
                         </div>
                         {pendingAccountRequests.map((req) => (
                           <div
                             key={req.id}
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '8px 0',
-                              borderBottom: '1px solid #fde68a',
-                            }}
+                            className="flex items-center justify-between border-b border-[#fde68a] py-2"
                           >
-                            <span style={{ fontSize: '13px', color: '#78350f' }}>
+                            <span className="text-[13px] text-[#78350f]">
                               {req.nickname || t.member}
                             </span>
-                            <div style={{ display: 'flex', gap: '6px' }}>
+                            <div className="flex gap-1.5">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onRejectRequest(req.id);
                                 }}
-                                style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #e2e8f0',
-                                  background: '#f1f5f9',
-                                  color: '#475569',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border border-solid border-[#e2e8f0] bg-[#f1f5f9] px-2.5 py-1 text-xs font-semibold text-[#475569]"
                               >
                                 {t.reject_btn}
                               </button>
@@ -190,16 +141,7 @@ export function PiggyBankSection({
                                   e.stopPropagation();
                                   onApproveRequest(req.id);
                                 }}
-                                style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  border: 'none',
-                                  background: '#22c55e',
-                                  color: '#fff',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border-0 bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white"
                               >
                                 {t.approve_btn}
                               </button>
@@ -209,14 +151,7 @@ export function PiggyBankSection({
                       </div>
                     )}
                     {!hasAnyAccount && piggyMemberPiggies.length === 0 && (
-                      <div
-                        style={{
-                          fontSize: '14px',
-                          color: '#64748b',
-                          padding: '12px',
-                          textAlign: 'center',
-                        }}
-                      >
+                      <div className="p-3 text-center text-sm text-[#64748b]">
                         {t.no_account_holders}
                       </div>
                     )}
@@ -224,23 +159,13 @@ export function PiggyBankSection({
                       p.noAccount ? (
                         <div
                           key={p.user_id}
-                          style={{
-                            backgroundColor: '#f8fafc',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            border: '1px solid #e2e8f0',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '10px',
-                          }}
+                          className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-solid border-[#e2e8f0] bg-[#f8fafc] p-4"
                         >
                           <div>
-                            <div style={{ fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
+                            <div className="text-base font-bold text-[#1f2937]">
                               {p.ownerNickname || t.member}
                             </div>
-                            <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                            <div className="mt-1 text-[13px] text-[#64748b]">
                               {t.member_no_account_line}
                             </div>
                           </div>
@@ -250,15 +175,7 @@ export function PiggyBankSection({
                               e.stopPropagation();
                               onAddPiggy(p.user_id);
                             }}
-                            style={{
-                              padding: '8px 14px',
-                              borderRadius: '8px',
-                              border: 'none',
-                              backgroundColor: '#22c55e',
-                              color: '#fff',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-lg border-0 bg-[#22c55e] px-3.5 py-2 font-semibold text-white"
                           >
                             {t.add_account_btn}
                           </button>
@@ -266,91 +183,43 @@ export function PiggyBankSection({
                       ) : (
                         <div
                           key={p.id}
-                          style={{
-                            backgroundColor: '#ffffff',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            border: '1px solid #e2e8f0',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#cbd5e1';
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#e2e8f0';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-                          }}
+                          className="cursor-pointer rounded-xl border border-solid border-[#e2e8f0] bg-white p-4 shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-all duration-200 ease-in-out hover:border-[#cbd5e1] hover:shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
                           onClick={() => {
                             if (p.user_id) onMemberClick(p.user_id);
                           }}
                         >
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '12px',
-                              flexWrap: 'wrap',
-                              gap: '8px',
-                            }}
-                          >
-                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1f2937' }}>
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="m-0 text-base font-bold text-[#1f2937]">
                               {t.card_title.replace(/\{name\}/g, p.ownerNickname?.trim() || 'Ellena')}
                             </h4>
                             <div
-                              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                              className="flex items-center gap-2"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <button
                                 type="button"
                                 onClick={() => p.user_id && onDeletePiggy(p.user_id)}
-                                style={{
-                                  padding: '4px 8px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #fecaca',
-                                  background: '#fef2f2',
-                                  color: '#b91c1c',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border border-solid border-[#fecaca] bg-[#fef2f2] px-2 py-1 text-[11px] font-semibold text-[#b91c1c]"
                               >
                                 {t.delete_account_btn}
                               </button>
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>→</span>
+                              <span className="text-xs text-[#64748b]">→</span>
                             </div>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <div
-                              style={{
-                                backgroundColor: '#fef2f2',
-                                borderRadius: '8px',
-                                padding: '10px',
-                                border: '1px solid #fecaca',
-                              }}
-                            >
-                              <div style={{ fontSize: '11px', color: '#b91c1c', marginBottom: '4px' }}>
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div className="rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2] p-2.5">
+                              <div className="mb-1 text-[11px] text-[#b91c1c]">
                                 {t.wallet_balance_label}
                               </div>
-                              <div style={{ fontSize: '16px', fontWeight: 700, color: '#b91c1c' }}>
+                              <div className="text-base font-bold text-[#b91c1c]">
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
                             </div>
-                            <div
-                              style={{
-                                backgroundColor: '#fff7ed',
-                                borderRadius: '8px',
-                                padding: '10px',
-                                border: '1px solid #fed7aa',
-                              }}
-                            >
-                              <div style={{ fontSize: '11px', color: '#9a3412', marginBottom: '4px' }}>
+                            <div className="rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed] p-2.5">
+                              <div className="mb-1 text-[11px] text-[#9a3412]">
                                 {t.bank_balance_label}
                               </div>
-                              <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>
+                              <div className="text-base font-bold text-[#9a3412]">
                                 {formatAmount(p.balance ?? 0, p.currency)}
                               </div>
                             </div>
@@ -363,56 +232,34 @@ export function PiggyBankSection({
               })()
             ) : piggySummary ? (
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
-              <div style={{ display: 'grid', gap: '10px' }}>
-                <div
-                  style={{
-                    backgroundColor: '#fef2f2',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    border: '1px solid #fecaca',
-                  }}
-                >
-                  <div style={{ fontSize: '12px', color: '#b91c1c' }}>
+              <div className="grid gap-2.5">
+                <div className="rounded-xl border border-solid border-[#fecaca] bg-[#fef2f2] p-3">
+                  <div className="text-xs text-[#b91c1c]">
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#b91c1c' }}>
+                  <div className="text-lg font-bold text-[#b91c1c]">
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
                 </div>
-                <div
-                  style={{
-                    backgroundColor: '#fff7ed',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    border: '1px solid #fed7aa',
-                  }}
-                >
-                  <div style={{ fontSize: '12px', color: '#9a3412' }}>
+                <div className="rounded-xl border border-solid border-[#fed7aa] bg-[#fff7ed] p-3">
+                  <div className="text-xs text-[#9a3412]">
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#9a3412' }}>
+                  <div className="text-lg font-bold text-[#9a3412]">
                     {formatAmount(piggySummary.bankBalance, piggySummary.currency)}
                   </div>
                 </div>
               </div>
             ) : (
               /* 일반 사용자: 저금통 없음 */
-              <div style={{ padding: '16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
+              <div className="p-4 text-center">
+                <div className="mb-3 text-sm text-[#64748b]">
                   {t.empty_ask_admin}
                 </div>
                 <button
                   type="button"
                   onClick={onRequestAccount}
-                  style={{
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #94a3b8',
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="cursor-pointer rounded-lg border border-solid border-[#94a3b8] bg-[#f1f5f9] px-4 py-2.5 font-semibold text-[#475569]"
                 >
                   {t.request_account_btn}
                 </button>
