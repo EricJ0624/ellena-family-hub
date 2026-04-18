@@ -34,6 +34,8 @@ export default function LoginPage() {
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  /** 가입만: 인증 서버 rate limit일 때 로그인 유도 UI */
+  const [signupRateLimitHint, setSignupRateLimitHint] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
@@ -244,6 +246,7 @@ export default function LoginPage() {
     signupSubmitLockRef.current = true;
     setLoading(true);
     setErrorMsg('');
+    setSignupRateLimitHint(false);
     setSuccessMsg('');
 
     try {
@@ -294,18 +297,7 @@ export default function LoginPage() {
       } catch (_) {}
 
       const signupNickname = trimmedNickname;
-      
-      // 초대 링크로 가입 시: 이메일 인증 후 그룹 연결을 위해 API로 초대 코드 임시 저장 (user_metadata는 일부 환경에서 가입 실패 유발)
       const pendingInviteCode = typeof window !== 'undefined' ? getSessionStoredInviteCode() : null;
-      if (pendingInviteCode && typeof window !== 'undefined') {
-        try {
-          await fetch(`${window.location.origin}/api/invite/store-pending`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
-          });
-        } catch (_) {}
-      }
 
       // SSR 안전성: window 객체가 있을 때만 origin 사용
       const redirectTo = typeof window !== 'undefined' 
@@ -349,6 +341,17 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user) {
+        // 가입이 확정된 뒤에만 초대 임시 저장 (실패한 signUp마다 API를 두르지 않음)
+        if (pendingInviteCode && typeof window !== 'undefined') {
+          try {
+            await fetch(`${window.location.origin}/api/invite/store-pending`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
+            });
+          } catch (_) {}
+        }
+
         // 이메일 인증 확인
         const isEmailConfirmed = data.user.email_confirmed_at !== null;
         
@@ -417,9 +420,13 @@ export default function LoginPage() {
       } else if (/password/i.test(message) && /weak|short|minimum|at least/i.test(message)) {
         setErrorMsg(t('error_password_min'));
       } else if (isSupabaseAuthRateLimitError(error)) {
-        signupCooldownUntilRef.current = Date.now() + 120_000;
+        setSignupRateLimitHint(true);
+        signupCooldownUntilRef.current = Date.now() + 300_000;
         setErrorMsg(
-          '가입·인증 메일 요청이 제한되었습니다. 2~3분 후 다시 시도해 주세요. (같은 네트워크에서 반복 시도하면 Supabase 인증 서버에서 잠시 막힐 수 있습니다.)'
+          [
+            '지금은 가입·인증 메일 서버(Supabase)가 요청을 일시적으로 막은 상태입니다. 테스트를 여러 번 하면 같은 Wi‑Fi에서 흔히 발생합니다.',
+            '5~10분 뒤에 다시 시도해 주세요. 이미 이 이메일로 가입한 적이 있다면 아래 버튼으로 로그인해 보세요.',
+          ].join('\n')
         );
       } else if (/signups not allowed|signup_disabled/i.test(message + ' ' + code)) {
         setErrorMsg('현재 이메일 가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.');
@@ -484,6 +491,7 @@ export default function LoginPage() {
   const switchMode = (newMode: Mode) => {
     setMode(newMode);
     setErrorMsg('');
+    setSignupRateLimitHint(false);
     setSuccessMsg('');
     setPassword('');
     setConfirmPassword('');
@@ -860,10 +868,35 @@ export default function LoginPage() {
               backgroundColor: '#fef2f2',
               borderRadius: '12px',
               border: '1px solid #fecaca',
-              animation: 'shake 0.5s ease-in-out'
+              animation: 'shake 0.5s ease-in-out',
+              whiteSpace: 'pre-line',
             }}>
               {errorMsg}
             </div>
+          )}
+
+          {mode === 'signup' && signupRateLimitHint && (
+            <button
+              type="button"
+              onClick={() => {
+                setSignupRateLimitHint(false);
+                switchMode('login');
+              }}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '12px 16px',
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#4f46e5',
+                backgroundColor: '#eef2ff',
+                border: '1px solid #c7d2fe',
+                borderRadius: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              이미 가입한 이메일이에요 → 로그인으로 이동
+            </button>
           )}
 
           {/* 제출 버튼 */}
