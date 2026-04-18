@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 
@@ -23,80 +24,84 @@ export default function AuthCallbackPage() {
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
+        const searchParams = new URLSearchParams(window.location.search);
+        const code = searchParams.get('code');
+        const tokenHash = searchParams.get('token_hash');
+        const callbackType = (hashParams.get('type') || searchParams.get('type') || '').trim();
 
         if (accessToken && refreshToken) {
-          // 세션 설정
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
-
           if (sessionError) throw sessionError;
-
-          // 실제로 요청에 붙을 세션(access_token)이 있는지 확인 후 리다이렉트
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) {
-            router.push('/');
-            return;
-          }
-
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            router.push('/');
-            return;
-          }
-
-          // 시스템 관리자 확인
-          const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-            user_id_param: user.id,
+        } else if (code) {
+          // PKCE callback: ?code=...
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
+        } else if (tokenHash && callbackType) {
+          // Email OTP callback: ?token_hash=...&type=signup|recovery|invite|magiclink|email_change
+          const otpType = callbackType as 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change';
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            type: otpType,
+            token_hash: tokenHash,
           });
+          if (verifyError) throw verifyError;
+        }
 
-          // 그룹이 있는지 확인
-          const { data: memberships } = await supabase
-            .from('memberships')
-            .select('group_id')
-            .eq('user_id', user.id)
-            .limit(1);
-
-          const { data: ownedGroups } = await supabase
-            .from('groups')
-            .select('id')
-            .eq('owner_id', user.id)
-            .limit(1);
-
-          const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
-          // 초대 링크로 가입한 경우: API에 임시 저장된 코드 우선 사용 (다른 탭/기기에서 인증해도 동작)
-          let invite: string | null = null;
-          try {
-            const { data: { session: sess } } = await supabase.auth.getSession();
-            if (sess?.access_token) {
-              const res = await fetch(`${window.location.origin}/api/invite/my-pending`, {
-                headers: { Authorization: `Bearer ${sess.access_token}` },
-              });
-              const json = await res.json().catch(() => ({}));
-              const fromApi = json?.invite_code;
-              if (fromApi && /^[0-9A-Za-z]{1,20}$/.test(String(fromApi))) invite = String(fromApi);
-            }
-          } catch (_) {}
-          if (!invite) {
-            const fromMeta = user?.user_metadata?.pending_invite_code;
-            const fromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
-            if (fromMeta && /^[0-9A-Za-z]{1,20}$/.test(String(fromMeta))) invite = String(fromMeta);
-            else if (fromStorage) invite = fromStorage;
-          }
-          const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
-
-          if (isAdmin) {
-            // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
-            router.push(hasGroups ? onboardingPath : '/admin');
-          } else {
-            // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
-            router.push(onboardingPath);
-          }
-        } else {
-          // 토큰이 없으면 로그인 페이지로 리다이렉트
+        // 실제로 요청에 붙을 세션(access_token)이 있는지 확인 후 리다이렉트
+        const { data: { session } } = await supabase.auth.getSession();
+        const { user } = await getValidatedUserWithSessionFallback(supabase, session);
+        if (!session?.access_token || !user) {
           router.push('/');
+          return;
+        }
+
+        // 시스템 관리자 확인
+        const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+          user_id_param: user.id,
+        });
+
+        // 그룹이 있는지 확인
+        const { data: memberships } = await supabase
+          .from('memberships')
+          .select('group_id')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        const { data: ownedGroups } = await supabase
+          .from('groups')
+          .select('id')
+          .eq('owner_id', user.id)
+          .limit(1);
+
+        const hasGroups = (memberships && memberships.length > 0) || (ownedGroups && ownedGroups.length > 0);
+        // 초대 링크로 가입한 경우: API에 임시 저장된 코드 우선 사용 (다른 탭/기기에서 인증해도 동작)
+        let invite: string | null = null;
+        try {
+          if (session?.access_token) {
+            const res = await fetch(`${window.location.origin}/api/invite/my-pending`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            const json = await res.json().catch(() => ({}));
+            const fromApi = json?.invite_code;
+            if (fromApi && /^[0-9A-Za-z]{1,20}$/.test(String(fromApi))) invite = String(fromApi);
+          }
+        } catch (_) {}
+        if (!invite) {
+          const fromMeta = user?.user_metadata?.pending_invite_code;
+          const fromStorage = typeof window !== 'undefined' ? window.sessionStorage.getItem('SFH_INVITE_CODE') : null;
+          if (fromMeta && /^[0-9A-Za-z]{1,20}$/.test(String(fromMeta))) invite = String(fromMeta);
+          else if (fromStorage) invite = fromStorage;
+        }
+        const onboardingPath = invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding';
+
+        if (isAdmin) {
+          // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
+          router.push(hasGroups ? onboardingPath : '/admin');
+        } else {
+          // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
+          router.push(onboardingPath);
         }
       } catch (err: any) {
         console.error('Auth callback error:', err);
