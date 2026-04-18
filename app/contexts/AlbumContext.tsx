@@ -79,6 +79,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
   const [album, setAlbum] = useState<Photo[]>([]);
   const albumRef = useRef<Photo[]>([]);
   const photosChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const realtimeResyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     albumRef.current = album;
@@ -115,12 +116,28 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       if (decrypted?.album && Array.isArray(decrypted.album)) localAlbum = decrypted.album;
     }
 
-    const { data: photos, error } = await supabase
-      .from('memory_vault')
-      .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode')
-      .eq('group_id', currentGroupId)
-      .order('created_at', { ascending: false })
-      .limit(100);
+    // 가입 직후·그룹 전환 직후 멤버십/세션 타이밍으로 첫 조회가 실패할 수 있어 짧게 재시도
+    let photos: Record<string, unknown>[] | null = null;
+    let error: { message?: string; code?: string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await supabase
+        .from('memory_vault')
+        .select(
+          'id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode'
+        )
+        .eq('group_id', currentGroupId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      error = res.error;
+      photos = res.data as Record<string, unknown>[] | null;
+      if (!res.error) break;
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Album] memory_vault load failed, retry', attempt + 1, res.error.message, res.error.code);
+      }
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 450 * (attempt + 1)));
+      }
+    }
 
     if (error) {
       const stableLocal = localAlbum.filter(
@@ -135,7 +152,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     }
 
     const supabasePhotos: Photo[] = (photos || [])
-      .filter((p: { image_url?: string; s3_original_url?: string }) => p.image_url || p.s3_original_url)
+      .filter((p: Record<string, unknown>) => p.image_url || p.s3_original_url)
       .map((p: Record<string, unknown>) => ({
         id: p.id as string | number,
         data: (p.image_url || p.s3_original_url) as string,
@@ -179,9 +196,18 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     }
 
     // 채널당 postgres_changes 1개만 사용 (여러 개 시 server/client bindings mismatch)
+    const gid = String(currentGroupId);
     const ch = supabase
       .channel(`memory_vault_album:${currentGroupId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'memory_vault' }, (payload: { eventType?: string; old?: { id?: unknown }; new?: Record<string, unknown> }) => {
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'memory_vault',
+          filter: `group_id=eq.${gid}`,
+        },
+        (payload: { eventType?: string; old?: { id?: unknown }; new?: Record<string, unknown> }) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
         if (ev === 'DELETE') {
           const id = payload.old?.id;
@@ -195,7 +221,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           const updated = payload.new as Record<string, unknown>;
           const url = (updated.image_url || updated.s3_original_url) as string;
           if (!url) return;
-          if (updated.group_id !== currentGroupId) return;
+          if (String(updated.group_id ?? '') !== gid) return;
           setAlbum((prev) =>
             prev.map((p) =>
               p.id === updated.id || p.supabaseId === updated.id
@@ -216,7 +242,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
         }
         // INSERT
         const newPhoto = payload.new as Record<string, unknown> | undefined;
-        if (!newPhoto || newPhoto.group_id !== currentGroupId) return;
+        if (!newPhoto || String(newPhoto.group_id ?? '') !== gid) return;
         const url = (newPhoto.image_url || newPhoto.s3_original_url) as string;
         if (!url) return;
         const newEntry: Photo = {
@@ -243,16 +269,33 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           return [newEntry, ...prev];
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Album] memory_vault realtime:', status);
+          }
+          if (realtimeResyncTimerRef.current) {
+            clearTimeout(realtimeResyncTimerRef.current);
+          }
+          realtimeResyncTimerRef.current = setTimeout(() => {
+            realtimeResyncTimerRef.current = null;
+            void loadAlbum();
+          }, 800);
+        }
+      });
     photosChannelRef.current = ch;
 
     return () => {
+      if (realtimeResyncTimerRef.current) {
+        clearTimeout(realtimeResyncTimerRef.current);
+        realtimeResyncTimerRef.current = null;
+      }
       if (photosChannelRef.current) {
         supabase.removeChannel(photosChannelRef.current);
         photosChannelRef.current = null;
       }
     };
-  }, [currentGroupId, userId]);
+  }, [currentGroupId, userId, loadAlbum]);
 
   const getKey = useCallback(() => {
     if (!userId) return '';

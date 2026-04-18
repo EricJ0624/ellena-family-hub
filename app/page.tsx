@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase, PERSIST_SESSION_FLAG_KEY } from '@/lib/supabase';
-import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
@@ -32,6 +31,8 @@ export default function LoginPage() {
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true); // 로그인 상태 유지 (기본 체크)
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
+  /** 가입 버튼 연타·이중 submit으로 signUp이 여러 번 나가 rate limit 걸리는 것 방지 */
+  const signupSubmitLockRef = useRef(false);
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
 
   // Hydration 오류 방지: 마운트 후에만 클라이언트 사이드 로직 실행
@@ -116,8 +117,9 @@ export default function LoginPage() {
     
     const checkExistingSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const { user, error } = await getValidatedUserWithSessionFallback(supabase, session);
+        // 자동 이동은 "서버에서 검증된 로그인"일 때만. getSession+세션 완화(getValidated…)를 쓰면
+        // 만료·유령 세션으로도 user가 있어 보여 가입(/) 화면에서 /onboarding 으로 빼앗길 수 있음 → 가입 불가 체감.
+        const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) return;
 
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -247,21 +249,22 @@ export default function LoginPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+    if (signupSubmitLockRef.current) return;
+    signupSubmitLockRef.current = true;
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
 
+    try {
     // 비밀번호 확인
     if (password !== confirmPassword) {
       setErrorMsg(t('error_password_mismatch'));
-      setLoading(false);
       return;
     }
 
     // 비밀번호 강도 검증 (최소 8자)
     if (password.length < 8) {
       setErrorMsg(t('error_password_min'));
-      setLoading(false);
       return;
     }
 
@@ -269,12 +272,10 @@ export default function LoginPage() {
     const trimmedNickname = nickname.trim();
     if (!trimmedNickname) {
       setErrorMsg(t('error_nickname_required'));
-      setLoading(false);
       return;
     }
     if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
       setErrorMsg(t('error_nickname_length'));
-      setLoading(false);
       return;
     }
 
@@ -321,8 +322,16 @@ export default function LoginPage() {
         }
       });
 
-      // Redirect URL allowlist 설정 누락 시 가입 자체가 막히는 경우가 있어 1회 무옵션 재시도
-      if (error && /redirect|email redirect|invalid redirect|not allowed/i.test(String(error.message || ''))) {
+      // Redirect URL allowlist 설정 누락 시에만 1회 무옵션 재시도 (rate limit·429에는 재호출하지 않음)
+      const firstMsg = String(error?.message || '');
+      const firstCode = String((error as { code?: string })?.code || '');
+      const isRateLimited =
+        /rate|429|too many|throttl|over_request|over_email|exceeded/i.test(`${firstMsg} ${firstCode}`);
+      if (
+        error &&
+        !isRateLimited &&
+        /redirect|email redirect|invalid redirect|not allowed/i.test(firstMsg)
+      ) {
         const retry = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
@@ -409,20 +418,26 @@ export default function LoginPage() {
         });
       }
       const message = String(error?.message || '');
+      const code = String((error as { code?: string })?.code || '');
+      const combined = `${message} ${code}`.toLowerCase();
       if (/already registered|already exists|already been registered/i.test(message)) {
         setErrorMsg(t('error_email_taken'));
       } else if (/invalid email|email.*invalid/i.test(message)) {
         setErrorMsg('이메일 형식이 올바르지 않습니다.');
       } else if (/password/i.test(message) && /weak|short|minimum|at least/i.test(message)) {
         setErrorMsg(t('error_password_min'));
-      } else if (/rate limit|too many requests|429/i.test(message)) {
-        setErrorMsg('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+      } else if (/rate|429|too many|throttl|over_request|over_email|exceeded/i.test(combined)) {
+        setErrorMsg(
+          '가입 요청이 너무 잦습니다. 몇 분 후 다시 시도해 주세요. (같은 Wi‑Fi에서 여러 번 가입 시도하면 인증 서버에서 잠시 막힐 수 있습니다.)'
+        );
       } else if (/signups not allowed/i.test(message)) {
         setErrorMsg('현재 이메일 가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.');
       } else {
         setErrorMsg(t('error_signup_failed'));
       }
+    }
     } finally {
+      signupSubmitLockRef.current = false;
       setLoading(false);
     }
   };

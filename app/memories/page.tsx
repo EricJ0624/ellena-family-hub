@@ -313,6 +313,11 @@ export default function MemoriesPage() {
       e.target.value = '';
       return;
     }
+    if (!currentGroupId) {
+      alert(dt('group_info_missing'));
+      e.target.value = '';
+      return;
+    }
     const isRawFile = isRawFileExtension(ext);
     const effectiveMode = isRawFile ? 'original' as const : uploadMode;
     let imageData: string;

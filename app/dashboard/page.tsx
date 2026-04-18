@@ -528,12 +528,25 @@ export default function FamilyHub() {
         return;
       }
 
-      const { data: photos, error } = await supabase
-        .from('memory_vault')
-        .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
-        .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
-        .order('created_at', { ascending: false })
-        .limit(100);
+      let photos: unknown[] | null = null;
+      let error: { message?: string; code?: string } | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await supabase
+          .from('memory_vault')
+          .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
+          .eq('group_id', currentGroupId)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        error = res.error;
+        photos = (res.data as unknown[]) ?? null;
+        if (!res.error) break;
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[loadData] memory_vault load failed, retry', attempt + 1, res.error?.message, res.error?.code);
+        }
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 450 * (attempt + 1)));
+        }
+      }
 
       if (error) {
         console.error('Supabase 사진 로드 오류:', error);
