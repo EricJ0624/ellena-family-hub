@@ -33,6 +33,7 @@ import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
+import { isValidUUID } from '@/lib/validation';
 import {
   CHAT_PAGE_SIZE,
   formatFamilyMessagesFromRows,
@@ -802,10 +803,45 @@ export default function FamilyHub() {
           user_id_param: currentUserId,
         });
 
-        const { hasGroups } = await resolveUserHasGroups(supabase, currentUserId, {
+        let { hasGroups } = await resolveUserHasGroups(supabase, currentUserId, {
           flakyRetry: true,
           isSystemAdmin: Boolean(isAdmin),
         });
+
+        // 온보딩에서 ?openGroup= 으로 넘어온 경우: 스토리지/목록 조회 레이스와 무관하게 멤버십을 직접 확인
+        if (!hasGroups && typeof window !== 'undefined') {
+          try {
+            const qs = new URLSearchParams(window.location.search);
+            const openGroup = qs.get('openGroup')?.trim().toLowerCase() ?? '';
+            if (openGroup && isValidUUID(openGroup)) {
+              const [mRes, oRes] = await Promise.all([
+                supabase
+                  .from('memberships')
+                  .select('group_id')
+                  .eq('user_id', currentUserId)
+                  .eq('group_id', openGroup)
+                  .maybeSingle(),
+                supabase
+                  .from('groups')
+                  .select('id')
+                  .eq('id', openGroup)
+                  .eq('owner_id', currentUserId)
+                  .maybeSingle(),
+              ]);
+              if ((!mRes.error && mRes.data) || (!oRes.error && oRes.data)) {
+                hasGroups = true;
+                try {
+                  localStorage.setItem('currentGroupId', openGroup);
+                } catch (_) {
+                  // ignore
+                }
+              }
+              window.history.replaceState({}, '', window.location.pathname);
+            }
+          } catch (_) {
+            // ignore
+          }
+        }
 
         if (isAdmin && !hasGroups) {
           // 시스템 관리자이고 그룹이 없으면 관리자 페이지로 리다이렉트

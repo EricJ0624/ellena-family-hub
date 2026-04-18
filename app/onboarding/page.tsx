@@ -40,6 +40,13 @@ function supabaseClientErrorText(err: unknown): string {
   return (o.message || o.details || o.hint || '').trim();
 }
 
+/** 온보딩 → 대시보드: 선택/가입 그룹을 URL에 실어 checkAuth가 멤버십을 확정(스토리지·JWT 레이스 완화) */
+function dashboardHrefWithOpenGroup(groupId: string | null | undefined): string {
+  const g = groupId?.trim().toLowerCase() ?? '';
+  if (!g || !isValidUUID(g)) return '/dashboard';
+  return `/dashboard?openGroup=${encodeURIComponent(g)}`;
+}
+
 interface GroupPreview {
   id: string;
   name: string;
@@ -542,7 +549,7 @@ export default function OnboardingPage() {
         try {
           clearSessionStoredInviteCode();
         } catch (_) {}
-        setTimeout(() => router.push('/dashboard'), 1500);
+        setTimeout(() => router.push(dashboardHrefWithOpenGroup(groupPreview?.id)), 1500);
       }
     } catch (err: any) {
       const msg = err?.message ?? '';
@@ -551,7 +558,7 @@ export default function OnboardingPage() {
         // 이미 가입된 멤버 → 역할 선택 없이 해당 그룹으로 대시보드 이동
         setError(null);
         setCurrentGroupId(groupPreview.id);
-        router.push('/dashboard');
+        router.push(dashboardHrefWithOpenGroup(groupPreview.id));
       } else {
         console.error('그룹 가입 오류:', err);
         const raw = supabaseClientErrorText(err) || String(msg || '').trim();
@@ -583,13 +590,13 @@ export default function OnboardingPage() {
   const handleConfirmInviteCode = () => {
     setInviteCodeConfirmed(true);
     setTimeout(() => {
-      router.push('/dashboard');
+      router.push(dashboardHrefWithOpenGroup(createdGroupId));
     }, 300);
   };
 
   // 대시보드로 이동 (그룹 생성 완료 후 등)
   const handleGoToDashboard = () => {
-    router.push('/dashboard');
+    router.push(dashboardHrefWithOpenGroup(createdGroupId));
   };
 
   // 초대 가입 완료 후 이동: 드롭다운에서 가족 표시만 고르고 별도 '저장'을 누르지 않아도 반영
@@ -614,7 +621,7 @@ export default function OnboardingPage() {
         }
       }
     }
-    router.push('/dashboard');
+    router.push(dashboardHrefWithOpenGroup(joinedGroupId));
   };
 
   const joinFlowReady =
@@ -1834,7 +1841,7 @@ export default function OnboardingPage() {
                     // localStorage만 바꾸면 GroupContext의 currentGroupId는 refreshGroups가 고른 첫 그룹에 머물러
                     // 대시보드가 이전 그룹으로 열리는 버그가 난다. 컨텍스트와 동기화 필수.
                     setCurrentGroupId(selectedGroupId);
-                    router.push('/dashboard');
+                    router.push(dashboardHrefWithOpenGroup(selectedGroupId));
                   }
                 }}
                 disabled={!selectedGroupId}
@@ -1983,10 +1990,11 @@ export default function OnboardingPage() {
                   <div
                     className="fixed inset-0 bg-black/50 z-[100]"
                     onClick={() => {
+                      const gid = joinedGroupId;
                       setShowJoinFamilyRoleModal(false);
                       setJoinedGroupId(null);
                       setJoinFamilyRole('');
-                      router.push('/dashboard');
+                      router.push(dashboardHrefWithOpenGroup(gid));
                     }}
                     aria-hidden="true"
                   />
@@ -2002,10 +2010,11 @@ export default function OnboardingPage() {
                         <h3 className="text-lg font-semibold text-gray-900">{mmt('family_role_label')}</h3>
                         <button
                           onClick={() => {
+                            const gid = joinedGroupId;
                             setShowJoinFamilyRoleModal(false);
                             setJoinedGroupId(null);
                             setJoinFamilyRole('');
-                            router.push('/dashboard');
+                            router.push(dashboardHrefWithOpenGroup(gid));
                           }}
                           className="text-gray-400 hover:text-gray-600"
                           aria-label={ct('close')}
@@ -2030,10 +2039,11 @@ export default function OnboardingPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => {
+                              const gid = joinedGroupId;
                               setShowJoinFamilyRoleModal(false);
                               setJoinedGroupId(null);
                               setJoinFamilyRole('');
-                              router.push('/dashboard');
+                              router.push(dashboardHrefWithOpenGroup(gid));
                             }}
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                           >
@@ -2044,9 +2054,10 @@ export default function OnboardingPage() {
                               const { data: { user } } = await supabase.auth.getUser();
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!user || !session?.access_token || !joinedGroupId) {
+                                const gid = joinedGroupId;
                                 setShowJoinFamilyRoleModal(false);
                                 setJoinedGroupId(null);
-                                router.push('/dashboard');
+                                router.push(dashboardHrefWithOpenGroup(gid));
                                 return;
                               }
                               if (joinFamilyRole) {
@@ -2061,10 +2072,11 @@ export default function OnboardingPage() {
                                   console.warn('가족 표시 저장 실패', e);
                                 }
                               }
+                              const gid = joinedGroupId;
                               setShowJoinFamilyRoleModal(false);
                               setJoinedGroupId(null);
                               setJoinFamilyRole('');
-                              router.push('/dashboard');
+                              router.push(dashboardHrefWithOpenGroup(gid));
                             }}
                             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                           >
