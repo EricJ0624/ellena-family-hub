@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -743,9 +743,9 @@ export function TravelPlannerContent() {
     };
   }, [placesApiReady, fetchPlaceCache, savePlaceCache, cancelAccNameBlurConfirm, cancelDiningNameBlurConfirm, cancelAttractionNameBlurConfirm]);
 
-  // Places Autocomplete: 숙소 폼
-  useEffect(() => attachPlacesAutocomplete({
-    enabled: showAccommodationForm && !accDirectInputMode,
+  // Places Autocomplete: 숙소 폼 (layout: 모달 DOM·ref 반영 직후 연결)
+  useLayoutEffect(() => attachPlacesAutocomplete({
+    enabled: showAccommodationForm && !!selectedTrip && !accDirectInputMode,
     inputRef: accNameInputRef,
     sessionTokenRef: accSessionTokenRef,
     onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
@@ -756,11 +756,11 @@ export function TravelPlannerContent() {
       setAccLongitude(longitude != null ? String(longitude) : '');
       setAccPlaceName(placeName);
     },
-  }), [showAccommodationForm, accDirectInputMode, attachPlacesAutocomplete]);
+  }), [showAccommodationForm, selectedTrip?.id, accDirectInputMode, attachPlacesAutocomplete]);
 
   // Places Autocomplete: 먹거리 폼
-  useEffect(() => attachPlacesAutocomplete({
-    enabled: showDiningForm && !diningDirectInputMode,
+  useLayoutEffect(() => attachPlacesAutocomplete({
+    enabled: showDiningForm && !!selectedTrip && !diningDirectInputMode,
     inputRef: diningNameInputRef,
     sessionTokenRef: diningSessionTokenRef,
     onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
@@ -771,7 +771,7 @@ export function TravelPlannerContent() {
       setDiningLongitude(longitude != null ? String(longitude) : '');
       setDiningPlaceName(placeName);
     },
-  }), [showDiningForm, diningDirectInputMode, attachPlacesAutocomplete]);
+  }), [showDiningForm, selectedTrip?.id, diningDirectInputMode, attachPlacesAutocomplete]);
 
   // Places Autocomplete: 일정 폼
   useEffect(() => attachPlacesAutocomplete({
@@ -787,8 +787,8 @@ export function TravelPlannerContent() {
   }), [showItineraryForm, attachPlacesAutocomplete]);
 
   // Places Autocomplete: 관광지 폼 (UI 유지, 핵심 로직만 동일 적용)
-  useEffect(() => attachPlacesAutocomplete({
-    enabled: showAttractionForm && !attractionDirectInputMode,
+  useLayoutEffect(() => attachPlacesAutocomplete({
+    enabled: showAttractionForm && !!selectedTrip && !attractionDirectInputMode,
     inputRef: attractionNameInputRef,
     sessionTokenRef: attractionSessionTokenRef,
     onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
@@ -799,7 +799,7 @@ export function TravelPlannerContent() {
       setAttractionLongitude(longitude != null ? String(longitude) : '');
       setAttractionPlaceName(placeName);
     },
-  }), [showAttractionForm, attractionDirectInputMode, attachPlacesAutocomplete]);
+  }), [showAttractionForm, selectedTrip?.id, attractionDirectInputMode, attachPlacesAutocomplete]);
 
   // Places Autocomplete: 교통 출발/도착
   useEffect(() => {
@@ -4087,8 +4087,23 @@ export function TravelPlannerContent() {
                 onBlur={scheduleAccNameBlurConfirm}
                 required
                 placeholder={tt('placeholder_acc_name')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={accDirectInputMode}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setAccDirectInputMode(checked);
+                    if (checked) {
+                      setAccPlaceId(null);
+                      setAccPlaceName('');
+                    }
+                  }}
+                />
+                직접 입력 모드 (Google 자동완성 호출 안 함)
+              </label>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_checkin')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
@@ -4133,21 +4148,6 @@ export function TravelPlannerContent() {
                   backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
                 }}
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={accDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setAccDirectInputMode(checked);
-                    if (checked) {
-                      setAccPlaceId(null);
-                      setAccPlaceName('');
-                    }
-                  }}
-                />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
-              </label>
               {accPlaceName && (
                 <div style={{ marginBottom: 12 }}>
                   <a href={`https://www.google.com/search?q=${encodeURIComponent(accPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
@@ -4304,8 +4304,23 @@ export function TravelPlannerContent() {
                 onBlur={scheduleDiningNameBlurConfirm}
                 required
                 placeholder={tt('placeholder_dining_name')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
               />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={diningDirectInputMode}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setDiningDirectInputMode(checked);
+                    if (checked) {
+                      setDiningPlaceId(null);
+                      setDiningPlaceName('');
+                    }
+                  }}
+                />
+                직접 입력 모드 (Google 자동완성 호출 안 함)
+              </label>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <input
@@ -4356,21 +4371,6 @@ export function TravelPlannerContent() {
                   backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
                 }}
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={diningDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setDiningDirectInputMode(checked);
-                    if (checked) {
-                      setDiningPlaceId(null);
-                      setDiningPlaceName('');
-                    }
-                  }}
-                />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
-              </label>
               {diningPlaceName && (
                 <div style={{ marginBottom: 12 }}>
                   <a href={`https://www.google.com/search?q=${encodeURIComponent(diningPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
@@ -4532,9 +4532,25 @@ export function TravelPlannerContent() {
                 onBlur={scheduleAttractionNameBlurConfirm}
                 disabled={submitting}
                 placeholder={tt('placeholder_attraction_name')}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 8, boxSizing: 'border-box' }}
                 required
               />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={attractionDirectInputMode}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setAttractionDirectInputMode(checked);
+                    if (checked) {
+                      setAttractionPlaceId(null);
+                      setAttractionPlaceName('');
+                    }
+                  }}
+                  disabled={submitting}
+                />
+                직접 입력 모드 (Google 자동완성 호출 안 함)
+              </label>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜</label>
               <input
                 type="date"
@@ -4589,22 +4605,6 @@ export function TravelPlannerContent() {
                   backgroundColor: attractionDirectInputMode ? '#fff' : '#f8fafc',
                 }}
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={attractionDirectInputMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setAttractionDirectInputMode(checked);
-                    if (checked) {
-                      setAttractionPlaceId(null);
-                      setAttractionPlaceName('');
-                    }
-                  }}
-                  disabled={submitting}
-                />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
-              </label>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>설명</label>
               <textarea
                 value={attractionDescription}

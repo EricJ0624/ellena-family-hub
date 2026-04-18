@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Google Places Autocomplete: body에 붙는 .pac-container가 모달(z-index~50) 뒤로 가면 선택 불가로 보임 */
+.pac-container {
+  z-index: 2147483646 !important;
+}
+
 /* 공지 배너 마퀴 슬라이딩 (AnnouncementBanner에서 animation: marquee 참조) */
 @keyframes marquee {
   0% {
