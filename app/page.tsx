@@ -279,8 +279,15 @@ export default function LoginPage() {
     }
 
     try {
-      // 이전 사용자 세션이 남아 있으면 새 가입 후 getSession()이 이전 사용자를 반환할 수 있음 → 가입 직전 세션 제거
-      await supabase.auth.signOut();
+      const normalizedEmail = email.trim().toLowerCase();
+      // 이전 사용자 세션이 남아 있어도 signOut 실패가 회원가입 자체를 막으면 안 된다.
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutErr) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[Sign up] pre-signout ignored:', signOutErr);
+        }
+      }
 
       const signupNickname = trimmedNickname;
       
@@ -292,7 +299,7 @@ export default function LoginPage() {
           await fetch(`${window.location.origin}/api/invite/store-pending`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim().toLowerCase(), invite_code: pendingInviteCode }),
+            body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
           });
         } catch (_) {}
       }
@@ -302,8 +309,8 @@ export default function LoginPage() {
         ? `${window.location.origin}/auth/callback`
         : '/auth/callback';
       
-      const { error, data } = await supabase.auth.signUp({
-        email,
+      let { error, data } = await supabase.auth.signUp({
+        email: normalizedEmail,
         password,
         options: {
           emailRedirectTo: redirectTo,
@@ -313,6 +320,22 @@ export default function LoginPage() {
           }
         }
       });
+
+      // Redirect URL allowlist 설정 누락 시 가입 자체가 막히는 경우가 있어 1회 무옵션 재시도
+      if (error && /redirect|email redirect|invalid redirect|not allowed/i.test(String(error.message || ''))) {
+        const retry = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            data: {
+              nickname: signupNickname,
+              full_name: signupNickname,
+            },
+          },
+        });
+        error = retry.error;
+        data = retry.data;
+      }
 
       if (error) throw error;
 
@@ -326,7 +349,7 @@ export default function LoginPage() {
             .from('profiles')
             .upsert({
               id: data.user.id,
-              email: email,
+              email: normalizedEmail,
               nickname: signupNickname
             }, {
               onConflict: 'id'
@@ -385,8 +408,17 @@ export default function LoginPage() {
           full: error
         });
       }
-      if (error?.message?.includes('already registered')) {
+      const message = String(error?.message || '');
+      if (/already registered|already exists|already been registered/i.test(message)) {
         setErrorMsg(t('error_email_taken'));
+      } else if (/invalid email|email.*invalid/i.test(message)) {
+        setErrorMsg('이메일 형식이 올바르지 않습니다.');
+      } else if (/password/i.test(message) && /weak|short|minimum|at least/i.test(message)) {
+        setErrorMsg(t('error_password_min'));
+      } else if (/rate limit|too many requests|429/i.test(message)) {
+        setErrorMsg('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+      } else if (/signups not allowed/i.test(message)) {
+        setErrorMsg('현재 이메일 가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.');
       } else {
         setErrorMsg(t('error_signup_failed'));
       }
