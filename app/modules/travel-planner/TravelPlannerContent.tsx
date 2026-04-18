@@ -4805,11 +4805,18 @@ export function TravelPlannerContent() {
                   border: '1px solid #cbd5e1',
                   borderRadius: 8,
                   fontSize: 14,
-                  marginBottom: 12,
+                  marginBottom: 4,
                   boxSizing: 'border-box',
                   backgroundColor: attractionDirectInputMode ? '#fff' : '#f8fafc',
                 }}
               />
+              {attractionPlaceName && (
+                <div style={{ marginBottom: 12 }}>
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(attractionPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                    {tt('link_google_search')}
+                  </a>
+                </div>
+              )}
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>설명</label>
               <textarea
                 value={attractionDescription}
