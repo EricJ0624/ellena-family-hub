@@ -704,6 +704,10 @@ export function TravelPlannerContent() {
       cancelAttractionNameBlurConfirm();
       const place = autocomplete.getPlace();
       if (!place?.place_id) return;
+      // 자동완성 목록에서 고른 줄과 동일한 표기(입력창 값). place_id는 place에서만 사용.
+      const chosenLabel = (params.inputRef.current?.value ?? '').trim();
+      const fallbackFromPlace =
+        typeof place.name === 'string' && place.name.trim() ? place.name.trim() : '';
       (async () => {
         const cached = await fetchPlaceCache(place.place_id).catch(() => null);
         if (cached) {
@@ -712,7 +716,7 @@ export function TravelPlannerContent() {
             address: cached.formatted_address ?? '',
             latitude: cached.latitude ?? undefined,
             longitude: cached.longitude ?? undefined,
-            placeName: cached.name ?? '',
+            placeName: chosenLabel || fallbackFromPlace || (cached.name ?? ''),
           });
           if (AutocompleteSessionToken) params.sessionTokenRef.current = new AutocompleteSessionToken();
           return;
@@ -725,15 +729,20 @@ export function TravelPlannerContent() {
         if (params.sessionTokenRef.current) req.sessionToken = params.sessionTokenRef.current;
         service.getDetails(req, (placeDetails: any, status: string) => {
           if (status !== 'OK' || !placeDetails) return;
+          const placeName =
+            chosenLabel ||
+            fallbackFromPlace ||
+            (typeof placeDetails.name === 'string' ? placeDetails.name : '') ||
+            '';
           params.onSelect({
             placeId: placeDetails.place_id,
             address: placeDetails.formatted_address ?? '',
             latitude: placeDetails.geometry?.location?.lat?.(),
             longitude: placeDetails.geometry?.location?.lng?.(),
-            placeName: placeDetails.name ?? '',
+            placeName,
           });
           if (AutocompleteSessionToken) params.sessionTokenRef.current = new AutocompleteSessionToken();
-          savePlaceCache(placeDetails);
+          savePlaceCache({ ...placeDetails, name: placeName });
         });
       })();
     });
