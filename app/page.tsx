@@ -156,6 +156,53 @@ export default function LoginPage() {
     }
   }, [mode, isMounted]);
 
+  /** 로그인/서버가입 후 이메일이 이미 확인된 사용자만 — 온보딩·관리자 라우팅 */
+  const completeAuthRoutingAfterConfirmedUser = async (emailForStorage: string) => {
+    if (emailForStorage && isMounted) {
+      localStorage.setItem(LAST_EMAIL_KEY, emailForStorage);
+      setLastEmailFromStorage(emailForStorage);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session && session.user) {
+      if (!session.user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        setErrorMsg(t('error_email_verification'));
+        return;
+      }
+      const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+        user_id_param: session.user.id,
+      });
+
+      const { hasGroups } = await resolveUserHasGroups(supabase, session.user.id, {
+        flakyRetry: true,
+        isSystemAdmin: Boolean(isAdmin),
+      });
+
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const invite = resolveInviteFromUrlOrSession(params);
+      const onboardingPath = buildOnboardingPath(invite);
+
+      if (isAdmin) {
+        if (hasGroups) {
+          router.push(onboardingPath);
+        } else {
+          router.push('/admin');
+        }
+        return;
+      }
+
+      router.push(onboardingPath);
+    } else {
+      setErrorMsg(t('error_session_failed'));
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
@@ -174,57 +221,12 @@ export default function LoginPage() {
       if (error) throw error;
       
       if (data.user) {
-        // 이메일 인증 확인 (미인증이면 로그인 차단)
         if (!data.user.email_confirmed_at) {
           await supabase.auth.signOut();
           setErrorMsg(t('error_email_verification'));
           return;
         }
-        // 이메일 저장 (다음 로그인 시 자동완성용)
-        if (email && isMounted) {
-          localStorage.setItem(LAST_EMAIL_KEY, email);
-          setLastEmailFromStorage(email);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session && session.user) {
-          if (!session.user.email_confirmed_at) {
-            await supabase.auth.signOut();
-            setErrorMsg(t('error_email_verification'));
-            return;
-          }
-          // 시스템 관리자 확인
-          const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-            user_id_param: session.user.id,
-          });
-
-          const { hasGroups } = await resolveUserHasGroups(supabase, session.user.id, {
-            flakyRetry: true,
-            isSystemAdmin: Boolean(isAdmin),
-          });
-
-          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const invite = resolveInviteFromUrlOrSession(params);
-          const onboardingPath = buildOnboardingPath(invite);
-
-          if (isAdmin) {
-            // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
-            if (hasGroups) {
-              router.push(onboardingPath);
-            } else {
-              router.push('/admin');
-            }
-            return;
-          }
-
-          // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
-          router.push(onboardingPath);
-        } else {
-          setErrorMsg(t('error_session_failed'));
-        }
+        await completeAuthRoutingAfterConfirmedUser(email);
       }
     } catch (error: any) {
       // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
@@ -297,6 +299,82 @@ export default function LoginPage() {
 
       const signupNickname = trimmedNickname;
       const pendingInviteCode = typeof window !== 'undefined' ? getSessionStoredInviteCode() : null;
+
+      // 서비스 롤 가입(확인 메일 미발송) → GoTrue 이메일 발송 한도(429) 회피. 실패·미설정 시에만 클라이언트 signUp.
+      if (typeof window !== 'undefined') {
+        try {
+          const regRes = await fetch(`${window.location.origin}/api/auth/register-with-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: normalizedEmail,
+              password,
+              nickname: signupNickname,
+              ...(pendingInviteCode ? { invite_code: pendingInviteCode } : {}),
+            }),
+          });
+          const regJson = (await regRes.json().catch(() => ({}))) as { error?: string; ok?: boolean };
+
+          if (regRes.ok && regJson.ok) {
+            if (pendingInviteCode) {
+              try {
+                await fetch(`${window.location.origin}/api/invite/store-pending`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
+                });
+              } catch (_) {}
+            }
+            window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, '1');
+            const { error: signInErr, data: signInData } = await supabase.auth.signInWithPassword({
+              email: normalizedEmail,
+              password,
+            });
+            if (signInErr) throw signInErr;
+            if (!signInData.user?.email_confirmed_at) {
+              await supabase.auth.signOut();
+              setErrorMsg(t('error_email_verification'));
+              return;
+            }
+            await completeAuthRoutingAfterConfirmedUser(normalizedEmail);
+            return;
+          }
+
+          if (regRes.status === 503) {
+            // SUPABASE_SERVICE_ROLE_KEY 없음 등 — 클라이언트 signUp으로 폴백
+          } else if (regRes.status === 409 || regJson.error === 'email_taken') {
+            setErrorMsg(t('error_email_taken'));
+            return;
+          } else if (regRes.status === 429 || regJson.error === 'too_many_requests') {
+            setErrorMsg('잠시 후 다시 시도해 주세요. (요청이 많아 일시적으로 제한되었습니다.)');
+            return;
+          } else if (regJson.error === 'invalid_invite') {
+            setErrorMsg('유효하지 않거나 만료된 초대 코드입니다. 코드를 확인한 뒤 다시 시도해 주세요.');
+            return;
+          } else if (regJson.error === 'invalid_password') {
+            setErrorMsg(t('error_password_min'));
+            return;
+          } else if (regJson.error === 'invalid_nickname') {
+            setErrorMsg(t('error_nickname_length'));
+            return;
+          } else if (regJson.error === 'invalid_email') {
+            setErrorMsg('이메일 형식이 올바르지 않습니다.');
+            return;
+          } else if (regRes.status >= 500) {
+            // 서버 오류 — 클라이언트 signUp 폴백
+          } else if (regRes.status === 400 && regJson.error === 'signup_failed') {
+            setErrorMsg(t('error_signup_failed'));
+            return;
+          } else if (regRes.status === 400) {
+            setErrorMsg(t('error_signup_failed'));
+            return;
+          }
+        } catch (serverRegErr) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Sign up] server register failed, falling back to client signUp:', serverRegErr);
+          }
+        }
+      }
 
       // SSR 안전성: window 객체가 있을 때만 origin 사용
       const redirectTo = typeof window !== 'undefined' 
