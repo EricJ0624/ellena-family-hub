@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { getValidatedUserWithSessionFallback, isTransientAuthNetworkError } from '@/lib/auth-session-resilience';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
 import type { LangCode } from '@/lib/language-fonts';
@@ -123,8 +124,9 @@ export default function OnboardingPage() {
         }
         setFromAdmin(fromAdminParam);
         // getSession()만 보면 로컬에 남은 만료·무효 JWT로도 user가 있어 보여 join 단계로 들어갈 수 있음.
-        // 서버 검증(getUser)에 실패하면 API(preview-by-invite-code)도 401·「인증에 실패했습니다」가 난다.
-        const { data: { user }, error: authUserError } = await supabase.auth.getUser();
+        // getUser 재시도·일시 네트워크 실패 시 session 완화 포함(getValidated…).
+        const { data: { session: initSession } } = await supabase.auth.getSession();
+        const { user, error: authUserError } = await getValidatedUserWithSessionFallback(supabase, initSession);
         if (authUserError || !user) {
           try {
             await supabase.auth.signOut();
@@ -378,7 +380,11 @@ export default function OnboardingPage() {
       // 초대코드를 확인한 후에만 대시보드로 이동하도록 함
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
-      setError(err.message || ot('error_create_failed'));
+      setError(
+        isTransientAuthNetworkError(err)
+          ? ot('error_network_retry')
+          : err.message || ot('error_create_failed')
+      );
     } finally {
       setCreating(false);
     }
@@ -444,7 +450,11 @@ export default function OnboardingPage() {
       setSuccess(ot('success_found'));
     } catch (err: any) {
       console.error('초대 코드 검증 오류:', err);
-      setError(err.message || ot('error_verify_failed'));
+      setError(
+        isTransientAuthNetworkError(err)
+          ? ot('error_network_retry')
+          : err.message || ot('error_verify_failed')
+      );
       setGroupPreview(null);
     } finally {
       setVerifying(false);
@@ -510,7 +520,11 @@ export default function OnboardingPage() {
         router.push('/dashboard');
       } else {
         console.error('그룹 가입 오류:', err);
-        setError(msg || ot('error_join_failed'));
+        const friendly =
+          isTransientAuthNetworkError(err) || isTransientAuthNetworkError(msg)
+            ? ot('error_network_retry')
+            : msg || ot('error_join_failed');
+        setError(friendly);
       }
     } finally {
       setJoining(false);

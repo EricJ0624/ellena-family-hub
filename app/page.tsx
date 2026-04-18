@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase, PERSIST_SESSION_FLAG_KEY } from '@/lib/supabase';
+import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
@@ -115,8 +116,8 @@ export default function LoginPage() {
     
     const checkExistingSession = async () => {
       try {
-        // getSession()만으로는 만료된 로컬 세션이 남아 온보딩으로 보내질 수 있음 → getUser()로 실제 유효성 확인
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const { user, error } = await getValidatedUserWithSessionFallback(supabase, session);
         if (error || !user) return;
 
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;

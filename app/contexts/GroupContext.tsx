@@ -57,9 +57,8 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setCurrentGroup(null);
       setUserRole(null);
       setIsOwner(false);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('currentGroupId');
-      }
+      // userId가 아직 resolve되기 전(null)인 동안 localStorage의 currentGroupId를 지우면
+      // 온보딩에서 선택 직후 /dashboard로 갈 때 선택 그룹이 날아갈 수 있음(로그인 루프 유발).
       setLoading(false);
       return;
     }
@@ -268,9 +267,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setIsOwner(false);
       setGroups([]);
       setMemberships([]);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('currentGroupId');
-      }
+      // 인증 resolve 전에는 persisted currentGroupId를 유지 (온보딩 → 대시보드 레이스 방지)
       prevUserIdRef.current = null;
       return;
     }

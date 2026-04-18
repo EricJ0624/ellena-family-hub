@@ -44,6 +44,8 @@ export type OnboardingTranslations = {
   error_join_failed: string;
   error_copy_failed: string;
   error_create_failed: string;
+  /** 네트워크·일시 연결 실패 시 가입/검증 재시도 안내 */
+  error_network_retry: string;
   success_created: string;
   success_found: string;
   success_joined: string;
@@ -106,6 +108,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: '그룹 가입에 실패했습니다.',
     error_copy_failed: '복사에 실패했습니다.',
     error_create_failed: '그룹 생성에 실패했습니다.',
+    error_network_retry: '연결이 불안정합니다. 잠시 후 다시 시도하거나 Wi‑Fi/데이터를 확인해 주세요.',
     success_created: '그룹이 생성되었습니다!',
     success_found: '그룹을 찾았습니다!',
     success_joined: '그룹에 가입되었습니다!',
@@ -166,6 +169,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: 'Failed to join group.',
     error_copy_failed: 'Copy failed.',
     error_create_failed: 'Failed to create group.',
+    error_network_retry: 'The connection is unstable. Please try again in a moment or check your network.',
     success_created: 'Group created!',
     success_found: 'Group found!',
     success_joined: 'You have joined the group!',
@@ -226,6 +230,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: 'グループの参加に失敗しました。',
     error_copy_failed: 'コピーに失敗しました。',
     error_create_failed: 'グループの作成に失敗しました。',
+    error_network_retry: '接続が不安定です。しばらくしてから再度お試しください。',
     success_created: 'グループが作成されました！',
     success_found: 'グループが見つかりました！',
     success_joined: 'グループに参加しました！',
@@ -286,6 +291,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: '加入群组失败。',
     error_copy_failed: '复制失败。',
     error_create_failed: '创建群组失败。',
+    error_network_retry: '网络不稳定，请稍后重试或检查网络连接。',
     success_created: '群组已创建！',
     success_found: '已找到群组！',
     success_joined: '已加入群组！',
@@ -346,6 +352,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: '加入群組失敗。',
     error_copy_failed: '複製失敗。',
     error_create_failed: '建立群組失敗。',
+    error_network_retry: '連線不穩定，請稍後再試或檢查網路。',
     success_created: '群組已建立！',
     success_found: '已找到群組！',
     success_joined: '已加入群組！',

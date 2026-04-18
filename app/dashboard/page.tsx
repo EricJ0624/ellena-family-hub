@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
+import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
@@ -762,8 +763,11 @@ export default function FamilyHub() {
         }
 
         // 강제탈퇴 등으로 서버(auth.users)에서 삭제된 사용자 검사: getSession()은 로컬 캐시만 반환하므로
-        // getUser()로 서버에 검증 요청. 삭제된 사용자는 여기서 실패하여 로그아웃 처리됨.
-        const { data: { user: serverUser }, error: userError } = await supabase.auth.getUser();
+        // getUser()로 검증. 모바일에서 일시적 네트워크 실패(Load failed) 시 무한 로그인 루프를 막기 위해 재시도·완화 경로 포함.
+        const { user: serverUser, error: userError } = await getValidatedUserWithSessionFallback(
+          supabase,
+          session
+        );
         if (userError || !serverUser) {
           if (typeof window !== 'undefined') clearAuthStorage();
           try { await supabase.auth.signOut(); } catch (_) {}
@@ -864,9 +868,13 @@ export default function FamilyHub() {
         }
         
         // ✅ 데이터 로드 (기존 키 또는 새로 생성한 고정 키 사용)
-        // await를 추가하여 loadData 완료 후 다음 단계 진행 보장
-        await loadData(key, currentUserId);
+        try {
+          await loadData(key, currentUserId);
+        } catch (loadErr) {
+          console.error('loadData 초기화 오류:', loadErr);
+        }
       } catch (err) {
+        console.error('checkAuth 예외:', err);
         router.push('/');
       }
     };
