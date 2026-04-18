@@ -26,6 +26,14 @@ const DISPLAY_LANG_OPTIONS: { code: LangCode; label: string }[] = [
   { code: 'zh-TW', label: '繁體中文' },
 ];
 
+/** PostgREST/GoTrue 에러 객체에서 사용자에게 보일 문자열 추출 */
+function supabaseClientErrorText(err: unknown): string {
+  if (err == null) return '';
+  if (typeof err === 'string') return err.trim();
+  const o = err as { message?: string; details?: string; hint?: string };
+  return (o.message || o.details || o.hint || '').trim();
+}
+
 interface GroupPreview {
   id: string;
   name: string;
@@ -476,9 +484,20 @@ export default function OnboardingPage() {
     setSuccess(null);
 
     try {
-      const { data: joinedGroupIdData, error: joinError } = await supabase.rpc('join_group_by_invite_code', {
-        invite_code_param: groupPreview.invite_code,
-      });
+      const runJoin = () =>
+        supabase.rpc('join_group_by_invite_code', {
+          invite_code_param: groupPreview.invite_code,
+        });
+
+      let { data: joinedGroupIdData, error: joinError } = await runJoin();
+
+      // 토큰 갱신 직후·일시 네트워크에서만 RPC가 실패하는 경우 1회 복구
+      if (joinError && isTransientAuthNetworkError(joinError)) {
+        const { error: refreshErr } = await supabase.auth.refreshSession();
+        if (!refreshErr) {
+          ({ data: joinedGroupIdData, error: joinError } = await runJoin());
+        }
+      }
 
       if (joinError) throw joinError;
 
@@ -520,11 +539,11 @@ export default function OnboardingPage() {
         router.push('/dashboard');
       } else {
         console.error('그룹 가입 오류:', err);
-        const friendly =
-          isTransientAuthNetworkError(err) || isTransientAuthNetworkError(msg)
-            ? ot('error_network_retry')
-            : msg || ot('error_join_failed');
-        setError(friendly);
+        const raw = supabaseClientErrorText(err) || String(msg || '').trim();
+        const looksTransient =
+          isTransientAuthNetworkError(err) || isTransientAuthNetworkError(raw);
+        // 서버/DB 메시지(만료·무효 코드 등)가 있으면 네트워크 안내로 덮어쓰지 않음
+        setError(looksTransient && !raw ? ot('error_network_retry') : raw || ot('error_join_failed'));
       }
     } finally {
       setJoining(false);
