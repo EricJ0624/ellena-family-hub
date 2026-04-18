@@ -122,15 +122,14 @@ export default function OnboardingPage() {
           } catch (_) {}
         }
         setFromAdmin(fromAdminParam);
-        const { data: { session } } = await supabase.auth.getSession();
-        let user = session?.user ?? null;
-        if (!user) {
-          const { data: { user: fetched } } = await supabase.auth.getUser();
-          user = fetched ?? null;
-        }
-        // 미가입·미로그인: 그룹 초대 코드 가입 UI(온보딩 join)가 아니라 앱 가입/로그인(/)으로 보냄.
-        // /onboarding?invite= 로 직접 들어온 경우에도 초대 코드는 sessionStorage + ?invite= 로 전달.
-        if (!user) {
+        // getSession()만 보면 로컬에 남은 만료·무효 JWT로도 user가 있어 보여 join 단계로 들어갈 수 있음.
+        // 서버 검증(getUser)에 실패하면 API(preview-by-invite-code)도 401·「인증에 실패했습니다」가 난다.
+        const { data: { user }, error: authUserError } = await supabase.auth.getUser();
+        if (authUserError || !user) {
+          try {
+            await supabase.auth.signOut();
+          } catch (_) {}
+          // 미가입·무효 세션: join UI 대신 가입/로그인(/)으로. 초대는 유지.
           if (inviteParam) {
             try {
               window.sessionStorage.setItem('SFH_INVITE_CODE', inviteParam);
@@ -236,15 +235,30 @@ export default function OnboardingPage() {
           setSuccess(null);
           try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.access_token) {
-              const res = await fetch('/api/group/preview-by-invite-code', {
+            let token = session?.access_token ?? null;
+            if (token) {
+              let res = await fetch('/api/group/preview-by-invite-code', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
+                  Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ invite_code: inviteParam }),
               });
+              if (res.status === 401) {
+                const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+                if (!refreshErr && refreshed.session?.access_token) {
+                  token = refreshed.session.access_token;
+                  res = await fetch('/api/group/preview-by-invite-code', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ invite_code: inviteParam }),
+                  });
+                }
+              }
               const data = await res.json().catch(() => ({}));
               if (res.ok && data.id) {
                 setGroupPreview({
@@ -389,14 +403,30 @@ export default function OnboardingPage() {
         return;
       }
 
-      const res = await fetch('/api/group/preview-by-invite-code', {
+      let accessToken = session.access_token;
+      let res = await fetch('/api/group/preview-by-invite-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ invite_code: inviteCode.trim() }),
       });
+
+      if (res.status === 401) {
+        const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+        if (!refreshErr && refreshed.session?.access_token) {
+          accessToken = refreshed.session.access_token;
+          res = await fetch('/api/group/preview-by-invite-code', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ invite_code: inviteCode.trim() }),
+          });
+        }
+      }
 
       const data = await res.json().catch(() => ({}));
 

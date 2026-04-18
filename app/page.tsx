@@ -115,16 +115,17 @@ export default function LoginPage() {
     
     const checkExistingSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const invite =
-            (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
-            params?.get('invite')?.trim() ||
-            params?.get('invite_code')?.trim() ||
-            null;
-          router.push(invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding');
-        }
+        // getSession()만으로는 만료된 로컬 세션이 남아 온보딩으로 보내질 수 있음 → getUser()로 실제 유효성 확인
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) return;
+
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const invite =
+          (typeof window !== 'undefined' ? window.sessionStorage.getItem(INVITE_STORAGE_KEY) : null) ||
+          params?.get('invite')?.trim() ||
+          params?.get('invite_code')?.trim() ||
+          null;
+        router.push(invite ? `/onboarding?invite=${encodeURIComponent(invite)}` : '/onboarding');
       } catch {
         // ignore
       }
