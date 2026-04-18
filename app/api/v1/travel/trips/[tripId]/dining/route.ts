@@ -60,13 +60,14 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, day_date, time_at, category, memo, address, latitude, longitude, show_in_itinerary } = body as {
+    const { name, day_date, time_at, category, memo, address, place_id, latitude, longitude, show_in_itinerary } = body as {
       name?: string;
       day_date?: string;
       time_at?: string;
       category?: string;
       memo?: string;
       address?: string;
+      place_id?: string | null;
       latitude?: number;
       longitude?: number;
       /** 일정 뷰에 표시 여부 */
@@ -100,6 +101,7 @@ export async function POST(
     if (category != null && String(category).trim()) insertPayload.category = String(category).trim();
     if (memo != null && String(memo).trim()) insertPayload.memo = String(memo).trim();
     if (address != null) insertPayload.address = address ? String(address).trim() : null;
+    if (place_id !== undefined) insertPayload.place_id = place_id ? String(place_id).trim() : null;
     if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
     if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
 

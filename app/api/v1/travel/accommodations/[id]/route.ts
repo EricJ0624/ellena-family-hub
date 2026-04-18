@@ -32,6 +32,7 @@ export async function PATCH(
     if (body.check_out_date !== undefined) updatePayload.check_out_date = body.check_out_date;
     if (body.address !== undefined) updatePayload.address = body.address ? String(body.address).trim() : null;
     if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
+    if (body.place_id !== undefined) updatePayload.place_id = body.place_id ? String(body.place_id).trim() : null;
     if (body.latitude !== undefined) updatePayload.latitude = body.latitude == null ? null : Number(body.latitude);
     if (body.longitude !== undefined) updatePayload.longitude = body.longitude == null ? null : Number(body.longitude);
     if (body.show_in_itinerary !== undefined) updatePayload.show_in_itinerary = body.show_in_itinerary === true;

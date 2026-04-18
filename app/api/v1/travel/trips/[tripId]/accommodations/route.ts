@@ -59,12 +59,13 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, check_in_date, check_out_date, address, memo, latitude, longitude, show_in_itinerary } = body as {
+    const { name, check_in_date, check_out_date, address, memo, place_id, latitude, longitude, show_in_itinerary } = body as {
       name?: string;
       check_in_date?: string;
       check_out_date?: string;
       address?: string;
       memo?: string;
+      place_id?: string | null;
       latitude?: number;
       longitude?: number;
       /** 일정 뷰에 표시 여부 */
@@ -94,6 +95,7 @@ export async function POST(
       check_out_date,
       address: address ? String(address).trim() : null,
       memo: memo ? String(memo).trim() : null,
+      place_id: place_id ? String(place_id).trim() : null,
       show_in_itinerary: show_in_itinerary === true,
       created_by: user.id,
     };

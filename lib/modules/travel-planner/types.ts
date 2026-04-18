@@ -93,6 +93,7 @@ export interface TravelAccommodation {
   check_out_date: string;
   address: string | null;
   memo: string | null;
+  place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   /** 일정 뷰에 표시 여부 */
@@ -115,6 +116,7 @@ export interface TravelDining {
   category: string | null;
   memo: string | null;
   address: string | null;
+  place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   /** 일정 뷰에 표시 여부 */
@@ -142,6 +144,7 @@ export interface TravelAttraction {
   start_time: string | null;
   end_time: string | null;
   address: string | null;
+  place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   description: string | null;

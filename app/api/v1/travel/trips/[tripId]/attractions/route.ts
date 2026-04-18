@@ -59,12 +59,13 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, day_date, start_time, end_time, address, description, latitude, longitude, show_in_itinerary } = body as {
+    const { name, day_date, start_time, end_time, address, place_id, description, latitude, longitude, show_in_itinerary } = body as {
       name?: string;
       day_date?: string;
       start_time?: string;
       end_time?: string;
       address?: string;
+      place_id?: string | null;
       description?: string;
       latitude?: number;
       longitude?: number;
@@ -98,6 +99,7 @@ export async function POST(
     if (start_time) insertPayload.start_time = String(start_time).trim().substring(0, 5);
     if (end_time) insertPayload.end_time = String(end_time).trim().substring(0, 5);
     if (address) insertPayload.address = String(address).trim();
+    if (place_id !== undefined) insertPayload.place_id = place_id ? String(place_id).trim() : null;
     if (description) insertPayload.description = String(description).trim();
     if (latitude != null && typeof latitude === 'number') insertPayload.latitude = latitude;
     if (longitude != null && typeof longitude === 'number') insertPayload.longitude = longitude;
