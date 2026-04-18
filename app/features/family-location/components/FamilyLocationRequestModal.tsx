@@ -71,59 +71,24 @@ export function FamilyLocationRequestModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
       onClick={onBackdropClose}
     >
       <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '80vh',
-          overflow: 'auto',
-        }}
+        className="max-h-[80vh] w-[90%] max-w-[500px] overflow-auto rounded-xl bg-white p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{t.location_modal_send_title}</h3>
+        <h3 className="mb-4 text-lg font-semibold">{t.location_modal_send_title}</h3>
         {loadingUsers ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>{t.location_modal_loading_users}</div>
+          <div className="p-10 text-center text-[#64748b]">{t.location_modal_loading_users}</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+          <div className="flex max-h-[400px] flex-col gap-3 overflow-y-auto">
             {allUsers.length > 0 ? (
-              <div
-                style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  padding: '16px',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '14px',
-                    color: '#1e293b',
-                    marginBottom: '12px',
-                    fontWeight: '600',
-                    paddingBottom: '8px',
-                    borderBottom: '1px solid #e2e8f0',
-                  }}
-                >
+              <div className="rounded-lg border border-solid border-[#e2e8f0] bg-[#f8fafc] p-4">
+                <div className="mb-3 border-b border-[#e2e8f0] pb-2 text-sm font-semibold text-[#1e293b]">
                   {fillN(t.location_modal_all_users_count, allUsers.length)}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   {allUsers.map((user) => {
                     const isOnline = onlineUsers.some((onlineUser) => onlineUser.id === user.id);
                     const hasAcceptedRequest = locationRequests.some(
@@ -142,61 +107,46 @@ export function FamilyLocationRequestModal({
                     return (
                       <div
                         key={user.id}
-                        style={{
-                          padding: '12px',
-                          backgroundColor: hasAcceptedRequest ? '#d1fae5' : '#f8fafc',
-                          borderRadius: '8px',
-                          border: '1px solid #e2e8f0',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: '8px',
-                        }}
+                        className={`mb-2 flex items-center justify-between rounded-lg border border-solid border-[#e2e8f0] p-3 ${
+                          hasAcceptedRequest ? 'bg-[#d1fae5]' : 'bg-[#f8fafc]'
+                        }`}
                       >
                         <div>
-                          <div style={{ fontWeight: '500' }}>
+                          <div className="font-medium">
                             {user.nickname ||
                               user.email ||
                               fillId(t.location_modal_user_fallback, user.id.substring(0, 8))}
                             {familyRoleByUserId[user.id] && (
-                              <span style={{ marginLeft: '6px' }}>
+                              <span className="ml-1.5">
                                 {getFamilyRoleEmoji(familyRoleByUserId[user.id])} {getFamilyRoleLabel(lang, familyRoleByUserId[user.id])}
                               </span>
                             )}
                             {isOnline && (
-                              <span style={{ fontSize: '10px', color: '#10b981', marginLeft: '6px' }}>
+                              <span className="ml-1.5 text-[10px] text-[#10b981]">
                                 {t.location_modal_online}
                               </span>
                             )}
                           </div>
                           {user.nickname && user.email && (
-                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>{user.email}</div>
+                            <div className="text-[11px] text-[#94a3b8]">{user.email}</div>
                           )}
                           {!user.nickname && user.email && (
-                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            <div className="text-[11px] text-[#94a3b8]">
                               {t.location_modal_id_prefix} {user.id.substring(0, 8)}...
                             </div>
                           )}
                           {hasAcceptedRequest && (
-                            <div style={{ fontSize: '12px', color: '#059669' }}>{t.location_already_approved}</div>
+                            <div className="text-xs text-[#059669]">{t.location_already_approved}</div>
                           )}
                           {hasPendingRequest && (
-                            <div style={{ fontSize: '12px', color: '#f59e0b' }}>{t.location_request_pending}</div>
+                            <div className="text-xs text-[#f59e0b]">{t.location_request_pending}</div>
                           )}
                         </div>
                         {!hasAcceptedRequest && !hasPendingRequest && (
                           <button
                             type="button"
                             onClick={() => onSendLocationRequest(user.id)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-0 bg-[#3b82f6] px-3 py-1.5 text-xs text-white"
                           >
                             {t.location_modal_btn_send}
                           </button>
@@ -207,17 +157,9 @@ export function FamilyLocationRequestModal({
                 </div>
               </div>
             ) : (
-              <div
-                style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  textAlign: 'center',
-                }}
-              >
-                <p style={{ color: '#64748b', margin: 0, marginBottom: '8px' }}>{t.location_modal_empty}</p>
-                <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>{t.location_modal_empty_hint}</p>
+              <div className="rounded-lg border border-solid border-[#e2e8f0] bg-[#f8fafc] p-5 text-center">
+                <p className="m-0 mb-2 text-[#64748b]">{t.location_modal_empty}</p>
+                <p className="m-0 text-xs text-[#94a3b8]">{t.location_modal_empty_hint}</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -226,16 +168,7 @@ export function FamilyLocationRequestModal({
                     }
                     onRefreshUsers();
                   }}
-                  style={{
-                    marginTop: '12px',
-                    padding: '6px 12px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
+                  className="mt-3 cursor-pointer rounded-md border-0 bg-[#3b82f6] px-3 py-1.5 text-xs text-white"
                 >
                   {t.location_modal_refresh}
                 </button>
@@ -246,18 +179,7 @@ export function FamilyLocationRequestModal({
         <button
           type="button"
           onClick={onBackdropClose}
-          style={{
-            marginTop: '16px',
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#e2e8f0',
-            color: '#1e293b',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-          }}
+          className="mt-4 w-full cursor-pointer rounded-lg border-0 bg-[#e2e8f0] p-2.5 text-sm font-medium text-[#1e293b]"
         >
           {closeLabel}
         </button>
