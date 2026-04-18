@@ -43,8 +43,8 @@ export default function LoginPage() {
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
   /** 가입 버튼 연타·이중 submit으로 signUp이 여러 번 나가 rate limit 걸리는 것 방지 */
   const signupSubmitLockRef = useRef(false);
-  /** 429 등 이후 짧은 쿨다운(같은 세션에서 연속 클릭으로 서버를 두드리지 않게) */
-  const signupCooldownUntilRef = useRef(0);
+  /** 이메일별 가입 쿨다운(전역이면 다른 이메일로 바꿔도 막히는 버그 방지) */
+  const signupCooldownByEmailRef = useRef<Record<string, number>>({});
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
 
   // Hydration 오류 방지: 마운트 후에만 클라이언트 사이드 로직 실행
@@ -273,12 +273,16 @@ export default function LoginPage() {
       return;
     }
 
+    let normalizedEmail = '';
     try {
-      const normalizedEmail = email.trim().toLowerCase();
+      normalizedEmail = email.trim().toLowerCase();
 
-      if (Date.now() < signupCooldownUntilRef.current) {
-        const sec = Math.ceil((signupCooldownUntilRef.current - Date.now()) / 1000);
-        setErrorMsg(`요청이 너무 잦습니다. ${sec}초 후에 다시 시도해 주세요.`);
+      const cooldownUntil = signupCooldownByEmailRef.current[normalizedEmail];
+      if (cooldownUntil && Date.now() < cooldownUntil) {
+        const sec = Math.ceil((cooldownUntil - Date.now()) / 1000);
+        setErrorMsg(
+          `이 이메일(${normalizedEmail})로는 방금 인증 서버 제한이 걸려 ${sec}초 후에 다시 시도할 수 있습니다. 다른 이메일 주소는 지금 바로 시도해 보세요.`
+        );
         return;
       }
 
@@ -421,7 +425,9 @@ export default function LoginPage() {
         setErrorMsg(t('error_password_min'));
       } else if (isSupabaseAuthRateLimitError(error)) {
         setSignupRateLimitHint(true);
-        signupCooldownUntilRef.current = Date.now() + 300_000;
+        if (normalizedEmail) {
+          signupCooldownByEmailRef.current[normalizedEmail] = Date.now() + 180_000;
+        }
         setErrorMsg(
           [
             '지금은 가입·인증 메일 서버(Supabase)가 요청을 일시적으로 막은 상태입니다. 테스트를 여러 번 하면 같은 Wi‑Fi에서 흔히 발생합니다.',
