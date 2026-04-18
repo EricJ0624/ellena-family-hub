@@ -300,7 +300,7 @@ export default function LoginPage() {
       const signupNickname = trimmedNickname;
       const pendingInviteCode = typeof window !== 'undefined' ? getSessionStoredInviteCode() : null;
 
-      // 서비스 롤 가입(확인 메일 미발송) → GoTrue 이메일 발송 한도(429) 회피. 실패·미설정 시에만 클라이언트 signUp.
+      // 서비스 롤 가입만 사용(확인 메일 미발송). 클라이언트 signUp 폴백은 인증 메일·429를 다시 유발하므로 하지 않음.
       if (typeof window !== 'undefined') {
         try {
           const regRes = await fetch(`${window.location.origin}/api/auth/register-with-password`, {
@@ -341,7 +341,10 @@ export default function LoginPage() {
           }
 
           if (regRes.status === 503) {
-            // SUPABASE_SERVICE_ROLE_KEY 없음 등 — 클라이언트 signUp으로 폴백
+            setErrorMsg(
+              '서버 가입을 쓸 수 없습니다. 배포 환경(Vercel 등)에 SUPABASE_SERVICE_ROLE_KEY가 설정돼 있는지 확인해 주세요.'
+            );
+            return;
           } else if (regRes.status === 409 || regJson.error === 'email_taken') {
             setErrorMsg(t('error_email_taken'));
             return;
@@ -361,127 +364,31 @@ export default function LoginPage() {
             setErrorMsg('이메일 형식이 올바르지 않습니다.');
             return;
           } else if (regRes.status >= 500) {
-            // 서버 오류 — 클라이언트 signUp 폴백
+            setErrorMsg('가입 서버에 일시적인 오류가 있습니다. 잠시 후 다시 시도해 주세요.');
+            return;
           } else if (regRes.status === 400 && regJson.error === 'signup_failed') {
             setErrorMsg(t('error_signup_failed'));
             return;
           } else if (regRes.status === 400) {
             setErrorMsg(t('error_signup_failed'));
             return;
+          } else {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[Sign up] register-with-password unexpected', regRes.status, regJson);
+            }
+            setErrorMsg('가입 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+            return;
           }
         } catch (serverRegErr) {
           if (process.env.NODE_ENV === 'development') {
-            console.warn('[Sign up] server register failed, falling back to client signUp:', serverRegErr);
+            console.warn('[Sign up] server register fetch error:', serverRegErr);
           }
-        }
-      }
-
-      // SSR 안전성: window 객체가 있을 때만 origin 사용
-      const redirectTo = typeof window !== 'undefined' 
-        ? `${window.location.origin}/auth/callback`
-        : '/auth/callback';
-      
-      let { error, data } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: {
-          emailRedirectTo: redirectTo,
-          data: {
-            nickname: signupNickname,
-            full_name: signupNickname
-          }
-        }
-      });
-
-      // Redirect URL allowlist 설정 누락 시에만 1회 무옵션 재시도 (rate limit·429에는 재호출하지 않음)
-      const firstMsg = String(error?.message || '');
-      const isRateLimited = isSupabaseAuthRateLimitError(error);
-      if (
-        error &&
-        !isRateLimited &&
-        /redirect|email redirect|invalid redirect|not allowed/i.test(firstMsg)
-      ) {
-        const retry = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: {
-              nickname: signupNickname,
-              full_name: signupNickname,
-            },
-          },
-        });
-        error = retry.error;
-        data = retry.data;
-      }
-
-      if (error) throw error;
-
-      if (data.user) {
-        // 가입이 확정된 뒤에만 초대 임시 저장 (실패한 signUp마다 API를 두르지 않음)
-        if (pendingInviteCode && typeof window !== 'undefined') {
-          try {
-            await fetch(`${window.location.origin}/api/invite/store-pending`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: normalizedEmail, invite_code: pendingInviteCode }),
-            });
-          } catch (_) {}
-        }
-
-        // 이메일 인증 확인
-        const isEmailConfirmed = data.user.email_confirmed_at !== null;
-        
-        // profiles 테이블에 nickname 저장 (비동기, 실패해도 가입은 성공)
-        try {
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              email: normalizedEmail,
-              nickname: signupNickname
-            }, {
-              onConflict: 'id'
-            });
-        } catch (profileError) {
-          console.warn('profiles 테이블 업데이트 실패 (무시):', profileError);
-          // 가입은 성공했으므로 계속 진행
-        }
-
-        // 이메일 인증이 필요하고 아직 인증되지 않은 경우
-        if (!isEmailConfirmed) {
-          setSuccessMsg(t('success_signup_check_email'));
-          // 3초 후 로그인 모드로 전환
-          setTimeout(() => {
-            setMode('login');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setNickname('');
-            setSuccessMsg('');
-          }, 3000);
+          setErrorMsg('가입 서버에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
           return;
         }
-
-        // signUp 응답의 세션만 사용 (getSession()은 이전 사용자 세션을 반환할 수 있음)
-        const session = data.session;
-        const isNewUserSession = session?.user?.id === data.user?.id;
-        if (session && isNewUserSession) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-          const invite = resolveInviteFromUrlOrSession(params);
-          router.push(buildOnboardingPath(invite));
-        } else {
-          setSuccessMsg(t('success_signup_done'));
-          setTimeout(() => {
-            setMode('login');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setNickname('');
-            setSuccessMsg('');
-          }, 3000);
-        }
+      } else {
+        setErrorMsg('이 환경에서는 가입을 진행할 수 없습니다.');
+        return;
       }
     } catch (error: any) {
       // 프로덕션에서도 코드·상태만 로그(이메일은 넣지 않음) — 실제 원인 파악용
