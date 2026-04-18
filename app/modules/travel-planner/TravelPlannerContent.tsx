@@ -403,6 +403,17 @@ export function TravelPlannerContent() {
     [],
   );
 
+  /** 목록 행용: 구글 웹검색 URL (Maps Platform 과금 없음). 이름·제목 + 주소 등을 합쳐 쿼리 생성 */
+  const buildGoogleWebSearchUrl = useCallback((...parts: (string | null | undefined)[]) => {
+    const q = parts
+      .map((p) => (typeof p === 'string' ? p.trim() : ''))
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    if (!q) return null;
+    return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  }, []);
+
   const fetchPlaceCache = useCallback(async (placeId: string) => {
     const headers = await getAuthHeaders();
     const res = await fetch(`/api/place-cache?placeId=${encodeURIComponent(placeId)}`, { headers });
@@ -2676,34 +2687,41 @@ export function TravelPlannerContent() {
                         </div>
                         {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
                       </div>
-                      <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                        {getGoogleMapsUrl(i) && (
-                          <a
-                            href={getGoogleMapsUrl(i)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-                            title={tt('view_on_map')}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {getGoogleMapsUrl(i) && (
+                            <a
+                              href={getGoogleMapsUrl(i)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                              title={tt('view_on_map')}
+                            >
+                              <MapPin style={{ width: 14, height: 14 }} />
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleEditFromItinerary(i)}
+                            style={{ padding: 6, background: '#e0f2fe', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#0369a1' }}
+                            title={tt('edit_itinerary')}
                           >
-                            <MapPin style={{ width: 14, height: 14 }} />
+                            <Pencil style={{ width: 14, height: 14 }} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFromItinerary(i)}
+                            style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
+                            title={tt('remove_from_itinerary')}
+                          >
+                            <Trash2 style={{ width: 14, height: 14 }} />
+                          </button>
+                        </div>
+                        {buildGoogleWebSearchUrl(i.title, i.address) && (
+                          <a href={buildGoogleWebSearchUrl(i.title, i.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                            {tt('link_google_search')}
                           </a>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => handleEditFromItinerary(i)}
-                          style={{ padding: 6, background: '#e0f2fe', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#0369a1' }}
-                          title={tt('edit_itinerary')}
-                        >
-                          <Pencil style={{ width: 14, height: 14 }} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFromItinerary(i)}
-                          style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
-                          title={tt('remove_from_itinerary')}
-                        >
-                          <Trash2 style={{ width: 14, height: 14 }} />
-                        </button>
                       </div>
                     </li>
                   ))
@@ -2787,12 +2805,19 @@ export function TravelPlannerContent() {
                             {a.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.description}</div>}
                             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(a.created_by)}{a.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(a.updated_by)}`}</div>
                           </div>
-                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                            {getGoogleMapsUrl(a) && (
-                              <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              {getGoogleMapsUrl(a) && (
+                                <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
+                              )}
+                              <button type="button" onClick={() => openAttractionForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
+                              <button type="button" onClick={() => handleDeleteAttraction(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                            </div>
+                            {buildGoogleWebSearchUrl(a.name, a.address) && (
+                              <a href={buildGoogleWebSearchUrl(a.name, a.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                                {tt('link_google_search')}
+                              </a>
                             )}
-                            <button type="button" onClick={() => openAttractionForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
-                            <button type="button" onClick={() => handleDeleteAttraction(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                           </div>
                         </li>
                       ))
@@ -2878,18 +2903,25 @@ export function TravelPlannerContent() {
                               {d.updated_by != null && ` · 수정: ${getDisplayName(d.updated_by)}`}
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                            {getGoogleMapsUrl(d) && (
-                              <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
-                                <MapPin style={{ width: 14, height: 14 }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              {getGoogleMapsUrl(d) && (
+                                <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
+                                  <MapPin style={{ width: 14, height: 14 }} />
+                                </a>
+                              )}
+                              <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
+                                <Pencil style={{ width: 14, height: 14 }} />
+                              </button>
+                              <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
+                                <Trash2 style={{ width: 14, height: 14 }} />
+                              </button>
+                            </div>
+                            {buildGoogleWebSearchUrl(d.name, d.address) && (
+                              <a href={buildGoogleWebSearchUrl(d.name, d.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                                {tt('link_google_search')}
                               </a>
                             )}
-                            <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
-                              <Pencil style={{ width: 14, height: 14 }} />
-                            </button>
-                            <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
-                              <Trash2 style={{ width: 14, height: 14 }} />
-                            </button>
                           </div>
                         </li>
                       ))
@@ -2972,18 +3004,25 @@ export function TravelPlannerContent() {
                               {a.updated_by != null && ` · 수정: ${getDisplayName(a.updated_by)}`}
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                            {getGoogleMapsUrl(a) && (
-                              <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
-                                <MapPin style={{ width: 14, height: 14 }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              {getGoogleMapsUrl(a) && (
+                                <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
+                                  <MapPin style={{ width: 14, height: 14 }} />
+                                </a>
+                              )}
+                              <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
+                                <Pencil style={{ width: 14, height: 14 }} />
+                              </button>
+                              <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
+                                <Trash2 style={{ width: 14, height: 14 }} />
+                              </button>
+                            </div>
+                            {buildGoogleWebSearchUrl(a.name, a.address) && (
+                              <a href={buildGoogleWebSearchUrl(a.name, a.address)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                                {tt('link_google_search')}
                               </a>
                             )}
-                            <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
-                              <Pencil style={{ width: 14, height: 14 }} />
-                            </button>
-                            <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
-                              <Trash2 style={{ width: 14, height: 14 }} />
-                            </button>
                           </div>
                         </li>
                       ))
