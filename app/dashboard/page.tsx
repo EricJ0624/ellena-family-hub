@@ -788,21 +788,9 @@ export default function FamilyHub() {
           router.push('/');
           return;
         }
-        
-        // Supabase 세션이 있으면 바로 대시보드 표시
-        setIsAuthenticated(true);
-        
-        // 사용자 ID 저장
-        const currentUserId = session.user.id;
-        setUserId(currentUserId);
-        
-        // family_id 가져오기 (user_metadata에서 가져오거나 기본값 사용)
-        // 모든 가족 구성원이 동일한 family_id를 공유하도록 설정
-        const userFamilyId = session.user.user_metadata?.family_id 
-          || process.env.NEXT_PUBLIC_FAMILY_ID 
-          || 'ellena_family'; // 기본 family_id
-        setFamilyId(userFamilyId);
-        
+
+        const currentUserId = serverUser.id;
+
         // 시스템 관리자 확인
         const { data: isAdmin } = await supabase.rpc('is_system_admin', {
           user_id_param: currentUserId,
@@ -824,6 +812,17 @@ export default function FamilyHub() {
           router.push('/onboarding');
           return;
         }
+
+        // 그룹·역할 라우팅이 끝난 뒤에만 대시보드 본문을 표시(잠깐 보였다가 온보딩으로 튀는 현상 방지)
+        setIsAuthenticated(true);
+        setUserId(currentUserId);
+
+        // family_id 가져오기 (user_metadata에서 가져오거나 기본값 사용)
+        // 모든 가족 구성원이 동일한 family_id를 공유하도록 설정
+        const userFamilyId = session.user.user_metadata?.family_id 
+          || process.env.NEXT_PUBLIC_FAMILY_ID 
+          || 'ellena_family'; // 기본 family_id
+        setFamilyId(userFamilyId);
 
         // 사용자 이름 가져오기 (profiles 테이블의 nickname 우선, 없으면 user_metadata)
         if (session.user) {

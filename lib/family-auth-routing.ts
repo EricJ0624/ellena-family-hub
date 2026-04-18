@@ -70,14 +70,14 @@ export type ResolveUserHasGroupsResult = {
 
 /**
  * 멤버십 또는 소유 그룹 존재 여부.
- * `flakyRetry`: 쿼리 오류이거나 비시스템관리자인데 그룹이 없으면 짧게 대기 후 1회 재조회.
+ * `flakyRetry`: 쿼리 오류이거나 그룹이 없을 때 짧은 백오프로 재조회(로그인 직후 JWT 반영 지연 대비).
+ * `isSystemAdmin`은 호환용으로 유지되며, 재시도 정책에는 더 이상 사용하지 않는다.
  */
 export async function resolveUserHasGroups(
   supabase: SupabaseClient,
   userId: string,
   options?: { flakyRetry?: boolean; isSystemAdmin?: boolean }
 ): Promise<ResolveUserHasGroupsResult> {
-  const isSystemAdmin = options?.isSystemAdmin ?? false;
   const flakyRetry = options?.flakyRetry ?? false;
 
   const fetchPair = async () => {
@@ -92,16 +92,28 @@ export async function resolveUserHasGroups(
 
   let { hasGroups, membershipsError, ownedGroupsError } = await fetchPair();
 
-  if (flakyRetry && (membershipsError || ownedGroupsError || (!isSystemAdmin && !hasGroups))) {
-    if (membershipsError || ownedGroupsError) {
-      console.warn('그룹 확인 쿼리 오류(재확인 시도):', {
-        membershipsError,
-        ownedGroupsError,
-      });
+  // 로그인 직후 JWT가 PostgREST에 반영되기 전에 빈 결과가 나오는 경우가 있어,
+  // 시스템 관리자 여부와 관계없이 "그룹 없음"·쿼리 오류일 때는 짧은 백오프로 여러 번 재시도한다.
+  if (flakyRetry) {
+    // 최초 1회 + 추가 2회: 무그룹 신규 가입자 체감 지연을 최소화하면서도 일시적 빈 결과를 흡수
+    const maxExtraAttempts = 2;
+    for (let attempt = 0; attempt < maxExtraAttempts; attempt++) {
+      const needRetry =
+        Boolean(membershipsError || ownedGroupsError) || !hasGroups;
+      if (!needRetry) break;
+      if (membershipsError || ownedGroupsError) {
+        console.warn('그룹 확인 쿼리 오류(재확인 시도):', {
+          attempt,
+          membershipsError,
+          ownedGroupsError,
+        });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 280 + attempt * 220));
+      const next = await fetchPair();
+      hasGroups = next.hasGroups;
+      membershipsError = next.membershipsError;
+      ownedGroupsError = next.ownedGroupsError;
     }
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    const second = await fetchPair();
-    hasGroups = second.hasGroups;
   }
 
   return { hasGroups };
