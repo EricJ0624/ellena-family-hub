@@ -174,10 +174,11 @@ export function TravelPlannerContent() {
   const travelMapRef = useRef<{ setCenter: (c: { lat: number; lng: number }) => void; fitBounds: (b: unknown) => void } | null>(null);
   const travelMapMarkersRef = useRef<unknown[]>([]);
   const travelMapScriptLoadedRef = useRef(false);
-  const accAddressInputRef = useRef<HTMLInputElement>(null);
-  const diningAddressInputRef = useRef<HTMLInputElement>(null);
+  /** 숙소·먹거리·관광지: Places Autocomplete는 이름 입력란에 연결 */
+  const accNameInputRef = useRef<HTMLInputElement>(null);
+  const diningNameInputRef = useRef<HTMLInputElement>(null);
+  const attractionNameInputRef = useRef<HTMLInputElement>(null);
   const itineraryAddressInputRef = useRef<HTMLInputElement>(null);
-  const attractionAddressInputRef = useRef<HTMLInputElement>(null);
   const transportDepartureInputRef = useRef<HTMLInputElement>(null);
   const transportArrivalInputRef = useRef<HTMLInputElement>(null);
   const placesServiceContainerRef = useRef<HTMLDivElement>(null);
@@ -188,10 +189,168 @@ export function TravelPlannerContent() {
   const attractionSessionTokenRef = useRef<unknown>(null);
   const transportSessionTokenRef = useRef<unknown>(null);
   const [placesApiReady, setPlacesApiReady] = useState(false);
+  /** 선택지 A: 이름 blur 시 미선택 입력 정리 (place_changed보다 늦게 실행) */
+  const accNameBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const diningNameBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attractionNameBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accommodationFormRef = useRef<HTMLFormElement>(null);
   const diningFormRef = useRef<HTMLFormElement>(null);
   const attractionFormRef = useRef<HTMLFormElement>(null);
   const transportFormRef = useRef<HTMLFormElement>(null);
+
+  const BLUR_CONFIRM_MS = 220;
+
+  const clearAccGooglePlaceFields = useCallback(() => {
+    setAccPlaceId(null);
+    setAccPlaceName('');
+    setAccAddress('');
+    setAccLatitude('');
+    setAccLongitude('');
+  }, []);
+
+  const clearDiningGooglePlaceFields = useCallback(() => {
+    setDiningPlaceId(null);
+    setDiningPlaceName('');
+    setDiningAddress('');
+    setDiningLatitude('');
+    setDiningLongitude('');
+  }, []);
+
+  const clearAttractionGooglePlaceFields = useCallback(() => {
+    setAttractionPlaceId(null);
+    setAttractionPlaceName('');
+    setAttractionAddress('');
+    setAttractionLatitude('');
+    setAttractionLongitude('');
+  }, []);
+
+  const cancelAccNameBlurConfirm = useCallback(() => {
+    if (accNameBlurTimerRef.current) {
+      clearTimeout(accNameBlurTimerRef.current);
+      accNameBlurTimerRef.current = null;
+    }
+  }, []);
+
+  const cancelDiningNameBlurConfirm = useCallback(() => {
+    if (diningNameBlurTimerRef.current) {
+      clearTimeout(diningNameBlurTimerRef.current);
+      diningNameBlurTimerRef.current = null;
+    }
+  }, []);
+
+  const cancelAttractionNameBlurConfirm = useCallback(() => {
+    if (attractionNameBlurTimerRef.current) {
+      clearTimeout(attractionNameBlurTimerRef.current);
+      attractionNameBlurTimerRef.current = null;
+    }
+  }, []);
+
+  /** 타이머 실행 시점의 최신 스냅샷 (place_changed 직후 ref가 갱신됨) */
+  const accBlurSnapRef = useRef({
+    direct: false,
+    pid: null as string | null,
+    pname: '',
+    name: '',
+  });
+  const diningBlurSnapRef = useRef({
+    direct: false,
+    pid: null as string | null,
+    pname: '',
+    name: '',
+  });
+  const attractionBlurSnapRef = useRef({
+    direct: false,
+    pid: null as string | null,
+    pname: '',
+    name: '',
+  });
+  accBlurSnapRef.current = {
+    direct: accDirectInputMode,
+    pid: accPlaceId,
+    pname: accPlaceName,
+    name: accName,
+  };
+  diningBlurSnapRef.current = {
+    direct: diningDirectInputMode,
+    pid: diningPlaceId,
+    pname: diningPlaceName,
+    name: diningName,
+  };
+  attractionBlurSnapRef.current = {
+    direct: attractionDirectInputMode,
+    pid: attractionPlaceId,
+    pname: attractionPlaceName,
+    name: attractionName,
+  };
+
+  const scheduleAccNameBlurConfirm = useCallback(() => {
+    cancelAccNameBlurConfirm();
+    accNameBlurTimerRef.current = setTimeout(() => {
+      accNameBlurTimerRef.current = null;
+      const { direct, pid, pname, name } = accBlurSnapRef.current;
+      if (direct || pid === '__existing__') return;
+      const n = name.trim();
+      if (!pid) {
+        if (n) {
+          clearAccGooglePlaceFields();
+          setAccName('');
+        }
+        return;
+      }
+      if (pname.trim() && n !== pname.trim()) {
+        clearAccGooglePlaceFields();
+        setAccName('');
+      }
+    }, BLUR_CONFIRM_MS);
+  }, [cancelAccNameBlurConfirm, clearAccGooglePlaceFields]);
+
+  const scheduleDiningNameBlurConfirm = useCallback(() => {
+    cancelDiningNameBlurConfirm();
+    diningNameBlurTimerRef.current = setTimeout(() => {
+      diningNameBlurTimerRef.current = null;
+      const { direct, pid, pname, name } = diningBlurSnapRef.current;
+      if (direct || pid === '__existing__') return;
+      const n = name.trim();
+      if (!pid) {
+        if (n) {
+          clearDiningGooglePlaceFields();
+          setDiningName('');
+        }
+        return;
+      }
+      if (pname.trim() && n !== pname.trim()) {
+        clearDiningGooglePlaceFields();
+        setDiningName('');
+      }
+    }, BLUR_CONFIRM_MS);
+  }, [cancelDiningNameBlurConfirm, clearDiningGooglePlaceFields]);
+
+  const scheduleAttractionNameBlurConfirm = useCallback(() => {
+    cancelAttractionNameBlurConfirm();
+    attractionNameBlurTimerRef.current = setTimeout(() => {
+      attractionNameBlurTimerRef.current = null;
+      const { direct, pid, pname, name } = attractionBlurSnapRef.current;
+      if (direct || pid === '__existing__') return;
+      const n = name.trim();
+      if (!pid) {
+        if (n) {
+          clearAttractionGooglePlaceFields();
+          setAttractionName('');
+        }
+        return;
+      }
+      if (pname.trim() && n !== pname.trim()) {
+        clearAttractionGooglePlaceFields();
+        setAttractionName('');
+      }
+    }, BLUR_CONFIRM_MS);
+  }, [cancelAttractionNameBlurConfirm, clearAttractionGooglePlaceFields]);
+
+  useEffect(() => () => {
+    cancelAccNameBlurConfirm();
+    cancelDiningNameBlurConfirm();
+    cancelAttractionNameBlurConfirm();
+  }, [cancelAccNameBlurConfirm, cancelAttractionNameBlurConfirm, cancelDiningNameBlurConfirm]);
 
   const getAuthHeaders = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
@@ -540,6 +699,9 @@ export function TravelPlannerContent() {
     if (params.sessionTokenRef.current) opts.sessionToken = params.sessionTokenRef.current;
     const autocomplete = new g.maps.places.Autocomplete(el, opts);
     const listener = autocomplete.addListener('place_changed', () => {
+      cancelAccNameBlurConfirm();
+      cancelDiningNameBlurConfirm();
+      cancelAttractionNameBlurConfirm();
       const place = autocomplete.getPlace();
       if (!place?.place_id) return;
       (async () => {
@@ -579,15 +741,16 @@ export function TravelPlannerContent() {
       listener?.remove?.();
       if (AutocompleteSessionToken) params.sessionTokenRef.current = new AutocompleteSessionToken();
     };
-  }, [placesApiReady, fetchPlaceCache, savePlaceCache]);
+  }, [placesApiReady, fetchPlaceCache, savePlaceCache, cancelAccNameBlurConfirm, cancelDiningNameBlurConfirm, cancelAttractionNameBlurConfirm]);
 
   // Places Autocomplete: 숙소 폼
   useEffect(() => attachPlacesAutocomplete({
     enabled: showAccommodationForm && !accDirectInputMode,
-    inputRef: accAddressInputRef,
+    inputRef: accNameInputRef,
     sessionTokenRef: accSessionTokenRef,
     onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
       setAccPlaceId(placeId);
+      setAccName(placeName);
       setAccAddress(address);
       setAccLatitude(latitude != null ? String(latitude) : '');
       setAccLongitude(longitude != null ? String(longitude) : '');
@@ -598,10 +761,11 @@ export function TravelPlannerContent() {
   // Places Autocomplete: 먹거리 폼
   useEffect(() => attachPlacesAutocomplete({
     enabled: showDiningForm && !diningDirectInputMode,
-    inputRef: diningAddressInputRef,
+    inputRef: diningNameInputRef,
     sessionTokenRef: diningSessionTokenRef,
     onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
       setDiningPlaceId(placeId);
+      setDiningName(placeName);
       setDiningAddress(address);
       setDiningLatitude(latitude != null ? String(latitude) : '');
       setDiningLongitude(longitude != null ? String(longitude) : '');
@@ -625,10 +789,11 @@ export function TravelPlannerContent() {
   // Places Autocomplete: 관광지 폼 (UI 유지, 핵심 로직만 동일 적용)
   useEffect(() => attachPlacesAutocomplete({
     enabled: showAttractionForm && !attractionDirectInputMode,
-    inputRef: attractionAddressInputRef,
+    inputRef: attractionNameInputRef,
     sessionTokenRef: attractionSessionTokenRef,
     onSelect: ({ placeId, address, latitude, longitude, placeName }) => {
       setAttractionPlaceId(placeId);
+      setAttractionName(placeName);
       setAttractionAddress(address);
       setAttractionLatitude(latitude != null ? String(latitude) : '');
       setAttractionLongitude(longitude != null ? String(longitude) : '');
@@ -1258,8 +1423,19 @@ export function TravelPlannerContent() {
       setAccMemo(item.memo ?? '');
       setAccLatitude(item.latitude != null ? String(item.latitude) : '');
       setAccLongitude(item.longitude != null ? String(item.longitude) : '');
-      setAccPlaceName('');
-      setAccPlaceId(item.address ? '__existing__' : null);
+      {
+        const pid = item.place_id?.trim() || null;
+        if (pid) {
+          setAccPlaceId(pid);
+          setAccPlaceName(item.name);
+        } else if (item.address?.trim()) {
+          setAccPlaceId('__existing__');
+          setAccPlaceName('');
+        } else {
+          setAccPlaceId(null);
+          setAccPlaceName('');
+        }
+      }
       setAccDirectInputMode(false);
     } else {
       setEditingAccommodation(null);
@@ -1284,9 +1460,15 @@ export function TravelPlannerContent() {
       alert(tt('alert_acc_required'));
       return;
     }
-    if (!accDirectInputMode && accAddress.trim() && !accPlaceId) {
-      alert('숙소 주소는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
-      return;
+    if (!accDirectInputMode && accName.trim()) {
+      if (!accPlaceId) {
+        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
+      if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
+        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
     }
     if (new Date(accCheckOut) < new Date(accCheckIn)) {
       alert(tt('alert_checkout_after_checkin'));
@@ -1329,9 +1511,15 @@ export function TravelPlannerContent() {
       alert(tt('alert_acc_required'));
       return;
     }
-    if (!accDirectInputMode && accAddress.trim() && !accPlaceId) {
-      alert('숙소 주소는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
-      return;
+    if (!accDirectInputMode && accName.trim()) {
+      if (!accPlaceId) {
+        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
+      if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
+        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
     }
     if (new Date(accCheckOut) < new Date(accCheckIn)) {
       alert(tt('alert_checkout_after_checkin'));
@@ -1395,8 +1583,19 @@ export function TravelPlannerContent() {
       setDiningAddress(item.address ?? '');
       setDiningLatitude(item.latitude != null ? String(item.latitude) : '');
       setDiningLongitude(item.longitude != null ? String(item.longitude) : '');
-      setDiningPlaceName('');
-      setDiningPlaceId(item.address ? '__existing__' : null);
+      {
+        const pid = item.place_id?.trim() || null;
+        if (pid) {
+          setDiningPlaceId(pid);
+          setDiningPlaceName(item.name);
+        } else if (item.address?.trim()) {
+          setDiningPlaceId('__existing__');
+          setDiningPlaceName('');
+        } else {
+          setDiningPlaceId(null);
+          setDiningPlaceName('');
+        }
+      }
       setDiningDirectInputMode(false);
     } else {
       setEditingDining(null);
@@ -1422,9 +1621,15 @@ export function TravelPlannerContent() {
       alert(tt('alert_dining_required'));
       return;
     }
-    if (!diningDirectInputMode && diningAddress.trim() && !diningPlaceId) {
-      alert('먹거리 주소는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
-      return;
+    if (!diningDirectInputMode && diningName.trim()) {
+      if (!diningPlaceId) {
+        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
+      if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
+        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
     }
     try {
       setSubmitting(true);
@@ -1464,9 +1669,15 @@ export function TravelPlannerContent() {
       alert(tt('alert_dining_required'));
       return;
     }
-    if (!diningDirectInputMode && diningAddress.trim() && !diningPlaceId) {
-      alert('먹거리 주소는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
-      return;
+    if (!diningDirectInputMode && diningName.trim()) {
+      if (!diningPlaceId) {
+        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
+      if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
+        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
     }
     try {
       setSubmitting(true);
@@ -1527,8 +1738,19 @@ export function TravelPlannerContent() {
       setAttractionDescription(item.description ?? '');
       setAttractionLatitude(item.latitude != null ? String(item.latitude) : '');
       setAttractionLongitude(item.longitude != null ? String(item.longitude) : '');
-      setAttractionPlaceName('');
-      setAttractionPlaceId(item.address ? '__existing__' : null);
+      {
+        const pid = item.place_id?.trim() || null;
+        if (pid) {
+          setAttractionPlaceId(pid);
+          setAttractionPlaceName(item.name);
+        } else if (item.address?.trim()) {
+          setAttractionPlaceId('__existing__');
+          setAttractionPlaceName('');
+        } else {
+          setAttractionPlaceId(null);
+          setAttractionPlaceName('');
+        }
+      }
       setAttractionDirectInputMode(false);
     } else {
       setEditingAttraction(null);
@@ -1553,9 +1775,15 @@ export function TravelPlannerContent() {
       alert('관광지명과 날짜는 필수입니다.');
       return;
     }
-    if (!attractionDirectInputMode && attractionAddress.trim() && !attractionPlaceId) {
-      alert('관광지 주소는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
-      return;
+    if (!attractionDirectInputMode && attractionName.trim()) {
+      if (!attractionPlaceId) {
+        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
+      if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
+        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
     }
     try {
       setSubmitting(true);
@@ -1595,9 +1823,15 @@ export function TravelPlannerContent() {
       alert('관광지명과 날짜는 필수입니다.');
       return;
     }
-    if (!attractionDirectInputMode && attractionAddress.trim() && !attractionPlaceId) {
-      alert('관광지 주소는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
-      return;
+    if (!attractionDirectInputMode && attractionName.trim()) {
+      if (!attractionPlaceId) {
+        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
+      if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
+        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        return;
+      }
     }
     try {
       setSubmitting(true);
@@ -3837,8 +4071,20 @@ export function TravelPlannerContent() {
             <form ref={accommodationFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAccommodation) handleUpdateAccommodation(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_acc_name')}</label>
               <input
+                ref={accNameInputRef}
                 value={accName}
-                onChange={(e) => setAccName(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!accDirectInputMode && accPlaceId !== '__existing__') {
+                    if (accPlaceId && accPlaceName && v.trim() !== accPlaceName.trim()) {
+                      clearAccGooglePlaceFields();
+                    }
+                    if (!v.trim()) clearAccGooglePlaceFields();
+                  }
+                  setAccName(v);
+                }}
+                onFocus={cancelAccNameBlurConfirm}
+                onBlur={scheduleAccNameBlurConfirm}
                 required
                 placeholder={tt('placeholder_acc_name')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
@@ -3865,17 +4111,27 @@ export function TravelPlannerContent() {
               </div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
-                ref={accAddressInputRef}
                 value={accAddress}
+                readOnly={!accDirectInputMode}
                 onChange={(e) => {
-                  setAccAddress(e.target.value);
-                  if (!accDirectInputMode) {
-                    setAccPlaceId(null);
-                    setAccPlaceName('');
-                  }
+                  if (accDirectInputMode) setAccAddress(e.target.value);
                 }}
-                placeholder={tt('placeholder_search_address')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 4, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                placeholder={
+                  accDirectInputMode
+                    ? tt('placeholder_search_address')
+                    : '이름에서 장소를 선택하면 주소·좌표가 채워집니다'
+                }
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
+                  padding: '10px 12px',
+                  marginBottom: 4,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  fontSize: 14,
+                  backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
+                }}
               />
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 10 }}>
                 <input
@@ -3908,9 +4164,21 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={accLatitude}
-                    onChange={(e) => setAccLatitude(e.target.value)}
+                    readOnly={!accDirectInputMode}
+                    onChange={(e) => {
+                      if (accDirectInputMode) setAccLatitude(e.target.value);
+                    }}
                     placeholder={tt('placeholder_lat')}
-                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
+                    }}
                   />
                 </div>
                 <div>
@@ -3919,9 +4187,21 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={accLongitude}
-                    onChange={(e) => setAccLongitude(e.target.value)}
+                    readOnly={!accDirectInputMode}
+                    onChange={(e) => {
+                      if (accDirectInputMode) setAccLongitude(e.target.value);
+                    }}
                     placeholder={tt('placeholder_lng')}
-                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
+                    }}
                   />
                 </div>
                 </div>
@@ -4008,8 +4288,20 @@ export function TravelPlannerContent() {
             <form ref={diningFormRef} onSubmit={(e) => { e.preventDefault(); if (editingDining) handleUpdateDining(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_name')}</label>
               <input
+                ref={diningNameInputRef}
                 value={diningName}
-                onChange={(e) => setDiningName(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!diningDirectInputMode && diningPlaceId !== '__existing__') {
+                    if (diningPlaceId && diningPlaceName && v.trim() !== diningPlaceName.trim()) {
+                      clearDiningGooglePlaceFields();
+                    }
+                    if (!v.trim()) clearDiningGooglePlaceFields();
+                  }
+                  setDiningName(v);
+                }}
+                onFocus={cancelDiningNameBlurConfirm}
+                onBlur={scheduleDiningNameBlurConfirm}
                 required
                 placeholder={tt('placeholder_dining_name')}
                 style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
@@ -4042,17 +4334,27 @@ export function TravelPlannerContent() {
               />
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
-                ref={diningAddressInputRef}
                 value={diningAddress}
+                readOnly={!diningDirectInputMode}
                 onChange={(e) => {
-                  setDiningAddress(e.target.value);
-                  if (!diningDirectInputMode) {
-                    setDiningPlaceId(null);
-                    setDiningPlaceName('');
-                  }
+                  if (diningDirectInputMode) setDiningAddress(e.target.value);
                 }}
-                placeholder={tt('placeholder_search_address')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 4, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                placeholder={
+                  diningDirectInputMode
+                    ? tt('placeholder_search_address')
+                    : '이름에서 장소를 선택하면 주소·좌표가 채워집니다'
+                }
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: 40,
+                  padding: '10px 12px',
+                  marginBottom: 4,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  fontSize: 14,
+                  backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
+                }}
               />
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 10 }}>
                 <input
@@ -4085,9 +4387,21 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={diningLatitude}
-                    onChange={(e) => setDiningLatitude(e.target.value)}
+                    readOnly={!diningDirectInputMode}
+                    onChange={(e) => {
+                      if (diningDirectInputMode) setDiningLatitude(e.target.value);
+                    }}
                     placeholder={tt('placeholder_lat')}
-                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
+                    }}
                   />
                 </div>
                 <div>
@@ -4096,9 +4410,21 @@ export function TravelPlannerContent() {
                     type="number"
                     step="any"
                     value={diningLongitude}
-                    onChange={(e) => setDiningLongitude(e.target.value)}
+                    readOnly={!diningDirectInputMode}
+                    onChange={(e) => {
+                      if (diningDirectInputMode) setDiningLongitude(e.target.value);
+                    }}
                     placeholder={tt('placeholder_lng')}
-                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      minHeight: 40,
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      fontSize: 14,
+                      backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
+                    }}
                   />
                 </div>
                 </div>
@@ -4190,8 +4516,20 @@ export function TravelPlannerContent() {
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>관광지명</label>
               <input
                 type="text"
+                ref={attractionNameInputRef}
                 value={attractionName}
-                onChange={(e) => setAttractionName(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!attractionDirectInputMode && attractionPlaceId !== '__existing__') {
+                    if (attractionPlaceId && attractionPlaceName && v.trim() !== attractionPlaceName.trim()) {
+                      clearAttractionGooglePlaceFields();
+                    }
+                    if (!v.trim()) clearAttractionGooglePlaceFields();
+                  }
+                  setAttractionName(v);
+                }}
+                onFocus={cancelAttractionNameBlurConfirm}
+                onBlur={scheduleAttractionNameBlurConfirm}
                 disabled={submitting}
                 placeholder={tt('placeholder_attraction_name')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
@@ -4231,18 +4569,25 @@ export function TravelPlannerContent() {
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소</label>
               <input
                 type="text"
-                ref={attractionAddressInputRef}
                 value={attractionAddress}
+                readOnly={!attractionDirectInputMode}
                 onChange={(e) => {
-                  setAttractionAddress(e.target.value);
-                  if (!attractionDirectInputMode) {
-                    setAttractionPlaceId(null);
-                    setAttractionPlaceName('');
-                  }
+                  if (attractionDirectInputMode) setAttractionAddress(e.target.value);
                 }}
                 disabled={submitting}
-                placeholder={tt('placeholder_address')}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                placeholder={
+                  attractionDirectInputMode ? tt('placeholder_address') : '이름에서 장소를 선택하면 주소·좌표가 채워집니다'
+                }
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 14,
+                  marginBottom: 12,
+                  boxSizing: 'border-box',
+                  backgroundColor: attractionDirectInputMode ? '#fff' : '#f8fafc',
+                }}
               />
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
                 <input
