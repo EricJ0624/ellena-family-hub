@@ -39,7 +39,7 @@ export default function LoginPage() {
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true); // 로그인 상태 유지 (기본 체크)
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
-  /** 가입 버튼 연타·이중 submit으로 signUp이 여러 번 나가 rate limit 걸리는 것 방지 */
+  /** 가입 처리 중 이중 submit 방지 */
   const signupSubmitLockRef = useRef(false);
   /** 이메일별 가입 쿨다운(전역이면 다른 이메일로 바꿔도 막히는 버그 방지) */
   const signupCooldownByEmailRef = useRef<Record<string, number>>({});
@@ -306,7 +306,7 @@ export default function LoginPage() {
           ? `${window.location.origin}/auth/callback`
           : '/auth/callback';
 
-      let { error, data } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
         options: {
@@ -318,28 +318,20 @@ export default function LoginPage() {
         },
       });
 
-      const firstMsg = String(error?.message || '');
-      const isRateLimited = isSupabaseAuthRateLimitError(error);
-      if (
-        error &&
-        !isRateLimited &&
-        /redirect|email redirect|invalid redirect|not allowed/i.test(firstMsg)
-      ) {
-        const retry = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: {
-              nickname: signupNickname,
-              full_name: signupNickname,
-            },
-          },
-        });
-        error = retry.error;
-        data = retry.data;
+      if (error) {
+        const firstMsg = String(error.message || '');
+        const isRateLimited = isSupabaseAuthRateLimitError(error);
+        if (
+          !isRateLimited &&
+          /redirect|email redirect|invalid redirect|not allowed/i.test(firstMsg)
+        ) {
+          setErrorMsg(
+            `인증 메일 링크를 쓰려면 Supabase 대시보드 → Authentication → URL Configuration → Redirect URLs에 다음 주소를 추가해야 합니다: ${redirectTo}`
+          );
+          return;
+        }
+        throw error;
       }
-
-      if (error) throw error;
 
       if (data.user) {
         if (pendingInviteCode && typeof window !== 'undefined') {
