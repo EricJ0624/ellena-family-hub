@@ -372,12 +372,36 @@ export function TravelPlannerContent() {
     [tripCurrencyCode, localeForMoney],
   );
 
-  /** 좌표 우선, 없으면 주소로 구글맵 URL 생성 */
-  const getGoogleMapsUrl = useCallback((item: { address?: string | null; latitude?: number | null; longitude?: number | null }) => {
-    if (item.latitude != null && item.longitude != null) return `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
-    if (item.address?.trim()) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address.trim())}`;
-    return null;
-  }, []);
+  /**
+   * 구글 지도 웹(소비자용) 링크 — Maps Platform API 호출·과금 없음.
+   * 업체 시트가 열리도록 place_id 또는 이름+주소 검색을 우선하고, 좌표 URL은 최후 수단.
+   */
+  const getGoogleMapsUrl = useCallback(
+    (item: {
+      name?: string | null;
+      title?: string | null;
+      address?: string | null;
+      place_id?: string | null;
+      latitude?: number | null;
+      longitude?: number | null;
+    }) => {
+      const pid = typeof item.place_id === 'string' ? item.place_id.trim() : '';
+      if (pid) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`place_id:${pid}`)}`;
+      }
+      const label = (typeof item.name === 'string' ? item.name.trim() : '') || (typeof item.title === 'string' ? item.title.trim() : '');
+      const addr = typeof item.address === 'string' ? item.address.trim() : '';
+      const textQuery = [label, addr].filter(Boolean).join(' ').trim();
+      if (textQuery) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(textQuery)}`;
+      }
+      if (item.latitude != null && item.longitude != null) {
+        return `https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
+      }
+      return null;
+    },
+    [],
+  );
 
   const fetchPlaceCache = useCallback(async (placeId: string) => {
     const headers = await getAuthHeaders();
@@ -2047,6 +2071,7 @@ export function TravelPlannerContent() {
       title: string;
       description?: string | null;
       address?: string | null;
+      place_id?: string | null;
       latitude?: number | null;
       longitude?: number | null;
       category?: string | null;
@@ -2066,6 +2091,7 @@ export function TravelPlannerContent() {
         title: a.name,
         description: a.memo,
         address: a.address,
+        place_id: a.place_id ?? null,
         latitude: a.latitude,
         longitude: a.longitude,
       });
@@ -2081,6 +2107,7 @@ export function TravelPlannerContent() {
         title: d.name,
         description: d.memo,
         address: d.address,
+        place_id: d.place_id ?? null,
         latitude: d.latitude,
         longitude: d.longitude,
         category: d.category,
@@ -2097,6 +2124,7 @@ export function TravelPlannerContent() {
         title: a.name,
         description: a.description,
         address: a.address,
+        place_id: a.place_id ?? null,
         latitude: a.latitude,
         longitude: a.longitude,
       });
