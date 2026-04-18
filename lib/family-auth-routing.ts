@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isValidUUID } from '@/lib/validation';
 
 /** sessionStorage 키: 초대 코드 (로그인·콜백·온보딩 공통) */
 export const INVITE_CODE_SESSION_STORAGE_KEY = 'SFH_INVITE_CODE';
@@ -113,6 +114,25 @@ export async function resolveUserHasGroups(
       hasGroups = next.hasGroups;
       membershipsError = next.membershipsError;
       ownedGroupsError = next.ownedGroupsError;
+    }
+  }
+
+  // 온보딩에서 선택 직후 /dashboard 로 넘어올 때, 전역 limit(1) 조회가 잠깐 비는 레이스가 있어도
+  // localStorage의 currentGroupId가 실제 멤버십·소유와 일치하면 그룹 있음으로 본다.
+  if (!hasGroups && typeof window !== 'undefined') {
+    const saved = window.localStorage.getItem('currentGroupId')?.trim().toLowerCase() ?? '';
+    if (saved && isValidUUID(saved)) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const [mRow, oRow] = await Promise.all([
+        supabase.from('memberships').select('group_id').eq('user_id', userId).eq('group_id', saved).maybeSingle(),
+        supabase.from('groups').select('id').eq('id', saved).eq('owner_id', userId).maybeSingle(),
+      ]);
+      if (!mRow.error && mRow.data) {
+        return { hasGroups: true };
+      }
+      if (!oRow.error && oRow.data) {
+        return { hasGroups: true };
+      }
     }
   }
 
