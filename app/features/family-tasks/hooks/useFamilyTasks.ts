@@ -43,6 +43,9 @@ export function useFamilyTasks({
   assigneeDisplayFromUserIdRef,
 }: UseFamilyTasksProps) {
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
+  /** Realtime 콜백 전용 — effect에 currentTasks 넣으면 목록 갱신마다 구독이 재생성됨 */
+  const currentTasksRef = useRef(currentTasks);
+  currentTasksRef.current = currentTasks;
 
   // ADD TODO
   const addTask = async (payload: {
@@ -287,6 +290,7 @@ export function useFamilyTasks({
     const tasksSubscription = supabase
       .channel(`family_tasks_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'family_tasks' }, (payload: any) => {
+        const latestTasks = currentTasksRef.current;
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
         if (ev === 'DELETE') {
@@ -296,7 +300,7 @@ export function useFamilyTasks({
           const deletedIdStr = String(deletedId).trim();
 
           onTasksChange(
-            currentTasks.filter((t) => {
+            latestTasks.filter((t) => {
               const tIdStr = String(t.id).trim();
               const tSupabaseId = t.supabaseId ? String(t.supabaseId).trim() : null;
               return tIdStr !== deletedIdStr && (!tSupabaseId || tSupabaseId !== deletedIdStr);
@@ -346,7 +350,7 @@ export function useFamilyTasks({
           }
 
           onTasksChange(
-            currentTasks.map((t) =>
+            latestTasks.map((t) =>
               t.id === updatedTask.id
                 ? {
                     ...t,
@@ -440,13 +444,13 @@ export function useFamilyTasks({
           }
         }
 
-        const existingTaskById = currentTasks?.find((t) => String(t.id) === String(newTask.id));
+        const existingTaskById = latestTasks?.find((t) => String(t.id) === String(newTask.id));
         if (existingTaskById) {
           return;
         }
 
         if (newTask.created_by === userId) {
-          const recentDuplicate = currentTasks?.find((t) => {
+          const recentDuplicate = latestTasks?.find((t) => {
             const isTempId = typeof t.id === 'number';
             const isRecent = isTempId && (t.id as number) > Date.now() - 30000;
             return isRecent && t.text === decryptedText;
@@ -454,7 +458,7 @@ export function useFamilyTasks({
 
           if (recentDuplicate) {
             onTasksChange(
-              currentTasks.map((t) =>
+              latestTasks.map((t) =>
                 t.id === recentDuplicate.id
                   ? {
                       ...t,
@@ -470,7 +474,7 @@ export function useFamilyTasks({
             return;
           }
 
-          const duplicateByContent = currentTasks?.find(
+          const duplicateByContent = latestTasks?.find(
             (t) => t.text === decryptedText && String(t.id) !== String(newTask.id)
           );
           if (duplicateByContent) {
@@ -487,7 +491,7 @@ export function useFamilyTasks({
             created_by: newTask.created_by,
             assigned_to_user_id: newAssignedToUserId,
           },
-          ...currentTasks,
+          ...latestTasks,
         ]);
       })
       .subscribe((status, err) => {
@@ -510,16 +514,7 @@ export function useFamilyTasks({
         subscriptionRef.current = null;
       }
     };
-  }, [
-    currentGroupId,
-    realtimeSubscriptionId,
-    userId,
-    currentTasks,
-    getCurrentKey,
-    CryptoService,
-    onTasksChange,
-    assigneeDisplayFromUserIdRef,
-  ]);
+  }, [currentGroupId, realtimeSubscriptionId, userId, getCurrentKey, CryptoService, onTasksChange, assigneeDisplayFromUserIdRef]);
 
   return {
     addTask,

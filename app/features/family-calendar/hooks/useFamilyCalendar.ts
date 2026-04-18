@@ -33,6 +33,9 @@ export function useFamilyCalendar({
   realtimeSubscriptionId,
 }: UseFamilyCalendarProps) {
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
+  /** Realtime 콜백에서 최신 목록 사용 — effect 의존성에 currentEvents 넣으면 매 갱신마다 구독 해제/재연결되어 모바일·불안정 네트워크에서 악화됨 */
+  const currentEventsRef = useRef(currentEvents);
+  currentEventsRef.current = currentEvents;
 
   // ADD EVENT
   const addEvent = async (payload: {
@@ -261,6 +264,7 @@ export function useFamilyCalendar({
     const eventsSubscription = supabase
       .channel(`family_events_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'family_events' }, (payload: any) => {
+        const latestEvents = currentEventsRef.current;
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
         if (ev === 'DELETE') {
@@ -270,7 +274,7 @@ export function useFamilyCalendar({
           const deletedIdStr = String(deletedId).trim().toLowerCase();
 
           onEventsChange(
-            currentEvents.filter((e) => {
+            latestEvents.filter((e) => {
               const eIdStr = String(e.id).trim().toLowerCase();
               const eSupabaseId = e.supabaseId ? String(e.supabaseId).trim().toLowerCase() : null;
               const isMatch =
@@ -323,7 +327,7 @@ export function useFamilyCalendar({
               : 'none';
 
           onEventsChange(
-            currentEvents.map((e) =>
+            latestEvents.map((e) =>
               e.id === updatedEvent.id
                 ? {
                     ...e,
@@ -418,13 +422,13 @@ export function useFamilyCalendar({
         ).padStart(2, '0')}`;
         const repeatType = newEvent.repeat_type === 'monthly' || newEvent.repeat_type === 'yearly' ? newEvent.repeat_type : 'none';
 
-        const existingEventById = currentEvents?.find((e) => String(e.id) === String(newEvent.id));
+        const existingEventById = latestEvents?.find((e) => String(e.id) === String(newEvent.id));
         if (existingEventById) {
           return;
         }
 
         if (newEvent.created_by === userId) {
-          const recentDuplicate = currentEvents?.find((e) => {
+          const recentDuplicate = latestEvents?.find((e) => {
             const isTempId = typeof e.id === 'number';
             const isRecent = isTempId && (e.id as number) > Date.now() - 30000;
             return isRecent && e.title === decryptedTitle && e.month === month && e.day === day;
@@ -432,7 +436,7 @@ export function useFamilyCalendar({
 
           if (recentDuplicate) {
             onEventsChange(
-              currentEvents.map((e) =>
+              latestEvents.map((e) =>
                 e.id === recentDuplicate.id
                   ? {
                       ...e,
@@ -452,7 +456,7 @@ export function useFamilyCalendar({
             return;
           }
 
-          const duplicateByContent = currentEvents?.find(
+          const duplicateByContent = latestEvents?.find(
             (e) => e.title === decryptedTitle && e.month === month && e.day === day && String(e.id) !== String(newEvent.id)
           );
           if (duplicateByContent) {
@@ -472,7 +476,7 @@ export function useFamilyCalendar({
             created_at: newEvent.created_at,
             repeat_type: repeatType,
           },
-          ...currentEvents,
+          ...latestEvents,
         ]);
       })
       .subscribe((status, err) => {
@@ -495,7 +499,7 @@ export function useFamilyCalendar({
         subscriptionRef.current = null;
       }
     };
-  }, [currentGroupId, realtimeSubscriptionId, userId, currentEvents, getCurrentKey, CryptoService, onEventsChange]);
+  }, [currentGroupId, realtimeSubscriptionId, userId, getCurrentKey, CryptoService, onEventsChange]);
 
   return {
     addEvent,
