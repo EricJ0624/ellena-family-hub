@@ -241,6 +241,9 @@ export default function FamilyHub() {
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
   const [isMounted, setIsMounted] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  /** Presence track·목록에서 표시명이 클로저와 어긋나지 않도록 */
+  const dashboardUserNameRef = useRef('');
+  dashboardUserNameRef.current = userName;
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
   const [nicknameModalFamilyRole, setNicknameModalFamilyRole] = useState<'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>(null);
@@ -1020,14 +1023,16 @@ export default function FamilyHub() {
     loadPiggySummary();
   }, [loadPiggySummary]);
 
-  // 관리자: piggy_account_requests 변경 시 요약(생성 요청 목록) 실시간 갱신
-  const isPiggyGroupAdmin = groupUserRole === 'ADMIN' || groupIsOwner;
+  // 대시보드 Piggy: 저금통 생성 요청 + 잔액·거래 실시간 (그룹 전 멤버)
+  // - 멤버 INSERT → 관리자 pending 목록 갱신(RLS로 관리자만 타인 요청 SELECT 가능, Realtime 동일)
+  // - 관리자 UPDATE(승인/거절) → 멤버 pendingAccountRequest 갱신
+  // - 계정/지갑 DELETE·변경 → 상대 화면 요약 갱신
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isAuthenticated || !currentGroupId || !isPiggyGroupAdmin) return;
+    if (!isAuthenticated || !currentGroupId) return;
 
     const gid = currentGroupId;
-    const scheduleReload = () => {
+    const schedulePiggySummaryReload = () => {
       if (piggyAccountRequestsDebounceRef.current) {
         clearTimeout(piggyAccountRequestsDebounceRef.current);
       }
@@ -1037,7 +1042,9 @@ export default function FamilyHub() {
       }, 220);
     };
 
-    const channel = supabase
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+
+    const chAccountRequests = supabase
       .channel(`dashboard_piggy_account_requests:${gid}`)
       .on(
         'postgres_changes',
@@ -1047,7 +1054,7 @@ export default function FamilyHub() {
           table: 'piggy_account_requests',
           filter: `group_id=eq.${gid}`,
         },
-        () => scheduleReload()
+        () => schedulePiggySummaryReload()
       )
       .subscribe((status, err) => {
         if (err && process.env.NODE_ENV === 'development') {
@@ -1057,15 +1064,66 @@ export default function FamilyHub() {
           console.log('✅ dashboard piggy_account_requests Realtime 구독됨');
         }
       });
+    channels.push(chAccountRequests);
+
+    const chAccounts = supabase
+      .channel(`dashboard_piggy_bank_accounts:${gid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_bank_accounts', filter: `group_id=eq.${gid}` },
+        () => schedulePiggySummaryReload()
+      )
+      .subscribe();
+    channels.push(chAccounts);
+
+    const chWallets = supabase
+      .channel(`dashboard_piggy_wallets:${gid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_wallets', filter: `group_id=eq.${gid}` },
+        () => schedulePiggySummaryReload()
+      )
+      .subscribe();
+    channels.push(chWallets);
+
+    const chOpenReq = supabase
+      .channel(`dashboard_piggy_open_requests:${gid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_open_requests', filter: `group_id=eq.${gid}` },
+        () => schedulePiggySummaryReload()
+      )
+      .subscribe();
+    channels.push(chOpenReq);
+
+    const chWalletTx = supabase
+      .channel(`dashboard_piggy_wallet_transactions:${gid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_wallet_transactions', filter: `group_id=eq.${gid}` },
+        () => schedulePiggySummaryReload()
+      )
+      .subscribe();
+    channels.push(chWalletTx);
+
+    const chBankTx = supabase
+      .channel(`dashboard_piggy_bank_transactions:${gid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'piggy_bank_transactions', filter: `group_id=eq.${gid}` },
+        () => schedulePiggySummaryReload()
+      )
+      .subscribe();
+    channels.push(chBankTx);
 
     return () => {
       if (piggyAccountRequestsDebounceRef.current) {
         clearTimeout(piggyAccountRequestsDebounceRef.current);
         piggyAccountRequestsDebounceRef.current = null;
       }
-      void supabase.removeChannel(channel);
+      channels.forEach((ch) => void supabase.removeChannel(ch));
     };
-  }, [isAuthenticated, currentGroupId, isPiggyGroupAdmin]);
+  }, [isAuthenticated, currentGroupId]);
 
   // 관리자: 대시보드에서 멤버에게 저금통 추가
   const handleDashboardAddPiggy = useCallback(async (childId: string) => {
@@ -2247,21 +2305,27 @@ export default function FamilyHub() {
       const buildOnlineUsersListFromPresence = async (
         presenceState: Record<string, unknown>
       ): Promise<Array<{ id: string; name: string; isCurrentUser: boolean }>> => {
+        const me = dashboardUserIdRef.current;
+        const gid = dashboardCurrentGroupIdRef.current;
         const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        if (userId) {
+        if (me) {
           usersList.push({
-            id: userId,
-            name: userName?.trim() || '',
+            id: me,
+            name: dashboardUserNameRef.current?.trim() || '',
             isCurrentUser: true,
           });
         }
+        const sameGroup = (p: { groupId?: string }) =>
+          gid != null &&
+          p.groupId != null &&
+          String(p.groupId) === String(gid);
         const otherIds = new Set<string>();
         for (const presenceId of Object.keys(presenceState)) {
           const presence = presenceState[presenceId];
           if (Array.isArray(presence) && presence.length > 0) {
             const userPresence = presence[0] as { userId?: string; groupId?: string; userName?: string };
             const uid = userPresence.userId;
-            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
+            if (uid && String(uid) !== String(me) && sameGroup(userPresence)) {
               otherIds.add(uid);
             }
           }
@@ -2285,7 +2349,7 @@ export default function FamilyHub() {
           if (Array.isArray(presence) && presence.length > 0) {
             const userPresence = presence[0] as { userId?: string; groupId?: string; userName?: string };
             const uid = userPresence.userId;
-            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
+            if (uid && String(uid) !== String(me) && sameGroup(userPresence)) {
               const profile = profilesMap.get(uid);
               const nick = profile?.nickname != null ? String(profile.nickname).trim() : '';
               const em = profile?.email != null ? String(profile.email).trim() : '';
@@ -2303,8 +2367,9 @@ export default function FamilyHub() {
         return usersList;
       };
 
+      // Presence는 그룹당 하나의 채널만 사용해야 함(세션마다 다른 realtimeSubscriptionId를 넣으면 상대방과 방이 분리됨)
       const presenceSubscription = supabase
-      .channel(`online_users:${currentGroupId}:${realtimeSubscriptionIdRef.current}`)
+      .channel(`online_users:${currentGroupId}`)
       .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
         const usersList = await buildOnlineUsersListFromPresence(state);
@@ -2327,11 +2392,11 @@ export default function FamilyHub() {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Presence subscription 연결 성공');
           subscriptionsRef.current.presence = presenceSubscription;
-          // 현재 사용자의 presence 전송
+          // 현재 사용자의 presence 전송 (ref = 최신 그룹·유저)
           await presenceSubscription.track({
-            userId: userId,
-            userName: userName?.trim() || '',
-            groupId: currentGroupId,
+            userId: dashboardUserIdRef.current,
+            userName: dashboardUserNameRef.current?.trim() || '',
+            groupId: dashboardCurrentGroupIdRef.current,
             onlineAt: new Date().toISOString()
           });
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
