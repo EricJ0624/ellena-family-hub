@@ -258,7 +258,7 @@ export function useFamilyCalendar({
   // Realtime 구독
   useEffect(() => {
     if (!currentGroupId) return;
-    if (!realtimeSubscriptionId || realtimeSubscriptionId === '0') return;
+    if (!realtimeSubscriptionId) return;
 
     console.log('📅 일정 subscription 설정 중...');
 

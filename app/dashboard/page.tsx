@@ -319,6 +319,8 @@ export default function FamilyHub() {
   const realtimeSubscriptionIdRef = useRef<number>(0);
   /** ref만 바뀌면 리렌더가 없어 FamilyTasks/Calendar가 `subscriptionId: '0'`에 묶일 수 있음 → Realtime 바인딩 오류 유발. ref와 함께 갱신 */
   const [realtimeSubscriptionEpoch, setRealtimeSubscriptionEpoch] = useState(0);
+  /** epoch가 아직 0일 때 자식 훅이 구독을 건너뛰지 않도록 부트스트랩 id (렌더마다 고정) */
+  const realtimeBootstrapIdRef = useRef<number | null>(null);
   /** 순차 구독 지연 타이머 정리용 */
   const realtimeStaggerTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   /** 구독 설정 중 플래그 (중복 방지) */
@@ -2296,7 +2298,7 @@ export default function FamilyHub() {
       };
 
       const presenceSubscription = supabase
-      .channel(`online_users:${currentGroupId}`)
+      .channel(`online_users:${currentGroupId}:${realtimeSubscriptionIdRef.current}`)
       .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
         const usersList = await buildOnlineUsersListFromPresence(state);
@@ -2907,44 +2909,48 @@ export default function FamilyHub() {
         subscriptionsRef.current.attachments = null;
       }
       
-      // ⭐ 모든 채널 제거 완료까지 대기
+      const proceedAfterChannelRemoval = () => {
+        const remainingChannels = supabase.getChannels();
+        console.log('✅ 구독 제거 후 남은 채널 수:', remainingChannels.length);
+
+        realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
+        realtimeStaggerTimeoutsRef.current = [];
+
+        const nextRealtimeId = Date.now();
+        realtimeSubscriptionIdRef.current = nextRealtimeId;
+        setRealtimeSubscriptionEpoch(nextRealtimeId);
+        console.log('✅ 새로운 Realtime 구독 시작 - ID:', nextRealtimeId);
+
+        setupPresenceSubscription();
+
+        const INITIAL_DELAY_MS = 100;
+        const STAGGER_MS = 200;
+        realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupMessagesSubscription(), INITIAL_DELAY_MS));
+        realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 1));
+        realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
+
+        const TOTAL_SETUP_TIME = INITIAL_DELAY_MS + STAGGER_MS * 3 + 1000;
+        realtimeStaggerTimeoutsRef.current.push(setTimeout(() => {
+          isSettingUpSubscriptionsRef.current = false;
+          console.log('✅ Realtime 구독 설정 완료, 중복 방지 플래그 해제');
+        }, TOTAL_SETUP_TIME));
+
+        console.log('✅ Realtime subscription 설정 예약 완료 (순차 구독)');
+      };
+
       if (removePromises.length > 0) {
         console.log(`⏳ ${removePromises.length}개 채널 제거 대기 중...`);
+        void Promise.all(removePromises)
+          .then(() => {
+            proceedAfterChannelRemoval();
+          })
+          .catch((err) => {
+            console.error('❌ Realtime 채널 제거 실패 — 재구독은 계속 시도:', err);
+            proceedAfterChannelRemoval();
+          });
+      } else {
+        proceedAfterChannelRemoval();
       }
-      
-      // 제거 완료 확인
-      const remainingChannels = supabase.getChannels();
-      console.log('✅ 구독 제거 후 남은 채널 수:', remainingChannels.length);
-
-      // 이전 순차 구독 타이머 정리
-      realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
-      realtimeStaggerTimeoutsRef.current = [];
-
-      // 채널명 재사용 방지 (effect 재실행 시 새 ID로 바인딩 중복 방지)
-      const nextRealtimeId = Date.now();
-      realtimeSubscriptionIdRef.current = nextRealtimeId;
-      setRealtimeSubscriptionEpoch(nextRealtimeId);
-      console.log('✅ 새로운 Realtime 구독 시작 - ID:', nextRealtimeId);
-
-      setupPresenceSubscription();
-
-      // postgres_changes 구독을 순차 지연 — Presence 후 100ms부터 200ms 간격으로 join (동시 다수 join 시 서버 바인딩 불일치 완화)
-      const INITIAL_DELAY_MS = 100;
-      const STAGGER_MS = 200;
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupMessagesSubscription(), INITIAL_DELAY_MS));
-      // setupTasksSubscription은 FamilyTasksSection에서 처리됨
-      // setupEventsSubscription은 FamilyCalendarSection에서 처리됨
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 1));
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
-
-      // ⭐ 모든 구독 설정 완료 후 플래그 해제 (마지막 구독 + 여유 시간)
-      const TOTAL_SETUP_TIME = INITIAL_DELAY_MS + STAGGER_MS * 3 + 1000; // 마지막 구독 + 1초 여유
-      realtimeStaggerTimeoutsRef.current.push(setTimeout(() => {
-        isSettingUpSubscriptionsRef.current = false;
-        console.log('✅ Realtime 구독 설정 완료, 중복 방지 플래그 해제');
-      }, TOTAL_SETUP_TIME));
-
-      console.log('✅ Realtime subscription 설정 예약 완료 (순차 구독)');
     };
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
@@ -5817,6 +5823,12 @@ export default function FamilyHub() {
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
+  if (realtimeBootstrapIdRef.current === null) {
+    realtimeBootstrapIdRef.current = Date.now();
+  }
+  const effectiveRealtimeEpochForChildren =
+    realtimeSubscriptionEpoch > 0 ? realtimeSubscriptionEpoch : realtimeBootstrapIdRef.current;
+
   return (
     <div className="app-container">
 
@@ -6079,7 +6091,7 @@ export default function FamilyHub() {
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
             sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(realtimeSubscriptionEpoch)}
+            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
@@ -6125,7 +6137,7 @@ export default function FamilyHub() {
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
             sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(realtimeSubscriptionEpoch)}
+            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
             eventAuthorNames={eventAuthorNames}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
