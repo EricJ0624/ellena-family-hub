@@ -7,6 +7,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
+import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { ChatUiMessage } from '../types';
 
 /** `public/images` 기준 말풍선 일러스트 — WebP 리사이즈본(용량 소) */
@@ -179,11 +180,11 @@ export function FamilyChatSection({
     if (isSendingText) return;
     const input = chatInputRef.current;
     if (!input || !input.value.trim()) {
-      console.info('[FamilyChat] send skipped (empty input or missing ref)');
+      familyChatDebug('send skipped (empty input or missing ref)');
       return;
     }
     const text = input.value.trim();
-    console.info('[FamilyChat] send click', { length: text.length });
+    familyChatDebug('send click', { length: text.length });
     onSendMessage(text);
     input.value = '';
   };

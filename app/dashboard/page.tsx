@@ -50,6 +50,7 @@ import {
   validateAttachmentFile,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { familyChatDebug } from '@/lib/family-chat-debug';
 import { FamilyTasksSection } from '@/app/features/family-tasks/components/FamilyTasksSection';
 import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
@@ -2273,11 +2274,11 @@ export default function FamilyHub() {
     }
     
     if (!isAuthenticated || !userId || !currentGroupId) {
-      console.log('Realtime 구독 스킵 - 인증되지 않음:', { isAuthenticated, userId });
+      familyChatDebug('Realtime 구독 스킵', { isAuthenticated, hasUserId: !!userId, hasGroupId: !!currentGroupId });
       return;
     }
     
-    console.log('✅ Realtime 구독 시작 - userId:', userId);
+    familyChatDebug('Realtime 구독 시작', userId);
 
     const scheduleLoadChatAttachments = () => {
       if (chatAttachmentsDebounceTimerRef.current) {
@@ -2461,7 +2462,7 @@ export default function FamilyHub() {
 
       // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 방지)
       const channelName = `family_messages_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
-      console.log('📨 메시지 subscription 설정 중... Channel:', channelName);
+      familyChatDebug('메시지 subscription 설정', channelName);
       const messagesSubscription = supabase
         .channel(channelName)
         .on('postgres_changes',
@@ -2526,7 +2527,7 @@ export default function FamilyHub() {
               uidForChat !== '' &&
               String(newMessage.sender_id) === String(uidForChat);
 
-            console.log('🔔 Realtime INSERT 이벤트 수신:', {
+            familyChatDebug('Realtime INSERT', {
               messageId,
               sender: newMessage.sender_id,
               currentUser: uidForChat,
@@ -2552,7 +2553,7 @@ export default function FamilyHub() {
                 }
                 const createdAt = new Date(newMessage.created_at);
                 const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-                console.log('📨 본인 메시지 Realtime으로 state 복구:', messageId);
+                familyChatDebug('본인 메시지 Realtime state 복구', messageId);
                 return {
                   ...prev,
                   messages: trimMessagesToMax([
@@ -2592,7 +2593,7 @@ export default function FamilyHub() {
                   }
                   const createdAt = new Date(newMessage.created_at);
                   const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-                  console.log('📨 본인 메시지(processed) Realtime 복구:', messageId);
+                  familyChatDebug('본인 메시지(processed) Realtime 복구', messageId);
                   return {
                     ...prev,
                     messages: trimMessagesToMax([
@@ -2610,18 +2611,18 @@ export default function FamilyHub() {
                 });
                 return;
               }
-              console.log('🚫 이미 처리된 메시지 ID, 중복 INSERT 무시:', messageId);
+              familyChatDebug('이미 처리된 메시지 ID 무시', messageId);
               return;
             }
             processedMessageIdsRef.current.add(messageId);
-            console.log('🔒 메시지 ID 마킹 완료:', messageId);
+            familyChatDebug('메시지 ID 마킹 완료', messageId);
 
             if (processedMessageIdsRef.current.size > 100) {
               const arr = Array.from(processedMessageIdsRef.current);
               processedMessageIdsRef.current = new Set(arr.slice(-100));
             }
 
-            console.log('✅ 새 메시지 Realtime 처리 시작:', messageId, 'sender:', newMessage.sender_id);
+            familyChatDebug('새 메시지 Realtime 처리', messageId, 'sender:', newMessage.sender_id);
             
             // 상대방이 보낸 메시지만 처리
             const messageText = newMessage.message_text || '';
@@ -2640,11 +2641,11 @@ export default function FamilyHub() {
               // State 내 중복 체크 (안전장치)
               const existingMessage = prev.messages?.find(m => String(m.id) === messageId);
               if (existingMessage) {
-                console.log('⚠️ State에 이미 존재하는 메시지, 무시:', messageId);
+                familyChatDebug('State에 이미 존재하는 메시지 무시', messageId);
                 return prev;
               }
               
-              console.log('📝 State에 메시지 추가:', messageId, decryptedText, '현재 메시지 수:', prev.messages.length);
+              familyChatDebug('State에 메시지 추가', messageId, 'len:', String(decryptedText).length, 'count:', prev.messages.length);
               // 새 메시지 추가
               const newMessages = trimMessagesToMax([
                 ...prev.messages,
@@ -2657,7 +2658,7 @@ export default function FamilyHub() {
                   created_at: newMessage.created_at,
                 },
               ]);
-              console.log('✅ 메시지 추가 완료, 새 메시지 수:', newMessages.length);
+              familyChatDebug('메시지 추가 완료, 새 메시지 수:', newMessages.length);
               return {
                 ...prev,
                 messages: newMessages
@@ -2671,29 +2672,26 @@ export default function FamilyHub() {
           }
         )
         .subscribe((status, err) => {
-          console.log('📨 Realtime 메시지 subscription 상태:', status, 'Channel:', channelName);
+          familyChatDebug('Realtime 메시지 subscription 상태', status, channelName);
           if (err) {
-            console.error('❌ Realtime 메시지 subscription 오류:', err);
+            console.error('[FamilyChat] Realtime 메시지 subscription 오류:', err);
           }
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime 메시지 subscription 연결 성공');
+            familyChatDebug('Realtime 메시지 subscription 연결됨');
             subscriptionsRef.current.messages = messagesSubscription;
-            
-            // 연결 후 전체 채널 확인 (디버깅)
             const activeChannels = supabase.getChannels();
-            console.log('📡 구독 후 전체 활성 채널 수:', activeChannels.length);
-            const messageChannels = activeChannels.filter(ch => ch.topic.includes('family_messages'));
-            console.log('📨 메시지 관련 채널 수:', messageChannels.length);
+            const messageChannels = activeChannels.filter((ch) => ch.topic.includes('family_messages'));
+            familyChatDebug('활성 채널 수', activeChannels.length, 'family_messages 채널 수', messageChannels.length);
             if (messageChannels.length > 1) {
-              console.error('🚨 경고: 메시지 채널이 중복되어 있습니다!', messageChannels.map(ch => ch.topic));
+              console.error('[FamilyChat] 메시지 Realtime 채널 중복:', messageChannels.map((ch) => ch.topic));
             }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('⚠️ Realtime 메시지 subscription 연결 실패:', status);
+            console.warn('[FamilyChat] Realtime 메시지 subscription 비정상:', status);
           }
         });
 
       // 📷 첨부 파일 Realtime 구독 (INSERT 시 자동 UI 갱신)
-      console.log('📷 첨부 파일 subscription 설정 중...');
+      familyChatDebug('첨부 파일 subscription 설정');
       const attachmentsSubscription = supabase
         .channel(`feature_attachments_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
@@ -2715,15 +2713,15 @@ export default function FamilyHub() {
           }
         )
         .subscribe((status, err) => {
-          console.log('📷 Realtime 첨부 파일 subscription 상태:', status);
+          familyChatDebug('Realtime 첨부 subscription 상태', status);
           if (err) {
-            console.error('❌ Realtime 첨부 파일 subscription 오류:', err);
+            console.error('[FamilyChat] Realtime 첨부 subscription 오류:', err);
           }
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Realtime 첨부 파일 subscription 연결 성공');
+            familyChatDebug('Realtime 첨부 subscription 연결됨');
             subscriptionsRef.current.attachments = attachmentsSubscription;
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('⚠️ Realtime 첨부 파일 subscription 연결 실패:', status);
+            console.warn('[FamilyChat] Realtime 첨부 subscription 비정상:', status);
           }
         });
     };
@@ -3027,12 +3025,12 @@ export default function FamilyHub() {
 
       // ✅ 구독 설정 중이면 중복 실행 방지
       if (isSettingUpSubscriptionsRef.current) {
-        console.log('⚠️ 이미 구독 설정 중, 중복 실행 방지');
+        familyChatDebug('이미 구독 설정 중, 중복 실행 방지');
         return;
       }
 
       isSettingUpSubscriptionsRef.current = true;
-      console.log('🚀 Realtime 구독 설정 시작 - userId:', userId, 'groupId:', currentGroupId);
+      familyChatDebug('Realtime 구독 설정 시작', { userId, groupId: currentGroupId });
 
       if (process.env.NODE_ENV === 'development') {
         console.log('setupRealtimeSubscriptions - userId:', userId);
@@ -3044,20 +3042,18 @@ export default function FamilyHub() {
       }
 
       // ✅ 중복 구독 방지: 기존 구독을 먼저 모두 제거
-      console.log('🧹 기존 Realtime 구독 정리 중...');
-      
-      // 현재 활성 채널 확인 (디버깅)
+      familyChatDebug('기존 Realtime 구독 정리');
       const allChannels = supabase.getChannels();
-      console.log('📡 현재 활성 채널 수:', allChannels.length);
-      allChannels.forEach(ch => {
-        console.log('  - 채널:', ch.topic, '상태:', ch.state);
+      familyChatDebug('정리 전 활성 채널 수', allChannels.length);
+      allChannels.forEach((ch) => {
+        familyChatDebug('채널', ch.topic, ch.state);
       });
       
       // ⭐ 모든 구독을 동기적으로 제거 (Promise.all 사용)
       const removePromises: Promise<any>[] = [];
       
       if (subscriptionsRef.current.messages) {
-        console.log('🗑️ messages 구독 제거 중...');
+        familyChatDebug('messages 구독 제거');
         removePromises.push(supabase.removeChannel(subscriptionsRef.current.messages));
         subscriptionsRef.current.messages = null;
       }
@@ -3092,7 +3088,7 @@ export default function FamilyHub() {
       
       const proceedAfterChannelRemoval = () => {
         const remainingChannels = supabase.getChannels();
-        console.log('✅ 구독 제거 후 남은 채널 수:', remainingChannels.length);
+        familyChatDebug('구독 제거 후 남은 채널 수', remainingChannels.length);
 
         realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
         realtimeStaggerTimeoutsRef.current = [];
@@ -3100,7 +3096,7 @@ export default function FamilyHub() {
         const nextRealtimeId = Date.now();
         realtimeSubscriptionIdRef.current = nextRealtimeId;
         setRealtimeSubscriptionEpoch(nextRealtimeId);
-        console.log('✅ 새로운 Realtime 구독 시작 - ID:', nextRealtimeId);
+        familyChatDebug('새 Realtime 구독 epoch', nextRealtimeId);
 
         setupPresenceSubscription();
 
@@ -3113,14 +3109,14 @@ export default function FamilyHub() {
         const TOTAL_SETUP_TIME = INITIAL_DELAY_MS + STAGGER_MS * 3 + 1000;
         realtimeStaggerTimeoutsRef.current.push(setTimeout(() => {
           isSettingUpSubscriptionsRef.current = false;
-          console.log('✅ Realtime 구독 설정 완료, 중복 방지 플래그 해제');
+          familyChatDebug('Realtime 구독 설정 완료, 플래그 해제');
         }, TOTAL_SETUP_TIME));
 
-        console.log('✅ Realtime subscription 설정 예약 완료 (순차 구독)');
+        familyChatDebug('Realtime subscription 순차 예약 완료');
       };
 
       if (removePromises.length > 0) {
-        console.log(`⏳ ${removePromises.length}개 채널 제거 대기 중...`);
+        familyChatDebug('채널 제거 대기', removePromises.length);
         void Promise.all(removePromises)
           .then(() => {
             proceedAfterChannelRemoval();
@@ -3143,7 +3139,7 @@ export default function FamilyHub() {
       if (locationLoadStartedRef.current) return;
       locationLoadStartedRef.current = true;
       loadSupabaseData().then(async () => {
-        console.log('✅ Supabase 데이터 로드 완료, Realtime 구독 시작');
+        familyChatDebug('Supabase 데이터 로드 완료 → Realtime 구독');
         setupRealtimeSubscriptions();
         loadMyLocation();
         await loadLocationRequests();
@@ -5710,7 +5706,7 @@ export default function FamilyHub() {
       }
       setChatAttachmentsByMessage(grouped);
     } catch (e) {
-      console.error('채팅 첨부 조회 오류:', e);
+      console.error('[FamilyChat] 첨부 조회 오류:', e);
     }
   }, [currentGroupId, state.messages]);
 
@@ -5778,7 +5774,7 @@ export default function FamilyHub() {
     
     // ✅ 중복 호출 방지
     if (chatPhotoUploadingRef.current) {
-      console.log('⚠️ 이미 사진 업로드 중, 중복 호출 무시');
+      familyChatDebug('이미 사진 업로드 중, 중복 호출 무시');
       return;
     }
     
@@ -5799,7 +5795,7 @@ export default function FamilyHub() {
     if (!currentGroupId) return;
     
     chatPhotoUploadingRef.current = true;
-    console.log('🔒 사진 업로드 시작, 중복 방지 플래그 설정');
+    familyChatDebug('사진 업로드 시작');
 
     const revokeOutgoingPreviews = (mid: string) => {
       setChatOutgoingPreviews((prev) => {
@@ -5860,7 +5856,7 @@ export default function FamilyHub() {
           } as Message,
         ]),
       }));
-      console.log('✅ 사진 메시지 즉시 전송 (텍스트 없음):', inserted.id);
+      familyChatDebug('사진 메시지 행 생성', inserted.id);
 
       const previewUrls = files.map((f) => URL.createObjectURL(f));
       setChatOutgoingPreviews((prev) => ({ ...prev, [mid]: previewUrls }));
@@ -5894,9 +5890,9 @@ export default function FamilyHub() {
       revokeOutgoingPreviews(mid);
       outgoingPreviewMessageId = null;
       void loadChatAttachmentsRef.current();
-      console.log(`✅ 사진 ${attachments.length}개 업로드 완료:`, inserted.id);
+      familyChatDebug(`사진 ${attachments.length}개 업로드 완료`, inserted.id);
     } catch (error) {
-      console.error('사진 전송 오류:', error);
+      console.error('[FamilyChat] 사진 전송 오류:', error);
       if (outgoingPreviewMessageId) {
         revokeOutgoingPreviews(outgoingPreviewMessageId);
         outgoingPreviewMessageId = null;
@@ -5910,13 +5906,13 @@ export default function FamilyHub() {
       }
     } finally {
       chatPhotoUploadingRef.current = false;
-      console.log('🔓 사진 업로드 완료, 중복 방지 플래그 해제');
+      familyChatDebug('사진 업로드 완료, 플래그 해제');
     }
   };
 
   const handlePickChatFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    console.log('📂 handlePickChatFiles 호출됨, 파일 수:', files.length, '파일명:', files.map(f => f.name));
+    familyChatDebug('handlePickChatFiles', files.length, files.map((f) => f.name));
     await uploadChatPhotos(files);
     if (e.target) e.target.value = ''; // 입력 초기화
   };
@@ -5928,28 +5924,28 @@ export default function FamilyHub() {
   const sendChat = (messageFromChild?: string) => {
     const input = chatInputRef.current;
     if (!input) {
-      console.warn('[FamilyChat] sendChat: chatInputRef 없음 — 브라우저 콘솔(F12)에서 확인하세요');
+      familyChatDebug('sendChat: chatInputRef 없음');
       return;
     }
 
     const rawText = (messageFromChild ?? input.value).trim();
     const sanitizedText = sanitizeInput(rawText, 500);
     if (!sanitizedText) {
-      console.warn('[FamilyChat] sendChat: sanitize 후 빈 문자열', { rawLen: rawText.length });
+      familyChatDebug('sendChat: sanitize 후 빈 문자열', { rawLen: rawText.length });
       return;
     }
 
-    console.info('[FamilyChat] sendChat 시작', { textLen: sanitizedText.length, groupId: currentGroupId ?? null });
+    familyChatDebug('sendChat 시작', { textLen: sanitizedText.length, groupId: currentGroupId ?? null });
     
     // ✅ 중복 전송 방지 — 플래그는 반드시 동기 구간에서 먼저 설정 (async 시작 전)
     // 그렇지 않으면 같은 틱에서 sendChat이 2번 호출될 때 둘 다 통과해 INSERT가 2번 나감
     if (chatTextSendingRef.current) {
-      console.log('⚠️ 이미 메시지 전송 중, 중복 호출 무시');
+      familyChatDebug('이미 메시지 전송 중, 중복 호출 무시');
       return;
     }
     chatTextSendingRef.current = true;
     setChatTextSendingUi(true);
-    console.log('🔒 텍스트 메시지 전송 잠금 (동기)');
+    familyChatDebug('텍스트 전송 잠금');
     
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -6004,10 +6000,10 @@ export default function FamilyHub() {
             } as Message,
           ]),
         }));
-        console.log('✅ 텍스트 메시지 전송 완료:', inserted.id);
+        familyChatDebug('텍스트 메시지 전송 완료', inserted.id);
         input.value = "";
       } catch (e) {
-        console.error('메시지 전송 오류:', e);
+        console.error('[FamilyChat] 메시지 전송 오류:', e);
         const msg = e instanceof Error ? e.message : '';
         if (msg === 'NO_FAMILY_GROUP_ACCESS' || msg.toLowerCase().includes('row-level security')) {
           alert(dt('chat_send_no_access'));
@@ -6018,7 +6014,7 @@ export default function FamilyHub() {
       } finally {
         chatTextSendingRef.current = false;
         setChatTextSendingUi(false);
-        console.log('🔓 텍스트 메시지 전송 완료, 중복 방지 플래그 해제');
+        familyChatDebug('텍스트 전송 완료, 플래그 해제');
       }
     })();
   };
