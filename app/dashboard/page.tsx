@@ -233,6 +233,11 @@ export default function FamilyHub() {
   const isAuthenticatedRef = useRef(false);
   const [masterKey, setMasterKey] = useState('');
   const [userId, setUserId] = useState<string>(''); // 사용자 ID 저장
+  /** postgres_changes 콜백은 구독 시점 클로저를 쓰므로, 본인 판별·그룹 필터는 항상 최신 값 사용 */
+  const dashboardUserIdRef = useRef<string>('');
+  const dashboardCurrentGroupIdRef = useRef<string | null>(null);
+  dashboardUserIdRef.current = userId;
+  dashboardCurrentGroupIdRef.current = currentGroupId;
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
   const [isMounted, setIsMounted] = useState(false);
   const [userName, setUserName] = useState<string>('');
@@ -863,6 +868,7 @@ export default function FamilyHub() {
         // 그룹·역할 라우팅이 끝난 뒤에만 대시보드 본문을 표시(잠깐 보였다가 온보딩으로 튀는 현상 방지)
         setIsAuthenticated(true);
         setUserId(currentUserId);
+        dashboardUserIdRef.current = currentUserId;
 
         // family_id 가져오기 (user_metadata에서 가져오거나 기본값 사용)
         // 모든 가족 구성원이 동일한 family_id를 공유하도록 설정
@@ -2365,7 +2371,8 @@ export default function FamilyHub() {
               const deletedMessage = payload.old;
               const deletedId = deletedMessage?.id;
               if (!deletedId) return;
-              if (deletedMessage?.group_id != null && deletedMessage.group_id !== currentGroupId) return;
+              const gid = dashboardCurrentGroupIdRef.current;
+              if (deletedMessage?.group_id != null && deletedMessage.group_id !== gid) return;
               const deletedIdStr = String(deletedId).trim();
               setState(prev => ({
                 ...prev,
@@ -2375,7 +2382,8 @@ export default function FamilyHub() {
             }
             if (ev === 'UPDATE') {
               const updatedMessage = payload.new;
-              if (updatedMessage.group_id != null && updatedMessage.group_id !== currentGroupId) return;
+              const gid = dashboardCurrentGroupIdRef.current;
+              if (updatedMessage.group_id != null && updatedMessage.group_id !== gid) return;
               const messageText = updatedMessage.message_text || '';
               let decryptedText = messageText;
               const updateMessageKey = getCurrentKey();
@@ -2407,39 +2415,111 @@ export default function FamilyHub() {
             // INSERT
             const newMessage = payload.new;
             if (!newMessage || !newMessage.id) return;
-            if (newMessage.group_id != null && newMessage.group_id !== currentGroupId) return;
+            const insertGid = dashboardCurrentGroupIdRef.current;
+            if (newMessage.group_id != null && newMessage.group_id !== insertGid) return;
             
             const messageId = String(newMessage.id);
-            
+            const uidForChat = dashboardUserIdRef.current;
+            const isOwnMessage =
+              newMessage.sender_id != null &&
+              uidForChat !== '' &&
+              String(newMessage.sender_id) === String(uidForChat);
+
             console.log('🔔 Realtime INSERT 이벤트 수신:', {
               messageId,
               sender: newMessage.sender_id,
-              currentUser: userId,
+              currentUser: uidForChat,
               subscriptionId: realtimeSubscriptionIdRef.current,
-              alreadyProcessed: processedMessageIdsRef.current.has(messageId)
+              alreadyProcessed: processedMessageIdsRef.current.has(messageId),
+              isOwnMessage,
             });
-            
-            // ✅ 전역 중복 체크 및 즉시 마킹 (원자적 처리로 경쟁 조건 방지)
-            if (processedMessageIdsRef.current.has(messageId)) {
-              console.log('🚫 이미 처리된 메시지 ID, 완전 무시:', messageId, '(중복 구독 감지)');
+
+            // 본인 메시지: 낙관적 UI가 다른 setState(재동기화 등)에 밀려 사라졌을 때 Realtime으로 복구
+            if (isOwnMessage) {
+              setState((prev) => {
+                if (prev.messages?.some((m) => String(m.id) === messageId)) {
+                  return prev;
+                }
+                const messageText = newMessage.message_text || '';
+                let decryptedText = messageText;
+                const messageKey = getCurrentKey();
+                if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
+                  try {
+                    const decrypted = CryptoService.decrypt(messageText, messageKey);
+                    if (typeof decrypted === 'string') decryptedText = decrypted;
+                  } catch (_) {}
+                }
+                const createdAt = new Date(newMessage.created_at);
+                const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
+                console.log('📨 본인 메시지 Realtime으로 state 복구:', messageId);
+                return {
+                  ...prev,
+                  messages: trimMessagesToMax([
+                    ...(prev.messages || []),
+                    {
+                      id: newMessage.id,
+                      user: '나',
+                      text: decryptedText,
+                      time: timeStr,
+                      sender_id: newMessage.sender_id,
+                      created_at: newMessage.created_at,
+                    },
+                  ]),
+                };
+              });
               return;
             }
-            // 체크 통과 즉시 마킹 (다른 이벤트가 동시에 들어와도 차단)
+
+            // 상대 메시지: 이미 처리된 ID면 중복 차단. 본인 메시지는 sendChat이 ID를 넣으므로,
+            // 예전 클로저로 isOwnMessage 분기를 못 탔을 때 여기서 막히면 UI가 영구히 비므로 sender=본인이면 복구
+            if (processedMessageIdsRef.current.has(messageId)) {
+              if (
+                newMessage.sender_id != null &&
+                uidForChat !== '' &&
+                String(newMessage.sender_id) === String(uidForChat)
+              ) {
+                setState((prev) => {
+                  if (prev.messages?.some((m) => String(m.id) === messageId)) return prev;
+                  const messageText = newMessage.message_text || '';
+                  let decryptedText = messageText;
+                  const messageKey = getCurrentKey();
+                  if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
+                    try {
+                      const decrypted = CryptoService.decrypt(messageText, messageKey);
+                      if (typeof decrypted === 'string') decryptedText = decrypted;
+                    } catch (_) {}
+                  }
+                  const createdAt = new Date(newMessage.created_at);
+                  const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
+                  console.log('📨 본인 메시지(processed) Realtime 복구:', messageId);
+                  return {
+                    ...prev,
+                    messages: trimMessagesToMax([
+                      ...(prev.messages || []),
+                      {
+                        id: newMessage.id,
+                        user: '나',
+                        text: decryptedText,
+                        time: timeStr,
+                        sender_id: newMessage.sender_id,
+                        created_at: newMessage.created_at,
+                      },
+                    ]),
+                  };
+                });
+                return;
+              }
+              console.log('🚫 이미 처리된 메시지 ID, 중복 INSERT 무시:', messageId);
+              return;
+            }
             processedMessageIdsRef.current.add(messageId);
             console.log('🔒 메시지 ID 마킹 완료:', messageId);
-            
-            // Set 크기 제한 (메모리 관리 - 최근 100개만 유지)
+
             if (processedMessageIdsRef.current.size > 100) {
               const arr = Array.from(processedMessageIdsRef.current);
               processedMessageIdsRef.current = new Set(arr.slice(-100));
             }
-            
-            // 본인이 보낸 메시지는 Realtime에서 무시 (이미 Optimistic update로 화면에 표시됨)
-            if (newMessage.sender_id === userId) {
-              console.log('📨 본인 메시지 Realtime 수신 무시 (이미 표시됨):', messageId);
-              return;
-            }
-            
+
             console.log('✅ 새 메시지 Realtime 처리 시작:', messageId, 'sender:', newMessage.sender_id);
             
             // 상대방이 보낸 메시지만 처리
