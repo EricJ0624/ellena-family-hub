@@ -38,6 +38,7 @@ import {
   CHAT_PAGE_SIZE,
   formatFamilyMessagesFromRows,
   trimMessagesToMax,
+  mergeChatMessagesWithExisting,
   type ChatMessageRow,
   type ChatUiMessage,
 } from '@/lib/chat-messages';
@@ -2687,7 +2688,7 @@ export default function FamilyHub() {
             setChatHasMoreOlder(messagesDataRaw.length >= CHAT_PAGE_SIZE);
             setState((prev) => ({
               ...prev,
-              messages: formattedMessages,
+              messages: mergeChatMessagesWithExisting(formattedMessages, prev.messages),
             }));
           }
         }
@@ -5728,11 +5729,11 @@ export default function FamilyHub() {
     await uploadChatPhotos(files);
   };
 
-  const sendChat = () => {
+  const sendChat = (messageFromChild?: string) => {
     const input = chatInputRef.current;
     if (!input) return;
-    
-    const rawText = input.value.trim();
+
+    const rawText = (messageFromChild ?? input.value).trim();
     const sanitizedText = sanitizeInput(rawText, 500);
     if (!sanitizedText) return;
     

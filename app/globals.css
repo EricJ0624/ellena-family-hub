@@ -1223,12 +1223,13 @@ select {
   align-items: center;
   gap: var(--spacing-sm);
   width: 100%;
-  flex-wrap: nowrap;
+  /* 한 줄에 보내기·앨범·카메라 버튼이 넓을 때 입력칸이 min-width:0 으로 0px까지 줄어 글자가 안 보이는 문제 방지 */
+  flex-wrap: wrap;
 }
 
 .chat-input {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid #f1f5f9;
   border-radius: var(--border-radius-md);
@@ -1236,6 +1237,8 @@ select {
   font-size: 0.875rem;
   font-weight: 700;
   color: #1e293b;
+  /* 위쪽 전역 input 방어에서 .chat-input 은 제외됨 — 동일하게 UA dark 폼 페인팅 방지 */
+  color-scheme: light;
   outline: none;
   transition: all 0.2s ease;
 }
