@@ -17,7 +17,14 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/webp',
   'image/heic',
+  'image/heif',
 ]);
+
+function normalizeClientMime(m: string): string {
+  const s = String(m || '').trim().toLowerCase();
+  if (s === 'image/jpg') return 'image/jpeg';
+  return s;
+}
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -51,7 +58,8 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED_ENTITY_TYPES.has(String(entityType))) {
       return NextResponse.json({ error: '지원하지 않는 entityType 입니다.' }, { status: 400 });
     }
-    if (!ALLOWED_MIME_TYPES.has(String(mimeType))) {
+    const mimeNorm = normalizeClientMime(String(mimeType || ''));
+    if (!ALLOWED_MIME_TYPES.has(mimeNorm)) {
       return NextResponse.json({ error: '지원하지 않는 파일 형식입니다.' }, { status: 400 });
     }
     if (typeof sizeBytes !== 'number' || sizeBytes <= 0 || sizeBytes > MAX_FILE_SIZE) {
@@ -71,7 +79,7 @@ export async function POST(request: NextRequest) {
         entity_type: String(entityType),
         entity_id: String(entityId),
         original_filename: String(originalFilename),
-        mime_type: String(mimeType),
+        mime_type: mimeNorm,
         size_bytes: sizeBytes,
         s3_key: String(s3Key),
         image_url: String(imageUrl),

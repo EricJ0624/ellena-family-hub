@@ -32,11 +32,32 @@ export type UploadJob = {
   attachment?: UploadedAttachment;
 };
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const MAX_SIZE = 20 * 1024 * 1024;
 
+/** 모바일에서 file.type 이 비어 있거나 image/jpg 인 경우가 많음 */
+export function normalizeImageMimeType(rawType: string, fileName: string): string {
+  const t = String(rawType || '').trim().toLowerCase();
+  if (t === 'image/jpg') return 'image/jpeg';
+  if (t && t !== 'application/octet-stream') return t;
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
+  return t;
+}
+
+/** API·S3 업로드에 넘길 때 type 이 허용 목록과 맞도록 */
+export function ensureImageFileWithKnownMime(file: File): File {
+  const mime = normalizeImageMimeType(file.type, file.name);
+  if (!mime || file.type === mime) return file;
+  return new File([file], file.name, { type: mime, lastModified: file.lastModified });
+}
+
 export function validateAttachmentFile(file: File): string | null {
-  if (!ALLOWED_TYPES.has(file.type)) return '지원하지 않는 파일 형식입니다.';
+  const mime = normalizeImageMimeType(file.type, file.name);
+  if (!ALLOWED_TYPES.has(mime)) return '지원하지 않는 파일 형식입니다.';
   if (file.size <= 0 || file.size > MAX_SIZE) return '파일 크기는 1B~20MB여야 합니다.';
   return null;
 }
@@ -57,26 +78,35 @@ function fileToImageBitmap(file: Blob): Promise<ImageBitmap> {
 }
 
 async function compressImageAuto(file: File): Promise<File> {
-  const bitmap = await fileToImageBitmap(file);
-  const maxEdge = 1920;
-  const quality = 0.82;
-  const ratio = Math.min(maxEdge / bitmap.width, maxEdge / bitmap.height, 1);
-  const w = Math.max(1, Math.round(bitmap.width * ratio));
-  const h = Math.max(1, Math.round(bitmap.height * ratio));
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return file;
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((b) => resolve(b), file.type === 'image/png' ? 'image/png' : 'image/jpeg', quality);
-  });
-  if (!blob) return file;
-  const outType = blob.type || file.type || 'image/jpeg';
-  const ext = outType === 'image/png' ? 'png' : outType === 'image/webp' ? 'webp' : 'jpg';
-  const name = file.name.replace(/\.[^.]+$/, '') + `.${ext}`;
-  return new File([blob], name, { type: outType, lastModified: Date.now() });
+  try {
+    const bitmap = await fileToImageBitmap(file);
+    const maxEdge = 1920;
+    const quality = 0.82;
+    const ratio = Math.min(maxEdge / bitmap.width, maxEdge / bitmap.height, 1);
+    const w = Math.max(1, Math.round(bitmap.width * ratio));
+    const h = Math.max(1, Math.round(bitmap.height * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    const mime = normalizeImageMimeType(file.type, file.name);
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), mime === 'image/png' ? 'image/png' : 'image/jpeg', quality);
+    });
+    if (!blob) return file;
+    const outType = blob.type || 'image/jpeg';
+    const ext = outType === 'image/png' ? 'png' : outType === 'image/webp' ? 'webp' : 'jpg';
+    const name = file.name.replace(/\.[^.]+$/, '') + `.${ext}`;
+    return new File([blob], name, { type: outType, lastModified: Date.now() });
+  } catch (e) {
+    // HEIC·일부 모바일 WebView에서 createImageBitmap 실패 → 원본 그대로 업로드 시도
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[attachments] compressImageAuto 실패, 원본 사용:', e);
+    }
+    return ensureImageFileWithKnownMime(file);
+  }
 }
 
 async function makeThumbnail(file: File): Promise<Blob> {
@@ -121,7 +151,8 @@ export async function uploadFeatureAttachment(params: {
   onProgress?: (progress: number) => void;
 }) {
   const { groupId, featureType, entityType, entityId, signal, onProgress } = params;
-  const file = await compressImageAuto(params.file);
+  const normalizedIn = ensureImageFileWithKnownMime(params.file);
+  const file = await compressImageAuto(normalizedIn);
   const validationError = validateAttachmentFile(file);
   if (validationError) throw new Error(validationError);
   onProgress?.(10);
@@ -138,15 +169,26 @@ export async function uploadFeatureAttachment(params: {
   onProgress?.(55);
   if (signal?.aborted) throw new DOMException('cancelled', 'AbortError');
 
-  const thumbnailBlob = await makeThumbnail(file);
-  const thumbnailMeta = await getUploadUrl(groupId, `${file.name}.thumb.webp`, 'image/webp', thumbnailBlob.size, true);
-  const putThumb = await fetch(thumbnailMeta.presignedUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'image/webp' },
-    body: thumbnailBlob,
-    signal,
-  });
-  if (!putThumb.ok) throw new Error('썸네일 업로드 실패');
+  let thumbnailS3Key: string | undefined;
+  let thumbnailUrl: string | undefined;
+  try {
+    const thumbnailBlob = await makeThumbnail(file);
+    const thumbnailMeta = await getUploadUrl(groupId, `${file.name}.thumb.webp`, 'image/webp', thumbnailBlob.size, true);
+    const putThumb = await fetch(thumbnailMeta.presignedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/webp' },
+      body: thumbnailBlob,
+      signal,
+    });
+    if (putThumb.ok) {
+      thumbnailS3Key = thumbnailMeta.s3Key;
+      thumbnailUrl = thumbnailMeta.s3Url;
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[attachments] 썸네일 생략(원본만 저장):', e);
+    }
+  }
   onProgress?.(85);
   if (signal?.aborted) throw new DOMException('cancelled', 'AbortError');
 
@@ -164,8 +206,8 @@ export async function uploadFeatureAttachment(params: {
       sizeBytes: file.size,
       s3Key: originalMeta.s3Key,
       imageUrl: originalMeta.s3Url,
-      thumbnailS3Key: thumbnailMeta.s3Key,
-      thumbnailUrl: thumbnailMeta.s3Url,
+      thumbnailS3Key,
+      thumbnailUrl,
     }),
   });
   const completeJson = await completeRes.json().catch(() => ({}));

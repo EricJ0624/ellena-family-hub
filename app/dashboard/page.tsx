@@ -5619,26 +5619,38 @@ export default function FamilyHub() {
 
   /** API requireGroupMember / RLS와 동일: 멤버·소유자·(시스템관리자+임시접근)만 해당 그룹에 메시지 작성 가능 */
   const assertCanPostToFamilyChatGroup = useCallback(async (groupId: string, uid: string) => {
-    const { data: mem } = await supabase
+    const { data: mem, error: memErr } = await supabase
       .from('memberships')
       .select('group_id')
       .eq('user_id', uid)
       .eq('group_id', groupId)
       .maybeSingle();
+    if (memErr) {
+      console.warn('채팅 권한: memberships 조회 오류', memErr);
+    }
     if (mem) return;
-    const { data: own } = await supabase
+    const { data: own, error: ownErr } = await supabase
       .from('groups')
       .select('id')
       .eq('id', groupId)
       .eq('owner_id', uid)
       .maybeSingle();
+    if (ownErr) {
+      console.warn('채팅 권한: groups 소유자 조회 오류', ownErr);
+    }
     if (own) return;
-    const { data: isSys } = await supabase.rpc('is_system_admin', { user_id_param: uid });
+    const { data: isSys, error: rpcErr } = await supabase.rpc('is_system_admin', { user_id_param: uid });
+    if (rpcErr && process.env.NODE_ENV === 'development') {
+      console.warn('is_system_admin RPC:', rpcErr);
+    }
     if (isSys === true) {
-      const { data: can } = await supabase.rpc('can_access_group_dashboard', {
+      const { data: can, error: canErr } = await supabase.rpc('can_access_group_dashboard', {
         group_id_param: groupId,
         admin_id_param: uid,
       });
+      if (canErr && process.env.NODE_ENV === 'development') {
+        console.warn('can_access_group_dashboard RPC:', canErr);
+      }
       if (can === true) return;
     }
     throw new Error('NO_FAMILY_GROUP_ACCESS');

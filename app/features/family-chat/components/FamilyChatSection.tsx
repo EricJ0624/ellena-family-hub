@@ -484,7 +484,7 @@ export function FamilyChatSection({
           <input
             ref={chatFileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             multiple
             onChange={onPickFiles}
             style={{ display: 'none' }}
@@ -492,7 +492,7 @@ export function FamilyChatSection({
           <input
             ref={chatCameraInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             capture="environment"
             onChange={onPickFiles}
             style={{ display: 'none' }}

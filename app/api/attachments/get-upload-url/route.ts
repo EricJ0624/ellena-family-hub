@@ -13,9 +13,16 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/webp',
   'image/heic',
+  'image/heif',
 ]);
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
+function normalizeClientMime(m: string): string {
+  const s = String(m || '').trim().toLowerCase();
+  if (s === 'image/jpg') return 'image/jpeg';
+  return s;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,11 +32,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { fileName, mimeType, fileSize, groupId, isThumbnail } = body ?? {};
+    const mimeNorm = normalizeClientMime(String(mimeType || ''));
 
-    if (!fileName || !mimeType || !groupId) {
+    if (!fileName || !mimeNorm || !groupId) {
       return NextResponse.json({ error: 'fileName, mimeType, groupId는 필수입니다.' }, { status: 400 });
     }
-    if (!ALLOWED_MIME_TYPES.has(String(mimeType))) {
+    if (!ALLOWED_MIME_TYPES.has(mimeNorm)) {
       return NextResponse.json({ error: '지원하지 않는 파일 형식입니다.' }, { status: 400 });
     }
     if (typeof fileSize !== 'number' || fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
@@ -45,14 +53,14 @@ export async function POST(request: NextRequest) {
     }
 
     const safeName = String(fileName).replace(/[^\w.\-]+/g, '_');
-    const baseKey = generateS3KeyWithGroup(safeName, String(mimeType), user.id, String(groupId));
+    const baseKey = generateS3KeyWithGroup(safeName, mimeNorm, user.id, String(groupId));
     const s3Key = isThumbnail ? `${baseKey}.thumb` : baseKey;
 
     const s3Client = getS3ClientInstance();
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
-      ContentType: String(mimeType),
+      ContentType: mimeNorm,
     });
     const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 900 });
 
