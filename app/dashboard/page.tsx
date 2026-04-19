@@ -5617,6 +5617,32 @@ export default function FamilyHub() {
     }
   };
 
+  /** API requireGroupMember / RLS와 동일: 멤버·소유자·(시스템관리자+임시접근)만 해당 그룹에 메시지 작성 가능 */
+  const assertCanPostToFamilyChatGroup = useCallback(async (groupId: string, uid: string) => {
+    const { data: mem } = await supabase
+      .from('memberships')
+      .select('group_id')
+      .eq('user_id', uid)
+      .eq('group_id', groupId)
+      .maybeSingle();
+    if (mem) return;
+    const { data: own } = await supabase
+      .from('groups')
+      .select('id')
+      .eq('id', groupId)
+      .eq('owner_id', uid)
+      .maybeSingle();
+    if (own) return;
+    const { data: isSys } = await supabase.rpc('is_system_admin', { user_id_param: uid });
+    if (isSys === true) {
+      const { data: can } = await supabase.rpc('can_access_group_dashboard', {
+        group_id_param: groupId,
+        admin_id_param: uid,
+      });
+      if (can === true) return;
+    }
+    throw new Error('NO_FAMILY_GROUP_ACCESS');
+  }, []);
 
   // Chat Handlers
   const loadChatAttachments = useCallback(async () => {
@@ -5756,6 +5782,7 @@ export default function FamilyHub() {
         return;
       }
       const authUid = session.user.id;
+      await assertCanPostToFamilyChatGroup(currentGroupId, authUid);
       const currentKey =
         masterKey ||
         sessionStorage.getItem(getAuthKey(authUid)) ||
@@ -5837,7 +5864,13 @@ export default function FamilyHub() {
         revokeOutgoingPreviews(outgoingPreviewMessageId);
         outgoingPreviewMessageId = null;
       }
-      alert(error instanceof Error ? error.message : '사진 전송에 실패했습니다.');
+      const msg = error instanceof Error ? error.message : '';
+      if (msg === 'NO_FAMILY_GROUP_ACCESS' || msg.toLowerCase().includes('row-level security')) {
+        alert(dt('chat_send_no_access'));
+        void refreshGroups?.();
+      } else {
+        alert(error instanceof Error ? error.message : '사진 전송에 실패했습니다.');
+      }
     } finally {
       chatPhotoUploadingRef.current = false;
       console.log('🔓 사진 업로드 완료, 중복 방지 플래그 해제');
@@ -5889,6 +5922,7 @@ export default function FamilyHub() {
         }
         // RLS는 보통 sender_id = auth.uid() — React userId state가 비어 있으면 INSERT 실패
         const authUid = session.user.id;
+        await assertCanPostToFamilyChatGroup(currentGroupId, authUid);
         const currentKey =
           masterKey ||
           sessionStorage.getItem(getAuthKey(authUid)) ||
@@ -5928,7 +5962,13 @@ export default function FamilyHub() {
         input.value = "";
       } catch (e) {
         console.error('메시지 전송 오류:', e);
-        alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
+        const msg = e instanceof Error ? e.message : '';
+        if (msg === 'NO_FAMILY_GROUP_ACCESS' || msg.toLowerCase().includes('row-level security')) {
+          alert(dt('chat_send_no_access'));
+          void refreshGroups?.();
+        } else {
+          alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
+        }
       } finally {
         chatTextSendingRef.current = false;
         console.log('🔓 텍스트 메시지 전송 완료, 중복 방지 플래그 해제');
