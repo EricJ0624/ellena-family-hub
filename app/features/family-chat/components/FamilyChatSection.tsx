@@ -22,6 +22,8 @@ interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
   userId: string;
   currentGroupId: string | null;
+  /** 텍스트 전송 중 — 버튼·입력 잠금 (늦은 중복 전송·연타 완화) */
+  isSendingText?: boolean;
   onSendMessage: (message: string) => void;
   chatBoxRef: React.RefObject<HTMLDivElement | null>;
   chatInputRef: React.RefObject<HTMLInputElement | null>;
@@ -66,6 +68,7 @@ export function FamilyChatSection({
   messages,
   userId,
   currentGroupId,
+  isSendingText = false,
   onSendMessage,
   chatBoxRef,
   chatInputRef,
@@ -173,14 +176,20 @@ export function FamilyChatSection({
   }, [t.section_chat_bubble_greeting, lang]);
 
   const handleSendClick = () => {
+    if (isSendingText) return;
     const input = chatInputRef.current;
-    if (!input || !input.value.trim()) return;
-    
-    onSendMessage(input.value.trim());
+    if (!input || !input.value.trim()) {
+      console.info('[FamilyChat] send skipped (empty input or missing ref)');
+      return;
+    }
+    const text = input.value.trim();
+    console.info('[FamilyChat] send click', { length: text.length });
+    onSendMessage(text);
     input.value = '';
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.repeat) return;
     if (e.key !== 'Enter' || e.shiftKey) return;
     if (e.nativeEvent.isComposing) return;
     e.preventDefault();
@@ -443,12 +452,25 @@ export function FamilyChatSection({
           <input
             ref={chatInputRef}
             type="text"
+            readOnly={isSendingText}
+            aria-busy={isSendingText}
             onKeyDown={handleKeyDown}
             className="chat-input"
             placeholder={t.chat_placeholder}
-            style={{ flex: 1, minWidth: 0, padding: '11px 12px' }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: '11px 12px',
+              opacity: isSendingText ? 0.85 : 1,
+            }}
           />
-          <button type="button" onClick={handleSendClick} className="btn-send" style={{ padding: '8px 12px', fontSize: '12px' }}>
+          <button
+            type="button"
+            onClick={handleSendClick}
+            disabled={isSendingText}
+            className="btn-send"
+            style={{ padding: '8px 12px', fontSize: '12px', opacity: isSendingText ? 0.7 : 1 }}
+          >
             {t.chat_send}
           </button>
           <button

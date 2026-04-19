@@ -397,6 +397,10 @@ export default function FamilyHub() {
   const [chatLoadingOlder, setChatLoadingOlder] = useState(false);
   const chatPhotoUploadingRef = useRef(false); // 사진 업로드 중복 방지
   const chatTextSendingRef = useRef(false); // 텍스트 메시지 전송 중복 방지
+  /** 연속 채팅 시 memberships/groups/RPC 왕복을 줄이기 위한 짧은 TTL 캐시 (그룹·uid 키) */
+  const chatPostPermissionCacheRef = useRef<{ key: string; expiresAt: number } | null>(null);
+  const CHAT_POST_PERMISSION_TTL_MS = 25_000;
+  const [chatTextSendingUi, setChatTextSendingUi] = useState(false);
   /** Realtime 첨부 핸들러가 항상 최신 loadChatAttachments를 호출하도록 */
   const loadChatAttachmentsRef = useRef<() => Promise<void>>(async () => {});
   const chatAttachmentsLoadGenRef = useRef(0);
@@ -5619,6 +5623,18 @@ export default function FamilyHub() {
 
   /** API requireGroupMember / RLS와 동일: 멤버·소유자·(시스템관리자+임시접근)만 해당 그룹에 메시지 작성 가능 */
   const assertCanPostToFamilyChatGroup = useCallback(async (groupId: string, uid: string) => {
+    const cacheKey = `${groupId}:${uid}`;
+    const now = Date.now();
+    const hit = chatPostPermissionCacheRef.current;
+    if (hit && hit.key === cacheKey && now < hit.expiresAt) {
+      return;
+    }
+    const markOk = () => {
+      chatPostPermissionCacheRef.current = {
+        key: cacheKey,
+        expiresAt: Date.now() + CHAT_POST_PERMISSION_TTL_MS,
+      };
+    };
     const { data: mem, error: memErr } = await supabase
       .from('memberships')
       .select('group_id')
@@ -5628,7 +5644,10 @@ export default function FamilyHub() {
     if (memErr) {
       console.warn('채팅 권한: memberships 조회 오류', memErr);
     }
-    if (mem) return;
+    if (mem) {
+      markOk();
+      return;
+    }
     const { data: own, error: ownErr } = await supabase
       .from('groups')
       .select('id')
@@ -5638,7 +5657,10 @@ export default function FamilyHub() {
     if (ownErr) {
       console.warn('채팅 권한: groups 소유자 조회 오류', ownErr);
     }
-    if (own) return;
+    if (own) {
+      markOk();
+      return;
+    }
     const { data: isSys, error: rpcErr } = await supabase.rpc('is_system_admin', { user_id_param: uid });
     if (rpcErr && process.env.NODE_ENV === 'development') {
       console.warn('is_system_admin RPC:', rpcErr);
@@ -5651,7 +5673,10 @@ export default function FamilyHub() {
       if (canErr && process.env.NODE_ENV === 'development') {
         console.warn('can_access_group_dashboard RPC:', canErr);
       }
-      if (can === true) return;
+      if (can === true) {
+        markOk();
+        return;
+      }
     }
     throw new Error('NO_FAMILY_GROUP_ACCESS');
   }, []);
@@ -5902,11 +5927,19 @@ export default function FamilyHub() {
 
   const sendChat = (messageFromChild?: string) => {
     const input = chatInputRef.current;
-    if (!input) return;
+    if (!input) {
+      console.warn('[FamilyChat] sendChat: chatInputRef 없음 — 브라우저 콘솔(F12)에서 확인하세요');
+      return;
+    }
 
     const rawText = (messageFromChild ?? input.value).trim();
     const sanitizedText = sanitizeInput(rawText, 500);
-    if (!sanitizedText) return;
+    if (!sanitizedText) {
+      console.warn('[FamilyChat] sendChat: sanitize 후 빈 문자열', { rawLen: rawText.length });
+      return;
+    }
+
+    console.info('[FamilyChat] sendChat 시작', { textLen: sanitizedText.length, groupId: currentGroupId ?? null });
     
     // ✅ 중복 전송 방지 — 플래그는 반드시 동기 구간에서 먼저 설정 (async 시작 전)
     // 그렇지 않으면 같은 틱에서 sendChat이 2번 호출될 때 둘 다 통과해 INSERT가 2번 나감
@@ -5915,6 +5948,7 @@ export default function FamilyHub() {
       return;
     }
     chatTextSendingRef.current = true;
+    setChatTextSendingUi(true);
     console.log('🔒 텍스트 메시지 전송 잠금 (동기)');
     
     const now = new Date();
@@ -5983,6 +6017,7 @@ export default function FamilyHub() {
         }
       } finally {
         chatTextSendingRef.current = false;
+        setChatTextSendingUi(false);
         console.log('🔓 텍스트 메시지 전송 완료, 중복 방지 플래그 해제');
       }
     })();
@@ -6416,6 +6451,7 @@ export default function FamilyHub() {
             messages={state.messages}
             userId={userId}
             currentGroupId={currentGroupId}
+            isSendingText={chatTextSendingUi}
             onSendMessage={sendChat}
             chatBoxRef={chatBoxRef}
             chatInputRef={chatInputRef}
