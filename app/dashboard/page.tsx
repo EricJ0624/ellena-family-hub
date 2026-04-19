@@ -5251,15 +5251,15 @@ export default function FamilyHub() {
           if (token) {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.access_token) {
-              console.warn('Push 토큰 삭제: 인증 세션이 없습니다.');
-              return;
+              console.warn('Push 토큰 삭제: 인증 세션이 없습니다. (로그아웃 절차는 계속합니다)');
+            } else {
+              await fetch(`/api/push/register-token?userId=${userId}&token=${encodeURIComponent(token)}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${session.access_token}`
+                }
+              }).catch(err => console.warn('Push 토큰 삭제 실패:', err));
             }
-            await fetch(`/api/push/register-token?userId=${userId}&token=${encodeURIComponent(token)}`, {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`
-              }
-            }).catch(err => console.warn('Push 토큰 삭제 실패:', err));
           }
         } catch (error) {
           console.warn('Push 토큰 삭제 중 오류:', error);
