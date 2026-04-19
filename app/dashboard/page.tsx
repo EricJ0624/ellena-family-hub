@@ -498,7 +498,16 @@ export default function FamilyHub() {
   }, [userId, currentGroupId]);
 
   const loadData = useCallback(async (key: string, userId: string) => {
-    const storageKey = getStorageKey(userId, currentGroupId);
+    /** 이 비동기 로드가 시작된 그룹 — 완료 시점에 그룹이 바뀌었으면 적용하지 않음(경쟁으로 타 그룹 사진이 섞이는 것 방지) */
+    const groupIdForThisLoad = currentGroupId;
+    if (!groupIdForThisLoad) {
+      console.warn('loadData: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
+      return;
+    }
+
+    const isLoadStale = () => groupIdForThisLoad !== dashboardCurrentGroupIdRef.current;
+
+    const storageKey = getStorageKey(userId, groupIdForThisLoad);
     const saved = localStorage.getItem(storageKey);
     
     let localState: AppState | null = null;
@@ -540,18 +549,15 @@ export default function FamilyHub() {
 
     // ✅ Supabase에서 사진 불러오기 (Multi-tenant: group_id 필터링)
     try {
-      if (!currentGroupId) {
-        console.warn('loadData: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-        return;
-      }
-
       let photos: unknown[] | null = null;
       let error: { message?: string; code?: string } | null = null;
       for (let attempt = 0; attempt < 3; attempt++) {
+        if (isLoadStale()) return;
+
         const res = await supabase
           .from('memory_vault')
           .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
-          .eq('group_id', currentGroupId)
+          .eq('group_id', groupIdForThisLoad)
           .order('created_at', { ascending: false })
           .limit(100);
         error = res.error;
@@ -564,6 +570,8 @@ export default function FamilyHub() {
           await new Promise((r) => setTimeout(r, 450 * (attempt + 1)));
         }
       }
+
+      if (isLoadStale()) return;
 
       if (error) {
         console.error('Supabase 사진 로드 오류:', error);
@@ -594,14 +602,16 @@ export default function FamilyHub() {
         // ✅ 재로그인 시 localStorage가 비어있으면 Supabase 사진만 사용
         // localStorage가 있으면 병합, 없으면 Supabase 사진만 사용
         setState(prev => {
+          if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
+
           // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
-          const storageKey = getStorageKey(userId, currentGroupId);
-          const saved = localStorage.getItem(storageKey);
+          const storageKeyInner = getStorageKey(userId, groupIdForThisLoad);
+          const savedInner = localStorage.getItem(storageKeyInner);
           let localStoragePhotos: Photo[] = [];
           
-          if (saved) {
+          if (savedInner) {
             try {
-              const decrypted = CryptoService.decrypt(saved, key);
+              const decrypted = CryptoService.decrypt(savedInner, key);
               if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
                 localStoragePhotos = decrypted.album;
               }
@@ -632,7 +642,7 @@ export default function FamilyHub() {
               supabasePhotos: supabasePhotos.length,
               localStorageOnlyPhotos: localStorageOnlyPhotos.length,
               mergedAlbum: mergedAlbum.length,
-              hasLocalStorage: !!saved,
+              hasLocalStorage: !!savedInner,
               prevAlbumLength: prev.album?.length || 0
             });
           }
@@ -643,17 +653,37 @@ export default function FamilyHub() {
           };
         });
       } else {
-        // ✅ Supabase에 사진이 없으면 localStorage 사진만 사용 (정상 동작)
-        // localStorage도 없으면 빈 배열 유지 (이미 INITIAL_STATE로 초기화됨)
+        // ✅ Supabase 조회 성공 & 0건: 이 그룹 localStorage의 안정 URL만 앨범에 반영(빈 그룹은 빈 앨범으로 확정)
         if (process.env.NODE_ENV === 'development') {
           console.log('Supabase에 사진이 없습니다.', {
             hasLocalStorage: !!saved,
             willUseLocalStorage: saved !== null
           });
         }
-        // ✅ localStorage가 있으면 이미 위에서 setState(decrypted)로 설정됨
-        // localStorage가 없으면 빈 배열 유지 (INITIAL_STATE)
-        // Supabase에 사진이 없어도 state를 업데이트하지 않음 (기존 state 유지)
+        if (isLoadStale()) return;
+        setState((prev) => {
+          if (groupIdForThisLoad !== dashboardCurrentGroupIdRef.current) return prev;
+          const sk = getStorageKey(userId, groupIdForThisLoad);
+          const raw = localStorage.getItem(sk);
+          let localStoragePhotos: Photo[] = [];
+          if (raw) {
+            try {
+              const decrypted = CryptoService.decrypt(raw, key);
+              if (decrypted && typeof decrypted === 'object' && decrypted !== null && 'album' in decrypted) {
+                const al = (decrypted as { album?: unknown }).album;
+                if (Array.isArray(al)) localStoragePhotos = al as Photo[];
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+          const stableOnly = localStoragePhotos.filter(
+            (p) =>
+              p?.data &&
+              (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))
+          );
+          return { ...prev, album: stableOnly };
+        });
       }
     } catch (supabaseError: any) {
       // Supabase 불러오기 실패해도 localStorage 사진은 사용 가능
@@ -661,6 +691,8 @@ export default function FamilyHub() {
       // ✅ 에러 발생 시에도 state를 업데이트하지 않음 (기존 state 유지)
       // localStorage가 있으면 이미 위에서 setState(decrypted)로 설정됨
     }
+
+    if (isLoadStale()) return;
 
     const authKey = getAuthKey(userId);
     sessionStorage.setItem(authKey, key);

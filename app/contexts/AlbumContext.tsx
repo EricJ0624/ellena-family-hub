@@ -80,6 +80,9 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
   const albumRef = useRef<Photo[]>([]);
   const photosChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const realtimeResyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** loadAlbum 비동기 완료 시점에 그룹이 바뀌었으면 setAlbum 하지 않음 */
+  const albumCurrentGroupIdRef = useRef<string | null>(null);
+  albumCurrentGroupIdRef.current = currentGroupId;
 
   useEffect(() => {
     albumRef.current = album;
@@ -102,13 +105,17 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       setAlbum([]);
       return;
     }
+
+    const groupIdForThisLoad = currentGroupId;
+    const isStale = () => groupIdForThisLoad !== albumCurrentGroupIdRef.current;
+
     // 그룹 전환 시 이전 그룹 앨범 즉시 제거 (blob/잘못된 데이터 노출·Hydration 에러 방지)
     setAlbum([]);
     const key =
       sessionStorage.getItem(getAuthKey(userId)) ||
       process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
       'ellena_family_shared_key_2024';
-    const storageKey = getStorageKey(userId, currentGroupId);
+    const storageKey = getStorageKey(userId, groupIdForThisLoad);
     const saved = localStorage.getItem(storageKey);
     let localAlbum: Photo[] = [];
     if (saved) {
@@ -120,12 +127,14 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     let photos: Record<string, unknown>[] | null = null;
     let error: { message?: string; code?: string } | null = null;
     for (let attempt = 0; attempt < 3; attempt++) {
+      if (isStale()) return;
+
       const res = await supabase
         .from('memory_vault')
         .select(
           'id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode'
         )
-        .eq('group_id', currentGroupId)
+        .eq('group_id', groupIdForThisLoad)
         .order('created_at', { ascending: false })
         .limit(100);
       error = res.error;
@@ -139,6 +148,8 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    if (isStale()) return;
+
     if (error) {
       const stableLocal = localAlbum.filter(
         (p) =>
@@ -147,7 +158,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
             p.data.startsWith('https://') ||
             p.data.startsWith('/api/photo/proxy'))
       );
-      setAlbum(stableLocal);
+      if (!isStale()) setAlbum(stableLocal);
       return;
     }
 
@@ -180,7 +191,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       );
     });
     const merged = [...supabasePhotos, ...localOnly];
-    setAlbum(merged);
+    if (!isStale()) setAlbum(merged);
   }, [userId, currentGroupId]);
 
   useEffect(() => {
