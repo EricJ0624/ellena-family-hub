@@ -84,6 +84,8 @@ export type DashboardTranslations = {
   chat_album_btn: string;
   chat_camera_btn: string;
   chat_remove_attachment_aria: string;
+  /** 그룹 미선택 등으로 채팅 전송 불가 */
+  chat_send_no_group: string;
   map_error_no_key: string;
   map_error_check_env: string;
   map_error_domain: string;
@@ -349,6 +351,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_album_btn: '앨범',
     chat_camera_btn: '카메라',
     chat_remove_attachment_aria: '첨부 삭제',
+    chat_send_no_group: '가족 그룹이 아직 선택되지 않았습니다. 잠시 후 다시 시도해 주세요.',
     map_error_no_key: 'Google Maps API 키가 설정되지 않았습니다. 환경 변수를 확인해주세요.',
     map_error_check_env: 'Google Maps API 키 설정 오류: Google Cloud Console에서 API 키의 도메인 제한 설정을 확인하고, Maps JavaScript API가 활성화되어 있는지 확인해주세요.',
     map_error_domain: '현재 도메인에서 Google Maps API를 사용할 수 없습니다. Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 API 키의 HTTP 리퍼러(웹사이트) 제한에 Vercel 도메인을 추가해주세요.',
@@ -601,6 +604,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_album_btn: 'Gallery',
     chat_camera_btn: 'Camera',
     chat_remove_attachment_aria: 'Remove attachment',
+    chat_send_no_group: 'No family group selected yet. Please try again in a moment.',
     map_error_no_key: 'Google Maps API key is not set. Check your environment variables.',
     map_error_check_env: 'Google Maps API error: Check API key domain restrictions and enable Maps JavaScript API in Google Cloud Console.',
     map_error_domain: 'Google Maps API is not available on this domain. Add your domain to the API key HTTP referrer restrictions in Google Cloud Console.',
@@ -853,6 +857,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_album_btn: 'アルバム',
     chat_camera_btn: 'カメラ',
     chat_remove_attachment_aria: '添付を削除',
+    chat_send_no_group: 'ファミリーグループがまだ選択されていません。しばらくしてから再度お試しください。',
     map_error_no_key: 'Google Maps APIキーが設定されていません。環境変数を確認してください。',
     map_error_check_env: 'Google Maps APIエラー: Google Cloud ConsoleでAPIキーの制限とMaps JavaScript APIの有効化を確認してください。',
     map_error_domain: 'このドメインではGoogle Maps APIを使用できません。Google Cloud ConsoleでAPIキーのHTTPリファラ制限にドメインを追加してください。',
@@ -1105,6 +1110,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_album_btn: '相册',
     chat_camera_btn: '相机',
     chat_remove_attachment_aria: '删除附件',
+    chat_send_no_group: '尚未选择家庭群组。请稍后再试。',
     map_error_no_key: '未设置 Google Maps API 密钥。请检查环境变量。',
     map_error_check_env: 'Google Maps API 错误：请在 Google Cloud Console 中检查 API 密钥限制并启用 Maps JavaScript API。',
     map_error_domain: '当前域名无法使用 Google Maps API。请在 Google Cloud Console 的 API 密钥 HTTP 引荐来源限制中添加域名。',
@@ -1355,6 +1361,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_album_btn: '相簿',
     chat_camera_btn: '相機',
     chat_remove_attachment_aria: '移除附件',
+    chat_send_no_group: '尚未選擇家庭群組。請稍後再試。',
     map_error_no_key: '未設定 Google Maps API 金鑰。請檢查環境變數。',
     map_error_check_env: 'Google Maps API 錯誤：請在 Google Cloud Console 中檢查 API 金鑰限制並啟用 Maps JavaScript API。',
     map_error_domain: '目前網域無法使用 Google Maps API。請在 Google Cloud Console 的 API 金鑰 HTTP 參照限制中新增網域。',

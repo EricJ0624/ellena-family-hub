@@ -5572,9 +5572,10 @@ export default function FamilyHub() {
         alert(dt('auth_session_expired'));
         return;
       }
+      const authUid = session.user.id;
       const currentKey =
         masterKey ||
-        sessionStorage.getItem(getAuthKey(userId)) ||
+        sessionStorage.getItem(getAuthKey(authUid)) ||
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
         'ellena_family_shared_key_2024';
 
@@ -5584,7 +5585,7 @@ export default function FamilyHub() {
         .from('family_messages')
         .insert({
           group_id: currentGroupId,
-          sender_id: userId,
+          sender_id: authUid,
           message_text: encryptedText,
         })
         .select('id')
@@ -5596,17 +5597,22 @@ export default function FamilyHub() {
       const now = new Date();
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
       
-      // 즉시 화면 반영 (빈 텍스트로)
+      // 즉시 화면 반영 — updateState(!userId) 스킵 방지
       processedMessageIdsRef.current.add(mid);
-      updateState('ADD_MESSAGE', {
-        id: inserted.id,
-        user: "나",
-        text: '',
-        time: timeStr,
-        sender_id: userId ?? undefined,
-        created_at: now.toISOString(),
-        alreadyPersisted: true,
-      });
+      setState((prev) => ({
+        ...prev,
+        messages: trimMessagesToMax([
+          ...(prev.messages || []),
+          {
+            id: inserted.id,
+            user: '나',
+            text: '',
+            time: timeStr,
+            sender_id: authUid,
+            created_at: now.toISOString(),
+          } as Message,
+        ]),
+      }));
       console.log('✅ 사진 메시지 즉시 전송 (텍스트 없음):', inserted.id);
 
       const previewUrls = files.map((f) => URL.createObjectURL(f));
@@ -5689,15 +5695,20 @@ export default function FamilyHub() {
     // 텍스트 메시지만 전송 (사진은 파일 선택 즉시 전송됨)
     void (async () => {
       try {
-        if (!currentGroupId) return;
+        if (!currentGroupId) {
+          alert(dt('chat_send_no_group'));
+          return;
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           alert(dt('auth_session_expired'));
           return;
         }
+        // RLS는 보통 sender_id = auth.uid() — React userId state가 비어 있으면 INSERT 실패
+        const authUid = session.user.id;
         const currentKey =
           masterKey ||
-          sessionStorage.getItem(getAuthKey(userId)) ||
+          sessionStorage.getItem(getAuthKey(authUid)) ||
           process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
           'ellena_family_shared_key_2024';
 
@@ -5706,7 +5717,7 @@ export default function FamilyHub() {
           .from('family_messages')
           .insert({
             group_id: currentGroupId,
-            sender_id: userId,
+            sender_id: authUid,
             message_text: encryptedText,
           })
           .select('id')
@@ -5714,8 +5725,7 @@ export default function FamilyHub() {
         if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
         // 즉시 화면 반영 — updateState(!userId 조기 return)로 ADD_MESSAGE가 스킵되는 경우 방지
-        const sessionUserId = session.user.id;
-        const senderId = userId || sessionUserId;
+        const senderId = authUid;
         processedMessageIdsRef.current.add(String(inserted.id));
         setState((prev) => ({
           ...prev,
