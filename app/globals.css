@@ -1223,13 +1223,12 @@ select {
   align-items: center;
   gap: var(--spacing-sm);
   width: 100%;
-  /* 한 줄에 보내기·앨범·카메라 버튼이 넓을 때 입력칸이 min-width:0 으로 0px까지 줄어 글자가 안 보이는 문제 방지 */
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .chat-input {
-  flex: 1 1 12rem;
-  min-width: min(100%, 12rem);
+  flex: 1;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid #f1f5f9;
   border-radius: var(--border-radius-md);

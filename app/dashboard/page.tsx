@@ -2234,148 +2234,85 @@ export default function FamilyHub() {
       }
 
       console.log('👥 Presence subscription 설정 중...');
+
+      /** sync / join / leave 모두 동일: profiles 우선 표시 (join·leave에서 닉네임 누락되던 문제 수정) */
+      const buildOnlineUsersListFromPresence = async (
+        presenceState: Record<string, unknown>
+      ): Promise<Array<{ id: string; name: string; isCurrentUser: boolean }>> => {
+        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
+        if (userId) {
+          usersList.push({
+            id: userId,
+            name: userName?.trim() || '',
+            isCurrentUser: true,
+          });
+        }
+        const otherIds = new Set<string>();
+        for (const presenceId of Object.keys(presenceState)) {
+          const presence = presenceState[presenceId];
+          if (Array.isArray(presence) && presence.length > 0) {
+            const userPresence = presence[0] as { userId?: string; groupId?: string; userName?: string };
+            const uid = userPresence.userId;
+            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
+              otherIds.add(uid);
+            }
+          }
+        }
+        let profilesMap = new Map<string, { nickname?: string | null; email?: string | null }>();
+        if (otherIds.size > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, nickname, email')
+            .in('id', [...otherIds]);
+          profilesMap = new Map(
+            (profilesData || []).map((p: { id: string; nickname?: string | null; email?: string | null }) => [
+              p.id,
+              { nickname: p.nickname, email: p.email },
+            ])
+          );
+        }
+        const othersById = new Map<string, { id: string; name: string; isCurrentUser: boolean }>();
+        for (const presenceId of Object.keys(presenceState)) {
+          const presence = presenceState[presenceId];
+          if (Array.isArray(presence) && presence.length > 0) {
+            const userPresence = presence[0] as { userId?: string; groupId?: string; userName?: string };
+            const uid = userPresence.userId;
+            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
+              const profile = profilesMap.get(uid);
+              const nick = profile?.nickname != null ? String(profile.nickname).trim() : '';
+              const em = profile?.email != null ? String(profile.email).trim() : '';
+              const presName = userPresence.userName != null ? String(userPresence.userName).trim() : '';
+              const displayName =
+                nick ||
+                em ||
+                presName ||
+                `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
+              othersById.set(uid, { id: uid, name: displayName, isCurrentUser: false });
+            }
+          }
+        }
+        usersList.push(...othersById.values());
+        return usersList;
+      };
+
       const presenceSubscription = supabase
       .channel(`online_users:${currentGroupId}`)
       .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
-        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        
-        // 현재 사용자 정보 추가
-        if (userId) {
-          usersList.push({
-            id: userId,
-            name: userName?.trim() || '',
-            isCurrentUser: true
-          });
-        }
-        
-        // 다른 사용자들의 정보 추가 (profiles 테이블에서 nickname 조회)
-        const otherUserIds = Object.keys(state)
-          .map((presenceId) => {
-            const presence = state[presenceId];
-            if (Array.isArray(presence) && presence.length > 0) {
-              const userPresence = presence[0] as any;
-              return userPresence.groupId === currentGroupId ? userPresence.userId : null;
-            }
-            return null;
-          })
-          .filter((uid): uid is string => uid !== null && uid !== userId);
-
-        // profiles 테이블에서 다른 사용자들의 nickname 조회
-        if (otherUserIds.length > 0) {
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, nickname, email')
-            .in('id', otherUserIds);
-
-          const profilesMap = new Map(
-            (profilesData || []).map((p: any) => [p.id, p])
-          );
-
-        Object.keys(state).forEach((presenceId) => {
-            const presence = state[presenceId];
-            if (Array.isArray(presence) && presence.length > 0) {
-              const userPresence = presence[0] as any;
-              const uid = userPresence.userId;
-            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
-                // profiles 테이블의 nickname 우선, 없으면 Presence의 userName, 없으면 기본값
-                const profile = profilesMap.get(uid);
-                const displayName = profile?.nickname 
-                  || profile?.email 
-                  || userPresence.userName 
-                  || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
-                usersList.push({
-                  id: uid,
-                  name: displayName,
-                  isCurrentUser: false
-                });
-              }
-            }
-          });
-        } else {
-          // otherUserIds가 없어도 Presence에서 직접 가져오기
-          Object.keys(state).forEach((presenceId) => {
-            const presence = state[presenceId];
-            if (Array.isArray(presence) && presence.length > 0) {
-              const userPresence = presence[0] as any;
-              const uid = userPresence.userId;
-              if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
-                const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
-                usersList.push({
-                  id: uid,
-                  name: displayName,
-                  isCurrentUser: false
-                });
-              }
-            }
-          });
-        }
-        
+        const usersList = await buildOnlineUsersListFromPresence(state);
         console.log('현재 로그인 중인 사용자 목록 (Presence):', usersList);
         setOnlineUsers(usersList);
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
         console.log('사용자 접속:', key, newPresences);
         const state = presenceSubscription.presenceState();
-        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        
-        if (userId) {
-          usersList.push({
-            id: userId,
-            name: userName?.trim() || '',
-            isCurrentUser: true
-          });
-        }
-        
-        Object.keys(state).forEach((presenceId) => {
-          const presence = state[presenceId];
-          if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0] as any;
-            const uid = userPresence.userId;
-            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
-              // Presence에서 userName을 가져오거나, 없으면 기본값 사용
-              const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
-              usersList.push({
-                id: uid,
-                name: displayName,
-                isCurrentUser: false
-              });
-            }
-          }
-        });
-        
+        const usersList = await buildOnlineUsersListFromPresence(state);
         setOnlineUsers(usersList);
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      .on('presence', { event: 'leave' }, async ({ key, leftPresences }) => {
         console.log('사용자 접속 해제:', key, leftPresences);
         const state = presenceSubscription.presenceState();
-        const usersList: Array<{ id: string; name: string; isCurrentUser: boolean }> = [];
-        
-        if (userId) {
-          usersList.push({
-            id: userId,
-            name: userName?.trim() || '',
-            isCurrentUser: true
-          });
-        }
-        
-        Object.keys(state).forEach((presenceId) => {
-          const presence = state[presenceId];
-          if (Array.isArray(presence) && presence.length > 0) {
-            const userPresence = presence[0] as any;
-            const uid = userPresence.userId;
-            if (uid && uid !== userId && userPresence.groupId === currentGroupId) {
-              // Presence에서 userName을 가져오거나, 없으면 기본값 사용
-              const displayName = userPresence.userName || `사용자 ${uid.length > 8 ? uid.substring(uid.length - 8) : uid}`;
-              usersList.push({
-                id: uid,
-                name: displayName,
-                isCurrentUser: false
-              });
-            }
-          }
-        });
-        
+        const usersList = await buildOnlineUsersListFromPresence(state);
         setOnlineUsers(usersList);
       })
       .subscribe(async (status) => {
@@ -5776,17 +5713,24 @@ export default function FamilyHub() {
           .single();
         if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
-        // 즉시 화면 반영 (optimistic update)
+        // 즉시 화면 반영 — updateState(!userId 조기 return)로 ADD_MESSAGE가 스킵되는 경우 방지
+        const sessionUserId = session.user.id;
+        const senderId = userId || sessionUserId;
         processedMessageIdsRef.current.add(String(inserted.id));
-        updateState('ADD_MESSAGE', {
-          id: inserted.id,
-          user: "나",
-          text: sanitizedText,
-          time: timeStr,
-          sender_id: userId ?? undefined,
-          created_at: new Date().toISOString(),
-          alreadyPersisted: true,
-        });
+        setState((prev) => ({
+          ...prev,
+          messages: trimMessagesToMax([
+            ...(prev.messages || []),
+            {
+              id: inserted.id,
+              user: '나',
+              text: sanitizedText,
+              time: timeStr,
+              sender_id: senderId,
+              created_at: new Date().toISOString(),
+            } as Message,
+          ]),
+        }));
         console.log('✅ 텍스트 메시지 전송 완료:', inserted.id);
         input.value = "";
       } catch (e) {

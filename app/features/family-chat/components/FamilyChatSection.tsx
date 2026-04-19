@@ -446,11 +446,7 @@ export function FamilyChatSection({
             onKeyDown={handleKeyDown}
             className="chat-input"
             placeholder={t.chat_placeholder}
-            style={{
-              flex: '1 1 12rem',
-              minWidth: 'min(100%, 12rem)',
-              padding: '11px 12px',
-            }}
+            style={{ flex: 1, minWidth: 0, padding: '11px 12px' }}
           />
           <button type="button" onClick={handleSendClick} className="btn-send" style={{ padding: '8px 12px', fontSize: '12px' }}>
             {t.chat_send}

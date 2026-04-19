@@ -70,26 +70,37 @@ export function trimMessagesToMax(messages: ChatUiMessage[]): ChatUiMessage[] {
 
 /**
  * Supabase에서 다시 불러온 목록으로 state를 덮을 때 사용.
- * 이전에 시작된 fetch가 insert 보다 먼저 끝나면 새 메시지가 스냅샷에 없어 UI에서 사라질 수 있음 →
- * DB 스냅샷에 없는 id는 기존 state에서 유지한다.
+ * - 진행 중이던 fetch가 insert보다 먼저 끝나면 스냅샷에 없는 행은 기존 state에서 유지
+ * - 같은 id가 양쪽에 있으면, 복호화 실패로 암호문만 있을 때는 화면에 이미 있는 평문을 유지
  */
 export function mergeChatMessagesWithExisting(
   fromDb: ChatUiMessage[],
   existing: ChatUiMessage[] | undefined | null
 ): ChatUiMessage[] {
-  const dbIds = new Set(fromDb.map((m) => String(m.id)));
-  const onlyInUi = (existing || []).filter((m) => !dbIds.has(String(m.id)));
-  if (onlyInUi.length === 0) return trimMessagesToMax(fromDb);
-
+  const existingList = existing || [];
   const byId = new Map<string, ChatUiMessage>();
+
   for (const m of fromDb) {
     byId.set(String(m.id), m);
   }
-  for (const m of onlyInUi) {
-    if (!byId.has(String(m.id))) {
-      byId.set(String(m.id), m);
+
+  for (const m of existingList) {
+    const id = String(m.id);
+    const fromDbMsg = byId.get(id);
+    if (!fromDbMsg) {
+      byId.set(id, m);
+      continue;
+    }
+    const dbT = String(fromDbMsg.text ?? '');
+    const uiT = String(m.text ?? '');
+    const dbEmpty = !dbT.trim();
+    const dbCipher = dbT.startsWith('U2FsdGVkX1');
+    const uiPlain = uiT.length > 0 && !uiT.startsWith('U2FsdGVkX1');
+    if (uiPlain && (dbEmpty || dbCipher)) {
+      byId.set(id, m);
     }
   }
+
   const merged = Array.from(byId.values()).sort((a, b) => {
     const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
     const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
