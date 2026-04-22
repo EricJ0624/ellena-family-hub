@@ -19,6 +19,7 @@ function createConcurrencyLimitedFetch(
 ): typeof fetch {
   let active = 0;
   const queue: Array<() => void> = [];
+  const REQUEST_TIMEOUT_MS = 15000;
 
   const drain = () => {
     while (active < maxConcurrent && queue.length > 0) {
@@ -42,16 +43,45 @@ function createConcurrencyLimitedFetch(
     return new Promise<Response>((resolve, reject) => {
       const start = () => {
         active++;
-        fetch(input, init)
+        const controller = new AbortController();
+        const upstreamSignal = init?.signal;
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let upstreamAbortHandler: (() => void) | undefined;
+
+        const release = () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          if (upstreamSignal && upstreamAbortHandler) {
+            upstreamSignal.removeEventListener('abort', upstreamAbortHandler);
+          }
+          active--;
+          drain();
+        };
+
+        if (upstreamSignal) {
+          if (upstreamSignal.aborted) {
+            controller.abort((upstreamSignal as AbortSignal).reason);
+          } else {
+            upstreamAbortHandler = () => controller.abort((upstreamSignal as AbortSignal).reason);
+            upstreamSignal.addEventListener('abort', upstreamAbortHandler, { once: true });
+          }
+        }
+
+        timeoutId = setTimeout(() => {
+          controller.abort(new Error(`Supabase request timeout (${REQUEST_TIMEOUT_MS}ms)`));
+        }, REQUEST_TIMEOUT_MS);
+
+        fetch(input, {
+          ...init,
+          signal: controller.signal,
+        })
           .then((res) => {
-            active--;
-            drain();
             resolve(res);
           })
           .catch((err) => {
-            active--;
-            drain();
             reject(err);
+          })
+          .finally(() => {
+            release();
           });
       };
 
