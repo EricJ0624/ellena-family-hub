@@ -589,6 +589,9 @@ export default function OnboardingPage() {
   // 초대코드 확인 완료 처리 (그룹 생성 후)
   const handleConfirmInviteCode = () => {
     setInviteCodeConfirmed(true);
+    if (createdGroupId) {
+      setCurrentGroupId(createdGroupId);
+    }
     setTimeout(() => {
       router.push(dashboardHrefWithOpenGroup(createdGroupId));
     }, 300);
@@ -596,6 +599,9 @@ export default function OnboardingPage() {
 
   // 대시보드로 이동 (그룹 생성 완료 후 등)
   const handleGoToDashboard = () => {
+    if (createdGroupId) {
+      setCurrentGroupId(createdGroupId);
+    }
     router.push(dashboardHrefWithOpenGroup(createdGroupId));
   };
 

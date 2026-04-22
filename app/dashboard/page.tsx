@@ -858,8 +858,9 @@ export default function FamilyHub() {
           isSystemAdmin: Boolean(isAdmin),
         });
 
-        // 온보딩에서 ?openGroup= 으로 넘어온 경우: 스토리지/목록 조회 레이스와 무관하게 멤버십을 직접 확인
-        if (!hasGroups && typeof window !== 'undefined') {
+        // 온보딩에서 ?openGroup= 으로 넘어온 경우: 사용자가 이미 다른 그룹을 가지고 있어도
+        // 의도한 그룹으로 정확히 전환되도록 멤버십/소유 여부를 직접 확인해 우선 적용
+        if (typeof window !== 'undefined') {
           try {
             const qs = new URLSearchParams(window.location.search);
             const openGroup = qs.get('openGroup')?.trim().toLowerCase() ?? '';
@@ -880,6 +881,11 @@ export default function FamilyHub() {
               ]);
               if ((!mRes.error && mRes.data) || (!oRes.error && oRes.data)) {
                 hasGroups = true;
+                try {
+                  setCurrentGroupId?.(openGroup);
+                } catch (_) {
+                  // ignore
+                }
                 try {
                   localStorage.setItem('currentGroupId', openGroup);
                 } catch (_) {
