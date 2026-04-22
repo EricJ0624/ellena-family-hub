@@ -97,8 +97,17 @@ function createConcurrencyLimitedFetch(
 function getSupabaseRestFetch(): typeof fetch | undefined {
   if (typeof window === 'undefined' || !supabaseUrl) return undefined;
   try {
-    const host = new URL(supabaseUrl as string).host;
-    return createConcurrencyLimitedFetch(6, (url) => url.includes(host));
+    const base = new URL(supabaseUrl as string);
+    const host = base.host;
+    return createConcurrencyLimitedFetch(6, (url) => {
+      try {
+        const target = new URL(url, base.origin);
+        // PostgREST 요청만 제한: Auth/Reatime/기타 경로는 대기열에서 제외해 초기 체감 지연 최소화
+        return target.host === host && target.pathname.startsWith('/rest/v1/');
+      } catch {
+        return false;
+      }
+    });
   } catch {
     return undefined;
   }
