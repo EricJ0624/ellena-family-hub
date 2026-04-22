@@ -44,10 +44,6 @@ import {
 } from '@/lib/chat-messages';
 import {
   deleteAttachment,
-  getAttachmentsForEntity,
-  listAttachments,
-  uploadFeatureAttachments,
-  validateAttachmentFile,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
@@ -56,6 +52,9 @@ import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-t
 import { FamilyCalendarSection } from '@/app/features/family-calendar/components/FamilyCalendarSection';
 import type { FamilyEvent } from '@/app/features/family-calendar/types';
 import { FamilyChatSection } from '@/app/features/family-chat/components/FamilyChatSection';
+import { useFamilyChatActions } from '@/app/features/family-chat/hooks/useFamilyChatActions';
+import { useFamilyChatRealtime } from '@/app/features/family-chat/hooks/useFamilyChatRealtime';
+import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyChatScroll';
 import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
 import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
@@ -1653,19 +1652,12 @@ export default function FamilyHub() {
     messagesRef.current = state.messages;
   }, [state.messages]);
 
-  // 채팅 스크롤: 이전 메시지 prepend 시 위치 유지, 그 외에는 맨 아래
-  useLayoutEffect(() => {
-    const el = chatBoxRef.current;
-    if (!el || !isAuthenticated) return;
-    const p = chatScrollRestoreRef.current;
-    if (p) {
-      const delta = el.scrollHeight - p.sh;
-      el.scrollTop = p.st + delta;
-      chatScrollRestoreRef.current = null;
-      return;
-    }
-    el.scrollTop = el.scrollHeight;
-  }, [state.messages, isAuthenticated]);
+  useFamilyChatScroll({
+    messages: state.messages,
+    isAuthenticated,
+    chatBoxRef,
+    chatScrollRestoreRef,
+  });
 
   // ✅ 지도 마커 업데이트 함수 (재사용 가능, useCallback으로 외부에서도 호출 가능)
   // AdvancedMarkerElement 사용으로 deprecated 경고 해결
@@ -2286,42 +2278,6 @@ export default function FamilyHub() {
     
     familyChatDebug('Realtime 구독 시작', userId);
 
-    const scheduleLoadChatAttachments = () => {
-      if (chatAttachmentsDebounceTimerRef.current) {
-        clearTimeout(chatAttachmentsDebounceTimerRef.current);
-      }
-      chatAttachmentsDebounceTimerRef.current = setTimeout(() => {
-        chatAttachmentsDebounceTimerRef.current = null;
-        void loadChatAttachmentsRef.current();
-      }, 280);
-    };
-
-    /** 상대 사진 메시지: 메시지 행은 먼저 오고 첨부 INSERT가 늦을 때 보강 */
-    const pollIncomingChatPhotos = (messageId: string) => {
-      const gid = currentGroupId;
-      if (!gid) return;
-      let attempts = 0;
-      const maxAttempts = 14;
-      const run = () => {
-        if (attempts >= maxAttempts) return;
-        attempts += 1;
-        void getAttachmentsForEntity({
-          groupId: gid,
-          entityType: 'chat_message',
-          entityId: messageId,
-        })
-          .then((atts) => {
-            if (atts.length > 0) {
-              void loadChatAttachmentsRef.current();
-              return;
-            }
-            setTimeout(run, 380);
-          })
-          .catch(() => setTimeout(run, 380));
-      };
-      setTimeout(run, 200);
-    };
-
     // ========== 기능별 구독 함수 분리 ==========
     
     // 1. Presence 구독 설정 (온라인 사용자 추적)
@@ -2451,285 +2407,6 @@ export default function FamilyHub() {
           // 네트워크 재연결이나 페이지 포커스 시 useEffect가 자동으로 재실행됨
         }
       });
-    };
-
-    // 2. 메시지 구독 설정
-    const setupMessagesSubscription = () => {
-      // 클라이언트에서만 실행되도록 보호
-      if (typeof window === 'undefined') {
-        return;
-      }
-
-      // 기존 구독 정리
-      if (subscriptionsRef.current.messages) {
-        supabase.removeChannel(subscriptionsRef.current.messages);
-        subscriptionsRef.current.messages = null;
-      }
-
-      // ✅ event: '*' 단일 바인딩 (INSERT/UPDATE/DELETE 3개 분리 시 server/client bindings mismatch 방지)
-      const channelName = `family_messages_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
-      familyChatDebug('메시지 subscription 설정', channelName);
-      const messagesSubscription = supabase
-        .channel(channelName)
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'family_messages' },
-          (payload: any) => {
-            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
-            if (ev === 'DELETE') {
-              const deletedMessage = payload.old;
-              const deletedId = deletedMessage?.id;
-              if (!deletedId) return;
-              const gid = dashboardCurrentGroupIdRef.current;
-              if (deletedMessage?.group_id != null && deletedMessage.group_id !== gid) return;
-              const deletedIdStr = String(deletedId).trim();
-              setState(prev => ({
-                ...prev,
-                messages: prev.messages.filter(m => String(m.id).trim() !== deletedIdStr)
-              }));
-              return;
-            }
-            if (ev === 'UPDATE') {
-              const updatedMessage = payload.new;
-              const gid = dashboardCurrentGroupIdRef.current;
-              if (updatedMessage.group_id != null && updatedMessage.group_id !== gid) return;
-              const messageText = updatedMessage.message_text || '';
-              let decryptedText = messageText;
-              const updateMessageKey = getCurrentKey();
-              if (updateMessageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
-                try {
-                  const decrypted = CryptoService.decrypt(messageText, updateMessageKey);
-                  // 빈 문자열(사진 전용 메시지 등)도 정상 복호화 — length > 0 조건이면 암호문이 그대로 노출됨
-                  if (typeof decrypted === 'string') decryptedText = decrypted;
-                } catch (_) {}
-              }
-              const timeStr = `${new Date(updatedMessage.created_at).getHours()}:${String(new Date(updatedMessage.created_at).getMinutes()).padStart(2, '0')}`;
-              setState(prev => ({
-                ...prev,
-                messages: prev.messages.map(m =>
-                  m.id === updatedMessage.id
-                    ? {
-                        id: updatedMessage.id,
-                        user: '사용자',
-                        text: decryptedText,
-                        time: timeStr,
-                        sender_id: updatedMessage.sender_id,
-                        created_at: updatedMessage.created_at,
-                      }
-                    : m
-                )
-              }));
-              return;
-            }
-            // INSERT
-            const newMessage = payload.new;
-            if (!newMessage || !newMessage.id) return;
-            const insertGid = dashboardCurrentGroupIdRef.current;
-            if (newMessage.group_id != null && newMessage.group_id !== insertGid) return;
-            
-            const messageId = String(newMessage.id);
-            const uidForChat = dashboardUserIdRef.current;
-            const isOwnMessage =
-              newMessage.sender_id != null &&
-              uidForChat !== '' &&
-              String(newMessage.sender_id) === String(uidForChat);
-
-            familyChatDebug('Realtime INSERT', {
-              messageId,
-              sender: newMessage.sender_id,
-              currentUser: uidForChat,
-              subscriptionId: realtimeSubscriptionIdRef.current,
-              alreadyProcessed: processedMessageIdsRef.current.has(messageId),
-              isOwnMessage,
-            });
-
-            // 본인 메시지: 낙관적 UI가 다른 setState(재동기화 등)에 밀려 사라졌을 때 Realtime으로 복구
-            if (isOwnMessage) {
-              setState((prev) => {
-                if (prev.messages?.some((m) => String(m.id) === messageId)) {
-                  return prev;
-                }
-                const messageText = newMessage.message_text || '';
-                let decryptedText = messageText;
-                const messageKey = getCurrentKey();
-                if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
-                  try {
-                    const decrypted = CryptoService.decrypt(messageText, messageKey);
-                    if (typeof decrypted === 'string') decryptedText = decrypted;
-                  } catch (_) {}
-                }
-                const createdAt = new Date(newMessage.created_at);
-                const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-                familyChatDebug('본인 메시지 Realtime state 복구', messageId);
-                return {
-                  ...prev,
-                  messages: trimMessagesToMax([
-                    ...(prev.messages || []),
-                    {
-                      id: newMessage.id,
-                      user: '나',
-                      text: decryptedText,
-                      time: timeStr,
-                      sender_id: newMessage.sender_id,
-                      created_at: newMessage.created_at,
-                    },
-                  ]),
-                };
-              });
-              return;
-            }
-
-            // 상대 메시지: 이미 처리된 ID면 중복 차단. 본인 메시지는 sendChat이 ID를 넣으므로,
-            // 예전 클로저로 isOwnMessage 분기를 못 탔을 때 여기서 막히면 UI가 영구히 비므로 sender=본인이면 복구
-            if (processedMessageIdsRef.current.has(messageId)) {
-              if (
-                newMessage.sender_id != null &&
-                uidForChat !== '' &&
-                String(newMessage.sender_id) === String(uidForChat)
-              ) {
-                setState((prev) => {
-                  if (prev.messages?.some((m) => String(m.id) === messageId)) return prev;
-                  const messageText = newMessage.message_text || '';
-                  let decryptedText = messageText;
-                  const messageKey = getCurrentKey();
-                  if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
-                    try {
-                      const decrypted = CryptoService.decrypt(messageText, messageKey);
-                      if (typeof decrypted === 'string') decryptedText = decrypted;
-                    } catch (_) {}
-                  }
-                  const createdAt = new Date(newMessage.created_at);
-                  const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-                  familyChatDebug('본인 메시지(processed) Realtime 복구', messageId);
-                  return {
-                    ...prev,
-                    messages: trimMessagesToMax([
-                      ...(prev.messages || []),
-                      {
-                        id: newMessage.id,
-                        user: '나',
-                        text: decryptedText,
-                        time: timeStr,
-                        sender_id: newMessage.sender_id,
-                        created_at: newMessage.created_at,
-                      },
-                    ]),
-                  };
-                });
-                return;
-              }
-              familyChatDebug('이미 처리된 메시지 ID 무시', messageId);
-              return;
-            }
-            processedMessageIdsRef.current.add(messageId);
-            familyChatDebug('메시지 ID 마킹 완료', messageId);
-
-            if (processedMessageIdsRef.current.size > 100) {
-              const arr = Array.from(processedMessageIdsRef.current);
-              processedMessageIdsRef.current = new Set(arr.slice(-100));
-            }
-
-            familyChatDebug('새 메시지 Realtime 처리', messageId, 'sender:', newMessage.sender_id);
-            
-            // 상대방이 보낸 메시지만 처리
-            const messageText = newMessage.message_text || '';
-            let decryptedText = messageText;
-            const messageKey = getCurrentKey();
-            if (messageKey && messageText && messageText.startsWith('U2FsdGVkX1')) {
-              try {
-                const decrypted = CryptoService.decrypt(messageText, messageKey);
-                if (typeof decrypted === 'string') decryptedText = decrypted;
-              } catch (_) {}
-            }
-            const createdAt = new Date(newMessage.created_at);
-            const timeStr = `${createdAt.getHours()}:${String(createdAt.getMinutes()).padStart(2, '0')}`;
-            
-            setState(prev => {
-              // State 내 중복 체크 (안전장치)
-              const existingMessage = prev.messages?.find(m => String(m.id) === messageId);
-              if (existingMessage) {
-                familyChatDebug('State에 이미 존재하는 메시지 무시', messageId);
-                return prev;
-              }
-              
-              familyChatDebug('State에 메시지 추가', messageId, 'len:', String(decryptedText).length, 'count:', prev.messages.length);
-              // 새 메시지 추가
-              const newMessages = trimMessagesToMax([
-                ...prev.messages,
-                {
-                  id: newMessage.id,
-                  user: '사용자',
-                  text: decryptedText,
-                  time: timeStr,
-                  sender_id: newMessage.sender_id,
-                  created_at: newMessage.created_at,
-                },
-              ]);
-              familyChatDebug('메시지 추가 완료, 새 메시지 수:', newMessages.length);
-              return {
-                ...prev,
-                messages: newMessages
-              };
-            });
-            // 사진 전용 메시지는 첨부 행이 늦게 생김 — 디바운스 일괄 로드 + 짧은 폴링(Realtime 클로저 지연 보강)
-            if (!String(decryptedText || '').trim()) {
-              scheduleLoadChatAttachments();
-              pollIncomingChatPhotos(messageId);
-            }
-          }
-        )
-        .subscribe((status, err) => {
-          familyChatDebug('Realtime 메시지 subscription 상태', status, channelName);
-          if (err) {
-            console.error('[FamilyChat] Realtime 메시지 subscription 오류:', err);
-          }
-          if (status === 'SUBSCRIBED') {
-            familyChatDebug('Realtime 메시지 subscription 연결됨');
-            subscriptionsRef.current.messages = messagesSubscription;
-            const activeChannels = supabase.getChannels();
-            const messageChannels = activeChannels.filter((ch) => ch.topic.includes('family_messages'));
-            familyChatDebug('활성 채널 수', activeChannels.length, 'family_messages 채널 수', messageChannels.length);
-            if (messageChannels.length > 1) {
-              console.error('[FamilyChat] 메시지 Realtime 채널 중복:', messageChannels.map((ch) => ch.topic));
-            }
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('[FamilyChat] Realtime 메시지 subscription 비정상:', status);
-          }
-        });
-
-      // 📷 첨부 파일 Realtime 구독 (INSERT 시 자동 UI 갱신)
-      familyChatDebug('첨부 파일 subscription 설정');
-      const attachmentsSubscription = supabase
-        .channel(`feature_attachments_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'feature_attachments' },
-          (payload: any) => {
-            const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
-            const record = payload.new || payload.old;
-            if (!record) return;
-            if (record.group_id != null && record.group_id !== currentGroupId) return;
-
-            // 채팅 첨부만 처리 (Piggy, Travel은 해당 화면에서 직접 처리)
-            if (record.feature_type !== 'chat' || record.entity_type !== 'chat_message') return;
-
-            if (ev === 'INSERT') {
-              scheduleLoadChatAttachments();
-            } else if (ev === 'DELETE') {
-              scheduleLoadChatAttachments();
-            }
-          }
-        )
-        .subscribe((status, err) => {
-          familyChatDebug('Realtime 첨부 subscription 상태', status);
-          if (err) {
-            console.error('[FamilyChat] Realtime 첨부 subscription 오류:', err);
-          }
-          if (status === 'SUBSCRIBED') {
-            familyChatDebug('Realtime 첨부 subscription 연결됨');
-            subscriptionsRef.current.attachments = attachmentsSubscription;
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('[FamilyChat] Realtime 첨부 subscription 비정상:', status);
-          }
-        });
     };
 
     // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
@@ -3108,7 +2785,7 @@ export default function FamilyHub() {
 
         const INITIAL_DELAY_MS = 100;
         const STAGGER_MS = 200;
-        realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupMessagesSubscription(), INITIAL_DELAY_MS));
+        realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupMessagesAndAttachmentsSubscription(), INITIAL_DELAY_MS));
         realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 1));
         realtimeStaggerTimeoutsRef.current.push(setTimeout(() => setupLocationRequestsSubscription(), INITIAL_DELAY_MS + STAGGER_MS * 2));
 
@@ -3230,13 +2907,9 @@ export default function FamilyHub() {
     // 정리 함수
     return () => {
       console.log('🧹 Realtime subscription 정리 중...');
-      if (chatAttachmentsDebounceTimerRef.current) {
-        clearTimeout(chatAttachmentsDebounceTimerRef.current);
-        chatAttachmentsDebounceTimerRef.current = null;
-      }
+      clearChatRuntimeState();
       locationLoadStartedRef.current = false;
       isSettingUpSubscriptionsRef.current = false;  // ✅ 플래그 리셋
-      processedMessageIdsRef.current.clear();  // ✅ 처리된 메시지 ID 초기화
       realtimeStaggerTimeoutsRef.current.forEach((t) => clearTimeout(t));
       realtimeStaggerTimeoutsRef.current = [];
       if (sessionWaitIntervalRef.current) {
@@ -5623,407 +5296,67 @@ export default function FamilyHub() {
     }
   };
 
-  /** API requireGroupMember / RLS와 동일: 멤버·소유자·(시스템관리자+임시접근)만 해당 그룹에 메시지 작성 가능 */
-  const assertCanPostToFamilyChatGroup = useCallback(async (groupId: string, uid: string) => {
-    const cacheKey = `${groupId}:${uid}`;
-    const now = Date.now();
-    const hit = chatPostPermissionCacheRef.current;
-    if (hit && hit.key === cacheKey && now < hit.expiresAt) {
-      return;
-    }
-    const markOk = () => {
-      chatPostPermissionCacheRef.current = {
-        key: cacheKey,
-        expiresAt: Date.now() + CHAT_POST_PERMISSION_TTL_MS,
-      };
-    };
-    const { data: mem, error: memErr } = await supabase
-      .from('memberships')
-      .select('group_id')
-      .eq('user_id', uid)
-      .eq('group_id', groupId)
-      .maybeSingle();
-    if (memErr) {
-      console.warn('채팅 권한: memberships 조회 오류', memErr);
-    }
-    if (mem) {
-      markOk();
-      return;
-    }
-    const { data: own, error: ownErr } = await supabase
-      .from('groups')
-      .select('id')
-      .eq('id', groupId)
-      .eq('owner_id', uid)
-      .maybeSingle();
-    if (ownErr) {
-      console.warn('채팅 권한: groups 소유자 조회 오류', ownErr);
-    }
-    if (own) {
-      markOk();
-      return;
-    }
-    const { data: isSys, error: rpcErr } = await supabase.rpc('is_system_admin', { user_id_param: uid });
-    if (rpcErr && process.env.NODE_ENV === 'development') {
-      console.warn('is_system_admin RPC:', rpcErr);
-    }
-    if (isSys === true) {
-      const { data: can, error: canErr } = await supabase.rpc('can_access_group_dashboard', {
-        group_id_param: groupId,
-        admin_id_param: uid,
-      });
-      if (canErr && process.env.NODE_ENV === 'development') {
-        console.warn('can_access_group_dashboard RPC:', canErr);
-      }
-      if (can === true) {
-        markOk();
-        return;
-      }
-    }
-    throw new Error('NO_FAMILY_GROUP_ACCESS');
+  const setMessages = useCallback((updater: React.SetStateAction<Message[]>) => {
+    setState((prev) => ({
+      ...prev,
+      messages: typeof updater === 'function' ? (updater as (prev: Message[]) => Message[])(prev.messages) : updater,
+    }));
   }, []);
 
-  // Chat Handlers
-  const loadChatAttachments = useCallback(async () => {
-    if (!currentGroupId) return;
-    const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const ids = (state.messages || [])
-      .map((m) => String(m.id))
-      .filter((id) => uuidLike.test(id));
-    if (ids.length === 0) {
-      chatAttachmentsLoadGenRef.current += 1;
-      setChatAttachmentsByMessage({});
-      return;
-    }
-    chatAttachmentsLoadGenRef.current += 1;
-    const gen = chatAttachmentsLoadGenRef.current;
-    try {
-      const rows = await listAttachments({
-        groupId: currentGroupId,
-        entityType: 'chat_message',
-        entityIds: ids,
-      });
-      if (gen !== chatAttachmentsLoadGenRef.current) return;
-      const grouped: Record<string, ChatAttachment[]> = {};
-      for (const row of rows) {
-        const key = String(row.entity_id);
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(row);
-      }
-      setChatAttachmentsByMessage(grouped);
-    } catch (e) {
-      console.error('[FamilyChat] 첨부 조회 오류:', e);
-    }
-  }, [currentGroupId, state.messages]);
+  const {
+    loadChatAttachments,
+    loadOlderChatMessages,
+    handlePickChatFiles,
+    handleDropChatFiles,
+    sendChat,
+  } = useFamilyChatActions({
+    supabase,
+    currentGroupId,
+    userId,
+    masterKey,
+    messages: state.messages,
+    messagesRef,
+    chatBoxRef,
+    chatScrollRestoreRef,
+    chatLoadingOlder,
+    chatHasMoreOlder,
+    chatPhotoUploadingRef,
+    chatTextSendingRef,
+    chatPostPermissionCacheRef,
+    chatPostPermissionTtlMs: CHAT_POST_PERMISSION_TTL_MS,
+    chatAttachmentsLoadGenRef,
+    loadChatAttachmentsRef,
+    processedMessageIdsRef,
+    setChatAttachmentsByMessage,
+    setChatHasMoreOlder,
+    setChatLoadingOlder,
+    setChatOutgoingPreviews,
+    setChatTextSendingUi,
+    setMessages,
+    dt: (key) => dt(key as keyof DashboardTranslations),
+    refreshGroups,
+    getAuthKey,
+    sanitizeInput,
+    encrypt: CryptoService.encrypt,
+  });
 
-  loadChatAttachmentsRef.current = loadChatAttachments;
-
-  useEffect(() => {
-    loadChatAttachments();
-  }, [loadChatAttachments]);
-
-  const loadOlderChatMessages = useCallback(async () => {
-    if (!currentGroupId || !userId || chatLoadingOlder || !chatHasMoreOlder) return;
-    const first = messagesRef.current[0];
-    if (!first?.created_at) {
-      setChatHasMoreOlder(false);
-      return;
-    }
-    const el = chatBoxRef.current;
-    if (el) {
-      chatScrollRestoreRef.current = { sh: el.scrollHeight, st: el.scrollTop };
-    }
-    setChatLoadingOlder(true);
-    try {
-      const authKey = getAuthKey(userId);
-      const currentKey =
-        masterKey ||
-        sessionStorage.getItem(authKey) ||
-        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
-        'ellena_family_shared_key_2024';
-      const { data: raw, error } = await supabase
-        .from('family_messages')
-        .select('*')
-        .eq('group_id', currentGroupId)
-        .lt('created_at', first.created_at)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(CHAT_PAGE_SIZE);
-      if (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('이전 채팅 로드 실패:', error);
-        }
-        chatScrollRestoreRef.current = null;
-        return;
-      }
-      const batch = raw && raw.length > 0 ? [...raw].reverse() : [];
-      const formatted = formatFamilyMessagesFromRows(batch as ChatMessageRow[], currentKey);
-      const existing = new Set(messagesRef.current.map((m) => String(m.id)));
-      const uniqueOlder = formatted.filter((m) => !existing.has(String(m.id)));
-      setChatHasMoreOlder((raw?.length ?? 0) >= CHAT_PAGE_SIZE);
-      if (uniqueOlder.length === 0) {
-        setChatHasMoreOlder(false);
-        chatScrollRestoreRef.current = null;
-        return;
-      }
-      setState((prev) => ({
-        ...prev,
-        messages: trimMessagesToMax([...uniqueOlder, ...prev.messages]),
-      }));
-    } finally {
-      setChatLoadingOlder(false);
-    }
-  }, [currentGroupId, userId, chatLoadingOlder, chatHasMoreOlder, masterKey]);
-
-  const uploadChatPhotos = async (files: File[]) => {
-    if (files.length === 0) return;
-    
-    // ✅ 중복 호출 방지
-    if (chatPhotoUploadingRef.current) {
-      familyChatDebug('이미 사진 업로드 중, 중복 호출 무시');
-      return;
-    }
-    
-    if (files.length > 4) {
-      alert('채팅 첨부는 최대 4장까지 가능합니다.');
-      return;
-    }
-    
-    for (const file of files) {
-      const error = validateAttachmentFile(file);
-      if (error) {
-        alert(error);
-        return;
-      }
-    }
-
-    // 파일 선택 즉시 업로드 (카카오톡 방식)
-    if (!currentGroupId) return;
-    
-    chatPhotoUploadingRef.current = true;
-    familyChatDebug('사진 업로드 시작');
-
-    const revokeOutgoingPreviews = (mid: string) => {
-      setChatOutgoingPreviews((prev) => {
-        const next = { ...prev };
-        const urls = next[mid];
-        if (urls) urls.forEach((u) => URL.revokeObjectURL(u));
-        delete next[mid];
-        return next;
-      });
-    };
-
-    let outgoingPreviewMessageId: string | null = null;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert(dt('auth_session_expired'));
-        return;
-      }
-      const authUid = session.user.id;
-      await assertCanPostToFamilyChatGroup(currentGroupId, authUid);
-      const currentKey =
-        masterKey ||
-        sessionStorage.getItem(getAuthKey(authUid)) ||
-        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
-        'ellena_family_shared_key_2024';
-
-      // DB에 메시지 생성 (텍스트 없이 첨부만)
-      const encryptedText = CryptoService.encrypt('', currentKey);
-      const { data: inserted, error } = await supabase
-        .from('family_messages')
-        .insert({
-          group_id: currentGroupId,
-          sender_id: authUid,
-          message_text: encryptedText,
-        })
-        .select('id')
-        .single();
-      if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
-
-      const mid = String(inserted.id);
-      outgoingPreviewMessageId = mid;
-      const now = new Date();
-      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-      
-      // 즉시 화면 반영 — updateState(!userId) 스킵 방지
-      processedMessageIdsRef.current.add(mid);
-      setState((prev) => ({
-        ...prev,
-        messages: trimMessagesToMax([
-          ...(prev.messages || []),
-          {
-            id: inserted.id,
-            user: '나',
-            text: '',
-            time: timeStr,
-            sender_id: authUid,
-            created_at: now.toISOString(),
-          } as Message,
-        ]),
-      }));
-      familyChatDebug('사진 메시지 행 생성', inserted.id);
-
-      const previewUrls = files.map((f) => URL.createObjectURL(f));
-      setChatOutgoingPreviews((prev) => ({ ...prev, [mid]: previewUrls }));
-
-      // 파일 업로드
-      const jobs = await uploadFeatureAttachments({
-        groupId: currentGroupId,
-        featureType: 'chat',
-        entityType: 'chat_message',
-        entityId: mid,
-        files,
-        maxConcurrent: 3,
-        retryCount: 1,
-      });
-      
-      const failed = jobs.filter((j) => j.status === 'failed');
-      if (failed.length > 0) {
-        throw new Error(`사진 ${failed.length}장 업로드 실패`);
-      }
-
-      // 첨부 파일 즉시 조회
-      const attachments = await getAttachmentsForEntity({
-        groupId: currentGroupId,
-        entityType: 'chat_message',
-        entityId: mid,
-      });
-      setChatAttachmentsByMessage(prev => ({
-        ...prev,
-        [mid]: attachments,
-      }));
-      revokeOutgoingPreviews(mid);
-      outgoingPreviewMessageId = null;
-      void loadChatAttachmentsRef.current();
-      familyChatDebug(`사진 ${attachments.length}개 업로드 완료`, inserted.id);
-    } catch (error) {
-      console.error('[FamilyChat] 사진 전송 오류:', error);
-      if (outgoingPreviewMessageId) {
-        revokeOutgoingPreviews(outgoingPreviewMessageId);
-        outgoingPreviewMessageId = null;
-      }
-      const msg = error instanceof Error ? error.message : '';
-      if (msg === 'NO_FAMILY_GROUP_ACCESS' || msg.toLowerCase().includes('row-level security')) {
-        alert(dt('chat_send_no_access'));
-        void refreshGroups?.();
-      } else {
-        alert(error instanceof Error ? error.message : '사진 전송에 실패했습니다.');
-      }
-    } finally {
-      chatPhotoUploadingRef.current = false;
-      familyChatDebug('사진 업로드 완료, 플래그 해제');
-    }
-  };
-
-  const handlePickChatFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    familyChatDebug('handlePickChatFiles', files.length, files.map((f) => f.name));
-    await uploadChatPhotos(files);
-    if (e.target) e.target.value = ''; // 입력 초기화
-  };
-
-  const handleDropChatFiles = async (files: File[]) => {
-    await uploadChatPhotos(files);
-  };
-
-  const sendChat = (messageFromChild?: string) => {
-    const input = chatInputRef.current;
-    if (!input) {
-      familyChatDebug('sendChat: chatInputRef 없음');
-      return;
-    }
-
-    const rawText = (messageFromChild ?? input.value).trim();
-    const sanitizedText = sanitizeInput(rawText, 500);
-    if (!sanitizedText) {
-      familyChatDebug('sendChat: sanitize 후 빈 문자열', { rawLen: rawText.length });
-      return;
-    }
-
-    familyChatDebug('sendChat 시작', { textLen: sanitizedText.length, groupId: currentGroupId ?? null });
-    
-    // ✅ 중복 전송 방지 — 플래그는 반드시 동기 구간에서 먼저 설정 (async 시작 전)
-    // 그렇지 않으면 같은 틱에서 sendChat이 2번 호출될 때 둘 다 통과해 INSERT가 2번 나감
-    if (chatTextSendingRef.current) {
-      familyChatDebug('이미 메시지 전송 중, 중복 호출 무시');
-      return;
-    }
-    chatTextSendingRef.current = true;
-    setChatTextSendingUi(true);
-    familyChatDebug('텍스트 전송 잠금');
-    
-    const now = new Date();
-    const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    // 텍스트 메시지만 전송 (사진은 파일 선택 즉시 전송됨)
-    void (async () => {
-      try {
-        if (!currentGroupId) {
-          alert(dt('chat_send_no_group'));
-          return;
-        }
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          alert(dt('auth_session_expired'));
-          return;
-        }
-        // RLS는 보통 sender_id = auth.uid() — React userId state가 비어 있으면 INSERT 실패
-        const authUid = session.user.id;
-        await assertCanPostToFamilyChatGroup(currentGroupId, authUid);
-        const currentKey =
-          masterKey ||
-          sessionStorage.getItem(getAuthKey(authUid)) ||
-          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
-          'ellena_family_shared_key_2024';
-
-        const encryptedText = CryptoService.encrypt(sanitizedText, currentKey);
-        const { data: inserted, error } = await supabase
-          .from('family_messages')
-          .insert({
-            group_id: currentGroupId,
-            sender_id: authUid,
-            message_text: encryptedText,
-          })
-          .select('id')
-          .single();
-        if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
-
-        // 즉시 화면 반영 — updateState(!userId 조기 return)로 ADD_MESSAGE가 스킵되는 경우 방지
-        const senderId = authUid;
-        processedMessageIdsRef.current.add(String(inserted.id));
-        setState((prev) => ({
-          ...prev,
-          messages: trimMessagesToMax([
-            ...(prev.messages || []),
-            {
-              id: inserted.id,
-              user: '나',
-              text: sanitizedText,
-              time: timeStr,
-              sender_id: senderId,
-              created_at: new Date().toISOString(),
-            } as Message,
-          ]),
-        }));
-        familyChatDebug('텍스트 메시지 전송 완료', inserted.id);
-        input.value = "";
-      } catch (e) {
-        console.error('[FamilyChat] 메시지 전송 오류:', e);
-        const msg = e instanceof Error ? e.message : '';
-        if (msg === 'NO_FAMILY_GROUP_ACCESS' || msg.toLowerCase().includes('row-level security')) {
-          alert(dt('chat_send_no_access'));
-          void refreshGroups?.();
-        } else {
-          alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
-        }
-      } finally {
-        chatTextSendingRef.current = false;
-        setChatTextSendingUi(false);
-        familyChatDebug('텍스트 전송 완료, 플래그 해제');
-      }
-    })();
-  };
+  const {
+    setupMessagesAndAttachmentsSubscription,
+    clearChatRuntimeState,
+  } = useFamilyChatRealtime({
+    supabase,
+    currentGroupId,
+    realtimeSubscriptionIdRef,
+    dashboardCurrentGroupIdRef,
+    dashboardUserIdRef,
+    processedMessageIdsRef,
+    chatAttachmentsDebounceTimerRef,
+    loadChatAttachmentsRef,
+    subscriptionsRef: subscriptionsRef as React.MutableRefObject<{ messages: any; attachments: any }>,
+    getCurrentKey,
+    decrypt: CryptoService.decrypt,
+    setMessages,
+  });
 
   // 일반 멤버 → 그룹 관리자 문의: 하단 FAB → /dashboard/member-support (미읽답 배지용 목록만 로드)
   // Rules of Hooks: 조기 return보다 위에 둠.
