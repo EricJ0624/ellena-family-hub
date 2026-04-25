@@ -81,65 +81,26 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
   return (
     <>
       {/* 배너 */}
-      <div style={{
-        backgroundColor: '#fffbeb',
-        borderBottom: '2px solid #fde68a',
-        padding: '12px 0',
-        overflow: 'hidden',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          paddingLeft: '12px',
-          paddingRight: '24px',
-        }}>
+      <div className="sticky top-0 z-[100] overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-3 pr-6">
           {/* 아이콘 + 라벨 (최소 폭 없이 필요한 만큼만 사용) */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            flexShrink: 0,
-          }}>
-            <Megaphone style={{ 
-              width: '20px', 
-              height: '20px', 
-              color: '#f59e0b',
-              flexShrink: 0,
-            }} />
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#92400e',
-            }}>
+          <div className="flex shrink-0 items-center gap-1">
+            <Megaphone className="h-5 w-5 shrink-0 text-amber-500" />
+            <span className="text-sm font-semibold text-amber-800">
               {label}
             </span>
           </div>
 
           {/* 스크롤 영역 (minWidth: 0으로 flex 오버플로우 시 줄어들 수 있게) */}
-          <div style={{
-            flex: 1,
-            minWidth: 0,
-            overflow: 'hidden',
-            position: 'relative',
-            marginLeft: '2px',
-            marginRight: '2px',
-          }}>
+          <div className="relative mx-0.5 min-w-0 flex-1 overflow-hidden">
             <div
               ref={trackRef}
               style={{
-                display: 'flex',
-                gap: '48px',
                 width: 'max-content',
                 animation: isPaused ? 'none' : `marquee ${animationDuration}s linear infinite`,
                 willChange: 'transform',
               }}
+              className="flex gap-12"
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
             >
@@ -147,39 +108,15 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
                 <div
                   key={`${announcement.id}-${index}`}
                   onClick={() => handleAnnouncementClick(announcement)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    fontSize: '14px',
-                    color: '#78350f',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#92400e';
-                    e.currentTarget.style.fontWeight = '600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#78350f';
-                    e.currentTarget.style.fontWeight = '400';
-                  }}
+                  className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm text-amber-900 transition-all duration-200 hover:font-semibold hover:text-amber-800"
                 >
-                  <span style={{
-                    padding: '2px 8px',
-                    backgroundColor: '#fbbf24',
-                    color: 'white',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                  }}>
+                  <span className="rounded px-2 py-0.5 text-[11px] font-semibold text-white bg-amber-400">
                     NEW
                   </span>
-                  <span style={{ fontWeight: '600' }}>
+                  <span className="font-semibold">
                     {announcement.title}
                   </span>
-                  <span style={{ color: '#a16207' }}>
+                  <span className="text-amber-700">
                     {announcement.content.length > 80 
                       ? `${announcement.content.substring(0, 80)}...` 
                       : announcement.content}
@@ -192,26 +129,9 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
           {/* 닫기 버튼 */}
           <button
             onClick={() => setIsVisible(false)}
-            style={{
-              padding: '4px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#92400e',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '4px',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#fde68a';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
+            className="flex items-center justify-center rounded p-1 text-amber-800 transition-all duration-200 hover:bg-amber-200"
           >
-            <X style={{ width: '18px', height: '18px' }} />
+            <X className="h-[18px] w-[18px]" />
           </button>
         </div>
       </div>
@@ -219,96 +139,34 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
       {/* 상세 보기 모달 */}
       {selectedAnnouncement && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
           onClick={() => setSelectedAnnouncement(null)}
         >
           <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '24px',
-              width: '90%',
-              maxWidth: '600px',
-              maxHeight: '80vh',
-              overflow: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
+            className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6 shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '16px',
-            }}>
-              <h3 style={{
-                fontSize: '20px',
-                fontWeight: '600',
-                color: '#1e293b',
-                margin: 0,
-              }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="m-0 text-xl font-semibold text-slate-800">
                 {selectedAnnouncement.title}
               </h3>
               <button
                 onClick={() => setSelectedAnnouncement(null)}
-                style={{
-                  padding: '4px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '4px',
-                }}
+                className="flex items-center justify-center rounded p-1 text-slate-500 hover:bg-slate-100"
               >
-                <X style={{ width: '20px', height: '20px' }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <div style={{
-              fontSize: '12px',
-              color: '#94a3b8',
-              marginBottom: '16px',
-            }}>
+            <div className="mb-4 text-xs text-slate-400">
               {new Date(selectedAnnouncement.created_at).toLocaleString('ko-KR')}
             </div>
-            <div style={{
-              fontSize: '14px',
-              color: '#475569',
-              lineHeight: '1.6',
-              whiteSpace: 'pre-wrap',
-            }}>
+            <div className="whitespace-pre-wrap text-sm leading-[1.6] text-slate-600">
               {selectedAnnouncement.content}
             </div>
-            <div style={{
-              marginTop: '24px',
-              display: 'flex',
-              justifyContent: 'flex-end',
-            }}>
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setSelectedAnnouncement(null)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#9333ea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
+                className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-purple-700"
               >
                 확인
               </button>

@@ -284,24 +284,16 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
       </div>
 
       <div className="space-y-6">
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <tbody>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <tr className="border-b border-slate-200">
                 <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
+                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
                 >
                   {gst('group_name')}
                 </th>
-                <td style={{ padding: '12px' }}>
+                <td className="p-3">
                   <input
                     type="text"
                     value={groupName}
@@ -310,79 +302,43 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                       setError(null);
                     }}
                     placeholder={gst('group_name_placeholder')}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                     disabled={saving}
                   />
                 </td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <tr className="border-b border-slate-200">
                 <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
+                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
                 >
                   {gst('dashboard_title_label')}
                 </th>
-                <td style={{ padding: '12px' }}>
+                <td className="p-3">
                   <input
                     type="text"
                     value={titleStyle.content ?? ''}
                     onChange={(e) => setTitleStyle((prev) => ({ ...prev, content: e.target.value }))}
                     disabled={saving}
                     placeholder={gst('dashboard_title_placeholder')}
-                    style={{
-                      width: '100%',
-                      maxWidth: '320px',
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      color: '#1e293b',
-                    }}
+                    className="w-full max-w-80 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800"
                   />
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <p className="mt-1.5 text-xs text-slate-500">
                     {gst('dashboard_title_hint')}
                   </p>
                 </td>
               </tr>
-              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <tr className="border-b border-slate-200">
                 <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    width: '160px',
-                    backgroundColor: '#f8fafc',
-                  }}
+                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
                 >
                   {gst('display_language')}
                 </th>
-                <td style={{ padding: '12px' }}>
+                <td className="p-3">
                   <select
                     value={preferredLanguage}
                     onChange={(e) => setPreferredLanguage(e.target.value as LangCode)}
                     disabled={saving}
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      minWidth: '160px',
-                    }}
+                    className="min-w-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   >
                     <option value="ko">한국어</option>
                     <option value="en">English</option>
@@ -390,148 +346,90 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
                     <option value="zh-CN">简体中文</option>
                     <option value="zh-TW">繁體中文</option>
                   </select>
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>
+                  <p className="mt-1.5 text-xs text-slate-500">
                     {gst('language_hint')}
                   </p>
                 </td>
               </tr>
               <tr>
                 <th
-                  style={{
-                    padding: '12px',
-                    textAlign: 'left',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#475569',
-                    backgroundColor: '#f8fafc',
-                  }}
+                  className="bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
                 >
                   {gst('invite_code')}
                 </th>
-                <td style={{ padding: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <td className="p-3">
+                  <div className="flex flex-col gap-4">
                     {/* 복사 버튼 + 안내 (다른 버튼들과 왼쪽 정렬) */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="flex flex-col gap-1">
                       <button
                         onClick={handleCopyInviteCode}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#2563eb',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          alignSelf: 'flex-start',
-                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-blue-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-blue-700"
                         aria-label={gst('invite_copy_aria')}
                       >
                         {copied ? (
                           <>
-                            <CheckCircle style={{ width: '16px', height: '16px' }} />
+                            <CheckCircle className="h-4 w-4" />
                             {gst('copied')}
                           </>
                         ) : (
                           <>
-                            <Copy style={{ width: '16px', height: '16px' }} />
+                            <Copy className="h-4 w-4" />
                             {gst('copy_btn')}
                           </>
                         )}
                       </button>
-                      <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                      <p className="m-0 text-xs text-slate-500">
                         {gst('invite_share_hint')}
                       </p>
                     </div>
                     {/* 초대 코드 입력창 */}
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="flex flex-wrap items-center">
                       <input
                         type="text"
                         value={inviteCode}
                         readOnly
-                        style={{
-                          minWidth: '220px',
-                          maxWidth: '100%',
-                          padding: '10px 12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          backgroundColor: '#f8fafc',
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                          textAlign: 'center',
-                          fontSize: '16px',
-                          letterSpacing: '0.12em',
-                        }}
+                        className="max-w-full min-w-[220px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-center font-mono text-base tracking-[0.12em]"
                       />
                     </div>
                     {/* 초대 링크 복사 + 안내 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="flex flex-col gap-1">
                       <button
                         onClick={handleCopyInviteLink}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#059669',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          alignSelf: 'flex-start',
-                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-emerald-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700"
                         aria-label={gst('invite_link_copy_aria')}
                       >
                         {copiedLink ? (
                           <>
-                            <CheckCircle style={{ width: '16px', height: '16px' }} />
+                            <CheckCircle className="h-4 w-4" />
                             {gst('copied')}
                           </>
                         ) : (
                           <>
-                            <Copy style={{ width: '16px', height: '16px' }} />
+                            <Copy className="h-4 w-4" />
                             {gst('invite_link_copy_btn')}
                           </>
                         )}
                       </button>
-                      <p style={{ fontSize: '12px', color: '#b45309', margin: 0, fontWeight: 500 }}>
+                      <p className="m-0 text-xs font-medium text-amber-700">
                         {gst('invite_only_family_hint')}
                       </p>
                     </div>
                     {/* 갱신 + 안내 */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="flex flex-col gap-1">
                       <button
                         onClick={handleRefreshInviteCode}
                         disabled={refreshing}
-                        style={{
-                          padding: '8px 12px',
-                          backgroundColor: '#7c3aed',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          opacity: refreshing ? 0.6 : 1,
-                          alignSelf: 'flex-start',
-                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-violet-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
                         aria-label={gst('invite_refresh_aria')}
                       >
                         {refreshing ? (
-                          <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <RefreshCw style={{ width: '16px', height: '16px' }} />
+                          <RefreshCw className="h-4 w-4" />
                         )}
                         {gst('refresh_btn')}
                       </button>
-                      <p style={{ fontSize: '12px', color: '#9333ea', margin: 0, fontWeight: 500 }}>
+                      <p className="m-0 text-xs font-medium text-purple-600">
                         {gst('invite_refresh_hint')}
                       </p>
                     </div>

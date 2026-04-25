@@ -371,87 +371,38 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
       {/* 헤더 */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '24px',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
-      >
-        <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="m-0 text-xl font-semibold text-slate-800">
           회원 목록 ({filteredMembers.length}명)
         </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search
-              style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '18px',
-                height: '18px',
-                color: '#94a3b8',
-              }}
-            />
+        <div className="flex items-center gap-2">
+          <div className="relative w-[280px]">
+            <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder={mmt('search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px 10px 40px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '14px',
-              }}
+              className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm"
             />
           </div>
           {isAdmin && (
             <button
               onClick={() => setShowGroupSettings(true)}
-              style={{
-                padding: '8px 14px',
-                backgroundColor: '#7c3aed',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-violet-600 px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-violet-700"
               aria-label={mmt('group_settings_btn')}
             >
-              <Settings style={{ width: '16px', height: '16px' }} />
+              <Settings className="h-4 w-4" />
               {mmt('group_settings_btn')}
             </button>
           )}
           {onClose && (
             <button
               onClick={onClose}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#e2e8f0',
-                color: '#475569',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-slate-200 px-3 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-300"
               aria-label={ct('close')}
             >
-              <X style={{ width: '16px', height: '16px' }} />
+              <X className="h-4 w-4" />
               {ct('close')}
             </button>
           )}
@@ -478,26 +429,26 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
       {/* 멤버 목록 */}
       {!loading && !error && (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+              <tr className="border-b-2 border-slate-200 bg-slate-50">
+                <th className="p-3 text-left text-sm font-semibold text-slate-600">
                   {mmt('email')}
                 </th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                <th className="p-3 text-left text-sm font-semibold text-slate-600">
                   {mmt('nickname')}
                 </th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                <th className="p-3 text-left text-sm font-semibold text-slate-600">
                   {mmt('role')}
                 </th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                <th className="p-3 text-left text-sm font-semibold text-slate-600">
                   {mmt('family_role_label')}
                 </th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                <th className="p-3 text-left text-sm font-semibold text-slate-600">
                   {mmt('joined_at')}
                 </th>
-                <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+                <th className="p-3 text-right text-sm font-semibold text-slate-600">
                   {mmt('manage')}
                 </th>
               </tr>
@@ -533,7 +484,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    style={{ borderBottom: '1px solid #e2e8f0', transition: 'background-color 0.2s' }}
+                    className="border-b border-slate-200 transition-colors duration-200"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#f8fafc';
                     }}
@@ -541,15 +492,15 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>{member.email || '-'}</td>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <td className="p-3 text-sm text-slate-800">{member.email || '-'}</td>
+                    <td className="p-3 text-sm text-slate-800">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span>{member.nickname || '-'}</span>
-                        {isCurrentUser && <span style={{ fontSize: '12px', color: '#64748b' }}>{ct('me_suffix')}</span>}
+                        {isCurrentUser && <span className="text-xs text-slate-500">{ct('me_suffix')}</span>}
                       </div>
                     </td>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>{roleLabel}</td>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b' }}>
+                    <td className="p-3 text-sm text-slate-800">{roleLabel}</td>
+                    <td className="p-3 text-sm text-slate-800">
                       <select
                         value={member.family_role ?? ''}
                         onChange={(e) => {
@@ -557,14 +508,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                           handleFamilyRoleChange(member.user_id, v === '' ? null : v);
                         }}
                         disabled={isUpdatingFamilyRole}
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid #e2e8f0',
-                          fontSize: '13px',
-                          minWidth: '90px',
-                          backgroundColor: '#fff',
-                        }}
+                        className="min-w-[90px] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px]"
                         aria-label={mmt('family_role_label')}
                       >
                         {familyRoleOptions.map((opt) => (
@@ -574,15 +518,15 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                         ))}
                       </select>
                       {isUpdatingFamilyRole && (
-                        <Loader2 style={{ width: '14px', height: '14px', marginLeft: '6px', verticalAlign: 'middle', animation: 'spin 1s linear infinite' }} />
+                        <Loader2 className="ml-1.5 inline h-[14px] w-[14px] animate-spin align-middle" />
                       )}
                     </td>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#64748b' }}>
+                    <td className="p-3 text-sm text-slate-500">
                       {new Date(member.joined_at).toLocaleDateString(DATE_LOCALE[lang] || 'en-US')}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                    <td className="p-3 text-right">
                       {(canRemove || canChangeRole) && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                        <div className="inline-flex items-center justify-end gap-2">
                           {canChangeRole && (
                             <>
                               {member.role === 'MEMBER' ? (
@@ -593,24 +537,14 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                     }
                                   }}
                                   disabled={isUpdatingRole || removingUserId === member.user_id}
-                                  style={{
-                                    padding: '6px',
-                                    color: '#7c3aed',
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
+                                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-transparent p-1.5 text-violet-600 disabled:cursor-not-allowed disabled:opacity-60"
                                   aria-label={`${member.nickname || member.email} ${mmt('promote_title')}`}
                                   title={mmt('promote_title')}
                                 >
                                   {isUpdatingRole ? (
-                                    <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                                    <Loader2 className="h-[18px] w-[18px] animate-spin" />
                                   ) : (
-                                    <Shield style={{ width: '18px', height: '18px' }} />
+                                    <Shield className="h-[18px] w-[18px]" />
                                   )}
                                 </button>
                               ) : (
@@ -621,24 +555,14 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                     }
                                   }}
                                   disabled={isUpdatingRole || removingUserId === member.user_id}
-                                  style={{
-                                    padding: '6px',
-                                    color: '#475569',
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
+                                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-transparent p-1.5 text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
                                   aria-label={`${member.nickname || member.email} ${mmt('demote_title')}`}
                                   title={mmt('demote_title')}
                                 >
                                   {isUpdatingRole ? (
-                                    <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                                    <Loader2 className="h-[18px] w-[18px] animate-spin" />
                                   ) : (
-                                    <User style={{ width: '18px', height: '18px' }} />
+                                    <User className="h-[18px] w-[18px]" />
                                   )}
                                 </button>
                               )}
@@ -647,40 +571,22 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                           {canRemove && (
                             <>
                               {showConfirmRemove === member.user_id ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => handleRemoveMember(member.user_id)}
                                     disabled={removingUserId === member.user_id || isUpdatingRole}
-                                    style={{
-                                      padding: '6px 10px',
-                                      backgroundColor: '#ef4444',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
-                                      fontWeight: 600,
-                                      cursor: 'pointer',
-                                    }}
+                                    className="cursor-pointer rounded-lg border-none bg-red-500 px-2.5 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                                     aria-label={`${member.nickname || member.email} ${mmt('remove_confirm')}`}
                                   >
                                     {removingUserId === member.user_id ? (
-                                      <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
+                                      <Loader2 className="h-[14px] w-[14px] animate-spin" />
                                     ) : (
                                       mmt('confirm_btn')
                                     )}
                                   </button>
                                   <button
                                     onClick={() => setShowConfirmRemove(null)}
-                                    style={{
-                                      padding: '6px 10px',
-                                      backgroundColor: '#e2e8f0',
-                                      color: '#334155',
-                                      border: 'none',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
-                                      fontWeight: 600,
-                                      cursor: 'pointer',
-                                    }}
+                                    className="cursor-pointer rounded-lg border-none bg-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-300"
                                     aria-label={ct('cancel')}
                                   >
                                     {ct('cancel')}
@@ -690,20 +596,10 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                                 <button
                                   onClick={() => setShowConfirmRemove(member.user_id)}
                                   disabled={isUpdatingRole}
-                                  style={{
-                                    padding: '6px',
-                                    color: '#dc2626',
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
+                                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-transparent p-1.5 text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                                   aria-label={`${member.nickname || member.email} ${mmt('remove_confirm')}`}
                                 >
-                                  <UserX style={{ width: '18px', height: '18px' }} />
+                                  <UserX className="h-[18px] w-[18px]" />
                                 </button>
                               )}
                             </>
@@ -717,7 +613,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
               {filteredMembers.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
                     {mmt('no_members')}
                   </td>
                 </tr>
