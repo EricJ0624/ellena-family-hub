@@ -453,7 +453,6 @@ export function FamilyChatSection({
           <input
             ref={chatInputRef}
             type="text"
-            readOnly={isSendingText}
             aria-busy={isSendingText}
             onKeyDown={handleKeyDown}
             className="chat-input"

@@ -440,6 +440,13 @@ export function useFamilyChatActions({
       chatTextSendingRef.current = true;
       setChatTextSendingUi(true);
       familyChatDebug('텍스트 전송 잠금');
+      // 네트워크/요청 정체로 finally가 늦어지는 경우 UI 잠금이 풀리지 않는 현상 방지
+      const lockWatchdog = setTimeout(() => {
+        if (!chatTextSendingRef.current) return;
+        console.error('[FamilyChat] 텍스트 전송 잠금 watchdog 타임아웃');
+        chatTextSendingRef.current = false;
+        setChatTextSendingUi(false);
+      }, 12000);
 
       const now = new Date();
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -504,6 +511,7 @@ export function useFamilyChatActions({
             alert(e instanceof Error ? e.message : '메시지 전송에 실패했습니다.');
           }
         } finally {
+          clearTimeout(lockWatchdog);
           chatTextSendingRef.current = false;
           setChatTextSendingUi(false);
           familyChatDebug('텍스트 전송 완료, 플래그 해제');
