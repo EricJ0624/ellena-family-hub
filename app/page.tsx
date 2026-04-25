@@ -226,19 +226,28 @@ export default function LoginPage() {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, keepLoggedIn ? '1' : '0');
       }
-      const { error, data } = await supabase.auth.signInWithPassword({ 
+
+      const { error, data } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
-        password 
+        password,
       });
       if (error) throw error;
-      
-      if (data.user) {
-        if (!data.user.email_confirmed_at) {
-          await supabase.auth.signOut();
-          setErrorMsg(t('error_email_verification'));
-          return;
-        }
+
+      if (!data.user) {
+        setErrorMsg(t('error_login_failed'));
+        return;
+      }
+      if (!data.user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        setErrorMsg(t('error_email_verification'));
+        return;
+      }
+
+      try {
         await completeAuthRoutingAfterConfirmedUser(normalizedEmail);
+      } catch (routingError: any) {
+        console.warn('[Login] 인증 후 라우팅 처리 오류:', routingError);
+        setErrorMsg('로그인은 되었지만 후속 처리 중 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요.');
       }
     } catch (error: any) {
       // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
