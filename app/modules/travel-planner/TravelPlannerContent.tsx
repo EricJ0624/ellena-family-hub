@@ -401,6 +401,19 @@ export function TravelPlannerContent() {
     (n: number) => formatMoneyAmount(n, tripCurrencyCode, localeForMoney),
     [tripCurrencyCode, localeForMoney],
   );
+  const expenseAmountLabel = useMemo(() => {
+    const translated = tt('label_amount');
+    const hasRequiredMark = /\*\s*$/.test(translated);
+    const base = translated
+      .replace(/\s*\*\s*$/, '')
+      .replace(/\s*\([^)]*\)\s*$/, '')
+      .trim();
+    return `${base} (${tripCurrencyCode})${hasRequiredMark ? ' *' : ''}`;
+  }, [tripCurrencyCode, tt]);
+  const expenseRequiredAlertMessage = useMemo(
+    () => `${tt('alert_expense_required')} (${tripCurrencyCode})`,
+    [tripCurrencyCode, tt],
+  );
 
   /**
    * 구글 지도 웹(소비자용) 링크 — Maps Platform API 호출·과금 없음.
@@ -1468,7 +1481,7 @@ export function TravelPlannerContent() {
     e.preventDefault();
     const amount = Number(expenseAmount);
     if (!currentGroupId || !selectedTrip || expenseDate === '' || Number.isNaN(amount) || amount < 0) {
-      alert(tt('alert_expense_required'));
+      alert(expenseRequiredAlertMessage);
       return;
     }
     try {
@@ -1502,7 +1515,7 @@ export function TravelPlannerContent() {
     e.preventDefault();
     const amount = Number(expenseAmount);
     if (!editingExpense || !currentGroupId || expenseDate === '' || Number.isNaN(amount) || amount < 0) {
-      alert(tt('alert_expense_required'));
+      alert(expenseRequiredAlertMessage);
       return;
     }
     try {
@@ -4180,7 +4193,7 @@ export function TravelPlannerContent() {
                   fontSize: 14,
                 }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_amount')}</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{expenseAmountLabel}</label>
               <input
                 type="number"
                 min={0}
