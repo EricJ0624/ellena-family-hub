@@ -7,13 +7,7 @@
 
 import React from 'react';
 import { Plus } from 'lucide-react';
-
-interface TravelTrip {
-  id: string;
-  title: string;
-  start_date: string;
-  end_date: string;
-}
+import type { TravelTrip } from '../types';
 
 interface TravelPlannerSectionProps {
   trips: TravelTrip[];

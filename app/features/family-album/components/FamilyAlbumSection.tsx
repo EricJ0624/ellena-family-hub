@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import type { Photo } from '@/app/contexts/AlbumContext';
+import type { Photo } from '../types';
 
 interface FamilyAlbumSectionProps {
   photos: Photo[];

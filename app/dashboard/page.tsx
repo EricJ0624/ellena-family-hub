@@ -9,7 +9,6 @@ import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { 
   getPushToken, 
   registerServiceWorker,
@@ -25,7 +24,6 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
-import { formatMoneyAmount } from '@/lib/format-currency';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
@@ -55,7 +53,10 @@ import { FamilyLocationSection } from '@/app/features/family-location/components
 import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
+import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
+import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '@/app/features/piggy-bank/types';
+import { usePiggyDisplay } from '@/app/features/piggy-bank/hooks/usePiggyDisplay';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -255,42 +256,23 @@ export default function FamilyHub() {
   const [isLocationSharing, setIsLocationSharing] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [piggySummary, setPiggySummary] = useState<{
-    name: string;
-    walletBalance: number;
-    bankBalance: number;
-    ownerNickname?: string | null;
-    currency?: string;
-  } | null>(null);
-  const [piggyAccounts, setPiggyAccounts] = useState<Array<{
-    id: string;
-    user_id: string | null;
-    name: string;
-    balance: number;
-    ownerNickname: string | null;
-    walletBalance: number;
-  }> | null>(null);
-  const [piggyMemberPiggies, setPiggyMemberPiggies] = useState<Array<{
-    user_id: string;
-    ownerNickname: string | null;
-    noAccount: true;
-  } | {
-    id: string;
-    user_id: string | null;
-    ownerNickname: string | null;
-    name: string;
-    balance: number;
-    walletBalance: number;
-    currency?: string;
-    noAccount: false;
-  }> | null>(null);
+  const [piggySummary, setPiggySummary] = useState<PiggySummary | null>(null);
+  const [piggyMemberPiggies, setPiggyMemberPiggies] = useState<PiggyMemberOrAccount[] | null>(null);
   const [piggyLoaded, setPiggyLoaded] = useState(false);
-  const [pendingAccountRequests, setPendingAccountRequests] = useState<Array<{ id: string; user_id: string; nickname: string | null }>>([]);
+  const [pendingAccountRequests, setPendingAccountRequests] = useState<AccountRequest[]>([]);
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const loadPiggySummaryRef = useRef<() => Promise<void>>(async () => {});
   const piggyAccountRequestsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [travelTrips, setTravelTrips] = useState<Array<{ id: string; title: string; start_date: string; end_date: string }>>([]);
-  const [travelTripsLoading, setTravelTripsLoading] = useState(false);
+  const { trips: travelTrips, loading: travelTripsLoading } = useTravelTrips({
+    currentGroupId,
+    isAuthenticated,
+    errorMessage: dt('piggy_travel_fetch_failed'),
+  });
+  const { piggyLabel, formatAmount: formatDashboardPiggy } = usePiggyDisplay({
+    piggySummary,
+    fallbackGroupCurrency: currentGroup?.piggy_currency,
+    lang,
+  });
   const [locationRequests, setLocationRequests] = useState<Array<{
     id: string;
     requester_id: string;
@@ -1000,7 +982,6 @@ export default function FamilyHub() {
   const loadPiggySummary = useCallback(async () => {
     if (!isAuthenticated || !currentGroupId) {
       setPiggySummary(null);
-      setPiggyAccounts(null);
       setPiggyMemberPiggies(null);
       setPiggyLoaded(false);
       return;
@@ -1029,7 +1010,6 @@ export default function FamilyHub() {
       if (result.data?.memberPiggies && Array.isArray(result.data.memberPiggies)) {
         setPiggyMemberPiggies(result.data.memberPiggies);
         setPendingAccountRequests(Array.isArray(result.data.pendingAccountRequests) ? result.data.pendingAccountRequests : []);
-        setPiggyAccounts(null);
         setPiggySummary(null);
       } else if (result.data?.account) {
         setPiggySummary({
@@ -1039,12 +1019,10 @@ export default function FamilyHub() {
           ownerNickname: result.data.account.ownerNickname || null,
           currency: result.data.account.currency,
         });
-        setPiggyAccounts(null);
         setPiggyMemberPiggies(null);
         setPendingAccountRequests([]);
       } else {
         setPiggySummary(null);
-        setPiggyAccounts(null);
         setPiggyMemberPiggies(null);
         setPendingAccountRequests([]);
       }
@@ -1254,36 +1232,6 @@ export default function FamilyHub() {
       setPiggySummaryError(err.message || dt('piggy_delete_failed'));
     }
   }, [currentGroupId, loadPiggySummary]);
-
-  // 가족 여행 목록 로드 (그룹 선택 시)
-  const loadTravelTrips = useCallback(async () => {
-    if (!isAuthenticated || !currentGroupId) {
-      setTravelTrips([]);
-      return;
-    }
-    try {
-      setTravelTripsLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        setTravelTrips([]);
-        return;
-      }
-      const response = await fetch(`/api/v1/travel/trips?groupId=${currentGroupId}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || dt('piggy_travel_fetch_failed'));
-      setTravelTrips(Array.isArray(result.data) ? result.data : []);
-    } catch {
-      setTravelTrips([]);
-    } finally {
-      setTravelTripsLoading(false);
-    }
-  }, [isAuthenticated, currentGroupId]);
-
-  useEffect(() => {
-    loadTravelTrips();
-  }, [loadTravelTrips]);
 
   // 2.4.5. state가 로드되면 titleStyle 동기화
   useEffect(() => {
@@ -5355,17 +5303,6 @@ export default function FamilyHub() {
     return null; // useEffect에서 리다이렉트 처리 중
   }
 
-  const piggyLabel = (() => {
-    const rawName = piggySummary?.name?.trim() || 'Ellena Piggy Bank';
-    const base = rawName.replace(/piggy\s*bank/gi, '').trim();
-    return base || rawName;
-  })();
-  const piggyMoneyLocale =
-    lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : lang === 'zh-CN' ? 'zh-CN' : lang === 'zh-TW' ? 'zh-TW' : 'en-US';
-  const formatDashboardPiggy = (amount: number, currencyCode?: string | null) => {
-    const cur = (currencyCode || piggySummary?.currency || currentGroup?.piggy_currency || 'KRW').trim().toUpperCase() || 'KRW';
-    return formatMoneyAmount(amount, cur, piggyMoneyLocale);
-  };
   const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
   const showAdminButton = isSystemAdmin || isGroupAdmin;
   const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
