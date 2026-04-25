@@ -378,8 +378,7 @@ export function FamilyCalendarSection({
 
       {/* Calendar Section */}
       <section
-        className="content-section"
-        style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f0f9ff 100%)' }}
+        className="content-section bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50"
       >
         <div className="section-header mb-2.5">
           <h3 className="section-title m-0 flex items-center gap-2.5">
@@ -424,11 +423,13 @@ export function FamilyCalendarSection({
               {weekDays.map((day, i) => (
                 <div
                   key={i}
-                  className="flex min-h-[34px] items-center justify-center rounded-md px-0.5 py-1.5 text-[13px] font-bold"
-                  style={{
-                    color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#64748b',
-                    backgroundColor: i === 0 || i === 6 ? 'rgba(0,0,0,0.03)' : 'transparent',
-                  }}
+                  className={`flex min-h-[34px] items-center justify-center rounded-md px-0.5 py-1.5 text-[13px] font-bold ${
+                    i === 0
+                      ? 'bg-black/[0.03] text-red-600'
+                      : i === 6
+                        ? 'bg-black/[0.03] text-blue-600'
+                        : 'bg-transparent text-slate-500'
+                  }`}
                 >
                   {day}
                 </div>
@@ -483,12 +484,9 @@ export function FamilyCalendarSection({
                     <span>{cell.day}</span>
                     {cell.eventCount > 0 && (
                       <span
-                        style={{
-                          fontSize: '9px',
-                          fontWeight: '700',
-                          marginTop: '1px',
-                          color: isSelected || cell.isToday ? 'rgba(255,255,255,0.9)' : '#7c3aed',
-                        }}
+                        className={`mt-px text-[9px] font-bold ${
+                          isSelected || cell.isToday ? 'text-white/90' : 'text-violet-600'
+                        }`}
                       >
                         {cell.eventCount}개
                       </span>

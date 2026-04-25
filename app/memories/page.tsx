@@ -518,7 +518,7 @@ export default function MemoriesPage() {
   const mainMaxWidth = Math.min(1200, viewportWidth);
 
   return (
-    <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip pb-20" style={{ background: 'var(--bg-dashboard, #f8fafc)' }}>
+    <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--bg-dashboard,#f8fafc)] pb-20">
       <header
         ref={headerRef}
         style={{
@@ -536,32 +536,26 @@ export default function MemoriesPage() {
           alignItems: 'center',
           gap: 12 * headerScale,
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          ['--hs' as any]: headerScale,
         }}
       >
         <button
           type="button"
           onClick={handleBack}
           aria-label={ct('back') || '뒤로'}
-          className="flex items-center justify-center border-none text-white"
-          style={{
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: 8 * headerScale,
-            width: 40 * headerScale,
-            height: 40 * headerScale,
-            cursor: 'pointer',
-          }}
+          className="flex h-[calc(40px*var(--hs))] w-[calc(40px*var(--hs))] cursor-pointer items-center justify-center rounded-[calc(8px*var(--hs))] border-none bg-white/20 text-white"
         >
           <ChevronLeft size={Math.round(24 * headerScale)} />
         </button>
-        <h1 className="m-0 flex-1 font-bold" style={{ fontSize: `${1.25 * headerScale}rem` }}>
+        <h1 className="m-0 flex-1 text-[calc(1.25rem*var(--hs))] font-bold">
           {dt('section_title_memories')}
         </h1>
-        <div className="flex flex-col" style={{ gap: 6 * headerScale }}>
-          <span className="text-white/90" style={{ fontSize: 12 * headerScale }}>
+        <div className="flex flex-col gap-[calc(6px*var(--hs))]">
+          <span className="text-[calc(12px*var(--hs))] text-white/90">
             {lang === 'ko' ? '업로드:' : 'Upload:'}
           </span>
-          <div className="grid grid-cols-2" style={{ gap: 8 * headerScale }}>
-            <label className="flex cursor-pointer items-center" style={{ gap: 6 * headerScale, fontSize: 13 * headerScale }}>
+          <div className="grid grid-cols-2 gap-[calc(8px*var(--hs))]">
+            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] text-[calc(13px*var(--hs))]">
               <input
                 type="radio"
                 name="uploadMode"
@@ -571,7 +565,7 @@ export default function MemoriesPage() {
               />
               {lang === 'ko' ? '일반(압축)' : 'Normal'}
             </label>
-            <label className="flex cursor-pointer items-center" style={{ gap: 6 * headerScale, fontSize: 13 * headerScale }}>
+            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] text-[calc(13px*var(--hs))]">
               <input
                 type="radio"
                 name="uploadMode"
@@ -585,13 +579,7 @@ export default function MemoriesPage() {
         </div>
         <label
           htmlFor="memories-file-input"
-          className="cursor-pointer font-semibold"
-          style={{
-            padding: `${8 * headerScale}px ${16 * headerScale}px`,
-            background: 'rgba(255,255,255,0.25)',
-            borderRadius: 8 * headerScale,
-            fontSize: 14 * headerScale,
-          }}
+          className="cursor-pointer rounded-[calc(8px*var(--hs))] bg-white/25 px-[calc(16px*var(--hs))] py-[calc(8px*var(--hs))] text-[calc(14px*var(--hs))] font-semibold"
         >
           {dt('photo_upload_btn')}
         </label>
@@ -606,15 +594,7 @@ export default function MemoriesPage() {
       </header>
 
       <main
-        style={{
-          padding: 16,
-          width: '100%',
-          maxWidth: `min(${mainMaxWidth}px, 100vw)`,
-          margin: '0 auto',
-          boxSizing: 'border-box',
-          overflowX: 'clip',
-          minWidth: 0,
-        }}
+        className={`mx-auto box-border w-full min-w-0 overflow-x-clip p-4 max-w-[min(${mainMaxWidth}px,100vw)]`}
       >
         {album.length === 0 ? (
           <div
@@ -626,34 +606,24 @@ export default function MemoriesPage() {
           </div>
         ) : (
           <>
-            <div className="mb-4 flex" style={{ gap: 8 * headerScale, marginBottom: 16 * headerScale }}>
+            <div className="mb-[calc(16px*var(--hs))] flex gap-[calc(8px*var(--hs))]">
               <button
                 type="button"
                 onClick={() => setViewMode('latest')}
-                className={`cursor-pointer font-semibold ${viewMode === 'latest' ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700' : 'border border-slate-200 bg-white text-slate-500'}`}
-                style={{
-                  padding: `${8 * headerScale}px ${14 * headerScale}px`,
-                  borderRadius: 8 * headerScale,
-                  fontSize: 14 * headerScale,
-                }}
+                className={`cursor-pointer rounded-[calc(8px*var(--hs))] px-[calc(14px*var(--hs))] py-[calc(8px*var(--hs))] text-[calc(14px*var(--hs))] font-semibold ${viewMode === 'latest' ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700' : 'border border-slate-200 bg-white text-slate-500'}`}
               >
                 {lang === 'ko' ? '최신순' : 'Latest'}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('byDate')}
-                className={`cursor-pointer font-semibold ${viewMode === 'byDate' ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700' : 'border border-slate-200 bg-white text-slate-500'}`}
-                style={{
-                  padding: `${8 * headerScale}px ${14 * headerScale}px`,
-                  borderRadius: 8 * headerScale,
-                  fontSize: 14 * headerScale,
-                }}
+                className={`cursor-pointer rounded-[calc(8px*var(--hs))] px-[calc(14px*var(--hs))] py-[calc(8px*var(--hs))] text-[calc(14px*var(--hs))] font-semibold ${viewMode === 'byDate' ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700' : 'border border-slate-200 bg-white text-slate-500'}`}
               >
                 {lang === 'ko' ? '촬영일별 보기' : 'By date taken'}
               </button>
             </div>
             {viewMode === 'latest' ? (
-          <div className="grid min-w-0 gap-2" style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}>
+          <div className={`grid min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]`}>
             {album.map((p, index) => (
               <motion.div
                 key={p.id}
@@ -671,11 +641,7 @@ export default function MemoriesPage() {
                   className="relative cursor-pointer"
                 >
                     <div
-                      className="relative bg-slate-100"
-                      style={{
-                        aspectRatio: gridColumns === 1 ? undefined : '4/3',
-                        ...(gridColumns === 1 ? { width: '100%' } : {}),
-                      }}
+                      className={`relative bg-slate-100 ${gridColumns === 1 ? 'w-full' : 'aspect-[4/3]'}`}
                     >
                     <img
                       src={p.data}
@@ -691,13 +657,11 @@ export default function MemoriesPage() {
                           markImageLoaded(p.id);
                         }
                       }}
-                      className="block w-full transition-opacity duration-200 ease-out"
-                      style={{
-                        height: gridColumns === 1 ? 'auto' : '100%',
-                        objectFit: gridColumns === 1 ? 'contain' : 'cover',
-                        opacity: imageLoadedIds.has(String(p.id)) ? 1 : 0,
-                        ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
-                      }}
+                      className={`block w-full transition-opacity duration-200 ease-out ${
+                        gridColumns === 1
+                          ? 'h-auto max-w-full align-top object-contain'
+                          : 'h-full object-cover'
+                      } ${imageLoadedIds.has(String(p.id)) ? 'opacity-100' : 'opacity-0'}`}
                     />
                     {failedImageIds.has(String(p.id)) && getDiagnoseKeyFromData(p.data) && (
                       <div
@@ -734,8 +698,7 @@ export default function MemoriesPage() {
                       {section.label} ({section.photos.length}{lang === 'ko' ? '장' : ''})
                     </h2>
                     <div
-                      className="grid min-w-0 gap-2"
-                      style={{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }}
+                      className={`grid min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]`}
                     >
                       {section.photos.map((p) => {
                         const globalIndex = displayListForLightbox.findIndex((x) => String(x.id) === String(p.id));
@@ -756,11 +719,7 @@ export default function MemoriesPage() {
                               className="relative cursor-pointer"
                             >
                               <div
-                                className="relative bg-slate-100"
-                                style={{
-                                  aspectRatio: gridColumns === 1 ? undefined : '4/3',
-                                  ...(gridColumns === 1 ? { width: '100%' } : {}),
-                                }}
+                                className={`relative bg-slate-100 ${gridColumns === 1 ? 'w-full' : 'aspect-[4/3]'}`}
                               >
                                 <img
                                   src={p.data}
@@ -775,13 +734,11 @@ export default function MemoriesPage() {
                                       markImageLoaded(p.id);
                                     }
                                   }}
-                                  className="block w-full transition-opacity duration-200 ease-out"
-                                  style={{
-                                    height: gridColumns === 1 ? 'auto' : '100%',
-                                    objectFit: gridColumns === 1 ? 'contain' : 'cover',
-                                    opacity: imageLoadedIds.has(String(p.id)) ? 1 : 0,
-                                    ...(gridColumns === 1 ? { maxWidth: '100%', verticalAlign: 'top' } : {}),
-                                  }}
+                                  className={`block w-full transition-opacity duration-200 ease-out ${
+                                    gridColumns === 1
+                                      ? 'h-auto max-w-full align-top object-contain'
+                                      : 'h-full object-cover'
+                                  } ${imageLoadedIds.has(String(p.id)) ? 'opacity-100' : 'opacity-0'}`}
                                 />
                                 {failedImageIds.has(String(p.id)) && getDiagnoseKeyFromData(p.data) && (
                                   <div
@@ -829,19 +786,12 @@ export default function MemoriesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="fixed z-[10000] box-border flex flex-col items-stretch bg-black/[0.95] p-0"
             style={{
-              position: 'fixed',
               top: vvValid ? vTop : 0,
               left: vvValid ? vLeft : 0,
               width: sizeW,
               height: sizeH,
-              background: 'rgba(0,0,0,0.95)',
-              zIndex: 10000,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'stretch',
-              padding: 0,
-              boxSizing: 'border-box',
             }}
             onClick={closeLightbox}
           >
@@ -859,9 +809,6 @@ export default function MemoriesPage() {
               aria-label={ct('delete') || '삭제'}
               title={ct('delete')}
               className="absolute left-3 top-3 z-[1] flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-red-500/90 text-white"
-              style={{
-                position: 'absolute',
-              }}
             >
               <Trash2 size={20} />
             </button>
@@ -906,9 +853,6 @@ export default function MemoriesPage() {
                 aria-label={downloadLabel}
                 title={downloadLabel}
                 className="absolute left-[60px] top-3 z-[1] flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/20 text-white"
-                style={{
-                  position: 'absolute',
-                }}
               >
                 <Download size={20} />
               </button>
@@ -919,41 +863,24 @@ export default function MemoriesPage() {
               onClick={closeLightbox}
               aria-label={ct('close') || '닫기'}
               className="absolute right-3 top-3 z-[1] flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-none bg-white/20 text-white"
-              style={{
-                position: 'absolute',
-              }}
             >
               <X size={24} />
             </button>
             <div
               className="absolute inset-0 flex items-center justify-center p-3 box-border"
-              style={{
-                position: 'absolute',
-                inset: 0,
-              }}
               onClick={(e) => e.stopPropagation()}
             >
               <img
                 src={displayListForLightbox[selectedIndex].data}
                 alt=""
                 onLoad={() => markImageLoaded(displayListForLightbox[selectedIndex].id)}
-                className="block h-auto w-auto max-h-full max-w-full rounded"
-                style={{
-                  objectFit: 'contain',
-                  opacity: imageLoadedIds.has(String(displayListForLightbox[selectedIndex].id)) ? 1 : 0,
-                  transition: 'opacity 0.25s ease-out',
-                }}
+                className={`block h-auto w-auto max-h-full max-w-full rounded object-contain transition-opacity duration-200 ease-out ${
+                  imageLoadedIds.has(String(displayListForLightbox[selectedIndex].id)) ? 'opacity-100' : 'opacity-0'
+                }`}
               />
             </div>
             <div
               className="absolute inset-x-0 bottom-0 mx-auto box-border flex max-w-[400px] flex-col items-center gap-2 bg-gradient-to-b from-transparent to-black/70 px-4 py-3"
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-              }}
               onClick={(e) => e.stopPropagation()}
             >
               {editingId === displayListForLightbox[selectedIndex].id ? (
@@ -964,8 +891,6 @@ export default function MemoriesPage() {
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder={dt('photo_description_placeholder')}
                     className="w-full rounded-lg border border-white/50 bg-white/10 p-2.5 text-sm text-white"
-                    style={{
-                    }}
                     autoFocus
                   />
                   <div className="flex flex-wrap justify-center gap-2">

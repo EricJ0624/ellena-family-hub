@@ -128,11 +128,7 @@ export function FamilyLocationSection({
 
         {!isLocationSharing ? (
           <div
-            className="mt-3 flex h-[400px] w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-cover bg-center p-5 text-slate-500"
-            style={{
-              backgroundImage:
-                'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
-            }}
+            className="mt-3 flex h-[400px] w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center p-5 text-slate-500"
           >
             <p className="mb-2 text-[15px] font-semibold text-slate-600">
               {t.location_ui_map_title}
@@ -284,11 +280,9 @@ export function FamilyLocationSection({
                   return (
                     <div
                       key={req.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                      style={{
-                        backgroundColor: isExpired ? '#fee2e2' : '#f8fafc',
-                        border: `1px solid ${isExpired ? '#fca5a5' : '#e2e8f0'}`,
-                      }}
+                      className={`flex items-center justify-between rounded-lg border p-3 ${
+                        isExpired ? 'border-red-300 bg-red-100' : 'border-slate-200 bg-slate-50'
+                      }`}
                     >
                       <div>
                         <div className="mb-1 font-medium">
@@ -321,10 +315,9 @@ export function FamilyLocationSection({
                               type="button"
                               onClick={() => onLocationRequestAction(req.id, 'accept')}
                               disabled={isExpired}
-                              className="flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                              style={{
-                                backgroundColor: isExpired ? '#cbd5e1' : '#10b981',
-                              }}
+                              className={`flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 ${
+                                isExpired ? 'bg-slate-300' : 'bg-emerald-500'
+                              }`}
                             >
                               <span>📍</span>
                               <span>{t.location_share_btn}</span>
@@ -361,11 +354,9 @@ export function FamilyLocationSection({
                   return (
                     <div
                       key={req.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                      style={{
-                        backgroundColor: isExpired ? '#fee2e2' : '#d1fae5',
-                        border: `1px solid ${isExpired ? '#fca5a5' : '#10b981'}`,
-                      }}
+                      className={`flex items-center justify-between rounded-lg border p-3 ${
+                        isExpired ? 'border-red-300 bg-red-100' : 'border-emerald-500 bg-emerald-100'
+                      }`}
                     >
                       <div>
                         <div className="mb-1 font-medium text-emerald-600">

@@ -342,11 +342,9 @@ export default function MemberSupportPage() {
                           {t.title}
                         </div>
                         <span
-                          className="whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-semibold"
-                          style={{
-                            backgroundColor: isPending ? '#fef3c7' : '#d1fae5',
-                            color: isPending ? '#92400e' : '#065f46',
-                          }}
+                          className={`whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-semibold ${
+                            isPending ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}
                         >
                           {isPending
                             ? dt('member_support_status_pending')
@@ -380,16 +378,11 @@ export default function MemberSupportPage() {
                       {thread.map((entry, idx) => (
                         <div
                           key={`${entry.created_at}-${idx}`}
-                          className="mt-2.5 whitespace-pre-wrap rounded-[10px] border p-3 text-[13px]"
-                          style={{
-                            backgroundColor:
-                              entry.role === 'member' ? '#fffbeb' : '#ecfdf5',
-                            border:
-                              entry.role === 'member'
-                                ? '1px solid #fde68a'
-                                : '1px solid #a7f3d0',
-                            color: entry.role === 'member' ? '#92400e' : '#065f46',
-                          }}
+                          className={`mt-2.5 whitespace-pre-wrap rounded-[10px] border p-3 text-[13px] ${
+                            entry.role === 'member'
+                              ? 'border-amber-200 bg-amber-50 text-amber-800'
+                              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                          }`}
                         >
                           <strong className="mb-1.5 block">
                             {entry.role === 'member'

@@ -1126,32 +1126,18 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setAdminLang('ko')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  backgroundColor: adminLang === 'ko' ? '#9333ea' : 'transparent',
-                  color: adminLang === 'ko' ? 'white' : '#64748b',
-                }}
+                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold ${
+                  adminLang === 'ko' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-500'
+                }`}
               >
                 한국어
               </button>
               <button
                 type="button"
                 onClick={() => setAdminLang('en')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  backgroundColor: adminLang === 'en' ? '#9333ea' : 'transparent',
-                  color: adminLang === 'en' ? 'white' : '#64748b',
-                }}
+                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold ${
+                  adminLang === 'en' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-500'
+                }`}
               >
                 English
               </button>
@@ -1550,26 +1536,7 @@ export default function AdminPage() {
                               {/* 시스템 관리자 승격/해제 버튼 */}
                               {systemAdmins.includes(user.id) ? (
                                 <button
-                                  style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: '#f59e0b',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    transition: 'all 0.2s',
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#d97706';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#f59e0b';
-                                  }}
+                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-amber-600"
                                   onClick={async () => {
                                     const { data: { user: currentUser } } = await supabase.auth.getUser();
                                     
@@ -1620,36 +1587,16 @@ export default function AdminPage() {
                                     }
                                   }}
                                 >
-                                  <Shield style={{ width: '16px', height: '16px' }} />
+                                  <Shield className="h-4 w-4" />
                                   권한 해제
                                 </button>
                               ) : (
                                 <button
-                                  style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: systemAdminCount >= 1 ? '#94a3b8' : '#7e22ce',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    cursor: systemAdminCount >= 1 ? 'not-allowed' : 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    transition: 'all 0.2s',
-                                    opacity: systemAdminCount >= 1 ? 0.6 : 1,
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    if (systemAdminCount < 1) {
-                                      e.currentTarget.style.backgroundColor = '#6b21a8';
-                                    }
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    if (systemAdminCount < 1) {
-                                      e.currentTarget.style.backgroundColor = '#7e22ce';
-                                    }
-                                  }}
+                                  className={`inline-flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 ${
+                                    systemAdminCount >= 1
+                                      ? 'cursor-not-allowed bg-slate-400 opacity-60'
+                                      : 'cursor-pointer bg-purple-700 opacity-100 hover:bg-purple-800'
+                                  }`}
                                   disabled={systemAdminCount >= 1}
                                   onClick={async () => {
                                     if (systemAdminCount >= 1) {
@@ -2748,104 +2695,52 @@ export default function AdminPage() {
 
             {activeTab === 'support-tickets' && (
               <div>
-                <h2 style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  marginBottom: '24px',
-                }}>
+                <h2 className="mb-6 text-xl font-semibold text-slate-800">
                   문의 관리 ({supportTickets.filter(t => t.status === 'pending').length}개 대기중)
                 </h2>
 
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}>
+                <div className="flex flex-col gap-4">
                   {supportTickets.map((ticket) => (
                     <motion.div
                       key={ticket.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: ticket.status === 'pending' ? '#fef3c7' : '#f8fafc',
-                        borderRadius: '12px',
-                        border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
-                      }}
+                      className={`rounded-xl border p-5 ${
+                        ticket.status === 'pending' ? 'border-amber-200 bg-amber-100' : 'border-slate-200 bg-slate-50'
+                      }`}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                        gap: '12px',
-                      }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '8px',
-                            flexWrap: 'wrap',
-                          }}>
-                            <h3 style={{
-                              fontSize: '18px',
-                              fontWeight: '600',
-                              color: '#1e293b',
-                              margin: 0,
-                            }}>
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-3">
+                            <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {ticket.title}
                             </h3>
-                            <span style={{
-                              padding: '4px 12px',
-                              backgroundColor: ticket.status === 'pending' ? '#fbbf24' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
-                              color: 'white',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                            }}>
+                            <span
+                              className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
+                                ticket.status === 'pending'
+                                  ? 'bg-amber-400'
+                                  : ticket.status === 'answered'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-slate-400'
+                              }`}
+                            >
                               {ticket.status === 'pending' ? at('status_pending') : ticket.status === 'answered' ? at('status_answered') : at('status_closed')}
                             </span>
                             {ticket.groups && (
-                              <span style={{
-                                fontSize: '14px',
-                                color: '#64748b',
-                              }}>
+                              <span className="text-sm text-slate-500">
                                 그룹: {ticket.groups.name}
                               </span>
                             )}
                           </div>
-                          <p style={{
-                            fontSize: '14px',
-                            color: '#64748b',
-                            margin: '0 0 12px 0',
-                            whiteSpace: 'pre-wrap',
-                          }}>
+                          <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
                           {ticket.answer && (
-                            <div style={{
-                              marginTop: '16px',
-                              padding: '16px',
-                              backgroundColor: '#f0f9ff',
-                              borderRadius: '8px',
-                              border: '1px solid #bae6fd',
-                            }}>
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#0369a1',
-                                marginBottom: '8px',
-                              }}>
+                            <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
+                              <div className="mb-2 text-xs font-semibold text-sky-700">
                                 답변:
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                                whiteSpace: 'pre-wrap',
-                              }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
                             </div>
@@ -2853,31 +2748,17 @@ export default function AdminPage() {
                           {parseMessageThread(ticket.message_thread).map((entry, idx) => (
                             <div
                               key={`st-${entry.created_at}-${idx}`}
-                              style={{
-                                marginTop: '12px',
-                                padding: '14px',
-                                backgroundColor: entry.role === 'group_admin' ? '#fffbeb' : '#f0f9ff',
-                                borderRadius: '8px',
-                                border: `1px solid ${entry.role === 'group_admin' ? '#fde68a' : '#bae6fd'}`,
-                              }}
+                              className={`mt-3 rounded-lg border p-3.5 ${
+                                entry.role === 'group_admin' ? 'border-amber-200 bg-amber-50' : 'border-sky-200 bg-sky-50'
+                              }`}
                             >
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: entry.role === 'group_admin' ? '#b45309' : '#0369a1',
-                                marginBottom: '6px',
-                              }}>
+                              <div className={`mb-1.5 text-xs font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
                                 {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                                whiteSpace: 'pre-wrap',
-                              }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                              <div className="mt-2 text-[11px] text-slate-400">
                                 {new Date(entry.created_at).toLocaleString('ko-KR')}
                               </div>
                             </div>
@@ -2913,73 +2794,40 @@ export default function AdminPage() {
                               setDeletingSystemSupportTicketId(null);
                             }
                           }}
-                          style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#fee2e2',
-                            color: '#b91c1c',
-                            border: '1px solid #fecaca',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            cursor: deletingSystemSupportTicketId === ticket.id ? 'wait' : 'pointer',
-                            flexShrink: 0,
-                            height: 'fit-content',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
+                          className={`inline-flex h-fit flex-shrink-0 items-center gap-1.5 rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 ${
+                            deletingSystemSupportTicketId === ticket.id ? 'cursor-wait' : 'cursor-pointer'
+                          }`}
                         >
                           {deletingSystemSupportTicketId === ticket.id ? (
-                            <Loader2 style={{ width: '14px', height: '14px' }} className="animate-spin" />
+                            <Loader2 className="h-[14px] w-[14px] animate-spin" />
                           ) : (
-                            <Trash2 style={{ width: '14px', height: '14px' }} />
+                            <Trash2 className="h-[14px] w-[14px]" />
                           )}
                           삭제
                         </button>
                       </div>
                       {ticket.status === 'pending' && (
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          marginTop: '16px',
-                        }}>
+                        <div className="mt-4 flex gap-2">
                           <button
                             onClick={() => {
                               setEditingTicket(ticket);
                               setTicketAnswer('');
                             }}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#9333ea',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white"
                           >
                             답변하기
                           </button>
                         </div>
                       )}
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        marginTop: '12px',
-                      }}>
+                      <div className="mt-3 text-xs text-slate-400">
                         {at('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
                         {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
                   {supportTickets.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>문의가 없습니다.</p>
                     </div>
                   )}
@@ -2987,71 +2835,36 @@ export default function AdminPage() {
 
                 {/* 답변 모달 */}
                 {editingTicket && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                  }}
+                  <div
+                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => setEditingTicket(null)}
                   >
-                    <div style={{
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      padding: '24px',
-                      width: '90%',
-                      maxWidth: '600px',
-                      maxHeight: '80vh',
-                      overflow: 'auto',
-                    }}
+                    <div
+                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
                     onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 style={{
-                        fontSize: '20px',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        marginBottom: '16px',
-                      }}>
+                      <h3 className="mb-4 text-xl font-semibold text-slate-800">
                         {at('submit_answer_btn')}
                       </h3>
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '12px',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
-                      }}>
-                        <div style={{
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          marginBottom: '4px',
-                        }}>
+                      <div className="mb-4 rounded-lg bg-slate-50 p-3">
+                        <div className="mb-1 text-sm font-semibold text-slate-800">
                           {editingTicket.title}
                         </div>
-                        <div style={{
-                          fontSize: '13px',
-                          color: '#64748b',
-                        }}>
+                        <div className="text-[13px] text-slate-500">
                           {editingTicket.content}
                         </div>
                         {editingTicket.answer && (
-                          <div style={{ marginTop: '12px', fontSize: '12px', color: '#0369a1' }}>
-                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>첫 답변</div>
-                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap' }}>{editingTicket.answer}</div>
+                          <div className="mt-3 text-xs text-sky-700">
+                            <div className="mb-1 font-semibold">첫 답변</div>
+                            <div className="whitespace-pre-wrap text-slate-600">{editingTicket.answer}</div>
                           </div>
                         )}
                         {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
-                          <div key={`modal2-${idx}`} style={{ marginTop: '10px', fontSize: '12px' }}>
-                            <div style={{ fontWeight: '600', color: entry.role === 'group_admin' ? '#b45309' : '#0369a1' }}>
+                          <div key={`modal2-${idx}`} className="mt-2.5 text-xs">
+                            <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
                               {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
                             </div>
-                            <div style={{ color: '#475569', whiteSpace: 'pre-wrap' }}>{entry.body}</div>
+                            <div className="whitespace-pre-wrap text-slate-600">{entry.body}</div>
                           </div>
                         ))}
                       </div>
@@ -3059,37 +2872,15 @@ export default function AdminPage() {
                         value={ticketAnswer}
                         onChange={(e) => setTicketAnswer(e.target.value)}
                         placeholder={at('placeholder_answer')}
-                        style={{
-                          width: '100%',
-                          minHeight: '200px',
-                          padding: '12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontFamily: 'inherit',
-                          marginBottom: '16px',
-                        }}
+                        className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
                       />
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        justifyContent: 'flex-end',
-                      }}>
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
                             setEditingTicket(null);
                             setTicketAnswer('');
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#475569',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
                         >
                           {at('cancel_btn')}
                         </button>
@@ -3138,16 +2929,7 @@ export default function AdminPage() {
                               setLoadingData(false);
                             }
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#9333ea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
                         >
                           {at('submit_answer_btn')}
                         </button>
@@ -3161,18 +2943,8 @@ export default function AdminPage() {
             {/* 접근 요청 관리 탭 */}
             {activeTab === 'dashboard-access-requests' && (
               <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '24px',
-                }}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: 0,
-                  }}>
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="m-0 text-xl font-semibold text-slate-800">
                     대시보드 접근 요청 관리 ({accessRequests.filter(r => r.status === 'pending').length}개 대기중)
                   </h2>
                   <button
@@ -3181,114 +2953,63 @@ export default function AdminPage() {
                       setNewAccessRequestGroupId('');
                       setNewAccessRequestReason('');
                     }}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: '#9333ea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
                   >
-                    <Plus style={{ width: '18px', height: '18px' }} />
+                    <Plus className="h-[18px] w-[18px]" />
                     새 접근 요청
                   </button>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}>
+                <div className="flex flex-col gap-4">
                   {accessRequests.map((request) => (
                     <motion.div
                       key={request.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: request.status === 'pending' ? '#fef3c7' : request.status === 'approved' ? '#d1fae5' : '#f8fafc',
-                        borderRadius: '12px',
-                        border: `1px solid ${request.status === 'pending' ? '#fde68a' : request.status === 'approved' ? '#a7f3d0' : '#e2e8f0'}`,
-                      }}
+                      className={`rounded-xl border p-5 ${
+                        request.status === 'pending'
+                          ? 'border-amber-200 bg-amber-100'
+                          : request.status === 'approved'
+                            ? 'border-emerald-200 bg-emerald-100'
+                            : 'border-slate-200 bg-slate-50'
+                      }`}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '8px',
-                          }}>
+                      <div className="mb-3 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="mb-2 flex items-center gap-3">
                             {request.groups && (
-                              <h3 style={{
-                                fontSize: '18px',
-                                fontWeight: '600',
-                                color: '#1e293b',
-                                margin: 0,
-                              }}>
+                              <h3 className="m-0 text-lg font-semibold text-slate-800">
                                 {request.groups.name}
                               </h3>
                             )}
-                            <span style={{
-                              padding: '4px 12px',
-                              backgroundColor: request.status === 'pending' ? '#fbbf24' : request.status === 'approved' ? '#10b981' : request.status === 'rejected' ? '#ef4444' : '#94a3b8',
-                              color: 'white',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                            }}>
+                            <span
+                              className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
+                                request.status === 'pending'
+                                  ? 'bg-amber-400'
+                                  : request.status === 'approved'
+                                    ? 'bg-emerald-500'
+                                    : request.status === 'rejected'
+                                      ? 'bg-red-500'
+                                      : 'bg-slate-400'
+                              }`}
+                            >
                               {request.status === 'pending' ? at('status_pending') : request.status === 'approved' ? at('status_approved') : request.status === 'rejected' ? at('status_rejected') : request.status === 'expired' ? at('status_expired') : at('status_revoked')}
                             </span>
                           </div>
-                          <p style={{
-                            fontSize: '14px',
-                            color: '#64748b',
-                            margin: '0 0 12px 0',
-                            whiteSpace: 'pre-wrap',
-                          }}>
+                          <p className="mb-3 mt-0 whitespace-pre-wrap text-sm text-slate-500">
                             {request.reason}
                           </p>
                           {request.status === 'approved' && request.expires_at && (
-                            <div style={{
-                              fontSize: '14px',
-                              color: '#059669',
-                              marginBottom: '8px',
-                            }}>
+                            <div className="mb-2 text-sm text-emerald-600">
                               {at('expires_at_label')} {new Date(request.expires_at).toLocaleString('ko-KR')}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
-                            <div style={{
-                              marginTop: '12px',
-                              padding: '12px',
-                              backgroundColor: '#fee2e2',
-                              borderRadius: '8px',
-                              border: '1px solid #fecaca',
-                            }}>
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#991b1b',
-                                marginBottom: '4px',
-                              }}>
+                            <div className="mt-3 rounded-lg border border-red-200 bg-red-100 p-3">
+                              <div className="mb-1 text-xs font-semibold text-red-800">
                                 {at('rejection_reason_label')}
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                              }}>
+                              <p className="m-0 text-sm text-slate-800">
                                 {request.rejection_reason}
                               </p>
                             </div>
@@ -3296,11 +3017,7 @@ export default function AdminPage() {
                         </div>
                       </div>
                       {request.status === 'pending' && (
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          marginTop: '16px',
-                        }}>
+                        <div className="mt-4 flex gap-2">
                           <button
                             onClick={async () => {
                               try {
@@ -3339,16 +3056,7 @@ export default function AdminPage() {
                                 setLoadingData(false);
                               }
                             }}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-none bg-emerald-500 px-4 py-2 text-[13px] font-semibold text-white"
                           >
 {at('approve_btn')}
                             </button>
@@ -3393,27 +3101,14 @@ export default function AdminPage() {
                                 setLoadingData(false);
                               }
                             }}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white"
                           >
 {at('reject_btn')}
                             </button>
                         </div>
                       )}
                       {request.status === 'approved' && request.expires_at && new Date(request.expires_at) > new Date() && (
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          marginTop: '16px',
-                        }}>
+                        <div className="mt-4 flex gap-2">
                           <button
                             onClick={async () => {
                               if (!confirm(at('confirm_revoke_request'))) {
@@ -3454,26 +3149,13 @@ console.error(at('error_revoke_failed'), error);
                                 setLoadingData(false);
                               }
                             }}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white"
                           >
                             {at('revoke_btn')}
                           </button>
                         </div>
                       )}
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        marginTop: '12px',
-                      }}>
+                      <div className="mt-3 text-xs text-slate-400">
                         요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
                         {request.approved_at && ` | ${at('approved_at_label')} ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
                         {request.rejected_at && ` | ${at('rejected_at_label')} ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
@@ -3481,12 +3163,8 @@ console.error(at('error_revoke_failed'), error);
                     </motion.div>
                   ))}
                   {accessRequests.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <KeyRound style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <KeyRound className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{at('no_access_requests')}</p>
                     </div>
                   )}
@@ -3494,66 +3172,29 @@ console.error(at('error_revoke_failed'), error);
 
                 {/* 새 접근 요청 모달 */}
                 {showNewAccessRequestModal && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                  }}
+                  <div
+                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => {
                     setShowNewAccessRequestModal(false);
                     setNewAccessRequestGroupId('');
                     setNewAccessRequestReason('');
                   }}
                   >
-                    <div style={{
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      padding: '24px',
-                      width: '90%',
-                      maxWidth: '600px',
-                      maxHeight: '80vh',
-                      overflow: 'auto',
-                    }}
+                    <div
+                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
                     onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 style={{
-                        fontSize: '20px',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        marginBottom: '16px',
-                      }}>
+                      <h3 className="mb-4 text-xl font-semibold text-slate-800">
                         새 접근 요청
                       </h3>
-                      <div style={{
-                        marginBottom: '16px',
-                      }}>
-                        <label style={{
-                          display: 'block',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          marginBottom: '8px',
-                        }}>
+                      <div className="mb-4">
+                        <label className="mb-2 block text-sm font-semibold text-slate-800">
                           그룹 선택
                         </label>
                         <select
                           value={newAccessRequestGroupId}
                           onChange={(e) => setNewAccessRequestGroupId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '12px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontFamily: 'inherit',
-                          }}
+                          className="w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
                         >
                           <option value="">{at('select_group_option')}</option>
                           {groups.map((group) => (
@@ -3563,55 +3204,25 @@ console.error(at('error_revoke_failed'), error);
                           ))}
                         </select>
                       </div>
-                      <div style={{
-                        marginBottom: '16px',
-                      }}>
-                        <label style={{
-                          display: 'block',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          marginBottom: '8px',
-                        }}>
+                      <div className="mb-4">
+                        <label className="mb-2 block text-sm font-semibold text-slate-800">
                           요청 이유
                         </label>
                         <textarea
                           value={newAccessRequestReason}
                           onChange={(e) => setNewAccessRequestReason(e.target.value)}
                           placeholder={at('placeholder_reason')}
-                          style={{
-                            width: '100%',
-                            minHeight: '150px',
-                            padding: '12px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontFamily: 'inherit',
-                            resize: 'vertical',
-                          }}
+                          className="min-h-[150px] w-full resize-y rounded-lg border border-slate-200 p-3 text-sm font-inherit"
                         />
                       </div>
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        justifyContent: 'flex-end',
-                      }}>
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
                             setShowNewAccessRequestModal(false);
                             setNewAccessRequestGroupId('');
                             setNewAccessRequestReason('');
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#f1f5f9',
-                            color: '#64748b',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500"
                         >
                           {at('cancel_btn')}
                         </button>
@@ -3664,16 +3275,7 @@ console.error(at('error_revoke_failed'), error);
                               setLoadingData(false);
                             }
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#9333ea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
                         >
                           요청하기
                         </button>
@@ -3687,38 +3289,28 @@ console.error(at('error_revoke_failed'), error);
             {/* 감사 로그 탭 */}
             {activeTab === 'audit-log' && (
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px' }}>
+                <h2 className="mb-6 text-xl font-semibold text-slate-800">
                   관리자 감사 로그
                 </h2>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  alignItems: 'center',
-                  marginBottom: '20px',
-                  padding: '16px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                }}>
-                  <label style={{ fontSize: '13px', color: '#475569' }}>기간</label>
+                <div className="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-[13px] text-slate-600">기간</label>
                   <input
                     type="date"
                     value={auditLogFilters.from}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, from: e.target.value }))}
-                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                    className="rounded-md border border-slate-200 px-3 py-2 text-sm"
                   />
-                  <span style={{ color: '#94a3b8' }}>~</span>
+                  <span className="text-slate-400">~</span>
                   <input
                     type="date"
                     value={auditLogFilters.to}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, to: e.target.value }))}
-                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px' }}
+                    className="rounded-md border border-slate-200 px-3 py-2 text-sm"
                   />
                   <select
                     value={auditLogFilters.resource_type}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, resource_type: e.target.value }))}
-                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', minWidth: '140px' }}
+                    className="min-w-[140px] rounded-md border border-slate-200 px-3 py-2 text-sm"
                   >
                     <option value="">전체 유형</option>
                     <option value="group">그룹</option>
@@ -3734,92 +3326,70 @@ console.error(at('error_revoke_failed'), error);
                     placeholder={at('placeholder_admin_id')}
                     value={auditLogFilters.admin_id}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, admin_id: e.target.value.trim() }))}
-                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}
+                    className="w-[220px] rounded-md border border-slate-200 px-3 py-2 text-sm"
                   />
                   <input
                     type="text"
                     placeholder={at('placeholder_group_id')}
                     value={auditLogFilters.group_id}
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, group_id: e.target.value.trim() }))}
-                    style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', width: '220px' }}
+                    className="w-[220px] rounded-md border border-slate-200 px-3 py-2 text-sm"
                   />
                   <button
                     onClick={() => loadAuditLogs(1)}
                     disabled={auditLogLoading}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#9333ea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: auditLogLoading ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-sm font-semibold text-white ${
+                      auditLogLoading ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'
+                    }`}
                   >
-                    {auditLogLoading ? <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} /> : null}
+                    {auditLogLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     조회
                   </button>
                   <button
                     onClick={exportAuditLogsCsv}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#0ea5e9',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-sky-500 px-4 py-2 text-sm font-semibold text-white"
                   >
-                    <Download style={{ width: '16px', height: '16px' }} />
+                    <Download className="h-4 w-4" />
                     CSV 내보내기
                   </button>
                 </div>
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full border-collapse text-[13px]">
                     <thead>
-                      <tr style={{ backgroundColor: '#f1f5f9' }}>
+                      <tr className="bg-slate-100">
                         {getAdminAuditHeaders(adminLang).slice(0, 9).map((h, i) => (
-                          <th key={i} style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
+                          <th key={i} className="border-b-2 border-slate-200 px-3 py-2.5 text-left">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {auditLogLoading && auditLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                            <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                          <td colSpan={9} className="p-8 text-center text-slate-500">
+                            <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
                             {at('loading')}
                           </td>
                         </tr>
                       ) : auditLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                          <td colSpan={9} className="p-8 text-center text-slate-400">
                             {at('no_audit_log')}
                           </td>
                         </tr>
                       ) : (
                         auditLogs.map((log) => (
-                          <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString('ko-KR')}</td>
-                            <td style={{ padding: '10px 12px' }}>{log.action}</td>
-                            <td style={{ padding: '10px 12px' }}>{log.resource_type}</td>
-                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.resource_id || '-'}</td>
-                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.admin_id}</td>
-                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.group_id || '-'}</td>
-                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '12px' }}>{log.target_user_id || '-'}</td>
-                            <td style={{ padding: '10px 12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <tr key={log.id} className="border-b border-slate-100">
+                            <td className="whitespace-nowrap px-3 py-2.5">{new Date(log.created_at).toLocaleString('ko-KR')}</td>
+                            <td className="px-3 py-2.5">{log.action}</td>
+                            <td className="px-3 py-2.5">{log.resource_type}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs">{log.resource_id || '-'}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs">{log.admin_id}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs">{log.group_id || '-'}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs">{log.target_user_id || '-'}</td>
+                            <td className="max-w-[200px] overflow-hidden text-ellipsis px-3 py-2.5">
                               {log.details ? JSON.stringify(log.details) : '-'}
                             </td>
-                            <td style={{ padding: '10px 12px' }}>{log.ip_address || '-'}</td>
+                            <td className="px-3 py-2.5">{log.ip_address || '-'}</td>
                           </tr>
                         ))
                       )}
@@ -3827,44 +3397,27 @@ console.error(at('error_revoke_failed'), error);
                   </table>
                 </div>
                 {auditLogTotal > 0 && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: '16px',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                  }}>
-                    <span style={{ fontSize: '13px', color: '#64748b' }}>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[13px] text-slate-500">
                       총 {auditLogTotal.toLocaleString()}건 ({(auditLogPage - 1) * auditLogLimit + 1}–{Math.min(auditLogPage * auditLogLimit, auditLogTotal)})
                     </span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="flex gap-2">
                       <button
                         onClick={() => loadAuditLogs(auditLogPage - 1)}
                         disabled={auditLogPage <= 1 || auditLogLoading}
-                        style={{
-                          padding: '6px 12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          backgroundColor: 'white',
-                          cursor: auditLogPage <= 1 || auditLogLoading ? 'not-allowed' : 'pointer',
-                          fontSize: '13px',
-                        }}
+                        className={`rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[13px] ${
+                          auditLogPage <= 1 || auditLogLoading ? 'cursor-not-allowed' : 'cursor-pointer'
+                        }`}
                       >
                         이전
                       </button>
-                      <span style={{ alignSelf: 'center', fontSize: '13px', color: '#475569' }}>{auditLogPage} / {Math.ceil(auditLogTotal / auditLogLimit) || 1}</span>
+                      <span className="self-center text-[13px] text-slate-600">{auditLogPage} / {Math.ceil(auditLogTotal / auditLogLimit) || 1}</span>
                       <button
                         onClick={() => loadAuditLogs(auditLogPage + 1)}
                         disabled={auditLogPage >= Math.ceil(auditLogTotal / auditLogLimit) || auditLogLoading}
-                        style={{
-                          padding: '6px 12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          backgroundColor: 'white',
-                          cursor: auditLogPage >= Math.ceil(auditLogTotal / auditLogLimit) || auditLogLoading ? 'not-allowed' : 'pointer',
-                          fontSize: '13px',
-                        }}
+                        className={`rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[13px] ${
+                          auditLogPage >= Math.ceil(auditLogTotal / auditLogLimit) || auditLogLoading ? 'cursor-not-allowed' : 'cursor-pointer'
+                        }`}
                       >
                         다음
                       </button>
@@ -3877,13 +3430,6 @@ console.error(at('error_revoke_failed'), error);
           </>
         )}
       </div>
-
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

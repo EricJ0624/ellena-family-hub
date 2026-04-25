@@ -5420,10 +5420,9 @@ export default function FamilyHub() {
           ) : showAdminButton ? (
             <button
               onClick={() => router.push(adminPagePath)}
-              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow"
-              style={{
-                backgroundColor: isSystemAdmin ? '#7e22ce' : '#2563eb',
-              }}
+              className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
+              }`}
               aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
             >
               <span className="text-sm">⚙️</span>
@@ -5463,11 +5462,10 @@ export default function FamilyHub() {
                 return (
                 <div 
                   key={user.id}
-                  className="user-info rounded-md border border-[rgba(99,102,241,0.3)] bg-[rgba(99,102,241,0.1)] px-1.5 py-[3px]" 
+                  className={`user-info rounded-md border border-[rgba(99,102,241,0.3)] bg-[rgba(99,102,241,0.1)] px-1.5 py-[3px] ${
+                    user.isCurrentUser ? 'cursor-pointer' : 'cursor-default'
+                  }`} 
                   onClick={user.isCurrentUser ? () => setIsNicknameModalOpen(true) : undefined}
-                  style={{
-                    cursor: user.isCurrentUser ? 'pointer' : 'default',
-                  }}
                 >
                   <span className="user-icon text-xs">👤</span>
                   <p className={`user-name m-0 text-xs ${user.isCurrentUser ? 'font-semibold' : 'font-medium'}`}>
@@ -5901,12 +5899,11 @@ export default function FamilyHub() {
               <button
                 onClick={handleTransferAndDelete}
                 disabled={!selectedSuccessor}
-                className="rounded-lg border-none px-6 py-3 text-sm font-semibold text-white transition-all duration-200"
-                style={{
-                  backgroundColor: selectedSuccessor ? '#7e22ce' : '#94a3b8',
-                  cursor: selectedSuccessor ? 'pointer' : 'not-allowed',
-                  opacity: selectedSuccessor ? 1 : 0.6,
-                }}
+                className={`rounded-lg border-none px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ${
+                  selectedSuccessor
+                    ? 'cursor-pointer bg-purple-700 opacity-100'
+                    : 'cursor-not-allowed bg-slate-400 opacity-60'
+                }`}
               >
                 후임자 지정 및 탈퇴
               </button>

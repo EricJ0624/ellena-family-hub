@@ -649,8 +649,7 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className="relative flex min-h-dvh flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
-      style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
+      className="relative flex min-h-dvh flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5 font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,'Helvetica_Neue',Arial,sans-serif]"
     >
       {/* 배경 장식 요소 */}
       <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
