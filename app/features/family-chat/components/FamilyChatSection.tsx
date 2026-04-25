@@ -311,22 +311,12 @@ export function FamilyChatSection({
       <div className="section-body">
         <div ref={chatBoxRef} className="chat-messages">
           {chatHasMoreOlder && (
-            <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
+            <div className="px-0 pb-1 pt-2 text-center">
               <button
                 type="button"
                 onClick={onLoadOlderMessages}
                 disabled={chatLoadingOlder}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#4f46e5',
-                  background: '#eef2ff',
-                  border: '1px solid #c7d2fe',
-                  borderRadius: '999px',
-                  cursor: chatLoadingOlder ? 'wait' : 'pointer',
-                  opacity: chatLoadingOlder ? 0.75 : 1,
-                }}
+                className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-[13px] font-semibold text-indigo-600 disabled:cursor-wait disabled:opacity-75"
               >
                 {chatLoadingOlder ? t.chat_loading_older : t.chat_load_older}
               </button>
@@ -335,13 +325,13 @@ export function FamilyChatSection({
           {(messages || []).map((m) => (
             <div key={String(m.id)} className="message-item">
               <div className="message-header">
-                <span className="message-user" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="message-user flex items-center gap-1">
                   {m.sender_id && familyRoleByUserId[m.sender_id] && (
                     <>
-                      <span style={{ fontSize: '20px', lineHeight: '1' }}>
+                      <span className="text-[20px] leading-none">
                         {getFamilyRoleEmoji(familyRoleByUserId[m.sender_id])}
                       </span>
-                      <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                      <span className="text-[13px] font-semibold text-slate-500">
                         {getFamilyRoleLabel(lang, familyRoleByUserId[m.sender_id])}
                       </span>
                     </>
@@ -363,77 +353,43 @@ export function FamilyChatSection({
                   const showLocalPreviews = previews.length > 0 && rows.length === 0;
                   if (rows.length === 0 && !showLocalPreviews) return null;
                   return (
-                    <div style={{ marginBottom: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}>
+                    <div className="mb-2 grid grid-cols-3 gap-1.5">
                       {showLocalPreviews &&
                         previews.map((src, pi) => (
                           <div
                             key={`pv-${pi}`}
-                            className="chat-attachment-cell"
-                            style={{ position: 'relative' }}
+                            className="chat-attachment-cell relative"
                             title="업로드 중"
                           >
                             <img
                               src={src}
                               alt=""
-                              style={{
-                                width: '100%',
-                                height: '84px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                opacity: 0.92,
-                              }}
+                              className="h-[84px] w-full rounded-lg object-cover opacity-90"
                             />
                             <span
-                              style={{
-                                position: 'absolute',
-                                inset: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                color: '#fff',
-                                background: 'rgba(15,23,42,0.35)',
-                                borderRadius: '8px',
-                                pointerEvents: 'none',
-                              }}
+                              className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-slate-900/35 text-[11px] font-bold text-white"
                             >
                               …
                             </span>
                           </div>
                         ))}
                       {rows.map((att) => (
-                        <div key={att.id} className="chat-attachment-cell" style={{ position: 'relative' }}>
+                        <div key={att.id} className="chat-attachment-cell relative">
                           <a href={att.image_url} target="_blank" rel="noopener noreferrer">
                             <img
                               src={att.thumbnail_url || att.image_url}
                               alt={att.original_filename}
-                              style={{ width: '100%', height: '84px', objectFit: 'cover', borderRadius: '8px' }}
+                              className="h-[84px] w-full rounded-lg object-cover"
                             />
                           </a>
                           {m.sender_id === userId && (
                             <button
                               type="button"
-                              className="chat-attachment-delete-btn"
                               onClick={() => {
                                 if (!currentGroupId) return;
                                 void onDeleteAttachment(att.id);
                               }}
-                              style={{
-                                position: 'absolute',
-                                top: 4,
-                                right: 4,
-                                width: 18,
-                                height: 18,
-                                borderRadius: '999px',
-                                border: 'none',
-                                background: 'rgba(239,68,68,0.95)',
-                                color: '#fff',
-                                fontSize: 11,
-                                cursor: 'pointer',
-                                lineHeight: '18px',
-                                padding: 0,
-                              }}
+                              className="chat-attachment-delete-btn absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-none bg-red-500/95 p-0 text-[11px] leading-[18px] text-white"
                               aria-label={t.chat_remove_attachment_aria}
                             >
                               x
@@ -476,30 +432,14 @@ export function FamilyChatSection({
           <button
             type="button"
             onClick={() => chatFileInputRef.current?.click()}
-            style={{
-              borderRadius: '8px',
-              border: '1px solid #cbd5e1',
-              padding: '7px 9px',
-              background: '#f8fafc',
-              fontWeight: 600,
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
+            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold"
           >
             {t.chat_album_btn}
           </button>
           <button
             type="button"
             onClick={() => chatCameraInputRef.current?.click()}
-            style={{
-              borderRadius: '8px',
-              border: '1px solid #cbd5e1',
-              padding: '7px 9px',
-              background: '#f8fafc',
-              fontWeight: 600,
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
+            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold"
           >
             {t.chat_camera_btn}
           </button>
@@ -509,7 +449,7 @@ export function FamilyChatSection({
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             multiple
             onChange={onPickFiles}
-            style={{ display: 'none' }}
+            className="hidden"
           />
           <input
             ref={chatCameraInputRef}
@@ -517,7 +457,7 @@ export function FamilyChatSection({
             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             capture="environment"
             onChange={onPickFiles}
-            style={{ display: 'none' }}
+            className="hidden"
           />
         </div>
       </div>

@@ -106,23 +106,11 @@ export function FamilyLocationSection({
     <section className="content-section">
       <div className="section-header">
         <h3 className="section-title">{t.section_title_location}</h3>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={onOpenRequestModal}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
           >
             <span>📍</span>
             <span>{t.location_where_btn}</span>
@@ -131,8 +119,8 @@ export function FamilyLocationSection({
       </div>
       <div className="section-body">
         {myLocation.address && (lat !== 0 || lng !== 0) && (
-          <div style={{ marginBottom: '16px' }}>
-            <p className="location-text" style={{ marginBottom: '12px' }}>
+          <div className="mb-4">
+            <p className="location-text mb-3">
               {t.location_ui_address_prefix} {extractLocationAddress(myLocation.address)}
             </p>
           </div>
@@ -140,72 +128,40 @@ export function FamilyLocationSection({
 
         {!isLocationSharing ? (
           <div
+            className="mt-3 flex h-[400px] w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-cover bg-center p-5 text-slate-500"
             style={{
-              width: '100%',
-              height: '400px',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              marginTop: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
               backgroundImage:
                 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              color: '#64748b',
-              padding: '20px',
             }}
           >
-            <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '8px', color: '#475569' }}>
+            <p className="mb-2 text-[15px] font-semibold text-slate-600">
               {t.location_ui_map_title}
             </p>
-            <p style={{ fontSize: '13px', lineHeight: '1.5', textAlign: 'center', maxWidth: '320px' }}>
+            <p className="max-w-80 text-center text-[13px] leading-[1.5]">
               {t.location_ui_map_hint_off}
             </p>
           </div>
         ) : hasGoogleMapsApiKey ? (
           mapError ? (
             <div
-              style={{
-                width: '100%',
-                height: '400px',
-                borderRadius: '12px',
-                border: '1px solid #fecaca',
-                marginTop: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#fef2f2',
-                color: '#991b1b',
-                padding: '20px',
-              }}
+              className="mt-3 flex h-[400px] w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-5 text-red-800"
             >
-              <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-                <p style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px', color: '#dc2626' }}>
+              <div className="max-w-[500px] text-center">
+                <p className="mb-3 text-lg font-semibold text-red-600">
                   {t.location_ui_gmaps_error_title}
                 </p>
-                <p style={{ fontSize: '14px', marginBottom: '16px', lineHeight: '1.6' }}>{mapError}</p>
+                <p className="mb-4 text-sm leading-[1.6]">{mapError}</p>
                 <div
-                  style={{
-                    backgroundColor: '#fee2e2',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    fontSize: '13px',
-                    lineHeight: '1.6',
-                  }}
+                  className="mb-4 rounded-lg bg-red-100 p-3 text-[13px] leading-[1.6]"
                 >
-                  <p style={{ fontWeight: '600', marginBottom: '8px' }}>{t.location_ui_troubleshoot_title}</p>
-                  <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                  <p className="mb-2 font-semibold">{t.location_ui_troubleshoot_title}</p>
+                  <ol className="ml-5 leading-[1.8]">
                     <li>
                       <a
                         href="https://console.cloud.google.com/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: '#dc2626', textDecoration: 'underline' }}
+                        className="text-red-600 underline"
                       >
                         {t.location_ui_troubleshoot_1}
                       </a>
@@ -214,19 +170,14 @@ export function FamilyLocationSection({
                     <li>{t.location_ui_troubleshoot_3}</li>
                     <li>{t.location_ui_troubleshoot_4}</li>
                   </ol>
-                  <p style={{ marginTop: '8px', fontSize: '12px', color: '#991b1b' }}>{t.location_ui_troubleshoot_note}</p>
+                  <p className="mt-2 text-xs text-red-800">{t.location_ui_troubleshoot_note}</p>
                 </div>
                 {(lat !== 0 || lng !== 0) && (
                   <a
                     href={`https://www.google.com/maps?q=${lat},${lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      color: '#dc2626',
-                      textDecoration: 'underline',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                    }}
+                    className="text-sm font-medium text-red-600 underline"
                   >
                     {t.location_ui_open_in_gmaps}
                   </a>
@@ -236,58 +187,27 @@ export function FamilyLocationSection({
           ) : (
             <div
               id="map"
-              style={{
-                width: '100%',
-                height: '400px',
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                marginTop: '12px',
-              }}
+              className="mt-3 h-[400px] w-full rounded-xl border border-slate-200"
             />
           )
         ) : null}
         {isLocationSharing && !hasGoogleMapsApiKey ? (
           <div
-            style={{
-              width: '100%',
-              height: '400px',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              marginTop: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#f8fafc',
-              color: '#64748b',
-              padding: '20px',
-            }}
+            className="mt-3 flex h-[400px] w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-500"
           >
-            <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-              <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1e293b' }}>
+            <div className="max-w-[500px] text-center">
+              <p className="mb-3 text-base font-semibold text-slate-800">
                 {t.location_ui_api_key_title}
               </p>
               <div
-                style={{
-                  fontSize: '13px',
-                  textAlign: 'left',
-                  backgroundColor: '#ffffff',
-                  padding: '16px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '12px',
-                }}
+                className="mb-3 rounded-lg border border-slate-200 bg-white p-4 text-left text-[13px]"
               >
-                <p style={{ marginBottom: '8px', fontWeight: '600' }}>{t.location_ui_api_setup_title}</p>
-                <ol style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+                <p className="mb-2 font-semibold">{t.location_ui_api_setup_title}</p>
+                <ol className="ml-5 leading-[1.8]">
                   <li>
                     {t.location_ui_api_li1_before}
                     <code
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                      }}
+                      className="rounded bg-slate-100 px-1.5 py-0.5 text-xs"
                     >
                       .env.local
                     </code>
@@ -297,14 +217,7 @@ export function FamilyLocationSection({
                     {t.location_ui_api_li2_intro}
                     <br />
                     <code
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        display: 'inline-block',
-                        marginTop: '4px',
-                      }}
+                      className="mt-1 inline-block rounded bg-slate-100 px-2 py-1 text-[11px]"
                     >
                       {t.location_ui_api_env_example}
                     </code>
@@ -312,25 +225,20 @@ export function FamilyLocationSection({
                   <li>
                     {t.location_ui_api_li3_before}
                     <code
-                      style={{
-                        backgroundColor: '#f1f5f9',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                      }}
+                      className="rounded bg-slate-100 px-1.5 py-0.5 text-xs"
                     >
                       npm run dev
                     </code>
                     {t.location_ui_api_li3_after}
                   </li>
                 </ol>
-                <p style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
+                <p className="mt-3 text-xs text-slate-500">
                   {t.location_ui_api_hint_before}
                   <a
                     href="https://console.cloud.google.com/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: '#3b82f6' }}
+                    className="text-blue-500"
                   >
                     Google Cloud Console
                   </a>
@@ -338,13 +246,13 @@ export function FamilyLocationSection({
                 </p>
               </div>
               {(lat !== 0 || lng !== 0) && (
-                <p style={{ fontSize: '12px', marginTop: '8px' }}>
+                <p className="mt-2 text-xs">
                   {t.location_ui_or_maps_before}
                   <a
                     href={`https://www.google.com/maps?q=${lat},${lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                    className="text-blue-500 underline"
                   >
                     {t.location_ui_or_maps_link}
                   </a>
@@ -355,9 +263,9 @@ export function FamilyLocationSection({
         ) : null}
 
         {locationRequests.length > 0 && (
-          <div style={{ marginTop: '20px' }}>
-            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>{t.location_ui_requests_heading}</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="mt-5">
+            <h4 className="mb-3 text-base font-semibold">{t.location_ui_requests_heading}</h4>
+            <div className="flex flex-col gap-2">
               {locationRequests
                 .filter((req) => req.status === 'pending')
                 .map((req) => {
@@ -376,46 +284,34 @@ export function FamilyLocationSection({
                   return (
                     <div
                       key={req.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
                       style={{
-                        padding: '12px',
                         backgroundColor: isExpired ? '#fee2e2' : '#f8fafc',
-                        borderRadius: '8px',
                         border: `1px solid ${isExpired ? '#fca5a5' : '#e2e8f0'}`,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                        <div className="mb-1 font-medium">
                           {isRequester ? `→ ${otherUserName}${roleDisplay}` : `← ${otherUserName}${roleDisplay}`}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        <div className="text-xs text-slate-500">
                           {isRequester ? t.piggy_request_sent : t.piggy_request_received}
                           {!isExpired && timeLeft > 0 && (
-                            <span style={{ marginLeft: '8px' }}>
+                            <span className="ml-2">
                               {fillHm(t.location_ui_dot_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
                             </span>
                           )}
                           {isExpired && (
-                            <span style={{ marginLeft: '8px', color: '#ef4444' }}>{t.location_ui_expired_suffix}</span>
+                            <span className="ml-2 text-red-500">{t.location_ui_expired_suffix}</span>
                           )}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="flex gap-2">
                         {isRequester ? (
                           <button
                             type="button"
                             onClick={() => onLocationRequestAction(req.id, 'cancel')}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-none bg-red-500 px-3 py-1.5 text-xs text-white"
                           >
                             {cancelLabel}
                           </button>
@@ -425,19 +321,9 @@ export function FamilyLocationSection({
                               type="button"
                               onClick={() => onLocationRequestAction(req.id, 'accept')}
                               disabled={isExpired}
+                              className="flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                               style={{
-                                padding: '8px 16px',
                                 backgroundColor: isExpired ? '#cbd5e1' : '#10b981',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                cursor: isExpired ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                opacity: isExpired ? 0.6 : 1,
                               }}
                             >
                               <span>📍</span>
@@ -446,15 +332,7 @@ export function FamilyLocationSection({
                             <button
                               type="button"
                               onClick={() => onLocationRequestAction(req.id, 'reject')}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#ef4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                              }}
+                              className="cursor-pointer rounded-md border-none bg-red-500 px-3 py-1.5 text-xs text-white"
                             >
                               {rejectLabel}
                             </button>
@@ -483,42 +361,30 @@ export function FamilyLocationSection({
                   return (
                     <div
                       key={req.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
                       style={{
-                        padding: '12px',
                         backgroundColor: isExpired ? '#fee2e2' : '#d1fae5',
-                        borderRadius: '8px',
                         border: `1px solid ${isExpired ? '#fca5a5' : '#10b981'}`,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: '500', marginBottom: '4px', color: '#059669' }}>
+                        <div className="mb-1 font-medium text-emerald-600">
                           {fillName(t.location_ui_sharing_with, otherUserName + roleDisplay)}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        <div className="text-xs text-slate-500">
                           {!isExpired && timeLeft > 0 ? (
                             <span>
                               {fillHm(t.location_ui_pin_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
                             </span>
                           ) : (
-                            <span style={{ color: '#ef4444' }}>{t.location_ui_pin_expired}</span>
+                            <span className="text-red-500">{t.location_ui_pin_expired}</span>
                           )}
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => onEndLocationSharing(req.id)}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                        }}
+                        className="cursor-pointer rounded-md border-none bg-red-500 px-3 py-1.5 text-xs text-white"
                       >
                         {t.location_ui_end_sharing}
                       </button>

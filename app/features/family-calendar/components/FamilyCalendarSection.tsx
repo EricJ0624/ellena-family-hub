@@ -289,80 +289,46 @@ export function FamilyCalendarSection({
       {/* Event Modal */}
       {showEventModal && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
           onClick={closeEventModal}
         >
           <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '24px',
-              width: '90%',
-              maxWidth: '500px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            }}
+            className="w-[90%] max-w-[500px] rounded-xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginTop: 0, marginBottom: '8px', fontSize: '20px', fontWeight: '600' }}>{t.event_add_title}</h3>
+            <h3 className="mb-2 mt-0 text-xl font-semibold">{t.event_add_title}</h3>
             {eventFormDate && (
-              <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b' }}>
+              <p className="mb-5 mt-0 text-sm text-slate-500">
                 {formatLongDate(eventFormDate)}
               </p>
             )}
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>{t.event_title_label}</label>
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium">{t.event_title_label}</label>
               <input
                 type="text"
                 value={eventForm.title}
                 onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                 placeholder={t.event_title_placeholder}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full box-border rounded-lg border border-slate-200 p-3 text-[15px]"
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>{t.event_desc_label}</label>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium">{t.event_desc_label}</label>
               <textarea
                 value={eventForm.desc}
                 onChange={(e) => setEventForm({ ...eventForm, desc: e.target.value })}
                 placeholder={t.event_desc_placeholder}
                 rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                }}
+                className="w-full box-border resize-y rounded-lg border border-slate-200 p-3 text-[15px] font-inherit"
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>{t.event_repeat_label}</label>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium">{t.event_repeat_label}</label>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex cursor-pointer items-center gap-1.5 text-sm">
                   <input
                     type="radio"
                     name="repeat_type"
@@ -371,7 +337,7 @@ export function FamilyCalendarSection({
                   />
                   {t.event_repeat_none}
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                <label className="flex cursor-pointer items-center gap-1.5 text-sm">
                   <input
                     type="radio"
                     name="repeat_type"
@@ -380,7 +346,7 @@ export function FamilyCalendarSection({
                   />
                   {t.event_repeat_monthly}
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                <label className="flex cursor-pointer items-center gap-1.5 text-sm">
                   <input
                     type="radio"
                     name="repeat_type"
@@ -392,34 +358,16 @@ export function FamilyCalendarSection({
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div className="flex justify-end gap-3">
               <button
                 onClick={closeEventModal}
-                style={{
-                  padding: '10px 20px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  backgroundColor: 'white',
-                  color: '#64748b',
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                }}
+                className="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[15px] font-medium text-slate-500"
               >
                 {t.cancel}
               </button>
               <button
                 onClick={handleEventSubmit}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  backgroundColor: '#667eea',
-                  color: 'white',
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                }}
+                className="cursor-pointer rounded-lg border-none bg-indigo-500 px-5 py-2.5 text-[15px] font-medium text-white hover:bg-indigo-600"
               >
                 {t.event_submit_btn}
               </button>
@@ -431,16 +379,11 @@ export function FamilyCalendarSection({
       {/* Calendar Section */}
       <section
         className="content-section"
-        style={{
-          background: 'linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f0f9ff 100%)',
-          borderRadius: '16px',
-          padding: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-        }}
+        style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #f8fafc 50%, #f0f9ff 100%)' }}
       >
-        <div className="section-header" style={{ marginBottom: '10px' }}>
-          <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
-            <Calendar style={{ width: '24px', height: '24px', color: '#7c3aed' }} />
+        <div className="section-header mb-2.5">
+          <h3 className="section-title m-0 flex items-center gap-2.5">
+            <Calendar className="h-6 w-6 text-violet-600" />
             {t.section_title_calendar}
           </h3>
         </div>
@@ -450,108 +393,41 @@ export function FamilyCalendarSection({
             initial={{ opacity: 0.7 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            style={{ marginBottom: '10px' }}
+            className="mb-2.5"
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+              <h4 className="m-0 text-lg font-bold text-slate-800">
                 {formatMonthYear(calendarGrid.year, calendarGrid.month)}
               </h4>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
-                  style={{
-                    padding: '8px 14px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f5f3ff';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.2)';
-                    e.currentTarget.style.borderColor = '#c4b5fd';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#fff';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                  }}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)]"
                 >
-                  <ChevronLeft style={{ width: '18px', height: '18px' }} />
+                  <ChevronLeft className="h-[18px] w-[18px]" />
                   {t.calendar_prev_month}
                 </button>
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
-                  style={{
-                    padding: '8px 14px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f5f3ff';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.2)';
-                    e.currentTarget.style.borderColor = '#c4b5fd';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#fff';
-                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                  }}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)]"
                 >
                   {t.calendar_next_month}
-                  <ChevronRight style={{ width: '18px', height: '18px' }} />
+                  <ChevronRight className="h-[18px] w-[18px]" />
                 </button>
               </div>
             </div>
             <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gridAutoRows: '42px',
-                gap: '4px',
-                textAlign: 'center',
-                fontSize: '12px',
-              }}
+              className="grid grid-cols-7 auto-rows-[42px] gap-1 text-center text-xs"
             >
               {weekDays.map((day, i) => (
                 <div
                   key={i}
+                  className="flex min-h-[34px] items-center justify-center rounded-md px-0.5 py-1.5 text-[13px] font-bold"
                   style={{
-                    padding: '6px 2px',
-                    minHeight: '34px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '700',
                     color: i === 0 ? '#dc2626' : i === 6 ? '#2563eb' : '#64748b',
                     backgroundColor: i === 0 || i === 6 ? 'rgba(0,0,0,0.03)' : 'transparent',
-                    borderRadius: '6px',
-                    fontSize: '13px',
                   }}
                 >
                   {day}
@@ -602,6 +478,7 @@ export function FamilyCalendarSection({
                       position: 'relative',
                       fontSize: '14px',
                     }}
+                    className="border-none"
                   >
                     <span>{cell.day}</span>
                     {cell.eventCount > 0 && (
@@ -630,93 +507,42 @@ export function FamilyCalendarSection({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
-                style={{
-                  marginTop: '14px',
-                  padding: '14px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(255,255,255,0.8)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                }}
+                className="mt-3.5 rounded-xl border border-slate-200 bg-white/80 p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '12px',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                  }}
-                >
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CalendarDays style={{ width: '20px', height: '20px', color: '#7c3aed' }} />
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="m-0 flex items-center gap-1.5 text-[15px] font-bold text-slate-800">
+                    <CalendarDays className="h-5 w-5 text-violet-600" />
                     {t.calendar_day_events_title.replace(/\{date\}/g, formatLongDate(selectedDate))}
                   </h4>
                   <button
                     type="button"
                     onClick={() => setSelectedDate(null)}
-                    style={{
-                      padding: '8px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '10px',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f1f5f9';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#fff';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                    }}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-[13px] transition-all duration-200 hover:border-slate-300 hover:bg-slate-100"
                   >
-                    <X style={{ width: '16px', height: '16px' }} />
+                    <X className="h-4 w-4" />
                     {t.close}
                   </button>
                 </div>
                 {eventsOnSelectedDate.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="flex flex-col gap-3.5">
                     {eventsOnSelectedDate.map((e, i) => (
                       <motion.div
                         key={e.id}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05, duration: 0.2 }}
-                        style={{
-                          padding: '14px 14px 14px 18px',
-                          background: '#fff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          borderLeft: '4px solid #7c3aed',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(el) => {
-                          el.currentTarget.style.boxShadow = '0 8px 24px rgba(124, 58, 237, 0.12)';
-                          el.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(el) => {
-                          el.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-                          el.currentTarget.style.transform = 'translateY(0)';
-                        }}
+                        className="rounded-xl border border-l-4 border-slate-200 border-l-violet-600 bg-white px-3.5 py-3.5 pl-[18px] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]"
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                          <div style={{ flex: 1 }}>
-                            <h5 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{e.title}</h5>
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="flex-1">
+                            <h5 className="mb-2 mt-0 text-base font-semibold text-slate-800">{e.title}</h5>
                             {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
-                              <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#7c3aed' }}>
+                              <p className="mb-1 mt-0 text-xs text-violet-600">
                                 {e.repeat_type === 'monthly' ? t.event_repeat_monthly : t.event_repeat_yearly}
                               </p>
                             )}
                             {e.created_by != null && (
-                              <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b' }}>
+                              <p className="mb-1 mt-0 text-xs text-slate-500">
                                 {t.event_author}:{' '}
                                 {e.created_by === userId ? t.me : eventAuthorNames[e.created_by] ?? t.unknown}
                                 {familyRoleByUserId[e.created_by]
@@ -725,12 +551,12 @@ export function FamilyCalendarSection({
                               </p>
                             )}
                             {e.desc && (
-                              <p style={{ margin: 0, fontSize: '14px', color: '#475569', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm leading-[1.5] text-slate-600">
                                 {e.desc}
                               </p>
                             )}
                             {e.created_at && (
-                              <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                              <p className="mb-0 mt-2.5 text-xs text-slate-400">
                                 등록: {new Date(e.created_at).toLocaleString('ko-KR')}
                               </p>
                             )}
@@ -739,22 +565,8 @@ export function FamilyCalendarSection({
                             <button
                               type="button"
                               onClick={() => handleDeleteEvent(e.id)}
-                              style={{
-                                flexShrink: 0,
-                                padding: '6px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                color: '#ef4444',
-                                borderRadius: '6px',
-                              }}
+                              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1.5 text-red-500 hover:bg-red-50"
                               aria-label={t.delete}
-                              onMouseEnter={(el) => {
-                                el.currentTarget.style.background = '#fef2f2';
-                              }}
-                              onMouseLeave={(el) => {
-                                el.currentTarget.style.background = 'transparent';
-                              }}
                             >
                               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -766,10 +578,10 @@ export function FamilyCalendarSection({
                     ))}
                   </div>
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '24px 16px' }}>
-                    <Calendar style={{ width: '48px', height: '48px', color: '#cbd5e1', margin: '0 auto 12px', display: 'block' }} />
-                    <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{t.event_no_events}</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>{t.event_add_hint}</p>
+                  <div className="px-4 py-6 text-center">
+                    <Calendar className="mx-auto mb-3 block h-12 w-12 text-slate-300" />
+                    <p className="m-0 text-sm text-slate-500">{t.event_no_events}</p>
+                    <p className="mb-0 mt-2 text-[13px] text-slate-400">{t.event_add_hint}</p>
                   </div>
                 )}
               </motion.div>
@@ -779,34 +591,9 @@ export function FamilyCalendarSection({
           <button
             type="button"
             onClick={openEventModal}
-            style={{
-              marginTop: '14px',
-              width: '100%',
-              padding: '12px',
-              border: 'none',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
-              color: 'white',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.4)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.3)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
+            className="mt-3.5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border-none bg-gradient-to-br from-violet-600 to-violet-800 px-3 py-3 text-[15px] font-semibold text-white shadow-[0_4px_12px_rgba(124,58,237,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)]"
           >
-            <Plus style={{ width: '20px', height: '20px' }} />
+            <Plus className="h-5 w-5" />
             {t.event_add_title}
           </button>
         </div>

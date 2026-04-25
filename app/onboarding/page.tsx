@@ -638,64 +638,25 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite', color: '#667eea' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>{ot('loading')}</p>
+      <div className="flex min-h-dvh items-center justify-center bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)]">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-indigo-500" />
+          <p className="text-base text-slate-500">{ot('loading')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      padding: '20px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      position: 'relative',
-      overflowX: 'hidden',
-      overflowY: 'auto',
-    }}>
+    <div
+      className="relative flex min-h-dvh flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
+      style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
+    >
       {/* 배경 장식 요소 */}
-      <div style={{
-        position: 'absolute',
-        top: '-50%',
-        right: '-20%',
-        width: '500px',
-        height: '500px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '-30%',
-        left: '-15%',
-        width: '400px',
-        height: '400px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(118, 75, 162, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)',
-        zIndex: 0
-      }} />
+      <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
+      <div className="absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]" />
 
-      <div style={{
-        width: '100%',
-        maxWidth: '480px',
-        position: 'relative',
-        zIndex: 1
-      }}>
+      <div className="relative z-[1] w-full max-w-[480px]">
         {/* 선택 단계 */}
         <AnimatePresence mode="wait">
           {step === 'select' && (
@@ -707,42 +668,22 @@ export default function OnboardingPage() {
               transition={{ duration: 0.3 }}
             >
               {/* 헤더 */}
-              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏠</div>
-                <h1 style={{
-                  fontSize: '32px',
-                  fontWeight: '800',
-                  color: '#1a202c',
-                  margin: '0 0 12px 0',
-                  letterSpacing: '-1px',
-                }}>
+              <div className="mb-10 text-center">
+                <div className="mb-5 text-[80px]">🏠</div>
+                <h1 className="m-0 mb-3 text-[32px] font-extrabold tracking-[-1px] text-slate-900">
                   {ot('title')}
                 </h1>
-                <p style={{
-                  fontSize: '16px',
-                  color: '#64748b',
-                  fontWeight: '500',
-                  lineHeight: '1.6',
-                  margin: 0,
-                }}>
+                <p className="m-0 text-base font-medium leading-relaxed text-slate-500">
                   {ot('subtitle')}
                 </p>
-                <div style={{ marginTop: '20px', textAlign: 'left', maxWidth: '320px', marginLeft: 'auto', marginRight: 'auto' }}>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
+                <div className="mx-auto mt-5 max-w-[320px] text-left">
+                  <label className="mb-2 block text-sm font-semibold text-slate-600">
                     {ot('display_language')}
                   </label>
                   <select
                     value={lang}
                     onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '10px',
-                      fontSize: '15px',
-                      color: '#1e293b',
-                      backgroundColor: '#fff',
-                    }}
+                    className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                   >
                     {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
                       <option key={code} value={code}>{label}</option>
@@ -752,51 +693,19 @@ export default function OnboardingPage() {
               </div>
 
               {/* 선택 카드 */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '16px',
-                marginBottom: '24px',
-              }}>
+              <div className="mb-6 grid grid-cols-2 gap-4">
                 {/* 그룹 생성 카드 */}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setStep('create')}
-                  style={{
-                    padding: '32px 24px',
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    border: '2px solid #e2e8f0',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#667eea';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                  }}
+                  className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-6 py-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out hover:border-indigo-500 hover:shadow-[0_8px_24px_rgba(102,126,234,0.2)]"
                 >
-                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏠</div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    color: '#1a202c',
-                    margin: '0 0 8px 0',
-                  }}>
+                  <div className="mb-3 text-5xl">🏠</div>
+                  <h3 className="m-0 mb-2 text-lg font-bold text-slate-900">
                     {ot('create_group')}
                   </h3>
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#64748b',
-                    margin: 0,
-                    lineHeight: '1.5',
-                  }}>
+                  <p className="m-0 text-sm leading-6 text-slate-500">
                     {ot('first_member')}
                   </p>
                 </motion.button>
@@ -806,63 +715,21 @@ export default function OnboardingPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setStep('join')}
-                  style={{
-                    padding: '32px 24px',
-                    backgroundColor: '#ffffff',
-                    borderRadius: '16px',
-                    border: '2px solid #e2e8f0',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#667eea';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                  }}
+                  className="cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-6 py-8 text-center shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 ease-in-out hover:border-indigo-500 hover:shadow-[0_8px_24px_rgba(102,126,234,0.2)]"
                 >
-                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>👥</div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    color: '#1a202c',
-                    margin: '0 0 8px 0',
-                  }}>
+                  <div className="mb-3 text-5xl">👥</div>
+                  <h3 className="m-0 mb-2 text-lg font-bold text-slate-900">
                     {ot('join_invite')}
                   </h3>
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#64748b',
-                    margin: 0,
-                    lineHeight: '1.5',
-                  }}>
+                  <p className="m-0 text-sm leading-6 text-slate-500">
                     {ot('already_family')}
                   </p>
                 </motion.button>
               </div>
 
               {/* 진행 표시 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '12px',
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                borderRadius: '12px',
-                fontSize: '14px',
-                color: '#64748b',
-              }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#667eea',
-                }} />
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-white/70 p-3 text-sm text-slate-500">
+                <div className="h-2 w-2 rounded-full bg-indigo-500" />
                 <span>1 / 2</span>
               </div>
             </motion.div>
@@ -877,14 +744,9 @@ export default function OnboardingPage() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                padding: '32px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-              }}>
+              <div className="rounded-2xl bg-white p-8 shadow-[0_8px_24px_rgba(0,0,0,0.1)]">
                 {/* 헤더 */}
-                <div style={{ marginBottom: '24px' }}>
+                <div className="mb-6">
                   <button
                     onClick={() => {
                       setStep('select');
@@ -893,42 +755,15 @@ export default function OnboardingPage() {
                       setCreatedGroupId(null);
                       setCreatedInviteCode(null);
                     }}
-                    style={{
-                      padding: '8px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      marginBottom: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      color: '#64748b',
-                      fontSize: '14px',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
+                    className="mb-4 flex cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent p-2 text-sm text-slate-500 hover:bg-slate-100"
                   >
-                    <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
+                    <ArrowRight className="h-4 w-4 rotate-180" />
                     {ot('back')}
                   </button>
-                  <h2 style={{
-                    fontSize: '24px',
-                    fontWeight: '700',
-                    color: '#1a202c',
-                    margin: '0 0 8px 0',
-                  }}>
+                  <h2 className="m-0 mb-2 text-2xl font-bold text-slate-900">
                     {ot('create_group')}
                   </h2>
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#64748b',
-                    margin: 0,
-                  }}>
+                  <p className="m-0 text-sm text-slate-500">
                     {ot('create_group_subtitle')}
                   </p>
                 </div>
@@ -1046,48 +881,18 @@ export default function OnboardingPage() {
                     {inviteCodeConfirmed && (
                       <button
                         onClick={handleGoToDashboard}
-                        style={{
-                          width: '100%',
-                          padding: '14px 24px',
-                          backgroundColor: '#667eea',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '12px',
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                          transition: 'all 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#5568d3';
-                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#667eea';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-                        }}
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-indigo-500 px-6 py-3.5 text-base font-semibold text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)] transition-all duration-300 ease-in-out hover:bg-indigo-600 hover:shadow-[0_6px_16px_rgba(102,126,234,0.4)]"
                       >
                         {ot('go_to_dashboard')}
-                        <ArrowRight style={{ width: '18px', height: '18px' }} />
+                        <ArrowRight className="h-[18px] w-[18px]" />
                       </button>
                     )}
                   </div>
                 ) : (
                   <>
                     {/* 그룹 이름 입력 */}
-                    <div style={{ marginBottom: '24px' }}>
-                      <label style={{
-                        display: 'block',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#475569',
-                        marginBottom: '8px',
-                      }}>
+                    <div className="mb-6">
+                      <label className="mb-2 block text-sm font-semibold text-slate-600">
                         {ot('group_name')}
                       </label>
                       <input
@@ -1098,23 +903,7 @@ export default function OnboardingPage() {
                           setError(null);
                         }}
                         placeholder={ot('group_name_placeholder')}
-                        style={{
-                          width: '100%',
-                          padding: '14px 16px',
-                          fontSize: '16px',
-                          border: '2px solid #e2e8f0',
-                          borderRadius: '12px',
-                          outline: 'none',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = '#667eea';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
-                        }}
+                        className="w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base outline-none transition-all duration-200 ease-in-out focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(102,126,234,0.1)]"
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && !creating && groupName.trim()) {
                             handleCreateGroup();
@@ -1125,22 +914,14 @@ export default function OnboardingPage() {
                     </div>
 
                     {/* 표시 언어 선택 */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                    <div className="mb-5">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
                         {ot('display_language')}
                       </label>
                       <select
                         value={lang}
                         onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 14px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '10px',
-                          fontSize: '15px',
-                          color: '#1e293b',
-                          backgroundColor: '#fff',
-                        }}
+                        className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                       >
                         {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
                           <option key={code} value={code}>{label}</option>
@@ -1149,22 +930,14 @@ export default function OnboardingPage() {
                     </div>
 
                     {/* 가족 표시 (생성자: 아빠/엄마/선택 안함) */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                    <div className="mb-5">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
                         {mmt('family_role_label')}
                       </label>
                       <select
                         value={createFamilyRole}
                         onChange={(e) => setCreateFamilyRole(e.target.value as '' | 'mom' | 'dad')}
-                        style={{
-                          width: '100%',
-                          padding: '12px 14px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '10px',
-                          fontSize: '15px',
-                          color: '#1e293b',
-                          backgroundColor: '#fff',
-                        }}
+                        className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                       >
                         <option value="">{mmt('family_role_none')}</option>
                         <option value="mom">{mmt('family_role_mom')}</option>
@@ -1174,38 +947,16 @@ export default function OnboardingPage() {
 
                     {/* 에러 메시지 */}
                     {error && (
-                      <div style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#dc2626',
-                        fontSize: '14px',
-                      }}>
-                        <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                      <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {/* 성공 메시지 */}
                     {success && (
-                      <div style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#f0fdf4',
-                        border: '1px solid #86efac',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#16a34a',
-                        fontSize: '14px',
-                      }}>
-                        <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                      <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-600">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
                         <span>{success}</span>
                       </div>
                     )}
@@ -1214,33 +965,23 @@ export default function OnboardingPage() {
                     <button
                       onClick={handleCreateGroup}
                       disabled={creating || !groupName.trim()}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-base font-semibold text-white transition-all duration-300 ease-in-out"
                       style={{
                         width: '100%',
-                        padding: '14px 24px',
                         backgroundColor: creating || !groupName.trim() ? '#94a3b8' : '#667eea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '12px',
-                        fontSize: '16px',
-                        fontWeight: '600',
                         cursor: creating || !groupName.trim() ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
                         boxShadow: creating || !groupName.trim() ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-                        transition: 'all 0.3s ease',
                       }}
                     >
                       {creating ? (
                         <>
-                          <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
+                          <Loader2 className="h-[18px] w-[18px] animate-spin" />
                           {ot('creating')}
                         </>
                       ) : (
                         <>
                           {ot('create_btn')}
-                          <ArrowRight style={{ width: '18px', height: '18px' }} />
+                          <ArrowRight className="h-[18px] w-[18px]" />
                         </>
                       )}
                     </button>
@@ -1341,38 +1082,20 @@ export default function OnboardingPage() {
                   )}
                   {groupPreview && !joinedGroupId && (
                     <>
-                      <h2 style={{
-                        fontSize: '24px',
-                        fontWeight: '700',
-                        color: '#1a202c',
-                        margin: '0 0 8px 0',
-                      }}>
+                      <h2 className="m-0 mb-2 text-2xl font-bold text-slate-900">
                         {ot('join_step_confirm')}
                       </h2>
-                      <p style={{
-                        fontSize: '14px',
-                        color: '#64748b',
-                        margin: 0,
-                      }}>
+                      <p className="m-0 text-sm text-slate-500">
                         {groupPreview.name}
                       </p>
                     </>
                   )}
                   {groupPreview && joinedGroupId && (
                     <>
-                      <h2 style={{
-                        fontSize: '24px',
-                        fontWeight: '700',
-                        color: '#1a202c',
-                        margin: '0 0 8px 0',
-                      }}>
+                      <h2 className="m-0 mb-2 text-2xl font-bold text-slate-900">
                         {ot('join_step_joined')}
                       </h2>
-                      <p style={{
-                        fontSize: '14px',
-                        color: '#64748b',
-                        margin: 0,
-                      }}>
+                      <p className="m-0 text-sm text-slate-500">
                         {ot('success_joined')}
                       </p>
                     </>
@@ -1382,17 +1105,11 @@ export default function OnboardingPage() {
                 {/* 초대 코드 입력 */}
                 {!groupPreview && (
                   <>
-                    <div style={{ marginBottom: '24px' }}>
-                      <label style={{
-                        display: 'block',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#475569',
-                        marginBottom: '8px',
-                      }}>
+                    <div className="mb-6">
+                      <label className="mb-2 block text-sm font-semibold text-slate-600">
                         {ot('invite_code')}
                       </label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="flex gap-2">
                         <input
                           type="text"
                           value={inviteCode}
@@ -1402,27 +1119,7 @@ export default function OnboardingPage() {
                           }}
                           placeholder={ot('invite_placeholder')}
                           maxLength={12}
-                          style={{
-                            flex: 1,
-                            padding: '14px 16px',
-                            fontSize: '18px',
-                            fontWeight: '700',
-                            letterSpacing: '2px',
-                            fontFamily: 'monospace',
-                            textAlign: 'center',
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '12px',
-                            outline: 'none',
-                            transition: 'all 0.2s ease',
-                          }}
-                          onFocus={(e) => {
-                            e.target.style.borderColor = '#667eea';
-                            e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-                          }}
-                          onBlur={(e) => {
-                            e.target.style.borderColor = '#e2e8f0';
-                            e.target.style.boxShadow = 'none';
-                          }}
+                          className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3.5 text-center font-mono text-lg font-bold tracking-[2px] outline-none transition-all duration-200 ease-in-out focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(102,126,234,0.1)]"
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !verifying && inviteCode.trim()) {
                               handleVerifyInviteCode();
@@ -1433,24 +1130,15 @@ export default function OnboardingPage() {
                         <button
                           onClick={handleVerifyInviteCode}
                           disabled={verifying || !inviteCode.trim()}
+                          className="flex items-center justify-center rounded-xl border-none px-5 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out"
                           style={{
-                            padding: '14px 20px',
                             backgroundColor: verifying || !inviteCode.trim() ? '#94a3b8' : '#667eea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '12px',
-                            fontSize: '14px',
-                            fontWeight: '600',
                             cursor: verifying || !inviteCode.trim() ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                             boxShadow: verifying || !inviteCode.trim() ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-                            transition: 'all 0.3s ease',
                           }}
                         >
                           {verifying ? (
-                            <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
+                            <Loader2 className="h-[18px] w-[18px] animate-spin" />
                           ) : (
                             ot('verify_btn')
                           )}
@@ -1460,19 +1148,8 @@ export default function OnboardingPage() {
 
                     {/* 에러 메시지 */}
                     {error && (
-                      <div style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#dc2626',
-                        fontSize: '14px',
-                      }}>
-                        <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                      <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
@@ -1481,81 +1158,38 @@ export default function OnboardingPage() {
 
                 {/* 그룹 미리보기 */}
                 {groupPreview && (
-                  <div style={{
-                    padding: '20px',
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '12px',
-                    border: '2px solid #e2e8f0',
-                    marginBottom: '24px',
-                  }}>
-                    <h3 style={{
-                      fontSize: '16px',
-                      fontWeight: '700',
-                      color: '#1a202c',
-                      margin: '0 0 16px 0',
-                    }}>
+                  <div className="mb-6 rounded-xl border-2 border-slate-200 bg-slate-50 p-5">
+                    <h3 className="m-0 mb-4 text-base font-bold text-slate-900">
                       {ot('group_info')}
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="flex flex-col gap-3">
                       <div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#64748b',
-                          marginBottom: '4px',
-                          fontWeight: '600',
-                        }}>
+                        <div className="mb-1 text-xs font-semibold text-slate-500">
                           {ot('group_name')}
                         </div>
-                        <div style={{
-                          fontSize: '18px',
-                          fontWeight: '700',
-                          color: '#1a202c',
-                        }}>
+                        <div className="text-lg font-bold text-slate-900">
                           {groupPreview.name}
                         </div>
                       </div>
                       <div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#64748b',
-                          marginBottom: '4px',
-                          fontWeight: '600',
-                        }}>
+                        <div className="mb-1 text-xs font-semibold text-slate-500">
                           {ot('member_count')}
                         </div>
-                        <div style={{
-                          fontSize: '18px',
-                          fontWeight: '700',
-                          color: '#1a202c',
-                        }}>
+                        <div className="text-lg font-bold text-slate-900">
                           {groupPreview.member_count}{ot('member_count_suffix')}
                         </div>
                       </div>
 
                       {/* You've joined 페이지: 가족 표시 선택 (일반 멤버: 아들/딸/기타) */}
                       {joinFlowReady && (
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-                          <label style={{
-                            display: 'block',
-                            fontSize: '12px',
-                            color: '#64748b',
-                            marginBottom: '6px',
-                            fontWeight: '600',
-                          }}>
+                        <div className="mt-4 border-t border-slate-200 pt-4">
+                          <label className="mb-1.5 block text-xs font-semibold text-slate-500">
                             {mmt('family_role_label')}
                           </label>
                           <select
                             value={joinFamilyRole}
                             onChange={(e) => setJoinFamilyRole((e.target.value || '') as '' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other')}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              fontSize: '14px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '8px',
-                              backgroundColor: 'white',
-                              color: '#1a202c',
-                            }}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900"
                             aria-label={mmt('family_role_label')}
                           >
                             <option value="">{mmt('family_role_none')}</option>
@@ -1584,15 +1218,7 @@ export default function OnboardingPage() {
                                   setError(mmt('family_role_save_failed'));
                                 }
                               }}
-                              style={{
-                                marginTop: '8px',
-                                padding: '6px 12px',
-                                fontSize: '12px',
-                                backgroundColor: '#f1f5f9',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                              }}
+                              className="mt-2 cursor-pointer rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs"
                             >
                               {ct('save')}
                             </button>
@@ -1603,43 +1229,21 @@ export default function OnboardingPage() {
 
                     {/* 에러/성공 메시지 */}
                     {error && (
-                      <div style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '8px',
-                        marginTop: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#dc2626',
-                        fontSize: '14px',
-                      }}>
-                        <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                      <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{error}</span>
                       </div>
                     )}
 
                     {success && (
-                      <div style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#f0fdf4',
-                        border: '1px solid #86efac',
-                        borderRadius: '8px',
-                        marginTop: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: '#16a34a',
-                        fontSize: '14px',
-                      }}>
-                        <CheckCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                      <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-600">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
                         <span>{success}</span>
                       </div>
                     )}
 
                     {/* 가입 버튼 */}
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                    <div className="mt-4 flex gap-2">
                       <button
                         onClick={() => {
                           setGroupPreview(null);
@@ -1648,25 +1252,9 @@ export default function OnboardingPage() {
                           setSuccess(null);
                         }}
                         disabled={joining}
+                        className="flex-1 rounded-xl border-none bg-slate-100 px-6 py-3.5 text-sm font-semibold text-slate-600 transition-all duration-300 ease-in-out"
                         style={{
-                          flex: 1,
-                          padding: '14px 24px',
-                          backgroundColor: '#f1f5f9',
-                          color: '#475569',
-                          border: 'none',
-                          borderRadius: '12px',
-                          fontSize: '14px',
-                          fontWeight: '600',
                           cursor: joining ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!joining) {
-                            e.currentTarget.style.backgroundColor = '#e2e8f0';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f1f5f9';
                         }}
                       >
                         다시 입력
@@ -1674,33 +1262,22 @@ export default function OnboardingPage() {
                       <button
                         onClick={joinFlowReady ? handleJoinCompleteGoToDashboard : handleJoinGroup}
                         disabled={joining && !joinFlowReady}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out"
                         style={{
-                          flex: 1,
-                          padding: '14px 24px',
                           backgroundColor: joining && !joinFlowReady ? '#94a3b8' : '#667eea',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '12px',
-                          fontSize: '14px',
-                          fontWeight: '600',
                           cursor: joining && !joinFlowReady ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
                           boxShadow: joining && !joinFlowReady ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-                          transition: 'all 0.3s ease',
                         }}
                       >
                         {joining && !joinFlowReady ? (
                           <>
-                            <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 0.8s linear infinite' }} />
+                            <Loader2 className="h-[18px] w-[18px] animate-spin" />
                             가입 중...
                           </>
                         ) : (
                           <>
                             {joinFlowReady ? ot('go_to_group_btn') : ot('join_btn')}
-                            <ArrowRight style={{ width: '18px', height: '18px' }} />
+                            <ArrowRight className="h-[18px] w-[18px]" />
                           </>
                         )}
                       </button>

@@ -1599,6 +1599,7 @@ export default function FamilyHub() {
   useFamilyChatScroll({
     messages: state.messages,
     isAuthenticated,
+    currentGroupId,
     chatBoxRef,
     chatScrollRestoreRef,
   });
@@ -5401,17 +5402,7 @@ export default function FamilyHub() {
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
         <div
           ref={dashboardTitleRowRef}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '0 4px',
-            minHeight: '48px',
-            width: '100%',
-            minWidth: 0,
-            maxWidth: '100%',
-            boxSizing: 'border-box',
-          }}
+          className="box-border flex min-h-12 w-full min-w-0 max-w-full items-center gap-3 px-1"
         >
           <h1
             ref={dashboardTitleRef}
@@ -5424,44 +5415,18 @@ export default function FamilyHub() {
           </h1>
           {isGroupLoading ? (
             <div
-              style={{
-                width: '80px',
-                height: '28px',
-                backgroundColor: '#e2e8f0',
-                borderRadius: '8px',
-                animation: 'pulse 1.5s ease-in-out infinite',
-                flexShrink: 0,
-              }}
+              className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200"
             />
           ) : showAdminButton ? (
             <button
               onClick={() => router.push(adminPagePath)}
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow"
               style={{
-                padding: '6px 10px',
                 backgroundColor: isSystemAdmin ? '#7e22ce' : '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
               }}
               aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
             >
-              <span style={{ fontSize: '14px' }}>⚙️</span>
+              <span className="text-sm">⚙️</span>
               {ct('admin')}
             </button>
           ) : null}
@@ -5487,7 +5452,7 @@ export default function FamilyHub() {
               <span className="status-dot-ping"></span>
               <span className="status-dot-core"></span>
             </span>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="flex flex-wrap items-center gap-2">
               {onlineUsers.map((user) => {
                 const nicknamePart = (
                   user.isCurrentUser ? (userName?.trim() || user.name.trim()) : user.name.trim()
@@ -5498,18 +5463,14 @@ export default function FamilyHub() {
                 return (
                 <div 
                   key={user.id}
-                  className="user-info" 
+                  className="user-info rounded-md border border-[rgba(99,102,241,0.3)] bg-[rgba(99,102,241,0.1)] px-1.5 py-[3px]" 
                   onClick={user.isCurrentUser ? () => setIsNicknameModalOpen(true) : undefined}
-            style={{
+                  style={{
                     cursor: user.isCurrentUser ? 'pointer' : 'default',
-                    padding: '3px 6px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)'
                   }}
                 >
-                  <span className="user-icon" style={{ fontSize: '12px' }}>👤</span>
-                  <p className="user-name" style={{ margin: 0, fontSize: '12px', fontWeight: user.isCurrentUser ? '600' : '500' }}>
+                  <span className="user-icon text-xs">👤</span>
+                  <p className={`user-name m-0 text-xs ${user.isCurrentUser ? 'font-semibold' : 'font-medium'}`}>
                     {nicknamePart ? `${nicknamePart} ` : ''}
                     {rolePart}
                     {user.isCurrentUser && ct('me_suffix')}
@@ -5518,7 +5479,7 @@ export default function FamilyHub() {
                 );
               })}
               {onlineUsers.length === 0 && (
-                <div className="user-info" onClick={() => setIsNicknameModalOpen(true)} style={{ cursor: 'pointer' }}>
+                <div className="user-info cursor-pointer" onClick={() => setIsNicknameModalOpen(true)}>
                   <span className="user-icon">👤</span>
                   <p className="user-name">
                     {(() => {
@@ -5541,27 +5502,7 @@ export default function FamilyHub() {
             </div>
             <button
               onClick={handleLogout}
-              style={{
-                marginLeft: '12px',
-                padding: '8px 16px',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                color: '#ef4444',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-              }}
+              className="ml-3 cursor-pointer whitespace-nowrap rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 transition-all duration-300 hover:border-red-500/50 hover:bg-red-500/20"
             >
               {ct('logout')}
             </button>
@@ -5900,89 +5841,40 @@ export default function FamilyHub() {
       {/* 후임자 지정 모달 */}
       {showSuccessorModal && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 10000,
-          }}
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50"
           onClick={() => {
             setShowSuccessorModal(false);
             setSelectedSuccessor('');
           }}
         >
           <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              padding: '32px',
-              maxWidth: '500px',
-              width: '90%',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            }}
+            className="max-h-[80vh] w-[90%] max-w-[500px] overflow-y-auto rounded-2xl bg-white p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2
-              style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                color: '#1e293b',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
+              className="mb-4 flex items-center gap-3 text-2xl font-bold text-slate-800"
             >
-              <Shield style={{ width: '28px', height: '28px', color: '#7e22ce' }} />
+              <Shield className="h-7 w-7 text-purple-700" />
               후임 시스템 관리자 지정
             </h2>
             <p
-              style={{
-                fontSize: '14px',
-                color: '#64748b',
-                marginBottom: '24px',
-                lineHeight: '1.6',
-              }}
+              className="mb-6 text-sm leading-relaxed text-slate-500"
             >
               {dt('delete_transfer_warning')}
               <br />
               아래 목록에서 후임 시스템 관리자를 선택해주세요.
             </p>
 
-            <div style={{ marginBottom: '24px' }}>
+            <div className="mb-6">
               <label
-                style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#475569',
-                  marginBottom: '12px',
-                }}
+                className="mb-3 block text-sm font-semibold text-slate-600"
               >
                 후임자 선택
               </label>
               <select
                 value={selectedSuccessor}
                 onChange={(e) => setSelectedSuccessor(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  color: '#1e293b',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                  outline: 'none',
-                }}
+                className="w-full cursor-pointer rounded-lg border-2 border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none"
               >
                 <option value="">후임자를 선택하세요</option>
                 {allUsers.map((user) => (
@@ -5995,44 +5887,24 @@ export default function FamilyHub() {
             </div>
 
             <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'flex-end',
-              }}
+              className="flex justify-end gap-3"
             >
               <button
                 onClick={() => {
                   setShowSuccessorModal(false);
                   setSelectedSuccessor('');
                 }}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#e2e8f0',
-                  color: '#475569',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
+                className="cursor-pointer rounded-lg border-none bg-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition-all duration-200"
               >
                 취소
               </button>
               <button
                 onClick={handleTransferAndDelete}
                 disabled={!selectedSuccessor}
+                className="rounded-lg border-none px-6 py-3 text-sm font-semibold text-white transition-all duration-200"
                 style={{
-                  padding: '12px 24px',
                   backgroundColor: selectedSuccessor ? '#7e22ce' : '#94a3b8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
                   cursor: selectedSuccessor ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s',
                   opacity: selectedSuccessor ? 1 : 0.6,
                 }}
               >
@@ -6045,38 +5917,13 @@ export default function FamilyHub() {
 
       {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 (작게·간격 축소·모서리에 붙여 지도 가림 최소화) */}
       <div
-        style={{
-          position: 'fixed',
-          bottom: 'calc(4px + env(safe-area-inset-bottom, 0px))',
-          right: 'calc(6px + env(safe-area-inset-right, 0px))',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-          zIndex: 1000,
-          alignItems: 'flex-end',
-          pointerEvents: 'none',
-        }}
+        className="pointer-events-none fixed bottom-[calc(4px+env(safe-area-inset-bottom,0px))] right-[calc(6px+env(safe-area-inset-right,0px))] z-[1000] flex flex-col items-end gap-1.5"
       >
         {showMemberInquiryFab && (
           <button
             type="button"
             onClick={() => router.push('/dashboard/member-support')}
-            style={{
-              position: 'relative',
-              padding: '5px 9px',
-              backgroundColor: '#f97316',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '11px',
-              fontWeight: 700,
-              lineHeight: 1.25,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(249, 115, 22, 0.28)',
-              whiteSpace: 'nowrap',
-              maxWidth: 'min(88vw, 220px)',
-              pointerEvents: 'auto',
-            }}
+            className="pointer-events-auto relative max-w-[min(88vw,220px)] cursor-pointer whitespace-nowrap rounded-lg border-none bg-orange-500 px-[9px] py-[5px] text-[11px] font-bold leading-[1.25] text-white shadow-[0_2px_8px_rgba(249,115,22,0.28)]"
             aria-label={
               hasUnreadAdminReply
                 ? `${dt('member_support_fab')} (${dt('member_support_fab_aria_unread')})`
@@ -6087,52 +5934,17 @@ export default function FamilyHub() {
             {hasUnreadAdminReply && (
               <span
                 aria-hidden
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  backgroundColor: '#22c55e',
-                  border: '2px solid #fff',
-                  boxSizing: 'content-box',
-                }}
+                className="absolute -right-0.5 -top-0.5 box-content h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500"
               />
             )}
           </button>
         )}
         <button
           onClick={() => handleDeleteAccount()}
-          style={{
-            padding: '5px 9px',
-            backgroundColor: 'rgba(139, 69, 19, 0.9)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '11px',
-            fontWeight: '600',
-            lineHeight: 1.25,
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(139, 69, 19, 0.32)',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            pointerEvents: 'auto',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 1)';
-            e.currentTarget.style.boxShadow = '0 3px 10px rgba(139, 69, 19, 0.45)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(139, 69, 19, 0.9)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(139, 69, 19, 0.32)';
-          }}
+          className="pointer-events-auto flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border-none bg-[rgba(139,69,19,0.9)] px-[9px] py-[5px] text-[11px] font-semibold leading-[1.25] text-white shadow-[0_2px_8px_rgba(139,69,19,0.32)] transition-all duration-200 ease-in-out hover:bg-[rgba(139,69,19,1)] hover:shadow-[0_3px_10px_rgba(139,69,19,0.45)]"
           aria-label={dt('delete_account_aria')}
         >
-          <span style={{ fontSize: '12px', lineHeight: 1 }} aria-hidden>🗑️</span>
+          <span className="text-xs leading-none" aria-hidden>🗑️</span>
           {dt('delete_account_btn')}
         </button>
       </div>

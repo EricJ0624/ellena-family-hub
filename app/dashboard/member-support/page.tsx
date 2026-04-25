@@ -274,8 +274,8 @@ export default function MemberSupportPage() {
 
   if (!authOk || !adminResolved) {
     return (
-      <div className="app-container" style={{ padding: '24px 16px' }}>
-        <p style={{ color: '#64748b', fontSize: '14px' }}>{dt('member_support_loading_page')}</p>
+      <div className="app-container px-4 py-6">
+        <p className="text-sm text-slate-500">{dt('member_support_loading_page')}</p>
       </div>
     );
   }
@@ -287,64 +287,43 @@ export default function MemberSupportPage() {
   const waitingGroup = groupLoading && !currentGroupId;
 
   return (
-    <div className="app-container" style={{ padding: '16px 16px 120px' }}>
-      <div style={{ marginBottom: '20px' }}>
+    <div className="app-container px-4 pb-[120px] pt-4">
+      <div className="mb-5">
         <Link
           href="/dashboard"
-          style={{
-            fontSize: '14px',
-            color: '#2563eb',
-            textDecoration: 'none',
-            fontWeight: 600,
-          }}
+          className="text-sm font-semibold text-blue-600 no-underline"
         >
           {dt('member_support_back_dashboard')}
         </Link>
       </div>
 
-      <h1
-        style={{
-          fontSize: '22px',
-          fontWeight: 700,
-          color: '#1e293b',
-          margin: '0 0 8px 0',
-        }}
-      >
+      <h1 className="mb-2 mt-0 text-[22px] font-bold text-slate-800">
         {dt('member_support_title')}
       </h1>
-      <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: '#64748b' }}>
+      <p className="mb-6 mt-0 text-[13px] text-slate-500">
         {dt('member_support_intro')}
       </p>
 
       {waitingGroup ? (
-        <p style={{ color: '#64748b', fontSize: '14px' }}>{dt('member_support_loading_group')}</p>
+        <p className="text-sm text-slate-500">{dt('member_support_loading_group')}</p>
       ) : !currentGroupId ? (
-        <p style={{ color: '#64748b', fontSize: '14px' }}>
+        <p className="text-sm text-slate-500">
           {dt('member_support_no_group')}
         </p>
       ) : (
         <>
-          <section style={{ marginBottom: '28px' }}>
-            <h2
-              style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: '#1e293b',
-                margin: '0 0 12px 0',
-              }}
-            >
+          <section className="mb-7">
+            <h2 className="mb-3 mt-0 text-base font-semibold text-slate-800">
               {dt('member_support_my_requests')}
             </h2>
             {listLoading ? (
-              <p style={{ color: '#64748b', fontSize: '14px' }}>{dt('member_support_loading_list')}</p>
+              <p className="text-sm text-slate-500">{dt('member_support_loading_list')}</p>
             ) : sortedTickets.length === 0 ? (
-              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+              <p className="m-0 text-sm text-slate-500">
                 {dt('member_support_empty_list')}
               </p>
             ) : (
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
-              >
+              <div className="flex flex-col gap-3.5">
                 {sortedTickets.map((t) => {
                   const hasFirstAnswer =
                     t.answer != null && String(t.answer).trim() !== '';
@@ -356,38 +335,15 @@ export default function MemberSupportPage() {
                   return (
                     <div
                       key={t.id}
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '14px',
-                        backgroundColor: '#f8fafc',
-                      }}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3.5"
                     >
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: '8px',
-                          marginBottom: '8px',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '15px',
-                            fontWeight: 700,
-                            color: '#1e293b',
-                          }}
-                        >
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div className="text-[15px] font-bold text-slate-800">
                           {t.title}
                         </div>
                         <span
+                          className="whitespace-nowrap rounded px-2 py-0.5 text-[11px] font-semibold"
                           style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            whiteSpace: 'nowrap',
                             backgroundColor: isPending ? '#fef3c7' : '#d1fae5',
                             color: isPending ? '#92400e' : '#065f46',
                           }}
@@ -397,51 +353,24 @@ export default function MemberSupportPage() {
                             : dt('member_support_status_answered')}
                         </span>
                       </div>
-                      <div
-                        style={{
-                          fontSize: '12px',
-                          color: '#94a3b8',
-                          marginBottom: '8px',
-                        }}
-                      >
+                      <div className="mb-2 text-xs text-slate-400">
                         {new Date(t.created_at).toLocaleString(dateLocaleForLang(lang))}
                       </div>
                       <div
-                        style={{
-                          fontSize: '13px',
-                          color: '#475569',
-                          whiteSpace: 'pre-wrap',
-                          marginBottom: hasFirstAnswer ? '12px' : 0,
-                        }}
+                        className={`whitespace-pre-wrap text-[13px] text-slate-600 ${hasFirstAnswer ? 'mb-3' : 'mb-0'}`}
                       >
                         {t.content}
                       </div>
                       {hasFirstAnswer && (
                         <div
-                          style={{
-                            padding: '12px',
-                            backgroundColor: '#ecfdf5',
-                            borderRadius: '10px',
-                            border: '1px solid #a7f3d0',
-                            fontSize: '13px',
-                            color: '#065f46',
-                            whiteSpace: 'pre-wrap',
-                          }}
+                          className="whitespace-pre-wrap rounded-[10px] border border-emerald-200 bg-emerald-50 p-3 text-[13px] text-emerald-800"
                         >
-                          <strong
-                            style={{ display: 'block', marginBottom: '6px' }}
-                          >
+                          <strong className="mb-1.5 block">
                             {dt('member_support_admin_reply')}
                           </strong>
                           {t.answer}
                           {t.answered_at && (
-                            <div
-                              style={{
-                                fontSize: '11px',
-                                color: '#059669',
-                                marginTop: '8px',
-                              }}
-                            >
+                            <div className="mt-2 text-[11px] text-emerald-600">
                               {dt('member_support_answered_at_prefix')}{' '}
                               {new Date(t.answered_at).toLocaleString(dateLocaleForLang(lang))}
                             </div>
@@ -451,49 +380,29 @@ export default function MemberSupportPage() {
                       {thread.map((entry, idx) => (
                         <div
                           key={`${entry.created_at}-${idx}`}
+                          className="mt-2.5 whitespace-pre-wrap rounded-[10px] border p-3 text-[13px]"
                           style={{
-                            marginTop: '10px',
-                            padding: '12px',
                             backgroundColor:
                               entry.role === 'member' ? '#fffbeb' : '#ecfdf5',
-                            borderRadius: '10px',
                             border:
                               entry.role === 'member'
                                 ? '1px solid #fde68a'
                                 : '1px solid #a7f3d0',
-                            fontSize: '13px',
                             color: entry.role === 'member' ? '#92400e' : '#065f46',
-                            whiteSpace: 'pre-wrap',
                           }}
                         >
-                          <strong style={{ display: 'block', marginBottom: '6px' }}>
+                          <strong className="mb-1.5 block">
                             {entry.role === 'member'
                               ? dt('member_support_thread_extra')
                               : dt('member_support_admin_reply')}
                           </strong>
                           {entry.body}
-                          <div
-                            style={{
-                              fontSize: '11px',
-                              opacity: 0.85,
-                              marginTop: '8px',
-                            }}
-                          >
+                          <div className="mt-2 text-[11px] opacity-85">
                             {new Date(entry.created_at).toLocaleString(dateLocaleForLang(lang))}
                           </div>
                         </div>
                       ))}
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          flexWrap: 'wrap',
-                          gap: '8px',
-                          marginTop: '12px',
-                          paddingTop: '12px',
-                          borderTop: '1px solid #e2e8f0',
-                        }}
-                      >
+                      <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
                         {showFollowUpBtn && (
                           <button
                             type="button"
@@ -501,16 +410,7 @@ export default function MemberSupportPage() {
                               setFollowUpTicketId(t.id);
                               setFollowUpText('');
                             }}
-                            style={{
-                              padding: '6px 12px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              color: '#fff',
-                              backgroundColor: '#0ea5e9',
-                              border: 'none',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-lg border-none bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white"
                           >
                             {dt('member_support_follow_up')}
                           </button>
@@ -519,17 +419,9 @@ export default function MemberSupportPage() {
                           type="button"
                           disabled={deletingId === t.id}
                           onClick={() => void handleDeleteTicket(t.id)}
-                          style={{
-                            padding: '6px 12px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: '#b91c1c',
-                            backgroundColor: '#fef2f2',
-                            border: '1px solid #fecaca',
-                            borderRadius: '8px',
-                            cursor: deletingId === t.id ? 'not-allowed' : 'pointer',
-                            opacity: deletingId === t.id ? 0.7 : 1,
-                          }}
+                          className={`rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ${
+                            deletingId === t.id ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
+                          }`}
                         >
                           {deletingId === t.id ? dt('member_support_deleting') : ct('delete')}
                         </button>
@@ -541,33 +433,13 @@ export default function MemberSupportPage() {
             )}
           </section>
 
-          <section
-            style={{
-              borderTop: '1px solid #e2e8f0',
-              paddingTop: '24px',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: '#1e293b',
-                margin: '0 0 14px 0',
-              }}
-            >
+          <section className="border-t border-slate-200 pt-6">
+            <h2 className="mb-3.5 mt-0 text-base font-semibold text-slate-800">
               {dt('member_support_new_request')}
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="flex flex-col gap-3.5">
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#475569',
-                    marginBottom: '6px',
-                  }}
-                >
+                <label className="mb-1.5 block text-[13px] font-semibold text-slate-600">
                   {dt('member_support_field_title')}
                 </label>
                 <input
@@ -575,26 +447,11 @@ export default function MemberSupportPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={dt('member_support_field_title_ph')}
                   maxLength={100}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '14px',
-                  }}
+                  className="w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 />
               </div>
               <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#475569',
-                    marginBottom: '6px',
-                  }}
-                >
+                <label className="mb-1.5 block text-[13px] font-semibold text-slate-600">
                   {dt('member_support_field_content')}
                 </label>
                 <textarea
@@ -603,33 +460,16 @@ export default function MemberSupportPage() {
                   placeholder={dt('member_support_field_content_ph')}
                   maxLength={1000}
                   rows={6}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '14px',
-                    resize: 'vertical',
-                    minHeight: '140px',
-                  }}
+                  className="min-h-[140px] w-full resize-y box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => void handleSubmit()}
                 disabled={submitLoading}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f97316',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  cursor: submitLoading ? 'not-allowed' : 'pointer',
-                  opacity: submitLoading ? 0.7 : 1,
-                }}
+                className={`rounded-[10px] border-none bg-orange-500 px-4 py-3 text-[15px] font-bold text-white ${
+                  submitLoading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
+                }`}
               >
                 {submitLoading ? dt('member_support_submitting') : dt('member_support_submit')}
               </button>
@@ -638,16 +478,7 @@ export default function MemberSupportPage() {
 
           {followUpTicketId && (
             <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                backgroundColor: 'rgba(0,0,0,0.45)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1200,
-                padding: '16px',
-              }}
+              className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/45 p-4"
               onClick={() => {
                 if (followUpLoading) return;
                 setFollowUpTicketId(null);
@@ -655,24 +486,10 @@ export default function MemberSupportPage() {
               }}
             >
               <div
-                style={{
-                  backgroundColor: '#fff',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  width: '100%',
-                  maxWidth: '480px',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full max-w-[480px] box-border rounded-xl bg-white p-5"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3
-                  style={{
-                    fontSize: '17px',
-                    fontWeight: 700,
-                    color: '#1e293b',
-                    margin: '0 0 12px 0',
-                  }}
-                >
+                <h3 className="mb-3 mt-0 text-[17px] font-bold text-slate-800">
                   {dt('member_support_follow_up')}
                 </h3>
                 <textarea
@@ -681,18 +498,9 @@ export default function MemberSupportPage() {
                   placeholder={dt('member_support_follow_up_placeholder')}
                   rows={5}
                   maxLength={2000}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '14px',
-                    resize: 'vertical',
-                    marginBottom: '14px',
-                  }}
+                  className="mb-3.5 w-full box-border resize-y rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     disabled={followUpLoading}
@@ -700,16 +508,7 @@ export default function MemberSupportPage() {
                       setFollowUpTicketId(null);
                       setFollowUpText('');
                     }}
-                    style={{
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#475569',
-                      backgroundColor: '#e2e8f0',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: followUpLoading ? 'not-allowed' : 'pointer',
-                    }}
+                    className="rounded-lg border-none bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 disabled:cursor-not-allowed"
                   >
                     {ct('cancel')}
                   </button>
@@ -717,17 +516,9 @@ export default function MemberSupportPage() {
                     type="button"
                     disabled={followUpLoading}
                     onClick={() => void handleFollowUpSubmit()}
-                    style={{
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#fff',
-                      backgroundColor: '#0ea5e9',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: followUpLoading ? 'not-allowed' : 'pointer',
-                      opacity: followUpLoading ? 0.75 : 1,
-                    }}
+                    className={`rounded-lg border-none bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white ${
+                      followUpLoading ? 'cursor-not-allowed opacity-75' : 'cursor-pointer opacity-100'
+                    }`}
                   >
                     {followUpLoading ? dt('member_support_submitting') : dt('member_support_follow_up_submit')}
                   </button>

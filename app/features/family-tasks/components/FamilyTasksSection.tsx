@@ -282,14 +282,11 @@ export function FamilyTasksSection({
           </button>
         </div>
         <div
-          className="section-body"
+          className={`section-body ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
           ref={chatDropRef}
           onDragOver={onChatDragOver}
           onDragLeave={onChatDragLeave}
           onDrop={onChatDrop}
-          style={
-            chatDragOver ? { outline: '2px dashed #6366f1', outlineOffset: '4px', borderRadius: '10px' } : undefined
-          }
         >
           {(tasks || []).length > 0 ? (
             <div className="todo-list">
