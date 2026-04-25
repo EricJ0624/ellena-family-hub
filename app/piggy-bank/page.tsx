@@ -508,8 +508,8 @@ export default function PiggyBankPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: '#64748b' }}>{pt('loading')}</span>
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="text-slate-500">{pt('loading')}</span>
       </div>
     );
   }
@@ -528,27 +528,27 @@ export default function PiggyBankPage() {
     const membersWithoutPiggy = list.filter((p) => p.noAccount);
 
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '90px', height: '90px' }} />
+      <div className="min-h-screen bg-slate-50 p-5">
+        <div className="mb-5 flex items-center gap-4">
+          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-[90px] w-[90px]" />
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{pt('management_title')}</h1>
-            <p style={{ margin: '4px 0 0', color: '#64748b' }}>{currentGroup?.name || pt('group_label')} · {pt('piggy_per_child')}</p>
+            <h1 className="m-0 text-[22px] text-gray-800">{pt('management_title')}</h1>
+            <p className="m-0 mt-1 text-slate-500">{currentGroup?.name || pt('group_label')} · {pt('piggy_per_child')}</p>
           </div>
         </div>
         {error && (
-          <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '12px', borderRadius: '10px', color: '#991b1b', marginBottom: '16px' }}>
+          <div className="mb-4 rounded-[10px] border border-red-200 bg-red-100 p-3 text-red-800">
             {error}
           </div>
         )}
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '8px' }}>{pt('piggy_currency_admin_title')}</h2>
-          <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: '14px' }}>ISO 4217 코드 · 모든 저금통에 동일하게 적용됩니다.</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+          <h2 className="mb-2 mt-0 text-lg">{pt('piggy_currency_admin_title')}</h2>
+          <p className="mb-3 mt-0 text-sm text-slate-500">ISO 4217 코드 · 모든 저금통에 동일하게 적용됩니다.</p>
+          <div className="flex flex-wrap items-center gap-2.5">
             <select
               value={piggyCurrencySelect}
               onChange={(e) => setPiggyCurrencySelect(e.target.value)}
-              style={{ flex: '1 1 200px', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px 12px', fontSize: '14px' }}
+              className="flex-[1_1_200px] rounded-[10px] border border-slate-200 px-3 py-2.5 text-sm"
             >
               {PIGGY_CURRENCY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
@@ -560,27 +560,21 @@ export default function PiggyBankPage() {
               type="button"
               disabled={piggyCurrencySaving}
               onClick={() => void handleSavePiggyCurrency()}
-              style={{
-                padding: '10px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                background: piggyCurrencySaving ? '#cbd5e1' : '#6366f1',
-                color: '#fff',
-                fontWeight: 600,
-                cursor: piggyCurrencySaving ? 'not-allowed' : 'pointer',
-              }}
+              className={`rounded-[10px] border-none px-[18px] py-2.5 font-semibold text-white ${
+                piggyCurrencySaving ? 'cursor-not-allowed bg-slate-300' : 'cursor-pointer bg-indigo-500'
+              }`}
             >
               {piggyCurrencySaving ? '…' : pt('piggy_currency_save')}
             </button>
           </div>
         </div>
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('select_child_title')}</h2>
-          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>{pt('select_child_hint')}</p>
+        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+          <h2 className="m-0 text-lg">{pt('select_child_title')}</h2>
+          <p className="mb-3 mt-2 text-sm text-slate-500">{pt('select_child_hint')}</p>
           <select
             value={selectedChildIdForAdmin}
             onChange={(e) => setSelectedChildIdForAdmin(e.target.value)}
-            style={{ width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '12px' }}
+            className="w-full rounded-[10px] border border-slate-200 p-3"
           >
             <option value="">{pt('select_placeholder')}</option>
             {accountsForSelect.map((acc) => (
@@ -591,15 +585,15 @@ export default function PiggyBankPage() {
               </option>
             ))}
           </select>
-          <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>{pt('select_child_hint2')}</p>
+          <p className="m-0 mt-2 text-xs text-slate-400">{pt('select_child_hint2')}</p>
         </div>
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('add_piggy_title')}</h2>
-          <p style={{ margin: '8px 0 12px', color: '#64748b', fontSize: '14px' }}>{pt('add_piggy_hint')}</p>
+        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+          <h2 className="m-0 text-lg">{pt('add_piggy_title')}</h2>
+          <p className="mb-3 mt-2 text-sm text-slate-500">{pt('add_piggy_hint')}</p>
           {membersWithoutPiggy.length === 0 ? (
-            <p style={{ color: '#94a3b8' }}>{pt('no_child_without_piggy')}</p>
+            <p className="text-slate-400">{pt('no_child_without_piggy')}</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="flex flex-col gap-2">
               {membersWithoutPiggy.map((p) => (
                 <button
                   key={p.user_id}
@@ -610,7 +604,7 @@ export default function PiggyBankPage() {
                       setError(err.message || pt('add_piggy_failed_short'));
                     }
                   }}
-                  style={{ padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: 600, textAlign: 'left' }}
+                  className="rounded-[10px] border border-slate-200 bg-slate-50 p-3 text-left font-semibold"
                 >
                   + {p.ownerNickname || pt('child_label')} {pt('create_piggy_btn')}
                 </button>
@@ -618,13 +612,13 @@ export default function PiggyBankPage() {
             </div>
           )}
         </div>
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('open_requests_title')}</h2>
-          <div style={{ marginTop: '12px' }}>
+        <div className="mb-5 rounded-2xl bg-white p-4">
+          <h2 className="m-0 text-lg">{pt('open_requests_title')}</h2>
+          <div className="mt-3">
             {(() => {
               const pendingRequests = requests.filter((req) => req.status === 'pending');
               if (pendingRequests.length === 0) {
-                return <p style={{ color: '#94a3b8' }}>{pt('no_pending_open_requests')}</p>;
+                return <p className="text-slate-400">{pt('no_pending_open_requests')}</p>;
               }
               const byChild = pendingRequests.reduce<Record<string, number>>((acc, req) => {
                 const id = req.child_id || '';
@@ -633,26 +627,18 @@ export default function PiggyBankPage() {
               }, {});
               const total = pendingRequests.length;
               return (
-                <div
-                  style={{
-                    padding: '12px',
-                    borderRadius: '10px',
-                    background: '#fef3c7',
-                    border: '1px solid #fcd34d',
-                    color: '#92400e',
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: '8px' }}>
+                <div className="rounded-[10px] border border-amber-300 bg-amber-100 p-3 text-amber-800">
+                  <div className="mb-2 font-semibold">
                     {pt('pending_open_requests_count')} {total}{pt('count_suffix')}
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#78350f' }}>
+                  <ul className="m-0 list-disc pl-5 text-sm text-amber-900">
                     {Object.entries(byChild).map(([childId, count]) => (
-                      <li key={childId} style={{ marginBottom: '4px' }}>
+                      <li key={childId} className="mb-1">
                         {resolveMemberName(childId)} {count}{pt('count_suffix')}
                       </li>
                     ))}
                   </ul>
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#78350f' }}>
+                  <p className="m-0 mt-2 text-[13px] text-amber-900">
                     {pt('select_child_to_approve')}
                   </p>
                 </div>
@@ -660,7 +646,12 @@ export default function PiggyBankPage() {
             })()}
           </div>
         </div>
-        <button onClick={() => router.push('/dashboard')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>{pt('back_to_dashboard')}</button>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="rounded-xl border-none bg-slate-200 px-4 py-3 font-semibold text-slate-700"
+        >
+          {pt('back_to_dashboard')}
+        </button>
       </div>
     );
   }
@@ -669,14 +660,14 @@ export default function PiggyBankPage() {
     if (summary !== null && summary.account == null && !isAdmin) {
       const pendingRequest = summary.pendingAccountRequest === true;
       return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '80px', height: '80px' }} />
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-5">
+          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-20 w-20" />
           {pendingRequest ? (
-            <p style={{ fontSize: '16px', color: '#92400e', textAlign: 'center', margin: 0, fontWeight: 600 }}>
+            <p className="m-0 text-center text-base font-semibold text-amber-800">
               {pt('approval_pending')}
             </p>
           ) : (
-            <p style={{ fontSize: '16px', color: '#475569', textAlign: 'center', margin: 0 }}>
+            <p className="m-0 text-center text-base text-slate-600">
               {pt('no_piggy_ask_admin')}
             </p>
           )}
@@ -684,39 +675,36 @@ export default function PiggyBankPage() {
             <button
               type="button"
               onClick={handleRequestAccount}
-              style={{
-                padding: '12px 20px',
-                borderRadius: '10px',
-                border: '1px solid #94a3b8',
-                backgroundColor: '#f1f5f9',
-                color: '#475569',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="cursor-pointer rounded-[10px] border border-slate-400 bg-slate-100 px-5 py-3 font-semibold text-slate-600"
             >
               {pt('request_piggy_btn')}
             </button>
           )}
-          <button onClick={() => router.push('/dashboard')} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>{pt('go_dashboard')}</button>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="rounded-[10px] border-none bg-slate-200 px-4 py-2.5 font-semibold text-slate-700"
+          >
+            {pt('go_dashboard')}
+          </button>
         </div>
       );
     }
     if (summary !== null && summary.account == null && isAdmin && selectedChildIdForAdmin) {
       const childName = members.find((m) => m.user_id === selectedChildIdForAdmin)?.nickname || pt('child_label');
       return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" style={{ width: '90px', height: '90px' }} />
+        <div className="min-h-screen bg-slate-50 p-5">
+          <div className="mb-5 flex items-center gap-4">
+            <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-[90px] w-[90px]" />
             <div>
-              <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{pt('management_title')}</h1>
-              <p style={{ margin: '4px 0 0', color: '#64748b' }}>{childName} · {pt('no_piggy')}</p>
+              <h1 className="m-0 text-[22px] text-gray-800">{pt('management_title')}</h1>
+              <p className="m-0 mt-1 text-slate-500">{childName} · {pt('no_piggy')}</p>
             </div>
           </div>
           {error && (
-            <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '12px', borderRadius: '10px', color: '#991b1b', marginBottom: '16px' }}>{error}</div>
+            <div className="mb-4 rounded-[10px] border border-red-200 bg-red-100 p-3 text-red-800">{error}</div>
           )}
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <p style={{ fontSize: '15px', color: '#475569', marginBottom: '16px' }}>{pt('this_child_has_no_piggy')}</p>
+          <div className="mb-5 rounded-2xl bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <p className="mb-4 text-[15px] text-slate-600">{pt('this_child_has_no_piggy')}</p>
             <button
               type="button"
               onClick={async () => {
@@ -726,36 +714,41 @@ export default function PiggyBankPage() {
                   setError(err.message || pt('add_piggy_failed_short'));
                 }
               }}
-              style={{ padding: '12px 20px', borderRadius: '10px', border: 'none', background: '#22c55e', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+              className="cursor-pointer rounded-[10px] border-none bg-green-500 px-5 py-3 font-semibold text-white"
             >
               {pt('add_piggy_btn')}
             </button>
           </div>
-          <button onClick={() => router.push('/piggy-bank')} style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}>{pt('full_list')}</button>
+          <button
+            onClick={() => router.push('/piggy-bank')}
+            className="rounded-xl border-none bg-slate-200 px-4 py-3 font-semibold text-slate-700"
+          >
+            {pt('full_list')}
+          </button>
         </div>
       );
     }
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: '#64748b' }}>{pt('loading')}</span>
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="text-slate-500">{pt('loading')}</span>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+    <div className="min-h-screen bg-slate-50 p-5">
+      <div className="mb-5 flex items-center gap-4">
         <img
           src="/piggy/ellena-piggy-red.svg"
           alt="Ellena Piggy"
-          style={{ width: '90px', height: '90px' }}
+          className="h-[90px] w-[90px]"
         />
-        <div style={{ flex: 1 }}>
+        <div className="flex-1">
           {isAdmin && (
             <select
               value={selectedChildIdForAdmin}
               onChange={(e) => setSelectedChildIdForAdmin(e.target.value)}
-              style={{ display: 'block', marginBottom: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '8px 12px', fontSize: '14px' }}
+              className="mb-2 block rounded-lg border border-slate-200 px-3 py-2 text-sm"
             >
               <option value="">{pt('full_list')}</option>
               {members.filter((m) => m.role === 'MEMBER').map((m) => (
@@ -763,15 +756,15 @@ export default function PiggyBankPage() {
               ))}
             </select>
           )}
-          <h1 style={{ margin: 0, fontSize: '22px', color: '#1f2937' }}>{summary!.account!.ownerNickname || summary!.account!.name}</h1>
-          <p style={{ margin: '4px 0 0', color: '#64748b' }}>
+          <h1 className="m-0 text-[22px] text-gray-800">{summary!.account!.ownerNickname || summary!.account!.name}</h1>
+          <p className="m-0 mt-1 text-slate-500">
             {currentGroup?.name || pt('group_label')} {isAdmin && selectedChildIdForAdmin ? `· ${resolveMemberName(selectedChildIdForAdmin)} ${pt('piggy_label')}` : pt('piggy_label')}
           </p>
           {isAdmin && selectedChildIdForAdmin && (
             <button
               type="button"
               onClick={() => handleDeletePiggy(selectedChildIdForAdmin)}
-              style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+              className="mt-2 cursor-pointer rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] font-semibold text-red-700"
             >
               {pt('delete_piggy_btn')}
             </button>
@@ -780,7 +773,7 @@ export default function PiggyBankPage() {
       </div>
 
       {error && (
-        <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', padding: '12px', borderRadius: '10px', color: '#991b1b', marginBottom: '16px' }}>
+        <div className="mb-4 rounded-[10px] border border-red-200 bg-red-100 p-3 text-red-800">
           {error}
         </div>
       )}
@@ -791,31 +784,31 @@ export default function PiggyBankPage() {
         accept="image/jpeg,image/png,image/webp,image/heic"
         multiple
         onChange={handlePickAttachment}
-        style={{ display: 'none' }}
+        className="hidden"
       />
 
-      <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ background: '#eff6ff', borderRadius: '14px', padding: '16px', border: '1px solid #bfdbfe' }}>
-          <div style={{ fontSize: '13px', color: '#1d4ed8' }}>{pt('wallet_balance')}</div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#1d4ed8' }}>
+      <div className="mb-5 grid gap-3">
+        <div className="rounded-[14px] border border-blue-200 bg-blue-50 p-4">
+          <div className="text-[13px] text-blue-700">{pt('wallet_balance')}</div>
+          <div className="text-2xl font-bold text-blue-700">
             {formatPiggyAmount(summary?.wallet?.balance ?? 0)}
           </div>
         </div>
-        <div style={{ background: '#fff7ed', borderRadius: '14px', padding: '16px', border: '1px solid #fed7aa' }}>
-          <div style={{ fontSize: '13px', color: '#9a3412' }}>{pt('piggy_balance')}</div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#9a3412' }}>
+        <div className="rounded-[14px] border border-amber-200 bg-amber-50 p-4">
+          <div className="text-[13px] text-amber-800">{pt('piggy_balance')}</div>
+          <div className="text-2xl font-bold text-amber-800">
             {formatPiggyAmount(summary?.account?.balance ?? 0)}
           </div>
         </div>
       </div>
 
       {/* 용돈 거래 내역 */}
-      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>{pt('allowance_history')}</h2>
+      <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <h2 className="mb-3 mt-0 text-lg">{pt('allowance_history')}</h2>
         {walletTransactions.length === 0 ? (
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>{pt('no_allowance_tx')}</p>
+          <p className="text-sm text-slate-400">{pt('no_allowance_tx')}</p>
         ) : (
-          <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
+          <div className="grid max-h-[330px] gap-2 overflow-y-auto pr-1">
             {walletTransactions.map((tx) => {
               const isNegative = tx.type === 'spend' || tx.type === 'child_save';
               const receiptKey = piggyTxAttachmentKey('piggy_wallet_tx', tx.id);
@@ -825,28 +818,21 @@ export default function PiggyBankPage() {
               return (
                 <div
                   key={tx.id}
-                  style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
+                  className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3"
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-xs text-slate-500">{tx.dateLabel}</span>
+                        <span className="text-[13px] font-semibold text-slate-800">{tx.typeLabel}</span>
                       </div>
                       {tx.actor_nickname && tx.type === 'allowance' && (
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                        <div className="mb-1 text-xs text-slate-500">
                           {tx.actor_nickname}{pt('paid_by_suffix')}
                         </div>
                       )}
                       {tx.memo && (
-                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
+                        <div className="text-xs text-slate-400">{tx.memo}</div>
                       )}
                       <button
                         type="button"
@@ -854,42 +840,28 @@ export default function PiggyBankPage() {
                           pendingAttachmentUploadRef.current = { entityType: 'piggy_wallet_tx', entityId: tx.id };
                           receiptFileInputRef.current?.click();
                         }}
-                        style={{
-                          marginTop: '6px',
-                          padding: '4px 8px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          background: '#f8fafc',
-                          color: '#334155',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
+                        className="mt-1.5 cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700"
                       >
                         영수증 첨부
                       </button>
                     </div>
                     <div
-                      style={{
-                        fontSize: '16px',
-                        fontWeight: 700,
-                        color: isNegative ? '#b91c1c' : '#16a34a',
-                      }}
+                      className={`text-base font-bold ${isNegative ? 'text-red-700' : 'text-green-600'}`}
                     >
                       {isNegative ? '-' : '+'}{formatPiggyAmount(tx.amount)}
                     </div>
                   </div>
                   {showReceiptSection && (
-                    <div style={{ width: '100%', paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+                    <div className="w-full border-t border-slate-100 pt-2">
                       {receipts.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+                        <div className="flex flex-wrap items-start gap-2">
                           {receipts.map((att) => (
-                            <div key={att.id} style={{ position: 'relative', width: 72, height: 72 }}>
+                            <div key={att.id} className="relative h-[72px] w-[72px]">
                               <a href={att.image_url} target="_blank" rel="noopener noreferrer">
                                 <img
                                   src={att.thumbnail_url || att.image_url}
                                   alt={att.original_filename}
-                                  style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                                  className="block h-[72px] w-[72px] rounded-lg object-cover"
                                 />
                               </a>
                               <button
@@ -911,21 +883,7 @@ export default function PiggyBankPage() {
                                     }
                                   })();
                                 }}
-                                style={{
-                                  position: 'absolute',
-                                  top: 4,
-                                  right: 4,
-                                  border: 'none',
-                                  borderRadius: '999px',
-                                  width: 20,
-                                  height: 20,
-                                  fontSize: 12,
-                                  lineHeight: 1,
-                                  padding: 0,
-                                  background: 'rgba(239,68,68,0.95)',
-                                  color: '#fff',
-                                  cursor: 'pointer',
-                                }}
+                                className="absolute right-1 top-1 h-5 w-5 cursor-pointer rounded-full border-none bg-[rgba(239,68,68,0.95)] p-0 text-xs leading-none text-white"
                               >
                                 ×
                               </button>
@@ -934,9 +892,9 @@ export default function PiggyBankPage() {
                         </div>
                       )}
                       {receiptUploadingKey === receiptKey && attachmentJobs.length > 0 && (
-                        <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                        <div className="mt-2 grid gap-1">
                           {attachmentJobs.map((job) => (
-                            <div key={job.id} style={{ fontSize: 11, color: '#64748b' }}>
+                            <div key={job.id} className="text-[11px] text-slate-500">
                               {job.fileName} · {job.status}
                               {job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
                             </div>
@@ -944,21 +902,12 @@ export default function PiggyBankPage() {
                         </div>
                       )}
                       {receiptUploadingKey === receiptKey && attachmentUploading && (
-                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 12, color: '#475569' }}>업로드 중…</span>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-slate-600">업로드 중…</span>
                           <button
                             type="button"
                             onClick={() => attachmentAbortRef.current?.abort()}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 8,
-                              border: 'none',
-                              background: '#fee2e2',
-                              color: '#b91c1c',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                              fontSize: 12,
-                            }}
+                            className="cursor-pointer rounded-lg border-none bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700"
                           >
                             취소
                           </button>
@@ -974,12 +923,12 @@ export default function PiggyBankPage() {
       </div>
 
       {/* 저금통 거래 내역 */}
-      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', marginBottom: '12px' }}>{pt('piggy_history')}</h2>
+      <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <h2 className="mb-3 mt-0 text-lg">{pt('piggy_history')}</h2>
         {bankTransactions.length === 0 ? (
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>{pt('no_piggy_tx')}</p>
+          <p className="text-sm text-slate-400">{pt('no_piggy_tx')}</p>
         ) : (
-          <div style={{ maxHeight: '330px', overflowY: 'auto', display: 'grid', gap: '8px', paddingRight: '4px' }}>
+          <div className="grid max-h-[330px] gap-2 overflow-y-auto pr-1">
             {bankTransactions.map((tx) => {
               const isNegative = tx.type === 'withdraw_cash' || tx.type === 'withdraw_to_wallet';
               const receiptKey = piggyTxAttachmentKey('piggy_bank_tx', tx.id);
@@ -989,28 +938,21 @@ export default function PiggyBankPage() {
               return (
                 <div
                   key={tx.id}
-                  style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
+                  className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3"
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>{tx.dateLabel}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{tx.typeLabel}</span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-xs text-slate-500">{tx.dateLabel}</span>
+                        <span className="text-[13px] font-semibold text-slate-800">{tx.typeLabel}</span>
                       </div>
                       {tx.actor_nickname && tx.type === 'parent_deposit' && (
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+                        <div className="mb-1 text-xs text-slate-500">
                           {tx.actor_nickname}{pt('deposited_by_suffix')}
                         </div>
                       )}
                       {tx.memo && (
-                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>{tx.memo}</div>
+                        <div className="text-xs text-slate-400">{tx.memo}</div>
                       )}
                       <button
                         type="button"
@@ -1018,42 +960,28 @@ export default function PiggyBankPage() {
                           pendingAttachmentUploadRef.current = { entityType: 'piggy_bank_tx', entityId: tx.id };
                           receiptFileInputRef.current?.click();
                         }}
-                        style={{
-                          marginTop: '6px',
-                          padding: '4px 8px',
-                          borderRadius: '8px',
-                          border: '1px solid #cbd5e1',
-                          background: '#f8fafc',
-                          color: '#334155',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
+                        className="mt-1.5 cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700"
                       >
                         영수증 첨부
                       </button>
                     </div>
                     <div
-                      style={{
-                        fontSize: '16px',
-                        fontWeight: 700,
-                        color: isNegative ? '#b91c1c' : '#16a34a',
-                      }}
+                      className={`text-base font-bold ${isNegative ? 'text-red-700' : 'text-green-600'}`}
                     >
                       {isNegative ? '-' : '+'}{formatPiggyAmount(tx.amount)}
                     </div>
                   </div>
                   {showReceiptSection && (
-                    <div style={{ width: '100%', paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+                    <div className="w-full border-t border-slate-100 pt-2">
                       {receipts.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }}>
+                        <div className="flex flex-wrap items-start gap-2">
                           {receipts.map((att) => (
-                            <div key={att.id} style={{ position: 'relative', width: 72, height: 72 }}>
+                            <div key={att.id} className="relative h-[72px] w-[72px]">
                               <a href={att.image_url} target="_blank" rel="noopener noreferrer">
                                 <img
                                   src={att.thumbnail_url || att.image_url}
                                   alt={att.original_filename}
-                                  style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                                  className="block h-[72px] w-[72px] rounded-lg object-cover"
                                 />
                               </a>
                               <button
@@ -1075,21 +1003,7 @@ export default function PiggyBankPage() {
                                     }
                                   })();
                                 }}
-                                style={{
-                                  position: 'absolute',
-                                  top: 4,
-                                  right: 4,
-                                  border: 'none',
-                                  borderRadius: '999px',
-                                  width: 20,
-                                  height: 20,
-                                  fontSize: 12,
-                                  lineHeight: 1,
-                                  padding: 0,
-                                  background: 'rgba(239,68,68,0.95)',
-                                  color: '#fff',
-                                  cursor: 'pointer',
-                                }}
+                                className="absolute right-1 top-1 h-5 w-5 cursor-pointer rounded-full border-none bg-[rgba(239,68,68,0.95)] p-0 text-xs leading-none text-white"
                               >
                                 ×
                               </button>
@@ -1098,9 +1012,9 @@ export default function PiggyBankPage() {
                         </div>
                       )}
                       {receiptUploadingKey === receiptKey && attachmentJobs.length > 0 && (
-                        <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                        <div className="mt-2 grid gap-1">
                           {attachmentJobs.map((job) => (
-                            <div key={job.id} style={{ fontSize: 11, color: '#64748b' }}>
+                            <div key={job.id} className="text-[11px] text-slate-500">
                               {job.fileName} · {job.status}
                               {job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
                             </div>
@@ -1108,21 +1022,12 @@ export default function PiggyBankPage() {
                         </div>
                       )}
                       {receiptUploadingKey === receiptKey && attachmentUploading && (
-                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 12, color: '#475569' }}>업로드 중…</span>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-slate-600">업로드 중…</span>
                           <button
                             type="button"
                             onClick={() => attachmentAbortRef.current?.abort()}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 8,
-                              border: 'none',
-                              background: '#fee2e2',
-                              color: '#b91c1c',
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                              fontSize: 12,
-                            }}
+                            className="cursor-pointer rounded-lg border-none bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700"
                           >
                             취소
                           </button>
@@ -1138,17 +1043,17 @@ export default function PiggyBankPage() {
       </div>
 
       {isAdmin && (
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('piggy_name_title')}</h2>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+          <h2 className="m-0 text-lg">{pt('piggy_name_title')}</h2>
+          <div className="mt-3 flex gap-2">
             <input
               value={piggyName}
               onChange={(e) => setPiggyName(e.target.value)}
-              style={{ flex: 1, borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+              className="flex-1 rounded-[10px] border border-slate-200 p-2.5"
             />
             <button
               onClick={handleRename}
-              style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 600 }}
+              className="rounded-[10px] border-none bg-red-500 px-4 py-2.5 font-semibold text-white"
             >
               {pt('rename_btn')}
             </button>
@@ -1158,21 +1063,21 @@ export default function PiggyBankPage() {
 
       {isAdmin ? (
         <>
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('allowance_grant_title')}</h2>
-            <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('allowance_grant_title')}</h2>
+            <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
                 value={allowanceAmount}
                 onChange={(e) => setAllowanceAmount(e.target.value)}
                 placeholder={pt('amount_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
                 value={allowanceMemo}
                 onChange={(e) => setAllowanceMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
@@ -1198,36 +1103,30 @@ export default function PiggyBankPage() {
                     setAllowanceSubmitting(false);
                   }
                 }}
-                style={{
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: allowanceSubmitting ? '#94a3b8' : '#2563eb',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: allowanceSubmitting ? 'not-allowed' : 'pointer',
-                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  allowanceSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-blue-600'
+                }`}
               >
                 {allowanceSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('allowance_grant_btn')}
               </button>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('parent_deposit_title')}</h2>
-            <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('parent_deposit_title')}</h2>
+            <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 placeholder={pt('amount_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
                 value={depositMemo}
                 onChange={(e) => setDepositMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
@@ -1253,46 +1152,36 @@ export default function PiggyBankPage() {
                     setDepositSubmitting(false);
                   }
                 }}
-                style={{
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: depositSubmitting ? '#94a3b8' : '#ef4444',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: depositSubmitting ? 'not-allowed' : 'pointer',
-                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  depositSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-red-500'
+                }`}
               >
                 {depositSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('parent_deposit_btn')}
               </button>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('open_approve_title')}</h2>
-            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'grid', gap: '12px', marginTop: '12px', paddingRight: '4px' }}>
-              {requests.length === 0 && <p style={{ color: '#94a3b8' }}>{pt('no_pending_requests')}</p>}
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('open_approve_title')}</h2>
+            <div className="mt-3 grid max-h-[200px] gap-3 overflow-y-auto pr-1">
+              {requests.length === 0 && <p className="text-slate-400">{pt('no_pending_requests')}</p>}
               {requests.map((req) => {
                 const isInactive = req.status !== 'pending';
                 return (
                   <div
                     key={req.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      opacity: isInactive ? 0.6 : 1,
-                      textDecoration: isInactive ? 'line-through' : undefined,
-                    }}
+                    className={`rounded-xl border border-slate-200 p-3 ${
+                      isInactive ? 'opacity-60 line-through' : ''
+                    }`}
                   >
-                    <div style={{ fontWeight: 600 }}>{resolveMemberName(req.child_id)}</div>
-                    <div style={{ color: '#475569', marginTop: '4px' }}>{formatPiggyAmount(req.amount)}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px' }}>
+                    <div className="font-semibold">{resolveMemberName(req.child_id)}</div>
+                    <div className="mt-1 text-slate-600">{formatPiggyAmount(req.amount)}</div>
+                    <div className="mt-1 text-xs text-slate-400">
                       {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.reason || pt('reason_none')}
                     </div>
-                    {isInactive && <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}</div>}
+                    {isInactive && <div className="mt-1 text-xs text-slate-400">{req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}</div>}
                     {!isInactive && (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                      <div className="mt-2.5 flex gap-2">
                         <button
                           onClick={async () => {
                             try {
@@ -1301,7 +1190,7 @@ export default function PiggyBankPage() {
                               setError(err.message || pt('approve_failed'));
                             }
                           }}
-                          style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700 }}
+                          className="flex-1 rounded-[10px] border-none bg-green-600 p-2.5 font-bold text-white"
                         >
                           {pt('approve_btn')}
                         </button>
@@ -1313,7 +1202,7 @@ export default function PiggyBankPage() {
                               setError(err.message || pt('reject_failed'));
                             }
                           }}
-                          style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: '#9ca3af', color: '#fff', fontWeight: 700 }}
+                          className="flex-1 rounded-[10px] border-none bg-gray-400 p-2.5 font-bold text-white"
                         >
                           {pt('reject_btn')}
                         </button>
@@ -1327,27 +1216,27 @@ export default function PiggyBankPage() {
         </>
       ) : (
         <>
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('spend_title')}</h2>
-            <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('spend_title')}</h2>
+            <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
                 value={spendAmount}
                 onChange={(e) => setSpendAmount(e.target.value)}
                 placeholder={pt('amount_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
                 value={spendCategory}
                 onChange={(e) => setSpendCategory(e.target.value)}
                 placeholder={pt('category_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
                 value={spendMemo}
                 onChange={(e) => setSpendMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
@@ -1370,36 +1259,30 @@ export default function PiggyBankPage() {
                     setSpendSubmitting(false);
                   }
                 }}
-                style={{
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: spendSubmitting ? '#94a3b8' : '#0ea5e9',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: spendSubmitting ? 'not-allowed' : 'pointer',
-                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  spendSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-sky-500'
+                }`}
               >
                 {spendSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('spend_btn')}
               </button>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('save_title')}</h2>
-            <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('save_title')}</h2>
+            <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
                 value={saveAmount}
                 onChange={(e) => setSaveAmount(e.target.value)}
                 placeholder={pt('save_amount_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <input
                 value={saveMemo}
                 onChange={(e) => setSaveMemo(e.target.value)}
                 placeholder={pt('memo_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
@@ -1417,35 +1300,29 @@ export default function PiggyBankPage() {
                     setSaveSubmitting(false);
                   }
                 }}
-                style={{
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: saveSubmitting ? '#94a3b8' : '#f97316',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: saveSubmitting ? 'not-allowed' : 'pointer',
-                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  saveSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-orange-500'
+                }`}
               >
                 {saveSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('save_btn')}
               </button>
             </div>
           </div>
 
-          <div style={{ background: '#ffffff', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px' }}>{pt('open_request_title')}</h2>
-            <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+            <h2 className="m-0 text-lg">{pt('open_request_title')}</h2>
+            <div className="mt-3 grid gap-2.5">
               <input
                 type="number"
                 value={openAmount}
                 onChange={(e) => setOpenAmount(e.target.value)}
                 placeholder={pt('request_amount_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <select
                 value={openDestination}
                 onChange={(e) => setOpenDestination(e.target.value as 'wallet' | 'cash')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               >
                 <option value="wallet">{pt('to_wallet')}</option>
                 <option value="cash">{pt('to_cash')}</option>
@@ -1454,7 +1331,7 @@ export default function PiggyBankPage() {
                 value={openReason}
                 onChange={(e) => setOpenReason(e.target.value)}
                 placeholder={pt('reason_placeholder')}
-                style={{ borderRadius: '10px', border: '1px solid #e2e8f0', padding: '10px' }}
+                className="rounded-[10px] border border-slate-200 p-2.5"
               />
               <button
                 type="button"
@@ -1476,40 +1353,30 @@ export default function PiggyBankPage() {
                     setOpenRequestSubmitting(false);
                   }
                 }}
-                style={{
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: openRequestSubmitting ? '#94a3b8' : '#7c3aed',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: openRequestSubmitting ? 'not-allowed' : 'pointer',
-                }}
+                className={`rounded-xl border-none p-3 font-bold text-white ${
+                  openRequestSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-violet-600'
+                }`}
               >
                 {openRequestSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('open_request_btn')}
               </button>
             </div>
 
-            <div style={{ marginTop: '16px', display: 'grid', gap: '10px' }}>
-              {requests.length === 0 && <p style={{ color: '#94a3b8' }}>{pt('no_requests')}</p>}
+            <div className="mt-4 grid gap-2.5">
+              {requests.length === 0 && <p className="text-slate-400">{pt('no_requests')}</p>}
               {requests.map((req) => {
                 const isInactive = req.status !== 'pending';
                 return (
                   <div
                     key={req.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      opacity: isInactive ? 0.6 : 1,
-                      textDecoration: isInactive ? 'line-through' : undefined,
-                    }}
+                    className={`rounded-xl border border-slate-200 p-3 ${
+                      isInactive ? 'opacity-60 line-through' : ''
+                    }`}
                   >
-                    <div style={{ fontWeight: 600 }}>{formatPiggyAmount(req.amount)}</div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    <div className="font-semibold">{formatPiggyAmount(req.amount)}</div>
+                    <div className="text-xs text-slate-400">
                       {req.destination === 'wallet' ? pt('to_wallet') : pt('to_cash')} · {req.status === 'approved' ? pt('status_approved') : req.status === 'rejected' ? pt('status_rejected') : req.status}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{req.reason || pt('reason_none')}</div>
+                    <div className="text-xs text-slate-400">{req.reason || pt('reason_none')}</div>
                   </div>
                 );
               })}
@@ -1520,7 +1387,7 @@ export default function PiggyBankPage() {
 
       <button
         onClick={() => router.push('/dashboard')}
-        style={{ padding: '12px 16px', borderRadius: '12px', border: 'none', background: '#e2e8f0', color: '#334155', fontWeight: 600 }}
+        className="rounded-xl border-none bg-slate-200 px-4 py-3 font-semibold text-slate-700"
       >
         {pt('back_to_dashboard')}
       </button>

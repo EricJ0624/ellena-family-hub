@@ -770,108 +770,41 @@ export default function OnboardingPage() {
 
                 {/* 그룹 생성 완료 화면 */}
                 {createdGroupId ? (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
-                    <h3 style={{
-                      fontSize: '20px',
-                      fontWeight: '700',
-                      color: '#1a202c',
-                      margin: '0 0 16px 0',
-                    }}>
+                  <div className="text-center">
+                    <div className="mb-4 text-[64px]">🎉</div>
+                    <h3 className="m-0 mb-4 text-xl font-bold text-slate-900">
                       {ot('group_created_heading').replace(/\{name\}/g, groupName)}
                     </h3>
                     
                     {/* 초대 코드 표시 */}
                     {createdInviteCode && !inviteCodeConfirmed && (
-                      <div style={{
-                        padding: '20px',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
-                        marginBottom: '24px',
-                      }}>
-                        <p style={{
-                          fontSize: '14px',
-                          color: '#64748b',
-                          margin: '0 0 12px 0',
-                          fontWeight: '600',
-                        }}>
+                      <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
+                        <p className="m-0 mb-3 text-sm font-semibold text-slate-500">
                           {ot('invite_code')}
                         </p>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          justifyContent: 'center',
-                        }}>
-                          <code style={{
-                            fontSize: '24px',
-                            fontWeight: '700',
-                            color: '#667eea',
-                            letterSpacing: '4px',
-                            fontFamily: 'monospace',
-                          }}>
+                        <div className="flex items-center justify-center gap-2">
+                          <code className="font-mono text-2xl font-bold tracking-[4px] text-indigo-500">
                             {createdInviteCode}
                           </code>
                           <button
                             onClick={handleCopyInviteCode}
-                            style={{
-                              padding: '8px',
-                              backgroundColor: '#667eea',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
+                            className="flex cursor-pointer items-center justify-center rounded-lg border-none bg-indigo-500 p-2 text-white"
                             title={ot('copy_title')}
                           >
-                            <Copy style={{ width: '16px', height: '16px' }} />
+                            <Copy className="h-4 w-4" />
                           </button>
                         </div>
-                        <p style={{
-                          fontSize: '12px',
-                          color: '#94a3b8',
-                          margin: '12px 0 8px 0',
-                        }}>
+                        <p className="m-0 mb-2 mt-3 text-xs text-slate-400">
                           {ot('share_code_hint')}
                         </p>
-                        <p style={{
-                          fontSize: '11px',
-                          color: '#64748b',
-                          margin: '8px 0 16px 0',
-                          fontStyle: 'italic',
-                        }}>
+                        <p className="m-0 mb-4 mt-2 text-[11px] italic text-slate-500">
                           {ot('confirm_invite_hint')}
                         </p>
                         <button
                           onClick={handleConfirmInviteCode}
-                          style={{
-                            width: '100%',
-                            padding: '10px 20px',
-                            backgroundColor: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            transition: 'all 0.3s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#059669';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#10b981';
-                          }}
+                          className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out hover:bg-emerald-600"
                         >
-                          <CheckCircle style={{ width: '16px', height: '16px' }} />
+                          <CheckCircle className="h-4 w-4" />
                           {ot('confirmed_btn')}
                         </button>
                       </div>
@@ -965,13 +898,11 @@ export default function OnboardingPage() {
                     <button
                       onClick={handleCreateGroup}
                       disabled={creating || !groupName.trim()}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-base font-semibold text-white transition-all duration-300 ease-in-out"
-                      style={{
-                        width: '100%',
-                        backgroundColor: creating || !groupName.trim() ? '#94a3b8' : '#667eea',
-                        cursor: creating || !groupName.trim() ? 'not-allowed' : 'pointer',
-                        boxShadow: creating || !groupName.trim() ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-                      }}
+                      className={`flex w-full items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-base font-semibold text-white transition-all duration-300 ease-in-out ${
+                        creating || !groupName.trim()
+                          ? 'cursor-not-allowed bg-slate-400 shadow-none'
+                          : 'cursor-pointer bg-indigo-500 shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                      }`}
                     >
                       {creating ? (
                         <>
@@ -1000,14 +931,9 @@ export default function OnboardingPage() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <div style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '16px',
-                padding: '32px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-              }}>
+              <div className="rounded-2xl bg-white p-8 shadow-[0_8px_24px_rgba(0,0,0,0.1)]">
                 {/* 헤더 */}
-                <div style={{ marginBottom: '24px' }}>
+                <div className="mb-6">
                   <button
                     onClick={() => {
                       setStep('select');
@@ -1016,45 +942,19 @@ export default function OnboardingPage() {
                       setInviteCode('');
                       setGroupPreview(null);
                     }}
-                    style={{
-                      padding: '8px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      marginBottom: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      color: '#64748b',
-                      fontSize: '14px',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
+                    className="mb-4 flex cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent p-2 text-sm text-slate-500 hover:bg-slate-100"
                   >
-                    <ArrowRight style={{ width: '16px', height: '16px', transform: 'rotate(180deg)' }} />
+                    <ArrowRight className="h-4 w-4 rotate-180" />
                     {ot('back')}
                   </button>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
+                  <div className="mb-5">
+                    <label className="mb-2 block text-sm font-semibold text-slate-600">
                       {ot('display_language')}
                     </label>
                     <select
                       value={lang}
                       onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 14px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '10px',
-                        fontSize: '15px',
-                        color: '#1e293b',
-                        backgroundColor: '#fff',
-                      }}
+                      className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                     >
                       {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
                         <option key={code} value={code}>{label}</option>
@@ -1063,19 +963,10 @@ export default function OnboardingPage() {
                   </div>
                   {!groupPreview && (
                     <>
-                      <h2 style={{
-                        fontSize: '24px',
-                        fontWeight: '700',
-                        color: '#1a202c',
-                        margin: '0 0 8px 0',
-                      }}>
+                      <h2 className="m-0 mb-2 text-2xl font-bold text-slate-900">
                         {ot('join_step_enter_code')}
                       </h2>
-                      <p style={{
-                        fontSize: '14px',
-                        color: '#64748b',
-                        margin: 0,
-                      }}>
+                      <p className="m-0 text-sm text-slate-500">
                         {ot('invite_join_subtitle')}
                       </p>
                     </>
@@ -1130,12 +1021,11 @@ export default function OnboardingPage() {
                         <button
                           onClick={handleVerifyInviteCode}
                           disabled={verifying || !inviteCode.trim()}
-                          className="flex items-center justify-center rounded-xl border-none px-5 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out"
-                          style={{
-                            backgroundColor: verifying || !inviteCode.trim() ? '#94a3b8' : '#667eea',
-                            cursor: verifying || !inviteCode.trim() ? 'not-allowed' : 'pointer',
-                            boxShadow: verifying || !inviteCode.trim() ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-                          }}
+                          className={`flex items-center justify-center rounded-xl border-none px-5 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out ${
+                            verifying || !inviteCode.trim()
+                              ? 'cursor-not-allowed bg-slate-400 shadow-none'
+                              : 'cursor-pointer bg-indigo-500 shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                          }`}
                         >
                           {verifying ? (
                             <Loader2 className="h-[18px] w-[18px] animate-spin" />
@@ -1252,22 +1142,20 @@ export default function OnboardingPage() {
                           setSuccess(null);
                         }}
                         disabled={joining}
-                        className="flex-1 rounded-xl border-none bg-slate-100 px-6 py-3.5 text-sm font-semibold text-slate-600 transition-all duration-300 ease-in-out"
-                        style={{
-                          cursor: joining ? 'not-allowed' : 'pointer',
-                        }}
+                        className={`flex-1 rounded-xl border-none bg-slate-100 px-6 py-3.5 text-sm font-semibold text-slate-600 transition-all duration-300 ease-in-out ${
+                          joining ? 'cursor-not-allowed' : 'cursor-pointer'
+                        }`}
                       >
                         다시 입력
                       </button>
                       <button
                         onClick={joinFlowReady ? handleJoinCompleteGoToDashboard : handleJoinGroup}
                         disabled={joining && !joinFlowReady}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out"
-                        style={{
-                          backgroundColor: joining && !joinFlowReady ? '#94a3b8' : '#667eea',
-                          cursor: joining && !joinFlowReady ? 'not-allowed' : 'pointer',
-                          boxShadow: joining && !joinFlowReady ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-                        }}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out ${
+                          joining && !joinFlowReady
+                            ? 'cursor-not-allowed bg-slate-400 shadow-none'
+                            : 'cursor-pointer bg-indigo-500 shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                        }`}
                       >
                         {joining && !joinFlowReady ? (
                           <>
@@ -1295,56 +1183,24 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              style={{
-                backgroundColor: 'white',
-                borderRadius: '24px',
-                padding: '40px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
-                maxWidth: '500px',
-                width: '100%',
-              }}
+              className="w-full max-w-[500px] rounded-3xl bg-white p-10 shadow-[0_20px_60px_rgba(0,0,0,0.1)]"
             >
-              <div style={{
-                textAlign: 'center',
-                marginBottom: '32px',
-              }}>
-                <Users style={{
-                  width: '48px',
-                  height: '48px',
-                  color: '#667eea',
-                  margin: '0 auto 16px',
-                }} />
-                <h2 style={{
-                  fontSize: '24px',
-                  fontWeight: '700',
-                  color: '#1e293b',
-                  marginBottom: '8px',
-                }}>
+              <div className="mb-8 text-center">
+                <Users className="mx-auto mb-4 h-12 w-12 text-indigo-500" />
+                <h2 className="mb-2 text-2xl font-bold text-slate-800">
                   {ot('select_group')}
                 </h2>
-                <p style={{
-                  fontSize: '14px',
-                  color: '#64748b',
-                  margin: 0,
-                }}>
+                <p className="m-0 text-sm text-slate-500">
                   {ot('choose_group_subtitle')}
                 </p>
-                <div style={{ marginTop: '20px', textAlign: 'left' }}>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
+                <div className="mt-5 text-left">
+                  <label className="mb-2 block text-sm font-semibold text-slate-600">
                     {ot('display_language')}
                   </label>
                   <select
                     value={lang}
                     onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '10px',
-                      fontSize: '15px',
-                      color: '#1e293b',
-                      backgroundColor: '#fff',
-                    }}
+                    className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                   >
                     {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
                       <option key={code} value={code}>{label}</option>
@@ -1353,65 +1209,28 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                marginBottom: '24px',
-              }}>
+              <div className="mb-6 flex flex-col gap-3">
                 {userGroups.map((group) => (
                   <button
                     key={group.id}
                     onClick={() => setSelectedGroupId(group.id)}
-                    style={{
-                      padding: '16px',
-                      border: selectedGroupId === group.id ? '2px solid #667eea' : '2px solid #e2e8f0',
-                      borderRadius: '12px',
-                      backgroundColor: selectedGroupId === group.id ? '#f0f4ff' : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      textAlign: 'left',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedGroupId !== group.id) {
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedGroupId !== group.id) {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.backgroundColor = 'white';
-                      }
-                    }}
+                    className={`cursor-pointer rounded-xl border-2 p-4 text-left transition-all duration-200 ${
+                      selectedGroupId === group.id
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
                   >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}>
+                    <div className="flex items-center justify-between">
                       <div>
-                        <div style={{
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          color: '#1e293b',
-                          marginBottom: '4px',
-                        }}>
+                        <div className="mb-1 text-base font-semibold text-slate-800">
                           {group.name}
                         </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#64748b',
-                        }}>
+                        <div className="text-xs text-slate-500">
                           <span>{group.is_owner ? ot('role_owner') : group.role === 'ADMIN' ? ot('role_admin') : ot('role_member')}</span>
                         </div>
                       </div>
                       {selectedGroupId === group.id && (
-                        <CheckCircle style={{
-                          width: '24px',
-                          height: '24px',
-                          color: '#667eea',
-                        }} />
+                        <CheckCircle className="h-6 w-6 text-indigo-500" />
                       )}
                     </div>
                   </button>
@@ -1428,79 +1247,36 @@ export default function OnboardingPage() {
                   }
                 }}
                 disabled={!selectedGroupId}
-                style={{
-                  width: '100%',
-                  padding: '14px 24px',
-                  backgroundColor: selectedGroupId ? '#667eea' : '#94a3b8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: selectedGroupId ? 'pointer' : 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: selectedGroupId ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
-                  transition: 'all 0.3s ease',
-                  marginBottom: '16px',
-                }}
+                className={`mb-4 flex w-full items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-in-out ${
+                  selectedGroupId
+                    ? 'cursor-pointer bg-indigo-500 shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                    : 'cursor-not-allowed bg-slate-400 shadow-none'
+                }`}
               >
                 {ot('go_to_selected_group')}
-                <ArrowRight style={{ width: '18px', height: '18px' }} />
+                <ArrowRight className="h-[18px] w-[18px]" />
               </button>
 
               {/* 구분선 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '16px',
-              }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
-                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-medium text-slate-400">
                   {ot('or_divider')}
                 </span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
+                <div className="h-px flex-1 bg-slate-200" />
               </div>
 
               {/* 새 그룹 추가 옵션 */}
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-              }}>
+              <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setStep('create');
                     setError(null);
                     setSuccess(null);
                   }}
-                  style={{
-                    flex: 1,
-                    padding: '12px 20px',
-                    backgroundColor: 'white',
-                    color: '#667eea',
-                    border: '2px solid #667eea',
-                    borderRadius: '12px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f0f4ff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }}
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-indigo-500 bg-white px-5 py-3 text-[13px] font-semibold text-indigo-500 transition-all duration-200 hover:bg-indigo-50"
                 >
-                  <Home style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                  <Home className="h-4 w-4 shrink-0" />
                   <span>{ot('create_group')}</span>
                 </button>
                 <button
@@ -1509,31 +1285,9 @@ export default function OnboardingPage() {
                     setError(null);
                     setSuccess(null);
                   }}
-                  style={{
-                    flex: 1,
-                    padding: '12px 20px',
-                    backgroundColor: 'white',
-                    color: '#10b981',
-                    border: '2px solid #10b981',
-                    borderRadius: '12px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f0fdf4';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }}
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-emerald-500 bg-white px-5 py-3 text-[13px] font-semibold text-emerald-500 transition-all duration-200 hover:bg-emerald-50"
                 >
-                  <Users style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                  <Users className="h-4 w-4 shrink-0" />
                   <span>{ot('join_invite')}</span>
                 </button>
               </div>
@@ -1543,24 +1297,8 @@ export default function OnboardingPage() {
 
         {/* 진행 표시 */}
         {step !== 'select' && step !== 'choose-group' && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            marginTop: '24px',
-            padding: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            borderRadius: '12px',
-            fontSize: '14px',
-            color: '#64748b',
-          }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#667eea',
-            }} />
+          <div className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-white/70 p-3 text-sm text-slate-500">
+            <div className="h-2 w-2 rounded-full bg-indigo-500" />
             <span>2 / 2</span>
           </div>
         )}
@@ -1675,12 +1413,6 @@ export default function OnboardingPage() {
           )}
       </div>
 
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
