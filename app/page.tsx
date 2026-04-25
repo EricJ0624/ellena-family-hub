@@ -218,11 +218,16 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) {
+        setErrorMsg(t('error_login_failed'));
+        return;
+      }
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, keepLoggedIn ? '1' : '0');
       }
       const { error, data } = await supabase.auth.signInWithPassword({ 
-        email, 
+        email: normalizedEmail,
         password 
       });
       if (error) throw error;
@@ -233,7 +238,7 @@ export default function LoginPage() {
           setErrorMsg(t('error_email_verification'));
           return;
         }
-        await completeAuthRoutingAfterConfirmedUser(email);
+        await completeAuthRoutingAfterConfirmedUser(normalizedEmail);
       }
     } catch (error: any) {
       // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
