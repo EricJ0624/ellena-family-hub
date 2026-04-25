@@ -5241,6 +5241,14 @@ export default function FamilyHub() {
     }));
   }, []);
 
+  const handleTasksChange = useCallback((tasks: AppState['todos']) => {
+    setState((prev) => ({ ...prev, todos: tasks }));
+  }, []);
+
+  const handleEventsChange = useCallback((events: AppState['events']) => {
+    setState((prev) => ({ ...prev, events }));
+  }, []);
+
   const {
     loadChatAttachments,
     loadOlderChatMessages,
@@ -5629,7 +5637,7 @@ export default function FamilyHub() {
           {/* Family Tasks Section */}
           <FamilyTasksSection
             tasks={state.todos}
-            onTasksChange={(tasks) => setState(prev => ({ ...prev, todos: tasks }))}
+            onTasksChange={handleTasksChange}
             userId={userId}
             currentGroupId={currentGroupId}
             getCurrentKey={getCurrentKey}
@@ -5675,7 +5683,7 @@ export default function FamilyHub() {
           {/* Family Calendar Section */}
           <FamilyCalendarSection
             events={state.events}
-            onEventsChange={(events) => setState(prev => ({ ...prev, events }))}
+            onEventsChange={handleEventsChange}
             userId={userId}
             currentGroupId={currentGroupId}
             getCurrentKey={getCurrentKey}
