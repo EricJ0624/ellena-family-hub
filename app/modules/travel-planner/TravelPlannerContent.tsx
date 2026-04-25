@@ -83,6 +83,114 @@ export function TravelPlannerContent() {
   const searchParams = useSearchParams();
   const { lang } = useLanguage();
   const tt = (key: keyof import('@/lib/translations/travel').TravelTranslations) => getTravelTranslation(lang, key);
+  const uiText = useMemo(() => {
+    if (lang === 'ko') {
+      return {
+        transportShort: '교통',
+        confirmDeleteTrip: (title: string) => `"${title}" 여행을 삭제할까요?`,
+        confirmDeleteItinerary: (title: string) => `"${title}" 일정을 삭제할까요?`,
+        confirmRemoveFromItinerary: (title: string) => `"${title}" 항목을 일정에서 제거할까요?`,
+        removeFromItineraryFailed: '일정에서 제거하는데 실패했습니다.',
+        confirmDeleteExpense: '이 경비 항목을 삭제할까요?',
+        placeSelectAccommodation: '숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.',
+        placeSelectDining: '먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.',
+        placeSelectAttraction: '관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.',
+        attractionRequired: '관광지명과 날짜는 필수입니다.',
+        attractionAddFailed: '관광지 추가에 실패했습니다.',
+        attractionUpdateFailed: '관광지 수정에 실패했습니다.',
+        attractionDeleteFailed: '관광지 삭제에 실패했습니다.',
+        dateRequired: '날짜는 필수입니다.',
+        departureSelectRequired: '출발지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.',
+        arrivalSelectRequired: '도착지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.',
+        transportAddFailed: '교통 추가에 실패했습니다.',
+        transportUpdateFailed: '교통 수정에 실패했습니다.',
+        transportDeleteFailed: '교통 삭제에 실패했습니다.',
+        confirmDeleteAccommodation: (name: string) => `"${name}" 숙소를 삭제할까요?`,
+        confirmDeleteDining: (name: string) => `"${name}" 먹거리를 삭제할까요?`,
+        confirmDeleteAttraction: (name: string) => `"${name}" 관광지를 삭제할까요?`,
+        confirmDeleteTransport: '이 교통수단을 삭제할까요?',
+        itineraryEmptyForPdf: '등록된 일정이 없습니다.',
+        goToDashboard: '대시보드로 이동',
+        createdLabel: '등록',
+        updatedLabel: '수정',
+        photo: '사진',
+        attachmentPhotos: '첨부 사진',
+        close: '닫기',
+        uploading: '업로드 중…',
+        addPhoto: '사진 추가',
+        autoOptimizedUpload: '자동 최적화 업로드',
+        filenameFilter: '파일명 필터',
+        expenseSection: '경비',
+        addBudget: '+ 경비추가',
+        addExpense: '- 지출추가',
+        balance: '잔액',
+        directInputMode: '직접 입력 모드 (Google 자동완성 호출 안 함)',
+        placeFillHint: '이름에서 장소를 선택하면 주소·좌표가 채워집니다',
+        coordInputAdvanced: '좌표 입력 (고급)',
+        diningSection: '먹거리',
+        addDining: '+ 먹거리 추가',
+        accommodationSection: '숙소',
+        addAccommodation: '+ 숙소 추가',
+        transportSection: '교통',
+        itinerarySection: '일정',
+        mapSectionTitle: '위치 지도 (숙소·먹거리·관광지)',
+        attractionTitle: (editing: boolean) => (editing ? '관광지 수정' : '관광지 추가'),
+        transportTitle: (editing: boolean) => (editing ? '교통 수정' : '교통 추가'),
+      };
+    }
+    return {
+      transportShort: 'Transport',
+      confirmDeleteTrip: (title: string) => `Delete trip "${title}"?`,
+      confirmDeleteItinerary: (title: string) => `Delete itinerary "${title}"?`,
+      confirmRemoveFromItinerary: (title: string) => `Remove "${title}" from itinerary?`,
+      removeFromItineraryFailed: 'Failed to remove from itinerary.',
+      confirmDeleteExpense: 'Delete this expense item?',
+      placeSelectAccommodation: 'Please select accommodation from Google Places. Enable direct input mode to type manually.',
+      placeSelectDining: 'Please select dining place from Google Places. Enable direct input mode to type manually.',
+      placeSelectAttraction: 'Please select attraction from Google Places. Enable direct input mode to type manually.',
+      attractionRequired: 'Attraction name and date are required.',
+      attractionAddFailed: 'Failed to add attraction.',
+      attractionUpdateFailed: 'Failed to update attraction.',
+      attractionDeleteFailed: 'Failed to delete attraction.',
+      dateRequired: 'Date is required.',
+      departureSelectRequired: 'Please select departure from autocomplete list. Enable direct input mode to type manually.',
+      arrivalSelectRequired: 'Please select arrival from autocomplete list. Enable direct input mode to type manually.',
+      transportAddFailed: 'Failed to add transportation.',
+      transportUpdateFailed: 'Failed to update transportation.',
+      transportDeleteFailed: 'Failed to delete transportation.',
+      confirmDeleteAccommodation: (name: string) => `Delete accommodation "${name}"?`,
+      confirmDeleteDining: (name: string) => `Delete dining "${name}"?`,
+      confirmDeleteAttraction: (name: string) => `Delete attraction "${name}"?`,
+      confirmDeleteTransport: 'Delete this transport item?',
+      itineraryEmptyForPdf: 'No itinerary available.',
+      goToDashboard: 'Go to dashboard',
+      createdLabel: 'Created',
+      updatedLabel: 'Updated',
+      photo: 'Photo',
+      attachmentPhotos: 'Attachments',
+      close: 'Close',
+      uploading: 'Uploading…',
+      addPhoto: 'Add photo',
+      autoOptimizedUpload: 'Auto-optimized upload',
+      filenameFilter: 'Filename filter',
+      expenseSection: 'Budget',
+      addBudget: '+ Add budget',
+      addExpense: '- Add expense',
+      balance: 'Balance',
+      directInputMode: 'Direct input mode (disable Google autocomplete)',
+      placeFillHint: 'Selecting a place name fills address and coordinates',
+      coordInputAdvanced: 'Coordinate input (advanced)',
+      diningSection: 'Dining',
+      addDining: '+ Add dining',
+      accommodationSection: 'Accommodation',
+      addAccommodation: '+ Add accommodation',
+      transportSection: 'Transportation',
+      itinerarySection: 'Itinerary',
+      mapSectionTitle: 'Location map (accommodation, dining, attractions)',
+      attractionTitle: (editing: boolean) => (editing ? 'Edit attraction' : 'Add attraction'),
+      transportTitle: (editing: boolean) => (editing ? 'Edit transportation' : 'Add transportation'),
+    };
+  }, [lang]);
   const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
   const isTripAdmin = userRole === 'ADMIN' || isOwner;
   const [loading, setLoading] = useState(true);
@@ -736,7 +844,7 @@ export function TravelPlannerContent() {
         else if (t.transport_type === 'train') emoji = '🚂';
         else if (t.transport_type === 'car') emoji = '🚗';
         else if (t.transport_type === 'bike') emoji = '🚲';
-        const title = t.departure && t.arrival ? `${t.departure} → ${t.arrival}` : '교통';
+        const title = t.departure && t.arrival ? `${t.departure} → ${t.arrival}` : uiText.transportShort;
         if (t.departure || t.arrival) {
           // 출발지나 도착지 중 하나라도 있으면 지도에 표시 (좌표는 없을 수 있음)
           // 실제로는 departure/arrival에는 좌표가 없으므로 생략
@@ -1198,7 +1306,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteTrip = async (trip: TravelTrip) => {
-    if (!currentGroupId || !confirm(`"${trip.title}" 여행을 삭제할까요?`)) return;
+    if (!currentGroupId || !confirm(uiText.confirmDeleteTrip(trip.title))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${trip.id}?groupId=${currentGroupId}`, {
@@ -1320,7 +1428,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteItinerary = async (item: TravelItinerary) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`"${item.title}" 일정을 삭제할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteItinerary(item.title))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/itineraries/${item.id}?groupId=${currentGroupId}`, {
@@ -1339,7 +1447,7 @@ export function TravelPlannerContent() {
 
   const handleRemoveFromItinerary = async (item: typeof sortedItineraries[0]) => {
     const displayTitle = shortItineraryTitle(item.type, item.title, item.address);
-    if (!currentGroupId || !selectedTrip || !confirm(`"${displayTitle}" 항목을 일정에서 제거할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmRemoveFromItinerary(displayTitle))) return;
     try {
       const headers = await getAuthHeaders();
       let res: Response;
@@ -1382,10 +1490,10 @@ export function TravelPlannerContent() {
       
       if (!res!.ok) {
         const json = await res!.json();
-        throw new Error(json.error || '일정에서 제거하는데 실패했습니다.');
+        throw new Error(json.error || uiText.removeFromItineraryFailed);
       }
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '일정에서 제거하는데 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.removeFromItineraryFailed);
     }
   };
 
@@ -1545,7 +1653,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteExpense = async (item: TravelExpense) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`이 경비 항목을 삭제할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteExpense)) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/expenses/${item.id}?groupId=${currentGroupId}`, {
@@ -1611,11 +1719,11 @@ export function TravelPlannerContent() {
     }
     if (!accDirectInputMode && accName.trim()) {
       if (!accPlaceId) {
-        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAccommodation);
         return;
       }
       if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
-        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAccommodation);
         return;
       }
     }
@@ -1662,11 +1770,11 @@ export function TravelPlannerContent() {
     }
     if (!accDirectInputMode && accName.trim()) {
       if (!accPlaceId) {
-        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAccommodation);
         return;
       }
       if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
-        alert('숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAccommodation);
         return;
       }
     }
@@ -1704,7 +1812,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteAccommodation = async (item: TravelAccommodation) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`"${item.name}" 숙소를 삭제할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteAccommodation(item.name))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/accommodations/${item.id}?groupId=${currentGroupId}`, {
@@ -1772,11 +1880,11 @@ export function TravelPlannerContent() {
     }
     if (!diningDirectInputMode && diningName.trim()) {
       if (!diningPlaceId) {
-        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectDining);
         return;
       }
       if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
-        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectDining);
         return;
       }
     }
@@ -1820,11 +1928,11 @@ export function TravelPlannerContent() {
     }
     if (!diningDirectInputMode && diningName.trim()) {
       if (!diningPlaceId) {
-        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectDining);
         return;
       }
       if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
-        alert('먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectDining);
         return;
       }
     }
@@ -1859,7 +1967,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteDining = async (item: TravelDining) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`"${item.name}" 먹거리를 삭제할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteDining(item.name))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/dining/${item.id}?groupId=${currentGroupId}`, {
@@ -1921,16 +2029,16 @@ export function TravelPlannerContent() {
   const handleCreateAttraction = async (e: React.FormEvent, showInItinerary: boolean) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !attractionName.trim() || !attractionDayDate) {
-      alert('관광지명과 날짜는 필수입니다.');
+      alert(uiText.attractionRequired);
       return;
     }
     if (!attractionDirectInputMode && attractionName.trim()) {
       if (!attractionPlaceId) {
-        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAttraction);
         return;
       }
       if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
-        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAttraction);
         return;
       }
     }
@@ -1955,12 +2063,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '관광지 추가에 실패했습니다.');
+      if (!res.ok) throw new Error(json.error || uiText.attractionAddFailed);
       await fetchAttractions(selectedTrip.id);
       setShowAttractionForm(false);
       setEditingAttraction(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '관광지 추가에 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.attractionAddFailed);
     } finally {
       setSubmitting(false);
     }
@@ -1969,16 +2077,16 @@ export function TravelPlannerContent() {
   const handleUpdateAttraction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAttraction || !currentGroupId || !attractionName.trim() || !attractionDayDate) {
-      alert('관광지명과 날짜는 필수입니다.');
+      alert(uiText.attractionRequired);
       return;
     }
     if (!attractionDirectInputMode && attractionName.trim()) {
       if (!attractionPlaceId) {
-        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAttraction);
         return;
       }
       if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
-        alert('관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.');
+        alert(uiText.placeSelectAttraction);
         return;
       }
     }
@@ -2001,19 +2109,19 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '관광지 수정에 실패했습니다.');
+      if (!res.ok) throw new Error(json.error || uiText.attractionUpdateFailed);
       await fetchAttractions(selectedTrip!.id);
       setShowAttractionForm(false);
       setEditingAttraction(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '관광지 수정에 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.attractionUpdateFailed);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteAttraction = async (item: TravelAttraction) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`"${item.name}" 관광지를 삭제할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteAttraction(item.name))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/attractions/${item.id}?groupId=${currentGroupId}`, {
@@ -2022,11 +2130,11 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || '관광지 삭제에 실패했습니다.');
+        throw new Error(json.error || uiText.attractionDeleteFailed);
       }
       await fetchAttractions(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '관광지 삭제에 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.attractionDeleteFailed);
     }
   };
 
@@ -2066,16 +2174,16 @@ export function TravelPlannerContent() {
   const handleCreateTransport = async (e: React.FormEvent, showInItinerary: boolean) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !transportDayDate) {
-      alert('날짜는 필수입니다.');
+      alert(uiText.dateRequired);
       return;
     }
     if (!transportDirectInputMode) {
       if (transportDeparture.trim() && !transportDeparturePlaceId) {
-        alert('출발지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
+        alert(uiText.departureSelectRequired);
         return;
       }
       if (transportArrival.trim() && !transportArrivalPlaceId) {
-        alert('도착지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
+        alert(uiText.arrivalSelectRequired);
         return;
       }
     }
@@ -2101,12 +2209,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '교통 추가에 실패했습니다.');
+      if (!res.ok) throw new Error(json.error || uiText.transportAddFailed);
       await fetchTransports(selectedTrip.id);
       setShowTransportForm(false);
       setEditingTransport(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '교통 추가에 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.transportAddFailed);
     } finally {
       setSubmitting(false);
     }
@@ -2115,16 +2223,16 @@ export function TravelPlannerContent() {
   const handleUpdateTransport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTransport || !currentGroupId || !transportDayDate) {
-      alert('날짜는 필수입니다.');
+      alert(uiText.dateRequired);
       return;
     }
     if (!transportDirectInputMode) {
       if (transportDeparture.trim() && !transportDeparturePlaceId) {
-        alert('출발지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
+        alert(uiText.departureSelectRequired);
         return;
       }
       if (transportArrival.trim() && !transportArrivalPlaceId) {
-        alert('도착지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.');
+        alert(uiText.arrivalSelectRequired);
         return;
       }
     }
@@ -2148,19 +2256,19 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || '교통 수정에 실패했습니다.');
+      if (!res.ok) throw new Error(json.error || uiText.transportUpdateFailed);
       await fetchTransports(selectedTrip!.id);
       setShowTransportForm(false);
       setEditingTransport(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '교통 수정에 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.transportUpdateFailed);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteTransport = async (item: TravelTransport) => {
-    if (!currentGroupId || !selectedTrip || !confirm(`이 교통수단을 삭제할까요?`)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteTransport)) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/transports/${item.id}?groupId=${currentGroupId}`, {
@@ -2169,11 +2277,11 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || '교통 삭제에 실패했습니다.');
+        throw new Error(json.error || uiText.transportDeleteFailed);
       }
       await fetchTransports(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : '교통 삭제에 실패했습니다.');
+      alert(e instanceof Error ? e.message : uiText.transportDeleteFailed);
     }
   };
 
@@ -2286,17 +2394,17 @@ export function TravelPlannerContent() {
   }, [accommodations, dining, attractions, transports, itineraries]);
 
   const getItineraryTypeLabel = (type: string, transport_type?: 'air' | 'train' | 'car' | 'bike') => {
-    if (type === 'accommodation') return '숙소';
-    if (type === 'dining') return '식당';
-    if (type === 'attraction') return '관광지';
+    if (type === 'accommodation') return uiText.accommodationSection;
+    if (type === 'dining') return uiText.diningSection;
+    if (type === 'attraction') return tt('add_attraction');
     if (type === 'transport') {
-      if (transport_type === 'air') return '비행기';
-      if (transport_type === 'train') return '기차';
-      if (transport_type === 'car') return '자동차';
-      if (transport_type === 'bike') return '바이크';
-      return '교통';
+      if (transport_type === 'air') return tt('transport_type_air');
+      if (transport_type === 'train') return tt('transport_type_train');
+      if (transport_type === 'car') return tt('transport_type_car');
+      if (transport_type === 'bike') return tt('transport_type_bike');
+      return tt('section_transport');
     }
-    return '기타';
+    return tt('other');
   };
 
   const downloadItineraryPdf = useCallback(() => {
@@ -2323,7 +2431,7 @@ export function TravelPlannerContent() {
 
       if (sortedItineraries.length === 0) {
         doc.setFontSize(10);
-        doc.text('등록된 일정이 없습니다.', margin, y);
+        doc.text(uiText.itineraryEmptyForPdf, margin, y);
         doc.save(`itinerary-${selectedTrip.title.replace(/[^\w\u3131-\uD7A3]/g, '-')}.pdf`);
         return;
       }
@@ -2406,7 +2514,7 @@ export function TravelPlannerContent() {
               cursor: 'pointer',
             }}
           >
-            대시보드로 이동
+            {uiText.goToDashboard}
           </button>
         </div>
       </div>
@@ -2480,8 +2588,8 @@ export function TravelPlannerContent() {
                     {tt('label_trip_currency')}: <strong style={{ color: '#334155' }}>{tripCurrencyCode}</strong>
                   </p>
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
-                    등록: {getDisplayName(selectedTrip.created_by)}
-                    {selectedTrip.updated_by != null && ` · 수정: ${getDisplayName(selectedTrip.updated_by)}`}
+                    {uiText.createdLabel}: {getDisplayName(selectedTrip.created_by)}
+                    {selectedTrip.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(selectedTrip.updated_by)}`}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -2499,7 +2607,7 @@ export function TravelPlannerContent() {
                       cursor: 'pointer',
                     }}
                   >
-                    사진
+                    {uiText.photo}
                   </button>
                   <button
                     type="button"
@@ -2527,7 +2635,7 @@ export function TravelPlannerContent() {
                     }}
                   >
                     <Pencil style={{ width: 16, height: 16 }} />
-                    수정
+                    {tt('edit')}
                   </button>
                   <button
                     type="button"
@@ -2547,7 +2655,7 @@ export function TravelPlannerContent() {
                     }}
                   >
                     <Trash2 style={{ width: 16, height: 16 }} />
-                    삭제
+                    {tt('delete')}
                   </button>
                 </div>
               </div>
@@ -2555,8 +2663,8 @@ export function TravelPlannerContent() {
             {travelAttachmentTarget && (
               <div style={{ marginTop: 12, marginBottom: 12, padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <strong style={{ fontSize: 13, color: '#334155' }}>첨부 사진</strong>
-                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} style={{ border: 'none', background: '#e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>닫기</button>
+                  <strong style={{ fontSize: 13, color: '#334155' }}>{uiText.attachmentPhotos}</strong>
+                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} style={{ border: 'none', background: '#e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>{uiText.close}</button>
                 </div>
                 <input
                   ref={travelAttachmentInputRef}
@@ -2572,22 +2680,22 @@ export function TravelPlannerContent() {
                   disabled={travelAttachmentUploading}
                   style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
                 >
-                  {travelAttachmentUploading ? '업로드 중…' : '사진 추가'}
+                  {travelAttachmentUploading ? uiText.uploading : uiText.addPhoto}
                 </button>
-                <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>자동 최적화 업로드</span>
+                <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{uiText.autoOptimizedUpload}</span>
                 {travelAttachmentUploading && (
                   <button
                     type="button"
                     onClick={() => travelAttachmentAbortRef.current?.abort()}
                     style={{ marginLeft: 8, padding: '6px 10px', borderRadius: 6, border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
                   >
-                    취소
+                    {tt('cancel')}
                   </button>
                 )}
                 <input
                   value={travelAttachmentFilter}
                   onChange={(e) => setTravelAttachmentFilter(e.target.value)}
-                  placeholder="파일명 필터"
+                  placeholder={uiText.filenameFilter}
                   style={{ marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1', minWidth: 120 }}
                 />
                 {travelAttachmentJobs.length > 0 && (
@@ -2636,7 +2744,7 @@ export function TravelPlannerContent() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Wallet style={{ width: 18, height: 18 }} />
-                  경비
+                  {uiText.expenseSection}
                 </h3>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
@@ -2653,7 +2761,7 @@ export function TravelPlannerContent() {
                       cursor: 'pointer',
                     }}
                   >
-                    + 경비추가
+                    {uiText.addBudget}
                   </button>
                   <button
                     type="button"
@@ -2669,7 +2777,7 @@ export function TravelPlannerContent() {
                       cursor: 'pointer',
                     }}
                   >
-                    - 지출추가
+                    {uiText.addExpense}
                   </button>
                 </div>
                 </div>
@@ -2679,7 +2787,7 @@ export function TravelPlannerContent() {
                     <strong style={{ color: '#1e293b' }}>{fmtTripMoney(totalBudget)}</strong>
                   </span>
                   <span style={{ fontSize: 18, fontWeight: 700, color: balance >= 0 ? '#9333ea' : '#dc2626' }}>
-                    잔액 {fmtTripMoney(balance)}
+                    {uiText.balance} {fmtTripMoney(balance)}
                   </span>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>{tt('add_list')}</div>
@@ -2696,7 +2804,7 @@ export function TravelPlannerContent() {
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title="사진">📷</button>
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title={uiText.photo}>📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
@@ -2718,7 +2826,7 @@ export function TravelPlannerContent() {
                           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title="사진">📷</button>
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title={uiText.photo}>📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
                         </div>
@@ -2732,7 +2840,7 @@ export function TravelPlannerContent() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <ListOrdered style={{ width: 18, height: 18 }} />
-                  일정
+                  {uiText.itinerarySection}
                 </h3>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
@@ -2748,7 +2856,7 @@ export function TravelPlannerContent() {
                     onClick={() => setShowScheduleAddTypePicker(true)}
                     style={{ padding: '6px 10px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   >
-                    + 일정 추가
+                    + {tt('add_itinerary')}
                   </button>
                 </div>
               </div>
@@ -2856,7 +2964,7 @@ export function TravelPlannerContent() {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {sectionOpenAttraction ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
                   <Landmark style={{ width: 18, height: 18 }} />
-                  관광지 ({attractions.length})
+                  {tt('section_attraction')} ({attractions.length})
                 </span>
               </button>
               {sectionOpenAttraction && (
@@ -2876,12 +2984,12 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 관광지 추가
+                      + {tt('add_attraction')}
                     </button>
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {attractions.length === 0 ? (
-                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 관광지가 없습니다.</li>
+                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_attraction')}</li>
                     ) : (
                       attractions.map((a) => (
                         <li
@@ -2972,7 +3080,7 @@ export function TravelPlannerContent() {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {sectionOpenDining ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
                   <UtensilsCrossed style={{ width: 18, height: 18 }} />
-                  먹거리 ({dining.length})
+                  {uiText.diningSection} ({dining.length})
                 </span>
               </button>
               {sectionOpenDining && (
@@ -2992,7 +3100,7 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 먹거리 추가
+                      {uiText.addDining}
                     </button>
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -3023,8 +3131,8 @@ export function TravelPlannerContent() {
                               {d.category && <span style={{ marginLeft: 6, color: '#64748b' }}>{d.category}</span>}
                             </div>
                             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                              등록: {getDisplayName(d.created_by)}
-                              {d.updated_by != null && ` · 수정: ${getDisplayName(d.updated_by)}`}
+                              {uiText.createdLabel}: {getDisplayName(d.created_by)}
+                              {d.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(d.updated_by)}`}
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
@@ -3094,7 +3202,7 @@ export function TravelPlannerContent() {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {sectionOpenAccommodation ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
                   <Home style={{ width: 18, height: 18 }} />
-                  숙소 ({accommodations.length})
+                  {uiText.accommodationSection} ({accommodations.length})
                 </span>
               </button>
               {sectionOpenAccommodation && (
@@ -3114,7 +3222,7 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 숙소 추가
+                      {uiText.addAccommodation}
                     </button>
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -3142,8 +3250,8 @@ export function TravelPlannerContent() {
                             <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{a.check_in_date} ~ {a.check_out_date}</div>
                             {a.address && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.address}</div>}
                             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                              등록: {getDisplayName(a.created_by)}
-                              {a.updated_by != null && ` · 수정: ${getDisplayName(a.updated_by)}`}
+                              {uiText.createdLabel}: {getDisplayName(a.created_by)}
+                              {a.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(a.updated_by)}`}
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
@@ -3213,7 +3321,7 @@ export function TravelPlannerContent() {
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {sectionOpenTransport ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
                   <Car style={{ width: 18, height: 18 }} />
-                  교통 ({transports.length})
+                  {uiText.transportSection} ({transports.length})
                 </span>
               </button>
               {sectionOpenTransport && (
@@ -3233,7 +3341,7 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 비행기
+                      + {tt('transport_type_air')}
                     </button>
                     <button
                       type="button"
@@ -3249,7 +3357,7 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 기차
+                      + {tt('transport_type_train')}
                     </button>
                     <button
                       type="button"
@@ -3265,7 +3373,7 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 자동차
+                      + {tt('transport_type_car')}
                     </button>
                     <button
                       type="button"
@@ -3281,12 +3389,12 @@ export function TravelPlannerContent() {
                         cursor: 'pointer',
                       }}
                     >
-                      + 바이크
+                      + {tt('transport_type_bike')}
                     </button>
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {transports.length === 0 ? (
-                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>등록된 교통편이 없습니다.</li>
+                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_transport')}</li>
                     ) : (
                       transports.map((t) => (
                         <li
@@ -3354,7 +3462,7 @@ export function TravelPlannerContent() {
               <div style={{ marginTop: 24 }}>
                 <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <MapPin style={{ width: 18, height: 18 }} />
-                  위치 지도 (숙소·먹거리·관광지)
+                  {uiText.mapSectionTitle}
                 </h3>
                 {!showTravelMap ? (
                   <div
@@ -3375,7 +3483,7 @@ export function TravelPlannerContent() {
                     }}
                   >
                     <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#475569' }}>
-                      📍 지도
+                      📍 {tt('show_map_btn')}
                     </p>
                     <p style={{ fontSize: 13, lineHeight: 1.5, textAlign: 'center', maxWidth: 320, marginBottom: 16 }}>
                       {tt('map_placeholder_desc')}
@@ -3424,7 +3532,7 @@ export function TravelPlannerContent() {
             {loading && urlTripId ? (
               <div style={{ color: '#64748b' }}>
                 <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-                여행 정보를 불러오는 중...
+                {tt('dashboard_trips_loading')}
               </div>
             ) : (
               <>
@@ -3445,7 +3553,7 @@ export function TravelPlannerContent() {
                     cursor: 'pointer',
                   }}
                 >
-                  대시보드로 이동
+                  {uiText.goToDashboard}
                 </button>
               </>
             )}
@@ -3608,7 +3716,7 @@ export function TravelPlannerContent() {
                     cursor: submitting ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  취소
+                  {tt('cancel')}
                 </button>
                 <button
                   type="submit"
@@ -3628,7 +3736,7 @@ export function TravelPlannerContent() {
                   }}
                 >
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  추가
+                  {tt('add')}
                 </button>
               </div>
             </form>
@@ -3805,7 +3913,7 @@ export function TravelPlannerContent() {
                     cursor: submitting ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  취소
+                  {tt('cancel')}
                 </button>
                 <button
                   type="submit"
@@ -3825,7 +3933,7 @@ export function TravelPlannerContent() {
                   }}
                 >
                   {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                  저장
+                  {tt('save')}
                 </button>
               </div>
             </form>
@@ -4067,7 +4175,7 @@ export function TravelPlannerContent() {
                 </div>
               )}
               <details style={{ marginBottom: 20 }}>
-                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>좌표 입력 (고급)</summary>
+                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>{uiText.coordInputAdvanced}</summary>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
@@ -4109,7 +4217,7 @@ export function TravelPlannerContent() {
                     cursor: submitting ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  취소
+                  {tt('cancel')}
                 </button>
                 <button
                   type="submit"
@@ -4262,7 +4370,7 @@ export function TravelPlannerContent() {
                     cursor: submitting ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  취소
+                  {tt('cancel')}
                 </button>
                 <button
                   type="submit"
@@ -4358,7 +4466,7 @@ export function TravelPlannerContent() {
                     }
                   }}
                 />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
+                {uiText.directInputMode}
               </label>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_checkin')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
@@ -4390,7 +4498,7 @@ export function TravelPlannerContent() {
                 placeholder={
                   accDirectInputMode
                     ? tt('placeholder_search_address')
-                    : '이름에서 장소를 선택하면 주소·좌표가 채워집니다'
+                    : uiText.placeFillHint
                 }
                 style={{
                   width: '100%',
@@ -4412,7 +4520,7 @@ export function TravelPlannerContent() {
                 </div>
               )}
               <details style={{ marginBottom: 12 }}>
-                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>좌표 입력 (고급)</summary>
+                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>{uiText.coordInputAdvanced}</summary>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
@@ -4575,7 +4683,7 @@ export function TravelPlannerContent() {
                     }
                   }}
                 />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
+                {uiText.directInputMode}
               </label>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
@@ -4613,7 +4721,7 @@ export function TravelPlannerContent() {
                 placeholder={
                   diningDirectInputMode
                     ? tt('placeholder_search_address')
-                    : '이름에서 장소를 선택하면 주소·좌표가 채워집니다'
+                    : uiText.placeFillHint
                 }
                 style={{
                   width: '100%',
@@ -4635,7 +4743,7 @@ export function TravelPlannerContent() {
                 </div>
               )}
               <details style={{ marginBottom: 12 }}>
-                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>좌표 입력 (고급)</summary>
+                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>{uiText.coordInputAdvanced}</summary>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
@@ -4759,7 +4867,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{editingAttraction ? '관광지 수정' : '관광지 추가'}</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{uiText.attractionTitle(!!editingAttraction)}</h3>
               <button
                 type="button"
                 onClick={() => !submitting && setShowAttractionForm(false)}
@@ -4769,7 +4877,7 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form ref={attractionFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAttraction) handleUpdateAttraction(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>관광지명</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_name')}</label>
               <input
                 type="text"
                 ref={attractionNameInputRef}
@@ -4805,9 +4913,9 @@ export function TravelPlannerContent() {
                   }}
                   disabled={submitting}
                 />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
+                {uiText.directInputMode}
               </label>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <input
                 type="date"
                 value={attractionDayDate}
@@ -4818,7 +4926,7 @@ export function TravelPlannerContent() {
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시작 시간</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_time')}</label>
                   <input
                     type="time"
                     value={attractionStartTime}
@@ -4828,7 +4936,7 @@ export function TravelPlannerContent() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료 시간</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_time')}</label>
                   <input
                     type="time"
                     value={attractionEndTime}
@@ -4838,7 +4946,7 @@ export function TravelPlannerContent() {
                   />
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>주소</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
               <input
                 type="text"
                 value={attractionAddress}
@@ -4848,7 +4956,7 @@ export function TravelPlannerContent() {
                 }}
                 disabled={submitting}
                 placeholder={
-                  attractionDirectInputMode ? tt('placeholder_address') : '이름에서 장소를 선택하면 주소·좌표가 채워집니다'
+                  attractionDirectInputMode ? tt('placeholder_address') : uiText.placeFillHint
                 }
                 style={{
                   width: '100%',
@@ -4868,7 +4976,7 @@ export function TravelPlannerContent() {
                   </a>
                 </div>
               )}
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>설명</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_description')}</label>
               <textarea
                 value={attractionDescription}
                 onChange={(e) => setAttractionDescription(e.target.value)}
@@ -4881,17 +4989,17 @@ export function TravelPlannerContent() {
                 {editingAttraction ? (
                   <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                    저장
+                    {tt('save')}
                   </button>
                 ) : (
                   <>
                     <button type="button" disabled={submitting} onClick={(e) => handleCreateAttraction(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                      저장만
+                      {tt('save_only')}
                     </button>
                     <button type="button" disabled={submitting} onClick={(e) => handleCreateAttraction(e, true)} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                      일정에 추가
+                      {tt('save_and_add_to_itinerary')}
                     </button>
                   </>
                 )}
@@ -4930,7 +5038,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{editingTransport ? '교통 수정' : '교통 추가'}</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{uiText.transportTitle(!!editingTransport)}</h3>
               <button
                 type="button"
                 onClick={() => !submitting && setShowTransportForm(false)}
@@ -4940,19 +5048,19 @@ export function TravelPlannerContent() {
               </button>
             </div>
             <form ref={transportFormRef} onSubmit={(e) => { e.preventDefault(); if (editingTransport) handleUpdateTransport(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>교통수단</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_transport_type')}</label>
               <select
                 value={transportType}
                 onChange={(e) => setTransportType(e.target.value as 'air' | 'train' | 'car' | 'bike')}
                 disabled={submitting}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               >
-                <option value="air">비행기</option>
-                <option value="train">기차</option>
-                <option value="car">자동차</option>
-                <option value="bike">바이크</option>
+                <option value="air">{tt('transport_type_air')}</option>
+                <option value="train">{tt('transport_type_train')}</option>
+                <option value="car">{tt('transport_type_car')}</option>
+                <option value="bike">{tt('transport_type_bike')}</option>
               </select>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>날짜</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
               <input
                 type="date"
                 value={transportDayDate}
@@ -4963,7 +5071,7 @@ export function TravelPlannerContent() {
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>시작 시간</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_time')}</label>
                   <input
                     type="time"
                     value={transportStartTime}
@@ -4973,7 +5081,7 @@ export function TravelPlannerContent() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>종료 시간</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_time')}</label>
                   <input
                     type="time"
                     value={transportEndTime}
@@ -4983,7 +5091,7 @@ export function TravelPlannerContent() {
                   />
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>출발지</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_departure')}</label>
               <input
                 type="text"
                 ref={transportDepartureInputRef}
@@ -4996,7 +5104,7 @@ export function TravelPlannerContent() {
                 placeholder={tt('placeholder_departure')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>도착지</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_arrival')}</label>
               <input
                 type="text"
                 ref={transportArrivalInputRef}
@@ -5023,9 +5131,9 @@ export function TravelPlannerContent() {
                   }}
                   disabled={submitting}
                 />
-                직접 입력 모드 (Google 자동완성 호출 안 함)
+                {uiText.directInputMode}
               </label>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>거리 (km)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_distance_km')}</label>
               <input
                 type="number"
                 value={transportDistanceKm}
@@ -5034,7 +5142,7 @@ export function TravelPlannerContent() {
                 placeholder={tt('placeholder_distance_km')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>메모</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
               <textarea
                 value={transportMemo}
                 onChange={(e) => setTransportMemo(e.target.value)}
@@ -5047,17 +5155,17 @@ export function TravelPlannerContent() {
                 {editingTransport ? (
                   <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                    저장
+                    {tt('save')}
                   </button>
                 ) : (
                   <>
                     <button type="button" disabled={submitting} onClick={(e) => handleCreateTransport(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                      저장만
+                      {tt('save_only')}
                     </button>
                     <button type="button" disabled={submitting} onClick={(e) => handleCreateTransport(e, true)} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
-                      일정에 추가
+                      {tt('save_and_add_to_itinerary')}
                     </button>
                   </>
                 )}
