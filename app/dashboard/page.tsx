@@ -35,11 +35,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
 import { isValidUUID } from '@/lib/validation';
 import {
-  CHAT_PAGE_SIZE,
-  formatFamilyMessagesFromRows,
-  trimMessagesToMax,
-  mergeChatMessagesWithExisting,
-  type ChatMessageRow,
   type ChatUiMessage,
 } from '@/lib/chat-messages';
 import {
@@ -53,6 +48,7 @@ import { FamilyCalendarSection } from '@/app/features/family-calendar/components
 import type { FamilyEvent } from '@/app/features/family-calendar/types';
 import { FamilyChatSection } from '@/app/features/family-chat/components/FamilyChatSection';
 import { useFamilyChatActions } from '@/app/features/family-chat/hooks/useFamilyChatActions';
+import { useFamilyChatInitialLoad } from '@/app/features/family-chat/hooks/useFamilyChatInitialLoad';
 import { useFamilyChatRealtime } from '@/app/features/family-chat/hooks/useFamilyChatRealtime';
 import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyChatScroll';
 import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
@@ -2471,28 +2467,7 @@ export default function FamilyHub() {
         const savedLocalStoragePhotos = localStoragePhotos;
 
         // 메시지 로드 (그룹별: currentGroupId 있을 때만 해당 그룹 메시지만 로드)
-        if (currentGroupId) {
-          // 최신 CHAT_PAGE_SIZE개 — 내림차순 + limit 후 시간순으로 뒤집어 표시
-          const { data: messagesDataRaw, error: messagesError } = await supabase
-            .from('family_messages')
-            .select('*')
-            .eq('group_id', currentGroupId)
-            .order('created_at', { ascending: false })
-            .limit(CHAT_PAGE_SIZE);
-          if (!messagesError && messagesDataRaw != null) {
-            const chronological =
-              messagesDataRaw.length > 0 ? [...messagesDataRaw].reverse() : [];
-            const formattedMessages = formatFamilyMessagesFromRows(
-              chronological as ChatMessageRow[],
-              currentKey
-            );
-            setChatHasMoreOlder(messagesDataRaw.length >= CHAT_PAGE_SIZE);
-            setState((prev) => ({
-              ...prev,
-              messages: mergeChatMessagesWithExisting(formattedMessages, prev.messages),
-            }));
-          }
-        }
+        await loadInitialChatMessages(currentKey);
 
         // 할일 로드는 FamilyTasksSection에서 처리됨
 
@@ -3271,35 +3246,8 @@ export default function FamilyHub() {
       }
 
       switch (action) {
-        case 'ADD_MESSAGE': {
-          // 그룹별 채팅: currentGroupId 필수
-          if (!currentGroupId) {
-            console.warn('ADD_MESSAGE: currentGroupId가 없어 메시지를 저장하지 않습니다.');
-            break;
-          }
-          // sendChat / uploadChatPhotos 가 이미 family_messages 에 insert 한 뒤 UI만 반영하는 경우 — 재삽입하면 행이 2개 생겨 상대 화면에 중복 표시됨
-          if (payload?.alreadyPersisted === true) {
-            break;
-          }
-          // 메시지 암호화
-          const encryptedText = CryptoService.encrypt(payload.text, currentKey);
-          
-          const { error } = await supabase
-            .from('family_messages')
-            .insert({
-              group_id: currentGroupId,
-              sender_id: userId,
-              message_text: encryptedText // 암호화된 메시지 저장
-            });
-          
-          if (error) {
-            console.error('메시지 저장 오류:', error);
-            if (process.env.NODE_ENV === 'development') {
-              console.error('에러 상세:', JSON.stringify(error, null, 2));
-            }
-          }
+        default:
           break;
-        }
       }
     } catch (error) {
       console.error('Supabase 저장 오류:', error);
@@ -3440,16 +3388,6 @@ export default function FamilyHub() {
             }
           })();
           break;
-        case 'ADD_MESSAGE': {
-          const { alreadyPersisted: _ap, ...messageForState } = payload as Record<string, unknown> & { alreadyPersisted?: boolean };
-          newState.messages = trimMessagesToMax([
-            ...(prev.messages || []),
-            messageForState as Message,
-          ]);
-          // Supabase에 저장 (이미 insert 된 메시지는 saveToSupabase 에서 건너뜀)
-          saveToSupabase('ADD_MESSAGE', payload, userId, currentKey);
-          break;
-        }
         case 'UPDATE_PHOTO_ID':
           // 업로드 완료 후 Photo 객체 업데이트 (localStorage ID를 Supabase ID로 업데이트)
           newState.album = prev.album.map(photo => {
@@ -5338,6 +5276,13 @@ export default function FamilyHub() {
     getAuthKey,
     sanitizeInput,
     encrypt: CryptoService.encrypt,
+  });
+
+  const { loadInitialChatMessages } = useFamilyChatInitialLoad({
+    supabase,
+    currentGroupId,
+    setChatHasMoreOlder,
+    setMessages,
   });
 
   const {
