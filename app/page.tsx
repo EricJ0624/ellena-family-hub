@@ -169,37 +169,44 @@ export default function LoginPage() {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (session && session.user) {
-      if (!session.user.email_confirmed_at) {
-        await supabase.auth.signOut();
-        setErrorMsg(t('error_email_verification'));
-        return;
-      }
-      const { data: isAdmin } = await supabase.rpc('is_system_admin', {
+    if (!session?.user) {
+      setErrorMsg(t('error_session_failed'));
+      return;
+    }
+
+    if (!session.user.email_confirmed_at) {
+      await supabase.auth.signOut();
+      setErrorMsg(t('error_email_verification'));
+      return;
+    }
+
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const invite = resolveInviteFromUrlOrSession(params);
+    const onboardingPath = buildOnboardingPath(invite);
+
+    try {
+      const { data: isAdmin, error: isAdminError } = await supabase.rpc('is_system_admin', {
         user_id_param: session.user.id,
       });
+      if (isAdminError) {
+        console.warn('[Login] 시스템 관리자 판정 실패, 일반 라우팅으로 폴백:', isAdminError);
+      }
 
       const { hasGroups } = await resolveUserHasGroups(supabase, session.user.id, {
         flakyRetry: true,
         isSystemAdmin: Boolean(isAdmin),
       });
 
-      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const invite = resolveInviteFromUrlOrSession(params);
-      const onboardingPath = buildOnboardingPath(invite);
-
       if (isAdmin) {
-        if (hasGroups) {
-          router.push(onboardingPath);
-        } else {
-          router.push('/admin');
-        }
+        router.push(hasGroups ? onboardingPath : '/admin');
         return;
       }
 
       router.push(onboardingPath);
-    } else {
-      setErrorMsg(t('error_session_failed'));
+    } catch (routingError) {
+      // 로그인은 성공했지만 후속 권한/그룹 판정이 일시 실패한 경우, 로그인 실패처럼 보이지 않도록 온보딩으로 폴백
+      console.warn('[Login] 후속 라우팅 판정 실패, 온보딩으로 폴백:', routingError);
+      router.push(onboardingPath);
     }
   };
 
@@ -233,7 +240,21 @@ export default function LoginPage() {
       if (process.env.NODE_ENV === 'development') {
         console.error('Login error:', error);
       }
-      setErrorMsg(t('error_login_failed'));
+      const message = String(error?.message || '').toLowerCase();
+      const code = String(error?.code || '').toLowerCase();
+      if (
+        message.includes('invalid login credentials') ||
+        code === 'invalid_credentials' ||
+        code === 'email_not_confirmed'
+      ) {
+        setErrorMsg(t('error_login_failed'));
+      } else if (isSupabaseAuthRateLimitError(error)) {
+        setErrorMsg('요청이 많아 일시적으로 로그인 제한 중입니다. 1~2분 후 다시 시도해 주세요.');
+      } else if (message.includes('email not confirmed') || message.includes('email_not_confirmed')) {
+        setErrorMsg(t('error_email_verification'));
+      } else {
+        setErrorMsg(t('error_login_failed'));
+      }
     } finally {
       setLoading(false);
     }
