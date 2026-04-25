@@ -162,6 +162,38 @@ export function useFamilyChatActions({
         throw new Error('CHAT_PERMISSION_CHECK_GROUP_OWNER_FAILED');
       }
 
+      // 비멤버 시스템 관리자는 승인된 접근 요청이 있을 때 그룹 관리자 수준으로 허용
+      const { data: isSystemAdminResult, error: sysErr } = await supabase.rpc('is_system_admin', {
+        user_id_param: uid,
+      });
+      if (sysErr) {
+        console.error('채팅 권한 확인 실패(is_system_admin):', sysErr);
+        throw new Error('CHAT_PERMISSION_CHECK_SYSTEM_ADMIN_FAILED');
+      }
+      const isSystemAdmin = isSystemAdminResult === true;
+
+      if (isSystemAdmin) {
+        const nowIso = new Date().toISOString();
+        const { data: approvedAccess, error: accessErr } = await supabase
+          .from('dashboard_access_requests')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('requested_by', uid)
+          .eq('status', 'approved')
+          .is('revoked_at', null)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+          .limit(1)
+          .maybeSingle();
+        if (accessErr) {
+          console.error('채팅 권한 확인 실패(dashboard_access_requests):', accessErr);
+          throw new Error('CHAT_PERMISSION_CHECK_DASHBOARD_ACCESS_FAILED');
+        }
+        if (approvedAccess) {
+          markOk();
+          return;
+        }
+      }
+
       throw new Error('NO_FAMILY_GROUP_ACCESS');
     },
     [chatPostPermissionCacheRef, chatPostPermissionTtlMs, supabase]

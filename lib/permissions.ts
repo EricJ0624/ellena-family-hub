@@ -9,6 +9,32 @@ import { getSupabaseServerClient } from './api-helpers';
 import { isValidUUID } from './validation';
 import type { MembershipRole } from '@/types/db';
 
+async function hasActiveDashboardAccessRequest(
+  userId: string,
+  groupId: string
+): Promise<boolean> {
+  const supabase = getSupabaseServerClient();
+  const nowIso = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('dashboard_access_requests')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('requested_by', userId)
+    .eq('status', 'approved')
+    .is('revoked_at', null)
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('대시보드 접근 승인 상태 확인 실패:', error);
+    return false;
+  }
+
+  return Boolean(data);
+}
+
 /**
  * 권한 검증 결과 타입
  */
@@ -124,24 +150,14 @@ export async function checkPermission(
       // 멤버가 아니더라도 소유자인지 확인
       const isOwner = group.owner_id === userId;
       if (!isOwner) {
-        // 시스템 관리자이고 임시 접근 권한이 있는 경우 확인
-        const { data: isSystemAdminResult } = await supabase.rpc('is_system_admin', {
-          user_id_param: userId,
-        });
-        const isSystemAdmin = isSystemAdminResult === true;
-
-        if (isSystemAdmin) {
-          const { data: canAccess, error: accessError } = await supabase.rpc('can_access_group_dashboard', {
-            group_id_param: groupId,
-            admin_id_param: userId,
-          });
-
-          if (!accessError && canAccess === true) {
-            // 시스템 관리자가 임시 접근 권한을 가지고 있는 경우
-            // MEMBER 수준의 권한 부여
+        // 시스템 관리자 + 승인된 접근 요청이 있는 비멤버는 해당 그룹에서 ADMIN으로 동작
+        const isAdmin = await isSystemAdmin(userId);
+        if (isAdmin) {
+          const hasApprovedAccess = await hasActiveDashboardAccessRequest(userId, groupId);
+          if (hasApprovedAccess) {
             return {
               success: true,
-              role: 'MEMBER',
+              role: 'ADMIN',
               isOwner: false,
             };
           }
