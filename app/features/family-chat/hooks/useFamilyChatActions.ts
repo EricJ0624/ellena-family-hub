@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type React from 'react';
 import type { MutableRefObject, RefObject } from 'react';
 import type { ChatMessageRow, ChatUiMessage } from '@/lib/chat-messages';
@@ -77,6 +77,45 @@ export function useFamilyChatActions({
   sanitizeInput,
   encrypt,
 }: UseFamilyChatActionsParams) {
+  const sessionCacheRef = useRef<{ expiresAt: number; session: any | null }>({
+    expiresAt: 0,
+    session: null,
+  });
+  const sessionInFlightRef = useRef<Promise<any | null> | null>(null);
+
+  const getSessionForChat = useCallback(async () => {
+    const now = Date.now();
+    const cached = sessionCacheRef.current;
+    if (cached.session && now < cached.expiresAt) {
+      familyChatDebug('chat session cache hit');
+      return cached.session;
+    }
+
+    if (sessionInFlightRef.current) {
+      familyChatDebug('chat session in-flight reuse');
+      return sessionInFlightRef.current;
+    }
+
+    const req = (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      // 아주 짧은 TTL로 연속 전송/업로드 시 중복 /user 호출 완화
+      sessionCacheRef.current = {
+        session: session ?? null,
+        expiresAt: Date.now() + 1500,
+      };
+      return session ?? null;
+    })();
+
+    sessionInFlightRef.current = req;
+    try {
+      return await req;
+    } finally {
+      sessionInFlightRef.current = null;
+    }
+  }, [supabase]);
+
   const assertCanPostToFamilyChatGroup = useCallback(
     async (groupId: string, uid: string) => {
       const cacheKey = `${groupId}:${uid}`;
@@ -121,26 +160,6 @@ export function useFamilyChatActions({
       if (ownErr) {
         console.error('채팅 권한 확인 실패(groups owner):', ownErr);
         throw new Error('CHAT_PERMISSION_CHECK_GROUP_OWNER_FAILED');
-      }
-
-      const { data: isSys, error: rpcErr } = await supabase.rpc('is_system_admin', { user_id_param: uid });
-      if (rpcErr) {
-        console.error('채팅 권한 확인 실패(is_system_admin RPC):', rpcErr);
-        throw new Error('CHAT_PERMISSION_CHECK_SYSTEM_ADMIN_RPC_FAILED');
-      }
-      if (isSys === true) {
-        const { data: can, error: canErr } = await supabase.rpc('can_access_group_dashboard', {
-          group_id_param: groupId,
-          admin_id_param: uid,
-        });
-        if (canErr) {
-          console.error('채팅 권한 확인 실패(can_access_group_dashboard RPC):', canErr);
-          throw new Error('CHAT_PERMISSION_CHECK_DASHBOARD_ACCESS_RPC_FAILED');
-        }
-        if (can === true) {
-          markOk();
-          return;
-        }
       }
 
       throw new Error('NO_FAMILY_GROUP_ACCESS');
@@ -290,9 +309,7 @@ export function useFamilyChatActions({
 
       let outgoingPreviewMessageId: string | null = null;
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const session = await getSessionForChat();
         if (!session) {
           alert(dt('auth_session_expired'));
           return;
@@ -394,6 +411,7 @@ export function useFamilyChatActions({
       currentGroupId,
       dt,
       encrypt,
+      getSessionForChat,
       getAuthKey,
       loadChatAttachmentsRef,
       masterKey,
@@ -452,20 +470,23 @@ export function useFamilyChatActions({
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
       void (async () => {
+        const startedAt = Date.now();
         try {
           if (!currentGroupId) {
             alert(dt('chat_send_no_group'));
             return;
           }
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+          const sessionStartedAt = Date.now();
+          const session = await getSessionForChat();
+          familyChatDebug('sendChat 단계: session', { elapsedMs: Date.now() - sessionStartedAt });
           if (!session) {
             alert(dt('auth_session_expired'));
             return;
           }
           const authUid = session.user.id;
+          const permissionStartedAt = Date.now();
           await assertCanPostToFamilyChatGroup(currentGroupId, authUid);
+          familyChatDebug('sendChat 단계: permission', { elapsedMs: Date.now() - permissionStartedAt });
           const currentKey =
             masterKey ||
             sessionStorage.getItem(getAuthKey(authUid)) ||
@@ -473,6 +494,7 @@ export function useFamilyChatActions({
             'ellena_family_shared_key_2024';
 
           const encryptedText = encrypt(sanitizedText, currentKey);
+          const insertStartedAt = Date.now();
           const { data: inserted, error } = await supabase
             .from('family_messages')
             .insert({
@@ -482,6 +504,7 @@ export function useFamilyChatActions({
             })
             .select('id')
             .single();
+          familyChatDebug('sendChat 단계: insert', { elapsedMs: Date.now() - insertStartedAt });
           if (error || !inserted?.id) throw new Error(error?.message || '메시지 저장 실패');
 
           processedMessageIdsRef.current.add(String(inserted.id));
@@ -499,6 +522,7 @@ export function useFamilyChatActions({
             ])
           );
           familyChatDebug('텍스트 메시지 전송 완료', inserted.id);
+          familyChatDebug('sendChat 총 소요', { elapsedMs: Date.now() - startedAt });
         } catch (e) {
           console.error('[FamilyChat] 메시지 전송 오류:', e);
           const msg = e instanceof Error ? e.message : '';
@@ -524,6 +548,7 @@ export function useFamilyChatActions({
       currentGroupId,
       dt,
       encrypt,
+      getSessionForChat,
       getAuthKey,
       masterKey,
       processedMessageIdsRef,
