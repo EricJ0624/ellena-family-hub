@@ -1266,14 +1266,14 @@ export default function OnboardingPage() {
               </div>
 
               {/* 새 그룹 추가 옵션 */}
-              <div className="flex gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   onClick={() => {
                     setStep('create');
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-indigo-500 bg-white px-5 py-3 text-[13px] font-semibold text-indigo-500 transition-all duration-200 hover:bg-indigo-50"
+                  className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-indigo-500 bg-white px-5 py-3 text-center text-[13px] font-semibold text-indigo-500 transition-all duration-200 hover:bg-indigo-50"
                 >
                   <Home className="h-4 w-4 shrink-0" />
                   <span>{ot('create_group')}</span>
@@ -1284,7 +1284,7 @@ export default function OnboardingPage() {
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border-2 border-emerald-500 bg-white px-5 py-3 text-[13px] font-semibold text-emerald-500 transition-all duration-200 hover:bg-emerald-50"
+                  className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-emerald-500 bg-white px-5 py-3 text-center text-[13px] font-semibold text-emerald-500 transition-all duration-200 hover:bg-emerald-50"
                 >
                   <Users className="h-4 w-4 shrink-0" />
                   <span>{ot('join_invite')}</span>

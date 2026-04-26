@@ -34,17 +34,16 @@ export function TravelPlannerSection({
 }: TravelPlannerSectionProps) {
   return (
     <section className="content-section">
-      <div className="section-header gap-x-3">
-        <h3 className="section-title m-0 shrink-0">
+      <div className="section-header flex-wrap gap-x-3 gap-y-2">
+        <h3 className="section-title m-0 min-w-0 flex-1">
           {t.section_title}
         </h3>
-        <div aria-hidden className="min-w-0 flex-1" />
-        <div className={`shrink-0 ${currentGroupId ? '' : 'min-w-0'}`}>
+        <div className={`w-full sm:w-auto ${currentGroupId ? '' : 'min-w-0'}`}>
           {currentGroupId ? (
             <button
               type="button"
               onClick={onAddClick}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-[#9333ea] px-3 py-2 font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-[#9333ea] px-3 py-2 font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
               {t.add_trip}

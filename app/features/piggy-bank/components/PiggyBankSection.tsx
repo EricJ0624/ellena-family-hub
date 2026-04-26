@@ -84,7 +84,9 @@ export function PiggyBankSection({
         {currentGroupId && (
           <button
             onClick={isAdmin ? onManageClick : onGoClick}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#ef4444] px-3 py-2 font-bold text-white"
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#ef4444] text-white ${
+              isAdmin ? 'px-2.5 py-1.5 text-sm font-semibold' : 'px-3 py-2 font-bold'
+            }`}
           >
             <span>🐷</span>
             {buttonText}
