@@ -549,60 +549,24 @@ export default function LoginPage() {
     position: 'relative' as const,
     overflow: 'hidden' as const
   };
+  const passwordInputStyle = {
+    ...inputStyle,
+    letterSpacing: '2px',
+  };
 
   return (
-    <div style={{
-      minHeight: '100dvh', // 모바일 뷰포트 높이 지원
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-      padding: '20px',
-      fontFamily: getFontStyle(lang, 'body').fontFamily,
-      position: 'relative',
-      overflowX: 'hidden',
-      overflowY: 'auto',
-    }}>
+    <div
+      className="relative flex min-h-dvh flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
+      style={{ fontFamily: getFontStyle(lang, 'body').fontFamily }}
+    >
       {/* 배경 장식 요소 */}
-      <div style={{
-        position: 'absolute',
-        top: '-50%',
-        right: '-20%',
-        width: '500px',
-        height: '500px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '-30%',
-        left: '-15%',
-        width: '400px',
-        height: '400px',
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(118, 75, 162, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)',
-        zIndex: 0
-      }} />
+      <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
+      <div className="absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]" />
 
-      <div style={{ 
-        width: '100%', 
-        maxWidth: '420px', 
-        textAlign: 'center',
-        position: 'relative',
-        zIndex: 1
-      }}>
+      <div className="relative z-[1] w-full max-w-[420px] text-center">
         {/* 로고 영역 */}
-        <div style={{ 
-          marginBottom: '40px',
-          animation: 'fadeInDown 0.6s ease-out'
-        }}>
-          <div style={{ 
-            fontSize: '100px', 
-            marginBottom: '20px',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))'
-          }}>
+        <div className="mb-10 [animation:fadeInDown_0.6s_ease-out]">
+          <div className="mb-5 text-[100px] [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]">
             🏠
           </div>
           <h1
@@ -624,87 +588,46 @@ export default function LoginPage() {
           >
             <AppTitleContent title={ct('app_title')} />
           </h1>
-          <p style={{
-            fontSize: '16px',
-            fontFamily: getFontStyle(lang, 'body').fontFamily,
-            color: '#64748b',
-            fontWeight: '500',
-            lineHeight: '1.6'
-          }}>
+          <p
+            className="text-base font-medium leading-[1.6] text-slate-500"
+            style={{ fontFamily: getFontStyle(lang, 'body').fontFamily }}
+          >
             {t('subtitle')}
           </p>
         </div>
 
         {/* 모드 전환 탭 */}
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '24px',
-          justifyContent: 'center'
-        }}>
+        <div className="mb-6 flex justify-center gap-2">
           <button
             type="button"
             onClick={() => switchMode('login')}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '12px',
-              border: 'none',
-              background: mode === 'login' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                : '#ffffff',
-              color: mode === 'login' ? '#ffffff' : '#64748b',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              boxShadow: mode === 'login' 
-                ? '0 4px 12px rgba(102, 126, 234, 0.3)'
-                : '0 2px 8px rgba(0,0,0,0.08)'
-            }}
+            className={`cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              mode === 'login'
+                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+            }`}
           >
             {t('tab_login')}
           </button>
           <button
             type="button"
             onClick={() => switchMode('signup')}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '12px',
-              border: 'none',
-              background: mode === 'signup' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                : '#ffffff',
-              color: mode === 'signup' ? '#ffffff' : '#64748b',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              boxShadow: mode === 'signup' 
-                ? '0 4px 12px rgba(102, 126, 234, 0.3)'
-                : '0 2px 8px rgba(0,0,0,0.08)'
-            }}
+            className={`cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              mode === 'signup'
+                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+            }`}
           >
             {t('tab_signup')}
           </button>
           <button
             type="button"
             onClick={() => switchMode('forgot')}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '12px',
-              border: 'none',
-              background: mode === 'forgot' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                : '#ffffff',
-              color: mode === 'forgot' ? '#ffffff' : '#64748b',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              boxShadow: mode === 'forgot' 
-                ? '0 4px 12px rgba(102, 126, 234, 0.3)'
-                : '0 2px 8px rgba(0,0,0,0.08)'
-            }}
+            className={`cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+              mode === 'forgot'
+                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+            }`}
           >
             {t('tab_forgot')}
           </button>
@@ -713,17 +636,11 @@ export default function LoginPage() {
         {/* 입력 폼 영역 */}
         <form 
           onSubmit={handleSubmit} 
-          className="fade-in"
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '20px',
-            animation: 'fadeInUp 0.6s ease-out 0.2s both'
-          }}
+          className="fade-in flex flex-col gap-5 [animation:fadeInUp_0.6s_ease-out_0.2s_both]"
         >
           {/* 별명 입력 (가입 모드에서만) */}
           {mode === 'signup' && (
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type="text"
                 placeholder={t('placeholder_nickname')}
@@ -744,7 +661,7 @@ export default function LoginPage() {
           )}
 
           {/* 이메일 입력 */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <input
               type="email"
               placeholder={t('placeholder_email')}
@@ -766,16 +683,7 @@ export default function LoginPage() {
             />
             {/* 이전 이메일 투명 오버레이 (입력 필드가 비어있을 때만) */}
             {isMounted && mode === 'login' && !email && lastEmailFromStorage && (
-              <div style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                color: 'rgba(100, 116, 139, 0.4)',
-                fontSize: '15px',
-                fontWeight: '400'
-              }}>
+              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[15px] font-normal text-[rgba(100,116,139,0.4)]">
                 {lastEmailFromStorage}
               </div>
             )}
@@ -783,17 +691,14 @@ export default function LoginPage() {
 
           {/* 비밀번호 입력 (로그인/가입 모드에서만) */}
           {(mode === 'login' || mode === 'signup') && (
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type="password"
                 placeholder={t('placeholder_password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                style={{
-                  ...inputStyle,
-                  letterSpacing: '2px'
-                }}
+                style={passwordInputStyle}
                 onFocus={(e) => {
                   e.target.style.borderColor = '#667eea';
                   e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
@@ -808,26 +713,12 @@ export default function LoginPage() {
 
           {/* 로그인 상태 유지 (로그인 모드에서만) */}
           {mode === 'login' && (
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              color: '#64748b',
-              userSelect: 'none',
-              marginTop: '-4px'
-            }}>
+            <label className="-mt-1 flex cursor-pointer select-none items-center gap-2.5 text-sm text-slate-500">
               <input
                 type="checkbox"
                 checked={keepLoggedIn}
                 onChange={(e) => setKeepLoggedIn(e.target.checked)}
-                style={{
-                  width: '18px',
-                  height: '18px',
-                  accentColor: '#667eea',
-                  cursor: 'pointer'
-                }}
+                className="h-[18px] w-[18px] cursor-pointer accent-[#667eea]"
               />
               <span>{t('keep_logged_in')}</span>
             </label>
@@ -835,17 +726,14 @@ export default function LoginPage() {
 
           {/* 비밀번호 확인 입력 (가입 모드에서만) */}
           {mode === 'signup' && (
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type="password"
                 placeholder={t('placeholder_confirm_password')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                style={{
-                  ...inputStyle,
-                  letterSpacing: '2px'
-                }}
+                style={passwordInputStyle}
                 onFocus={(e) => {
                   e.target.style.borderColor = '#667eea';
                   e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
@@ -860,33 +748,14 @@ export default function LoginPage() {
 
           {/* 성공 메시지 */}
           {successMsg && (
-            <div style={{ 
-              color: '#10b981', 
-              fontSize: '14px', 
-              marginTop: '-8px',
-              padding: '12px 16px',
-              backgroundColor: '#f0fdf4',
-              borderRadius: '12px',
-              border: '1px solid #86efac',
-              animation: 'fadeIn 0.5s ease-in-out'
-            }}>
+            <div className="-mt-2 rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-500 [animation:fadeIn_0.5s_ease-in-out]">
               {successMsg}
             </div>
           )}
 
           {/* 에러 메시지 */}
           {errorMsg && (
-            <div style={{ 
-              color: '#ef4444', 
-              fontSize: '14px', 
-              marginTop: '-8px',
-              padding: '12px 16px',
-              backgroundColor: '#fef2f2',
-              borderRadius: '12px',
-              border: '1px solid #fecaca',
-              animation: 'shake 0.5s ease-in-out',
-              whiteSpace: 'pre-line',
-            }}>
+            <div className="-mt-2 whitespace-pre-line rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-500 [animation:shake_0.5s_ease-in-out]">
               {errorMsg}
             </div>
           )}
@@ -912,17 +781,9 @@ export default function LoginPage() {
             }}
           >
             {loading ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span className="flex items-center justify-center gap-2">
                 <span>{mode === 'login' ? t('btn_loading_login') : mode === 'signup' ? t('btn_loading_signup') : t('btn_loading_send')}</span>
-                <span style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderTop: '2px solid #ffffff',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  display: 'inline-block'
-                }} />
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               </span>
             ) : (
               mode === 'login' ? t('btn_submit_login') : mode === 'signup' ? t('btn_submit_signup') : t('btn_submit_reset')
@@ -931,7 +792,7 @@ export default function LoginPage() {
         </form>
         
         {/* 하단 여백 */}
-        <div style={{ height: '40px' }} />
+        <div className="h-10" />
       </div>
 
     </div>

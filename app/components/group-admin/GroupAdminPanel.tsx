@@ -820,16 +820,10 @@ export function GroupAdminPanel({
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f7fa',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Loader2 style={{ width: '48px', height: '48px', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: '#64748b', fontSize: '16px' }}>{gat('checking_permission')}</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f7fa]">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin" />
+          <p className="text-base text-slate-500">{gat('checking_permission')}</p>
         </div>
       </div>
     );
@@ -844,59 +838,29 @@ export function GroupAdminPanel({
     return membership?.role === 'ADMIN';
   });
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
+  const tabButtonClass = (tab: GroupAdminTabId) =>
+    `cursor-pointer border-b-[3px] border-x-0 border-t-0 bg-transparent px-6 py-3 text-base transition-all ${
+      activeTab === tab
+        ? 'border-b-blue-500 font-semibold text-blue-500'
+        : 'border-b-transparent font-medium text-slate-500'
+    }`;
 
   return (
     <div
-      className="group-admin-page"
-      style={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f7fa',
-        padding: '20px',
-      }}
+      className="group-admin-page min-h-screen bg-[#f5f7fa] p-5"
     >
       {/* ???�쎌???*/}
-      <div
-        className="group-admin-header"
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          marginBottom: '24px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div
-          className="group-admin-header-top"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '24px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#3b82f6',
-              borderRadius: '12px',
-              color: 'white',
-            }}>
-              <Shield style={{ width: '24px', height: '24px' }} />
+      <div className="group-admin-header mb-6 rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-blue-500 p-3 text-white">
+              <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h1 style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                color: '#1e293b',
-                margin: 0,
-              }}>
+              <h1 className="m-0 text-2xl font-bold text-slate-800">
                 그룹 관리자 페이지
               </h1>
-              <p style={{
-                fontSize: '14px',
-                color: '#64748b',
-                margin: '4px 0 0 0',
-              }}>
+              <p className="m-0 mt-1 text-sm text-slate-500">
                 {displayGroupName || gat('group_label')} {gat('group_manage')}
               </p>
             </div>
@@ -909,28 +873,16 @@ export function GroupAdminPanel({
               }
               router.push('/dashboard');
             }}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#e2e8f0',
-              color: '#475569',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
+            className="flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
           >
-            <X style={{ width: '16px', height: '16px' }} />
+            <X className="h-4 w-4" />
             닫기
           </button>
         </div>
 
         {canSwitchAdminGroups && (
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>
+          <div className="mb-4">
+            <div className="mb-1.5 text-xs text-slate-500">
               관리할 그룹 선택
             </div>
             <select
@@ -942,17 +894,7 @@ export function GroupAdminPanel({
                   setActiveTab('dashboard');
                 }
               }}
-              style={{
-                width: '100%',
-                maxWidth: '320px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                backgroundColor: '#f8fafc',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#1e293b',
-              }}
+              className="w-full max-w-80 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-semibold text-slate-800"
             >
               {adminGroups.map((group: any) => (
                 <option key={group.id} value={group.id}>
@@ -964,186 +906,75 @@ export function GroupAdminPanel({
         )}
 
         {/* ??筌롫?�??*/}
-        <div
-          className="group-admin-tabs"
-          style={{
-            display: 'flex',
-            gap: '8px',
-            rowGap: '8px',
-            flexWrap: 'wrap',
-            overflowX: 'auto',
-            borderBottom: '2px solid #e2e8f0',
-          }}
-        >
+        <div className="flex flex-wrap gap-2 overflow-x-auto border-b-2 border-slate-200">
           <button
             onClick={() => setActiveTab('dashboard')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'dashboard' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'dashboard' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'dashboard' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('dashboard')}
           >
-            <BarChart3 style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <BarChart3 className="mr-2 inline h-[18px] w-[18px] align-middle" />
             대시보드
           </button>
           <button
             onClick={() => setActiveTab('members')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'members' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'members' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'members' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('members')}
           >
-            <Users style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <Users className="mr-2 inline h-[18px] w-[18px] align-middle" />
             멤버 관리
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'settings' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'settings' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'settings' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('settings')}
           >
-            <Settings style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <Settings className="mr-2 inline h-[18px] w-[18px] align-middle" />
             그룹 설정
           </button>
           <button
             onClick={() => setActiveTab('content')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'content' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'content' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'content' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('content')}
           >
-            <ImageIcon style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <ImageIcon className="mr-2 inline h-[18px] w-[18px] align-middle" />
             콘텐츠 관리
           </button>
           <button
             onClick={() => setActiveTab('announcements')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'announcements' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'announcements' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'announcements' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              position: 'relative',
-            }}
+            className={`relative ${tabButtonClass('announcements')}`}
           >
-            <Megaphone style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <Megaphone className="mr-2 inline h-[18px] w-[18px] align-middle" />
             {gat('announcements_tab')}
             {announcements.filter(a => !a.is_read).length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                borderRadius: '10px',
-                padding: '2px 6px',
-                fontSize: '11px',
-                fontWeight: '600',
-              }}>
+              <span className="absolute right-2 top-2 rounded-[10px] bg-red-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">
                 {announcements.filter(a => !a.is_read).length}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('support-tickets')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'support-tickets' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'support-tickets' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'support-tickets' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('support-tickets')}
           >
-            <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <MessageSquare className="mr-2 inline h-[18px] w-[18px] align-middle" />
             문의하기
           </button>
           <button
             onClick={() => setActiveTab('member-support-tickets')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'member-support-tickets' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'member-support-tickets' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'member-support-tickets' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('member-support-tickets')}
           >
-            <MessageSquare style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <MessageSquare className="mr-2 inline h-[18px] w-[18px] align-middle" />
             멤버 문의
           </button>
           <button
             onClick={() => setActiveTab('dashboard-access-requests')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'dashboard-access-requests' ? '3px solid #3b82f6' : '3px solid transparent',
-              color: activeTab === 'dashboard-access-requests' ? '#3b82f6' : '#64748b',
-              fontSize: '16px',
-              fontWeight: activeTab === 'dashboard-access-requests' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
+            className={tabButtonClass('dashboard-access-requests')}
           >
-            <Key style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            <Key className="mr-2 inline h-[18px] w-[18px] align-middle" />
             접근 요청
           </button>
           {showPiggyArchivesTab && (
             <button
               type="button"
               onClick={() => setActiveTab('piggy-archives')}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'piggy-archives' ? '3px solid #3b82f6' : '3px solid transparent',
-                color: activeTab === 'piggy-archives' ? '#3b82f6' : '#64748b',
-                fontSize: '16px',
-                fontWeight: activeTab === 'piggy-archives' ? '600' : '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
+              className={tabButtonClass('piggy-archives')}
             >
-              <PiggyBank style={{ width: '18px', height: '18px', display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+              <PiggyBank className="mr-2 inline h-[18px] w-[18px] align-middle" />
               저금통 보관 내역
             </button>
           )}
@@ -1151,41 +982,18 @@ export function GroupAdminPanel({
       </div>
 
       {/* ??�쎌�??�썲?????�쎌?�占?*/}
-      <div
-        className="group-admin-content"
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}
-      >
+      <div className="group-admin-content rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
         {error && (
-          <div style={{
-            padding: '12px 16px',
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            marginBottom: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#991b1b',
-          }}>
-            <AlertCircle style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-800">
+            <AlertCircle className="h-5 w-5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {loadingData ? (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '48px',
-          }}>
-            <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
-            <span style={{ marginLeft: '12px', color: '#64748b' }}>{gat('loading')}</span>
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <span className="ml-3 text-slate-500">{gat('loading')}</span>
           </div>
         ) : (
           <>
@@ -1223,46 +1031,22 @@ export function GroupAdminPanel({
                   }}
                 />
 
-                <h2 style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  marginBottom: '24px',
-                  marginTop: announcements.filter(a => !a.is_read).length > 0 ? '24px' : '0',
-                }}>
+                <h2
+                  className="mb-6 text-[20px] font-semibold text-slate-800"
+                  style={{ marginTop: announcements.filter(a => !a.is_read).length > 0 ? '24px' : '0' }}
+                >
                   그룹 통계
                 </h2>
-                <div
-                  className="group-admin-grid"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '16px',
-                  }}
-                >
+                <div className="group-admin-grid grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      padding: '24px',
-                      backgroundColor: '#f0f9ff',
-                      borderRadius: '12px',
-                      border: '1px solid #bae6fd',
-                    }}
+                    className="rounded-xl border border-sky-200 bg-sky-50 p-6"
                   >
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#0369a1',
-                      fontWeight: '500',
-                      marginBottom: '8px',
-                    }}>
+                    <div className="mb-2 text-sm font-medium text-sky-700">
                       그룹 멤버
                     </div>
-                    <div style={{
-                      fontSize: '32px',
-                      fontWeight: '700',
-                      color: '#0c4a6e',
-                    }}>
+                    <div className="text-[32px] font-bold text-sky-900">
                       {stats.totalMembers}
                     </div>
                   </motion.div>
@@ -1271,26 +1055,12 @@ export function GroupAdminPanel({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    style={{
-                      padding: '24px',
-                      backgroundColor: '#fef3c7',
-                      borderRadius: '12px',
-                      border: '1px solid #fde68a',
-                    }}
+                    className="rounded-xl border border-amber-200 bg-amber-100 p-6"
                   >
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#92400e',
-                      fontWeight: '500',
-                      marginBottom: '8px',
-                    }}>
+                    <div className="mb-2 text-sm font-medium text-amber-800">
                       전체 사진
                     </div>
-                    <div style={{
-                      fontSize: '32px',
-                      fontWeight: '700',
-                      color: '#78350f',
-                    }}>
+                    <div className="text-[32px] font-bold text-amber-900">
                       {stats.totalPhotos}
                     </div>
                   </motion.div>
@@ -1299,26 +1069,12 @@ export function GroupAdminPanel({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    style={{
-                      padding: '24px',
-                      backgroundColor: '#f3e8ff',
-                      borderRadius: '12px',
-                      border: '1px solid #d8b4fe',
-                    }}
+                    className="rounded-xl border border-purple-300 bg-purple-100 p-6"
                   >
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#6b21a8',
-                      fontWeight: '500',
-                      marginBottom: '8px',
-                    }}>
+                    <div className="mb-2 text-sm font-medium text-purple-800">
                       위치 공유
                     </div>
-                    <div style={{
-                      fontSize: '32px',
-                      fontWeight: '700',
-                      color: '#581c87',
-                    }}>
+                    <div className="text-[32px] font-bold text-purple-900">
                       {stats.totalLocations}
                     </div>
                   </motion.div>
@@ -1327,26 +1083,12 @@ export function GroupAdminPanel({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    style={{
-                      padding: '24px',
-                      backgroundColor: '#fce7f3',
-                      borderRadius: '12px',
-                      border: '1px solid #fbcfe8',
-                    }}
+                    className="rounded-xl border border-pink-200 bg-pink-100 p-6"
                   >
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#9f1239',
-                      fontWeight: '500',
-                      marginBottom: '8px',
-                    }}>
+                    <div className="mb-2 text-sm font-medium text-pink-800">
                       최근 사진 (7일)
                     </div>
-                    <div style={{
-                      fontSize: '32px',
-                      fontWeight: '700',
-                      color: '#831843',
-                    }}>
+                    <div className="text-[32px] font-bold text-pink-900">
                       {stats.recentPhotos}
                     </div>
                   </motion.div>
@@ -1371,143 +1113,63 @@ export function GroupAdminPanel({
             {/* ??�쎌�??�썲????�승?????*/}
             {activeTab === 'content' && (
               <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '24px',
-                }}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: 0,
-                  }}>
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                     콘텐츠 관리
                   </h2>
-                  <div
-                    className="group-admin-search"
-                    style={{
-                      position: 'relative',
-                      width: '300px',
-                    }}
-                  >
-                    <Search style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: '18px',
-                      height: '18px',
-                      color: '#94a3b8',
-                    }} />
+                  <div className="group-admin-search relative w-[300px]">
+                    <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       placeholder={gat('search_photo_placeholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px 10px 40px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                      }}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 pl-10 text-sm"
                     />
                   </div>
                 </div>
 
                 {/* ???�쎌?�占?筌뤴뫖占?*/}
-                <div style={{ marginBottom: '32px' }}>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    marginBottom: '16px',
-                  }}>
+                <div className="mb-8">
+                  <h3 className="mb-4 text-lg font-semibold text-slate-800">
                     사진 (${filteredPhotos.length}개)
                   </h3>
-                  <div
-                    className="group-admin-grid"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '16px',
-                    }}
-                  >
+                  <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     {filteredPhotos.map((photo, index) => (
                       <motion.div
                         key={photo.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        style={{
-                          position: 'relative',
-                          padding: '12px',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '12px',
-                          border: '1px solid #e2e8f0',
-                        }}
+                        className="relative rounded-xl border border-slate-200 bg-slate-50 p-3"
                       >
                         <img
                           src={photo.image_url || photo.s3_original_url || ''}
                           alt={photo.original_filename || gat('photo_label')}
-                          style={{
-                            width: '100%',
-                            height: '150px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            marginBottom: '8px',
-                          }}
+                          className="mb-2 h-[150px] w-full rounded-lg object-cover"
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = 'none';
                           }}
                         />
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#64748b',
-                          marginBottom: '4px',
-                        }}>
+                        <div className="mb-1 text-xs text-slate-500">
                           {photo.original_filename || gat('no_filename')}
                         </div>
-                        <div style={{
-                          fontSize: '11px',
-                          color: '#94a3b8',
-                          marginBottom: '8px',
-                        }}>
+                        <div className="mb-2 text-[11px] text-slate-400">
                           {new Date(photo.created_at).toLocaleDateString('ko-KR')}
                         </div>
                         <button
                           onClick={() => handleDeletePhoto(photo.id)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            backgroundColor: '#fee2e2',
-                            color: '#991b1b',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                          }}
+                          className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-md border-0 bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800"
                         >
-                          <Trash2 style={{ width: '14px', height: '14px' }} />
+                          <Trash2 className="h-[14px] w-[14px]" />
                           삭제
                         </button>
                       </motion.div>
                     ))}
                   </div>
                   {filteredPhotos.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <ImageIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <ImageIcon className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{gat('no_photos')}</p>
                     </div>
                   )}

@@ -199,51 +199,24 @@ export function FamilyChatSection({
 
   return (
     <section
-      className="content-section"
-      style={{
-        paddingTop: '0.65rem',
-        paddingBottom: '0.65rem',
-        paddingLeft: 'var(--spacing-lg)',
-        paddingRight: 'var(--spacing-lg)',
-      }}
+      className="content-section px-[var(--spacing-lg)] py-[0.65rem]"
     >
       <div
         ref={chatHeaderRowRef}
-        className="section-header"
-        style={{
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          gap: 'clamp(2px, 1.2vw, 8px)',
-          columnGap: '6px',
-          marginBottom: '0.5rem',
-          marginTop: 0,
-        }}
+        className="section-header mb-2 mt-0 items-center justify-start gap-[clamp(2px,1.2vw,8px)]"
       >
         <div
           ref={chatTitleBoxRef}
-          style={{
-            flex: '1 1 0%',
-            minWidth: 0,
-            alignSelf: 'stretch',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-          }}
+          className="flex min-w-0 flex-[1_1_0%] items-center self-stretch overflow-hidden"
         >
           <h3
             ref={chatTitleRef}
-            className="section-title"
+            className="section-title m-0 overflow-hidden text-ellipsis whitespace-nowrap tracking-[0.16em] leading-[1.2]"
             style={{
-              margin: 0,
               fontSize:
                 sectionTitleFontPx != null
                   ? `${sectionTitleFontPx}px`
                   : `${CHAT_TITLE_ABS_MAX_PX}px`,
-              letterSpacing: '0.16em',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              lineHeight: CHAT_TITLE_LINE_HEIGHT,
             }}
           >
             {t.section_title_chat}
@@ -265,42 +238,18 @@ export function FamilyChatSection({
             alt=""
             fill
             sizes="(max-width: 768px) 28vw, 176px"
-            style={{ objectFit: 'contain', objectPosition: 'center' }}
+            className="object-contain object-center"
             priority={false}
           />
           <div
             ref={chatBubbleTextBoxRef}
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '82%',
-              height: '46%',
-              maxHeight: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              overflow: 'hidden',
-              pointerEvents: 'none',
-              boxSizing: 'border-box',
-            }}
+            className="pointer-events-none absolute left-1/2 top-1/2 box-border flex h-[46%] max-h-full w-[82%] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden text-center"
           >
             <span
               ref={chatBubbleTextRef}
+              className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-black tracking-[0.04em] text-orange-600 [line-height:1.05] [text-shadow:1.5px_0_0_#0f172a,-1.5px_0_0_#0f172a,0_1.5px_0_#0f172a,0_-1.5px_0_#0f172a,2px_2px_0_rgba(15,23,42,0.2)]"
               style={{
                 fontSize: bubbleGreetingFontPx != null ? `${bubbleGreetingFontPx}px` : `${BUBBLE_TEXT_MAX_PX}px`,
-                fontWeight: 900,
-                letterSpacing: '0.04em',
-                lineHeight: 1.05,
-                color: '#ea580c',
-                textShadow:
-                  '1.5px 0 0 #0f172a, -1.5px 0 0 #0f172a, 0 1.5px 0 #0f172a, 0 -1.5px 0 #0f172a, 2px 2px 0 rgba(15,23,42,0.2)',
-                whiteSpace: 'nowrap',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
               {t.section_chat_bubble_greeting}
@@ -405,27 +354,20 @@ export function FamilyChatSection({
             </div>
           ))}
         </div>
-        <div className="chat-input-wrapper" style={{ gap: '6px' }}>
+        <div className="chat-input-wrapper gap-1.5">
           <input
             ref={chatInputRef}
             type="text"
             aria-busy={isSendingText}
             onKeyDown={handleKeyDown}
-            className="chat-input"
+            className={`chat-input min-w-0 flex-1 px-3 py-[11px] ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
             placeholder={t.chat_placeholder}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              padding: '11px 12px',
-              opacity: isSendingText ? 0.85 : 1,
-            }}
           />
           <button
             type="button"
             onClick={handleSendClick}
             disabled={isSendingText}
-            className="btn-send"
-            style={{ padding: '8px 12px', fontSize: '12px', opacity: isSendingText ? 0.7 : 1 }}
+            className={`btn-send px-3 py-2 text-xs ${isSendingText ? 'opacity-70' : 'opacity-100'}`}
           >
             {t.chat_send}
           </button>

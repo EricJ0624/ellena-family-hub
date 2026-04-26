@@ -127,12 +127,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2 }}
-      className="relative mb-6 z-30"
-      style={{
-        width: '100%',
-        maxWidth: '380px',
-        margin: '0 auto',
-      }}
+      className="relative z-30 mb-6 mx-auto w-full max-w-[380px]"
     >
       {/* SVG 프레임 컨테이너 (클릭 시 가족 추억 페이지로 이동) */}
       <div
@@ -140,49 +135,20 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         tabIndex={onFrameClick ? 0 : undefined}
         onClick={onFrameClick}
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
-        style={{
-          position: 'relative',
-          width: '100%',
-          aspectRatio: '4/3',
-          overflow: 'visible',
-          cursor: onFrameClick ? 'pointer' : undefined,
-        }}
+        className={`relative w-full aspect-[4/3] overflow-visible ${onFrameClick ? 'cursor-pointer' : ''}`}
       >
         {/* SVG 프레임 (배경) */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))',
-        }}>
+        <div className="absolute left-0 top-0 h-full w-full [filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.3))]">
           <PhotoFrameSVG frameStyle={frameStyle} />
         </div>
 
         {/* 내부 사진 영역 (매트 제거 → 사진이 액자에 꽉 차게) */}
         <div
-          style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            right: '20px',
-            bottom: '20px',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            padding: 0,
-          }}
+          className="absolute inset-[20px] overflow-hidden rounded"
         >
           {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
           <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              borderRadius: '2px',
-              overflow: 'hidden',
-              background: '#1a1a1a',
-            }}
+            className="relative h-full w-full overflow-hidden rounded-[2px] bg-[#1a1a1a]"
           >
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
@@ -192,35 +158,18 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                  }}
+                  className="absolute inset-0"
                 >
                   {/* 1) 최하단: 가우시안 블러 배경 (원본 cover + scale 1.1 + blur, 저해상도 URL 사용 시 부하 감소) */}
                   <img
                     src={getBlurLayerSrc(selectedPhoto.data)}
                     alt=""
                     aria-hidden
-                    style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      transform: 'translate(-50%, -50%) scale(1.1)',
-                      filter: 'blur(50px) brightness(0.7)',
-                    }}
+                    className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 scale-110 object-cover [filter:blur(50px)_brightness(0.7)]"
                   />
                   {/* 2) 중간: 어두운 오버레이 (가독성) */}
                   <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                      pointerEvents: 'none',
-                    }}
+                    className="pointer-events-none absolute inset-0 bg-black/20"
                   />
                   {/* 3) 최상단: 원본 사진 (가로=cover 꽉 채움, 세로=contain + 블러가 좌우 여백 채움) */}
                   <Image
@@ -248,24 +197,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#1a1a1a',
-                  }}
+                  className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a]"
                 >
                   <img
                     src="/frame-default.png"
                     alt=""
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
+                    className="block h-full w-full object-cover"
                   />
                 </motion.div>
               )}
@@ -275,14 +212,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         
         {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}
         <div
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            right: '10px',
-            display: 'flex',
-            gap: '8px',
-            zIndex: 40,
-          }}
+          className="absolute bottom-2.5 right-2.5 z-40 flex gap-2"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
@@ -291,26 +221,16 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowFrameSelector(!showFrameSelector)}
-            style={{
-              width: '44px',
-              height: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: showFrameSelector 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-              border: '3px solid #8B4513',
-              borderRadius: '50%',
-              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
-              cursor: 'pointer',
-            }}
+            className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)] ${
+              showFrameSelector
+                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)]'
+                : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]'
+            }`}
             aria-label={tp('frame_change')}
             title={tp('frame_change')}
           >
             <FrameIcon 
-              className="w-5 h-5" 
-              style={{ color: showFrameSelector ? '#ffffff' : '#8B4513' }}
+              className={`h-5 w-5 ${showFrameSelector ? 'text-white' : 'text-[#8B4513]'}`}
               strokeWidth={2.5} 
             />
           </motion.button>
@@ -321,18 +241,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
               whileHover={{ scale: 1.15, rotate: 180 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleShuffle}
-              style={{
-                width: '44px',
-                height: '44px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                border: '3px solid #8B4513',
-                borderRadius: '50%',
-                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8)',
-                cursor: 'pointer',
-              }}
+              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)]"
               aria-label={tp('photo_refresh')}
               title={tp('photo_refresh')}
             >
@@ -351,35 +260,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
-              style={{
-                position: 'absolute',
-                bottom: '70px',
-                right: '10px',
-                background: 'rgba(255, 255, 255, 0.98)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '12px',
-                padding: '12px',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                border: '2px solid rgba(139, 69, 19, 0.3)',
-                zIndex: 50,
-                minWidth: '200px',
-              }}
+              className="absolute bottom-[70px] right-2.5 z-50 min-w-[200px] rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px]"
             >
-              <div style={{ 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                color: '#5d2a1f',
-                marginBottom: '8px',
-                paddingBottom: '8px',
-                borderBottom: '1px solid rgba(139, 69, 19, 0.2)',
-              }}>
+              <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
                 {tp('frame_style_select')}
               </div>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-              }}>
+              <div className="flex flex-col gap-1.5">
                 {FRAME_CONFIGS.map((frame) => (
                   <motion.button
                     key={frame.id}
@@ -391,42 +277,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                       }
                       setShowFrameSelector(false);
                     }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 12px',
-                      background: frameStyle === frame.id 
-                        ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                        : 'transparent',
-                      color: frameStyle === frame.id ? '#ffffff' : '#333',
-                      border: frameStyle === frame.id 
-                        ? '2px solid #667eea'
-                        : '2px solid rgba(139, 69, 19, 0.2)',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: frameStyle === frame.id ? '600' : '500',
-                      transition: 'all 0.2s',
-                    }}
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 ${
+                      frameStyle === frame.id
+                        ? 'border-[#667eea] bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] font-semibold text-white'
+                        : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]'
+                    }`}
                   >
                     <div
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '4px',
-                        background: frame.color,
-                        border: '1px solid rgba(0,0,0,0.2)',
-                        flexShrink: 0,
-                      }}
+                      className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
+                      style={{ background: frame.color }}
                     />
-                    <div style={{ flex: 1, textAlign: 'left' }}>
-                      <div style={{ fontWeight: '600' }}>{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
-                      <div style={{ 
-                        fontSize: '10px', 
-                        opacity: 0.8,
-                        marginTop: '2px',
-                      }}>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold">{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
+                      <div className="mt-0.5 text-[10px] opacity-80">
                         {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
                       </div>
                     </div>
@@ -454,7 +317,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
   const titleContent = parenMatch ? (
     <>
       {parenMatch[1]}
-      <span style={{ fontSize: '0.65em', verticalAlign: 'baseline' }}>{parenMatch[2]}</span>
+      <span className="align-baseline text-[0.65em]">{parenMatch[2]}</span>
       {parenMatch[3]}
     </>
   ) : raw;
@@ -549,21 +412,12 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -20 }}
       transition={{ duration: 0.2 }}
-      className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[100] rounded-2xl shadow-2xl overflow-hidden"
-      style={{
-        width: '90%',
-        maxWidth: '480px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-      }}
+      className="fixed left-1/2 top-1/2 z-[100] max-h-[90vh] w-[90%] max-w-[480px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {/* 그라데이션 헤더 */}
       <div 
-        className="relative px-6 py-5 text-white"
-        style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        }}
+        className="relative bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] px-6 py-5 text-white"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -768,7 +622,7 @@ const FloatingPetals: React.FC = () => {
           className="absolute"
         >
           <div
-            className={`w-3 h-3 rounded-full ${
+            className={`h-3 w-3 rounded-full [clip-path:polygon(50%_0%,0%_100%,100%_100%)] ${
               index % 4 === 0
                 ? 'bg-pink-300'
                 : index % 4 === 1
@@ -777,9 +631,6 @@ const FloatingPetals: React.FC = () => {
                 ? 'bg-purple-300'
                 : 'bg-yellow-300'
             }`}
-            style={{
-              clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
-            }}
           />
         </motion.div>
       ))}
@@ -860,10 +711,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
         <>
           {/* 배경 그라데이션 */}
           <div 
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
-            }}
+            className="absolute inset-0 bg-[linear-gradient(to_bottom_right,#e0f2fe_0%,#e9d5ff_50%,#fce7f3_100%)]"
           />
           {/* 떠다니는 꽃잎 */}
           <FloatingPetals />
@@ -918,12 +766,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
           >
             <Heart 
-              className="w-64 h-64 md:w-80 md:h-80" 
-              style={{ 
-                color: '#ec4899', 
-                fill: '#ec4899',
-                opacity: 0.1
-              }}
+              className="h-64 w-64 text-pink-500 opacity-10 fill-pink-500 md:h-80 md:w-80"
             />
           </motion.div>
         )}
