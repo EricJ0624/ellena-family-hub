@@ -8,6 +8,7 @@ import { PhotoFrameSVG, FRAME_CONFIGS, type FrameStyle } from './PhotoFrames';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTitlePageTranslation } from '@/lib/translations/titlePage';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { cn } from '@/lib/ui/cn';
 
 
 // 날짜 기반 해시 시드 생성 함수
@@ -135,7 +136,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         tabIndex={onFrameClick ? 0 : undefined}
         onClick={onFrameClick}
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
-        className={`relative w-full aspect-[4/3] overflow-visible ${onFrameClick ? 'cursor-pointer' : ''}`}
+        className={cn('relative aspect-[4/3] w-full overflow-visible', onFrameClick && 'cursor-pointer')}
       >
         {/* SVG 프레임 (배경) */}
         <div className="absolute left-0 top-0 h-full w-full [filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.3))]">
@@ -176,7 +177,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     src={selectedPhoto.data}
                     alt={tp('photo_alt_today_memory')}
                     fill
-                    className={`${imageAspectRatio !== null && imageAspectRatio >= 1 ? 'object-cover' : 'object-contain'} shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]`}
+                    className={cn(
+                      imageAspectRatio !== null && imageAspectRatio >= 1 ? 'object-cover' : 'object-contain',
+                      'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
+                    )}
                     unoptimized={true}
                     onLoad={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -218,16 +222,17 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowFrameSelector(!showFrameSelector)}
-            className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)] ${
+            className={cn(
+              'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)]',
               showFrameSelector
                 ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)]'
-                : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]'
-            }`}
+                : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]',
+            )}
             aria-label={tp('frame_change')}
             title={tp('frame_change')}
           >
             <FrameIcon 
-              className={`h-5 w-5 ${showFrameSelector ? 'text-white' : 'text-[#8B4513]'}`}
+              className={cn('h-5 w-5', showFrameSelector ? 'text-white' : 'text-[#8B4513]')}
               strokeWidth={2.5} 
             />
           </motion.button>
@@ -274,11 +279,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                       }
                       setShowFrameSelector(false);
                     }}
-                    className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 ${
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200',
                       frameStyle === frame.id
                         ? 'border-[#667eea] bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] font-semibold text-white'
-                        : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]'
-                    }`}
+                        : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
+                    )}
                   >
                     <div
                       className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
@@ -324,7 +330,7 @@ const TitleText: React.FC<TitleTextProps> = ({ title, titleStyle, onTitleClick }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
       onClick={onTitleClick}
-      className={`text-center select-none mb-6 relative z-30 ${onTitleClick ? 'cursor-pointer' : 'cursor-default'}`}
+      className={cn('relative z-30 mb-6 select-none text-center', onTitleClick ? 'cursor-pointer' : 'cursor-default')}
       style={{
         color: titleStyle.color,
         fontSize: `${titleStyle.fontSize}px`,

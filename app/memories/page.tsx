@@ -521,22 +521,12 @@ export default function MemoriesPage() {
     <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--bg-dashboard,#f8fafc)] pb-20">
       <header
         ref={headerRef}
+        className="sticky top-0 z-50 mx-auto box-border flex w-full items-center bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] [max-width:var(--memories-header-max-width)] [padding:var(--memories-header-padding)] [gap:var(--memories-header-gap)]"
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          width: '100%',
-          maxWidth: `min(${mainMaxWidth}px, 100vw)`,
-          margin: '0 auto',
-          boxSizing: 'border-box',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: '#fff',
-          padding: `${12 * headerScale}px ${16 * headerScale}px`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12 * headerScale,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           ['--hs' as any]: headerScale,
+          ['--memories-header-max-width' as any]: `min(${mainMaxWidth}px, 100vw)`,
+          ['--memories-header-padding' as any]: `${12 * headerScale}px ${16 * headerScale}px`,
+          ['--memories-header-gap' as any]: `${12 * headerScale}px`,
         }}
       >
         <button
@@ -786,12 +776,12 @@ export default function MemoriesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed z-[10000] box-border flex flex-col items-stretch bg-black/[0.95] p-0"
+            className="fixed z-[10000] box-border flex flex-col items-stretch bg-black/[0.95] p-0 [top:var(--lightbox-top)] [left:var(--lightbox-left)] [width:var(--lightbox-width)] [height:var(--lightbox-height)]"
             style={{
-              top: vvValid ? vTop : 0,
-              left: vvValid ? vLeft : 0,
-              width: sizeW,
-              height: sizeH,
+              ['--lightbox-top' as any]: `${vvValid ? vTop : 0}px`,
+              ['--lightbox-left' as any]: `${vvValid ? vLeft : 0}px`,
+              ['--lightbox-width' as any]: `${sizeW}px`,
+              ['--lightbox-height' as any]: `${sizeH}px`,
             }}
             onClick={closeLightbox}
           >

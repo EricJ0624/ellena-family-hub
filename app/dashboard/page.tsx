@@ -1310,6 +1310,13 @@ export default function FamilyHub() {
         }
       : { color: effectiveTitleStyle?.color || '#1e293b' }),
   };
+  const resolvedDashboardTitleStyle: React.CSSProperties = {
+    ...dashboardTitleStyle,
+    ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
+  };
+  const dashboardMainContentStyle = {
+    ['--dashboard-body-font' as any]: bodyFont.fontFamily,
+  } as React.CSSProperties;
 
   // 타이틀 오른쪽 레이아웃 영향 — effect 선언 위치에서 사용 가능한 값
   const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
@@ -5386,7 +5393,10 @@ export default function FamilyHub() {
       )}
 
       {/* Main Content - 본문 폰트 상속 */}
-      <div className="main-content" style={{ fontFamily: bodyFont.fontFamily }}>
+      <div
+        className="main-content [font-family:var(--dashboard-body-font)]"
+        style={dashboardMainContentStyle}
+      >
         {/* 공지사항 배너 (모든 멤버) */}
         {announcements.length > 0 && (
           <AnnouncementBanner 
@@ -5406,10 +5416,7 @@ export default function FamilyHub() {
         >
           <h1
             ref={dashboardTitleRef}
-            style={{
-              ...dashboardTitleStyle,
-              ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
-            }}
+            style={resolvedDashboardTitleStyle}
           >
             <AppTitleContent title={dashboardTitleText} />
           </h1>

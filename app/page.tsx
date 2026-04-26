@@ -617,11 +617,12 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => switchMode('forgot')}
-            className={`cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
+            className={cn(
+              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
               mode === 'forgot'
                 ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
-                : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
-            }`}
+                : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
+            )}
           >
             {t('tab_forgot')}
           </button>
