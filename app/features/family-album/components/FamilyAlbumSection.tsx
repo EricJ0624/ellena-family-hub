@@ -38,7 +38,7 @@ export function FamilyAlbumSection({
         <button
           type="button"
           onClick={onViewAllClick}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#8b5cf6] px-3 py-2 text-xs font-bold text-white"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#8b5cf6] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#7c3aed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
         >
           📸 {t.view_all}
           {photos.length > 0 && ` (${photos.length})`}
@@ -55,7 +55,7 @@ export function FamilyAlbumSection({
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                className="relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-[#f1f5f9] transition-[transform,box-shadow] duration-200 ease-in-out hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                className="relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-[#f1f5f9] transition-[transform,box-shadow,filter] duration-200 ease-in-out hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:brightness-105"
               >
                 <img
                   src={photo.data}
@@ -77,7 +77,7 @@ export function FamilyAlbumSection({
             <button
               type="button"
               onClick={onViewAllClick}
-              className="cursor-pointer rounded-lg border border-solid border-[#cbd5e1] bg-[#f8fafc] px-5 py-2.5 text-[13px] font-semibold text-[#475569]"
+              className="cursor-pointer rounded-lg border border-solid border-[#cbd5e1] bg-[#f8fafc] px-5 py-2.5 text-[13px] font-semibold text-[#475569] transition-colors hover:bg-[#f1f5f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
             >
               {t.photos_count.replace('{count}', String(photos.length - maxPhotos))}
             </button>

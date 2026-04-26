@@ -44,7 +44,7 @@ export function TravelPlannerSection({
             <button
               type="button"
               onClick={onAddClick}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-[#9333ea] px-3 py-2 font-bold text-white"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-[#9333ea] px-3 py-2 font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
             >
               <Plus className="h-4 w-4" />
               {t.add_trip}
@@ -71,7 +71,7 @@ export function TravelPlannerSection({
               <li
                 key={trip.id}
                 onClick={() => onTripClick(trip.id)}
-                className="mb-1.5 cursor-pointer rounded-lg border border-solid border-[#e2e8f0] px-3 py-2.5 text-[13px] text-[#1e293b]"
+                className="mb-1.5 cursor-pointer rounded-lg border border-solid border-[#e2e8f0] px-3 py-2.5 text-[13px] text-[#1e293b] transition-colors hover:border-[#cbd5e1] hover:bg-[#f8fafc]"
               >
                 <div className="font-semibold">{trip.title}</div>
                 <div className="mt-0.5 text-xs text-[#64748b]">

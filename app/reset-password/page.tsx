@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
     'box-border h-[60px] w-full rounded-2xl border-2 border-[#e2e8f0] bg-white px-5 text-base text-[#1a202c] shadow-[0_4px_12px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 ease-in-out tracking-[2px] focus:border-[rgb(var(--brand-primary))] focus:shadow-[0_4px_16px_rgba(102,126,234,0.2)]';
 
   const buttonClassName = [
-    'relative mt-2 h-[60px] w-full overflow-hidden rounded-2xl border-none text-lg font-bold text-white transition-all duration-300 ease-in-out',
+    'relative mt-2 h-[60px] w-full overflow-hidden rounded-2xl border-none text-lg font-bold text-white transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
     loading
       ? 'cursor-not-allowed bg-[linear-gradient(135deg,#94a3b8_0%,#64748b_100%)] shadow-[0_4px_12px_rgba(0,0,0,0.1)]'
       : 'cursor-pointer bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] shadow-[0_8px_24px_rgba(102,126,234,0.4)] active:scale-[0.98] active:shadow-[0_4px_12px_rgba(102,126,234,0.3)]',

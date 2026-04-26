@@ -223,7 +223,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowFrameSelector(!showFrameSelector)}
             className={cn(
-              'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)]',
+              'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
               showFrameSelector
                 ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)]'
                 : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]',
@@ -243,7 +243,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
               whileHover={{ scale: 1.15, rotate: 180 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleShuffle}
-              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)]"
+              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
               aria-label={tp('photo_refresh')}
               title={tp('photo_refresh')}
             >
@@ -280,7 +280,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                       setShowFrameSelector(false);
                     }}
                     className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200',
+                      'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
                       frameStyle === frame.id
                         ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
                         : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
@@ -434,7 +434,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             aria-label={ct('close')}
           >
             <X className="w-5 h-5" />
@@ -468,7 +468,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
           <select
             value={localStyle.fontFamily || 'Inter'}
             onChange={(e) => handleChange('fontFamily', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all appearance-none bg-white cursor-pointer"
+            className="w-full appearance-none cursor-pointer rounded-xl border-2 border-gray-200 bg-white px-4 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus:border-purple-500"
           >
             {fontFamilies.map((font) => (
               <option key={font.value} value={font.value}>
@@ -490,7 +490,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
                 type="color"
                 value={localStyle.color}
                 onChange={(e) => handleChange('color', e.target.value)}
-                className="h-16 w-16 cursor-pointer rounded-xl border-2 border-gray-200 transition-transform hover:scale-105 [appearance:none] [-moz-appearance:none]"
+                className="h-16 w-16 cursor-pointer rounded-xl border-2 border-gray-200 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 [appearance:none] [-moz-appearance:none]"
               />
             </div>
             <input
@@ -521,7 +521,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               max="72"
               value={localStyle.fontSize}
               onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
-              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="h-3 w-full appearance-none cursor-pointer rounded-lg bg-gray-200 accent-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
               style={{
                 background: `linear-gradient(to right, rgb(var(--brand-primary)) 0%, rgb(var(--brand-primary)) ${fontSizeProgress}%, #e5e7eb ${fontSizeProgress}%, #e5e7eb 100%)`,
               }}
@@ -542,7 +542,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
           <select
             value={localStyle.fontWeight}
             onChange={(e) => handleChange('fontWeight', e.target.value)}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all cursor-pointer"
+            className="w-full cursor-pointer rounded-xl border-2 border-gray-200 px-4 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 focus:border-purple-500"
           >
             <option value="300">{tp('font_weight_300')}</option>
             <option value="400">{tp('font_weight_400')}</option>
@@ -573,7 +573,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               step="0.5"
               value={localStyle.letterSpacing}
               onChange={(e) => handleChange('letterSpacing', parseFloat(e.target.value))}
-              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="h-3 w-full appearance-none cursor-pointer rounded-lg bg-gray-200 accent-purple-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
               style={{
                 background: `linear-gradient(to right, rgb(var(--brand-primary)) 0%, rgb(var(--brand-primary)) ${letterSpacingProgress}%, #e5e7eb ${letterSpacingProgress}%, #e5e7eb 100%)`,
               }}

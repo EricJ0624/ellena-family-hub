@@ -594,7 +594,7 @@ export default function LoginPage() {
             type="button"
             onClick={() => switchMode('login')}
             className={cn(
-              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
+              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
               mode === 'login'
                 ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
@@ -606,7 +606,7 @@ export default function LoginPage() {
             type="button"
             onClick={() => switchMode('signup')}
             className={cn(
-              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
+              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
               mode === 'signup'
                 ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
@@ -618,7 +618,7 @@ export default function LoginPage() {
             type="button"
             onClick={() => switchMode('forgot')}
             className={cn(
-              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
+              'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
               mode === 'forgot'
                 ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
@@ -713,7 +713,7 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={keepLoggedIn}
                 onChange={(e) => setKeepLoggedIn(e.target.checked)}
-                className="h-[18px] w-[18px] cursor-pointer accent-[rgb(var(--brand-primary))]"
+                className="h-[18px] w-[18px] cursor-pointer accent-[rgb(var(--brand-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
               />
               <span>{t('keep_logged_in')}</span>
             </label>

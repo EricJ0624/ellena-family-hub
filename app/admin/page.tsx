@@ -1126,7 +1126,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setAdminLang('ko')}
-                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold ${
+                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
                   adminLang === 'ko' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-500'
                 }`}
               >
@@ -1135,7 +1135,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setAdminLang('en')}
-                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold ${
+                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
                   adminLang === 'en' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-500'
                 }`}
               >
@@ -1144,7 +1144,7 @@ export default function AdminPage() {
             </div>
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+              className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
             >
               <X className="h-4 w-4" />
               {ct('close')}
@@ -1158,7 +1158,7 @@ export default function AdminPage() {
         >
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'dashboard'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : 'border-transparent font-medium text-slate-500'
@@ -1169,7 +1169,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'users'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : 'border-transparent font-medium text-slate-500'
@@ -1180,7 +1180,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('groups')}
-            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'groups'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : 'border-transparent font-medium text-slate-500'
@@ -1209,7 +1209,7 @@ export default function AdminPage() {
                 }
               }
             }}
-            className={`border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'group-admin'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : manageableGroups.length > 0
@@ -1222,7 +1222,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('announcements')}
-            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'announcements'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : 'border-transparent font-medium text-slate-500'
@@ -1233,7 +1233,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('all-support-tickets')}
-            className={`relative cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`relative cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'all-support-tickets'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : 'border-transparent font-medium text-slate-500'
@@ -1249,7 +1249,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('member-inquiries')}
-            className={`relative cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 ${
+            className={`relative cursor-pointer border-none border-b-[3px] bg-transparent px-6 py-3 text-base transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 ${
               activeTab === 'member-inquiries'
                 ? 'border-purple-600 font-semibold text-purple-600'
                 : 'border-transparent font-medium text-slate-500'
@@ -1391,7 +1391,7 @@ export default function AdminPage() {
                     </div>
                     <button
                       onClick={() => setActiveTab('all-support-tickets')}
-                      className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-purple-700"
+                      className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                     >
                       전체 보기
                     </button>
@@ -1405,7 +1405,7 @@ export default function AdminPage() {
                       {supportTickets.slice(0, 5).map((ticket) => (
                         <div
                           key={ticket.id}
-                          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+                          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           onClick={() => setActiveTab('all-support-tickets')}
                         >
                           <div className="mb-2 flex items-center justify-between">
@@ -1445,7 +1445,7 @@ export default function AdminPage() {
                   </div>
                   <button
                     onClick={() => router.push('/onboarding?from=admin')}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_4px_rgba(147,51,234,0.2)] transition-all duration-200 hover:bg-purple-700 hover:shadow-[0_4px_8px_rgba(147,51,234,0.3)]"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_4px_rgba(147,51,234,0.2)] transition-all duration-200 hover:bg-purple-700 hover:shadow-[0_4px_8px_rgba(147,51,234,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
                     <UserPlus className="h-[18px] w-[18px]" />
                     가족 생성/가입하기
@@ -1536,7 +1536,7 @@ export default function AdminPage() {
                               {/* 시스템 관리자 승격/해제 버튼 */}
                               {systemAdmins.includes(user.id) ? (
                                 <button
-                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-amber-600"
+                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                                   onClick={async () => {
                                     const { data: { user: currentUser } } = await supabase.auth.getUser();
                                     
@@ -1592,7 +1592,7 @@ export default function AdminPage() {
                                 </button>
                               ) : (
                                 <button
-                                  className={`inline-flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 ${
+                                  className={`inline-flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
                                     systemAdminCount >= 1
                                       ? 'cursor-not-allowed bg-slate-400 opacity-60'
                                       : 'cursor-pointer bg-purple-700 opacity-100 hover:bg-purple-800'
@@ -1649,7 +1649,7 @@ export default function AdminPage() {
                               
                               {/* {at('force_leave_btn')} 버튼 */}
                               <button
-                              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-red-600 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-red-700"
+                              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-red-600 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
                               onClick={async () => {
                                 // 현재 로그인한 사용자 확인
                                 const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -1785,7 +1785,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                           <button
-                            className="flex-[1_1_120px] cursor-pointer rounded-lg border-none bg-sky-100 px-3 py-2 text-[13px] font-semibold text-sky-700"
+                            className="flex-[1_1_120px] cursor-pointer rounded-lg border-none bg-sky-100 px-3 py-2 text-[13px] font-semibold text-sky-700 transition-colors hover:bg-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
                             onClick={async () => {
                               const currentGb = quotaBytes ? (quotaBytes / 1024 / 1024 / 1024).toFixed(2) : '5';
                               const input = prompt(at('prompt_quota_gb'), currentGb);
@@ -1831,14 +1831,14 @@ export default function AdminPage() {
                         {/* 관리 가능한 그룹에만 "관리하기" 버튼 표시 */}
                         {manageableGroups.some(mg => mg.id === group.id) && (
                           <button
-                            className="flex-1 cursor-pointer rounded-lg border-none bg-purple-600 px-4 py-2 text-sm font-semibold text-white"
+                            className="flex-1 cursor-pointer rounded-lg border-none bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             onClick={() => handleSelectGroupForAdmin(group.id)}
                           >
 {at('manage_btn')}
                             </button>
                         )}
                         <button
-                          className={`cursor-pointer rounded-lg border-none bg-red-100 px-4 py-2 text-sm font-semibold text-red-800 ${
+                          className={`cursor-pointer rounded-lg border-none bg-red-100 px-4 py-2 text-sm font-semibold text-red-800 transition-colors hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 ${
                             manageableGroups.some(mg => mg.id === group.id) ? 'flex-1' : 'w-full'
                           }`}
                           onClick={async () => {
@@ -1914,7 +1914,7 @@ export default function AdminPage() {
                         setSelectedGroup(null);
                       }
                     }}
-                    className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                    className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
                     <option value="">{at('select_group_option')}</option>
                     {/* 관리 가능한 그룹만 표시 */}
@@ -1966,7 +1966,7 @@ export default function AdminPage() {
                       setAnnouncementTarget('ADMIN_ONLY');
                       setAnnouncementLangTab('ko');
                     }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
                     <Plus className="h-[18px] w-[18px]" />
                     {at('new_announcement_btn')}
@@ -2022,7 +2022,7 @@ export default function AdminPage() {
                               setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
                               setAnnouncementLangTab('ko');
                             }}
-                            className="cursor-pointer rounded-md border-none bg-indigo-100 px-3 py-2 text-[13px] font-semibold text-indigo-800"
+                            className="cursor-pointer rounded-md border-none bg-indigo-100 px-3 py-2 text-[13px] font-semibold text-indigo-800 transition-colors hover:bg-indigo-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
                           >
                             {at('edit_btn')}
                           </button>
@@ -2065,7 +2065,7 @@ export default function AdminPage() {
                                   setLoadingData(false);
                                 }
                               }}
-                              className="cursor-pointer rounded-md border-none bg-amber-100 px-3 py-2 text-[13px] font-semibold text-amber-800"
+                              className="cursor-pointer rounded-md border-none bg-amber-100 px-3 py-2 text-[13px] font-semibold text-amber-800 transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                             >
                               {at('deactivate_btn')}
                             </button>
@@ -2108,7 +2108,7 @@ export default function AdminPage() {
                                   setLoadingData(false);
                                 }
                               }}
-                              className="cursor-pointer rounded-md border-none bg-red-100 px-3 py-2 text-[13px] font-semibold text-red-800"
+                              className="cursor-pointer rounded-md border-none bg-red-100 px-3 py-2 text-[13px] font-semibold text-red-800 transition-colors hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
                             >
                               {at('permanent_delete_btn')}
                             </button>
@@ -2192,7 +2192,7 @@ export default function AdminPage() {
                               value="ADMIN_ONLY"
                               checked={announcementTarget === 'ADMIN_ONLY'}
                               onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
-                              className="cursor-pointer"
+                              className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             />
                             <span className={`text-sm text-slate-700 ${announcementTarget === 'ADMIN_ONLY' ? 'font-semibold' : 'font-normal'}`}>
                               관리자만
@@ -2209,7 +2209,7 @@ export default function AdminPage() {
                               value="ALL_MEMBERS"
                               checked={announcementTarget === 'ALL_MEMBERS'}
                               onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
-                              className="cursor-pointer"
+                              className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             />
                             <span className={`text-sm text-slate-700 ${announcementTarget === 'ALL_MEMBERS' ? 'font-semibold' : 'font-normal'}`}>
                               모든 멤버
@@ -2230,7 +2230,7 @@ export default function AdminPage() {
                             setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
                             setAnnouncementTarget('ADMIN_ONLY');
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                         >
                           {ct('cancel')}
                         </button>
@@ -2319,7 +2319,7 @@ export default function AdminPage() {
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                         >
                           {editingAnnouncement ? at('edit_btn') : at('write_btn')}
                         </button>
@@ -2340,7 +2340,7 @@ export default function AdminPage() {
                   </h2>
                   <div className="flex gap-2">
                     <select
-                      className="cursor-pointer rounded-md border border-slate-200 px-3 py-2 text-sm"
+                      className="cursor-pointer rounded-md border border-slate-200 px-3 py-2 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                       onChange={(e) => {
                         const status = e.target.value;
                         if (status === 'all') {
@@ -2470,7 +2470,7 @@ export default function AdminPage() {
                               setEditingTicket(ticket);
                               setTicketAnswer('');
                             }}
-                            className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           >
                             답변하기
                           </button>
@@ -2537,7 +2537,7 @@ export default function AdminPage() {
                             setEditingTicket(null);
                             setTicketAnswer('');
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500"
+                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                         >
                           {at('cancel_btn')}
                         </button>
@@ -2583,7 +2583,7 @@ export default function AdminPage() {
                               alert(err.message || at('answer_save_error'));
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                         >
                           저장
                         </button>
@@ -2813,7 +2813,7 @@ export default function AdminPage() {
                               setEditingTicket(ticket);
                               setTicketAnswer('');
                             }}
-                            className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           >
                             답변하기
                           </button>
@@ -2880,7 +2880,7 @@ export default function AdminPage() {
                             setEditingTicket(null);
                             setTicketAnswer('');
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                         >
                           {at('cancel_btn')}
                         </button>
@@ -2929,7 +2929,7 @@ export default function AdminPage() {
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                         >
                           {at('submit_answer_btn')}
                         </button>
@@ -2953,7 +2953,7 @@ export default function AdminPage() {
                       setNewAccessRequestGroupId('');
                       setNewAccessRequestReason('');
                     }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
                     <Plus className="h-[18px] w-[18px]" />
                     새 접근 요청
@@ -3056,7 +3056,7 @@ export default function AdminPage() {
                                 setLoadingData(false);
                               }
                             }}
-                            className="cursor-pointer rounded-md border-none bg-emerald-500 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-emerald-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
                           >
 {at('approve_btn')}
                             </button>
@@ -3101,7 +3101,7 @@ export default function AdminPage() {
                                 setLoadingData(false);
                               }
                             }}
-                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
                           >
 {at('reject_btn')}
                             </button>
@@ -3149,7 +3149,7 @@ console.error(at('error_revoke_failed'), error);
                                 setLoadingData(false);
                               }
                             }}
-                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
                           >
                             {at('revoke_btn')}
                           </button>
@@ -3222,7 +3222,7 @@ console.error(at('error_revoke_failed'), error);
                             setNewAccessRequestGroupId('');
                             setNewAccessRequestReason('');
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500"
+                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                         >
                           {at('cancel_btn')}
                         </button>
@@ -3275,7 +3275,7 @@ console.error(at('error_revoke_failed'), error);
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                         >
                           요청하기
                         </button>
@@ -3347,7 +3347,7 @@ console.error(at('error_revoke_failed'), error);
                   </button>
                   <button
                     onClick={exportAuditLogsCsv}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-sky-500 px-4 py-2 text-sm font-semibold text-white"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
                   >
                     <Download className="h-4 w-4" />
                     CSV 내보내기
