@@ -873,7 +873,7 @@ export function GroupAdminPanel({
               }
               router.push('/dashboard');
             }}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             <X className="h-4 w-4" />
             닫기
@@ -1163,7 +1163,7 @@ export function GroupAdminPanel({
                         </div>
                         <button
                           onClick={() => handleDeletePhoto(photo.id)}
-                          className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-md border-0 bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800"
+                          className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-md border-none bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800 transition-colors hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                         >
                           <Trash2 className="h-[14px] w-[14px]" />
                           삭제
@@ -1326,7 +1326,7 @@ export function GroupAdminPanel({
                       setTicketTitle('');
                       setTicketContent('');
                     }}
-                    className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
+                    className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                   >
                     <Plus className="h-[18px] w-[18px]" />
                     시스템 관리자에게 문의
@@ -1410,7 +1410,7 @@ export function GroupAdminPanel({
                                 setFollowUpForTicket(ticket);
                                 setFollowUpBody('');
                               }}
-                              className="cursor-pointer whitespace-nowrap rounded-lg border-0 bg-sky-500 px-3 py-2 text-xs font-semibold text-white"
+                              className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                             >
                               추가 문의
                             </button>
@@ -1509,7 +1509,7 @@ export function GroupAdminPanel({
                             setTicketTitle('');
                             setTicketContent('');
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
                           취소
                         </button>
@@ -1564,7 +1564,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         >
                           작성
                         </button>
@@ -1604,7 +1604,7 @@ export function GroupAdminPanel({
                             setFollowUpForTicket(null);
                             setFollowUpBody('');
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
                           취소
                         </button>
@@ -1651,7 +1651,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                         >
                           보내기
                         </button>
@@ -1748,7 +1748,7 @@ export function GroupAdminPanel({
                               setEditingMemberTicket(ticket);
                               setMemberTicketAnswer('');
                             }}
-                            className="cursor-pointer rounded-md border-0 bg-blue-500 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-blue-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                           >
                             답변하기
                           </button>
@@ -1832,7 +1832,7 @@ export function GroupAdminPanel({
                             setEditingMemberTicket(null);
                             setMemberTicketAnswer('');
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
                           취소
                         </button>
@@ -1878,7 +1878,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         >
                           저장
                         </button>
@@ -1901,7 +1901,7 @@ export function GroupAdminPanel({
                       setShowAccessRequestForm(true);
                       setAccessRequestReason('');
                     }}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                   >
                     <Plus className="h-[18px] w-[18px]" />
                     접근 요청
@@ -2007,7 +2007,7 @@ export function GroupAdminPanel({
                                 setLoadingData(false);
                               }
                             }}
-                            className="cursor-pointer rounded-md border-0 bg-red-500 px-4 py-2 text-[13px] font-semibold text-white"
+                            className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                           >
                             취소
                           </button>
@@ -2056,7 +2056,7 @@ export function GroupAdminPanel({
                             setShowAccessRequestForm(false);
                             setAccessRequestReason('');
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
+                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
                           취소
                         </button>
@@ -2109,7 +2109,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          className="cursor-pointer rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
+                          className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         >
                           요청
                         </button>
