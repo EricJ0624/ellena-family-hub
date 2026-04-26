@@ -741,8 +741,7 @@ export function TravelPlannerContent() {
       setPlacesApiReady(true);
       return;
     }
-    const existing = document.getElementById('google-maps-script') as HTMLScriptElement | null;
-    if (existing) {
+    const waitForPlacesAutocomplete = () => {
       const iv = setInterval(() => {
         if ((window as any).google?.maps?.places?.Autocomplete) {
           clearInterval(iv);
@@ -750,6 +749,10 @@ export function TravelPlannerContent() {
         }
       }, 100);
       return () => clearInterval(iv);
+    };
+    const existing = document.getElementById('google-maps-script') as HTMLScriptElement | null;
+    if (existing) {
+      return waitForPlacesAutocomplete();
     }
     const script = document.createElement('script');
     script.id = 'google-maps-script';
@@ -758,7 +761,8 @@ export function TravelPlannerContent() {
     script.defer = true;
     script.onload = () => {
       travelMapScriptLoadedRef.current = true;
-      setPlacesApiReady(true);
+      // onload 직후에도 places 네임스페이스 초기화가 늦는 경우가 있어 실제 객체 확인 후 ready 처리
+      waitForPlacesAutocomplete();
     };
     document.head.appendChild(script);
   }, [
