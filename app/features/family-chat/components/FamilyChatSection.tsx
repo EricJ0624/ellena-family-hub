@@ -262,7 +262,7 @@ export function FamilyChatSection({
                 type="button"
                 onClick={onLoadOlderMessages}
                 disabled={chatLoadingOlder}
-                className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-[13px] font-semibold text-indigo-600 disabled:cursor-wait disabled:opacity-75"
+                className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-[13px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-wait disabled:opacity-75"
               >
                 {chatLoadingOlder ? t.chat_loading_older : t.chat_load_older}
               </button>
@@ -335,7 +335,7 @@ export function FamilyChatSection({
                                 if (!currentGroupId) return;
                                 void onDeleteAttachment(att.id);
                               }}
-                              className="chat-attachment-delete-btn absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-none bg-red-500/95 p-0 text-[11px] leading-[18px] text-white"
+                              className="chat-attachment-delete-btn absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-none bg-red-500/95 p-0 text-[11px] leading-[18px] text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
                               aria-label={t.chat_remove_attachment_aria}
                             >
                               x
@@ -371,14 +371,14 @@ export function FamilyChatSection({
           <button
             type="button"
             onClick={() => chatFileInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold"
+            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             {t.chat_album_btn}
           </button>
           <button
             type="button"
             onClick={() => chatCameraInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold"
+            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             {t.chat_camera_btn}
           </button>

@@ -310,7 +310,7 @@ export function FamilyCalendarSection({
                 value={eventForm.title}
                 onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                 placeholder={t.event_title_placeholder}
-                className="w-full box-border rounded-lg border border-slate-200 p-3 text-[15px]"
+                className="w-full box-border rounded-lg border border-slate-200 p-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
               />
             </div>
 
@@ -321,7 +321,7 @@ export function FamilyCalendarSection({
                 onChange={(e) => setEventForm({ ...eventForm, desc: e.target.value })}
                 placeholder={t.event_desc_placeholder}
                 rows={3}
-                className="w-full box-border resize-y rounded-lg border border-slate-200 p-3 text-[15px] font-inherit"
+                className="w-full box-border resize-y rounded-lg border border-slate-200 p-3 text-[15px] font-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
               />
             </div>
 
@@ -361,13 +361,13 @@ export function FamilyCalendarSection({
             <div className="flex justify-end gap-3">
               <button
                 onClick={closeEventModal}
-                className="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[15px] font-medium text-slate-500"
+                className="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[15px] font-medium text-slate-500 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
               >
                 {t.cancel}
               </button>
               <button
                 onClick={handleEventSubmit}
-                className="cursor-pointer rounded-lg border-none bg-indigo-500 px-5 py-2.5 text-[15px] font-medium text-white hover:bg-indigo-600"
+                className="cursor-pointer rounded-lg border-none bg-indigo-500 px-5 py-2.5 text-[15px] font-medium text-white transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
               >
                 {t.event_submit_btn}
               </button>
@@ -402,7 +402,7 @@ export function FamilyCalendarSection({
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)]"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                 >
                   <ChevronLeft className="h-[18px] w-[18px]" />
                   {t.calendar_prev_month}
@@ -410,7 +410,7 @@ export function FamilyCalendarSection({
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)]"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                 >
                   {t.calendar_next_month}
                   <ChevronRight className="h-[18px] w-[18px]" />
@@ -479,7 +479,7 @@ export function FamilyCalendarSection({
                       position: 'relative',
                       fontSize: '14px',
                     }}
-                    className="border-none"
+                    className="border-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                   >
                     <span>{cell.day}</span>
                     {cell.eventCount > 0 && (
@@ -515,7 +515,7 @@ export function FamilyCalendarSection({
                   <button
                     type="button"
                     onClick={() => setSelectedDate(null)}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-[13px] transition-all duration-200 hover:border-slate-300 hover:bg-slate-100"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-[13px] transition-all duration-200 hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                   >
                     <X className="h-4 w-4" />
                     {t.close}
@@ -563,7 +563,7 @@ export function FamilyCalendarSection({
                             <button
                               type="button"
                               onClick={() => handleDeleteEvent(e.id)}
-                              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1.5 text-red-500 hover:bg-red-50"
+                              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1.5 text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                               aria-label={t.delete}
                             >
                               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -589,7 +589,7 @@ export function FamilyCalendarSection({
           <button
             type="button"
             onClick={openEventModal}
-            className="mt-3.5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border-none bg-gradient-to-br from-violet-600 to-violet-800 px-3 py-3 text-[15px] font-semibold text-white shadow-[0_4px_12px_rgba(124,58,237,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)]"
+            className="mt-3.5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border-none bg-gradient-to-br from-violet-600 to-violet-800 px-3 py-3 text-[15px] font-semibold text-white shadow-[0_4px_12px_rgba(124,58,237,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
           >
             <Plus className="h-5 w-5" />
             {t.event_add_title}
