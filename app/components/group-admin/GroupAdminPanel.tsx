@@ -894,7 +894,7 @@ export function GroupAdminPanel({
                   setActiveTab('dashboard');
                 }
               }}
-              className="w-full max-w-80 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-semibold text-slate-800"
+              className="w-full max-w-80 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-semibold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
             >
               {adminGroups.map((group: any) => (
                 <option key={group.id} value={group.id}>
@@ -1128,7 +1128,7 @@ export function GroupAdminPanel({
                       placeholder={gat('search_photo_placeholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 pl-10 text-sm"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2.5 pl-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                     />
                   </div>
                 </div>
