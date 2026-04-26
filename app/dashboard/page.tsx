@@ -1303,7 +1303,7 @@ export default function FamilyHub() {
     fontFamily: titleFont.fontFamily,
     ...(isDefaultDashboardTitle
       ? {
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',

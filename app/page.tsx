@@ -535,7 +535,7 @@ export default function LoginPage() {
     height: '60px',
     background: loading 
       ? 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)'
-      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      : 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '16px',
@@ -572,7 +572,7 @@ export default function LoginPage() {
           </div>
           <h1
             ref={loginTitleRef}
-            className="mb-3 overflow-hidden whitespace-nowrap bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-ellipsis tracking-[-0.5px] [background-clip:text] [color:transparent] [text-fill-color:transparent] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent]"
+            className="mb-3 overflow-hidden whitespace-nowrap bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-ellipsis tracking-[-0.5px] [background-clip:text] [color:transparent] [text-fill-color:transparent] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent]"
             style={{
               fontSize: loginTitleFontSize != null ? `${loginTitleFontSize}px` : '48px',
               fontFamily: getFontStyle(lang, 'title').fontFamily,
@@ -596,7 +596,7 @@ export default function LoginPage() {
             className={cn(
               'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
               mode === 'login'
-                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
             )}
           >
@@ -608,7 +608,7 @@ export default function LoginPage() {
             className={cn(
               'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
               mode === 'signup'
-                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
             )}
           >
@@ -620,7 +620,7 @@ export default function LoginPage() {
             className={cn(
               'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300',
               mode === 'forgot'
-                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
+                ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
             )}
           >

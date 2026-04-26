@@ -521,7 +521,7 @@ export default function MemoriesPage() {
     <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--bg-dashboard,#f8fafc)] pb-20">
       <header
         ref={headerRef}
-        className="sticky top-0 z-50 mx-auto box-border flex w-full items-center bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] [max-width:var(--memories-header-max-width)] [padding:var(--memories-header-padding)] [gap:var(--memories-header-gap)]"
+        className="sticky top-0 z-50 mx-auto box-border flex w-full items-center bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] [max-width:var(--memories-header-max-width)] [padding:var(--memories-header-padding)] [gap:var(--memories-header-gap)]"
         style={{
           ['--hs' as any]: headerScale,
           ['--memories-header-max-width' as any]: `min(${mainMaxWidth}px, 100vw)`,

@@ -225,7 +225,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             className={cn(
               'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)]',
               showFrameSelector
-                ? 'bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)]'
+                ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)]'
                 : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]',
             )}
             aria-label={tp('frame_change')}
@@ -282,7 +282,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     className={cn(
                       'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200',
                       frameStyle === frame.id
-                        ? 'border-[#667eea] bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] font-semibold text-white'
+                        ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
                         : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
                     )}
                   >
@@ -420,7 +420,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
     >
       {/* 그라데이션 헤더 */}
       <div 
-        className="relative bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] px-6 py-5 text-white"
+        className="relative bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] px-6 py-5 text-white"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
