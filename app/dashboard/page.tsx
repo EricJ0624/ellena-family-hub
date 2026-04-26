@@ -120,6 +120,14 @@ const sanitizeInput = (input: string | null | undefined, maxLength: number = 200
     .substring(0, maxLength);
 };
 
+// location_requests 레거시/혼용 스키마(target_user_id) 안전 정규화
+function normalizeLocationRequestRow(req: any) {
+  return {
+    ...req,
+    target_id: req?.target_id || req?.target_user_id || req?.target?.id || null,
+  };
+}
+
 // --- [TYPES] 타입 안정성 추가 ---
 type Message = ChatUiMessage;
 type ChatAttachment = UploadedAttachment;
@@ -3920,11 +3928,11 @@ export default function FamilyHub() {
         const result = await response.json();
         console.log('📍 [loadFamilyLocations] location_requests fetch 결과:', result);
         if (result.success && result.data) {
-          currentLocationRequests = result.data;
+          currentLocationRequests = (result.data || []).map(normalizeLocationRequestRow);
           console.log('📍 [loadFamilyLocations] currentLocationRequests 개수:', currentLocationRequests.length);
           console.log('📍 [loadFamilyLocations] currentLocationRequests:', JSON.stringify(currentLocationRequests, null, 2));
           // ✅ CRITICAL FIX: state에도 반영 (updateMapMarkers가 최신 locationRequests 참조하도록)
-          setLocationRequests(result.data);
+          setLocationRequests(currentLocationRequests as any);
         }
       } catch (err) {
         // 조회 실패 시 기존 locationRequests 사용
@@ -4223,7 +4231,8 @@ export default function FamilyHub() {
         const expiredAcceptedRequests: string[] = [];
         
         // 만료된 accepted 요청만 자동 종료, pending은 그대로 표시
-        const processedRequests = result.data.map((req: any) => {
+        const processedRequests = result.data.map((rawReq: any) => {
+          const req = normalizeLocationRequestRow(rawReq);
           if (req.expires_at && req.status === 'accepted') {
             const expiresAt = new Date(req.expires_at);
             if (expiresAt < now) {
