@@ -107,8 +107,16 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
               {displayAnnouncements.map((announcement, index) => (
                 <div
                   key={`${announcement.id}-${index}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleAnnouncementClick(announcement)}
-                  className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm text-amber-900 transition-all duration-200 hover:font-semibold hover:text-amber-800"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleAnnouncementClick(announcement);
+                    }
+                  }}
+                  className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded px-1 text-sm text-amber-900 transition-all duration-200 hover:font-semibold hover:text-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
                 >
                   <span className="rounded px-2 py-0.5 text-[11px] font-semibold text-white bg-amber-400">
                     NEW
@@ -129,7 +137,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
           {/* 닫기 버튼 */}
           <button
             onClick={() => setIsVisible(false)}
-            className="flex items-center justify-center rounded p-1 text-amber-800 transition-all duration-200 hover:bg-amber-200"
+            className="flex items-center justify-center rounded p-1 text-amber-800 transition-all duration-200 hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
           >
             <X className="h-[18px] w-[18px]" />
           </button>
@@ -152,7 +160,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
               </h3>
               <button
                 onClick={() => setSelectedAnnouncement(null)}
-                className="flex items-center justify-center rounded p-1 text-slate-500 hover:bg-slate-100"
+                className="flex items-center justify-center rounded p-1 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -166,7 +174,7 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setSelectedAnnouncement(null)}
-                className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-purple-700"
+                className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
               >
                 확인
               </button>
