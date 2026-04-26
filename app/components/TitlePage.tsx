@@ -523,7 +523,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
               className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
               style={{
-                background: `linear-gradient(to right, #667eea 0%, #667eea ${fontSizeProgress}%, #e5e7eb ${fontSizeProgress}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, rgb(var(--brand-primary)) 0%, rgb(var(--brand-primary)) ${fontSizeProgress}%, #e5e7eb ${fontSizeProgress}%, #e5e7eb 100%)`,
               }}
             />
           </div>
@@ -575,7 +575,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
               onChange={(e) => handleChange('letterSpacing', parseFloat(e.target.value))}
               className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
               style={{
-                background: `linear-gradient(to right, #667eea 0%, #667eea ${letterSpacingProgress}%, #e5e7eb ${letterSpacingProgress}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, rgb(var(--brand-primary)) 0%, rgb(var(--brand-primary)) ${letterSpacingProgress}%, #e5e7eb ${letterSpacingProgress}%, #e5e7eb 100%)`,
               }}
             />
           </div>

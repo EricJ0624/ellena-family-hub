@@ -644,7 +644,7 @@ export default function LoginPage() {
                 maxLength={20}
                 style={inputStyle}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
+                  e.target.style.borderColor = 'rgb(var(--brand-primary))';
                   e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
                 }}
                 onBlur={(e) => {
@@ -665,7 +665,7 @@ export default function LoginPage() {
               required
               style={inputStyle}
               onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
+                e.target.style.borderColor = 'rgb(var(--brand-primary))';
                 e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
                 if (!email && mode === 'login' && isMounted && lastEmailFromStorage) {
                   setEmail(lastEmailFromStorage);
@@ -695,7 +695,7 @@ export default function LoginPage() {
                 required
                 style={passwordInputStyle}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
+                  e.target.style.borderColor = 'rgb(var(--brand-primary))';
                   e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
                 }}
                 onBlur={(e) => {
@@ -713,7 +713,7 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={keepLoggedIn}
                 onChange={(e) => setKeepLoggedIn(e.target.checked)}
-                className="h-[18px] w-[18px] cursor-pointer accent-[#667eea]"
+                className="h-[18px] w-[18px] cursor-pointer accent-[rgb(var(--brand-primary))]"
               />
               <span>{t('keep_logged_in')}</span>
             </label>
@@ -730,7 +730,7 @@ export default function LoginPage() {
                 required
                 style={passwordInputStyle}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
+                  e.target.style.borderColor = 'rgb(var(--brand-primary))';
                   e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.2)';
                 }}
                 onBlur={(e) => {
