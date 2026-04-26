@@ -839,7 +839,7 @@ export function GroupAdminPanel({
   });
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
   const tabButtonClass = (tab: GroupAdminTabId) =>
-    `cursor-pointer border-b-[3px] border-x-0 border-t-0 bg-transparent px-6 py-3 text-base transition-all ${
+    `cursor-pointer border-b-[3px] border-x-0 border-t-0 bg-transparent px-6 py-3 text-base transition-all duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
       activeTab === tab
         ? 'border-b-blue-500 font-semibold text-blue-500'
         : 'border-b-transparent font-medium text-slate-500'
@@ -873,7 +873,7 @@ export function GroupAdminPanel({
               }
               router.push('/dashboard');
             }}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             <X className="h-4 w-4" />
             닫기

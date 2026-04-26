@@ -277,7 +277,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="rounded-lg p-2 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           aria-label={ct('close')}
         >
           <X className="w-5 h-5 text-gray-500" />
@@ -303,7 +303,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       setError(null);
                     }}
                     placeholder={gst('group_name_placeholder')}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                     disabled={saving}
                   />
                 </td>
@@ -321,7 +321,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                     onChange={(e) => setTitleStyle((prev) => ({ ...prev, content: e.target.value }))}
                     disabled={saving}
                     placeholder={gst('dashboard_title_placeholder')}
-                    className="w-full max-w-80 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800"
+                    className="w-full max-w-80 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                   />
                   <p className="mt-1.5 text-xs text-slate-500">
                     {gst('dashboard_title_hint')}
@@ -339,7 +339,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                     value={preferredLanguage}
                     onChange={(e) => setPreferredLanguage(e.target.value as LangCode)}
                     disabled={saving}
-                    className="min-w-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                    className="min-w-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                   >
                     <option value="ko">한국어</option>
                     <option value="en">English</option>
@@ -364,7 +364,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                     <div className="flex flex-col gap-1">
                       <button
                         onClick={handleCopyInviteCode}
-                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-blue-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-blue-700"
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-blue-600 px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         aria-label={gst('invite_copy_aria')}
                       >
                         {copied ? (
@@ -396,7 +396,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                     <div className="flex flex-col gap-1">
                       <button
                         onClick={handleCopyInviteLink}
-                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-emerald-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-emerald-700"
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-emerald-600 px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
                         aria-label={gst('invite_link_copy_aria')}
                       >
                         {copiedLink ? (
@@ -420,7 +420,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       <button
                         onClick={handleRefreshInviteCode}
                         disabled={refreshing}
-                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-violet-600 px-3 py-2 text-[13px] font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex cursor-pointer items-center gap-1.5 self-start rounded-lg border-none bg-violet-600 px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 disabled:cursor-not-allowed disabled:opacity-60"
                         aria-label={gst('invite_refresh_aria')}
                       >
                         {refreshing ? (
@@ -461,7 +461,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
         <div className="flex gap-3 pt-4 border-t border-gray-200">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
             disabled={saving}
           >
             취소
@@ -469,16 +469,16 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           <button
             onClick={handleSave}
             disabled={saving || !groupName.trim()}
-            className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-{gst('saving')}
-                        </>
-                      ) : (
-                        gst('save_btn')
-                      )}
+                {gst('saving')}
+              </>
+            ) : (
+              gst('save_btn')
+            )}
           </button>
         </div>
       </div>
