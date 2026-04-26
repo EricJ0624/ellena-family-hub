@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:inline-styles": "node scripts/check-inline-style-allowlist.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",

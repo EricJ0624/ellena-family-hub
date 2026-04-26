@@ -1,0 +1,12 @@
+{
+  "app/components/TitlePage.tsx": 4,
+  "app/features/family-chat/components/FamilyChatSection.tsx": 3,
+  "app/page.tsx": 2,
+  "app/modules/travel-planner/TravelPlannerContent.tsx": 1,
+  "app/memories/page.tsx": 2,
+  "app/features/family-calendar/components/FamilyCalendarSection.tsx": 1,
+  "app/dashboard/page.tsx": 2,
+  "app/admin/page.tsx": 1,
+  "app/components/AnnouncementBanner.tsx": 1
+}
+

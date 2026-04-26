@@ -9,6 +9,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          primary: "rgb(var(--brand-primary) / <alpha-value>)",
+          secondary: "rgb(var(--brand-secondary) / <alpha-value>)",
+          accent: "rgb(var(--brand-accent) / <alpha-value>)",
+        },
+        surface: {
+          base: "rgb(var(--surface-base) / <alpha-value>)",
+          elevated: "rgb(var(--surface-elevated) / <alpha-value>)",
+          muted: "rgb(var(--surface-muted) / <alpha-value>)",
+        },
         background: "rgb(var(--background) / <alpha-value>)",
         foreground: "rgb(var(--foreground) / <alpha-value>)",
         card: {
