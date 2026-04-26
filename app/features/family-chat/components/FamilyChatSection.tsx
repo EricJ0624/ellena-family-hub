@@ -224,13 +224,10 @@ export function FamilyChatSection({
         </div>
         <div
           ref={chatBubbleWrapRef}
+          className="relative shrink-0 -ml-1 -translate-y-[22px]"
           style={{
-            position: 'relative',
-            flexShrink: 0,
             width: FAMILY_CHAT_BUBBLE_LAYOUT.width,
             height: FAMILY_CHAT_BUBBLE_LAYOUT.height,
-            marginLeft: '-4px',
-            transform: 'translateY(-22px)',
           }}
         >
           <Image

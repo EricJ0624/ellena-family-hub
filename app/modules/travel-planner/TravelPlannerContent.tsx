@@ -3089,150 +3089,82 @@ export function TravelPlannerContent() {
               )}
             </div>
 
-            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div className="mt-5 overflow-hidden rounded-[10px] border border-slate-200">
               <button
                 type="button"
                 onClick={() => setSectionOpenTransport((v) => !v)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: '#f8fafc',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: '#475569',
-                }}
+                className="flex w-full cursor-pointer items-center justify-between border-0 bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-600"
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {sectionOpenTransport ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
-                  <Car style={{ width: 18, height: 18 }} />
+                <span className="flex items-center gap-2">
+                  {sectionOpenTransport ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
+                  <Car className="h-[18px] w-[18px]" />
                   {uiText.transportSection} ({transports.length})
                 </span>
               </button>
               {sectionOpenTransport && (
-                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 8 }}>
+                <div className="border-t border-slate-200 px-4 py-3">
+                  <div className="mb-3 flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => openTransportForm(null, 'air', false)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       + {tt('transport_type_air')}
                     </button>
                     <button
                       type="button"
                       onClick={() => openTransportForm(null, 'train', false)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       + {tt('transport_type_train')}
                     </button>
                     <button
                       type="button"
                       onClick={() => openTransportForm(null, 'car', false)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       + {tt('transport_type_car')}
                     </button>
                     <button
                       type="button"
                       onClick={() => openTransportForm(null, 'bike', false)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       + {tt('transport_type_bike')}
                     </button>
                   </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  <ul className="m-0 list-none p-0">
                     {transports.length === 0 ? (
-                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_transport')}</li>
+                      <li className="p-3 text-[13px] text-slate-400">{tt('no_transport')}</li>
                     ) : (
                       transports.map((t) => (
                         <li
                           key={t.id}
-                          style={{
-                            padding: '10px 12px',
-                            marginBottom: 6,
-                            background: '#f8fafc',
-                            borderRadius: 8,
-                            border: '1px solid #e2e8f0',
-                            fontSize: 14,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 8,
-                          }}
+                          className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
                         >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                              <span style={{ marginRight: 6 }}>{t.transport_type === 'air' ? '✈️' : t.transport_type === 'train' ? '🚆' : t.transport_type === 'car' ? '🚗' : '🚲'}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-800">
+                              <span className="mr-1.5">{t.transport_type === 'air' ? '✈️' : t.transport_type === 'train' ? '🚆' : t.transport_type === 'car' ? '🚗' : '🚲'}</span>
                               {t.departure || ''} → {t.arrival || ''}
                             </div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                            <div className="mt-1 text-xs text-slate-500">
                               {t.day_date}
-                              {(t.start_time || t.end_time) && <span style={{ marginLeft: 6 }}>· {(t.start_time || '--')} ~ {(t.end_time || '--')}</span>}
-                              {t.distance_km && <span style={{ marginLeft: 6 }}>· {t.distance_km}km</span>}
+                              {(t.start_time || t.end_time) && <span className="ml-1.5">· {(t.start_time || '--')} ~ {(t.end_time || '--')}</span>}
+                              {t.distance_km && <span className="ml-1.5">· {t.distance_km}km</span>}
                             </div>
-                            {t.memo && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{t.memo}</div>}
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(t.created_by)}{t.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(t.updated_by)}`}</div>
+                            {t.memo && <div className="mt-1 text-[13px] text-slate-600">{t.memo}</div>}
+                            <div className="mt-1 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(t.created_by)}{t.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(t.updated_by)}`}</div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                              <button type="button" onClick={() => openTransportForm(t)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
-                              <button type="button" onClick={() => handleDeleteTransport(t)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <div className="flex items-center gap-1">
+                              <button type="button" onClick={() => openTransportForm(t)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
+                              <button type="button" onClick={() => handleDeleteTransport(t)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                             </div>
                             {!t.show_in_itinerary && (
                               <button
                                 type="button"
                                 onClick={() => void handleAddToItinerary('transport', t.id)}
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  color: '#059669',
-                                  background: '#ecfdf5',
-                                  border: '1px solid #a7f3d0',
-                                  borderRadius: 6,
-                                  padding: '4px 8px',
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600"
                               >
                                 {tt('save_and_add_to_itinerary')}
                               </button>
@@ -3248,48 +3180,26 @@ export function TravelPlannerContent() {
             </div>
 
             {process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY && (
-              <div style={{ marginTop: 24 }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <MapPin style={{ width: 18, height: 18 }} />
+              <div className="mt-6">
+                <h3 className="m-0 mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
+                  <MapPin className="h-[18px] w-[18px]" />
                   {uiText.mapSectionTitle}
                 </h3>
                 {!showTravelMap ? (
                   <div
-                    style={{
-                      width: '100%',
-                      height: 320,
-                      borderRadius: 12,
-                      border: '1px solid #e2e8f0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundImage: 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      color: '#64748b',
-                      padding: 20,
-                    }}
+                    className="flex h-80 w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 bg-cover bg-center p-5 text-slate-500"
+                    style={{ backgroundImage: 'linear-gradient(rgba(248, 250, 252, 0.82), rgba(248, 250, 252, 0.82)), url(/images/map-placeholder-bg.png)' }}
                   >
-                    <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#475569' }}>
+                    <p className="mb-2 text-[15px] font-semibold text-slate-600">
                       📍 {tt('show_map_btn')}
                     </p>
-                    <p style={{ fontSize: 13, lineHeight: 1.5, textAlign: 'center', maxWidth: 320, marginBottom: 16 }}>
+                    <p className="mb-4 max-w-80 text-center text-[13px] leading-[1.5]">
                       {tt('map_placeholder_desc')}
                     </p>
                     <button
                       type="button"
                       onClick={() => setShowTravelMap(true)}
-                      style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 8,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
                     >
                       {tt('show_map_btn')}
                     </button>
@@ -3298,14 +3208,14 @@ export function TravelPlannerContent() {
                   <>
                     <div
                       id="travel-planner-map"
-                      style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid #e2e8f0', background: '#f1f5f9' }}
+                      className="h-80 w-full rounded-xl border border-slate-200 bg-slate-100"
                     />
-                    <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p className="mt-2 flex items-center gap-2 text-xs text-slate-400">
                       {tt('map_hint')}
                       <button
                         type="button"
                         onClick={() => setShowTravelMap(false)}
-                        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#94a3b8', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
+                        className="ml-auto cursor-pointer border-0 bg-transparent text-xs text-slate-400 underline"
                       >
                         {tt('hide_map_btn')}
                       </button>
@@ -3317,30 +3227,20 @@ export function TravelPlannerContent() {
 
           </div>
         ) : (
-          <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
             {loading && urlTripId ? (
-              <div style={{ color: '#64748b' }}>
-                <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+              <div className="text-slate-500">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
                 {tt('dashboard_trips_loading')}
               </div>
             ) : (
               <>
-                <MapPin style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.6, color: '#94a3b8' }} />
-                <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>{tt('select_or_add_trip')}</p>
+                <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-400 opacity-60" />
+                <p className="m-0 text-sm text-slate-500">{tt('select_or_add_trip')}</p>
                 <button
                   type="button"
                   onClick={() => router.push('/dashboard')}
-                  style={{
-                    marginTop: 16,
-                    padding: '10px 20px',
-                    backgroundColor: '#9333ea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="mt-4 cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
                 >
                   {uiText.goToDashboard}
                 </button>
@@ -3351,135 +3251,67 @@ export function TravelPlannerContent() {
 
       {showTripForm && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && router.push('/dashboard')}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{tt('add_trip')}</h3>
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{tt('add_trip')}</h3>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => router.push('/dashboard')}
-                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed"
               >
-                <X style={{ width: 20, height: 20 }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateTrip} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_title')}</label>
+            <form onSubmit={handleCreateTrip} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_title')}</label>
               <input
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 required
                 placeholder={tt('placeholder_trip_title')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_destination')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_destination')}</label>
               <input
                 value={formDestination}
                 onChange={(e) => setFormDestination(e.target.value)}
                 placeholder={tt('placeholder_destination')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_date')}</label>
-              <div style={{ overflow: 'hidden', borderRadius: 8, marginBottom: 12 }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_date')}</label>
+              <div className="mb-3 overflow-hidden rounded-lg">
                 <input
                   type="date"
                   value={formStartDate}
                   onChange={(e) => setFormStartDate(e.target.value)}
                   required
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    maxWidth: '100%',
-                    minWidth: 0,
-                    boxSizing: 'border-box',
-                    minHeight: 40,
-                    padding: '10px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 8,
-                    fontSize: 14,
-                  }}
+                  className="block box-border min-h-10 w-full min-w-0 max-w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_date')}</label>
-              <div style={{ overflow: 'hidden', borderRadius: 8, marginBottom: 20 }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_date')}</label>
+              <div className="mb-5 overflow-hidden rounded-lg">
                 <input
                   type="date"
                   value={formEndDate}
                   onChange={(e) => setFormEndDate(e.target.value)}
                   required
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    maxWidth: '100%',
-                    minWidth: 0,
-                    boxSizing: 'border-box',
-                    minHeight: 40,
-                    padding: '10px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 8,
-                    fontSize: 14,
-                  }}
+                  className="block box-border min-h-10 w-full min-w-0 max-w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                 />
               </div>
               {isTripAdmin && (
                 <>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_trip_currency')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_trip_currency')}</label>
                   <select
                     value={formTripCurrency}
                     onChange={(e) => setFormTripCurrency(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      marginBottom: 20,
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                    }}
+                    className="mb-5 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   >
                     {TRIP_CURRENCY_OPTIONS.map((c) => (
                       <option key={c} value={c}>
@@ -3489,42 +3321,25 @@ export function TravelPlannerContent() {
                   </select>
                 </>
               )}
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => router.push('/dashboard')}
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#f1f5f9',
-                    color: '#475569',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                  }}
+                  className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
+                    submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {tt('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#9333ea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${
+                    submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'
+                  }`}
                 >
-                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {tt('add')}
                 </button>
               </div>
@@ -3535,114 +3350,57 @@ export function TravelPlannerContent() {
 
       {showTripEditForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && setShowTripEditForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{tt('edit_trip')}</h3>
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{tt('edit_trip')}</h3>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => setShowTripEditForm(false)}
-                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed"
               >
-                <X style={{ width: 20, height: 20 }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleUpdateTrip} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_title')}</label>
+            <form onSubmit={handleUpdateTrip} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_title')}</label>
               <input
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 required
                 placeholder={tt('placeholder_trip_title')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_destination')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_destination')}</label>
               <input
                 value={formDestination}
                 onChange={(e) => setFormDestination(e.target.value)}
                 placeholder={tt('placeholder_destination')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_date')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_date')}</label>
               <input
                 type="date"
                 value={formStartDate}
                 onChange={(e) => setFormStartDate(e.target.value)}
                 required
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 block box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_date')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_date')}</label>
               <input
                 type="date"
                 value={formEndDate}
                 onChange={(e) => setFormEndDate(e.target.value)}
                 required
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 block box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_budget')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_budget')}</label>
               <input
                 type="number"
                 min={0}
@@ -3650,33 +3408,15 @@ export function TravelPlannerContent() {
                 value={formBudget}
                 onChange={(e) => setFormBudget(e.target.value)}
                 placeholder={tt('placeholder_budget')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
               {isTripAdmin && (
                 <>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_trip_currency')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_trip_currency')}</label>
                   <select
                     value={formTripCurrency}
                     onChange={(e) => setFormTripCurrency(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      marginBottom: 20,
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                    }}
+                    className="mb-5 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   >
                     {TRIP_CURRENCY_OPTIONS.map((c) => (
                       <option key={c} value={c}>
@@ -3686,42 +3426,25 @@ export function TravelPlannerContent() {
                   </select>
                 </>
               )}
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowTripEditForm(false)}
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#f1f5f9',
-                    color: '#475569',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                  }}
+                  className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
+                    submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {tt('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#9333ea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${
+                    submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'
+                  }`}
                 >
-                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {tt('save')}
                 </button>
               </div>
@@ -3732,37 +3455,18 @@ export function TravelPlannerContent() {
 
       {showScheduleAddTypePicker && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => setShowScheduleAddTypePicker(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 380,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[380px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{tt('schedule_add_type_prompt')}</h3>
-              <button type="button" onClick={() => setShowScheduleAddTypePicker(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X style={{ width: 20, height: 20 }} /></button>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{tt('schedule_add_type_prompt')}</h3>
+              <button type="button" onClick={() => setShowScheduleAddTypePicker(false)} className="cursor-pointer border-0 bg-transparent p-1 text-slate-500"><X className="h-5 w-5" /></button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -3770,7 +3474,7 @@ export function TravelPlannerContent() {
                   setAccommodationFormFromSchedule(true);
                   setShowAccommodationForm(true);
                 }}
-                style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm"
               >
                 🏨 {tt('add_accommodation')}
               </button>
@@ -3781,15 +3485,15 @@ export function TravelPlannerContent() {
                   setDiningFormFromSchedule(true);
                   setShowDiningForm(true);
                 }}
-                style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm"
               >
                 🍽️ {tt('add_dining')}
               </button>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'attraction'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🏛️ {tt('place_type_attraction')}</button>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_air'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>✈️ {tt('place_type_transport_air')}</button>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_car'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🚗 {tt('place_type_transport_car')}</button>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_bike'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>🚲 {tt('place_type_transport_bike')}</button>
-              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'other'); }} style={{ padding: '12px 16px', textAlign: 'left', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>📌 {tt('place_type_other')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'attraction'); }} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm">🏛️ {tt('place_type_attraction')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_air'); }} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm">✈️ {tt('place_type_transport_air')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_car'); }} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm">🚗 {tt('place_type_transport_car')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'transport_bike'); }} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm">🚲 {tt('place_type_transport_bike')}</button>
+              <button type="button" onClick={() => { setShowScheduleAddTypePicker(false); openItineraryForm(null, 'other'); }} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm">📌 {tt('place_type_other')}</button>
             </div>
           </div>
         </div>
@@ -3797,150 +3501,80 @@ export function TravelPlannerContent() {
 
       {showItineraryForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && setShowItineraryForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingItinerary ? tt('edit_itinerary') : tt('add_itinerary')}</h3>
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{editingItinerary ? tt('edit_itinerary') : tt('add_itinerary')}</h3>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => setShowItineraryForm(false)}
-                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed"
               >
-                <X style={{ width: 20, height: 20 }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={editingItinerary ? handleUpdateItinerary : handleCreateItinerary} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
-              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+            <form onSubmit={editingItinerary ? handleUpdateItinerary : handleCreateItinerary} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
                   type="date"
                   value={itineraryDayDate}
                   onChange={(e) => setItineraryDayDate(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: 40,
-                    padding: '10px 12px',
-                    border: 'none',
-                    fontSize: 14,
-                    outline: 'none',
-                  }}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
-              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_time')}</label>
-                  <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <div className="mb-3 flex gap-3">
+                <div className="flex-1">
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_time')}</label>
+                  <div className="overflow-hidden rounded-[10px] border border-slate-200">
                     <input
                       type="time"
                       value={itineraryStartTime}
                       onChange={(e) => setItineraryStartTime(e.target.value)}
-                      style={{
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        minHeight: 40,
-                        padding: '10px 12px',
-                        border: 'none',
-                        fontSize: 14,
-                        outline: 'none',
-                      }}
+                      className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                     />
                   </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_time')}</label>
-                  <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <div className="flex-1">
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_time')}</label>
+                  <div className="overflow-hidden rounded-[10px] border border-slate-200">
                     <input
                       type="time"
                       value={itineraryEndTime}
                       onChange={(e) => setItineraryEndTime(e.target.value)}
-                      style={{
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        minHeight: 40,
-                        padding: '10px 12px',
-                        border: 'none',
-                        fontSize: 14,
-                        outline: 'none',
-                      }}
+                      className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                     />
                   </div>
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_title')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_title')}</label>
               <input
                 value={itineraryTitle}
                 onChange={(e) => setItineraryTitle(e.target.value)}
                 required
                 placeholder={tt('placeholder_itinerary_title')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_description')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_description')}</label>
               <textarea
                 value={itineraryDescription}
                 onChange={(e) => setItineraryDescription(e.target.value)}
                 placeholder={tt('placeholder_optional')}
                 rows={3}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  resize: 'vertical',
-                }}
+                className="mb-3 w-full resize-y box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_place_type')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_place_type')}</label>
               <select
                 value={itineraryPlaceType}
                 onChange={(e) => setItineraryPlaceType(e.target.value as '' | 'attraction' | 'transport_air' | 'transport_car' | 'transport_bike' | 'other')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               >
                 <option value="attraction">{tt('place_type_attraction')} 🏛️</option>
                 <option value="transport_air">{tt('place_type_transport_air')} ✈️</option>
@@ -3948,84 +3582,67 @@ export function TravelPlannerContent() {
                 <option value="transport_bike">{tt('place_type_transport_bike')} 🚲</option>
                 <option value="other">{tt('place_type_other')} 📌</option>
               </select>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 ref={itineraryAddressInputRef}
                 value={itineraryAddress}
                 onChange={(e) => setItineraryAddress(e.target.value)}
                 placeholder={tt('placeholder_search_address')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 4, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                className="mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
               {itineraryPlaceName && (
-                <div style={{ marginBottom: 12 }}>
-                  <a href={`https://www.google.com/search?q=${encodeURIComponent(itineraryPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                <div className="mb-3">
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(itineraryPlaceName)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                     {tt('link_google_search')}
                   </a>
                 </div>
               )}
-              <details style={{ marginBottom: 20 }}>
-                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>{uiText.coordInputAdvanced}</summary>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
+              <details className="mb-5">
+                <summary className="cursor-pointer text-xs text-slate-500">{uiText.coordInputAdvanced}</summary>
+                <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
                   <input
                     type="number"
                     step="any"
                     value={itineraryLatitude}
                     onChange={(e) => setItineraryLatitude(e.target.value)}
                     placeholder={tt('placeholder_lat')}
-                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                    className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lng_map')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lng_map')}</label>
                   <input
                     type="number"
                     step="any"
                     value={itineraryLongitude}
                     onChange={(e) => setItineraryLongitude(e.target.value)}
                     placeholder={tt('placeholder_lng')}
-                    style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                    className="min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                   />
                 </div>
                 </div>
               </details>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowItineraryForm(false)}
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#f1f5f9',
-                    color: '#475569',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                  }}
+                  className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
+                    submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {tt('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#9333ea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${
+                    submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'
+                  }`}
                 >
-                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingItinerary ? tt('save') : tt('add')}
                 </button>
               </div>
@@ -4036,61 +3653,33 @@ export function TravelPlannerContent() {
 
       {showExpenseForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && setShowExpenseForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingExpense ? tt('edit_expense') : tt('add_expense')}</h3>
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{editingExpense ? tt('edit_expense') : tt('add_expense')}</h3>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => setShowExpenseForm(false)}
-                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed"
               >
-                <X style={{ width: 20, height: 20 }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_category')}</label>
+            <form onSubmit={editingExpense ? handleUpdateExpense : handleCreateExpense} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_category')}</label>
               <input
                 value={expenseCategory}
                 onChange={(e) => setExpenseCategory(e.target.value)}
                 placeholder={tt('placeholder_category')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{expenseAmountLabel}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{expenseAmountLabel}</label>
               <input
                 type="number"
                 min={0}
@@ -4098,87 +3687,44 @@ export function TravelPlannerContent() {
                 onChange={(e) => setExpenseAmount(e.target.value)}
                 required
                 placeholder="0"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
-              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
                   type="date"
                   value={expenseDate}
                   onChange={(e) => setExpenseDate(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: 40,
-                    padding: '10px 12px',
-                    border: 'none',
-                    fontSize: 14,
-                    outline: 'none',
-                  }}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_memo')}</label>
               <input
                 value={expenseMemo}
                 onChange={(e) => setExpenseMemo(e.target.value)}
                 placeholder={tt('placeholder_optional')}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 20,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
+                className="mb-5 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowExpenseForm(false)}
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#f1f5f9',
-                    color: '#475569',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                  }}
+                  className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
+                    submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'
+                  }`}
                 >
                   {tt('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    padding: '10px 18px',
-                    background: '#9333ea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${
+                    submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'
+                  }`}
                 >
-                  {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingExpense ? tt('save') : tt('add')}
                 </button>
               </div>
@@ -4189,40 +3735,21 @@ export function TravelPlannerContent() {
 
       {showAccommodationForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && setShowAccommodationForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingAccommodation ? tt('edit_accommodation') : tt('add_accommodation')}</h3>
-              <button type="button" disabled={submitting} onClick={() => setShowAccommodationForm(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X style={{ width: 20, height: 20 }} />
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{editingAccommodation ? tt('edit_accommodation') : tt('add_accommodation')}</h3>
+              <button type="button" disabled={submitting} onClick={() => setShowAccommodationForm(false)} className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed">
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form ref={accommodationFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAccommodation) handleUpdateAccommodation(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_acc_name')}</label>
+            <form ref={accommodationFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAccommodation) handleUpdateAccommodation(e); }} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_acc_name')}</label>
               <input
                 ref={accNameInputRef}
                 value={accName}
@@ -4240,9 +3767,9 @@ export function TravelPlannerContent() {
                 onBlur={scheduleAccNameBlurConfirm}
                 required
                 placeholder={tt('placeholder_acc_name')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                className="mb-2 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
                 <input
                   type="checkbox"
                   checked={accDirectInputMode}
@@ -4257,27 +3784,27 @@ export function TravelPlannerContent() {
                 />
                 {uiText.directInputMode}
               </label>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_checkin')}</label>
-              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_checkin')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
                   type="date"
                   value={accCheckIn}
                   onChange={(e) => setAccCheckIn(e.target.value)}
                   required
-                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_checkout')}</label>
-              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_checkout')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
                   type="date"
                   value={accCheckOut}
                   onChange={(e) => setAccCheckOut(e.target.value)}
                   required
-                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 value={accAddress}
                 readOnly={!accDirectInputMode}
@@ -4289,30 +3816,22 @@ export function TravelPlannerContent() {
                     ? tt('placeholder_search_address')
                     : uiText.placeFillHint
                 }
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 4,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
-                }}
+                className={`mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                  accDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                }`}
               />
               {accPlaceName && (
-                <div style={{ marginBottom: 12 }}>
-                  <a href={`https://www.google.com/search?q=${encodeURIComponent(accPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                <div className="mb-3">
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(accPlaceName)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                     {tt('link_google_search')}
                   </a>
                 </div>
               )}
-              <details style={{ marginBottom: 12 }}>
-                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>{uiText.coordInputAdvanced}</summary>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
+              <details className="mb-3">
+                <summary className="cursor-pointer text-xs text-slate-500">{uiText.coordInputAdvanced}</summary>
+                <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
                   <input
                     type="number"
                     step="any"
@@ -4322,20 +3841,13 @@ export function TravelPlannerContent() {
                       if (accDirectInputMode) setAccLatitude(e.target.value);
                     }}
                     placeholder={tt('placeholder_lat')}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
-                    }}
+                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                      accDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lng_map')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lng_map')}</label>
                   <input
                     type="number"
                     step="any"
@@ -4345,32 +3857,25 @@ export function TravelPlannerContent() {
                       if (accDirectInputMode) setAccLongitude(e.target.value);
                     }}
                     placeholder={tt('placeholder_lng')}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      backgroundColor: accDirectInputMode ? '#fff' : '#f8fafc',
-                    }}
+                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                      accDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                    }`}
                   />
                 </div>
                 </div>
               </details>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_memo')}</label>
               <input
                 value={accMemo}
                 onChange={(e) => setAccMemo(e.target.value)}
                 placeholder={tt('placeholder_optional')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                className="mb-5 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => setShowAccommodationForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>{tt('cancel')}</button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button type="button" onClick={() => setShowAccommodationForm(false)} disabled={submitting} className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'}`}>{tt('cancel')}</button>
                 {editingAccommodation ? (
-                  <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  <button type="submit" disabled={submitting} className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'}`}>
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {tt('save')}
                   </button>
                 ) : accommodationFormFromSchedule ? (
@@ -4381,19 +3886,19 @@ export function TravelPlannerContent() {
                       handleCreateAccommodation(e, true);
                       setAccommodationFormFromSchedule(false);
                     }}
-                    style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'}`}
                   >
-                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {tt('add')}
                   </button>
                 ) : (
                   <>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAccommodation(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAccommodation(e, false)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-slate-500 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_only')}
                     </button>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAccommodation(e, true)} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAccommodation(e, true)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-purple-600 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_and_add_to_itinerary')}
                     </button>
                   </>
@@ -4406,40 +3911,21 @@ export function TravelPlannerContent() {
 
       {showDiningForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: 16,
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && setShowDiningForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{editingDining ? tt('edit_dining') : tt('add_dining')}</h3>
-              <button type="button" disabled={submitting} onClick={() => setShowDiningForm(false)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X style={{ width: 20, height: 20 }} />
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{editingDining ? tt('edit_dining') : tt('add_dining')}</h3>
+              <button type="button" disabled={submitting} onClick={() => setShowDiningForm(false)} className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed">
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form ref={diningFormRef} onSubmit={(e) => { e.preventDefault(); if (editingDining) handleUpdateDining(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_name')}</label>
+            <form ref={diningFormRef} onSubmit={(e) => { e.preventDefault(); if (editingDining) handleUpdateDining(e); }} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_name')}</label>
               <input
                 ref={diningNameInputRef}
                 value={diningName}
@@ -4457,9 +3943,9 @@ export function TravelPlannerContent() {
                 onBlur={scheduleDiningNameBlurConfirm}
                 required
                 placeholder={tt('placeholder_dining_name')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                className="mb-2 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
                 <input
                   type="checkbox"
                   checked={diningDirectInputMode}
@@ -4474,33 +3960,33 @@ export function TravelPlannerContent() {
                 />
                 {uiText.directInputMode}
               </label>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
-              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
                   type="date"
                   value={diningDayDate}
                   onChange={(e) => setDiningDayDate(e.target.value)}
                   required
-                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_time')}</label>
-              <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_time')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
                 <input
                   type="time"
                   value={diningTime}
                   onChange={(e) => setDiningTime(e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', border: 'none', fontSize: 14, outline: 'none' }}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_dining_category')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_dining_category')}</label>
               <input
                 value={diningCategory}
                 onChange={(e) => setDiningCategory(e.target.value)}
                 placeholder={tt('placeholder_select')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 12, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                className="mb-3 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 value={diningAddress}
                 readOnly={!diningDirectInputMode}
@@ -4512,30 +3998,22 @@ export function TravelPlannerContent() {
                     ? tt('placeholder_search_address')
                     : uiText.placeFillHint
                 }
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: 40,
-                  padding: '10px 12px',
-                  marginBottom: 4,
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
-                }}
+                className={`mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                  diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                }`}
               />
               {diningPlaceName && (
-                <div style={{ marginBottom: 12 }}>
-                  <a href={`https://www.google.com/search?q=${encodeURIComponent(diningPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                <div className="mb-3">
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(diningPlaceName)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                     {tt('link_google_search')}
                   </a>
                 </div>
               )}
-              <details style={{ marginBottom: 12 }}>
-                <summary style={{ fontSize: 12, color: '#64748b', cursor: 'pointer' }}>{uiText.coordInputAdvanced}</summary>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
+              <details className="mb-3">
+                <summary className="cursor-pointer text-xs text-slate-500">{uiText.coordInputAdvanced}</summary>
+                <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lat_map')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
                   <input
                     type="number"
                     step="any"
@@ -4545,20 +4023,13 @@ export function TravelPlannerContent() {
                       if (diningDirectInputMode) setDiningLatitude(e.target.value);
                     }}
                     placeholder={tt('placeholder_lat')}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
-                    }}
+                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                      diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_lng_map')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lng_map')}</label>
                   <input
                     type="number"
                     step="any"
@@ -4568,32 +4039,25 @@ export function TravelPlannerContent() {
                       if (diningDirectInputMode) setDiningLongitude(e.target.value);
                     }}
                     placeholder={tt('placeholder_lng')}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      minHeight: 40,
-                      padding: '10px 12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      backgroundColor: diningDirectInputMode ? '#fff' : '#f8fafc',
-                    }}
+                    className={`min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
+                      diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                    }`}
                   />
                 </div>
                 </div>
               </details>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_memo')}</label>
               <input
                 value={diningMemo}
                 onChange={(e) => setDiningMemo(e.target.value)}
                 placeholder={tt('placeholder_optional')}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 40, padding: '10px 12px', marginBottom: 20, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }}
+                className="mb-5 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => setShowDiningForm(false)} disabled={submitting} style={{ padding: '10px 18px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}>{tt('cancel')}</button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button type="button" onClick={() => setShowDiningForm(false)} disabled={submitting} className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'}`}>{tt('cancel')}</button>
                 {editingDining ? (
-                  <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  <button type="submit" disabled={submitting} className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'}`}>
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {tt('save')}
                   </button>
                 ) : diningFormFromSchedule ? (
@@ -4604,19 +4068,19 @@ export function TravelPlannerContent() {
                       handleCreateDining(e, true);
                       setDiningFormFromSchedule(false);
                     }}
-                    style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'}`}
                   >
-                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {tt('add')}
                   </button>
                 ) : (
                   <>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateDining(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateDining(e, false)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-slate-500 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_only')}
                     </button>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateDining(e, true)} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateDining(e, true)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-purple-600 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_and_add_to_itinerary')}
                     </button>
                   </>
@@ -4629,44 +4093,25 @@ export function TravelPlannerContent() {
 
       {showAttractionForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '0 16px',
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 px-4"
           onClick={() => !submitting && setShowAttractionForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{uiText.attractionTitle(!!editingAttraction)}</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-bold text-slate-800">{uiText.attractionTitle(!!editingAttraction)}</h3>
               <button
                 type="button"
                 onClick={() => !submitting && setShowAttractionForm(false)}
-                style={{ background: 'none', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', padding: 4, color: '#64748b' }}
+                className={`border-0 bg-transparent p-1 text-slate-500 ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                <X style={{ width: 20, height: 20 }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form ref={attractionFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAttraction) handleUpdateAttraction(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_name')}</label>
+            <form ref={attractionFormRef} onSubmit={(e) => { e.preventDefault(); if (editingAttraction) handleUpdateAttraction(e); }} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_name')}</label>
               <input
                 type="text"
                 ref={attractionNameInputRef}
@@ -4685,10 +4130,10 @@ export function TravelPlannerContent() {
                 onBlur={scheduleAttractionNameBlurConfirm}
                 disabled={submitting}
                 placeholder={tt('placeholder_attraction_name')}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 8, boxSizing: 'border-box' }}
+                className="mb-2 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 required
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
                 <input
                   type="checkbox"
                   checked={attractionDirectInputMode}
@@ -4704,38 +4149,38 @@ export function TravelPlannerContent() {
                 />
                 {uiText.directInputMode}
               </label>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
               <input
                 type="date"
                 value={attractionDayDate}
                 onChange={(e) => setAttractionDayDate(e.target.value)}
                 disabled={submitting}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 required
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="mb-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_time')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_time')}</label>
                   <input
                     type="time"
                     value={attractionStartTime}
                     onChange={(e) => setAttractionStartTime(e.target.value)}
                     disabled={submitting}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    className="w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_time')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_time')}</label>
                   <input
                     type="time"
                     value={attractionEndTime}
                     onChange={(e) => setAttractionEndTime(e.target.value)}
                     disabled={submitting}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    className="w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                   />
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_address')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 type="text"
                 value={attractionAddress}
@@ -4747,47 +4192,40 @@ export function TravelPlannerContent() {
                 placeholder={
                   attractionDirectInputMode ? tt('placeholder_address') : uiText.placeFillHint
                 }
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  marginBottom: 4,
-                  boxSizing: 'border-box',
-                  backgroundColor: attractionDirectInputMode ? '#fff' : '#f8fafc',
-                }}
+                className={`mb-1 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm ${
+                  attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
+                }`}
               />
               {attractionPlaceName && (
-                <div style={{ marginBottom: 12 }}>
-                  <a href={`https://www.google.com/search?q=${encodeURIComponent(attractionPlaceName)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                <div className="mb-3">
+                  <a href={`https://www.google.com/search?q=${encodeURIComponent(attractionPlaceName)}`} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                     {tt('link_google_search')}
                   </a>
                 </div>
               )}
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_description')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_description')}</label>
               <textarea
                 value={attractionDescription}
                 onChange={(e) => setAttractionDescription(e.target.value)}
                 disabled={submitting}
                 placeholder={tt('placeholder_description')}
                 rows={3}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box', resize: 'vertical' }}
+                className="mb-3 w-full resize-y box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div className="flex justify-end gap-2">
                 {editingAttraction ? (
-                  <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  <button type="submit" disabled={submitting} className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'}`}>
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {tt('save')}
                   </button>
                 ) : (
                   <>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAttraction(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAttraction(e, false)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-slate-500 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_only')}
                     </button>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAttraction(e, true)} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateAttraction(e, true)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-purple-600 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_and_add_to_itinerary')}
                     </button>
                   </>
@@ -4800,87 +4238,68 @@ export function TravelPlannerContent() {
 
       {showTransportForm && selectedTrip && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '0 16px',
-            boxSizing: 'border-box',
-          }}
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 px-4"
           onClick={() => !submitting && setShowTransportForm(false)}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              padding: 24,
-              width: '90%',
-              maxWidth: 400,
-              minWidth: 0,
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
+            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{uiText.transportTitle(!!editingTransport)}</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-bold text-slate-800">{uiText.transportTitle(!!editingTransport)}</h3>
               <button
                 type="button"
                 onClick={() => !submitting && setShowTransportForm(false)}
-                style={{ background: 'none', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer', padding: 4, color: '#64748b' }}
+                className={`border-0 bg-transparent p-1 text-slate-500 ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                <X style={{ width: 20, height: 20 }} />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <form ref={transportFormRef} onSubmit={(e) => { e.preventDefault(); if (editingTransport) handleUpdateTransport(e); }} style={{ overflow: 'hidden', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_transport_type')}</label>
+            <form ref={transportFormRef} onSubmit={(e) => { e.preventDefault(); if (editingTransport) handleUpdateTransport(e); }} className="min-w-0 overflow-hidden">
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_transport_type')}</label>
               <select
                 value={transportType}
                 onChange={(e) => setTransportType(e.target.value as 'air' | 'train' | 'car' | 'bike')}
                 disabled={submitting}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               >
                 <option value="air">{tt('transport_type_air')}</option>
                 <option value="train">{tt('transport_type_train')}</option>
                 <option value="car">{tt('transport_type_car')}</option>
                 <option value="bike">{tt('transport_type_bike')}</option>
               </select>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_date')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
               <input
                 type="date"
                 value={transportDayDate}
                 onChange={(e) => setTransportDayDate(e.target.value)}
                 disabled={submitting}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 required
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="mb-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_start_time')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_time')}</label>
                   <input
                     type="time"
                     value={transportStartTime}
                     onChange={(e) => setTransportStartTime(e.target.value)}
                     disabled={submitting}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    className="w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_end_time')}</label>
+                  <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_time')}</label>
                   <input
                     type="time"
                     value={transportEndTime}
                     onChange={(e) => setTransportEndTime(e.target.value)}
                     disabled={submitting}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                    className="w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                   />
                 </div>
               </div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_departure')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_departure')}</label>
               <input
                 type="text"
                 ref={transportDepartureInputRef}
@@ -4891,9 +4310,9 @@ export function TravelPlannerContent() {
                 }}
                 disabled={submitting}
                 placeholder={tt('placeholder_departure')}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_arrival')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_arrival')}</label>
               <input
                 type="text"
                 ref={transportArrivalInputRef}
@@ -4904,9 +4323,9 @@ export function TravelPlannerContent() {
                 }}
                 disabled={submitting}
                 placeholder={tt('placeholder_arrival')}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+              <label className="mb-3 flex items-center gap-1.5 text-xs text-slate-500">
                 <input
                   type="checkbox"
                   checked={transportDirectInputMode}
@@ -4922,38 +4341,38 @@ export function TravelPlannerContent() {
                 />
                 {uiText.directInputMode}
               </label>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_distance_km')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_distance_km')}</label>
               <input
                 type="number"
                 value={transportDistanceKm}
                 onChange={(e) => setTransportDistanceKm(e.target.value)}
                 disabled={submitting}
                 placeholder={tt('placeholder_distance_km')}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box' }}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 4 }}>{tt('label_memo')}</label>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_memo')}</label>
               <textarea
                 value={transportMemo}
                 onChange={(e) => setTransportMemo(e.target.value)}
                 disabled={submitting}
                 placeholder={tt('placeholder_memo')}
                 rows={2}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, marginBottom: 12, boxSizing: 'border-box', resize: 'vertical' }}
+                className="mb-3 w-full resize-y box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <div className="flex justify-end gap-2">
                 {editingTransport ? (
-                  <button type="submit" disabled={submitting} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                  <button type="submit" disabled={submitting} className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'}`}>
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {tt('save')}
                   </button>
                 ) : (
                   <>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateTransport(e, false)} style={{ padding: '10px 18px', background: '#64748b', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateTransport(e, false)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-slate-500 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_only')}
                     </button>
-                    <button type="button" disabled={submitting} onClick={(e) => handleCreateTransport(e, true)} style={{ padding: '10px 18px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {submitting && <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />}
+                    <button type="button" disabled={submitting} onClick={(e) => handleCreateTransport(e, true)} className={`inline-flex items-center gap-1.5 rounded-lg border-0 bg-purple-600 px-[18px] py-2.5 text-sm font-semibold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       {tt('save_and_add_to_itinerary')}
                     </button>
                   </>

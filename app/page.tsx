@@ -571,26 +571,17 @@ export default function LoginPage() {
           </div>
           <h1
             ref={loginTitleRef}
+            className="mb-3 overflow-hidden whitespace-nowrap bg-[linear-gradient(135deg,#667eea_0%,#764ba2_100%)] text-ellipsis tracking-[-0.5px] [background-clip:text] [color:transparent] [text-fill-color:transparent] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent]"
             style={{
               fontSize: loginTitleFontSize != null ? `${loginTitleFontSize}px` : '48px',
               fontFamily: getFontStyle(lang, 'title').fontFamily,
               fontWeight: getFontStyle(lang, 'title').fontWeight,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '12px',
-              letterSpacing: '-0.5px'
             }}
           >
             <AppTitleContent title={ct('app_title')} />
           </h1>
           <p
             className="text-base font-medium leading-[1.6] text-slate-500"
-            style={{ fontFamily: getFontStyle(lang, 'body').fontFamily }}
           >
             {t('subtitle')}
           </p>

@@ -176,10 +176,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     src={selectedPhoto.data}
                     alt={tp('photo_alt_today_memory')}
                     fill
-                    style={{
-                      objectFit: imageAspectRatio !== null && imageAspectRatio >= 1 ? 'cover' : 'contain',
-                      boxShadow: '0 4px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05)',
-                    }}
+                    className={`${imageAspectRatio !== null && imageAspectRatio >= 1 ? 'object-cover' : 'object-contain'} shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]`}
                     unoptimized={true}
                     onLoad={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -466,12 +463,9 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
             value={localStyle.fontFamily || 'Inter'}
             onChange={(e) => handleChange('fontFamily', e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all appearance-none bg-white cursor-pointer"
-            style={{
-              fontFamily: localStyle.fontFamily || 'Inter',
-            }}
           >
             {fontFamilies.map((font) => (
-              <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
+              <option key={font.value} value={font.value}>
                 {tp(fontOptionKeys[font.value])}
               </option>
             ))}
@@ -490,11 +484,7 @@ const DesignEditor: React.FC<DesignEditorProps> = ({ titleStyle, onStyleChange, 
                 type="color"
                 value={localStyle.color}
                 onChange={(e) => handleChange('color', e.target.value)}
-                className="w-16 h-16 rounded-xl border-2 border-gray-200 cursor-pointer hover:scale-105 transition-transform"
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                }}
+                className="h-16 w-16 cursor-pointer rounded-xl border-2 border-gray-200 transition-transform hover:scale-105 [appearance:none] [-moz-appearance:none]"
               />
             </div>
             <input
@@ -700,12 +690,12 @@ const TitlePage: React.FC<TitlePageProps> = ({
   }, [editable]);
   
   return (
-    <div 
-      className="relative w-full min-h-[240px] md:min-h-[280px] flex flex-col items-center justify-center overflow-visible rounded-2xl mb-4"
-      style={{
-        background: noBackground ? 'transparent' : 'linear-gradient(to bottom right, #e0f2fe 0%, #e9d5ff 50%, #fce7f3 100%)',
-        paddingTop: '8px'
-      }}
+    <div
+      className={`relative mb-4 flex min-h-[240px] w-full flex-col items-center justify-center overflow-visible rounded-2xl pt-2 md:min-h-[280px] ${
+        noBackground
+          ? 'bg-transparent'
+          : 'bg-[linear-gradient(to_bottom_right,#e0f2fe_0%,#e9d5ff_50%,#fce7f3_100%)]'
+      }`}
     >
       {!noBackground && (
         <>
