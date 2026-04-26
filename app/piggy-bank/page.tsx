@@ -1045,15 +1045,15 @@ export default function PiggyBankPage() {
       {isAdmin && (
         <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
           <h2 className="m-0 text-lg">{pt('piggy_name_title')}</h2>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               value={piggyName}
               onChange={(e) => setPiggyName(e.target.value)}
-              className="flex-1 rounded-[10px] border border-slate-200 p-2.5"
+              className="w-full min-w-0 flex-1 rounded-[10px] border border-slate-200 p-2.5"
             />
             <button
               onClick={handleRename}
-              className="rounded-[10px] border-none bg-red-500 px-4 py-2.5 font-semibold text-white"
+              className="inline-flex w-full shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border-none bg-red-500 px-4 py-2.5 font-semibold text-white sm:w-auto"
             >
               {pt('rename_btn')}
             </button>
