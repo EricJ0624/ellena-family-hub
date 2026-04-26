@@ -20,6 +20,7 @@ import type { LangCode } from '@/lib/language-fonts';
 
 interface GroupSettingsProps {
   onClose: () => void;
+  forceAdminAccess?: boolean;
 }
 
 const DEFAULT_TITLE_STYLE: TitleStyle = {
@@ -46,7 +47,7 @@ function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
   return { ...DEFAULT_TITLE_STYLE, content: fallbackContent };
 }
 
-const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
+const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess = false }) => {
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
   const { lang } = useLanguage();
   const gst = (key: keyof GroupSettingsTranslations) => getGroupSettingsTranslation(lang, key);
@@ -100,7 +101,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose }) => {
 
   // ✅ SECURITY: 권한 계층 로직 - 그룹 내 실제 역할에만 의존
   // 시스템 관리자 여부와 무관하게 해당 그룹에서 소유자 또는 ADMIN 역할이어야 함
-  const isAdmin = userRole === 'ADMIN' || isOwner;
+  const isAdmin = forceAdminAccess || userRole === 'ADMIN' || isOwner;
 
   // currentGroup 변경 시 titleStyle 동기화 (문구·스타일 통합)
   useEffect(() => {

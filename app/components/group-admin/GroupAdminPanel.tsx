@@ -1107,7 +1107,10 @@ export function GroupAdminPanel({
             {/* ?�밸챶占????�쎌?????*/}
             {activeTab === 'settings' && (
               <div>
-                <GroupSettings onClose={() => setShowGroupSettings(false)} />
+                <GroupSettings
+                  onClose={() => setShowGroupSettings(false)}
+                  forceAdminAccess={isAuthorized}
+                />
               </div>
             )}
 
