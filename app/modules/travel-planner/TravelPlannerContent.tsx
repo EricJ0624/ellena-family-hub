@@ -2495,24 +2495,14 @@ export function TravelPlannerContent() {
 
   if (!currentGroupId) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#64748b' }}>
-          <MapPin style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.6 }} />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
+        <div className="text-center text-slate-500">
+          <MapPin className="mx-auto mb-4 h-12 w-12 opacity-60" />
           <p>{tt('select_group_first')}</p>
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
-            style={{
-              marginTop: 16,
-              padding: '10px 20px',
-              backgroundColor: '#9333ea',
-              color: 'white',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="mt-4 cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
           >
             {uiText.goToDashboard}
           </button>
@@ -2530,82 +2520,57 @@ export function TravelPlannerContent() {
   const expenseList = expenses.filter((e) => e.entry_type !== 'addition');
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: 20 }}>
-      <div ref={placesServiceContainerRef} style={{ position: 'absolute', left: -9999, width: 1, height: 1 }} aria-hidden="true" />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+    <div className="min-h-screen bg-slate-50 p-5">
+      <div ref={placesServiceContainerRef} className="absolute left-[-9999px] h-px w-px" aria-hidden="true" />
+      <div className="mb-6 flex items-center gap-3">
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
-          style={{
-            padding: 8,
-            background: '#fff',
-            border: '1px solid #e2e8f0',
-            borderRadius: 8,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white p-2"
         >
-          <ChevronLeft style={{ width: 20, height: 20, color: '#475569' }} />
+          <ChevronLeft className="h-5 w-5 text-slate-600" />
         </button>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>{tt('title')}</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>{currentGroup?.name ?? tt('group_label')}</p>
+          <h1 className="m-0 text-[22px] font-bold text-slate-800">{tt('title')}</h1>
+          <p className="m-0 mt-1 text-sm text-slate-500">{currentGroup?.name ?? tt('group_label')}</p>
         </div>
       </div>
 
       {error && (
-        <div style={{
-          padding: 12,
-          marginBottom: 16,
-          backgroundColor: '#fee2e2',
-          border: '1px solid #fecaca',
-          borderRadius: 8,
-          color: '#991b1b',
-        }}>
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-100 p-3 text-red-800">
           {error}
         </div>
       )}
 
       {selectedTrip ? (
-          <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+            <div className="mb-5">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{selectedTrip.title}</h2>
+                  <h2 className="m-0 text-[20px] font-bold text-slate-800">{selectedTrip.title}</h2>
                   {selectedTrip.destination && (
-                    <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <MapPin style={{ width: 16, height: 16 }} />
+                    <p className="m-0 mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                      <MapPin className="h-4 w-4" />
                       {selectedTrip.destination}
                     </p>
                   )}
-                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#94a3b8' }}>
-                    <Calendar style={{ width: 14, height: 14, display: 'inline', marginRight: 4 }} />
+                  <p className="m-0 mt-1 text-[13px] text-slate-400">
+                    <Calendar className="mr-1 inline h-[14px] w-[14px]" />
                     {selectedTrip.start_date} ~ {selectedTrip.end_date}
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
-                    {tt('label_trip_currency')}: <strong style={{ color: '#334155' }}>{tripCurrencyCode}</strong>
+                  <p className="m-0 mt-1 text-xs text-slate-500">
+                    {tt('label_trip_currency')}: <strong className="text-slate-700">{tripCurrencyCode}</strong>
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+                  <p className="m-0 mt-1 text-xs text-slate-400">
                     {uiText.createdLabel}: {getDisplayName(selectedTrip.created_by)}
                     {selectedTrip.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(selectedTrip.updated_by)}`}
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
                     onClick={() => setTravelAttachmentTarget({ entityType: 'travel_trip', entityId: selectedTrip.id })}
-                    style={{
-                      padding: '8px 12px',
-                      background: '#eff6ff',
-                      color: '#1d4ed8',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
+                    className="cursor-pointer rounded-lg border-0 bg-blue-50 px-3 py-2 text-[13px] font-semibold text-blue-700"
                   >
                     {uiText.photo}
                   </button>
@@ -2620,51 +2585,27 @@ export function TravelPlannerContent() {
                       setFormTripCurrency((selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW');
                       setShowTripEditForm(true);
                     }}
-                    style={{
-                      padding: '8px 12px',
-                      background: '#f1f5f9',
-                      color: '#475569',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-slate-100 px-3 py-2 text-[13px] font-semibold text-slate-600"
                   >
-                    <Pencil style={{ width: 16, height: 16 }} />
+                    <Pencil className="h-4 w-4" />
                     {tt('edit')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteTrip(selectedTrip)}
-                    style={{
-                      padding: '8px 12px',
-                      background: '#fee2e2',
-                      color: '#991b1b',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-red-100 px-3 py-2 text-[13px] font-semibold text-red-800"
                   >
-                    <Trash2 style={{ width: 16, height: 16 }} />
+                    <Trash2 className="h-4 w-4" />
                     {tt('delete')}
                   </button>
                 </div>
               </div>
 
             {travelAttachmentTarget && (
-              <div style={{ marginTop: 12, marginBottom: 12, padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <strong style={{ fontSize: 13, color: '#334155' }}>{uiText.attachmentPhotos}</strong>
-                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} style={{ border: 'none', background: '#e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>{uiText.close}</button>
+              <div className="my-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <strong className="text-[13px] text-slate-700">{uiText.attachmentPhotos}</strong>
+                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} className="cursor-pointer rounded-md border-0 bg-slate-200 px-2 py-1">{uiText.close}</button>
                 </div>
                 <input
                   ref={travelAttachmentInputRef}
@@ -2672,22 +2613,22 @@ export function TravelPlannerContent() {
                   accept="image/jpeg,image/png,image/webp,image/heic"
                   capture="environment"
                   onChange={handlePickTravelAttachment}
-                  style={{ display: 'none' }}
+                  className="hidden"
                 />
                 <button
                   type="button"
                   onClick={() => travelAttachmentInputRef.current?.click()}
                   disabled={travelAttachmentUploading}
-                  style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                  className="cursor-pointer rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold"
                 >
                   {travelAttachmentUploading ? uiText.uploading : uiText.addPhoto}
                 </button>
-                <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{uiText.autoOptimizedUpload}</span>
+                <span className="ml-2 text-xs text-slate-500">{uiText.autoOptimizedUpload}</span>
                 {travelAttachmentUploading && (
                   <button
                     type="button"
                     onClick={() => travelAttachmentAbortRef.current?.abort()}
-                    style={{ marginLeft: 8, padding: '6px 10px', borderRadius: 6, border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                    className="ml-2 cursor-pointer rounded-md border-0 bg-red-100 px-2.5 py-1.5 text-xs font-semibold text-red-700"
                   >
                     {tt('cancel')}
                   </button>
@@ -2696,24 +2637,24 @@ export function TravelPlannerContent() {
                   value={travelAttachmentFilter}
                   onChange={(e) => setTravelAttachmentFilter(e.target.value)}
                   placeholder={uiText.filenameFilter}
-                  style={{ marginLeft: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid #cbd5e1', minWidth: 120 }}
+                  className="ml-2 min-w-[120px] rounded-md border border-slate-300 px-2 py-1.5"
                 />
                 {travelAttachmentJobs.length > 0 && (
-                  <div style={{ marginTop: 8, display: 'grid', gap: 4, width: '100%' }}>
+                  <div className="mt-2 grid w-full gap-1">
                     {travelAttachmentJobs.map((job) => (
-                      <div key={job.id} style={{ fontSize: 12, color: '#475569' }}>
+                      <div key={job.id} className="text-xs text-slate-600">
                         {job.fileName} · {job.status}{job.status === 'uploading' ? ` ${Math.round(job.progress)}%` : ''}
                       </div>
                     ))}
                   </div>
                 )}
-                <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+                <div className="mt-2 grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2">
                   {travelAttachments
                     .filter((att) => !travelAttachmentFilter || att.original_filename.toLowerCase().includes(travelAttachmentFilter.toLowerCase()))
                     .map((att) => (
-                    <div key={att.id} style={{ position: 'relative' }}>
+                    <div key={att.id} className="relative">
                       <a href={att.image_url} target="_blank" rel="noopener noreferrer">
-                        <img src={att.thumbnail_url || att.image_url} alt={att.original_filename} style={{ width: '100%', height: 78, objectFit: 'cover', borderRadius: 6 }} />
+                        <img src={att.thumbnail_url || att.image_url} alt={att.original_filename} className="h-[78px] w-full rounded-md object-cover" />
                       </a>
                       <button
                         type="button"
@@ -2730,7 +2671,7 @@ export function TravelPlannerContent() {
                             }
                           })();
                         }}
-                        style={{ position: 'absolute', top: 4, right: 4, border: 'none', borderRadius: '999px', width: 18, height: 18, background: 'rgba(239,68,68,0.95)', color: '#fff', cursor: 'pointer' }}
+                        className="absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-0 bg-[rgba(239,68,68,0.95)] text-white"
                       >
                         x
                       </button>
@@ -2740,95 +2681,77 @@ export function TravelPlannerContent() {
               </div>
             )}
 
-            <div style={{ marginTop: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Wallet style={{ width: 18, height: 18 }} />
+            <div className="mt-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="m-0 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
+                  <Wallet className="h-[18px] w-[18px]" />
                   {uiText.expenseSection}
                 </h3>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => openExpenseForm(null, 'addition')}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#16a34a',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
+                    className="cursor-pointer rounded-md border-0 bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
                     {uiText.addBudget}
                   </button>
                   <button
                     type="button"
                     onClick={() => openExpenseForm(null, 'expense')}
-                    style={{
-                      padding: '6px 10px',
-                      background: '#dc2626',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
+                    className="cursor-pointer rounded-md border-0 bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
                     {uiText.addExpense}
                   </button>
                 </div>
                 </div>
-                <div style={{ marginBottom: 8, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 15, color: '#64748b' }}>
+                <div className="mb-2 flex flex-wrap items-center gap-4">
+                  <span className="text-[15px] text-slate-500">
                     {tt('total_budget')}{' '}
-                    <strong style={{ color: '#1e293b' }}>{fmtTripMoney(totalBudget)}</strong>
+                    <strong className="text-slate-800">{fmtTripMoney(totalBudget)}</strong>
                   </span>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: balance >= 0 ? '#9333ea' : '#dc2626' }}>
+                  <span className={`text-lg font-bold ${balance >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
                     {uiText.balance} {fmtTripMoney(balance)}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>{tt('add_list')}</div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: 16 }}>
+                <div className="mb-1.5 text-[13px] font-semibold text-slate-600">{tt('add_list')}</div>
+                <ul className="mb-4 m-0 list-none p-0">
                   {additionList.length === 0 ? (
-                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>{tt('no_additions')}</li>
+                    <li className="rounded-md bg-slate-50 p-2.5 text-[13px] text-slate-400">{tt('no_additions')}</li>
                   ) : (
                     additionList.map((e) => (
-                      <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#f0fdf4', borderRadius: 6, border: '1px solid #bbf7d0', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                      <li key={e.id} className="mb-1 flex items-start justify-between gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-[13px]">
+                        <div className="min-w-0 flex-1">
                           <span>{e.category || tt('addition')}</span>
-                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#15803d' }}>+{fmtTripMoney(Number(e.amount))}</span>
-                          {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
+                          <span className="ml-2 font-semibold text-green-700">+{fmtTripMoney(Number(e.amount))}</span>
+                          {e.expense_date && <span className="ml-2 text-xs text-slate-500">{e.expense_date}</span>}
+                          <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title={uiText.photo}>📷</button>
-                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
-                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                        <div className="flex shrink-0 gap-1">
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={uiText.photo}>📷</button>
+                          <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
+                          <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                         </div>
                       </li>
                     ))
                   )}
                 </ul>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>{tt('expense_list')}</div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <div className="mb-1.5 text-[13px] font-semibold text-slate-600">{tt('expense_list')}</div>
+                <ul className="m-0 list-none p-0">
                   {expenseList.length === 0 ? (
-                    <li style={{ padding: 10, color: '#94a3b8', fontSize: 13, background: '#f8fafc', borderRadius: 6 }}>{tt('no_expenses')}</li>
+                    <li className="rounded-md bg-slate-50 p-2.5 text-[13px] text-slate-400">{tt('no_expenses')}</li>
                   ) : (
                     expenseList.map((e) => (
-                      <li key={e.id} style={{ padding: '8px 12px', marginBottom: 4, background: '#fef2f2', borderRadius: 6, border: '1px solid #fecaca', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                      <li key={e.id} className="mb-1 flex items-start justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px]">
+                        <div className="min-w-0 flex-1">
                           <span>{e.category || tt('other')}</span>
-                          <span style={{ fontWeight: 600, marginLeft: 8, color: '#b91c1c' }}>-{fmtTripMoney(Number(e.amount))}</span>
-                          {e.expense_date && <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>{e.expense_date}</span>}
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
+                          <span className="ml-2 font-semibold text-red-700">-{fmtTripMoney(Number(e.amount))}</span>
+                          {e.expense_date && <span className="ml-2 text-xs text-slate-500">{e.expense_date}</span>}
+                          <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#1d4ed8' }} title={uiText.photo}>📷</button>
-                          <button type="button" onClick={() => openExpenseForm(e)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
-                          <button type="button" onClick={() => handleDeleteExpense(e)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                        <div className="flex shrink-0 gap-1">
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={uiText.photo}>📷</button>
+                          <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
+                          <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                         </div>
                       </li>
                     ))
@@ -2836,53 +2759,42 @@ export function TravelPlannerContent() {
                 </ul>
             </div>
 
-            <div style={{ marginTop: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <ListOrdered style={{ width: 18, height: 18 }} />
+            <div className="mt-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="m-0 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
+                  <ListOrdered className="h-[18px] w-[18px]" />
                   {uiText.itinerarySection}
                 </h3>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={downloadItineraryPdf}
-                    style={{ padding: '6px 10px', background: '#10b981', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                    className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-emerald-500 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
-                    <FileDown style={{ width: 14, height: 14 }} />
+                    <FileDown className="h-[14px] w-[14px]" />
                     {tt('view_itinerary_pdf')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowScheduleAddTypePicker(true)}
-                    style={{ padding: '6px 10px', background: '#9333ea', color: 'white', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
                     + {tt('add_itinerary')}
                   </button>
                 </div>
               </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              <ul className="m-0 list-none p-0">
                 {sortedItineraries.length === 0 ? (
-                  <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_itinerary')}</li>
+                  <li className="p-3 text-[13px] text-slate-400">{tt('no_itinerary')}</li>
                 ) : (
                   sortedItineraries.map((i) => (
                     <li
                       key={i.id}
-                      style={{
-                        padding: '10px 12px',
-                        marginBottom: 6,
-                        background: '#f8fafc',
-                        borderRadius: 8,
-                        border: '1px solid #e2e8f0',
-                        fontSize: 14,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: 8,
-                      }}
+                      className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                          <span style={{ marginRight: 6 }}>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-800">
+                          <span className="mr-1.5">
                             {i.type === 'accommodation' ? '🏨' : 
                              i.type === 'dining' ? '🍽️' : 
                              i.type === 'attraction' ? '🏛️' : 
@@ -2895,44 +2807,44 @@ export function TravelPlannerContent() {
                           </span>
                           {shortItineraryTitle(i.type, i.title, i.address)}
                         </div>
-                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                        <div className="mt-1 text-xs text-slate-500">
                           {i.day_date}
-                          {(i.start_time || i.end_time) && <span style={{ marginLeft: 6 }}>· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
+                          {(i.start_time || i.end_time) && <span className="ml-1.5">· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
                         </div>
-                        {i.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{i.description}</div>}
+                        {i.description && <div className="mt-1 text-[13px] text-slate-600">{i.description}</div>}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <div className="flex items-center gap-1">
                           {getGoogleMapsUrl(i) && (
                             <a
                               href={getGoogleMapsUrl(i)!}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                              className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline"
                               title={tt('view_on_map')}
                             >
-                              <MapPin style={{ width: 14, height: 14 }} />
+                              <MapPin className="h-[14px] w-[14px]" />
                             </a>
                           )}
                           <button
                             type="button"
                             onClick={() => handleEditFromItinerary(i)}
-                            style={{ padding: 6, background: '#e0f2fe', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#0369a1' }}
+                            className="cursor-pointer rounded-md border-0 bg-sky-100 p-1.5 text-sky-700"
                             title={tt('edit_itinerary')}
                           >
-                            <Pencil style={{ width: 14, height: 14 }} />
+                            <Pencil className="h-[14px] w-[14px]" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveFromItinerary(i)}
-                            style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }}
+                            className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800"
                             title={tt('remove_from_itinerary')}
                           >
-                            <Trash2 style={{ width: 14, height: 14 }} />
+                            <Trash2 className="h-[14px] w-[14px]" />
                           </button>
                         </div>
                         {buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address)) && (
-                          <a href={buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address))!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                          <a href={buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address))!} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                             {tt('link_google_search')}
                           </a>
                         )}
@@ -2943,92 +2855,60 @@ export function TravelPlannerContent() {
               </ul>
             </div>
 
-            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div className="mt-5 overflow-hidden rounded-[10px] border border-slate-200">
               <button
                 type="button"
                 onClick={() => setSectionOpenAttraction((v) => !v)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: '#f8fafc',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: '#475569',
-                }}
+                className="flex w-full cursor-pointer items-center justify-between border-0 bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-600"
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {sectionOpenAttraction ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
-                  <Landmark style={{ width: 18, height: 18 }} />
+                <span className="flex items-center gap-2">
+                  {sectionOpenAttraction ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
+                  <Landmark className="h-[18px] w-[18px]" />
                   {tt('section_attraction')} ({attractions.length})
                 </span>
               </button>
               {sectionOpenAttraction && (
-                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <div className="border-t border-slate-200 px-4 py-3">
+                  <div className="mb-3 flex justify-end">
                     <button
                       type="button"
                       onClick={() => openAttractionForm(null, false)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       + {tt('add_attraction')}
                     </button>
                   </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  <ul className="m-0 list-none p-0">
                     {attractions.length === 0 ? (
-                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_attraction')}</li>
+                      <li className="p-3 text-[13px] text-slate-400">{tt('no_attraction')}</li>
                     ) : (
                       attractions.map((a) => (
                         <li
                           key={a.id}
-                          style={{
-                            padding: '10px 12px',
-                            marginBottom: 6,
-                            background: '#f8fafc',
-                            borderRadius: 8,
-                            border: '1px solid #e2e8f0',
-                            fontSize: 14,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 8,
-                          }}
+                          className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
                         >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, color: '#1e293b' }}>
-                              <span style={{ marginRight: 6 }}>🏛️</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-800">
+                              <span className="mr-1.5">🏛️</span>
                               {a.name}
                             </div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                            <div className="mt-1 text-xs text-slate-500">
                               {a.day_date}
-                              {(a.start_time || a.end_time) && <span style={{ marginLeft: 6 }}>· {(a.start_time || '--')} ~ {(a.end_time || '--')}</span>}
+                              {(a.start_time || a.end_time) && <span className="ml-1.5">· {(a.start_time || '--')} ~ {(a.end_time || '--')}</span>}
                             </div>
-                            {a.description && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.description}</div>}
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{tt('registered_by')}: {getDisplayName(a.created_by)}{a.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(a.updated_by)}`}</div>
+                            {a.description && <div className="mt-1 text-[13px] text-slate-600">{a.description}</div>}
+                            <div className="mt-1 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(a.created_by)}{a.updated_by != null && ` · ${tt('updated_by')}: ${getDisplayName(a.updated_by)}`}</div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <div className="flex items-center gap-1">
                               {getGoogleMapsUrl(a) && (
-                                <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}><MapPin style={{ width: 14, height: 14 }} /></a>
+                                <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline" title={tt('view_on_map')}><MapPin className="h-[14px] w-[14px]" /></a>
                               )}
-                              <button type="button" onClick={() => openAttractionForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}><Pencil style={{ width: 14, height: 14 }} /></button>
-                              <button type="button" onClick={() => handleDeleteAttraction(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}><Trash2 style={{ width: 14, height: 14 }} /></button>
+                              <button type="button" onClick={() => openAttractionForm(a)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
+                              <button type="button" onClick={() => handleDeleteAttraction(a)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                             </div>
                             {buildGoogleWebSearchUrl(a.name) && (
-                              <a href={buildGoogleWebSearchUrl(a.name)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                              <a href={buildGoogleWebSearchUrl(a.name)!} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                                 {tt('link_google_search')}
                               </a>
                             )}
@@ -3036,16 +2916,7 @@ export function TravelPlannerContent() {
                               <button
                                 type="button"
                                 onClick={() => void handleAddToItinerary('attraction', a.id)}
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  color: '#059669',
-                                  background: '#ecfdf5',
-                                  border: '1px solid #a7f3d0',
-                                  borderRadius: 6,
-                                  padding: '4px 8px',
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600"
                               >
                                 {tt('save_and_add_to_itinerary')}
                               </button>
@@ -3059,98 +2930,66 @@ export function TravelPlannerContent() {
               )}
             </div>
 
-            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div className="mt-5 overflow-hidden rounded-[10px] border border-slate-200">
               <button
                 type="button"
                 onClick={() => setSectionOpenDining((v) => !v)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: '#f8fafc',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: '#475569',
-                }}
+                className="flex w-full cursor-pointer items-center justify-between border-0 bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-600"
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {sectionOpenDining ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
-                  <UtensilsCrossed style={{ width: 18, height: 18 }} />
+                <span className="flex items-center gap-2">
+                  {sectionOpenDining ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
+                  <UtensilsCrossed className="h-[18px] w-[18px]" />
                   {uiText.diningSection} ({dining.length})
                 </span>
               </button>
               {sectionOpenDining && (
-                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <div className="border-t border-slate-200 px-4 py-3">
+                  <div className="mb-3 flex justify-end">
                     <button
                       type="button"
                       onClick={() => openDiningForm(null)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       {uiText.addDining}
                     </button>
                   </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  <ul className="m-0 list-none p-0">
                     {dining.length === 0 ? (
-                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_dining')}</li>
+                      <li className="p-3 text-[13px] text-slate-400">{tt('no_dining')}</li>
                     ) : (
                       dining.map((d) => (
                         <li
                           key={d.id}
-                          style={{
-                            padding: '10px 12px',
-                            marginBottom: 6,
-                            background: '#f8fafc',
-                            borderRadius: 8,
-                            border: '1px solid #e2e8f0',
-                            fontSize: 14,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 8,
-                          }}
+                          className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
                         >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{d.name}</div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-800">{d.name}</div>
+                            <div className="mt-1 text-xs text-slate-500">
                               {d.day_date}
-                              {d.time_at && <span style={{ marginLeft: 6 }}>{d.time_at}</span>}
-                              {d.category && <span style={{ marginLeft: 6, color: '#64748b' }}>{d.category}</span>}
+                              {d.time_at && <span className="ml-1.5">{d.time_at}</span>}
+                              {d.category && <span className="ml-1.5 text-slate-500">{d.category}</span>}
                             </div>
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                            <div className="mt-1 text-[11px] text-slate-400">
                               {uiText.createdLabel}: {getDisplayName(d.created_by)}
                               {d.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(d.updated_by)}`}
                             </div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <div className="flex items-center gap-1">
                               {getGoogleMapsUrl(d) && (
-                                <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
-                                  <MapPin style={{ width: 14, height: 14 }} />
+                                <a href={getGoogleMapsUrl(d)!} target="_blank" rel="noopener noreferrer" className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline" title={tt('view_on_map')}>
+                                  <MapPin className="h-[14px] w-[14px]" />
                                 </a>
                               )}
-                              <button type="button" onClick={() => openDiningForm(d)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
-                                <Pencil style={{ width: 14, height: 14 }} />
+                              <button type="button" onClick={() => openDiningForm(d)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}>
+                                <Pencil className="h-[14px] w-[14px]" />
                               </button>
-                              <button type="button" onClick={() => handleDeleteDining(d)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
-                                <Trash2 style={{ width: 14, height: 14 }} />
+                              <button type="button" onClick={() => handleDeleteDining(d)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}>
+                                <Trash2 className="h-[14px] w-[14px]" />
                               </button>
                             </div>
                             {buildGoogleWebSearchUrl(d.name) && (
-                              <a href={buildGoogleWebSearchUrl(d.name)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                              <a href={buildGoogleWebSearchUrl(d.name)!} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                                 {tt('link_google_search')}
                               </a>
                             )}
@@ -3158,16 +2997,7 @@ export function TravelPlannerContent() {
                               <button
                                 type="button"
                                 onClick={() => void handleAddToItinerary('dining', d.id)}
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  color: '#059669',
-                                  background: '#ecfdf5',
-                                  border: '1px solid #a7f3d0',
-                                  borderRadius: 6,
-                                  padding: '4px 8px',
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600"
                               >
                                 {tt('save_and_add_to_itinerary')}
                               </button>
@@ -3181,95 +3011,63 @@ export function TravelPlannerContent() {
               )}
             </div>
 
-            <div style={{ marginTop: 20, border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div className="mt-5 overflow-hidden rounded-[10px] border border-slate-200">
               <button
                 type="button"
                 onClick={() => setSectionOpenAccommodation((v) => !v)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: '#f8fafc',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: '#475569',
-                }}
+                className="flex w-full cursor-pointer items-center justify-between border-0 bg-slate-50 px-4 py-3 text-[15px] font-semibold text-slate-600"
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {sectionOpenAccommodation ? <ChevronDown style={{ width: 18, height: 18 }} /> : <ChevronRight style={{ width: 18, height: 18 }} />}
-                  <Home style={{ width: 18, height: 18 }} />
+                <span className="flex items-center gap-2">
+                  {sectionOpenAccommodation ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
+                  <Home className="h-[18px] w-[18px]" />
                   {uiText.accommodationSection} ({accommodations.length})
                 </span>
               </button>
               {sectionOpenAccommodation && (
-                <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <div className="border-t border-slate-200 px-4 py-3">
+                  <div className="mb-3 flex justify-end">
                     <button
                       type="button"
                       onClick={() => openAccommodationForm(null)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#9333ea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
                       {uiText.addAccommodation}
                     </button>
                   </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  <ul className="m-0 list-none p-0">
                     {accommodations.length === 0 ? (
-                      <li style={{ padding: 12, color: '#94a3b8', fontSize: 13 }}>{tt('no_accommodation')}</li>
+                      <li className="p-3 text-[13px] text-slate-400">{tt('no_accommodation')}</li>
                     ) : (
                       accommodations.map((a) => (
                         <li
                           key={a.id}
-                          style={{
-                            padding: '10px 12px',
-                            marginBottom: 6,
-                            background: '#f8fafc',
-                            borderRadius: 8,
-                            border: '1px solid #e2e8f0',
-                            fontSize: 14,
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 8,
-                          }}
+                          className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
                         >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{a.name}</div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{a.check_in_date} ~ {a.check_out_date}</div>
-                            {a.address && <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>{a.address}</div>}
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-800">{a.name}</div>
+                            <div className="mt-1 text-xs text-slate-500">{a.check_in_date} ~ {a.check_out_date}</div>
+                            {a.address && <div className="mt-1 text-[13px] text-slate-600">{a.address}</div>}
+                            <div className="mt-1 text-[11px] text-slate-400">
                               {uiText.createdLabel}: {getDisplayName(a.created_by)}
                               {a.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(a.updated_by)}`}
                             </div>
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <div className="flex items-center gap-1">
                               {getGoogleMapsUrl(a) && (
-                                <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" style={{ padding: 6, background: '#eff6ff', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#2563eb', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} title={tt('view_on_map')}>
-                                  <MapPin style={{ width: 14, height: 14 }} />
+                                <a href={getGoogleMapsUrl(a)!} target="_blank" rel="noopener noreferrer" className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline" title={tt('view_on_map')}>
+                                  <MapPin className="h-[14px] w-[14px]" />
                                 </a>
                               )}
-                              <button type="button" onClick={() => openAccommodationForm(a)} style={{ padding: 6, background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569' }} title={tt('edit')}>
-                                <Pencil style={{ width: 14, height: 14 }} />
+                              <button type="button" onClick={() => openAccommodationForm(a)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}>
+                                <Pencil className="h-[14px] w-[14px]" />
                               </button>
-                              <button type="button" onClick={() => handleDeleteAccommodation(a)} style={{ padding: 6, background: '#fee2e2', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#991b1b' }} title={tt('delete')}>
-                                <Trash2 style={{ width: 14, height: 14 }} />
+                              <button type="button" onClick={() => handleDeleteAccommodation(a)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}>
+                                <Trash2 className="h-[14px] w-[14px]" />
                               </button>
                             </div>
                             {buildGoogleWebSearchUrl(a.name) && (
-                              <a href={buildGoogleWebSearchUrl(a.name)!} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#6366f1' }}>
+                              <a href={buildGoogleWebSearchUrl(a.name)!} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
                                 {tt('link_google_search')}
                               </a>
                             )}
@@ -3277,16 +3075,7 @@ export function TravelPlannerContent() {
                               <button
                                 type="button"
                                 onClick={() => void handleAddToItinerary('accommodation', a.id)}
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                  color: '#059669',
-                                  background: '#ecfdf5',
-                                  border: '1px solid #a7f3d0',
-                                  borderRadius: 6,
-                                  padding: '4px 8px',
-                                  cursor: 'pointer',
-                                }}
+                                className="cursor-pointer rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600"
                               >
                                 {tt('save_and_add_to_itinerary')}
                               </button>

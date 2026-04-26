@@ -1032,8 +1032,9 @@ export function GroupAdminPanel({
                 />
 
                 <h2
-                  className="mb-6 text-[20px] font-semibold text-slate-800"
-                  style={{ marginTop: announcements.filter(a => !a.is_read).length > 0 ? '24px' : '0' }}
+                  className={`mb-6 text-[20px] font-semibold text-slate-800 ${
+                    announcements.filter(a => !a.is_read).length > 0 ? 'mt-6' : 'mt-0'
+                  }`}
                 >
                   그룹 통계
                 </h2>
@@ -1232,13 +1233,11 @@ export function GroupAdminPanel({
                       key={announcement.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: announcement.is_read ? '#f8fafc' : '#fef3c7',
-                        borderRadius: '12px',
-                        border: `1px solid ${announcement.is_read ? '#e2e8f0' : '#fde68a'}`,
-                        cursor: 'pointer',
-                      }}
+                      className={`cursor-pointer rounded-xl border p-5 ${
+                        announcement.is_read
+                          ? 'border-slate-200 bg-slate-50'
+                          : 'border-amber-200 bg-amber-100'
+                      }`}
                       onClick={async () => {
                         if (announcement.is_read) return;
 
@@ -1338,12 +1337,11 @@ export function GroupAdminPanel({
                       key={ticket.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: ticket.status === 'pending' ? '#fef3c7' : '#f8fafc',
-                        borderRadius: '12px',
-                        border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
-                      }}
+                      className={`rounded-xl border p-5 ${
+                        ticket.status === 'pending'
+                          ? 'border-amber-200 bg-amber-100'
+                          : 'border-slate-200 bg-slate-50'
+                      }`}
                     >
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
@@ -1351,14 +1349,15 @@ export function GroupAdminPanel({
                             <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {ticket.title}
                             </h3>
-                            <span style={{
-                              padding: '4px 12px',
-                              backgroundColor: ticket.status === 'pending' ? '#fbbf24' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
-                              color: 'white',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                            }}>
+                            <span
+                              className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
+                                ticket.status === 'pending'
+                                  ? 'bg-amber-400'
+                                  : ticket.status === 'answered'
+                                  ? 'bg-emerald-500'
+                                  : 'bg-slate-400'
+                              }`}
+                            >
                               {ticket.status === "pending" ? gat('status_pending') : ticket.status === "answered" ? gat('status_answered') : gat('status_closed')}
                             </span>
                           </div>
@@ -1378,15 +1377,17 @@ export function GroupAdminPanel({
                           {parseMessageThread(ticket.message_thread).map((entry, idx) => (
                             <div
                               key={`${entry.created_at}-${idx}`}
-                              style={{
-                                marginTop: '12px',
-                                padding: '14px',
-                                backgroundColor: entry.role === 'group_admin' ? '#fffbeb' : '#f0f9ff',
-                                borderRadius: '8px',
-                                border: `1px solid ${entry.role === 'group_admin' ? '#fde68a' : '#bae6fd'}`,
-                              }}
+                              className={`mt-3 rounded-lg border p-3.5 ${
+                                entry.role === 'group_admin'
+                                  ? 'border-amber-200 bg-amber-50'
+                                  : 'border-sky-200 bg-sky-50'
+                              }`}
                             >
-                              <div className="mb-1.5 text-xs font-semibold" style={{ color: entry.role === 'group_admin' ? '#b45309' : '#0369a1' }}>
+                              <div
+                                className={`mb-1.5 text-xs font-semibold ${
+                                  entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'
+                                }`}
+                              >
                                 {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
@@ -1673,12 +1674,11 @@ export function GroupAdminPanel({
                       key={ticket.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: ticket.status === 'pending' ? '#fef3c7' : '#f8fafc',
-                        borderRadius: '12px',
-                        border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
-                      }}
+                      className={`rounded-xl border p-5 ${
+                        ticket.status === 'pending'
+                          ? 'border-amber-200 bg-amber-100'
+                          : 'border-slate-200 bg-slate-50'
+                      }`}
                     >
                       <div className="mb-3 flex items-start justify-between">
                         <div className="flex-1">
@@ -1686,14 +1686,15 @@ export function GroupAdminPanel({
                             <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {ticket.title}
                             </h3>
-                            <span style={{
-                              padding: '4px 12px',
-                              backgroundColor: ticket.status === 'pending' ? '#fbbf24' : ticket.status === 'answered' ? '#10b981' : '#94a3b8',
-                              color: 'white',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                            }}>
+                            <span
+                              className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
+                                ticket.status === 'pending'
+                                  ? 'bg-amber-400'
+                                  : ticket.status === 'answered'
+                                  ? 'bg-emerald-500'
+                                  : 'bg-slate-400'
+                              }`}
+                            >
                               {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '종료'}
                             </span>
                           </div>
@@ -1713,15 +1714,17 @@ export function GroupAdminPanel({
                           {parseMemberSupportMessageThread(ticket.message_thread).map((entry, idx) => (
                             <div
                               key={`mst-${entry.created_at}-${idx}`}
-                              style={{
-                                marginTop: '12px',
-                                padding: '14px',
-                                backgroundColor: entry.role === 'member' ? '#fffbeb' : '#f0f9ff',
-                                borderRadius: '8px',
-                                border: `1px solid ${entry.role === 'member' ? '#fde68a' : '#bae6fd'}`,
-                              }}
+                              className={`mt-3 rounded-lg border p-3.5 ${
+                                entry.role === 'member'
+                                  ? 'border-amber-200 bg-amber-50'
+                                  : 'border-sky-200 bg-sky-50'
+                              }`}
                             >
-                              <div className="mb-1.5 text-xs font-semibold" style={{ color: entry.role === 'member' ? '#b45309' : '#0369a1' }}>
+                              <div
+                                className={`mb-1.5 text-xs font-semibold ${
+                                  entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
+                                }`}
+                              >
                                 {entry.role === 'member' ? '추가 문의' : '답변'}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
@@ -1780,51 +1783,36 @@ export function GroupAdminPanel({
 
                 {editingMemberTicket && (
                   <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 1000,
-                    }}
+                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                     onClick={() => setEditingMemberTicket(null)}
                   >
                     <div
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '12px',
-                        padding: '24px',
-                        width: '90%',
-                        maxWidth: '600px',
-                        maxHeight: '80vh',
-                        overflow: 'auto',
-                      }}
+                      className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>
+                      <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
                         답변 작성
                       </h3>
                       {editingMemberTicket && (
-                        <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '13px', color: '#475569' }}>
-                          <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>{editingMemberTicket.title}</div>
-                          <div style={{ whiteSpace: 'pre-wrap', marginBottom: '8px' }}>{editingMemberTicket.content}</div>
+                        <div className="mb-4 rounded-lg bg-slate-50 p-3 text-[13px] text-slate-600">
+                          <div className="mb-1.5 font-semibold text-slate-800">{editingMemberTicket.title}</div>
+                          <div className="mb-2 whitespace-pre-wrap">{editingMemberTicket.content}</div>
                           {editingMemberTicket.answer && (
-                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
-                              <span style={{ fontSize: '11px', fontWeight: 600, color: '#0369a1' }}>첫 답변</span>
-                              <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>{editingMemberTicket.answer}</div>
+                            <div className="mt-2 border-t border-slate-200 pt-2">
+                              <span className="text-[11px] font-semibold text-sky-700">첫 답변</span>
+                              <div className="mt-1 whitespace-pre-wrap">{editingMemberTicket.answer}</div>
                             </div>
                           )}
                           {parseMemberSupportMessageThread(editingMemberTicket.message_thread).map((entry, i) => (
-                            <div key={`emt-${i}`} style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
-                              <span style={{ fontSize: '11px', fontWeight: 600, color: entry.role === 'member' ? '#b45309' : '#0369a1' }}>
+                            <div key={`emt-${i}`} className="mt-2 border-t border-slate-200 pt-2">
+                              <span
+                                className={`text-[11px] font-semibold ${
+                                  entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
+                                }`}
+                              >
                                 {entry.role === 'member' ? '추가 문의' : '이전 답변'}
                               </span>
-                              <div style={{ whiteSpace: 'pre-wrap', marginTop: '4px' }}>{entry.body}</div>
+                              <div className="mt-1 whitespace-pre-wrap">{entry.body}</div>
                             </div>
                           ))}
                         </div>
@@ -1833,33 +1821,15 @@ export function GroupAdminPanel({
                         value={memberTicketAnswer}
                         onChange={(e) => setMemberTicketAnswer(e.target.value)}
                         placeholder="답변 내용을 입력하세요"
-                        style={{
-                          width: '100%',
-                          minHeight: '220px',
-                          padding: '12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontFamily: 'inherit',
-                          marginBottom: '16px',
-                        }}
+                        className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm"
                       />
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
                             setEditingMemberTicket(null);
                             setMemberTicketAnswer('');
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#475569',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
                         >
                           취소
                         </button>
@@ -1905,16 +1875,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
                         >
                           저장
                         </button>
@@ -1928,18 +1889,8 @@ export function GroupAdminPanel({
             {/* ???�쎌??????�쎌?�占???*/}
             {activeTab === 'dashboard-access-requests' && (
               <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '24px',
-                }}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: 0,
-                  }}>
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                     대시보드 접근 요청
                   </h2>
                   <button
@@ -1947,64 +1898,42 @@ export function GroupAdminPanel({
                       setShowAccessRequestForm(true);
                       setAccessRequestReason('');
                     }}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
                   >
-                    <Plus style={{ width: '18px', height: '18px' }} />
+                    <Plus className="h-[18px] w-[18px]" />
                     접근 요청
                   </button>
                 </div>
 
                 {/* ???�쎌??????�쎌?�占?筌뤴뫖占?*/}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}>
+                <div className="flex flex-col gap-4">
                   {accessRequests.map((request) => (
                     <motion.div
                       key={request.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      style={{
-                        padding: '20px',
-                        backgroundColor: request.status === 'pending' ? '#fef3c7' : request.status === 'approved' ? '#d1fae5' : '#f8fafc',
-                        borderRadius: '12px',
-                        border: `1px solid ${request.status === 'pending' ? '#fde68a' : request.status === 'approved' ? '#a7f3d0' : '#e2e8f0'}`,
-                      }}
+                      className={`rounded-xl border p-5 ${
+                        request.status === 'pending'
+                          ? 'border-amber-200 bg-amber-100'
+                          : request.status === 'approved'
+                          ? 'border-emerald-200 bg-emerald-100'
+                          : 'border-slate-200 bg-slate-50'
+                      }`}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '8px',
-                          }}>
-                            <span style={{
-                              padding: '4px 12px',
-                              backgroundColor: request.status === 'pending' ? '#fbbf24' : request.status === 'approved' ? '#10b981' : request.status === 'rejected' ? '#ef4444' : '#94a3b8',
-                              color: 'white',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                            }}>
+                      <div className="mb-3 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="mb-2 flex items-center gap-3">
+                            <span
+                              className={`rounded-xl px-3 py-1 text-xs font-semibold text-white ${
+                                request.status === 'pending'
+                                  ? 'bg-amber-400'
+                                  : request.status === 'approved'
+                                  ? 'bg-emerald-500'
+                                  : request.status === 'rejected'
+                                  ? 'bg-red-500'
+                                  : 'bg-slate-400'
+                              }`}
+                            >
                               {request.status === 'pending'
                                 ? gat('status_pending')
                                 : request.status === 'approved'
@@ -2016,44 +1945,20 @@ export function GroupAdminPanel({
                                       : gat('status_cancelled')}
                             </span>
                           </div>
-                          <p style={{
-                            fontSize: '14px',
-                            color: '#64748b',
-                            margin: '0 0 12px 0',
-                            whiteSpace: 'pre-wrap',
-                          }}>
+                          <p className="m-0 mb-3 whitespace-pre-wrap text-sm text-slate-500">
                             {request.reason}
                           </p>
                           {request.status === 'approved' && request.expires_at && (
-                            <div style={{
-                              fontSize: '14px',
-                              color: '#059669',
-                              marginBottom: '8px',
-                            }}>
+                            <div className="mb-2 text-sm text-emerald-600">
                               만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
-                            <div style={{
-                              marginTop: '12px',
-                              padding: '12px',
-                              backgroundColor: '#fee2e2',
-                              borderRadius: '8px',
-                              border: '1px solid #fecaca',
-                            }}>
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#991b1b',
-                                marginBottom: '4px',
-                              }}>
+                            <div className="mt-3 rounded-lg border border-red-200 bg-red-100 p-3">
+                              <div className="mb-1 text-xs font-semibold text-red-800">
                                 거절 사유:
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                              }}>
+                              <p className="m-0 text-sm text-slate-800">
                                 {request.rejection_reason}
                               </p>
                             </div>
@@ -2061,11 +1966,7 @@ export function GroupAdminPanel({
                         </div>
                       </div>
                       {request.status === 'pending' && (
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          marginTop: '16px',
-                        }}>
+                        <div className="mt-4 flex gap-2">
                           <button
                             onClick={async () => {
                               if (!confirm(gat('confirm_cancel_request'))) {
@@ -2103,26 +2004,13 @@ export function GroupAdminPanel({
                                 setLoadingData(false);
                               }
                             }}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-0 bg-red-500 px-4 py-2 text-[13px] font-semibold text-white"
                           >
                             취소
                           </button>
                         </div>
                       )}
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        marginTop: '12px',
-                      }}>
+                      <div className="mt-3 text-xs text-slate-400">
                         요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
                         {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
                         {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
@@ -2130,12 +2018,8 @@ export function GroupAdminPanel({
                     </motion.div>
                   ))}
                   {accessRequests.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <Key style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <Key className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{gat('no_requests')}</p>
                     </div>
                   )}
@@ -2143,81 +2027,33 @@ export function GroupAdminPanel({
 
                 {/* ???�쎌??????�쎌?�占????�쎌?�占?筌뤴뫀??*/}
                 {showAccessRequestForm && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                  }}
+                  <div
+                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => setShowAccessRequestForm(false)}
                   >
-                    <div style={{
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      padding: '24px',
-                      width: '90%',
-                      maxWidth: '600px',
-                      maxHeight: '80vh',
-                      overflow: 'auto',
-                    }}
+                    <div
+                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
                     onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 style={{
-                        fontSize: '20px',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        marginBottom: '16px',
-                      }}>
+                      <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
                         대시보드 접근 요청
                       </h3>
-                      <p style={{
-                        fontSize: '14px',
-                        color: '#64748b',
-                        marginBottom: '16px',
-                      }}>
+                      <p className="mb-4 text-sm text-slate-500">
                         시스템 관리자가 본인 가족 대시보드에 접근하도록 요청합니다.
                       </p>
                       <textarea
                         value={accessRequestReason}
                         onChange={(e) => setAccessRequestReason(e.target.value)}
                         placeholder={gat('reason_placeholder')}
-                        style={{
-                          width: '100%',
-                          minHeight: '200px',
-                          padding: '12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontFamily: 'inherit',
-                          marginBottom: '16px',
-                        }}
+                        className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm"
                       />
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        justifyContent: 'flex-end',
-                      }}>
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
                             setShowAccessRequestForm(false);
                             setAccessRequestReason('');
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#475569',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
                         >
                           취소
                         </button>
@@ -2270,16 +2106,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
                         >
                           요청
                         </button>
@@ -2292,72 +2119,57 @@ export function GroupAdminPanel({
 
             {activeTab === 'piggy-archives' && showPiggyArchivesTab && effectiveGroupId && (
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b', marginBottom: '24px' }}>
+                <h2 className="mb-6 text-[20px] font-semibold text-slate-800">
                   {atPiggy('piggy_archive_section_title')}
                 </h2>
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '24px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <div className="mb-6 overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full border-collapse text-[13px]">
                     <thead>
-                      <tr style={{ backgroundColor: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{atPiggy('piggy_archive_deleted_at')}</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{atPiggy('nickname')}</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{atPiggy('piggy_archive_account_name')}</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{atPiggy('piggy_archive_deleted_by')}</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>{atPiggy('actions')}</th>
+                      <tr className="bg-slate-100">
+                        <th className="border-b-2 border-slate-200 px-3 py-2.5 text-left">{atPiggy('piggy_archive_deleted_at')}</th>
+                        <th className="border-b-2 border-slate-200 px-3 py-2.5 text-left">{atPiggy('nickname')}</th>
+                        <th className="border-b-2 border-slate-200 px-3 py-2.5 text-left">{atPiggy('piggy_archive_account_name')}</th>
+                        <th className="border-b-2 border-slate-200 px-3 py-2.5 text-left">{atPiggy('piggy_archive_deleted_by')}</th>
+                        <th className="border-b-2 border-slate-200 px-3 py-2.5 text-left">{atPiggy('actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {piggyArchivesLoading && piggyArchivesSnapshots.length === 0 ? (
                         <tr>
-                          <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                            <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                          <td colSpan={5} className="p-8 text-center text-slate-500">
+                            <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
                             {gat('loading')}
                           </td>
                         </tr>
                       ) : piggyArchivesSnapshots.length === 0 ? (
                         <tr>
-                          <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                          <td colSpan={5} className="p-8 text-center text-slate-400">
                             {atPiggy('no_piggy_archives')}
                           </td>
                         </tr>
                       ) : (
                         piggyArchivesSnapshots.map((s) => (
-                          <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{new Date(s.deleted_at).toLocaleString('ko-KR')}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.user_nickname}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.account_name || '-'}</td>
-                            <td style={{ padding: '10px 12px' }}>{s.deleted_by_nickname ?? '-'}</td>
-                            <td style={{ padding: '10px 12px' }}>
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <tr key={s.id} className="border-b border-slate-100">
+                            <td className="whitespace-nowrap px-3 py-2.5">{new Date(s.deleted_at).toLocaleString('ko-KR')}</td>
+                            <td className="px-3 py-2.5">{s.user_nickname}</td>
+                            <td className="px-3 py-2.5">{s.account_name || '-'}</td>
+                            <td className="px-3 py-2.5">{s.deleted_by_nickname ?? '-'}</td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setPiggyArchivesDetailId(s.id);
                                     loadPiggyArchivesDetail(effectiveGroupId, s.id);
                                   }}
-                                  style={{
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #e2e8f0',
-                                    background: '#f8fafc',
-                                    fontSize: '12px',
-                                    cursor: 'pointer',
-                                  }}
+                                  className="cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs"
                                 >
                                   {atPiggy('view_transactions_btn')}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => deletePiggyArchivesSnapshot(effectiveGroupId, s.id)}
-                                  style={{
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #fecaca',
-                                    background: '#fef2f2',
-                                    color: '#b91c1c',
-                                    fontSize: '12px',
-                                    cursor: 'pointer',
-                                  }}
+                                  className="cursor-pointer rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs text-red-700"
                                 >
                                   {atPiggy('archive_delete_btn')}
                                 </button>
@@ -2370,73 +2182,73 @@ export function GroupAdminPanel({
                   </table>
                 </div>
                 {piggyArchivesDetailId && (
-                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', backgroundColor: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{atPiggy('piggy_archive_transactions_title')}</h3>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="m-0 text-base font-semibold">{atPiggy('piggy_archive_transactions_title')}</h3>
                       <button
                         type="button"
                         onClick={() => { setPiggyArchivesDetailId(null); setPiggyArchivesDetail(null); }}
-                        style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontSize: '12px', cursor: 'pointer' }}
+                        className="cursor-pointer rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs"
                       >
                         닫기
                       </button>
                     </div>
                     {piggyArchivesDetailLoading ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                        <Loader2 style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                      <div className="p-6 text-center text-slate-500">
+                        <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
                         {gat('loading')}
                       </div>
                     ) : piggyArchivesDetail && (piggyArchivesDetail.walletTransactions.length > 0 || piggyArchivesDetail.bankTransactions.length > 0) ? (
                       <>
-                        <h4 style={{ margin: '12px 0 8px', fontSize: '14px', color: '#475569' }}>용돈 내역</h4>
+                        <h4 className="my-2 text-sm text-slate-600">용돈 내역</h4>
                         {piggyArchivesDetail.walletTransactions.length === 0 ? (
-                          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>없음</p>
+                          <p className="m-0 text-[13px] text-slate-400">없음</p>
                         ) : (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '16px' }}>
+                          <table className="mb-4 w-full border-collapse text-xs">
                             <thead>
-                              <tr style={{ backgroundColor: '#f1f5f9' }}>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>일시</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>유형</th>
-                                <th style={{ padding: '8px', textAlign: 'right' }}>금액</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>메모</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>행위자</th>
+                              <tr className="bg-slate-100">
+                                <th className="p-2 text-left">일시</th>
+                                <th className="p-2 text-left">유형</th>
+                                <th className="p-2 text-right">금액</th>
+                                <th className="p-2 text-left">메모</th>
+                                <th className="p-2 text-left">행위자</th>
                               </tr>
                             </thead>
                             <tbody>
                               {piggyArchivesDetail.walletTransactions.map((tx) => (
-                                <tr key={tx.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '8px' }}>{tx.dateLabel}</td>
-                                  <td style={{ padding: '8px' }}>{tx.typeLabel}</td>
-                                  <td style={{ padding: '8px', textAlign: 'right' }}>{tx.amount.toLocaleString()}원</td>
-                                  <td style={{ padding: '8px' }}>{tx.memo || '-'}</td>
-                                  <td style={{ padding: '8px' }}>{tx.actor_nickname}</td>
+                                <tr key={tx.id} className="border-b border-slate-200">
+                                  <td className="p-2">{tx.dateLabel}</td>
+                                  <td className="p-2">{tx.typeLabel}</td>
+                                  <td className="p-2 text-right">{tx.amount.toLocaleString()}원</td>
+                                  <td className="p-2">{tx.memo || '-'}</td>
+                                  <td className="p-2">{tx.actor_nickname}</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         )}
-                        <h4 style={{ margin: '12px 0 8px', fontSize: '14px', color: '#475569' }}>저금통 내역</h4>
+                        <h4 className="my-2 text-sm text-slate-600">저금통 내역</h4>
                         {piggyArchivesDetail.bankTransactions.length === 0 ? (
-                          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>없음</p>
+                          <p className="m-0 text-[13px] text-slate-400">없음</p>
                         ) : (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <table className="w-full border-collapse text-xs">
                             <thead>
-                              <tr style={{ backgroundColor: '#f1f5f9' }}>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>일시</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>유형</th>
-                                <th style={{ padding: '8px', textAlign: 'right' }}>금액</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>메모</th>
-                                <th style={{ padding: '8px', textAlign: 'left' }}>행위자</th>
+                              <tr className="bg-slate-100">
+                                <th className="p-2 text-left">일시</th>
+                                <th className="p-2 text-left">유형</th>
+                                <th className="p-2 text-right">금액</th>
+                                <th className="p-2 text-left">메모</th>
+                                <th className="p-2 text-left">행위자</th>
                               </tr>
                             </thead>
                             <tbody>
                               {piggyArchivesDetail.bankTransactions.map((tx) => (
-                                <tr key={tx.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                  <td style={{ padding: '8px' }}>{tx.dateLabel}</td>
-                                  <td style={{ padding: '8px' }}>{tx.typeLabel}</td>
-                                  <td style={{ padding: '8px', textAlign: 'right' }}>{tx.amount.toLocaleString()}원</td>
-                                  <td style={{ padding: '8px' }}>{tx.memo || '-'}</td>
-                                  <td style={{ padding: '8px' }}>{tx.actor_nickname}</td>
+                                <tr key={tx.id} className="border-b border-slate-200">
+                                  <td className="p-2">{tx.dateLabel}</td>
+                                  <td className="p-2">{tx.typeLabel}</td>
+                                  <td className="p-2 text-right">{tx.amount.toLocaleString()}원</td>
+                                  <td className="p-2">{tx.memo || '-'}</td>
+                                  <td className="p-2">{tx.actor_nickname}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -2444,7 +2256,7 @@ export function GroupAdminPanel({
                         )}
                       </>
                     ) : (
-                      <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>{atPiggy('no_transactions')}</p>
+                      <p className="m-0 text-[13px] text-slate-400">{atPiggy('no_transactions')}</p>
                     )}
                   </div>
                 )}
