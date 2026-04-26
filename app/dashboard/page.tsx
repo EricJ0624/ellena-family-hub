@@ -39,6 +39,7 @@ import {
   deleteAttachment,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { DB_TABLES } from '@/lib/db-table-names';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import { FamilyTasksSection } from '@/app/features/family-tasks/components/FamilyTasksSection';
 import type { FamilyTask, FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
@@ -406,7 +407,7 @@ export default function FamilyHub() {
 
       // 그룹 필터링: Multi-tenant 아키텍처 - group_id로 직접 필터링
       let query = supabase
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
         .eq('group_id', currentGroupId) // Multi-tenant: group_id로 직접 필터링
         .order('created_at', { ascending: false })
@@ -537,7 +538,7 @@ export default function FamilyHub() {
         if (isLoadStale()) return;
 
         const res = await supabase
-          .from('memory_vault')
+          .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
           .select('id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id')
           .eq('group_id', groupIdForThisLoad)
           .order('created_at', { ascending: false })
@@ -3377,7 +3378,7 @@ export default function FamilyHub() {
                 (async () => {
                   try {
                     const { error } = await supabase
-                      .from('memory_vault')
+                      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
                       .update({ caption: payload.description || null })
                       .eq('id', photo.supabaseId);
                     if (error) {

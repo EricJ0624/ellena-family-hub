@@ -4,6 +4,7 @@ import {
   downloadFromS3,
 } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 /**
  * 사진 파일 다운로드 (S3 → 스트림, Content-Disposition: attachment)
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const { data: row, error: fetchError } = await supabase
-      .from('memory_vault')
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
       .select('id, group_id, s3_key, original_filename, mime_type, upload_mode')
       .eq('id', id)
       .single();

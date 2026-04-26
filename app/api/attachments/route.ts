@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteFromS3, getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 const ALLOWED_ENTITY_TYPES = new Set([
   'chat_message',
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
-      .from('feature_attachments')
+      .from(DB_TABLES.ATTACHMENTS)
       .select('*')
       .eq('group_id', groupId)
       .eq('entity_type', entityType)
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
-      .from('feature_attachments')
+      .from(DB_TABLES.ATTACHMENTS)
       .select('*')
       .eq('group_id', String(groupId))
       .eq('entity_type', String(entityType))
@@ -108,7 +109,7 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const { data: row, error: fetchError } = await supabase
-      .from('feature_attachments')
+      .from(DB_TABLES.ATTACHMENTS)
       .select('id, group_id, uploader_id, s3_key, thumbnail_s3_key')
       .eq('id', String(attachmentId))
       .eq('group_id', String(groupId))
@@ -128,7 +129,7 @@ export async function DELETE(request: NextRequest) {
     if (row.thumbnail_s3_key) await deleteFromS3(row.thumbnail_s3_key);
 
     const { error: delError } = await supabase
-      .from('feature_attachments')
+      .from(DB_TABLES.ATTACHMENTS)
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', String(attachmentId))
       .eq('group_id', String(groupId));

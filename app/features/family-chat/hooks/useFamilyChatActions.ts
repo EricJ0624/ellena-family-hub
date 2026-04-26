@@ -5,6 +5,7 @@ import type React from 'react';
 import type { MutableRefObject, RefObject } from 'react';
 import type { ChatMessageRow, ChatUiMessage } from '@/lib/chat-messages';
 import { CHAT_PAGE_SIZE, formatFamilyMessagesFromRows, trimMessagesToMax } from '@/lib/chat-messages';
+import { DB_TABLES } from '@/lib/db-table-names';
 import {
   getAttachmentsForEntity,
   listAttachments,
@@ -262,7 +263,7 @@ export function useFamilyChatActions({
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
         'ellena_family_shared_key_2024';
       const { data: raw, error } = await supabase
-        .from('family_messages')
+        .from(DB_TABLES.FAMILY_MESSAGES)
         .select('*')
         .eq('group_id', currentGroupId)
         .lt('created_at', first.created_at)
@@ -356,7 +357,7 @@ export function useFamilyChatActions({
 
         const encryptedText = encrypt('', currentKey);
         const { data: inserted, error } = await supabase
-          .from('family_messages')
+          .from(DB_TABLES.FAMILY_MESSAGES)
           .insert({
             group_id: currentGroupId,
             sender_id: authUid,
@@ -528,7 +529,7 @@ export function useFamilyChatActions({
           const encryptedText = encrypt(sanitizedText, currentKey);
           const insertStartedAt = Date.now();
           const { data: inserted, error } = await supabase
-            .from('family_messages')
+            .from(DB_TABLES.FAMILY_MESSAGES)
             .insert({
               group_id: currentGroupId,
               sender_id: authUid,

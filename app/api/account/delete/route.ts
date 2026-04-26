@@ -4,6 +4,7 @@ import {
   deleteFromS3,
 } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 /**
  * 회원탈퇴 API
@@ -90,7 +91,7 @@ export async function DELETE(request: NextRequest) {
       // 확인 완료 시 그룹 삭제 진행 (각 그룹의 S3 파일 삭제 후 DB 삭제, Cloudinary 제거)
       for (const group of ownedGroups) {
         const { data: groupPhotos } = await supabaseServer
-          .from('memory_vault')
+          .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
           .select('id, s3_key')
           .eq('group_id', group.id);
 
@@ -156,7 +157,7 @@ export async function DELETE(request: NextRequest) {
     // 6. 메모리 볼트 데이터 삭제 (S3 파일 삭제 후 DB 삭제, Cloudinary 제거)
     try {
       const { data: photos } = await supabaseServer
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select('id, s3_key')
         .eq('uploader_id', user.id);
 
@@ -175,7 +176,7 @@ export async function DELETE(request: NextRequest) {
 
       // Supabase에서 레코드 삭제
       await supabaseServer
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .delete()
         .eq('uploader_id', user.id);
     } catch (memoryError) {

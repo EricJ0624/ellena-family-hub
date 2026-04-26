@@ -37,6 +37,7 @@ import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 export type GroupAdminPanelVariant = 'standalone' | 'embedded';
 
@@ -405,7 +406,7 @@ export function GroupAdminPanel({
 
       // ?�밸챶占????�쎌?�占???
       const { count: photoCount } = await supabase
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select('*', { count: 'exact', head: true })
         .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000']);
 
@@ -413,7 +414,7 @@ export function GroupAdminPanel({
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const { count: recentPhotoCount } = await supabase
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select('*', { count: 'exact', head: true })
         .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000'])
         .gte('created_at', sevenDaysAgo.toISOString());
@@ -472,7 +473,7 @@ export function GroupAdminPanel({
       }
 
       const { data: photosData, error: photosError } = await supabase
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select('id, image_url, s3_original_url, original_filename, created_at, uploader_id, caption')
         .in('uploader_id', memberIds)
         .order('created_at', { ascending: false })
@@ -792,7 +793,7 @@ export function GroupAdminPanel({
 
     try {
       const { error } = await supabase
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .delete()
         .eq('id', photoId);
 

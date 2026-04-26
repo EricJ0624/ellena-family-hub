@@ -5,6 +5,7 @@ import {
   getSupabaseServerClient,
 } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 import { getGroupStorageStats } from '@/lib/storage-quota';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const supabaseServer = getSupabaseServerClient();
     const { data: memoryData, error: dbError } = await supabaseServer
-      .from('memory_vault')
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
       .insert({
         uploader_id: user.id,
         group_id: groupId,

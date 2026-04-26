@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 const ALLOWED_ENTITY_TYPES = new Set([
   'chat_message',
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
-      .from('feature_attachments')
+      .from(DB_TABLES.ATTACHMENTS)
       .insert({
         group_id: String(groupId),
         uploader_id: user.id,

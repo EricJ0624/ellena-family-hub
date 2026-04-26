@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient, deleteFromS3 } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 /**
  * 그룹 소유자 전용: 가족(그룹) 영구 삭제
@@ -39,7 +40,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { data: photos } = await supabase.from('memory_vault').select('id, s3_key').eq('group_id', groupId);
+    const { data: photos } = await supabase.from(DB_TABLES.FAMILY_ALBUM_ITEMS).select('id, s3_key').eq('group_id', groupId);
 
     if (photos && photos.length > 0) {
       const deletePromises: Promise<boolean>[] = [];

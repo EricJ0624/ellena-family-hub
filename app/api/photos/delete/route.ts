@@ -4,6 +4,7 @@ import {
   deleteFromS3,
 } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -37,7 +38,7 @@ export async function DELETE(request: NextRequest) {
     // Supabase에서 파일 정보 조회 (삭제 전에)
     const supabaseServer = getSupabaseServerClient();
     const { data: photoData, error: fetchError } = await supabaseServer
-      .from('memory_vault')
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
       .select('id, uploader_id, s3_key, group_id')
       .eq('id', photoId)
       .eq('group_id', groupId) // Multi-tenant: group_id 검증
@@ -72,7 +73,7 @@ export async function DELETE(request: NextRequest) {
 
     // 3. Supabase에서 레코드 삭제
     const { error: deleteError } = await supabaseServer
-      .from('memory_vault')
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
       .delete()
       .eq('id', photoId)
       .eq('group_id', groupId); // Multi-tenant: group_id 검증

@@ -8,6 +8,7 @@ import {
   type ChatMessageRow,
   type ChatUiMessage,
 } from '@/lib/chat-messages';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 interface UseFamilyChatInitialLoadParams {
   supabase: any;
@@ -27,7 +28,7 @@ export function useFamilyChatInitialLoad({
       if (!currentGroupId) return;
 
       const { data: messagesDataRaw, error: messagesError } = await supabase
-        .from('family_messages')
+        .from(DB_TABLES.FAMILY_MESSAGES)
         .select('*')
         .eq('group_id', currentGroupId)
         .order('created_at', { ascending: false })

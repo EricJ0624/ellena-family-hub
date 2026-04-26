@@ -5,6 +5,7 @@ import type { MutableRefObject } from 'react';
 import { trimMessagesToMax, type ChatUiMessage } from '@/lib/chat-messages';
 import { getAttachmentsForEntity } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 interface UseFamilyChatRealtimeParams {
   supabase: any;
@@ -84,11 +85,11 @@ export function useFamilyChatRealtime({
       subscriptionsRef.current.messages = null;
     }
 
-    const channelName = `family_messages_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
+    const channelName = `${DB_TABLES.FAMILY_MESSAGES}_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
     familyChatDebug('메시지 subscription 설정', channelName);
     const messagesSubscription = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_messages' }, (payload: any) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.FAMILY_MESSAGES }, (payload: any) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
         if (ev === 'DELETE') {
           const deletedMessage = payload.old;
@@ -275,8 +276,8 @@ export function useFamilyChatRealtime({
           familyChatDebug('Realtime 메시지 subscription 연결됨');
           subscriptionsRef.current.messages = messagesSubscription;
           const activeChannels = supabase.getChannels();
-          const messageChannels = activeChannels.filter((ch: any) => ch.topic.includes('family_messages'));
-          familyChatDebug('활성 채널 수', activeChannels.length, 'family_messages 채널 수', messageChannels.length);
+          const messageChannels = activeChannels.filter((ch: any) => ch.topic.includes(DB_TABLES.FAMILY_MESSAGES));
+          familyChatDebug('활성 채널 수', activeChannels.length, `${DB_TABLES.FAMILY_MESSAGES} 채널 수`, messageChannels.length);
           if (messageChannels.length > 1) {
             console.error('[FamilyChat] 메시지 Realtime 채널 중복:', messageChannels.map((ch: any) => ch.topic));
           }
@@ -291,8 +292,8 @@ export function useFamilyChatRealtime({
       subscriptionsRef.current.attachments = null;
     }
     const attachmentsSubscription = supabase
-      .channel(`feature_attachments_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'feature_attachments' }, (payload: any) => {
+      .channel(`${DB_TABLES.ATTACHMENTS}_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.ATTACHMENTS }, (payload: any) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
         const record = payload.new || payload.old;
         if (!record) return;

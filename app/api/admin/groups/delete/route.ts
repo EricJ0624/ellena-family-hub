@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient, deleteFromS3 } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function DELETE(request: NextRequest) {
 
     // 그룹 삭제 전: 해당 그룹의 memory_vault(사진) 조회 후 S3에서 파일 삭제 (Cloudinary 제거)
     const { data: photos } = await supabase
-      .from('memory_vault')
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
       .select('id, s3_key')
       .eq('group_id', groupId);
 

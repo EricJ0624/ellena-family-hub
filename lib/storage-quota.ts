@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from '@/lib/api-helpers';
+import { DB_TABLES } from '@/lib/db-table-names';
 
 export const DEFAULT_GROUP_STORAGE_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // 5GB
 
@@ -21,7 +22,7 @@ export async function getGroupStorageQuotaBytes(groupId: string): Promise<number
 export async function getGroupStorageUsedBytes(groupId: string): Promise<number> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
-    .from('memory_vault')
+    .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
     .select('original_file_size')
     .eq('group_id', groupId);
 

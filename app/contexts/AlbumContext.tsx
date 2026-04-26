@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import CryptoJS from 'crypto-js';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { DB_TABLES } from '@/lib/db-table-names';
 import { getStorageKey, getAuthKey, CryptoService } from '@/lib/dashboard-storage';
 
 export type Photo = {
@@ -130,7 +131,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
       if (isStale()) return;
 
       const res = await supabase
-        .from('memory_vault')
+        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
         .select(
           'id, image_url, s3_original_url, file_type, original_filename, mime_type, created_at, uploader_id, caption, group_id, taken_at, upload_mode'
         )
@@ -209,13 +210,13 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     // 채널당 postgres_changes 1개만 사용 (여러 개 시 server/client bindings mismatch)
     const gid = String(currentGroupId);
     const ch = supabase
-      .channel(`memory_vault_album:${currentGroupId}`)
+      .channel(`${DB_TABLES.FAMILY_ALBUM_ITEMS}_album:${currentGroupId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'memory_vault',
+          table: DB_TABLES.FAMILY_ALBUM_ITEMS,
           filter: `group_id=eq.${gid}`,
         },
         (payload: { eventType?: string; old?: { id?: unknown }; new?: Record<string, unknown> }) => {
@@ -397,7 +398,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
           if (p.id !== payload.photoId) return p;
           if (p.supabaseId) {
             supabase
-              .from('memory_vault')
+              .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
               .update({ caption: payload.description || null })
               .eq('id', p.supabaseId)
               .then(({ error }) => {
