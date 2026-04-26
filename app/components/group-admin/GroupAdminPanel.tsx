@@ -1236,7 +1236,7 @@ export function GroupAdminPanel({
                       key={announcement.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`cursor-pointer rounded-xl border p-5 ${
+                      className={`cursor-pointer rounded-xl border p-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70 ${
                         announcement.is_read
                           ? 'border-slate-200 bg-slate-50'
                           : 'border-amber-200 bg-amber-100'
@@ -2165,14 +2165,14 @@ export function GroupAdminPanel({
                                     setPiggyArchivesDetailId(s.id);
                                     loadPiggyArchivesDetail(effectiveGroupId, s.id);
                                   }}
-                                  className="cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs"
+                                  className="cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                                 >
                                   {atPiggy('view_transactions_btn')}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => deletePiggyArchivesSnapshot(effectiveGroupId, s.id)}
-                                  className="cursor-pointer rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs text-red-700"
+                                  className="cursor-pointer rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs text-red-700 transition-colors hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                                 >
                                   {atPiggy('archive_delete_btn')}
                                 </button>
@@ -2191,7 +2191,7 @@ export function GroupAdminPanel({
                       <button
                         type="button"
                         onClick={() => { setPiggyArchivesDetailId(null); setPiggyArchivesDetail(null); }}
-                        className="cursor-pointer rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs"
+                        className="cursor-pointer rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                       >
                         닫기
                       </button>
