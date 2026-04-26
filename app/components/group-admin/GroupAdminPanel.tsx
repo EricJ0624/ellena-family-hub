@@ -1177,78 +1177,41 @@ export function GroupAdminPanel({
 
                 {/* ???�쎌??????�쎌????筌뤴뫖占?*/}
                 <div>
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    marginBottom: '16px',
-                  }}>
+                  <h3 className="mb-4 text-lg font-semibold text-slate-800">
                     위치 데이터 (${locations.length}개)
                   </h3>
-                  <div
-                    className="group-admin-grid"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                      gap: '16px',
-                    }}
-                  >
+                  <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
                     {locations.map((location, index) => (
                       <motion.div
                         key={location.user_id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        style={{
-                          padding: '16px',
-                          backgroundColor: '#f8fafc',
-                          borderRadius: '12px',
-                          border: '1px solid #e2e8f0',
-                        }}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                       >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          marginBottom: '8px',
-                        }}>
-                          <MapPin style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
-                          <div style={{
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            color: '#1e293b',
-                          }}>
+                        <div className="mb-2 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-blue-500" />
+                          <div className="text-sm font-semibold text-slate-800">
                             {location.nickname || location.email || gat('no_name')}
                             {location.familyRole && (
-                              <span style={{ marginLeft: '6px' }}>
+                              <span className="ml-1.5">
                                 {getFamilyRoleEmoji(location.familyRole)} {getFamilyRoleLabel(lang, location.familyRole)}
                               </span>
                             )}
                           </div>
                         </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: '#64748b',
-                          marginBottom: '4px',
-                        }}>
+                        <div className="mb-1 text-xs text-slate-500">
                           {location.address || `${location.latitude}, ${location.longitude}`}
                         </div>
-                        <div style={{
-                          fontSize: '11px',
-                          color: '#94a3b8',
-                        }}>
+                        <div className="text-[11px] text-slate-400">
                         {new Date(location.last_updated).toLocaleString('ko-KR')}
                         </div>
                       </motion.div>
                     ))}
                   </div>
                   {locations.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <MapPin style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <MapPin className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{gat('no_locations')}</p>
                     </div>
                   )}
@@ -1259,20 +1222,11 @@ export function GroupAdminPanel({
             {/* ??�쎈�?????�쏙??????*/}
             {activeTab === 'announcements' && (
               <div>
-                <h2 style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  marginBottom: '24px',
-                }}>
+                <h2 className="mb-6 text-[20px] font-semibold text-slate-800">
                   {gat('announcements_section_unread').replace(/\$\{count\}/g, String(announcements.filter(a => !a.is_read).length))}
                 </h2>
 
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}>
+                <div className="flex flex-col gap-4">
                   {announcements.map((announcement) => (
                     <motion.div
                       key={announcement.id}
@@ -1320,66 +1274,31 @@ export function GroupAdminPanel({
                         }
                       }}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '8px',
-                          }}>
-                            <h3 style={{
-                              fontSize: '18px',
-                              fontWeight: '600',
-                              color: '#1e293b',
-                              margin: 0,
-                            }}>
+                      <div className="mb-3 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="mb-2 flex items-center gap-2">
+                            <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {getAnnouncementTexts(announcement, lang).title || announcement.title}
                             </h3>
                             {!announcement.is_read && (
-                              <span style={{
-                                padding: '2px 8px',
-                                backgroundColor: '#fbbf24',
-                                color: 'white',
-                                borderRadius: '12px',
-                                fontSize: '11px',
-                                fontWeight: '600',
-                              }}>
+                              <span className="rounded-xl bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-white">
                                 공지
                               </span>
                             )}
                           </div>
-                          <p style={{
-                            fontSize: '14px',
-                            color: '#64748b',
-                            margin: 0,
-                            whiteSpace: 'pre-wrap',
-                          }}>
+                          <p className="m-0 whitespace-pre-wrap text-sm text-slate-500">
                             {getAnnouncementTexts(announcement, lang).content || announcement.content}
                           </p>
                         </div>
                       </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        marginTop: '12px',
-                      }}>
+                      <div className="mt-3 text-xs text-slate-400">
                         {gat('written_at')} {new Date(announcement.created_at).toLocaleString('ko-KR')}
                       </div>
                     </motion.div>
                   ))}
                   {announcements.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <Megaphone style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <Megaphone className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{gat('no_announcements')}</p>
                     </div>
                   )}
@@ -1390,22 +1309,12 @@ export function GroupAdminPanel({
             {/* ??�쎈�????�쎌?�占???*/}
             {activeTab === 'support-tickets' && (
               <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '24px',
-                }}>
+                <div className="mb-6 flex items-center justify-between">
                   <div>
-                    <h2 style={{
-                      fontSize: '20px',
-                      fontWeight: '600',
-                      color: '#1e293b',
-                      margin: 0,
-                    }}>
+                    <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                       문의하기
                     </h2>
-                    <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                    <p className="m-0 mt-1.5 text-[13px] text-slate-500">
                       시스템 관리자에게 보내는 문의입니다. 가족 멤버 문의는 &quot;멤버 문의&quot; 탭에서 확인하세요.
                     </p>
                   </div>
@@ -1415,32 +1324,15 @@ export function GroupAdminPanel({
                       setTicketTitle('');
                       setTicketContent('');
                     }}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      flexShrink: 0,
-                    }}
+                    className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
                   >
-                    <Plus style={{ width: '18px', height: '18px' }} />
+                    <Plus className="h-[18px] w-[18px]" />
                     시스템 관리자에게 문의
                   </button>
                 </div>
 
                 {/* ??�쎈�??筌뤴뫖占?*/}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}>
+                <div className="flex flex-col gap-4">
                   {supportTickets.map((ticket) => (
                     <motion.div
                       key={ticket.id}
@@ -1453,27 +1345,10 @@ export function GroupAdminPanel({
                         border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
                       }}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                        gap: '12px',
-                      }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '8px',
-                            flexWrap: 'wrap',
-                          }}>
-                            <h3 style={{
-                              fontSize: '18px',
-                              fontWeight: '600',
-                              color: '#1e293b',
-                              margin: 0,
-                            }}>
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-3">
+                            <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {ticket.title}
                             </h3>
                             <span style={{
@@ -1487,36 +1362,15 @@ export function GroupAdminPanel({
                               {ticket.status === "pending" ? gat('status_pending') : ticket.status === "answered" ? gat('status_answered') : gat('status_closed')}
                             </span>
                           </div>
-                          <p style={{
-                            fontSize: '14px',
-                            color: '#64748b',
-                            margin: '0 0 12px 0',
-                            whiteSpace: 'pre-wrap',
-                          }}>
+                          <p className="m-0 mb-3 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
                           {ticket.answer && (
-                            <div style={{
-                              marginTop: '16px',
-                              padding: '16px',
-                              backgroundColor: '#f0f9ff',
-                              borderRadius: '8px',
-                              border: '1px solid #bae6fd',
-                            }}>
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#0369a1',
-                                marginBottom: '8px',
-                              }}>
+                            <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
+                              <div className="mb-2 text-xs font-semibold text-sky-700">
                                 답변:
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                                whiteSpace: 'pre-wrap',
-                              }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
                             </div>
@@ -1532,29 +1386,19 @@ export function GroupAdminPanel({
                                 border: `1px solid ${entry.role === 'group_admin' ? '#fde68a' : '#bae6fd'}`,
                               }}
                             >
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: entry.role === 'group_admin' ? '#b45309' : '#0369a1',
-                                marginBottom: '6px',
-                              }}>
+                              <div className="mb-1.5 text-xs font-semibold" style={{ color: entry.role === 'group_admin' ? '#b45309' : '#0369a1' }}>
                                 {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                                whiteSpace: 'pre-wrap',
-                              }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                              <div className="mt-2 text-[11px] text-slate-400">
                                 {new Date(entry.created_at).toLocaleString('ko-KR')}
                               </div>
                             </div>
                           ))}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                        <div className="flex shrink-0 flex-col gap-2">
                           {(ticket.status === 'answered' || ticket.status === 'closed') && ticket.answer && (
                             <button
                               type="button"
@@ -1562,17 +1406,7 @@ export function GroupAdminPanel({
                                 setFollowUpForTicket(ticket);
                                 setFollowUpBody('');
                               }}
-                              style={{
-                                padding: '8px 12px',
-                                backgroundColor: '#0ea5e9',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                              }}
+                              className="cursor-pointer whitespace-nowrap rounded-lg border-0 bg-sky-500 px-3 py-2 text-xs font-semibold text-white"
                             >
                               추가 문의
                             </button>
@@ -1611,47 +1445,28 @@ export function GroupAdminPanel({
                                 setDeletingSupportTicketId(null);
                               }
                             }}
-                            style={{
-                              padding: '8px 12px',
-                              backgroundColor: '#fee2e2',
-                              color: '#b91c1c',
-                              border: '1px solid #fecaca',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: deletingSupportTicketId === ticket.id ? 'wait' : 'pointer',
-                              whiteSpace: 'nowrap',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
+                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 ${
+                              deletingSupportTicketId === ticket.id ? 'cursor-wait' : 'cursor-pointer'
+                            }`}
                           >
                             {deletingSupportTicketId === ticket.id ? (
-                              <Loader2 style={{ width: '14px', height: '14px' }} className="animate-spin" />
+                              <Loader2 className="h-[14px] w-[14px] animate-spin" />
                             ) : (
-                              <Trash2 style={{ width: '14px', height: '14px' }} />
+                              <Trash2 className="h-[14px] w-[14px]" />
                             )}
                             삭제
                           </button>
                         </div>
                       </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        marginTop: '12px',
-                      }}>
+                      <div className="mt-3 text-xs text-slate-400">
                         {gat('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
                         {ticket.answered_at && ` | ${gat('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                       </div>
                     </motion.div>
                   ))}
                   {supportTickets.length === 0 && (
-                    <div style={{
-                      padding: '48px',
-                      textAlign: 'center',
-                      color: '#94a3b8',
-                    }}>
-                      <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>{gat('no_tickets')}</p>
                     </div>
                   )}
@@ -1659,37 +1474,15 @@ export function GroupAdminPanel({
 
                 {/* ??�쎈�?????�쎌?�占?筌뤴뫀??*/}
                 {showTicketForm && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                  }}
+                  <div
+                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => setShowTicketForm(false)}
                   >
-                    <div style={{
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      padding: '24px',
-                      width: '90%',
-                      maxWidth: '600px',
-                      maxHeight: '80vh',
-                      overflow: 'auto',
-                    }}
+                    <div
+                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
                     onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 style={{
-                        fontSize: '20px',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        marginBottom: '16px',
-                      }}>
+                      <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
                         문의 작성
                       </h3>
                       <input
@@ -1697,52 +1490,22 @@ export function GroupAdminPanel({
                         value={ticketTitle}
                         onChange={(e) => setTicketTitle(e.target.value)}
                         placeholder={gat('title_placeholder')}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          fontFamily: 'inherit',
-                          marginBottom: '16px',
-                        }}
+                        className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base"
                       />
                       <textarea
                         value={ticketContent}
                         onChange={(e) => setTicketContent(e.target.value)}
                         placeholder={gat('content_placeholder')}
-                        style={{
-                          width: '100%',
-                          minHeight: '300px',
-                          padding: '12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontFamily: 'inherit',
-                          marginBottom: '16px',
-                        }}
+                        className="mb-4 min-h-[300px] w-full rounded-lg border border-slate-200 p-3 text-sm"
                       />
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        justifyContent: 'flex-end',
-                      }}>
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
                             setShowTicketForm(false);
                             setTicketTitle('');
                             setTicketContent('');
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#475569',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
                         >
                           취소
                         </button>
@@ -1797,16 +1560,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white"
                         >
                           작성
                         </button>
@@ -1816,81 +1570,37 @@ export function GroupAdminPanel({
                 )}
 
                 {followUpForTicket && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                  }}
+                  <div
+                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => {
                     setFollowUpForTicket(null);
                     setFollowUpBody('');
                   }}
                   >
-                    <div style={{
-                      backgroundColor: 'white',
-                      borderRadius: '12px',
-                      padding: '24px',
-                      width: '90%',
-                      maxWidth: '560px',
-                      maxHeight: '80vh',
-                      overflow: 'auto',
-                    }}
+                    <div
+                    className="max-h-[80vh] w-[90%] max-w-[560px] overflow-auto rounded-xl bg-white p-6"
                     onClick={(e) => e.stopPropagation()}
                     >
-                      <h3 style={{
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        marginBottom: '12px',
-                      }}>
+                      <h3 className="mb-3 text-lg font-semibold text-slate-800">
                         추가 문의
                       </h3>
-                      <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px' }}>
+                      <p className="mb-3 text-[13px] text-slate-500">
                         {followUpForTicket.title}
                       </p>
                       <textarea
                         value={followUpBody}
                         onChange={(e) => setFollowUpBody(e.target.value)}
                         placeholder="추가로 남길 내용을 입력하세요."
-                        style={{
-                          width: '100%',
-                          minHeight: '160px',
-                          padding: '12px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontFamily: 'inherit',
-                          marginBottom: '16px',
-                        }}
+                        className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm"
                       />
-                      <div style={{
-                        display: 'flex',
-                        gap: '8px',
-                        justifyContent: 'flex-end',
-                      }}>
+                      <div className="flex justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => {
                             setFollowUpForTicket(null);
                             setFollowUpBody('');
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#475569',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600"
                         >
                           취소
                         </button>
@@ -1937,16 +1647,7 @@ export function GroupAdminPanel({
                               setLoadingData(false);
                             }
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#0ea5e9',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                          }}
+                          className="cursor-pointer rounded-lg border-0 bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white"
                         >
                           보내기
                         </button>
@@ -1960,27 +1661,13 @@ export function GroupAdminPanel({
             {/* 멤버 문의 (일반멤버 <-> 그룹관리자) */}
             {activeTab === 'member-support-tickets' && (
               <div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '24px',
-                }}>
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    margin: 0,
-                  }}>
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                     멤버 문의
                   </h2>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                }}>
+                <div className="flex flex-col gap-4">
                   {memberSupportTickets.map((ticket) => (
                     <motion.div
                       key={ticket.id}
@@ -1993,25 +1680,10 @@ export function GroupAdminPanel({
                         border: `1px solid ${ticket.status === 'pending' ? '#fde68a' : '#e2e8f0'}`,
                       }}
                     >
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px',
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '8px',
-                          }}>
-                            <h3 style={{
-                              fontSize: '18px',
-                              fontWeight: '600',
-                              color: '#1e293b',
-                              margin: 0,
-                            }}>
+                      <div className="mb-3 flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="mb-2 flex items-center gap-3">
+                            <h3 className="m-0 text-lg font-semibold text-slate-800">
                               {ticket.title}
                             </h3>
                             <span style={{
@@ -2025,36 +1697,15 @@ export function GroupAdminPanel({
                               {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '종료'}
                             </span>
                           </div>
-                          <p style={{
-                            fontSize: '14px',
-                            color: '#64748b',
-                            margin: '0 0 12px 0',
-                            whiteSpace: 'pre-wrap',
-                          }}>
+                          <p className="m-0 mb-3 whitespace-pre-wrap text-sm text-slate-500">
                             {ticket.content}
                           </p>
                           {ticket.answer && (
-                            <div style={{
-                              marginTop: '16px',
-                              padding: '16px',
-                              backgroundColor: '#f0f9ff',
-                              borderRadius: '8px',
-                              border: '1px solid #bae6fd',
-                            }}>
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#0369a1',
-                                marginBottom: '8px',
-                              }}>
+                            <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
+                              <div className="mb-2 text-xs font-semibold text-sky-700">
                                 답변:
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                                whiteSpace: 'pre-wrap',
-                              }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
                               </p>
                             </div>
@@ -2070,23 +1721,13 @@ export function GroupAdminPanel({
                                 border: `1px solid ${entry.role === 'member' ? '#fde68a' : '#bae6fd'}`,
                               }}
                             >
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: entry.role === 'member' ? '#b45309' : '#0369a1',
-                                marginBottom: '6px',
-                              }}>
+                              <div className="mb-1.5 text-xs font-semibold" style={{ color: entry.role === 'member' ? '#b45309' : '#0369a1' }}>
                                 {entry.role === 'member' ? '추가 문의' : '답변'}
                               </div>
-                              <p style={{
-                                fontSize: '14px',
-                                color: '#1e293b',
-                                margin: 0,
-                                whiteSpace: 'pre-wrap',
-                              }}>
+                              <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+                              <div className="mt-2 text-[11px] text-slate-400">
                                 {new Date(entry.created_at).toLocaleString('ko-KR')}
                               </div>
                             </div>
@@ -2095,22 +1736,13 @@ export function GroupAdminPanel({
                       </div>
 
                       {ticket.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                        <div className="mt-4 flex gap-2">
                           <button
                             onClick={() => {
                               setEditingMemberTicket(ticket);
                               setMemberTicketAnswer('');
                             }}
-                            style={{
-                              padding: '8px 16px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer rounded-md border-0 bg-blue-500 px-4 py-2 text-[13px] font-semibold text-white"
                           >
                             답변하기
                           </button>
@@ -2118,16 +1750,9 @@ export function GroupAdminPanel({
                       )}
 
                       <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '8px',
-                          marginTop: '12px',
-                        }}
+                        className="mt-3 flex flex-wrap items-center justify-between gap-2"
                       >
-                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        <div className="text-xs text-slate-400">
                           작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
                           {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
                         </div>
@@ -2135,17 +1760,9 @@ export function GroupAdminPanel({
                           type="button"
                           disabled={deletingMemberTicketId === ticket.id}
                           onClick={() => void handleDeleteMemberSupportTicket(ticket.id)}
-                          style={{
-                            padding: '6px 12px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: '#b91c1c',
-                            backgroundColor: '#fef2f2',
-                            border: '1px solid #fecaca',
-                            borderRadius: '8px',
-                            cursor: deletingMemberTicketId === ticket.id ? 'not-allowed' : 'pointer',
-                            opacity: deletingMemberTicketId === ticket.id ? 0.7 : 1,
-                          }}
+                          className={`rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ${
+                            deletingMemberTicketId === ticket.id ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                          }`}
                         >
                           {deletingMemberTicketId === ticket.id ? '삭제 중…' : '삭제'}
                         </button>
@@ -2154,8 +1771,8 @@ export function GroupAdminPanel({
                   ))}
 
                   {memberSupportTickets.length === 0 && (
-                    <div style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>
-                      <MessageSquare style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+                    <div className="p-12 text-center text-slate-400">
+                      <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
                       <p>멤버 문의가 없습니다.</p>
                     </div>
                   )}
