@@ -58,6 +58,14 @@ import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTri
 import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
 import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '@/app/features/piggy-bank/types';
 import { usePiggyDisplay } from '@/app/features/piggy-bank/hooks/usePiggyDisplay';
+import {
+  type DashboardWidgetKey,
+  type WidgetConfigDraft,
+} from '@/lib/widgets/types';
+import {
+  ensureWidgetConfigs,
+  saveWidgetConfigs,
+} from '@/lib/widgets/widget-configs';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -297,6 +305,11 @@ export default function FamilyHub() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
+  const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigDraft[]>([]);
+  const [widgetDrafts, setWidgetDrafts] = useState<WidgetConfigDraft[]>([]);
+  const [widgetConfigsLoading, setWidgetConfigsLoading] = useState(false);
+  const [widgetConfigsSaving, setWidgetConfigsSaving] = useState(false);
+  const [isWidgetEditMode, setIsWidgetEditMode] = useState(false);
   
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
@@ -5330,6 +5343,388 @@ export default function FamilyHub() {
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentGroupId) {
+      setWidgetConfigs([]);
+      setWidgetDrafts([]);
+      setIsWidgetEditMode(false);
+      return;
+    }
+
+    const run = async () => {
+      try {
+        setWidgetConfigsLoading(true);
+        const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
+        if (!cancelled) {
+          setWidgetConfigs(configs);
+          setWidgetDrafts(configs);
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('위젯 설정 로드 실패:', error);
+        }
+      } finally {
+        if (!cancelled) setWidgetConfigsLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentGroupId, groupIsOwner]);
+
+  const widgetLabels: Record<DashboardWidgetKey, string> = {
+    tasks: dt('todo_section_title'),
+    calendar: dt('section_title_calendar'),
+    chat: dt('section_title_chat'),
+    location: dt('section_title_location'),
+    album: dt('section_title_memories'),
+    travel: tt('title'),
+    piggy: dt('piggy_section_admin_title'),
+  };
+
+  const activeWidgetConfigs = isWidgetEditMode ? widgetDrafts : widgetConfigs;
+  const orderedWidgetKeys = activeWidgetConfigs
+    .filter((cfg) => cfg.is_enabled)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((cfg) => cfg.widget_key);
+
+  const toggleWidgetEnabled = (key: DashboardWidgetKey) => {
+    setWidgetDrafts((prev) =>
+      prev.map((cfg) => (cfg.widget_key === key ? { ...cfg, is_enabled: !cfg.is_enabled } : cfg))
+    );
+  };
+
+  const moveWidget = (key: DashboardWidgetKey, direction: 'up' | 'down') => {
+    setWidgetDrafts((prev) => {
+      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
+      const idx = sorted.findIndex((x) => x.widget_key === key);
+      if (idx < 0) return prev;
+      const nextIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (nextIdx < 0 || nextIdx >= sorted.length) return prev;
+      const temp = sorted[idx];
+      sorted[idx] = sorted[nextIdx];
+      sorted[nextIdx] = temp;
+      return sorted.map((cfg, i) => ({ ...cfg, display_order: (i + 1) * 10 }));
+    });
+  };
+
+  const handleSaveWidgets = async () => {
+    if (!currentGroupId) return;
+    if (!widgetDrafts.some((x) => x.is_enabled)) {
+      alert('최소 1개 위젯은 켜져 있어야 합니다.');
+      return;
+    }
+    try {
+      setWidgetConfigsSaving(true);
+      await saveWidgetConfigs(currentGroupId, widgetDrafts);
+      setWidgetConfigs(widgetDrafts);
+      setIsWidgetEditMode(false);
+    } catch (error: any) {
+      alert(error?.message || '위젯 설정 저장에 실패했습니다.');
+    } finally {
+      setWidgetConfigsSaving(false);
+    }
+  };
+
+  const handleCancelWidgetEdit = () => {
+    setWidgetDrafts(widgetConfigs);
+    setIsWidgetEditMode(false);
+  };
+
+  const renderWidgetSection = (widgetKey: DashboardWidgetKey) => {
+    switch (widgetKey) {
+      case 'tasks':
+        return (
+          <FamilyTasksSection
+            tasks={state.todos}
+            onTasksChange={handleTasksChange}
+            userId={userId}
+            currentGroupId={currentGroupId}
+            getCurrentKey={getCurrentKey}
+            CryptoService={CryptoService}
+            sanitizeInput={sanitizeInput}
+            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            lang={lang}
+            taskMembers={familyTaskMembers}
+            translations={{
+              todo_section_title: dt('todo_section_title'),
+              todo_add_btn: dt('todo_add_btn'),
+              todo_empty_state: dt('todo_empty_state'),
+              todo_modal_title: dt('todo_modal_title'),
+              todo_what_label: dt('todo_what_label'),
+              todo_what_placeholder: dt('todo_what_placeholder'),
+              todo_who_label: dt('todo_who_label'),
+              todo_who_placeholder: dt('todo_who_placeholder'),
+              todo_register_btn: dt('todo_register_btn'),
+              todo_required: dt('todo_required'),
+              invalid_input: dt('invalid_input'),
+              anyone: ct('anyone'),
+              cancel: ct('cancel'),
+              delete_confirm: ct('delete_confirm'),
+            }}
+            chatDragOver={chatDragOver}
+            chatDropRef={chatDropRef}
+            onChatDragOver={(e) => {
+              e.preventDefault();
+              setChatDragOver(true);
+            }}
+            onChatDragLeave={() => setChatDragOver(false)}
+            onChatDrop={(e) => {
+              e.preventDefault();
+              setChatDragOver(false);
+              const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
+              handleDropChatFiles(files);
+            }}
+          />
+        );
+      case 'calendar':
+        return (
+          <FamilyCalendarSection
+            events={state.events}
+            onEventsChange={handleEventsChange}
+            userId={userId}
+            currentGroupId={currentGroupId}
+            getCurrentKey={getCurrentKey}
+            CryptoService={CryptoService}
+            sanitizeInput={sanitizeInput}
+            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
+            eventAuthorNames={eventAuthorNames}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            lang={lang}
+            translations={{
+              section_title_calendar: dt('section_title_calendar'),
+              calendar_prev_month: dt('calendar_prev_month'),
+              calendar_next_month: dt('calendar_next_month'),
+              calendar_sun: dt('calendar_weekday_0'),
+              calendar_mon: dt('calendar_weekday_1'),
+              calendar_tue: dt('calendar_weekday_2'),
+              calendar_wed: dt('calendar_weekday_3'),
+              calendar_thu: dt('calendar_weekday_4'),
+              calendar_fri: dt('calendar_weekday_5'),
+              calendar_sat: dt('calendar_weekday_6'),
+              calendar_day_events_title: dt('calendar_day_events_title'),
+              event_add_title: dt('event_add_title'),
+              event_title_label: dt('event_title_label'),
+              event_title_placeholder: dt('event_title_placeholder'),
+              event_desc_label: dt('event_desc_label'),
+              event_desc_placeholder: dt('event_desc_placeholder'),
+              event_repeat_label: dt('event_repeat_label'),
+              event_repeat_none: dt('event_repeat_none'),
+              event_repeat_monthly: dt('event_repeat_monthly'),
+              event_repeat_yearly: dt('event_repeat_yearly'),
+              event_submit_btn: dt('event_submit_btn'),
+              event_title_required: dt('event_title_required'),
+              event_date_invalid: dt('event_date_invalid'),
+              event_title_invalid: dt('event_title_invalid'),
+              event_author: dt('event_author'),
+              event_no_events: dt('event_no_events'),
+              event_add_hint: dt('event_add_hint'),
+              event_save_failed: dt('event_save_failed'),
+              delete_failed_retry: dt('delete_failed_retry'),
+              me: ct('me'),
+              unknown: ct('unknown'),
+              cancel: ct('cancel'),
+              close: ct('close'),
+              delete: ct('delete'),
+              delete_confirm: ct('delete_confirm'),
+            }}
+          />
+        );
+      case 'chat':
+        return (
+          <FamilyChatSection
+            messages={state.messages}
+            userId={userId}
+            currentGroupId={currentGroupId}
+            isSendingText={chatTextSendingUi}
+            onSendMessage={sendChat}
+            chatBoxRef={chatBoxRef}
+            chatInputRef={chatInputRef}
+            chatFileInputRef={chatFileInputRef}
+            chatCameraInputRef={chatCameraInputRef}
+            chatHasMoreOlder={chatHasMoreOlder}
+            chatLoadingOlder={chatLoadingOlder}
+            onLoadOlderMessages={loadOlderChatMessages}
+            onPickFiles={handlePickChatFiles}
+            chatAttachmentsByMessage={chatAttachmentsByMessage}
+            chatOutgoingPreviews={chatOutgoingPreviews}
+            onDeleteAttachment={async (attachmentId: string) => {
+              if (!currentGroupId) return;
+              try {
+                await deleteAttachment(currentGroupId, attachmentId);
+                await loadChatAttachments();
+              } catch (e) {
+                alert(e instanceof Error ? e.message : '첨부 삭제 실패');
+              }
+            }}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            eventAuthorNames={eventAuthorNames}
+            lang={lang}
+            translations={{
+              section_title_chat: dt('section_title_chat'),
+              section_chat_bubble_greeting: dt('section_chat_bubble_greeting'),
+              chat_placeholder: dt('chat_placeholder'),
+              chat_send: dt('chat_send'),
+              chat_load_older: dt('chat_load_older'),
+              chat_loading_older: dt('chat_loading_older'),
+              chat_album_btn: dt('chat_album_btn'),
+              chat_camera_btn: dt('chat_camera_btn'),
+              chat_remove_attachment_aria: dt('chat_remove_attachment_aria'),
+              me: ct('me'),
+              user: ct('user'),
+            }}
+          />
+        );
+      case 'travel':
+        return (
+          <TravelPlannerSection
+            trips={travelTrips}
+            loading={travelTripsLoading}
+            currentGroupId={currentGroupId}
+            onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
+            onAddClick={() => router.push('/travel?openAdd=1')}
+            translations={{
+              section_title: tt('title'),
+              add_trip: tt('add_trip'),
+              select_group: tt('dashboard_select_group'),
+              trips_loading: tt('dashboard_trips_loading'),
+              empty_state: tt('dashboard_card_empty'),
+            }}
+          />
+        );
+      case 'piggy':
+        return (
+          <PiggyBankSection
+            currentGroupId={currentGroupId}
+            isAdmin={piggyMemberPiggies !== null}
+            piggySummary={piggySummary}
+            piggyMemberPiggies={piggyMemberPiggies}
+            piggyLoaded={piggyLoaded}
+            piggySummaryError={piggySummaryError}
+            pendingAccountRequests={pendingAccountRequests}
+            piggyLabel={piggyLabel}
+            formatAmount={formatDashboardPiggy}
+            onGoClick={() => router.push('/piggy-bank')}
+            onManageClick={() => router.push('/piggy-bank')}
+            onAddPiggy={handleDashboardAddPiggy}
+            onDeletePiggy={handleDashboardDeletePiggy}
+            onApproveRequest={handleApproveAccountRequest}
+            onRejectRequest={handleRejectAccountRequest}
+            onRequestAccount={handlePiggyRequestAccount}
+            onMemberClick={(targetUserId) => router.push(`/piggy-bank?child_id=${targetUserId}`)}
+            translations={{
+              section_title_admin: dt('piggy_section_admin_title'),
+              section_title_user: dt('piggy_card_title'),
+              manage_all: dt('piggy_manage_all'),
+              go: dt('piggy_go'),
+              select_group: dt('piggy_select_group_prompt'),
+              loading: dt('piggy_loading_generic'),
+              pending_requests: dt('piggy_pending_requests'),
+              no_account_holders: dt('piggy_no_account_holders'),
+              member_no_account_line: dt('piggy_member_no_account_line'),
+              add_account_btn: dt('piggy_add_account_btn'),
+              delete_account_btn: dt('piggy_delete_account_btn'),
+              reject_btn: dt('piggy_reject_btn'),
+              approve_btn: dt('piggy_approve_btn'),
+              wallet_balance_label: dt('piggy_wallet_balance_label'),
+              bank_balance_label: dt('piggy_bank_balance_label'),
+              wallet_balance_for_name: dt('piggy_wallet_balance_for_name'),
+              bank_balance_for_name: dt('piggy_bank_balance_for_name'),
+              empty_ask_admin: dt('piggy_empty_ask_admin'),
+              request_account_btn: dt('piggy_request_account_btn'),
+              member: ct('member'),
+              card_title: dt('piggy_card_title'),
+            }}
+          />
+        );
+      case 'album':
+        return (
+          <FamilyAlbumSection
+            photos={stableAlbum}
+            onViewAllClick={() => router.push('/memories')}
+            maxPhotos={9}
+            translations={{
+              section_title: dt('section_title_memories'),
+              view_all: dt('album_view_all'),
+              empty_state: dt('photo_upload_prompt'),
+              photos_count: dt('album_more_photos'),
+            }}
+          />
+        );
+      case 'location':
+        return (
+          <FamilyLocationSection
+            onOpenRequestModal={() => setShowLocationRequestModal(true)}
+            myLocation={state.location}
+            extractLocationAddress={extractLocationAddress}
+            isLocationSharing={isLocationSharing}
+            mapError={mapError}
+            hasGoogleMapsApiKey={Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY)}
+            locationRequests={locationRequests}
+            userId={userId}
+            onLocationRequestAction={handleLocationRequestAction}
+            onEndLocationSharing={endLocationSharing}
+            translations={{
+              section_title_location: dt('section_title_location'),
+              location_where_btn: dt('location_where_btn'),
+              piggy_request_sent: dt('piggy_request_sent'),
+              piggy_request_received: dt('piggy_request_received'),
+              location_share_btn: dt('location_share_btn'),
+              location_ui_address_prefix: dt('location_ui_address_prefix'),
+              location_ui_map_title: dt('location_ui_map_title'),
+              location_ui_map_hint_off: dt('location_ui_map_hint_off'),
+              location_ui_gmaps_error_title: dt('location_ui_gmaps_error_title'),
+              location_ui_troubleshoot_title: dt('location_ui_troubleshoot_title'),
+              location_ui_troubleshoot_1: dt('location_ui_troubleshoot_1'),
+              location_ui_troubleshoot_2: dt('location_ui_troubleshoot_2'),
+              location_ui_troubleshoot_3: dt('location_ui_troubleshoot_3'),
+              location_ui_troubleshoot_4: dt('location_ui_troubleshoot_4'),
+              location_ui_troubleshoot_note: dt('location_ui_troubleshoot_note'),
+              location_ui_open_in_gmaps: dt('location_ui_open_in_gmaps'),
+              location_ui_api_key_title: dt('location_ui_api_key_title'),
+              location_ui_api_setup_title: dt('location_ui_api_setup_title'),
+              location_ui_api_li1_before: dt('location_ui_api_li1_before'),
+              location_ui_api_li1_after: dt('location_ui_api_li1_after'),
+              location_ui_api_li2_intro: dt('location_ui_api_li2_intro'),
+              location_ui_api_env_example: dt('location_ui_api_env_example'),
+              location_ui_api_li3_before: dt('location_ui_api_li3_before'),
+              location_ui_api_li3_after: dt('location_ui_api_li3_after'),
+              location_ui_api_hint_before: dt('location_ui_api_hint_before'),
+              location_ui_api_hint_after: dt('location_ui_api_hint_after'),
+              location_ui_or_maps_before: dt('location_ui_or_maps_before'),
+              location_ui_or_maps_link: dt('location_ui_or_maps_link'),
+              location_ui_requests_heading: dt('location_ui_requests_heading'),
+              location_ui_unknown_user: dt('location_ui_unknown_user'),
+              location_ui_dot_time_left: dt('location_ui_dot_time_left'),
+              location_ui_expired_suffix: dt('location_ui_expired_suffix'),
+              location_ui_pin_time_left: dt('location_ui_pin_time_left'),
+              location_ui_pin_expired: dt('location_ui_pin_expired'),
+              location_ui_sharing_with: dt('location_ui_sharing_with'),
+              location_ui_end_sharing: dt('location_ui_end_sharing'),
+            }}
+            cancelLabel={ct('cancel')}
+            rejectLabel={dt('piggy_reject_btn')}
+            familyRoleByUserId={familyRoleByUserId}
+            getFamilyRoleEmoji={getFamilyRoleEmoji}
+            getFamilyRoleLabel={getFamilyRoleLabel}
+            lang={lang}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   if (realtimeBootstrapIdRef.current === null) {
     realtimeBootstrapIdRef.current = Date.now();
   }
@@ -5527,281 +5922,92 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div className="sections-container">
-          {/* Family Tasks Section */}
-          <FamilyTasksSection
-            tasks={state.todos}
-            onTasksChange={handleTasksChange}
-            userId={userId}
-            currentGroupId={currentGroupId}
-            getCurrentKey={getCurrentKey}
-            CryptoService={CryptoService}
-            sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
-            familyRoleByUserId={familyRoleByUserId}
-            getFamilyRoleEmoji={getFamilyRoleEmoji}
-            getFamilyRoleLabel={getFamilyRoleLabel}
-            lang={lang}
-            taskMembers={familyTaskMembers}
-            translations={{
-              todo_section_title: dt('todo_section_title'),
-              todo_add_btn: dt('todo_add_btn'),
-              todo_empty_state: dt('todo_empty_state'),
-              todo_modal_title: dt('todo_modal_title'),
-              todo_what_label: dt('todo_what_label'),
-              todo_what_placeholder: dt('todo_what_placeholder'),
-              todo_who_label: dt('todo_who_label'),
-              todo_who_placeholder: dt('todo_who_placeholder'),
-              todo_register_btn: dt('todo_register_btn'),
-              todo_required: dt('todo_required'),
-              invalid_input: dt('invalid_input'),
-              anyone: ct('anyone'),
-              cancel: ct('cancel'),
-              delete_confirm: ct('delete_confirm'),
-            }}
-            chatDragOver={chatDragOver}
-            chatDropRef={chatDropRef}
-            onChatDragOver={(e) => {
-              e.preventDefault();
-              setChatDragOver(true);
-            }}
-            onChatDragLeave={() => setChatDragOver(false)}
-            onChatDrop={(e) => {
-              e.preventDefault();
-              setChatDragOver(false);
-              const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
-              handleDropChatFiles(files);
-            }}
-          />
+          {currentGroupId && groupIsOwner && (
+            <section className="content-section border border-slate-200 bg-slate-50">
+              <div className="section-header">
+                <h3 className="section-title">위젯 편집</h3>
+                {!isWidgetEditMode ? (
+                  <button
+                    type="button"
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
+                    onClick={() => setIsWidgetEditMode(true)}
+                  >
+                    편집 시작
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
+                      onClick={handleCancelWidgetEdit}
+                      disabled={widgetConfigsSaving}
+                    >
+                      {ct('cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+                      onClick={handleSaveWidgets}
+                      disabled={widgetConfigsSaving}
+                    >
+                      {widgetConfigsSaving ? ct('loading') : ct('save')}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="section-body">
+                {widgetConfigsLoading ? (
+                  <p className="text-sm text-slate-500">{ct('loading')}</p>
+                ) : (
+                  <div className="grid gap-2">
+                    {widgetDrafts
+                      .slice()
+                      .sort((a, b) => a.display_order - b.display_order)
+                      .map((cfg, idx, arr) => (
+                        <div
+                          key={cfg.widget_key}
+                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={cfg.is_enabled}
+                              onChange={() => toggleWidgetEnabled(cfg.widget_key)}
+                              disabled={!isWidgetEditMode || widgetConfigsSaving}
+                            />
+                            <span className="text-sm font-medium text-slate-700">
+                              {widgetLabels[cfg.widget_key]}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 disabled:opacity-40"
+                              onClick={() => moveWidget(cfg.widget_key, 'up')}
+                              disabled={!isWidgetEditMode || idx === 0 || widgetConfigsSaving}
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 disabled:opacity-40"
+                              onClick={() => moveWidget(cfg.widget_key, 'down')}
+                              disabled={!isWidgetEditMode || idx === arr.length - 1 || widgetConfigsSaving}
+                            >
+                              ▼
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
-          {/* Family Calendar Section */}
-          <FamilyCalendarSection
-            events={state.events}
-            onEventsChange={handleEventsChange}
-            userId={userId}
-            currentGroupId={currentGroupId}
-            getCurrentKey={getCurrentKey}
-            CryptoService={CryptoService}
-            sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
-            eventAuthorNames={eventAuthorNames}
-            familyRoleByUserId={familyRoleByUserId}
-            getFamilyRoleEmoji={getFamilyRoleEmoji}
-            getFamilyRoleLabel={getFamilyRoleLabel}
-            lang={lang}
-            translations={{
-              section_title_calendar: dt('section_title_calendar'),
-              calendar_prev_month: dt('calendar_prev_month'),
-              calendar_next_month: dt('calendar_next_month'),
-              calendar_sun: dt('calendar_weekday_0'),
-              calendar_mon: dt('calendar_weekday_1'),
-              calendar_tue: dt('calendar_weekday_2'),
-              calendar_wed: dt('calendar_weekday_3'),
-              calendar_thu: dt('calendar_weekday_4'),
-              calendar_fri: dt('calendar_weekday_5'),
-              calendar_sat: dt('calendar_weekday_6'),
-              calendar_day_events_title: dt('calendar_day_events_title'),
-              event_add_title: dt('event_add_title'),
-              event_title_label: dt('event_title_label'),
-              event_title_placeholder: dt('event_title_placeholder'),
-              event_desc_label: dt('event_desc_label'),
-              event_desc_placeholder: dt('event_desc_placeholder'),
-              event_repeat_label: dt('event_repeat_label'),
-              event_repeat_none: dt('event_repeat_none'),
-              event_repeat_monthly: dt('event_repeat_monthly'),
-              event_repeat_yearly: dt('event_repeat_yearly'),
-              event_submit_btn: dt('event_submit_btn'),
-              event_title_required: dt('event_title_required'),
-              event_date_invalid: dt('event_date_invalid'),
-              event_title_invalid: dt('event_title_invalid'),
-              event_author: dt('event_author'),
-              event_no_events: dt('event_no_events'),
-              event_add_hint: dt('event_add_hint'),
-              event_save_failed: dt('event_save_failed'),
-              delete_failed_retry: dt('delete_failed_retry'),
-              me: ct('me'),
-              unknown: ct('unknown'),
-              cancel: ct('cancel'),
-              close: ct('close'),
-              delete: ct('delete'),
-              delete_confirm: ct('delete_confirm'),
-            }}
-          />
-
-          {/* Family Chat Section */}
-          <FamilyChatSection
-            messages={state.messages}
-            userId={userId}
-            currentGroupId={currentGroupId}
-            isSendingText={chatTextSendingUi}
-            onSendMessage={sendChat}
-            chatBoxRef={chatBoxRef}
-            chatInputRef={chatInputRef}
-            chatFileInputRef={chatFileInputRef}
-            chatCameraInputRef={chatCameraInputRef}
-            chatHasMoreOlder={chatHasMoreOlder}
-            chatLoadingOlder={chatLoadingOlder}
-            onLoadOlderMessages={loadOlderChatMessages}
-            onPickFiles={handlePickChatFiles}
-            chatAttachmentsByMessage={chatAttachmentsByMessage}
-            chatOutgoingPreviews={chatOutgoingPreviews}
-            onDeleteAttachment={async (attachmentId: string) => {
-              if (!currentGroupId) return;
-              try {
-                await deleteAttachment(currentGroupId, attachmentId);
-                await loadChatAttachments();
-              } catch (e) {
-                alert(e instanceof Error ? e.message : '첨부 삭제 실패');
-              }
-            }}
-            familyRoleByUserId={familyRoleByUserId}
-            getFamilyRoleEmoji={getFamilyRoleEmoji}
-            getFamilyRoleLabel={getFamilyRoleLabel}
-            eventAuthorNames={eventAuthorNames}
-            lang={lang}
-            translations={{
-              section_title_chat: dt('section_title_chat'),
-              section_chat_bubble_greeting: dt('section_chat_bubble_greeting'),
-              chat_placeholder: dt('chat_placeholder'),
-              chat_send: dt('chat_send'),
-              chat_load_older: dt('chat_load_older'),
-              chat_loading_older: dt('chat_loading_older'),
-              chat_album_btn: dt('chat_album_btn'),
-              chat_camera_btn: dt('chat_camera_btn'),
-              chat_remove_attachment_aria: dt('chat_remove_attachment_aria'),
-              me: ct('me'),
-              user: ct('user'),
-            }}
-          />
-
-          {/* 가족 여행 플래너 Section */}
-          <TravelPlannerSection
-            trips={travelTrips}
-            loading={travelTripsLoading}
-            currentGroupId={currentGroupId}
-            onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
-            onAddClick={() => router.push('/travel?openAdd=1')}
-            translations={{
-              section_title: tt('title'),
-              add_trip: tt('add_trip'),
-              select_group: tt('dashboard_select_group'),
-              trips_loading: tt('dashboard_trips_loading'),
-              empty_state: tt('dashboard_card_empty'),
-            }}
-          />
-
-          {/* Piggy Bank Section */}
-          <PiggyBankSection
-            currentGroupId={currentGroupId}
-            isAdmin={piggyMemberPiggies !== null}
-            piggySummary={piggySummary}
-            piggyMemberPiggies={piggyMemberPiggies}
-            piggyLoaded={piggyLoaded}
-            piggySummaryError={piggySummaryError}
-            pendingAccountRequests={pendingAccountRequests}
-            piggyLabel={piggyLabel}
-            formatAmount={formatDashboardPiggy}
-            onGoClick={() => router.push('/piggy-bank')}
-            onManageClick={() => router.push('/piggy-bank')}
-            onAddPiggy={handleDashboardAddPiggy}
-            onDeletePiggy={handleDashboardDeletePiggy}
-            onApproveRequest={handleApproveAccountRequest}
-            onRejectRequest={handleRejectAccountRequest}
-            onRequestAccount={handlePiggyRequestAccount}
-            onMemberClick={(userId) => router.push(`/piggy-bank?child_id=${userId}`)}
-            translations={{
-              section_title_admin: dt('piggy_section_admin_title'),
-              section_title_user: dt('piggy_card_title'),
-              manage_all: dt('piggy_manage_all'),
-              go: dt('piggy_go'),
-              select_group: dt('piggy_select_group_prompt'),
-              loading: dt('piggy_loading_generic'),
-              pending_requests: dt('piggy_pending_requests'),
-              no_account_holders: dt('piggy_no_account_holders'),
-              member_no_account_line: dt('piggy_member_no_account_line'),
-              add_account_btn: dt('piggy_add_account_btn'),
-              delete_account_btn: dt('piggy_delete_account_btn'),
-              reject_btn: dt('piggy_reject_btn'),
-              approve_btn: dt('piggy_approve_btn'),
-              wallet_balance_label: dt('piggy_wallet_balance_label'),
-              bank_balance_label: dt('piggy_bank_balance_label'),
-              wallet_balance_for_name: dt('piggy_wallet_balance_for_name'),
-              bank_balance_for_name: dt('piggy_bank_balance_for_name'),
-              empty_ask_admin: dt('piggy_empty_ask_admin'),
-              request_account_btn: dt('piggy_request_account_btn'),
-              member: ct('member'),
-              card_title: dt('piggy_card_title'),
-            }}
-          />
-
-          {/* Family Album Section */}
-          <FamilyAlbumSection
-            photos={stableAlbum}
-            onViewAllClick={() => router.push('/memories')}
-            maxPhotos={9}
-            translations={{
-              section_title: dt('section_title_memories'),
-              view_all: dt('album_view_all'),
-              empty_state: dt('photo_upload_prompt'),
-              photos_count: dt('album_more_photos'),
-            }}
-          />
-
-          <FamilyLocationSection
-            onOpenRequestModal={() => setShowLocationRequestModal(true)}
-            myLocation={state.location}
-            extractLocationAddress={extractLocationAddress}
-            isLocationSharing={isLocationSharing}
-            mapError={mapError}
-            hasGoogleMapsApiKey={Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY)}
-            locationRequests={locationRequests}
-            userId={userId}
-            onLocationRequestAction={handleLocationRequestAction}
-            onEndLocationSharing={endLocationSharing}
-            translations={{
-              section_title_location: dt('section_title_location'),
-              location_where_btn: dt('location_where_btn'),
-              piggy_request_sent: dt('piggy_request_sent'),
-              piggy_request_received: dt('piggy_request_received'),
-              location_share_btn: dt('location_share_btn'),
-              location_ui_address_prefix: dt('location_ui_address_prefix'),
-              location_ui_map_title: dt('location_ui_map_title'),
-              location_ui_map_hint_off: dt('location_ui_map_hint_off'),
-              location_ui_gmaps_error_title: dt('location_ui_gmaps_error_title'),
-              location_ui_troubleshoot_title: dt('location_ui_troubleshoot_title'),
-              location_ui_troubleshoot_1: dt('location_ui_troubleshoot_1'),
-              location_ui_troubleshoot_2: dt('location_ui_troubleshoot_2'),
-              location_ui_troubleshoot_3: dt('location_ui_troubleshoot_3'),
-              location_ui_troubleshoot_4: dt('location_ui_troubleshoot_4'),
-              location_ui_troubleshoot_note: dt('location_ui_troubleshoot_note'),
-              location_ui_open_in_gmaps: dt('location_ui_open_in_gmaps'),
-              location_ui_api_key_title: dt('location_ui_api_key_title'),
-              location_ui_api_setup_title: dt('location_ui_api_setup_title'),
-              location_ui_api_li1_before: dt('location_ui_api_li1_before'),
-              location_ui_api_li1_after: dt('location_ui_api_li1_after'),
-              location_ui_api_li2_intro: dt('location_ui_api_li2_intro'),
-              location_ui_api_env_example: dt('location_ui_api_env_example'),
-              location_ui_api_li3_before: dt('location_ui_api_li3_before'),
-              location_ui_api_li3_after: dt('location_ui_api_li3_after'),
-              location_ui_api_hint_before: dt('location_ui_api_hint_before'),
-              location_ui_api_hint_after: dt('location_ui_api_hint_after'),
-              location_ui_or_maps_before: dt('location_ui_or_maps_before'),
-              location_ui_or_maps_link: dt('location_ui_or_maps_link'),
-              location_ui_requests_heading: dt('location_ui_requests_heading'),
-              location_ui_unknown_user: dt('location_ui_unknown_user'),
-              location_ui_dot_time_left: dt('location_ui_dot_time_left'),
-              location_ui_expired_suffix: dt('location_ui_expired_suffix'),
-              location_ui_pin_time_left: dt('location_ui_pin_time_left'),
-              location_ui_pin_expired: dt('location_ui_pin_expired'),
-              location_ui_sharing_with: dt('location_ui_sharing_with'),
-              location_ui_end_sharing: dt('location_ui_end_sharing'),
-            }}
-            cancelLabel={ct('cancel')}
-            rejectLabel={dt('piggy_reject_btn')}
-            familyRoleByUserId={familyRoleByUserId}
-            getFamilyRoleEmoji={getFamilyRoleEmoji}
-            getFamilyRoleLabel={getFamilyRoleLabel}
-            lang={lang}
-          />
+          {orderedWidgetKeys.map((widgetKey) => (
+            <React.Fragment key={widgetKey}>{renderWidgetSection(widgetKey)}</React.Fragment>
+          ))}
 
         <FamilyLocationRequestModal
           open={showLocationRequestModal}
@@ -5843,7 +6049,7 @@ export default function FamilyHub() {
           lang={lang}
         />
       </div>
-              </div>
+      </div>
       
       {/* 업로드 상태 애니메이션 스타일 */}
       <style jsx>{`
