@@ -5325,24 +5325,6 @@ export default function FamilyHub() {
     );
   }, [memberSupportTickets, userId]);
 
-  // --- [RENDER] ---
-
-  if (!isMounted) return null; // Hydration mismatch 방지
-
-  // Supabase 세션이 없으면 로그인 페이지로 리다이렉트 (렌더링 전 처리)
-  if (!isAuthenticated && isMounted) {
-    return null; // useEffect에서 리다이렉트 처리 중
-  }
-
-  const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
-  const showAdminButton = isSystemAdmin || isGroupAdmin;
-  const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
-
-  // 그룹 정보 로딩 중인지 확인
-  const isGroupLoading = groupLoading && !currentGroupId;
-  /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
-  const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
-
   useEffect(() => {
     let cancelled = false;
     if (!currentGroupId) {
@@ -5374,6 +5356,24 @@ export default function FamilyHub() {
       cancelled = true;
     };
   }, [currentGroupId, groupIsOwner]);
+
+  // --- [RENDER] ---
+
+  if (!isMounted) return null; // Hydration mismatch 방지
+
+  // Supabase 세션이 없으면 로그인 페이지로 리다이렉트 (렌더링 전 처리)
+  if (!isAuthenticated && isMounted) {
+    return null; // useEffect에서 리다이렉트 처리 중
+  }
+
+  const isGroupAdmin = (groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null;
+  const showAdminButton = isSystemAdmin || isGroupAdmin;
+  const adminPagePath = isSystemAdmin ? '/admin' : '/group-admin';
+
+  // 그룹 정보 로딩 중인지 확인
+  const isGroupLoading = groupLoading && !currentGroupId;
+  /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
+  const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
   const widgetLabels: Record<DashboardWidgetKey, string> = {
     tasks: dt('todo_section_title'),
