@@ -1596,17 +1596,22 @@ export default function FamilyHub() {
         }
       }));
 
-      // Supabase에 위치 저장 (일관된 형식으로)
+      // Supabase에 위치 저장 (일관된 형식으로) — group_id 누락 시 그룹 기반 RLS에서 상대 SELECT 불가
       try {
+        const groupIdForRow = dashboardCurrentGroupIdRef.current;
+        const row: Record<string, unknown> = {
+          user_id: userId,
+          latitude: latitude,
+          longitude: longitude,
+          address: currentAddress,
+          last_updated: new Date().toISOString(),
+        };
+        if (groupIdForRow) {
+          row.group_id = groupIdForRow;
+        }
         const { error } = await supabase
           .from('user_locations')
-          .upsert({
-            user_id: userId,
-            latitude: latitude,
-            longitude: longitude,
-            address: currentAddress, // extractLocationAddress로 변환된 주소
-            last_updated: new Date().toISOString()
-          }, {
+          .upsert(row as any, {
             onConflict: 'user_id'
           });
 
@@ -4133,6 +4138,11 @@ export default function FamilyHub() {
           }).filter(Boolean);
           console.log('📍 [loadFamilyLocations] merged 개수:', merged.length);
           console.log('📍 [loadFamilyLocations] merged:', JSON.stringify(merged, null, 2));
+          // 승인된 상대는 있는데 아직 user_locations 행이 없거나(RLS/지연) merged만 비면 []로 덮어써 마커가 사라짐
+          if (expectedUserIds.size > 0 && merged.length === 0) {
+            console.log('📍 [loadFamilyLocations] expectedUserIds는 있으나 merged 비어 있음 - prev 유지');
+            return prev;
+          }
           // expectedUserIds가 비어있을 때는 API stale 가능성 → []로 덮어쓰지 않음 (prev 유지, 취소/거절 시에만 else 쪽에서 비움)
           if (expectedUserIds.size === 0 && merged.length === 0) {
             console.log('📍 [loadFamilyLocations] expectedUserIds 비어있고 merged도 비어있음 - prev 유지');
