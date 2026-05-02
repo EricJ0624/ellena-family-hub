@@ -271,6 +271,9 @@ export default function FamilyHub() {
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
+  /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
+  const isLocationSharingRef = useRef(false);
+  isLocationSharingRef.current = isLocationSharing;
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [piggySummary, setPiggySummary] = useState<PiggySummary | null>(null);
@@ -3507,18 +3510,21 @@ export default function FamilyHub() {
     return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
-  // 위치를 Supabase에 저장 — 60초 최소 간격 + 50m 최소 이동 거리 둘 다 만족할 때만 upsert (첫 저장은 즉시)
+  // 위치를 Supabase에 저장 — 공유 중: 20초·15m / 비공유 경로: 60초·50m (첫 저장은 즉시)
   const saveLocationToSupabase = async (latitude: number, longitude: number, address: string) => {
     const now = Date.now();
     const timeSinceLastUpdate = now - lastLocationUpdateRef.current;
     const hasPreviousSend = lastLocationUpdateRef.current > 0;
+    const sharing = isLocationSharingRef.current;
+    const minIntervalMs = sharing ? 20000 : 60000;
+    const minMoveM = sharing ? 15 : 50;
 
-    if (hasPreviousSend && timeSinceLastUpdate < 60000) {
+    if (hasPreviousSend && timeSinceLastUpdate < minIntervalMs) {
       return;
     }
     const lastLat = lastSentLatRef.current;
     const lastLng = lastSentLngRef.current;
-    if (lastLat != null && lastLng != null && distanceMeters(latitude, longitude, lastLat, lastLng) < 50) {
+    if (lastLat != null && lastLng != null && distanceMeters(latitude, longitude, lastLat, lastLng) < minMoveM) {
       return;
     }
 
@@ -3692,7 +3698,8 @@ export default function FamilyHub() {
               {
                 enableHighAccuracy: true,
                 timeout: 20000,
-                maximumAge: 60000
+                // 공유 시작 시 오래된 캐시 좌표 쓰면 같은 자리도 지도에서 어긋져 보임
+                maximumAge: 0
               }
             );
           });
@@ -3733,7 +3740,7 @@ export default function FamilyHub() {
       const watchOptions: PositionOptions = {
         enableHighAccuracy: true,
         timeout: 30000, // 30초 타임아웃
-        maximumAge: 10000 // 10초 이내 캐시된 위치 허용
+        maximumAge: 5000 // 짧은 캐시만 허용 (같은 위치 동기화에 유리)
       };
 
       const watchId = navigator.geolocation.watchPosition(
@@ -3764,8 +3771,9 @@ export default function FamilyHub() {
             // Supabase에 저장 (쓰로틀링 적용)
             await saveLocationToSupabase(latitude, longitude, address);
 
-            // 가족 구성원 위치 목록 업데이트 (60초마다 - 무료 할당량 절약)
-            if (now - lastLocationUpdateRef.current > 60000) {
+            // 가족 위치 재조회: 공유 중에는 저장 주기에 맞춰 더 자주 (상대 마커 지연 완화)
+            const reloadGapMs = isLocationSharingRef.current ? 25000 : 60000;
+            if (now - lastLocationUpdateRef.current > reloadGapMs) {
               await loadFamilyLocations();
             }
 
@@ -3812,10 +3820,10 @@ export default function FamilyHub() {
 
       geolocationWatchIdRef.current = watchId;
 
-      // 주기적으로 가족 구성원 위치 업데이트 (30초마다)
+      // 주기적으로 가족 구성원 위치 업데이트 (공유 세션 중 15초)
       locationUpdateIntervalRef.current = setInterval(async () => {
         await loadFamilyLocations();
-      }, 30000);
+      }, 15000);
 
     } catch (error: any) {
       console.error('위치 추적 시작 오류:', error);
