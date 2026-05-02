@@ -26,7 +26,8 @@ import {
   Key,
   Plus,
   Check,
-  PiggyBank
+  PiggyBank,
+  LayoutGrid,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MemberManagement from '@/app/components/MemberManagement';
@@ -38,6 +39,7 @@ import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { DashboardWidgetSettings } from '@/app/components/group-admin/DashboardWidgetSettings';
 
 export type GroupAdminPanelVariant = 'standalone' | 'embedded';
 
@@ -154,7 +156,8 @@ type GroupAdminTabId =
   | 'support-tickets'
   | 'member-support-tickets'
   | 'dashboard-access-requests'
-  | 'piggy-archives';
+  | 'piggy-archives'
+  | 'widgets';
 
 export function GroupAdminPanel({
   variant = 'standalone',
@@ -929,6 +932,16 @@ export function GroupAdminPanel({
             <Settings className="mr-2 inline h-[18px] w-[18px] align-middle" />
             그룹 설정
           </button>
+          {isOwner && !!effectiveGroupId && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('widgets')}
+              className={tabButtonClass('widgets')}
+            >
+              <LayoutGrid className="mr-2 inline h-[18px] w-[18px] align-middle" />
+              {gat('widgets_tab')}
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('content')}
             className={tabButtonClass('content')}
@@ -1115,6 +1128,12 @@ export function GroupAdminPanel({
               </div>
             )}
 
+
+            {activeTab === 'widgets' && isOwner && (
+              <div>
+                <DashboardWidgetSettings groupId={effectiveGroupId} isOwner={isOwner} />
+              </div>
+            )}
             {/* ??�쎌�??�썲????�승?????*/}
             {activeTab === 'content' && (
               <div>

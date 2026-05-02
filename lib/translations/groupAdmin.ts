@@ -42,6 +42,15 @@ export type GroupAdminTranslations = {
   error_delete_photo: string;
   written_at: string;
   answered_at: string;
+  /** 그룹 관리 — 대시보드 위젯 탭 */
+  widgets_tab: string;
+  widgets_panel_title: string;
+  widgets_panel_hint: string;
+  widgets_edit_start: string;
+  widgets_alert_min_one: string;
+  widgets_error_save: string;
+  widgets_no_group: string;
+  widgets_owner_only: string;
 }
 
 const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
@@ -87,6 +96,14 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     error_delete_photo: '사진 삭제 중 오류가 발생했습니다.',
     written_at: '작성일:',
     answered_at: '답변일:',
+    widgets_tab: '대시보드 위젯',
+    widgets_panel_title: '대시보드 위젯',
+    widgets_panel_hint: '가족 대시보드에 표시할 위젯의 순서와 표시 여부를 설정합니다. 변경 후 저장해야 반영됩니다.',
+    widgets_edit_start: '편집 시작',
+    widgets_alert_min_one: '최소 1개 위젯은 켜져 있어야 합니다.',
+    widgets_error_save: '위젯 설정 저장에 실패했습니다.',
+    widgets_no_group: '선택된 그룹이 없습니다.',
+    widgets_owner_only: '그룹 소유자만 위젯을 편집할 수 있습니다.',
   },
   en: {
     checking_permission: 'Checking permission...',
@@ -130,6 +147,14 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     error_delete_photo: 'Failed to delete photo.',
     written_at: 'Written:',
     answered_at: 'Answered:',
+    widgets_tab: 'Dashboard widgets',
+    widgets_panel_title: 'Dashboard widgets',
+    widgets_panel_hint: 'Choose which widgets appear on the family dashboard and their order. Save to apply.',
+    widgets_edit_start: 'Edit',
+    widgets_alert_min_one: 'At least one widget must stay enabled.',
+    widgets_error_save: 'Failed to save widget settings.',
+    widgets_no_group: 'No group selected.',
+    widgets_owner_only: 'Only the group owner can edit widgets.',
   },
   ja: {
     checking_permission: '権限確認中...',
@@ -173,6 +198,14 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     error_delete_photo: '削除に失敗しました。',
     written_at: '作成日：',
     answered_at: '返信日：',
+    widgets_tab: 'ダッシュボードウィジェット',
+    widgets_panel_title: 'ダッシュボードウィジェット',
+    widgets_panel_hint: '家族ダッシュボードに表示するウィジェットと順序を設定します。保存で反映されます。',
+    widgets_edit_start: '編集',
+    widgets_alert_min_one: '少なくとも1つのウィジェットを有効にしてください。',
+    widgets_error_save: 'ウィジェット設定の保存に失敗しました。',
+    widgets_no_group: 'グループが選択されていません。',
+    widgets_owner_only: 'グループオーナーのみ編集できます。',
   },
   'zh-CN': {
     checking_permission: '正在验证权限...',
@@ -216,6 +249,14 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     error_delete_photo: '删除失败。',
     written_at: '创建日：',
     answered_at: '回复日：',
+    widgets_tab: '仪表盘小组件',
+    widgets_panel_title: '仪表盘小组件',
+    widgets_panel_hint: '设置家庭仪表盘显示的小组件及顺序。保存后生效。',
+    widgets_edit_start: '开始编辑',
+    widgets_alert_min_one: '至少需要启用一个小组件。',
+    widgets_error_save: '保存小组件设置失败。',
+    widgets_no_group: '未选择群组。',
+    widgets_owner_only: '仅群主可编辑小组件。',
   },
   'zh-TW': {
     checking_permission: '正在驗證權限...',
@@ -259,6 +300,14 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     error_delete_photo: '刪除失敗。',
     written_at: '建立日：',
     answered_at: '回覆日：',
+    widgets_tab: '儀表板小工具',
+    widgets_panel_title: '儀表板小工具',
+    widgets_panel_hint: '設定家庭儀表板顯示的小工具與順序。儲存後生效。',
+    widgets_edit_start: '開始編輯',
+    widgets_alert_min_one: '至少需要啟用一個小工具。',
+    widgets_error_save: '儲存小工具設定失敗。',
+    widgets_no_group: '未選擇群組。',
+    widgets_owner_only: '僅群組擁有者可編輯小工具。',
   },
 };
 

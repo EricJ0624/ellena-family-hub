@@ -62,10 +62,7 @@ import {
   type DashboardWidgetKey,
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
-import {
-  ensureWidgetConfigs,
-  saveWidgetConfigs,
-} from '@/lib/widgets/widget-configs';
+import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -309,10 +306,6 @@ export default function FamilyHub() {
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigDraft[]>([]);
-  const [widgetDrafts, setWidgetDrafts] = useState<WidgetConfigDraft[]>([]);
-  const [widgetConfigsLoading, setWidgetConfigsLoading] = useState(false);
-  const [widgetConfigsSaving, setWidgetConfigsSaving] = useState(false);
-  const [isWidgetEditMode, setIsWidgetEditMode] = useState(false);
   
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
@@ -5347,25 +5340,19 @@ export default function FamilyHub() {
     let cancelled = false;
     if (!currentGroupId) {
       setWidgetConfigs([]);
-      setWidgetDrafts([]);
-      setIsWidgetEditMode(false);
       return;
     }
 
     const run = async () => {
       try {
-        setWidgetConfigsLoading(true);
         const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
         if (!cancelled) {
           setWidgetConfigs(configs);
-          setWidgetDrafts(configs);
         }
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('위젯 설정 로드 실패:', error);
         }
-      } finally {
-        if (!cancelled) setWidgetConfigsLoading(false);
       }
     };
 
@@ -5393,64 +5380,10 @@ export default function FamilyHub() {
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
-  const widgetLabels: Record<DashboardWidgetKey, string> = {
-    tasks: dt('todo_section_title'),
-    calendar: dt('section_title_calendar'),
-    chat: dt('section_title_chat'),
-    location: dt('section_title_location'),
-    album: dt('section_title_memories'),
-    travel: tt('title'),
-    piggy: dt('piggy_section_admin_title'),
-  };
-
-  const activeWidgetConfigs = isWidgetEditMode ? widgetDrafts : widgetConfigs;
-  const orderedWidgetKeys = activeWidgetConfigs
+  const orderedWidgetKeys = widgetConfigs
     .filter((cfg) => cfg.is_enabled)
     .sort((a, b) => a.display_order - b.display_order)
     .map((cfg) => cfg.widget_key);
-
-  const toggleWidgetEnabled = (key: DashboardWidgetKey) => {
-    setWidgetDrafts((prev) =>
-      prev.map((cfg) => (cfg.widget_key === key ? { ...cfg, is_enabled: !cfg.is_enabled } : cfg))
-    );
-  };
-
-  const moveWidget = (key: DashboardWidgetKey, direction: 'up' | 'down') => {
-    setWidgetDrafts((prev) => {
-      const sorted = [...prev].sort((a, b) => a.display_order - b.display_order);
-      const idx = sorted.findIndex((x) => x.widget_key === key);
-      if (idx < 0) return prev;
-      const nextIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (nextIdx < 0 || nextIdx >= sorted.length) return prev;
-      const temp = sorted[idx];
-      sorted[idx] = sorted[nextIdx];
-      sorted[nextIdx] = temp;
-      return sorted.map((cfg, i) => ({ ...cfg, display_order: (i + 1) * 10 }));
-    });
-  };
-
-  const handleSaveWidgets = async () => {
-    if (!currentGroupId) return;
-    if (!widgetDrafts.some((x) => x.is_enabled)) {
-      alert('최소 1개 위젯은 켜져 있어야 합니다.');
-      return;
-    }
-    try {
-      setWidgetConfigsSaving(true);
-      await saveWidgetConfigs(currentGroupId, widgetDrafts);
-      setWidgetConfigs(widgetDrafts);
-      setIsWidgetEditMode(false);
-    } catch (error: any) {
-      alert(error?.message || '위젯 설정 저장에 실패했습니다.');
-    } finally {
-      setWidgetConfigsSaving(false);
-    }
-  };
-
-  const handleCancelWidgetEdit = () => {
-    setWidgetDrafts(widgetConfigs);
-    setIsWidgetEditMode(false);
-  };
 
   const renderWidgetSection = (widgetKey: DashboardWidgetKey) => {
     switch (widgetKey) {
@@ -5940,89 +5873,6 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div className="sections-container">
-          {currentGroupId && groupIsOwner && (
-            <section className="content-section border border-slate-200 bg-slate-50">
-              <div className="section-header">
-                <h3 className="section-title">위젯 편집</h3>
-                {!isWidgetEditMode ? (
-                  <button
-                    type="button"
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
-                    onClick={() => setIsWidgetEditMode(true)}
-                  >
-                    편집 시작
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
-                      onClick={handleCancelWidgetEdit}
-                      disabled={widgetConfigsSaving}
-                    >
-                      {ct('cancel')}
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
-                      onClick={handleSaveWidgets}
-                      disabled={widgetConfigsSaving}
-                    >
-                      {widgetConfigsSaving ? ct('loading') : ct('save')}
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="section-body">
-                {widgetConfigsLoading ? (
-                  <p className="text-sm text-slate-500">{ct('loading')}</p>
-                ) : (
-                  <div className="grid gap-2">
-                    {widgetDrafts
-                      .slice()
-                      .sort((a, b) => a.display_order - b.display_order)
-                      .map((cfg, idx, arr) => (
-                        <div
-                          key={cfg.widget_key}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={cfg.is_enabled}
-                              onChange={() => toggleWidgetEnabled(cfg.widget_key)}
-                              disabled={!isWidgetEditMode || widgetConfigsSaving}
-                            />
-                            <span className="text-sm font-medium text-slate-700">
-                              {widgetLabels[cfg.widget_key]}
-                            </span>
-                          </div>
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 disabled:opacity-40"
-                              onClick={() => moveWidget(cfg.widget_key, 'up')}
-                              disabled={!isWidgetEditMode || idx === 0 || widgetConfigsSaving}
-                            >
-                              ▲
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 disabled:opacity-40"
-                              onClick={() => moveWidget(cfg.widget_key, 'down')}
-                              disabled={!isWidgetEditMode || idx === arr.length - 1 || widgetConfigsSaving}
-                            >
-                              ▼
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
           {orderedWidgetKeys.map((widgetKey) => (
             <React.Fragment key={widgetKey}>{renderWidgetSection(widgetKey)}</React.Fragment>
           ))}
