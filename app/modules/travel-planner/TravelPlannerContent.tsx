@@ -2419,6 +2419,7 @@ export function TravelPlannerContent() {
     ];
     void import('@/lib/modules/travel-planner/itinerary-pdf').then(({ buildAndSaveTravelItineraryPdf }) =>
       buildAndSaveTravelItineraryPdf({
+        lang,
         trip: {
           title: selectedTrip.title,
           destination: selectedTrip.destination,
