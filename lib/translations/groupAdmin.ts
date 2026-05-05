@@ -51,6 +51,9 @@ export type GroupAdminTranslations = {
   widgets_error_save: string;
   widgets_no_group: string;
   widgets_owner_only: string;
+  active_theme: string;
+  theme_stable_glass_short: string;
+  theme_highend_glass_short: string;
 }
 
 const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
@@ -104,6 +107,9 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: '위젯 설정 저장에 실패했습니다.',
     widgets_no_group: '선택된 그룹이 없습니다.',
     widgets_owner_only: '그룹 소유자만 위젯을 편집할 수 있습니다.',
+    active_theme: '현재 테마',
+    theme_stable_glass_short: 'Stable Glass',
+    theme_highend_glass_short: 'High-end Glass',
   },
   en: {
     checking_permission: 'Checking permission...',
@@ -155,6 +161,9 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: 'Failed to save widget settings.',
     widgets_no_group: 'No group selected.',
     widgets_owner_only: 'Only the group owner can edit widgets.',
+    active_theme: 'Active theme',
+    theme_stable_glass_short: 'Stable Glass',
+    theme_highend_glass_short: 'High-end Glass',
   },
   ja: {
     checking_permission: '権限確認中...',
@@ -206,6 +215,9 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: 'ウィジェット設定の保存に失敗しました。',
     widgets_no_group: 'グループが選択されていません。',
     widgets_owner_only: 'グループオーナーのみ編集できます。',
+    active_theme: '現在のテーマ',
+    theme_stable_glass_short: 'Stable Glass',
+    theme_highend_glass_short: 'High-end Glass',
   },
   'zh-CN': {
     checking_permission: '正在验证权限...',
@@ -257,6 +269,9 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: '保存小组件设置失败。',
     widgets_no_group: '未选择群组。',
     widgets_owner_only: '仅群主可编辑小组件。',
+    active_theme: '当前主题',
+    theme_stable_glass_short: 'Stable Glass',
+    theme_highend_glass_short: 'High-end Glass',
   },
   'zh-TW': {
     checking_permission: '正在驗證權限...',
@@ -308,6 +323,9 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: '儲存小工具設定失敗。',
     widgets_no_group: '未選擇群組。',
     widgets_owner_only: '僅群組擁有者可編輯小工具。',
+    active_theme: '目前主題',
+    theme_stable_glass_short: 'Stable Glass',
+    theme_highend_glass_short: 'High-end Glass',
   },
 };
 

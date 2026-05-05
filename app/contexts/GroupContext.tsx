@@ -7,6 +7,12 @@ import type { Group, Membership, MembershipRole } from '@/types/db';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 
+type UiTheme = 'stable_glass' | 'highend_glass';
+
+function resolveUiTheme(value: unknown): UiTheme {
+  return value === 'highend_glass' ? 'highend_glass' : 'stable_glass';
+}
+
 interface GroupContextType {
   currentGroupId: string | null;
   currentGroup: Group | null;
@@ -351,6 +357,13 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setCurrentGroup(null);
     }
   }, [currentGroupId, userId, refreshMemberships]);
+
+  // 그룹 단위 UI 테마를 문서 루트 속성으로 반영
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const theme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
+    document.documentElement.setAttribute('data-ui-theme', theme);
+  }, [currentGroup]);
 
   const value: GroupContextType = {
     currentGroupId,

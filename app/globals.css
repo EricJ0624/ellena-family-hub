@@ -115,6 +115,40 @@
   --glass-overlay-bg: rgba(2, 6, 23, 0.5);
 }
 
+:root[data-ui-theme='highend_glass'] {
+  --app-shell-inner-bg: linear-gradient(140deg, #eef4ff 0%, #d8e7ff 45%, #f4e8ff 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 10% 0%, #c7dcff 0%, #dfe9f8 50%, #edf3ff 100%);
+  --glass-soft-bg: rgba(255, 255, 255, 0.64);
+  --glass-medium-bg: rgba(255, 255, 255, 0.72);
+  --glass-strong-bg: rgba(255, 255, 255, 0.82);
+  --glass-soft-blur: 20px;
+  --glass-medium-blur: 28px;
+  --glass-strong-blur: 36px;
+  --glass-soft-border: rgba(255, 255, 255, 0.72);
+  --glass-medium-border: rgba(255, 255, 255, 0.82);
+  --glass-strong-border: rgba(255, 255, 255, 0.9);
+  --glass-soft-shadow: 0 14px 36px rgba(37, 99, 235, 0.14);
+  --glass-medium-shadow: 0 24px 58px rgba(79, 70, 229, 0.2);
+  --glass-strong-shadow: 0 30px 70px rgba(109, 40, 217, 0.24);
+}
+
+.dark[data-ui-theme='highend_glass'] {
+  --app-shell-inner-bg: linear-gradient(140deg, #090f1f 0%, #131b34 42%, #24153a 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 12% 8%, #2d3d69 0%, #18233f 42%, #0b1220 100%);
+  --glass-soft-bg: rgba(15, 23, 42, 0.56);
+  --glass-medium-bg: rgba(15, 23, 42, 0.64);
+  --glass-strong-bg: rgba(15, 23, 42, 0.74);
+  --glass-soft-blur: 22px;
+  --glass-medium-blur: 30px;
+  --glass-strong-blur: 38px;
+  --glass-soft-border: rgba(148, 163, 184, 0.34);
+  --glass-medium-border: rgba(165, 180, 252, 0.42);
+  --glass-strong-border: rgba(196, 181, 253, 0.5);
+  --glass-soft-shadow: 0 16px 40px rgba(2, 6, 23, 0.42);
+  --glass-medium-shadow: 0 26px 62px rgba(2, 6, 23, 0.5);
+  --glass-strong-shadow: 0 34px 78px rgba(2, 6, 23, 0.58);
+}
+
 * {
   box-sizing: border-box;
 }

@@ -11,6 +11,12 @@ export type GroupSettingsTranslations = {
   dashboard_title_hint: string;
   display_language: string;
   language_hint: string;
+  dashboard_theme_label: string;
+  dashboard_theme_hint: string;
+  theme_stable_glass_label: string;
+  theme_stable_glass_desc: string;
+  theme_highend_glass_label: string;
+  theme_highend_glass_desc: string;
   invite_code: string;
   invite_copy_aria: string;
   invite_link_copy_btn: string;
@@ -44,6 +50,12 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: '대시보드 상단에 표시되는 문구입니다. 글자 크기는 화면에 맞게 자동 조정됩니다.',
     display_language: '표시 언어',
     language_hint: '그룹 대시보드의 타이틀·본문 폰트에 적용됩니다.',
+    dashboard_theme_label: '대시보드 테마',
+    dashboard_theme_hint: 'stable_glass는 현재 상태를 그대로 유지합니다. highend_glass는 더 강한 글래스 효과를 적용합니다.',
+    theme_stable_glass_label: 'Stable Glass (기본)',
+    theme_stable_glass_desc: '현재 사용 중인 안정 버전 스타일입니다.',
+    theme_highend_glass_label: 'High-end Glass',
+    theme_highend_glass_desc: '블러·하이라이트·대비를 강화한 고급 글래스 스타일입니다.',
     invite_code: '초대 코드',
     invite_copy_aria: '초대 코드 복사',
     invite_link_copy_btn: '초대 링크 복사',
@@ -75,6 +87,12 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: 'This text is shown at the top of the dashboard. Font size adjusts automatically.',
     display_language: 'Display language',
     language_hint: 'Applied to title and body fonts on the group dashboard.',
+    dashboard_theme_label: 'Dashboard theme',
+    dashboard_theme_hint: 'stable_glass keeps the current design. highend_glass applies a stronger glass look.',
+    theme_stable_glass_label: 'Stable Glass (default)',
+    theme_stable_glass_desc: 'Current production-safe visual style.',
+    theme_highend_glass_label: 'High-end Glass',
+    theme_highend_glass_desc: 'Enhanced blur, highlight, and contrast for a premium glass feel.',
     invite_code: 'Invite code',
     invite_copy_aria: 'Copy invite code',
     invite_link_copy_btn: 'Copy invite link',
@@ -106,6 +124,12 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: 'ダッシュボード上部に表示されます。文字サイズは自動調整されます。',
     display_language: '表示言語',
     language_hint: 'グループのダッシュボードのタイトル・本文フォントに適用されます。',
+    dashboard_theme_label: 'ダッシュボードテーマ',
+    dashboard_theme_hint: 'stable_glass は現在のデザインを維持し、highend_glass はより強いガラス表現を適用します。',
+    theme_stable_glass_label: 'Stable Glass（既定）',
+    theme_stable_glass_desc: '現在運用中の安定スタイルです。',
+    theme_highend_glass_label: 'High-end Glass',
+    theme_highend_glass_desc: 'ぼかし・ハイライト・コントラストを強化した上位ガラススタイルです。',
     invite_code: '招待コード',
     invite_copy_aria: '招待コードをコピー',
     invite_link_copy_btn: '招待リンクをコピー',
@@ -137,6 +161,12 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: '显示在仪表盘顶部。字号将自动调整。',
     display_language: '显示语言',
     language_hint: '应用于群组仪表盘的标题与正文字体。',
+    dashboard_theme_label: '仪表盘主题',
+    dashboard_theme_hint: 'stable_glass 保持当前设计，highend_glass 应用更强的玻璃效果。',
+    theme_stable_glass_label: 'Stable Glass（默认）',
+    theme_stable_glass_desc: '当前线上稳定样式。',
+    theme_highend_glass_label: 'High-end Glass',
+    theme_highend_glass_desc: '强化模糊、高光与对比度的高级玻璃样式。',
     invite_code: '邀请码',
     invite_copy_aria: '复制邀请码',
     invite_link_copy_btn: '复制邀请链接',
@@ -168,6 +198,12 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_hint: '顯示在儀表板頂部。字型大小會自動調整。',
     display_language: '顯示語言',
     language_hint: '套用於群組儀表板的標題與內文字型。',
+    dashboard_theme_label: '儀表板主題',
+    dashboard_theme_hint: 'stable_glass 會維持目前設計，highend_glass 會套用更強的玻璃效果。',
+    theme_stable_glass_label: 'Stable Glass（預設）',
+    theme_stable_glass_desc: '目前線上穩定樣式。',
+    theme_highend_glass_label: 'High-end Glass',
+    theme_highend_glass_desc: '加強模糊、高光與對比的高階玻璃樣式。',
     invite_code: '邀請碼',
     invite_copy_aria: '複製邀請碼',
     invite_link_copy_btn: '複製邀請連結',

@@ -31,6 +31,7 @@ export interface Database {
           title_style: Json | null
           preferred_language: string | null
           piggy_currency: string
+          ui_theme: 'stable_glass' | 'highend_glass'
         }
         Insert: {
           id?: string
@@ -46,6 +47,7 @@ export interface Database {
           title_style?: Json | null
           preferred_language?: string | null
           piggy_currency?: string
+          ui_theme?: 'stable_glass' | 'highend_glass'
         }
         Update: {
           id?: string
@@ -61,6 +63,7 @@ export interface Database {
           title_style?: Json | null
           preferred_language?: string | null
           piggy_currency?: string
+          ui_theme?: 'stable_glass' | 'highend_glass'
         }
         Relationships: [
           {

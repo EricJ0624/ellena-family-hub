@@ -159,6 +159,12 @@ type GroupAdminTabId =
   | 'piggy-archives'
   | 'widgets';
 
+type UiTheme = 'stable_glass' | 'highend_glass';
+
+function parseUiTheme(value: unknown): UiTheme {
+  return value === 'highend_glass' ? 'highend_glass' : 'stable_glass';
+}
+
 export function GroupAdminPanel({
   variant = 'standalone',
   embeddedGroupId = null,
@@ -841,6 +847,15 @@ export function GroupAdminPanel({
     const membership = groupMemberships.find((m: any) => m.group_id === group.id);
     return membership?.role === 'ADMIN';
   });
+  const selectedGroupFromList = groupList.find((group: any) => group.id === effectiveGroupId);
+  const effectiveUiTheme = parseUiTheme(
+    (selectedGroupFromList as { ui_theme?: unknown } | undefined)?.ui_theme ??
+      (currentGroup as { ui_theme?: unknown } | null)?.ui_theme
+  );
+  const activeThemeLabel =
+    effectiveUiTheme === 'highend_glass'
+      ? gat('theme_highend_glass_short')
+      : gat('theme_stable_glass_short');
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
   const tabButtonClass = (tab: GroupAdminTabId) =>
     `cursor-pointer border-b-[3px] border-x-0 border-t-0 bg-transparent px-6 py-3 text-base transition-all duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
@@ -864,9 +879,21 @@ export function GroupAdminPanel({
               <h1 className="m-0 text-2xl font-bold text-slate-800">
                 그룹 관리자 페이지
               </h1>
-              <p className="m-0 mt-1 text-sm text-slate-500">
-                {displayGroupName || gat('group_label')} {gat('group_manage')}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <p className="m-0">
+                  {displayGroupName || gat('group_label')} {gat('group_manage')}
+                </p>
+                <span className="text-slate-300">|</span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                    effectiveUiTheme === 'highend_glass'
+                      ? 'border-violet-300 bg-violet-50 text-violet-700'
+                      : 'border-slate-300 bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {gat('active_theme')}: {activeThemeLabel}
+                </span>
+              </div>
             </div>
           </div>
           <button

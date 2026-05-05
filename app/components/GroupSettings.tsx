@@ -18,6 +18,8 @@ import { getCommonTranslation } from '@/lib/translations/common';
 import type { TitleStyle } from '@/app/components/TitlePage';
 import type { LangCode } from '@/lib/language-fonts';
 
+type UiTheme = 'stable_glass' | 'highend_glass';
+
 interface GroupSettingsProps {
   onClose: () => void;
   forceAdminAccess?: boolean;
@@ -31,6 +33,10 @@ const DEFAULT_TITLE_STYLE: TitleStyle = {
   letterSpacing: 0,
   fontFamily: 'Inter',
 };
+
+function parseUiTheme(raw: unknown): UiTheme {
+  return raw === 'highend_glass' ? 'highend_glass' : 'stable_glass';
+}
 
 function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
   if (raw && typeof raw === 'object' && 'content' in (raw as object)) {
@@ -61,6 +67,9 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
     if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') return v;
     return 'ko';
   });
+  const [uiTheme, setUiTheme] = useState<UiTheme>(() =>
+    parseUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme)
+  );
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -118,8 +127,19 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       setInviteCode(currentGroup.invite_code || '');
       const v = (currentGroup as { preferred_language?: string }).preferred_language;
       if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') setPreferredLanguage(v);
+      setUiTheme(parseUiTheme((currentGroup as { ui_theme?: unknown }).ui_theme));
     }
   }, [currentGroup]);
+
+  // 설정 화면에서 선택한 테마를 즉시 미리보기로 반영하고, 닫히면 그룹 저장값으로 복원
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-ui-theme', uiTheme);
+    return () => {
+      const persistedTheme = parseUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
+      document.documentElement.setAttribute('data-ui-theme', persistedTheme);
+    };
+  }, [uiTheme, currentGroup]);
 
   // 그룹 설정 저장
   const handleSave = async () => {
@@ -143,6 +163,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       updates.family_name = titleStyle.content?.trim() || null;
       updates.title_style = titleStyle;
       updates.preferred_language = preferredLanguage;
+      updates.ui_theme = uiTheme;
 
       const { error: updateError } = await supabase
         .from('groups')
@@ -350,6 +371,69 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                   <p className="mt-1.5 text-xs text-slate-500">
                     {gst('language_hint')}
                   </p>
+                </td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <th
+                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
+                >
+                  {gst('dashboard_theme_label')}
+                </th>
+                <td className="p-3">
+                  <div className="space-y-3">
+                    <select
+                      value={uiTheme}
+                      onChange={(e) => setUiTheme(e.target.value as UiTheme)}
+                      disabled={saving}
+                      className="min-w-48 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                    >
+                      <option value="stable_glass">{gst('theme_stable_glass_label')}</option>
+                      <option value="highend_glass">{gst('theme_highend_glass_label')}</option>
+                    </select>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setUiTheme('stable_glass')}
+                        disabled={saving}
+                        className={`rounded-xl border p-3 text-left transition-colors ${
+                          uiTheme === 'stable_glass'
+                            ? 'border-blue-400 bg-blue-50'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-slate-800">{gst('theme_stable_glass_label')}</p>
+                        <p className="mt-1 text-xs text-slate-500">{gst('theme_stable_glass_desc')}</p>
+                        <div className="mt-3 overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 p-2">
+                          <div className="rounded-md border border-white/70 bg-white/70 p-2 shadow-[0_8px_16px_rgba(15,23,42,0.08)] backdrop-blur-[8px]">
+                            <div className="h-2 w-16 rounded bg-indigo-200" />
+                            <div className="mt-2 h-1.5 w-24 rounded bg-slate-300/80" />
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUiTheme('highend_glass')}
+                        disabled={saving}
+                        className={`rounded-xl border p-3 text-left transition-colors ${
+                          uiTheme === 'highend_glass'
+                            ? 'border-purple-400 bg-purple-50'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-slate-800">{gst('theme_highend_glass_label')}</p>
+                        <p className="mt-1 text-xs text-slate-500">{gst('theme_highend_glass_desc')}</p>
+                        <div className="mt-3 overflow-hidden rounded-lg border border-white/80 bg-gradient-to-br from-blue-100 via-violet-100 to-fuchsia-100 p-2">
+                          <div className="rounded-md border border-white/85 bg-white/78 p-2 shadow-[0_12px_24px_rgba(79,70,229,0.18)] backdrop-blur-[16px]">
+                            <div className="h-2 w-16 rounded bg-violet-300/90" />
+                            <div className="mt-2 h-1.5 w-24 rounded bg-slate-400/70" />
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {gst('dashboard_theme_hint')}
+                    </p>
+                  </div>
                 </td>
               </tr>
               <tr>
