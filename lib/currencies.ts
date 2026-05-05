@@ -33,6 +33,12 @@ const FALLBACK_CODES: readonly string[] = [
 ];
 
 let cachedCodes: readonly string[] | null = null;
+const TOP_CURRENCY_CODES: readonly string[] = [
+  'USD', 'EUR', 'JPY', 'GBP', 'CNY',
+  'KRW', 'AUD', 'CAD', 'CHF', 'HKD',
+  'SGD', 'INR', 'THB', 'TWD', 'VND',
+  'MYR', 'IDR', 'PHP', 'NZD', 'SEK',
+];
 
 function collectSupported(): readonly string[] {
   try {
@@ -54,6 +60,10 @@ export function getAllowedCurrencyCodes(): readonly string[] {
     cachedCodes = collectSupported();
   }
   return cachedCodes;
+}
+
+export function getTopCurrencyCodes(): readonly string[] {
+  return TOP_CURRENCY_CODES;
 }
 
 export function normalizeCurrencyCode(raw: string | null | undefined): string | null {

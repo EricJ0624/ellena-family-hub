@@ -14,7 +14,7 @@ import {
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
-import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
+import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +65,7 @@ type PiggyAttachment = UploadedAttachment;
 
 const LOCALE_MAP: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
 
-const PIGGY_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
+const PIGGY_CURRENCY_OPTIONS = [...getTopCurrencyCodes()];
 
 function piggyTxAttachmentKey(entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', entityId: string) {
   return `${entityType}:${entityId}`;

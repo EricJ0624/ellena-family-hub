@@ -14,7 +14,7 @@ import {
   type ExpandedPlannerItineraryItem,
 } from '@/lib/modules/travel-planner/itinerary-display-expand';
 import { buildTransportItineraryTitle, shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
-import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
+import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
   MapPin,
@@ -54,7 +54,7 @@ function getGoogleMapsNs(): typeof google.maps | undefined {
 
 const API_BASE = '/api/v1/travel';
 
-const TRIP_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
+const TRIP_CURRENCY_OPTIONS = [...getTopCurrencyCodes()];
 
 const LOCALE_FOR_MONEY: Record<string, string> = {
   ko: 'ko-KR',
