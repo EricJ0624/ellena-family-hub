@@ -91,16 +91,8 @@ export function FamilyChatSection({
       const w = box.clientWidth;
       if (w <= 0) return;
 
-      const rowH = row?.clientHeight ?? 0;
-      const maxFromHeight =
-        rowH > 0
-          ? Math.min(
-              CHAT_TITLE_ABS_MAX_PX,
-              Math.max(12, Math.floor((rowH * 0.72) / CHAT_TITLE_LINE_HEIGHT))
-            )
-          : CHAT_TITLE_ABS_MAX_PX;
-
-      let fs = maxFromHeight;
+      // hello 말풍선 제거 후 row 높이가 작아져 타이틀이 과도하게 축소되는 문제를 방지
+      let fs = CHAT_TITLE_ABS_MAX_PX;
       el.style.fontSize = `${fs}px`;
       void el.offsetHeight;
       while (el.scrollWidth > w + 1 && fs > CHAT_TITLE_MIN_PX) {

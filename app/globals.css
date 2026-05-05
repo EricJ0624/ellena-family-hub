@@ -515,7 +515,7 @@ select {
 }
 
 .section-title {
-  font-size: 0.75rem;
+  font-size: clamp(0.84rem, 0.24vw + 0.8rem, 0.95rem);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.2em;
