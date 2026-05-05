@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
 import Image from 'next/image';
@@ -98,11 +98,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const selectedPhoto = photoIndex !== null && stablePhotos[photoIndex] ? stablePhotos[photoIndex] : null;
 
+  // 세로/가로 자동 맞춤 복구: 사진 비율 캐시로 재진입 시 리플로우 최소화
+  const imageAspectRatioCacheRef = useRef<Record<string, number>>({});
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
   useEffect(() => {
     if (!selectedPhoto) {
+      setImageAspectRatio(null);
       setImageLoadError(false);
+      return;
     }
+    const cacheKey = String(selectedPhoto.id);
+    const cachedRatio = imageAspectRatioCacheRef.current[cacheKey];
+    setImageAspectRatio(typeof cachedRatio === 'number' ? cachedRatio : null);
   }, [selectedPhoto]);
 
   // 블러 배경용 저해상도 URL (S3/CloudFront 직링크는 그대로 사용)
@@ -116,8 +124,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     setManualSeed(Date.now());
   }, []);
 
-  // 안정성 우선: 런타임 비율 전환으로 인한 카드 리플로우/깜빡임 방지
-  const frameAspectClass = 'aspect-[4/3]';
+  const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
+  const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
     baroque: 'inset-[20px]',
     ornate: 'inset-[20px]',
@@ -130,7 +138,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     gradient_rim: 'inset-[12px]',
   };
   const useCoverImage = frameStyle === 'polaroid_modern' || frameStyle === 'editorial';
-  const frameWidthClass = 'max-w-[380px]';
+  const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
   
   useEffect(() => {
     if (onShuffle) onShuffle();
@@ -187,6 +195,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                       'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
                     )}
                     unoptimized={true}
+                    onLoad={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target?.naturalWidth || !target?.naturalHeight || !selectedPhoto) return;
+                      const ratio = target.naturalWidth / target.naturalHeight;
+                      const cacheKey = String(selectedPhoto.id);
+                      imageAspectRatioCacheRef.current[cacheKey] = ratio;
+                      setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
+                    }}
                     onError={() => setImageLoadError(true)}
                   />
                 </motion.div>
