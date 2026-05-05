@@ -11,7 +11,7 @@ import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { ChatUiMessage } from '../types';
 
 /** `public/images` 기준 말풍선 일러스트 — WebP 리사이즈본(용량 소) */
-export const FAMILY_CHAT_BUBBLE_IMAGE_SRC = '/images/family-chat-hello-bubble.webp' as const;
+export const FAMILY_CHAT_BUBBLE_IMAGE_SRC = '/images/family-chat-hello-bubble.webp?v=2' as const;
 
 /** 헤더 말풍선 박스 크기 — 한곳에서 조절 */
 export const FAMILY_CHAT_BUBBLE_LAYOUT = {
@@ -235,7 +235,7 @@ export function FamilyChatSection({
             alt=""
             fill
             sizes="(max-width: 768px) 28vw, 176px"
-            className="object-contain object-center mix-blend-multiply dark:mix-blend-screen"
+            className="object-contain object-center opacity-95 mix-blend-darken dark:mix-blend-screen"
             priority={false}
           />
           <div
@@ -371,14 +371,14 @@ export function FamilyChatSection({
           <button
             type="button"
             onClick={() => chatFileInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-[7px] text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 px-2.5 py-[7px] text-xs font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
           >
             {t.chat_album_btn}
           </button>
           <button
             type="button"
             onClick={() => chatCameraInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-[7px] text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 px-2.5 py-[7px] text-xs font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
           >
             {t.chat_camera_btn}
           </button>
