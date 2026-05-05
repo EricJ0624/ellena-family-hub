@@ -589,7 +589,7 @@ export default function MemoriesPage() {
         {album.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="glass-panel-soft cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400"
+            className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400"
           >
             <div className="mb-3 text-5xl">📷</div>
             <div>{dt('photo_upload_prompt')}</div>
@@ -621,7 +621,7 @@ export default function MemoriesPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
-                className="memory-card glass-panel-soft overflow-hidden rounded-xl"
+                className="memory-card glass-panel-soft glass-panel-interactive overflow-hidden rounded-xl"
               >
                 <div
                   role="button"
@@ -699,7 +699,7 @@ export default function MemoriesPage() {
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
-                            className="memory-card glass-panel-soft overflow-hidden rounded-xl"
+                            className="memory-card glass-panel-soft glass-panel-interactive overflow-hidden rounded-xl"
                           >
                             <div
                               role="button"

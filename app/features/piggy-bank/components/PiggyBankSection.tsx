@@ -161,7 +161,7 @@ export function PiggyBankSection({
                       p.noAccount ? (
                         <div
                           key={p.user_id}
-                          className="glass-panel-soft flex flex-wrap items-center justify-between gap-2.5 rounded-xl p-4"
+                          className="glass-panel-soft glass-panel-interactive flex flex-wrap items-center justify-between gap-2.5 rounded-xl p-4"
                         >
                           <div>
                             <div className="text-base font-bold text-[#1f2937]">
@@ -185,7 +185,7 @@ export function PiggyBankSection({
                       ) : (
                         <div
                           key={p.id}
-                          className="glass-panel cursor-pointer rounded-xl p-4 transition-all duration-200 ease-in-out hover:border-[#cbd5e1] hover:shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
+                          className="glass-panel glass-panel-interactive cursor-pointer rounded-xl p-4"
                           onClick={() => {
                             if (p.user_id) onMemberClick(p.user_id);
                           }}
@@ -235,7 +235,7 @@ export function PiggyBankSection({
             ) : piggySummary ? (
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
               <div className="grid gap-2.5">
-                <div className="glass-panel-soft rounded-xl p-3">
+                <div className="glass-panel-soft glass-panel-interactive rounded-xl p-3">
                   <div className="text-xs text-[#b91c1c]">
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
@@ -243,7 +243,7 @@ export function PiggyBankSection({
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
                 </div>
-                <div className="glass-panel-soft rounded-xl p-3">
+                <div className="glass-panel-soft glass-panel-interactive rounded-xl p-3">
                   <div className="text-xs text-[#9a3412]">
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
