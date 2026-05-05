@@ -371,14 +371,14 @@ export function FamilyChatSection({
           <button
             type="button"
             onClick={() => chatFileInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             {t.chat_album_btn}
           </button>
           <button
             type="button"
             onClick={() => chatCameraInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             {t.chat_camera_btn}
           </button>
