@@ -6,8 +6,9 @@ import type { jsPDF } from 'jspdf';
 import { shortItineraryTitle } from './short-itinerary-title';
 
 const VFS_FONT_FILE = 'NotoSansKR-Regular.otf';
-const VFS_BOLD_FILE = 'NotoSansKR-Bold.otf';
 const FONT_FAMILY = 'NotoSansKR';
+
+/** Regular OTF만 사용 (Bold 별도 임베딩은 일부 뷰어/파서와 충돌 보고가 있어 제목은 굵기 시뮬레이션) */
 
 /** 인디고 계열 (Tailwind indigo-600 근사) */
 const BRAND_R = 79;
@@ -18,7 +19,6 @@ const BRAND_B = 229;
 const ACCENT_BAR_W = 3;
 
 let cachedFontBase64: string | null = null;
-let cachedBoldBase64: string | null = null;
 
 export type ItineraryPdfItem = {
   type: 'accommodation' | 'dining' | 'attraction' | 'transport' | 'other';
@@ -69,6 +69,7 @@ async function fetchRegularFontBase64(): Promise<string | null> {
   }
   urls.push(
     'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/KR/NotoSansKR-Regular.otf',
+    'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/KR/NotoSansKR-Regular.otf',
   );
 
   for (const url of urls) {
@@ -79,32 +80,6 @@ async function fetchRegularFontBase64(): Promise<string | null> {
       if (buf.byteLength < 1000) continue;
       cachedFontBase64 = arrayBufferToBase64(buf);
       return cachedFontBase64;
-    } catch {
-      /* try next */
-    }
-  }
-  return null;
-}
-
-async function fetchBoldFontBase64(): Promise<string | null> {
-  if (cachedBoldBase64) return cachedBoldBase64;
-
-  const urls: string[] = [];
-  if (typeof window !== 'undefined') {
-    urls.push(`${window.location.origin}/fonts/${VFS_BOLD_FILE}`);
-  }
-  urls.push(
-    'https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/KR/NotoSansKR-Bold.otf',
-  );
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { mode: 'cors' });
-      if (!res.ok) continue;
-      const buf = await res.arrayBuffer();
-      if (buf.byteLength < 1000) continue;
-      cachedBoldBase64 = arrayBufferToBase64(buf);
-      return cachedBoldBase64;
     } catch {
       /* try next */
     }
@@ -127,21 +102,6 @@ function tryRegisterRegular(doc: jsPDF): boolean {
   }
 }
 
-function tryRegisterBold(doc: jsPDF): boolean {
-  try {
-    if (!cachedBoldBase64) return false;
-    doc.addFileToVFS(VFS_BOLD_FILE, cachedBoldBase64);
-    doc.addFont(VFS_BOLD_FILE, FONT_FAMILY, 'bold', 'Identity-H');
-    return true;
-  } catch (e) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[itinerary-pdf] Noto Sans KR Bold 등록 실패 (제목은 일반 굵기 사용):', e);
-    }
-    cachedBoldBase64 = null;
-    return false;
-  }
-}
-
 function setBodyFont(doc: jsPDF, hasKo: boolean, size: number) {
   doc.setFontSize(size);
   if (hasKo) {
@@ -151,25 +111,37 @@ function setBodyFont(doc: jsPDF, hasKo: boolean, size: number) {
   }
 }
 
-function setHeadingFont(doc: jsPDF, hasKo: boolean, hasKoBold: boolean, size: number) {
+/** 제목용: 한글은 동일 패밀리 normal + 크기, 라틴은 helvetica bold */
+function setHeadingFont(doc: jsPDF, hasKo: boolean, size: number) {
   doc.setFontSize(size);
-  if (hasKo && hasKoBold) {
-    doc.setFont(FONT_FAMILY, 'bold');
-  } else if (hasKo) {
+  if (hasKo) {
     doc.setFont(FONT_FAMILY, 'normal');
   } else {
     doc.setFont('helvetica', 'bold');
   }
 }
 
+/** addPage() 직후 일부 환경에서 활성 폰트가 풀리는 경우 대비 */
+function restoreDefaultBodyStyle(doc: jsPDF, hasKo: boolean) {
+  doc.setTextColor(55, 65, 81);
+  setBodyFont(doc, hasKo, 10);
+}
+
 function sanitizeFilename(title: string): string {
   return title.replace(/[^\w\u3131-\uD7A3]/g, '-');
 }
 
-function ensurePageSpace(doc: jsPDF, y: number, needed: number, margin: number): number {
+function ensurePageSpace(
+  doc: jsPDF,
+  y: number,
+  needed: number,
+  margin: number,
+  hasKo: boolean,
+): number {
   const pageH = doc.internal.pageSize.getHeight();
   if (y + needed > pageH - margin) {
     doc.addPage();
+    restoreDefaultBodyStyle(doc, hasKo);
     return margin;
   }
   return y;
@@ -194,19 +166,14 @@ export async function buildAndSaveTravelItineraryPdf(params: {
   const contentW = pageW - margin * 2;
   const lineH = 6;
 
-  const [regBase64, boldBase64] = await Promise.all([
-    fetchRegularFontBase64(),
-    fetchBoldFontBase64(),
-  ]);
-
+  const regBase64 = await fetchRegularFontBase64();
   const hasKo = Boolean(regBase64 && tryRegisterRegular(doc));
-  const hasKoBold = Boolean(hasKo && boldBase64 && tryRegisterBold(doc));
 
   if (!hasKo && process.env.NODE_ENV === 'development') {
     console.warn('[itinerary-pdf] 한글 폰트를 불러오지 못했습니다. Helvetica로 저장됩니다.');
   }
 
-  setHeadingFont(doc, hasKo, hasKoBold, 20);
+  setHeadingFont(doc, hasKo, 20);
   const titleLines = doc.splitTextToSize(params.trip.title, contentW);
   const titleLineHeight = lineH + 2;
   const headerBarH = Math.max(44, 26 + titleLines.length * titleLineHeight + 12);
@@ -215,7 +182,7 @@ export async function buildAndSaveTravelItineraryPdf(params: {
   doc.rect(0, 0, pageW, headerBarH, 'F');
 
   doc.setTextColor(255, 255, 255);
-  setHeadingFont(doc, hasKo, hasKoBold, 20);
+  setHeadingFont(doc, hasKo, 20);
   let yTitle = 26;
   for (const line of titleLines) {
     doc.text(line, margin, yTitle);
@@ -247,7 +214,7 @@ export async function buildAndSaveTravelItineraryPdf(params: {
     for (const line of params.expenseSummaryLines) {
       const sub = doc.splitTextToSize(line, contentW);
       for (const sl of sub) {
-        yMeta = ensurePageSpace(doc, yMeta, lineH + 2, margin);
+        yMeta = ensurePageSpace(doc, yMeta, lineH + 2, margin, hasKo);
         doc.text(sl, margin, yMeta);
         yMeta += lineH - 1;
       }
@@ -258,7 +225,7 @@ export async function buildAndSaveTravelItineraryPdf(params: {
 
   if (params.items.length === 0) {
     setBodyFont(doc, hasKo, 10);
-    yMeta = ensurePageSpace(doc, yMeta, lineH + 8, margin);
+    yMeta = ensurePageSpace(doc, yMeta, lineH + 8, margin, hasKo);
     doc.text(params.emptyItineraryMessage, margin, yMeta + 6);
     doc.save(`itinerary-${sanitizeFilename(params.trip.title)}.pdf`);
     return;
@@ -274,11 +241,12 @@ export async function buildAndSaveTravelItineraryPdf(params: {
 
   /** ========== Phase 3: 요약 페이지 ========== */
   doc.addPage();
+  restoreDefaultBodyStyle(doc, hasKo);
   let y = margin;
 
   doc.setFillColor(BRAND_R, BRAND_G, BRAND_B);
   doc.rect(margin, y - 5, ACCENT_BAR_W, 10, 'F');
-  setHeadingFont(doc, hasKo, hasKoBold, 14);
+  setHeadingFont(doc, hasKo, 14);
   doc.setTextColor(30, 41, 59);
   doc.text(params.pdfLabels.overviewTitle, margin + ACCENT_BAR_W + 6, y);
   y += lineH + 10;
@@ -297,7 +265,7 @@ export async function buildAndSaveTravelItineraryPdf(params: {
       contentW - ACCENT_BAR_W - 8,
     );
 
-    y = ensurePageSpace(doc, y, summaryLine.length * (lineH + 1) + 8, margin);
+    y = ensurePageSpace(doc, y, summaryLine.length * (lineH + 1) + 8, margin, hasKo);
 
     doc.setFillColor(241, 245, 249);
     doc.rect(margin, y - 4, pageW - margin * 2, summaryLine.length * (lineH - 1) + 10, 'F');
@@ -322,22 +290,23 @@ export async function buildAndSaveTravelItineraryPdf(params: {
 
   /** ========== 상세 일정 ========== */
   doc.addPage();
+  restoreDefaultBodyStyle(doc, hasKo);
   y = margin;
 
   doc.setFillColor(BRAND_R, BRAND_G, BRAND_B);
   doc.rect(margin, y - 5, ACCENT_BAR_W, 10, 'F');
-  setHeadingFont(doc, hasKo, hasKoBold, 14);
+  setHeadingFont(doc, hasKo, 14);
   doc.setTextColor(30, 41, 59);
   doc.text(params.pdfLabels.detailsTitle, margin + ACCENT_BAR_W + 6, y);
   y += lineH + 12;
 
   for (let idx = 0; idx < days.length; idx++) {
-    y = ensurePageSpace(doc, y, lineH + 20, margin);
+    y = ensurePageSpace(doc, y, lineH + 20, margin, hasKo);
     const day = days[idx]!;
     doc.setDrawColor(220, 220, 220);
     doc.setLineWidth(0.3);
     doc.line(margin, y - 4, pageW - margin, y - 4);
-    setHeadingFont(doc, hasKo, hasKoBold, 13);
+    setHeadingFont(doc, hasKo, 13);
     doc.setTextColor(30, 41, 59);
     doc.text(`Day ${idx + 1}  ·  ${day}`, margin, y);
     y += lineH + 4;
@@ -345,7 +314,7 @@ export async function buildAndSaveTravelItineraryPdf(params: {
     setBodyFont(doc, hasKo, 10);
 
     for (const i of byDay.get(day)!) {
-      y = ensurePageSpace(doc, y, lineH + 8, margin);
+      y = ensurePageSpace(doc, y, lineH + 8, margin, hasKo);
       const label = params.getTypeLabel(i.type, i.transport_type);
       const timeStr =
         i.start_time || i.end_time ? `  ${i.start_time || '--'} ~ ${i.end_time || '--'}` : '';
@@ -356,7 +325,7 @@ export async function buildAndSaveTravelItineraryPdf(params: {
         const lines = doc.splitTextToSize(i.description.trim(), pageW - margin * 2 - 8);
         setBodyFont(doc, hasKo, 9);
         for (const line of lines) {
-          y = ensurePageSpace(doc, y, 6, margin);
+          y = ensurePageSpace(doc, y, 6, margin, hasKo);
           doc.text(line, margin + 6, y);
           y += 5;
         }
