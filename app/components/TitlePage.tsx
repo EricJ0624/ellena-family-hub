@@ -128,7 +128,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     modern: 'inset-[20px]',
     minimal: 'inset-[20px]',
     soft_glass: 'inset-[14px]',
-    polaroid_modern: 'inset-x-[14px] inset-t-[14px] inset-b-[38px]',
+    polaroid_modern: 'left-[14px] right-[14px] top-[14px] bottom-[38px]',
     editorial: 'inset-[10px]',
     gradient_rim: 'inset-[12px]',
   };
