@@ -518,7 +518,7 @@ export default function MemoriesPage() {
   const mainMaxWidth = Math.min(1200, viewportWidth);
 
   return (
-    <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--bg-dashboard,#f8fafc)] pb-20">
+    <div className="memories-page min-h-screen w-full max-w-[100vw] overflow-x-clip bg-[var(--surface-base)] pb-20">
       <header
         ref={headerRef}
         className="sticky top-0 z-50 mx-auto box-border flex w-full items-center bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] [max-width:var(--memories-header-max-width)] [padding:var(--memories-header-padding)] [gap:var(--memories-header-gap)]"
@@ -589,7 +589,7 @@ export default function MemoriesPage() {
         {album.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-12 text-center text-slate-400"
+            className="glass-panel-soft cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-12 text-center text-slate-400"
           >
             <div className="mb-3 text-5xl">📷</div>
             <div>{dt('photo_upload_prompt')}</div>
@@ -621,7 +621,7 @@ export default function MemoriesPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
-                className="memory-card overflow-hidden rounded-xl bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                className="memory-card glass-panel-soft overflow-hidden rounded-xl"
               >
                 <div
                   role="button"
@@ -699,7 +699,7 @@ export default function MemoriesPage() {
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ layout: { duration: 0.3, ease: [0.4, 0, 0.2, 1] } }}
-                            className="memory-card overflow-hidden rounded-xl bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                            className="memory-card glass-panel-soft overflow-hidden rounded-xl"
                           >
                             <div
                               role="button"

@@ -70,7 +70,7 @@ export function TravelPlannerSection({
               <li
                 key={trip.id}
                 onClick={() => onTripClick(trip.id)}
-                className="mb-1.5 cursor-pointer rounded-lg border border-solid border-[#e2e8f0] px-3 py-2.5 text-[13px] text-[#1e293b] transition-colors hover:border-[#cbd5e1] hover:bg-[#f8fafc]"
+                className="glass-panel-soft mb-1.5 cursor-pointer rounded-lg px-3 py-2.5 text-[13px] text-[#1e293b] transition-colors hover:border-[#cbd5e1] hover:bg-white/50"
               >
                 <div className="font-semibold">{trip.title}</div>
                 <div className="mt-0.5 text-xs text-[#64748b]">

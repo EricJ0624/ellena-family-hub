@@ -114,7 +114,7 @@ export function PiggyBankSection({
                 return (
                   <div className="grid gap-3">
                     {pendingAccountRequests.length > 0 && (
-                      <div className="mb-1 rounded-xl border border-[#fcd34d] bg-[#fef3c7] p-3">
+                      <div className="glass-panel-soft mb-1 rounded-xl p-3">
                         <div className="mb-2 text-[13px] font-bold text-[#92400e]">
                           {t.pending_requests.replace(/\{count\}/g, String(pendingAccountRequests.length))}
                         </div>
@@ -161,7 +161,7 @@ export function PiggyBankSection({
                       p.noAccount ? (
                         <div
                           key={p.user_id}
-                          className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-solid border-[#e2e8f0] bg-[#f8fafc] p-4"
+                          className="glass-panel-soft flex flex-wrap items-center justify-between gap-2.5 rounded-xl p-4"
                         >
                           <div>
                             <div className="text-base font-bold text-[#1f2937]">
@@ -185,7 +185,7 @@ export function PiggyBankSection({
                       ) : (
                         <div
                           key={p.id}
-                          className="cursor-pointer rounded-xl border border-solid border-[#e2e8f0] bg-white p-4 shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-all duration-200 ease-in-out hover:border-[#cbd5e1] hover:shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
+                          className="glass-panel cursor-pointer rounded-xl p-4 transition-all duration-200 ease-in-out hover:border-[#cbd5e1] hover:shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
                           onClick={() => {
                             if (p.user_id) onMemberClick(p.user_id);
                           }}
@@ -235,7 +235,7 @@ export function PiggyBankSection({
             ) : piggySummary ? (
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
               <div className="grid gap-2.5">
-                <div className="rounded-xl border border-solid border-[#fecaca] bg-[#fef2f2] p-3">
+                <div className="glass-panel-soft rounded-xl p-3">
                   <div className="text-xs text-[#b91c1c]">
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
@@ -243,7 +243,7 @@ export function PiggyBankSection({
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
                 </div>
-                <div className="rounded-xl border border-solid border-[#fed7aa] bg-[#fff7ed] p-3">
+                <div className="glass-panel-soft rounded-xl p-3">
                   <div className="text-xs text-[#9a3412]">
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>

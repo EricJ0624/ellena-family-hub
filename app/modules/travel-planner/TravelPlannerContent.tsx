@@ -2496,7 +2496,7 @@ export function TravelPlannerContent() {
 
   if (!currentGroupId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] p-5">
         <div className="text-center text-slate-500">
           <MapPin className="mx-auto mb-4 h-12 w-12 opacity-60" />
           <p>{tt('select_group_first')}</p>
@@ -2516,13 +2516,13 @@ export function TravelPlannerContent() {
   const expenseList = expenses.filter((e) => e.entry_type !== 'addition');
 
   return (
-    <div className="min-h-screen bg-slate-50 p-5">
+    <div className="min-h-screen bg-[var(--surface-base)] p-5">
       <div ref={placesServiceContainerRef} className="absolute left-[-9999px] h-px w-px" aria-hidden="true" />
       <div className="mb-6 flex items-center gap-3">
         <button
           type="button"
           onClick={() => router.push('/dashboard')}
-          className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white p-2"
+          className="glass-panel-soft inline-flex cursor-pointer items-center justify-center rounded-lg p-2"
         >
           <ChevronLeft className="h-5 w-5 text-slate-600" />
         </button>
@@ -2539,7 +2539,7 @@ export function TravelPlannerContent() {
       )}
 
       {selectedTrip ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+          <div className="glass-panel rounded-xl p-5">
             <div className="mb-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -3370,7 +3370,7 @@ export function TravelPlannerContent() {
 
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <div className="glass-panel rounded-xl p-6 text-center">
             {loading && urlTripId ? (
               <div className="text-slate-500">
                 <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />

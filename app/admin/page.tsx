@@ -1084,7 +1084,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f7fa]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base)]">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin" />
           <p className="text-base text-slate-500">{at('checking_permission')}</p>
@@ -1099,11 +1099,11 @@ export default function AdminPage() {
 
   return (
     <div
-      className="admin-page min-h-screen bg-[#f5f7fa] p-5"
+      className="admin-page min-h-screen bg-[var(--surface-base)] p-5"
     >
       {/* 헤더 */}
       <div
-        className="admin-header mb-6 rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
+        className="admin-header glass-panel mb-6 rounded-xl p-6"
       >
         <div
           className="admin-header-top mb-6 flex items-center justify-between"
@@ -1295,7 +1295,7 @@ export default function AdminPage() {
 
       {/* 콘텐츠 영역 */}
       <div
-        className="admin-content rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]"
+        className="admin-content glass-panel rounded-xl p-6"
       >
         {error && (
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-800">

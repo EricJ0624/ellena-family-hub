@@ -824,7 +824,7 @@ export function GroupAdminPanel({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f7fa]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-base)]">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin" />
           <p className="text-base text-slate-500">{gat('checking_permission')}</p>
@@ -851,10 +851,10 @@ export function GroupAdminPanel({
 
   return (
     <div
-      className="group-admin-page min-h-screen bg-[#f5f7fa] p-5"
+      className="group-admin-page min-h-screen bg-[var(--surface-base)] p-5"
     >
       {/* ???�쎌???*/}
-      <div className="group-admin-header mb-6 rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+      <div className="group-admin-header glass-panel mb-6 rounded-xl p-6">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-blue-500 p-3 text-white">
@@ -996,7 +996,7 @@ export function GroupAdminPanel({
       </div>
 
       {/* ??�쎌�??�썲?????�쎌?�占?*/}
-      <div className="group-admin-content rounded-xl bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
+      <div className="group-admin-content glass-panel rounded-xl p-6">
         {error && (
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-800">
             <AlertCircle className="h-5 w-5 shrink-0" />

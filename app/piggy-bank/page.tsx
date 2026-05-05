@@ -528,7 +528,7 @@ export default function PiggyBankPage() {
     const membersWithoutPiggy = list.filter((p) => p.noAccount);
 
     return (
-      <div className="min-h-screen bg-slate-50 p-5">
+      <div className="min-h-screen bg-[var(--surface-base)] p-5">
         <div className="mb-5 flex items-center gap-4">
           <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-[90px] w-[90px]" />
           <div>
@@ -541,7 +541,7 @@ export default function PiggyBankPage() {
             {error}
           </div>
         )}
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <div className="glass-panel mb-5 rounded-2xl p-4">
           <h2 className="mb-2 mt-0 text-lg">{pt('piggy_currency_admin_title')}</h2>
           <p className="mb-3 mt-0 text-sm text-slate-500">ISO 4217 코드 · 모든 저금통에 동일하게 적용됩니다.</p>
           <div className="flex flex-wrap items-center gap-2.5">
@@ -568,7 +568,7 @@ export default function PiggyBankPage() {
             </button>
           </div>
         </div>
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <div className="glass-panel mb-5 rounded-2xl p-4">
           <h2 className="m-0 text-lg">{pt('select_child_title')}</h2>
           <p className="mb-3 mt-2 text-sm text-slate-500">{pt('select_child_hint')}</p>
           <select
@@ -587,7 +587,7 @@ export default function PiggyBankPage() {
           </select>
           <p className="m-0 mt-2 text-xs text-slate-400">{pt('select_child_hint2')}</p>
         </div>
-        <div className="mb-5 rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+        <div className="glass-panel mb-5 rounded-2xl p-4">
           <h2 className="m-0 text-lg">{pt('add_piggy_title')}</h2>
           <p className="mb-3 mt-2 text-sm text-slate-500">{pt('add_piggy_hint')}</p>
           {membersWithoutPiggy.length === 0 ? (
@@ -612,7 +612,7 @@ export default function PiggyBankPage() {
             </div>
           )}
         </div>
-        <div className="mb-5 rounded-2xl bg-white p-4">
+        <div className="glass-panel mb-5 rounded-2xl p-4">
           <h2 className="m-0 text-lg">{pt('open_requests_title')}</h2>
           <div className="mt-3">
             {(() => {
@@ -660,7 +660,7 @@ export default function PiggyBankPage() {
     if (summary !== null && summary.account == null && !isAdmin) {
       const pendingRequest = summary.pendingAccountRequest === true;
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-5">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--surface-base)] p-5">
           <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-20 w-20" />
           {pendingRequest ? (
             <p className="m-0 text-center text-base font-semibold text-amber-800">
@@ -692,7 +692,7 @@ export default function PiggyBankPage() {
     if (summary !== null && summary.account == null && isAdmin && selectedChildIdForAdmin) {
       const childName = members.find((m) => m.user_id === selectedChildIdForAdmin)?.nickname || pt('child_label');
       return (
-        <div className="min-h-screen bg-slate-50 p-5">
+        <div className="min-h-screen bg-[var(--surface-base)] p-5">
           <div className="mb-5 flex items-center gap-4">
             <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-[90px] w-[90px]" />
             <div>
@@ -703,7 +703,7 @@ export default function PiggyBankPage() {
           {error && (
             <div className="mb-4 rounded-[10px] border border-red-200 bg-red-100 p-3 text-red-800">{error}</div>
           )}
-          <div className="mb-5 rounded-2xl bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+          <div className="glass-panel mb-5 rounded-2xl p-5">
             <p className="mb-4 text-[15px] text-slate-600">{pt('this_child_has_no_piggy')}</p>
             <button
               type="button"
@@ -736,7 +736,7 @@ export default function PiggyBankPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-5">
+    <div className="min-h-screen bg-[var(--surface-base)] p-5">
       <div className="mb-5 flex items-center gap-4">
         <img
           src="/piggy/ellena-piggy-red.svg"
