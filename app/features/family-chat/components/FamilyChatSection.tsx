@@ -235,7 +235,7 @@ export function FamilyChatSection({
             alt=""
             fill
             sizes="(max-width: 768px) 28vw, 176px"
-            className="object-contain object-center"
+            className="object-contain object-center mix-blend-multiply dark:mix-blend-screen"
             priority={false}
           />
           <div
@@ -371,14 +371,14 @@ export function FamilyChatSection({
           <button
             type="button"
             onClick={() => chatFileInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className="cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-[7px] text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
           >
             {t.chat_album_btn}
           </button>
           <button
             type="button"
             onClick={() => chatCameraInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-[7px] text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+            className="cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-[7px] text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
           >
             {t.chat_camera_btn}
           </button>
