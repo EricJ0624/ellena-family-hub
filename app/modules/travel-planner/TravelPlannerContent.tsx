@@ -2788,14 +2788,14 @@ export function TravelPlannerContent() {
                       itineraryPlannerTripDays.map((dayYmd, idx) => {
                         const dayNum = idx + 1;
                         const dayRows = itineraryRowsByTripDay.get(dayYmd) ?? [];
+                        if (dayRows.length === 0) return null;
                         return (
                           <div key={dayYmd} className="mb-4">
                             <div className="mb-2 border-b border-indigo-200 pb-1.5 text-[13px] font-bold text-indigo-900">
                               {tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · {formatTripDateLong(dayYmd)}
                             </div>
-                            {dayRows.length > 0 ? (
-                              <ul className="m-0 list-none p-0">
-                                {dayRows.map((i) => (
+                            <ul className="m-0 list-none p-0">
+                              {dayRows.map((i) => (
                                   <li
                                     key={i.rowKey}
                                     className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
@@ -2881,8 +2881,7 @@ export function TravelPlannerContent() {
                                     </div>
                                   </li>
                                 ))}
-                              </ul>
-                            ) : null}
+                            </ul>
                           </div>
                         );
                       })}
