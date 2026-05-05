@@ -7,6 +7,12 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
+import {
+  buildExpandedPlannerItinerary,
+  enumerateTripDays,
+  partitionRowsByTripRange,
+  type ExpandedPlannerItineraryItem,
+} from '@/lib/modules/travel-planner/itinerary-display-expand';
 import { buildTransportItineraryTitle, shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
 import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
@@ -51,6 +57,13 @@ const API_BASE = '/api/v1/travel';
 const TRIP_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
 
 const LOCALE_FOR_MONEY: Record<string, string> = {
+  ko: 'ko-KR',
+  en: 'en-US',
+  ja: 'ja-JP',
+  'zh-CN': 'zh-CN',
+  'zh-TW': 'zh-TW',
+};
+const LOCALE_FOR_TRIP_DATES: Record<string, string> = {
   ko: 'ko-KR',
   en: 'en-US',
   ja: 'ja-JP',
@@ -202,6 +215,7 @@ export function TravelPlannerContent() {
   const [itineraryDescription, setItineraryDescription] = useState('');
   const [itineraryStartTime, setItineraryStartTime] = useState('');
   const [itineraryEndTime, setItineraryEndTime] = useState('');
+  const [itineraryEndDayDate, setItineraryEndDayDate] = useState('');
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<TravelExpense | null>(null);
   const [expenseCategory, setExpenseCategory] = useState('');
@@ -214,6 +228,8 @@ export function TravelPlannerContent() {
   const [accName, setAccName] = useState('');
   const [accCheckIn, setAccCheckIn] = useState('');
   const [accCheckOut, setAccCheckOut] = useState('');
+  const [accCheckInTime, setAccCheckInTime] = useState('');
+  const [accCheckOutTime, setAccCheckOutTime] = useState('');
   const [accAddress, setAccAddress] = useState('');
   const [accMemo, setAccMemo] = useState('');
   const [accLatitude, setAccLatitude] = useState('');
@@ -228,6 +244,7 @@ export function TravelPlannerContent() {
   const [editingDining, setEditingDining] = useState<TravelDining | null>(null);
   const [diningName, setDiningName] = useState('');
   const [diningDayDate, setDiningDayDate] = useState('');
+  const [diningEndDayDate, setDiningEndDayDate] = useState('');
   const [diningTime, setDiningTime] = useState('');
   const [diningCategory, setDiningCategory] = useState('');
   const [diningMemo, setDiningMemo] = useState('');
@@ -256,6 +273,7 @@ export function TravelPlannerContent() {
   const [editingTransport, setEditingTransport] = useState<TravelTransport | null>(null);
   const [attractionName, setAttractionName] = useState('');
   const [attractionDayDate, setAttractionDayDate] = useState('');
+  const [attractionEndDayDate, setAttractionEndDayDate] = useState('');
   const [attractionStartTime, setAttractionStartTime] = useState('');
   const [attractionEndTime, setAttractionEndTime] = useState('');
   const [attractionAddress, setAttractionAddress] = useState('');
@@ -267,6 +285,7 @@ export function TravelPlannerContent() {
   const [attractionDirectInputMode, setAttractionDirectInputMode] = useState(false);
   const [transportType, setTransportType] = useState<'air' | 'train' | 'car' | 'bike'>('air');
   const [transportDayDate, setTransportDayDate] = useState('');
+  const [transportEndDayDate, setTransportEndDayDate] = useState('');
   const [transportStartTime, setTransportStartTime] = useState('');
   const [transportEndTime, setTransportEndTime] = useState('');
   const [transportDeparture, setTransportDeparture] = useState('');
@@ -511,6 +530,19 @@ export function TravelPlannerContent() {
   const expenseRequiredAlertMessage = useMemo(
     () => `${tt('alert_expense_required')} (${tripCurrencyCode})`,
     [tripCurrencyCode, tt],
+  );
+
+  const localeForTripDates = LOCALE_FOR_TRIP_DATES[lang] ?? 'en-US';
+  const formatTripDateLong = useCallback(
+    (ymd: string) => {
+      const [y, m0, d0] = ymd.split('-').map(Number);
+      return new Intl.DateTimeFormat(localeForTripDates, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(new Date(Date.UTC(y!, m0! - 1, d0!)));
+    },
+    [localeForTripDates],
   );
 
   /**
@@ -1324,6 +1356,7 @@ export function TravelPlannerContent() {
     if (item) {
       setEditingItinerary(item);
       setItineraryDayDate(item.day_date);
+      setItineraryEndDayDate(item.end_day_date ?? '');
       setItineraryTitle(item.title);
       setItineraryDescription(item.description ?? '');
       setItineraryStartTime(item.start_time ?? '');
@@ -1336,6 +1369,7 @@ export function TravelPlannerContent() {
     } else {
       setEditingItinerary(null);
       setItineraryDayDate('');
+      setItineraryEndDayDate('');
       setItineraryTitle('');
       setItineraryDescription('');
       setItineraryStartTime('');
@@ -1364,6 +1398,10 @@ export function TravelPlannerContent() {
         body: JSON.stringify({
           groupId: currentGroupId,
           day_date: itineraryDayDate,
+          end_day_date:
+            itineraryEndDayDate.trim() && itineraryEndDayDate.trim() !== itineraryDayDate
+              ? itineraryEndDayDate.trim().slice(0, 10)
+              : undefined,
           title: itineraryTitle.trim(),
           description: itineraryDescription.trim() || undefined,
           start_time: itineraryStartTime.trim() || undefined,
@@ -1400,6 +1438,10 @@ export function TravelPlannerContent() {
         headers,
         body: JSON.stringify({
           day_date: itineraryDayDate,
+          end_day_date:
+            itineraryEndDayDate.trim() && itineraryEndDayDate.trim() !== itineraryDayDate
+              ? itineraryEndDayDate.trim().slice(0, 10)
+              : null,
           title: itineraryTitle.trim(),
           description: itineraryDescription.trim() || null,
           start_time: itineraryStartTime.trim() || null,
@@ -1440,7 +1482,7 @@ export function TravelPlannerContent() {
     }
   };
 
-  const handleRemoveFromItinerary = async (item: typeof sortedItineraries[0]) => {
+  const handleRemoveFromItinerary = async (item: ExpandedPlannerItineraryItem) => {
     const displayTitle = shortItineraryTitle(item.type, item.title, item.address);
     if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmRemoveFromItinerary(displayTitle))) return;
     try {
@@ -1541,7 +1583,7 @@ export function TravelPlannerContent() {
     ],
   );
 
-  const handleEditFromItinerary = (item: typeof sortedItineraries[0]) => {
+  const handleEditFromItinerary = (item: ExpandedPlannerItineraryItem) => {
     if (!selectedTrip) return;
     if (item.type === 'accommodation') {
       const acc = accommodations.find((a) => a.id === item.id);
@@ -1671,6 +1713,8 @@ export function TravelPlannerContent() {
       setAccName(item.name);
       setAccCheckIn(item.check_in_date);
       setAccCheckOut(item.check_out_date);
+      setAccCheckInTime(item.check_in_time ?? '');
+      setAccCheckOutTime(item.check_out_time ?? '');
       setAccAddress(item.address ?? '');
       setAccMemo(item.memo ?? '');
       setAccLatitude(item.latitude != null ? String(item.latitude) : '');
@@ -1694,6 +1738,8 @@ export function TravelPlannerContent() {
       setAccName('');
       setAccCheckIn('');
       setAccCheckOut('');
+      setAccCheckInTime('');
+      setAccCheckOutTime('');
       setAccAddress('');
       setAccMemo('');
       setAccLatitude('');
@@ -1737,6 +1783,8 @@ export function TravelPlannerContent() {
           name: accName.trim(),
           check_in_date: accCheckIn,
           check_out_date: accCheckOut,
+          check_in_time: accCheckInTime.trim() || undefined,
+          check_out_time: accCheckOutTime.trim() || undefined,
           address: accAddress.trim() || undefined,
           memo: accMemo.trim() || undefined,
           place_id: accDirectInputMode ? undefined : (accPlaceId ?? undefined),
@@ -1787,6 +1835,8 @@ export function TravelPlannerContent() {
           name: accName.trim(),
           check_in_date: accCheckIn,
           check_out_date: accCheckOut,
+          check_in_time: accCheckInTime.trim() || null,
+          check_out_time: accCheckOutTime.trim() || null,
           address: accAddress.trim() || null,
           memo: accMemo.trim() || null,
           place_id: accDirectInputMode ? null : accPlaceId,
@@ -1829,6 +1879,7 @@ export function TravelPlannerContent() {
       setEditingDining(item);
       setDiningName(item.name);
       setDiningDayDate(item.day_date);
+      setDiningEndDayDate(item.end_day_date ?? '');
       setDiningTime(item.time_at ?? '');
       setDiningCategory(item.category ?? '');
       setDiningMemo(item.memo ?? '');
@@ -1853,6 +1904,7 @@ export function TravelPlannerContent() {
       setEditingDining(null);
       setDiningName('');
       setDiningDayDate('');
+      setDiningEndDayDate('');
       setDiningTime('');
       setDiningCategory('');
       setDiningMemo('');
@@ -1893,6 +1945,10 @@ export function TravelPlannerContent() {
           groupId: currentGroupId,
           name: diningName.trim(),
           day_date: diningDayDate,
+          end_day_date:
+            diningEndDayDate.trim() && diningEndDayDate.trim() !== diningDayDate
+              ? diningEndDayDate.trim().slice(0, 10)
+              : undefined,
           time_at: diningTime.trim() || undefined,
           category: diningCategory.trim() || undefined,
           memo: diningMemo.trim() || undefined,
@@ -1940,6 +1996,10 @@ export function TravelPlannerContent() {
         body: JSON.stringify({
           name: diningName.trim(),
           day_date: diningDayDate,
+          end_day_date:
+            diningEndDayDate.trim() && diningEndDayDate.trim() !== diningDayDate
+              ? diningEndDayDate.trim().slice(0, 10)
+              : null,
           time_at: diningTime.trim() || null,
           category: diningCategory.trim() || null,
           memo: diningMemo.trim() || null,
@@ -1984,6 +2044,7 @@ export function TravelPlannerContent() {
       setEditingAttraction(item);
       setAttractionName(item.name);
       setAttractionDayDate(item.day_date);
+      setAttractionEndDayDate(item.end_day_date ?? '');
       setAttractionStartTime(item.start_time ?? '');
       setAttractionEndTime(item.end_time ?? '');
       setAttractionAddress(item.address ?? '');
@@ -2008,6 +2069,7 @@ export function TravelPlannerContent() {
       setEditingAttraction(null);
       setAttractionName('');
       setAttractionDayDate('');
+      setAttractionEndDayDate('');
       setAttractionStartTime('');
       setAttractionEndTime('');
       setAttractionAddress('');
@@ -2047,6 +2109,10 @@ export function TravelPlannerContent() {
           groupId: currentGroupId,
           name: attractionName.trim(),
           day_date: attractionDayDate,
+          end_day_date:
+            attractionEndDayDate.trim() && attractionEndDayDate.trim() !== attractionDayDate
+              ? attractionEndDayDate.trim().slice(0, 10)
+              : undefined,
           start_time: attractionStartTime.trim() || undefined,
           end_time: attractionEndTime.trim() || undefined,
           address: attractionAddress.trim() || undefined,
@@ -2094,6 +2160,10 @@ export function TravelPlannerContent() {
         body: JSON.stringify({
           name: attractionName.trim(),
           day_date: attractionDayDate,
+          end_day_date:
+            attractionEndDayDate.trim() && attractionEndDayDate.trim() !== attractionDayDate
+              ? attractionEndDayDate.trim().slice(0, 10)
+              : null,
           start_time: attractionStartTime.trim() || null,
           end_time: attractionEndTime.trim() || null,
           address: attractionAddress.trim() || null,
@@ -2138,6 +2208,7 @@ export function TravelPlannerContent() {
       setEditingTransport(item);
       setTransportType(item.transport_type);
       setTransportDayDate(item.day_date);
+      setTransportEndDayDate(item.end_day_date ?? '');
       setTransportStartTime(item.start_time ?? '');
       setTransportEndTime(item.end_time ?? '');
       setTransportDeparture(item.departure ?? '');
@@ -2153,6 +2224,7 @@ export function TravelPlannerContent() {
       setEditingTransport(null);
       setTransportType(type);
       setTransportDayDate('');
+      setTransportEndDayDate('');
       setTransportStartTime('');
       setTransportEndTime('');
       setTransportDeparture('');
@@ -2192,6 +2264,10 @@ export function TravelPlannerContent() {
           groupId: currentGroupId,
           transport_type: transportType,
           day_date: transportDayDate,
+          end_day_date:
+            transportEndDayDate.trim() && transportEndDayDate.trim() !== transportDayDate
+              ? transportEndDayDate.trim().slice(0, 10)
+              : undefined,
           start_time: transportStartTime.trim() || undefined,
           end_time: transportEndTime.trim() || undefined,
           departure: transportDeparture.trim() || undefined,
@@ -2240,6 +2316,10 @@ export function TravelPlannerContent() {
         body: JSON.stringify({
           transport_type: transportType,
           day_date: transportDayDate,
+          end_day_date:
+            transportEndDayDate.trim() && transportEndDayDate.trim() !== transportDayDate
+              ? transportEndDayDate.trim().slice(0, 10)
+              : null,
           start_time: transportStartTime.trim() || null,
           end_time: transportEndTime.trim() || null,
           departure: transportDeparture.trim() || null,
@@ -2280,113 +2360,56 @@ export function TravelPlannerContent() {
     }
   };
 
-  const sortedItineraries = useMemo(() => {
-    const allItems: Array<{
-      id: string;
-      type: 'accommodation' | 'dining' | 'attraction' | 'transport' | 'other';
-      day_date: string;
-      start_time?: string | null;
-      end_time?: string | null;
-      title: string;
-      description?: string | null;
-      address?: string | null;
-      place_id?: string | null;
-      latitude?: number | null;
-      longitude?: number | null;
-      category?: string | null;
-      departure?: string | null;
-      arrival?: string | null;
-      distance_km?: number | null;
-      transport_type?: 'air' | 'train' | 'car' | 'bike';
-    }> = [];
-
-    accommodations.filter(a => a.show_in_itinerary).forEach(a => {
-      allItems.push({
-        id: a.id,
-        type: 'accommodation',
-        day_date: a.check_in_date,
-        start_time: null,
-        end_time: null,
-        title: a.name,
-        description: a.memo,
-        address: a.address,
-        place_id: a.place_id ?? null,
-        latitude: a.latitude,
-        longitude: a.longitude,
-      });
+  const expandedItineraryRows = useMemo((): ExpandedPlannerItineraryItem[] => {
+    if (!selectedTrip) return [];
+    return buildExpandedPlannerItinerary({
+      trip_start_date: selectedTrip.start_date,
+      trip_end_date: selectedTrip.end_date,
+      accommodations,
+      dining,
+      attractions,
+      transports,
+      itineraries,
     });
+  }, [selectedTrip, accommodations, dining, attractions, transports, itineraries]);
 
-    dining.filter(d => d.show_in_itinerary).forEach(d => {
-      allItems.push({
-        id: d.id,
-        type: 'dining',
-        day_date: d.day_date,
-        start_time: d.time_at,
-        end_time: null,
-        title: d.name,
-        description: d.memo,
-        address: d.address,
-        place_id: d.place_id ?? null,
-        latitude: d.latitude,
-        longitude: d.longitude,
-        category: d.category,
-      });
-    });
+  const itineraryPlannerTripDays = useMemo(() => {
+    if (!selectedTrip) return [];
+    return enumerateTripDays(selectedTrip.start_date, selectedTrip.end_date);
+  }, [selectedTrip]);
 
-    attractions.filter(a => a.show_in_itinerary).forEach(a => {
-      allItems.push({
-        id: a.id,
-        type: 'attraction',
-        day_date: a.day_date,
-        start_time: a.start_time,
-        end_time: a.end_time,
-        title: a.name,
-        description: a.description,
-        address: a.address,
-        place_id: a.place_id ?? null,
-        latitude: a.latitude,
-        longitude: a.longitude,
-      });
-    });
+  const itineraryRowsByTripDay = useMemo(() => {
+    const map = new Map<string, ExpandedPlannerItineraryItem[]>();
+    if (!selectedTrip) return map;
+    const { inTrip } = partitionRowsByTripRange(
+      expandedItineraryRows,
+      selectedTrip.start_date,
+      selectedTrip.end_date,
+    );
+    for (const r of inTrip) {
+      if (!map.has(r.display_day)) map.set(r.display_day, []);
+      map.get(r.display_day)!.push(r);
+    }
+    return map;
+  }, [expandedItineraryRows, selectedTrip]);
 
-    transports.filter(t => t.show_in_itinerary).forEach(t => {
-      allItems.push({
-        id: t.id,
-        type: 'transport',
-        day_date: t.day_date,
-        start_time: t.start_time,
-        end_time: t.end_time,
-        title: buildTransportItineraryTitle(t.departure, t.arrival),
-        description: t.memo,
-        departure: t.departure,
-        arrival: t.arrival,
-        distance_km: t.distance_km,
-        transport_type: t.transport_type,
-      });
-    });
+  const itineraryRowsOutsideTrip = useMemo(() => {
+    if (!selectedTrip) return [];
+    return partitionRowsByTripRange(expandedItineraryRows, selectedTrip.start_date, selectedTrip.end_date)
+      .outsideTrip;
+  }, [expandedItineraryRows, selectedTrip]);
 
-    itineraries.forEach(i => {
-      allItems.push({
-        id: i.id,
-        type: 'other',
-        day_date: i.day_date,
-        start_time: i.start_time,
-        end_time: i.end_time,
-        title: i.title,
-        description: i.description,
-        address: i.address,
-        latitude: i.latitude,
-        longitude: i.longitude,
-      });
-    });
-
-    return allItems.sort((a, b) => {
-      if (a.day_date !== b.day_date) return a.day_date.localeCompare(b.day_date);
-      const timeA = a.start_time || '00:00';
-      const timeB = b.start_time || '00:00';
-      return timeA.localeCompare(timeB);
-    });
-  }, [accommodations, dining, attractions, transports, itineraries]);
+  const itineraryOutsideGrouped = useMemo(() => {
+    const days = [...new Set(itineraryRowsOutsideTrip.map((r) => r.display_day))].sort();
+    const map = new Map<string, ExpandedPlannerItineraryItem[]>();
+    for (const d of days) {
+      map.set(
+        d,
+        itineraryRowsOutsideTrip.filter((r) => r.display_day === d),
+      );
+    }
+    return { days, map };
+  }, [itineraryRowsOutsideTrip]);
 
   const getItineraryTypeLabel = (type: string, transport_type?: 'air' | 'train' | 'car' | 'bike') => {
     if (type === 'accommodation') return uiText.accommodationSection;
@@ -2417,30 +2440,49 @@ export function TravelPlannerContent() {
       `${uiText.pdfSpentTotal}: ${formatMoneyAmount(expenseSum, cur, loc)}`,
       `${uiText.balance}: ${formatMoneyAmount(balance, cur, loc)}`,
     ];
-    void import('@/lib/modules/travel-planner/itinerary-pdf').then(({ buildAndSaveTravelItineraryPdf }) =>
-      buildAndSaveTravelItineraryPdf({
-        lang,
-        trip: {
-          title: selectedTrip.title,
-          destination: selectedTrip.destination,
-          start_date: selectedTrip.start_date,
-          end_date: selectedTrip.end_date,
-        },
-        items: sortedItineraries,
-        getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
-        emptyItineraryMessage: uiText.itineraryEmptyForPdf,
-        pdfLabels: {
-          coverKicker: uiText.pdfCoverKicker,
-          overviewTitle: uiText.pdfOverviewTitle,
-          detailsTitle: uiText.pdfDetailsTitle,
-          placesCount: uiText.pdfPlacesCount,
-        },
-        expenseSummaryLines,
-      }),
-    );
+    void import('@/lib/modules/travel-planner/itinerary-pdf')
+      .then(({ buildAndSaveTravelItineraryPdf }) =>
+        buildAndSaveTravelItineraryPdf({
+          lang,
+          trip: {
+            title: selectedTrip.title,
+            destination: selectedTrip.destination,
+            start_date: selectedTrip.start_date,
+            end_date: selectedTrip.end_date,
+          },
+          items: expandedItineraryRows.map((r) => ({
+            type: r.type,
+            day_date: r.display_day,
+            start_time: r.start_time,
+            end_time: r.end_time,
+            title: r.title,
+            description: r.description,
+            address: r.address,
+            transport_type: r.transport_type,
+          })),
+          getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
+          emptyItineraryMessage: uiText.itineraryEmptyForPdf,
+          pdfLabels: {
+            coverKicker: uiText.pdfCoverKicker,
+            overviewTitle: uiText.pdfOverviewTitle,
+            detailsTitle: uiText.pdfDetailsTitle,
+            placesCount: uiText.pdfPlacesCount,
+            outsideTripSectionTitle: tt('pdf_section_outside_trip'),
+          },
+          expenseSummaryLines,
+          formatScheduleDayHeading: (dayNum, iso) =>
+            `${tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · ${formatTripDateLong(iso)}`,
+          formatOutsideDayHeading: (iso) =>
+            `${tt('itinerary_section_outside_trip')} · ${formatTripDateLong(iso)}`,
+        }),
+      )
+      .catch((err) => {
+        console.error(err);
+        setError(tt('itinerary_pdf_build_failed'));
+      });
   }, [
     selectedTrip,
-    sortedItineraries,
+    expandedItineraryRows,
     uiText,
     getItineraryTypeLabel,
     lang,
@@ -2448,6 +2490,8 @@ export function TravelPlannerContent() {
     totalBudget,
     expenseSum,
     balance,
+    formatTripDateLong,
+    setError,
   ]);
 
   if (!currentGroupId) {
@@ -2735,76 +2779,214 @@ export function TravelPlannerContent() {
                   </button>
                 </div>
               </div>
-              <ul className="m-0 list-none p-0">
-                {sortedItineraries.length === 0 ? (
-                  <li className="p-3 text-[13px] text-slate-400">{tt('no_itinerary')}</li>
+              <div className="m-0">
+                {expandedItineraryRows.length === 0 ? (
+                  <div className="p-3 text-[13px] text-slate-400">{tt('no_itinerary')}</div>
                 ) : (
-                  sortedItineraries.map((i) => (
-                    <li
-                      key={i.id}
-                      className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-800">
-                          <span className="mr-1.5">
-                            {i.type === 'accommodation' ? '🏨' : 
-                             i.type === 'dining' ? '🍽️' : 
-                             i.type === 'attraction' ? '🏛️' : 
-                             i.type === 'transport' ? 
-                               (i.transport_type === 'air' ? '✈️' : 
-                                i.transport_type === 'train' ? '🚂' : 
-                                i.transport_type === 'car' ? '🚗' : 
-                                i.transport_type === 'bike' ? '🚲' : '🚗') : 
-                             '📌'}
-                          </span>
-                          {shortItineraryTitle(i.type, i.title, i.address)}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {i.day_date}
-                          {(i.start_time || i.end_time) && <span className="ml-1.5">· {(i.start_time || '--')} ~ {(i.end_time || '--')}</span>}
-                        </div>
-                        {i.description && <div className="mt-1 text-[13px] text-slate-600">{i.description}</div>}
+                  <>
+                    {selectedTrip &&
+                      itineraryPlannerTripDays.map((dayYmd, idx) => {
+                        const dayNum = idx + 1;
+                        const dayRows = itineraryRowsByTripDay.get(dayYmd) ?? [];
+                        return (
+                          <div key={dayYmd} className="mb-4">
+                            <div className="mb-2 border-b border-indigo-200 pb-1.5 text-[13px] font-bold text-indigo-900">
+                              {tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · {formatTripDateLong(dayYmd)}
+                            </div>
+                            {dayRows.length > 0 ? (
+                              <ul className="m-0 list-none p-0">
+                                {dayRows.map((i) => (
+                                  <li
+                                    key={i.rowKey}
+                                    className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-semibold text-slate-800">
+                                        <span className="mr-1.5">
+                                          {i.type === 'accommodation'
+                                            ? '🏨'
+                                            : i.type === 'dining'
+                                              ? '🍽️'
+                                              : i.type === 'attraction'
+                                                ? '🏛️'
+                                                : i.type === 'transport'
+                                                  ? i.transport_type === 'air'
+                                                    ? '✈️'
+                                                    : i.transport_type === 'train'
+                                                      ? '🚂'
+                                                      : i.transport_type === 'car'
+                                                        ? '🚗'
+                                                        : i.transport_type === 'bike'
+                                                          ? '🚲'
+                                                          : '🚗'
+                                                  : '📌'}
+                                        </span>
+                                        {shortItineraryTitle(i.type, i.title, i.address)}
+                                      </div>
+                                      {(i.start_time || i.end_time) && (
+                                        <div className="mt-1 text-xs text-slate-500">
+                                          {(i.start_time || '--')} ~ {(i.end_time || '--')}
+                                        </div>
+                                      )}
+                                      {i.description && (
+                                        <div className="mt-1 text-[13px] text-slate-600">{i.description}</div>
+                                      )}
+                                    </div>
+                                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                      <div className="flex items-center gap-1">
+                                        {getGoogleMapsUrl(i) && (
+                                          <a
+                                            href={getGoogleMapsUrl(i)!}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline"
+                                            title={tt('view_on_map')}
+                                          >
+                                            <MapPin className="h-[14px] w-[14px]" />
+                                          </a>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => handleEditFromItinerary(i)}
+                                          className="cursor-pointer rounded-md border-0 bg-sky-100 p-1.5 text-sky-700"
+                                          title={tt('edit_itinerary')}
+                                        >
+                                          <Pencil className="h-[14px] w-[14px]" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveFromItinerary(i)}
+                                          className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800"
+                                          title={tt('remove_from_itinerary')}
+                                        >
+                                          <Trash2 className="h-[14px] w-[14px]" />
+                                        </button>
+                                      </div>
+                                      {buildGoogleWebSearchUrl(
+                                        shortItineraryTitle(i.type, i.title, i.address),
+                                      ) && (
+                                        <a
+                                          href={
+                                            buildGoogleWebSearchUrl(
+                                              shortItineraryTitle(i.type, i.title, i.address),
+                                            )!
+                                          }
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-indigo-500"
+                                        >
+                                          {tt('link_google_search')}
+                                        </a>
+                                      )}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    {itineraryOutsideGrouped.days.length > 0 && (
+                      <div className="mt-6 rounded-xl border border-amber-300/80 bg-amber-50/90 p-3">
+                        <div className="mb-3 text-[13px] font-bold text-amber-950">{tt('itinerary_section_outside_trip')}</div>
+                        {itineraryOutsideGrouped.days.map((dayYmd) => (
+                          <div key={`outside-${dayYmd}`} className="mb-4 last:mb-0">
+                            <div className="mb-2 border-b border-amber-200/90 pb-1 text-xs font-semibold text-amber-900">
+                              {formatTripDateLong(dayYmd)} <span className="font-normal text-amber-800/90">({dayYmd})</span>
+                            </div>
+                            <ul className="m-0 list-none p-0">
+                              {(itineraryOutsideGrouped.map.get(dayYmd) ?? []).map((i) => (
+                                <li
+                                  key={i.rowKey}
+                                  className="mb-1.5 flex items-start justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-semibold text-slate-800">
+                                      <span className="mr-1.5">
+                                        {i.type === 'accommodation'
+                                          ? '🏨'
+                                          : i.type === 'dining'
+                                            ? '🍽️'
+                                            : i.type === 'attraction'
+                                              ? '🏛️'
+                                              : i.type === 'transport'
+                                                ? i.transport_type === 'air'
+                                                  ? '✈️'
+                                                  : i.transport_type === 'train'
+                                                    ? '🚂'
+                                                    : i.transport_type === 'car'
+                                                      ? '🚗'
+                                                      : i.transport_type === 'bike'
+                                                        ? '🚲'
+                                                        : '🚗'
+                                                : '📌'}
+                                      </span>
+                                      {shortItineraryTitle(i.type, i.title, i.address)}
+                                    </div>
+                                    {(i.start_time || i.end_time) && (
+                                      <div className="mt-1 text-xs text-slate-500">
+                                        {(i.start_time || '--')} ~ {(i.end_time || '--')}
+                                      </div>
+                                    )}
+                                    {i.description && (
+                                      <div className="mt-1 text-[13px] text-slate-600">{i.description}</div>
+                                    )}
+                                  </div>
+                                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                    <div className="flex items-center gap-1">
+                                      {getGoogleMapsUrl(i) && (
+                                        <a
+                                          href={getGoogleMapsUrl(i)!}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline"
+                                          title={tt('view_on_map')}
+                                        >
+                                          <MapPin className="h-[14px] w-[14px]" />
+                                        </a>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditFromItinerary(i)}
+                                        className="cursor-pointer rounded-md border-0 bg-sky-100 p-1.5 text-sky-700"
+                                        title={tt('edit_itinerary')}
+                                      >
+                                        <Pencil className="h-[14px] w-[14px]" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveFromItinerary(i)}
+                                        className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800"
+                                        title={tt('remove_from_itinerary')}
+                                      >
+                                        <Trash2 className="h-[14px] w-[14px]" />
+                                      </button>
+                                    </div>
+                                    {buildGoogleWebSearchUrl(
+                                      shortItineraryTitle(i.type, i.title, i.address),
+                                    ) && (
+                                      <a
+                                        href={
+                                          buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address))!
+                                        }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-indigo-500"
+                                      >
+                                        {tt('link_google_search')}
+                                      </a>
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <div className="flex items-center gap-1">
-                          {getGoogleMapsUrl(i) && (
-                            <a
-                              href={getGoogleMapsUrl(i)!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex cursor-pointer items-center justify-center rounded-md border-0 bg-blue-50 p-1.5 text-blue-600 no-underline"
-                              title={tt('view_on_map')}
-                            >
-                              <MapPin className="h-[14px] w-[14px]" />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleEditFromItinerary(i)}
-                            className="cursor-pointer rounded-md border-0 bg-sky-100 p-1.5 text-sky-700"
-                            title={tt('edit_itinerary')}
-                          >
-                            <Pencil className="h-[14px] w-[14px]" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFromItinerary(i)}
-                            className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800"
-                            title={tt('remove_from_itinerary')}
-                          >
-                            <Trash2 className="h-[14px] w-[14px]" />
-                          </button>
-                        </div>
-                        {buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address)) && (
-                          <a href={buildGoogleWebSearchUrl(shortItineraryTitle(i.type, i.title, i.address))!} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500">
-                            {tt('link_google_search')}
-                          </a>
-                        )}
-                      </div>
-                    </li>
-                  ))
+                    )}
+                  </>
                 )}
-              </ul>
+              </div>
             </div>
 
             <div className="mt-5 overflow-hidden rounded-[10px] border border-slate-200">
@@ -2846,6 +3028,7 @@ export function TravelPlannerContent() {
                             </div>
                             <div className="mt-1 text-xs text-slate-500">
                               {a.day_date}
+                              {a.end_day_date && a.end_day_date !== a.day_date ? ` → ${a.end_day_date}` : ''}
                               {(a.start_time || a.end_time) && <span className="ml-1.5">· {(a.start_time || '--')} ~ {(a.end_time || '--')}</span>}
                             </div>
                             {a.description && <div className="mt-1 text-[13px] text-slate-600">{a.description}</div>}
@@ -2918,6 +3101,7 @@ export function TravelPlannerContent() {
                             <div className="font-semibold text-slate-800">{d.name}</div>
                             <div className="mt-1 text-xs text-slate-500">
                               {d.day_date}
+                              {d.end_day_date && d.end_day_date !== d.day_date ? ` → ${d.end_day_date}` : ''}
                               {d.time_at && <span className="ml-1.5">{d.time_at}</span>}
                               {d.category && <span className="ml-1.5 text-slate-500">{d.category}</span>}
                             </div>
@@ -2997,7 +3181,14 @@ export function TravelPlannerContent() {
                         >
                           <div className="min-w-0 flex-1">
                             <div className="font-semibold text-slate-800">{a.name}</div>
-                            <div className="mt-1 text-xs text-slate-500">{a.check_in_date} ~ {a.check_out_date}</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {a.check_in_date} ~ {a.check_out_date}
+                              {(a.check_in_time || a.check_out_time) && (
+                                <span className="ml-1.5">
+                                  · {a.check_in_time || '—'} ~ {a.check_out_time || '—'}
+                                </span>
+                              )}
+                            </div>
                             {a.address && <div className="mt-1 text-[13px] text-slate-600">{a.address}</div>}
                             <div className="mt-1 text-[11px] text-slate-400">
                               {uiText.createdLabel}: {getDisplayName(a.created_by)}
@@ -3101,6 +3292,7 @@ export function TravelPlannerContent() {
                             </div>
                             <div className="mt-1 text-xs text-slate-500">
                               {t.day_date}
+                              {t.end_day_date && t.end_day_date !== t.day_date ? ` → ${t.end_day_date}` : ''}
                               {(t.start_time || t.end_time) && <span className="ml-1.5">· {(t.start_time || '--')} ~ {(t.end_time || '--')}</span>}
                               {t.distance_km && <span className="ml-1.5">· {t.distance_km}km</span>}
                             </div>
@@ -3482,6 +3674,16 @@ export function TravelPlannerContent() {
                   className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_day_date')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
+                <input
+                  type="date"
+                  value={itineraryEndDayDate}
+                  min={itineraryDayDate || undefined}
+                  onChange={(e) => setItineraryEndDayDate(e.target.value)}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
+                />
+              </div>
               <div className="mb-3 flex gap-3">
                 <div className="flex-1">
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_time')}</label>
@@ -3756,6 +3958,24 @@ export function TravelPlannerContent() {
                   className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_checkin_time')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
+                <input
+                  type="time"
+                  value={accCheckInTime}
+                  onChange={(e) => setAccCheckInTime(e.target.value)}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
+                />
+              </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_checkout_time')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
+                <input
+                  type="time"
+                  value={accCheckOutTime}
+                  onChange={(e) => setAccCheckOutTime(e.target.value)}
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
+                />
+              </div>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_address')}</label>
               <input
                 value={accAddress}
@@ -3919,6 +4139,16 @@ export function TravelPlannerContent() {
                   value={diningDayDate}
                   onChange={(e) => setDiningDayDate(e.target.value)}
                   required
+                  className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
+                />
+              </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_day_date')}</label>
+              <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
+                <input
+                  type="date"
+                  value={diningEndDayDate}
+                  min={diningDayDate || undefined}
+                  onChange={(e) => setDiningEndDayDate(e.target.value)}
                   className="min-h-10 w-full box-border border-0 px-3 py-2.5 text-sm outline-none"
                 />
               </div>
@@ -4110,6 +4340,15 @@ export function TravelPlannerContent() {
                 className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 required
               />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_day_date')}</label>
+              <input
+                type="date"
+                value={attractionEndDayDate}
+                min={attractionDayDate || undefined}
+                onChange={(e) => setAttractionEndDayDate(e.target.value)}
+                disabled={submitting}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+              />
               <div className="mb-3 grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_start_time')}</label>
@@ -4228,6 +4467,15 @@ export function TravelPlannerContent() {
                 disabled={submitting}
                 className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                 required
+              />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_end_day_date')}</label>
+              <input
+                type="date"
+                value={transportEndDayDate}
+                min={transportDayDate || undefined}
+                onChange={(e) => setTransportEndDayDate(e.target.value)}
+                disabled={submitting}
+                className="mb-3 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
               />
               <div className="mb-3 grid grid-cols-2 gap-3">
                 <div>

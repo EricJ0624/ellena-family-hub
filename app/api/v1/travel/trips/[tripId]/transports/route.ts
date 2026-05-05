@@ -59,9 +59,23 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { transport_type, day_date, start_time, end_time, departure, arrival, departure_place_id, arrival_place_id, distance_km, memo, show_in_itinerary } = body as {
+    const {
+      transport_type,
+      day_date,
+      end_day_date,
+      start_time,
+      end_time,
+      departure,
+      arrival,
+      departure_place_id,
+      arrival_place_id,
+      distance_km,
+      memo,
+      show_in_itinerary,
+    } = body as {
       transport_type?: 'air' | 'train' | 'car' | 'bike';
       day_date?: string;
+      end_day_date?: string | null;
       start_time?: string;
       end_time?: string;
       departure?: string;
@@ -96,11 +110,20 @@ export async function POST(
 
     const supabase = getSupabaseServerClient();
 
+    const endNorm =
+      typeof end_day_date === 'string' && end_day_date.trim() && end_day_date.trim() !== day_date
+        ? end_day_date.trim().slice(0, 10)
+        : null;
+    if (endNorm && endNorm < day_date) {
+      return NextResponse.json({ error: 'end_day_date는 day_date 이후여야 합니다.' }, { status: 400 });
+    }
+
     const insertPayload: Record<string, unknown> = {
       trip_id: tripId,
       group_id: groupId,
       transport_type,
       day_date,
+      end_day_date: endNorm,
       show_in_itinerary: show_in_itinerary === true,
       created_by: user.id,
     };

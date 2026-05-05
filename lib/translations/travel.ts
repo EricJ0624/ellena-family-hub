@@ -127,6 +127,8 @@ export type TravelTranslations = {
   add_attraction: string;
   add_transport: string;
   view_itinerary_pdf: string;
+  /** 일정 PDF 생성 실패(폰트/네트워크 등) */
+  itinerary_pdf_build_failed: string;
   load_attraction_failed: string;
   load_transport_failed: string;
   edit_attraction: string;
@@ -155,6 +157,13 @@ export type TravelTranslations = {
   transport_type_car: string;
   transport_type_bike: string;
   place_type_train: string;
+  /** 일정 헤더: {n}=여행 n일차 */
+  itinerary_day_label: string;
+  itinerary_section_outside_trip: string;
+  pdf_section_outside_trip: string;
+  label_end_day_date: string;
+  label_checkin_time: string;
+  label_checkout_time: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -285,6 +294,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '관광지 추가',
     add_transport: '교통 추가',
     view_itinerary_pdf: '일정 PDF로 보기',
+    itinerary_pdf_build_failed:
+      'PDF 파일을 만들지 못했습니다. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
     load_attraction_failed: '관광지 조회 실패',
     load_transport_failed: '교통 조회 실패',
     edit_attraction: '관광지 수정',
@@ -313,6 +324,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     transport_type_car: '자동차',
     transport_type_bike: '바이크',
     place_type_train: '기차',
+    itinerary_day_label: 'Day {n}',
+    itinerary_section_outside_trip: '여행 기간 밖 일정',
+    pdf_section_outside_trip: '여행 기간 밖',
+    label_end_day_date: '종료일 (포함, 선택)',
+    label_checkin_time: '체크인 시간',
+    label_checkout_time: '체크아웃 시간',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -441,6 +458,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: 'Add Attraction',
     add_transport: 'Add Transportation',
     view_itinerary_pdf: 'View Itinerary PDF',
+    itinerary_pdf_build_failed:
+      'Could not create the PDF. Check your network connection and try again.',
     load_attraction_failed: 'Failed to load attractions',
     load_transport_failed: 'Failed to load transportation',
     edit_attraction: 'Edit Attraction',
@@ -469,6 +488,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     transport_type_car: 'Car',
     transport_type_bike: 'Bike',
     place_type_train: 'Train',
+    itinerary_day_label: 'Day {n}',
+    itinerary_section_outside_trip: 'Outside trip dates',
+    pdf_section_outside_trip: 'Outside trip dates',
+    label_end_day_date: 'End date (inclusive, optional)',
+    label_checkin_time: 'Check-in time',
+    label_checkout_time: 'Check-out time',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -597,6 +622,8 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '観光地追加',
     add_transport: '交通追加',
     view_itinerary_pdf: '日程をPDFで見る',
+    itinerary_pdf_build_failed:
+      'PDFを作成できませんでした。通信環境をご確認のうえ、再度お試しください。',
     load_attraction_failed: '観光地の読み込みに失敗しました',
     load_transport_failed: '交通の読み込みに失敗しました',
     edit_attraction: '観光地を編集',
@@ -625,6 +652,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     transport_type_car: '自動車',
     transport_type_bike: 'バイク',
     place_type_train: '列車',
+    itinerary_day_label: 'Day {n}',
+    itinerary_section_outside_trip: '旅行期間外',
+    pdf_section_outside_trip: '旅行期間外',
+    label_end_day_date: '終了日（含む・任意）',
+    label_checkin_time: 'チェックイン時刻',
+    label_checkout_time: 'チェックアウト時刻',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -753,6 +786,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '添加观光地',
     add_transport: '添加交通',
     view_itinerary_pdf: '查看行程PDF',
+    itinerary_pdf_build_failed: '无法生成 PDF。请检查网络连接后重试。',
     load_attraction_failed: '加载观光地失败',
     load_transport_failed: '加载交通失败',
     edit_attraction: '编辑观光地',
@@ -781,6 +815,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     transport_type_car: '汽车',
     transport_type_bike: '摩托车',
     place_type_train: '火车',
+    itinerary_day_label: '第 {n} 天',
+    itinerary_section_outside_trip: '行程日期范围外',
+    pdf_section_outside_trip: '行程日期范围外',
+    label_end_day_date: '结束日期（含，可选）',
+    label_checkin_time: '入住时间',
+    label_checkout_time: '退房时间',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -909,6 +949,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     add_attraction: '新增觀光地',
     add_transport: '新增交通',
     view_itinerary_pdf: '查看行程PDF',
+    itinerary_pdf_build_failed: '無法產生 PDF。請檢查網路連線後再試一次。',
     load_attraction_failed: '載入觀光地失敗',
     load_transport_failed: '載入交通失敗',
     edit_attraction: '編輯觀光地',
@@ -937,6 +978,12 @@ const travel: Record<LangCode, TravelTranslations> = {
     transport_type_car: '汽車',
     transport_type_bike: '摩托車',
     place_type_train: '火車',
+    itinerary_day_label: '第 {n} 天',
+    itinerary_section_outside_trip: '行程日期範圍外',
+    pdf_section_outside_trip: '行程日期範圍外',
+    label_end_day_date: '結束日期（含，選填）',
+    label_checkin_time: '入住時間',
+    label_checkout_time: '退房時間',
   },
 };
 

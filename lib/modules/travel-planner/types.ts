@@ -27,6 +27,8 @@ export interface TravelItinerary {
   trip_id: string;
   group_id: string;
   day_date: string;
+  /** 며칠에 걸친 일정의 종료일(포함). 없으면 day_date 하루 */
+  end_day_date?: string | null;
   title: string;
   description: string | null;
   sort_order: number;
@@ -91,6 +93,10 @@ export interface TravelAccommodation {
   name: string;
   check_in_date: string;
   check_out_date: string;
+  /** 체크인 시각 HH:mm (선택) */
+  check_in_time?: string | null;
+  /** 체크아웃 시각 HH:mm (선택) */
+  check_out_time?: string | null;
   address: string | null;
   memo: string | null;
   place_id?: string | null;
@@ -112,6 +118,8 @@ export interface TravelDining {
   group_id: string;
   name: string;
   day_date: string;
+  /** 며칠에 걸친 경우 종료일(포함) */
+  end_day_date?: string | null;
   time_at: string | null;
   category: string | null;
   memo: string | null;
@@ -141,6 +149,8 @@ export interface TravelAttraction {
   group_id: string;
   name: string;
   day_date: string;
+  /** 며칠에 걸친 경우 종료일(포함) */
+  end_day_date?: string | null;
   start_time: string | null;
   end_time: string | null;
   address: string | null;
@@ -165,6 +175,8 @@ export interface TravelTransport {
   /** air(비행기), train(기차), car(자동차), bike(바이크) */
   transport_type: 'air' | 'train' | 'car' | 'bike';
   day_date: string;
+  /** 며칠에 걸친 경우 종료일(포함) */
+  end_day_date?: string | null;
   start_time: string | null;
   end_time: string | null;
   departure: string | null;

@@ -23,6 +23,21 @@ export async function PATCH(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+
+    let existingEnd: string | null = null;
+    let existingDay: string | null = null;
+    if (body.end_day_date !== undefined || body.day_date !== undefined) {
+      const { data: ex } = await supabase
+        .from('travel_transports')
+        .select('day_date, end_day_date')
+        .eq('id', id)
+        .eq('group_id', groupId)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (ex?.day_date) existingDay = String(ex.day_date).slice(0, 10);
+      if (ex?.end_day_date) existingEnd = String(ex.end_day_date).slice(0, 10);
+    }
+
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
@@ -37,6 +52,22 @@ export async function PATCH(
       updatePayload.transport_type = body.transport_type;
     }
     if (body.day_date !== undefined) updatePayload.day_date = body.day_date;
+    if (body.day_date !== undefined && body.end_day_date === undefined) {
+      const nd = String(body.day_date).trim().slice(0, 10);
+      if (existingEnd && existingEnd < nd) updatePayload.end_day_date = null;
+    }
+    if (body.end_day_date !== undefined) {
+      const dayForEnd =
+        typeof body.day_date === 'string'
+          ? String(body.day_date).trim().slice(0, 10)
+          : existingDay ?? undefined;
+      const ed =
+        body.end_day_date == null || body.end_day_date === ''
+          ? null
+          : String(body.end_day_date).trim().slice(0, 10);
+      if (!ed || !dayForEnd || ed <= dayForEnd) updatePayload.end_day_date = null;
+      else updatePayload.end_day_date = ed;
+    }
     if (body.start_time !== undefined) updatePayload.start_time = body.start_time ? String(body.start_time).trim().substring(0, 5) : null;
     if (body.end_time !== undefined) updatePayload.end_time = body.end_time ? String(body.end_time).trim().substring(0, 5) : null;
     if (body.departure !== undefined) updatePayload.departure = body.departure ? String(body.departure).trim() : null;

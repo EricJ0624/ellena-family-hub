@@ -61,8 +61,23 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { day_date, title, description, sort_order, start_time, end_time, source_type, source_id, place_type, address, latitude, longitude } = body as {
+    const {
+      day_date,
+      end_day_date,
+      title,
+      description,
+      sort_order,
+      start_time,
+      end_time,
+      source_type,
+      source_id,
+      place_type,
+      address,
+      latitude,
+      longitude,
+    } = body as {
       day_date?: string;
+      end_day_date?: string | null;
       title?: string;
       description?: string;
       sort_order?: number;
@@ -91,10 +106,19 @@ export async function POST(
 
     const supabase = getSupabaseServerClient();
 
+    const endNorm =
+      typeof end_day_date === 'string' && end_day_date.trim() && end_day_date.trim() !== day_date
+        ? end_day_date.trim().slice(0, 10)
+        : null;
+    if (endNorm && endNorm < day_date) {
+      return NextResponse.json({ error: 'end_day_date는 day_date 이후여야 합니다.' }, { status: 400 });
+    }
+
     const insertPayload: Record<string, unknown> = {
       trip_id: tripId,
       group_id: groupId,
       day_date,
+      end_day_date: endNorm,
       title: String(title).trim(),
       description: description ? String(description).trim() : null,
       sort_order: typeof sort_order === 'number' ? sort_order : 0,

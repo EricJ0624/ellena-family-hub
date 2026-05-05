@@ -59,10 +59,24 @@ export async function POST(
     const { tripId } = await params;
     const body = await request.json().catch(() => ({}));
     const groupId = (body.groupId ?? request.nextUrl.searchParams.get('groupId')) as string | undefined;
-    const { name, check_in_date, check_out_date, address, memo, place_id, latitude, longitude, show_in_itinerary } = body as {
+    const {
+      name,
+      check_in_date,
+      check_out_date,
+      check_in_time,
+      check_out_time,
+      address,
+      memo,
+      place_id,
+      latitude,
+      longitude,
+      show_in_itinerary,
+    } = body as {
       name?: string;
       check_in_date?: string;
       check_out_date?: string;
+      check_in_time?: string | null;
+      check_out_time?: string | null;
       address?: string;
       memo?: string;
       place_id?: string | null;
@@ -93,6 +107,14 @@ export async function POST(
       name: String(name).trim(),
       check_in_date,
       check_out_date,
+      check_in_time:
+        check_in_time != null && String(check_in_time).trim()
+          ? String(check_in_time).trim().substring(0, 5)
+          : null,
+      check_out_time:
+        check_out_time != null && String(check_out_time).trim()
+          ? String(check_out_time).trim().substring(0, 5)
+          : null,
       address: address ? String(address).trim() : null,
       memo: memo ? String(memo).trim() : null,
       place_id: place_id ? String(place_id).trim() : null,

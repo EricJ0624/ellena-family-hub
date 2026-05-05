@@ -30,6 +30,12 @@ export async function PATCH(
     if (body.name !== undefined) updatePayload.name = String(body.name).trim();
     if (body.check_in_date !== undefined) updatePayload.check_in_date = body.check_in_date;
     if (body.check_out_date !== undefined) updatePayload.check_out_date = body.check_out_date;
+    if (body.check_in_time !== undefined) {
+      updatePayload.check_in_time = body.check_in_time ? String(body.check_in_time).trim().substring(0, 5) : null;
+    }
+    if (body.check_out_time !== undefined) {
+      updatePayload.check_out_time = body.check_out_time ? String(body.check_out_time).trim().substring(0, 5) : null;
+    }
     if (body.address !== undefined) updatePayload.address = body.address ? String(body.address).trim() : null;
     if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
     if (body.place_id !== undefined) updatePayload.place_id = body.place_id ? String(body.place_id).trim() : null;
