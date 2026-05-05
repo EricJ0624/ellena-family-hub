@@ -52,6 +52,7 @@ export type GroupAdminTranslations = {
   widgets_no_group: string;
   widgets_owner_only: string;
   active_theme: string;
+  theme_default_short: string;
   theme_stable_glass_short: string;
   theme_highend_glass_short: string;
 }
@@ -108,6 +109,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_no_group: '선택된 그룹이 없습니다.',
     widgets_owner_only: '그룹 소유자만 위젯을 편집할 수 있습니다.',
     active_theme: '현재 테마',
+    theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
   },
@@ -162,6 +164,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_no_group: 'No group selected.',
     widgets_owner_only: 'Only the group owner can edit widgets.',
     active_theme: 'Active theme',
+    theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
   },
@@ -216,6 +219,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_no_group: 'グループが選択されていません。',
     widgets_owner_only: 'グループオーナーのみ編集できます。',
     active_theme: '現在のテーマ',
+    theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
   },
@@ -270,6 +274,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_no_group: '未选择群组。',
     widgets_owner_only: '仅群主可编辑小组件。',
     active_theme: '当前主题',
+    theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
   },
@@ -324,6 +329,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_no_group: '未選擇群組。',
     widgets_owner_only: '僅群組擁有者可編輯小工具。',
     active_theme: '目前主題',
+    theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
   },

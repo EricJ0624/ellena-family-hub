@@ -13,6 +13,8 @@ export type GroupSettingsTranslations = {
   language_hint: string;
   dashboard_theme_label: string;
   dashboard_theme_hint: string;
+  theme_default_label: string;
+  theme_default_desc: string;
   theme_stable_glass_label: string;
   theme_stable_glass_desc: string;
   theme_highend_glass_label: string;
@@ -51,8 +53,10 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     display_language: '표시 언어',
     language_hint: '그룹 대시보드의 타이틀·본문 폰트에 적용됩니다.',
     dashboard_theme_label: '대시보드 테마',
-    dashboard_theme_hint: 'stable_glass는 현재 상태를 그대로 유지합니다. highend_glass는 더 강한 글래스 효과를 적용합니다.',
-    theme_stable_glass_label: 'Stable Glass (기본)',
+    dashboard_theme_hint: 'default는 테마 적용 전 오리지널 설정입니다. stable_glass와 highend_glass는 글래스 스타일 테마입니다.',
+    theme_default_label: 'Default (오리지널)',
+    theme_default_desc: '테마 적용 전 기존 기본 설정입니다.',
+    theme_stable_glass_label: 'Stable Glass',
     theme_stable_glass_desc: '현재 사용 중인 안정 버전 스타일입니다.',
     theme_highend_glass_label: 'High-end Glass',
     theme_highend_glass_desc: '블러·하이라이트·대비를 강화한 고급 글래스 스타일입니다.',
@@ -88,8 +92,10 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     display_language: 'Display language',
     language_hint: 'Applied to title and body fonts on the group dashboard.',
     dashboard_theme_label: 'Dashboard theme',
-    dashboard_theme_hint: 'stable_glass keeps the current design. highend_glass applies a stronger glass look.',
-    theme_stable_glass_label: 'Stable Glass (default)',
+    dashboard_theme_hint: 'default keeps the original pre-theme style. stable_glass and highend_glass apply glass-style themes.',
+    theme_default_label: 'Default (original)',
+    theme_default_desc: 'Original baseline before theme variants.',
+    theme_stable_glass_label: 'Stable Glass',
     theme_stable_glass_desc: 'Current production-safe visual style.',
     theme_highend_glass_label: 'High-end Glass',
     theme_highend_glass_desc: 'Enhanced blur, highlight, and contrast for a premium glass feel.',
@@ -125,8 +131,10 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     display_language: '表示言語',
     language_hint: 'グループのダッシュボードのタイトル・本文フォントに適用されます。',
     dashboard_theme_label: 'ダッシュボードテーマ',
-    dashboard_theme_hint: 'stable_glass は現在のデザインを維持し、highend_glass はより強いガラス表現を適用します。',
-    theme_stable_glass_label: 'Stable Glass（既定）',
+    dashboard_theme_hint: 'default はテーマ適用前のオリジナル設定です。stable_glass と highend_glass はガラステーマです。',
+    theme_default_label: 'Default（オリジナル）',
+    theme_default_desc: 'テーマ適用前の既存基本設定です。',
+    theme_stable_glass_label: 'Stable Glass',
     theme_stable_glass_desc: '現在運用中の安定スタイルです。',
     theme_highend_glass_label: 'High-end Glass',
     theme_highend_glass_desc: 'ぼかし・ハイライト・コントラストを強化した上位ガラススタイルです。',
@@ -162,8 +170,10 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     display_language: '显示语言',
     language_hint: '应用于群组仪表盘的标题与正文字体。',
     dashboard_theme_label: '仪表盘主题',
-    dashboard_theme_hint: 'stable_glass 保持当前设计，highend_glass 应用更强的玻璃效果。',
-    theme_stable_glass_label: 'Stable Glass（默认）',
+    dashboard_theme_hint: 'default 为主题应用前的原始设置。stable_glass 与 highend_glass 为玻璃风格主题。',
+    theme_default_label: 'Default（原始）',
+    theme_default_desc: '主题系统前的原始基础设置。',
+    theme_stable_glass_label: 'Stable Glass',
     theme_stable_glass_desc: '当前线上稳定样式。',
     theme_highend_glass_label: 'High-end Glass',
     theme_highend_glass_desc: '强化模糊、高光与对比度的高级玻璃样式。',
@@ -199,8 +209,10 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     display_language: '顯示語言',
     language_hint: '套用於群組儀表板的標題與內文字型。',
     dashboard_theme_label: '儀表板主題',
-    dashboard_theme_hint: 'stable_glass 會維持目前設計，highend_glass 會套用更強的玻璃效果。',
-    theme_stable_glass_label: 'Stable Glass（預設）',
+    dashboard_theme_hint: 'default 為套用主題前的原始設定。stable_glass 與 highend_glass 為玻璃風格主題。',
+    theme_default_label: 'Default（原始）',
+    theme_default_desc: '主題系統前的原始基準設定。',
+    theme_stable_glass_label: 'Stable Glass',
     theme_stable_glass_desc: '目前線上穩定樣式。',
     theme_highend_glass_label: 'High-end Glass',
     theme_highend_glass_desc: '加強模糊、高光與對比的高階玻璃樣式。',

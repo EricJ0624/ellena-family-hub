@@ -7,10 +7,12 @@ import type { Group, Membership, MembershipRole } from '@/types/db';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 
-type UiTheme = 'stable_glass' | 'highend_glass';
+type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
 
 function resolveUiTheme(value: unknown): UiTheme {
-  return value === 'highend_glass' ? 'highend_glass' : 'stable_glass';
+  if (value === 'highend_glass') return 'highend_glass';
+  if (value === 'stable_glass') return 'stable_glass';
+  return 'default';
 }
 
 interface GroupContextType {

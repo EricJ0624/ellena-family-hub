@@ -18,7 +18,7 @@ import { getCommonTranslation } from '@/lib/translations/common';
 import type { TitleStyle } from '@/app/components/TitlePage';
 import type { LangCode } from '@/lib/language-fonts';
 
-type UiTheme = 'stable_glass' | 'highend_glass';
+type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
 
 interface GroupSettingsProps {
   onClose: () => void;
@@ -35,7 +35,9 @@ const DEFAULT_TITLE_STYLE: TitleStyle = {
 };
 
 function parseUiTheme(raw: unknown): UiTheme {
-  return raw === 'highend_glass' ? 'highend_glass' : 'stable_glass';
+  if (raw === 'highend_glass') return 'highend_glass';
+  if (raw === 'stable_glass') return 'stable_glass';
+  return 'default';
 }
 
 function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
@@ -387,10 +389,30 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       disabled={saving}
                       className="min-w-48 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                     >
+                      <option value="default">{gst('theme_default_label')}</option>
                       <option value="stable_glass">{gst('theme_stable_glass_label')}</option>
                       <option value="highend_glass">{gst('theme_highend_glass_label')}</option>
                     </select>
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={() => setUiTheme('default')}
+                        disabled={saving}
+                        className={`rounded-xl border p-3 text-left transition-colors ${
+                          uiTheme === 'default'
+                            ? 'border-emerald-400 bg-emerald-50'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-slate-800">{gst('theme_default_label')}</p>
+                        <p className="mt-1 text-xs text-slate-500">{gst('theme_default_desc')}</p>
+                        <div className="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 p-2">
+                          <div className="rounded-md border border-slate-200 bg-white p-2 shadow-sm">
+                            <div className="h-2 w-16 rounded bg-sky-300/80" />
+                            <div className="mt-2 h-1.5 w-24 rounded bg-slate-300/80" />
+                          </div>
+                        </div>
+                      </button>
                       <button
                         type="button"
                         onClick={() => setUiTheme('stable_glass')}

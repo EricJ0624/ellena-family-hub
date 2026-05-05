@@ -159,10 +159,12 @@ type GroupAdminTabId =
   | 'piggy-archives'
   | 'widgets';
 
-type UiTheme = 'stable_glass' | 'highend_glass';
+type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
 
 function parseUiTheme(value: unknown): UiTheme {
-  return value === 'highend_glass' ? 'highend_glass' : 'stable_glass';
+  if (value === 'highend_glass') return 'highend_glass';
+  if (value === 'stable_glass') return 'stable_glass';
+  return 'default';
 }
 
 export function GroupAdminPanel({
@@ -870,7 +872,9 @@ export function GroupAdminPanel({
   const activeThemeLabel =
     effectiveUiTheme === 'highend_glass'
       ? gat('theme_highend_glass_short')
-      : gat('theme_stable_glass_short');
+      : effectiveUiTheme === 'stable_glass'
+        ? gat('theme_stable_glass_short')
+        : gat('theme_default_short');
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
   const tabButtonClass = (tab: GroupAdminTabId) =>
     `cursor-pointer border-b-[3px] border-x-0 border-t-0 bg-transparent px-6 py-3 text-base transition-all duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
@@ -903,7 +907,9 @@ export function GroupAdminPanel({
                   className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
                     effectiveUiTheme === 'highend_glass'
                       ? 'border-violet-300 bg-violet-50 text-violet-700'
-                      : 'border-slate-300 bg-slate-100 text-slate-600'
+                      : effectiveUiTheme === 'stable_glass'
+                        ? 'border-blue-300 bg-blue-50 text-blue-700'
+                        : 'border-emerald-300 bg-emerald-50 text-emerald-700'
                   }`}
                 >
                   {gat('active_theme')}: {activeThemeLabel}
