@@ -37,6 +37,15 @@ import {
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 
+type WindowWithGoogleMaps = Window & {
+  google?: { maps: typeof google.maps };
+};
+
+function getGoogleMapsNs(): typeof google.maps | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return (window as WindowWithGoogleMaps).google?.maps;
+}
+
 const API_BASE = '/api/v1/travel';
 
 const TRIP_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
@@ -280,8 +289,8 @@ export function TravelPlannerContent() {
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
   const selectedTripIdRef = useRef<string | null>(null);
   selectedTripIdRef.current = selectedTrip?.id ?? null;
-  const travelMapRef = useRef<{ setCenter: (c: { lat: number; lng: number }) => void; fitBounds: (b: unknown) => void } | null>(null);
-  const travelMapMarkersRef = useRef<unknown[]>([]);
+  const travelMapRef = useRef<google.maps.Map | null>(null);
+  const travelMapMarkersRef = useRef<google.maps.Marker[]>([]);
   const travelMapScriptLoadedRef = useRef(false);
   /** 숙소·먹거리·관광지: Places Autocomplete는 이름 입력란에 연결 */
   const accNameInputRef = useRef<HTMLInputElement>(null);
@@ -291,7 +300,7 @@ export function TravelPlannerContent() {
   const transportDepartureInputRef = useRef<HTMLInputElement>(null);
   const transportArrivalInputRef = useRef<HTMLInputElement>(null);
   const placesServiceContainerRef = useRef<HTMLDivElement>(null);
-  const placesServiceRef = useRef<{ getDetails: (req: unknown, cb: (place: unknown, status: string) => void) => void } | null>(null);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   const accSessionTokenRef = useRef<unknown>(null);
   const diningSessionTokenRef = useRef<unknown>(null);
   const itinerarySessionTokenRef = useRef<unknown>(null);
@@ -550,7 +559,7 @@ export function TravelPlannerContent() {
     return json?.cached ? json : null;
   }, [getAuthHeaders]);
 
-  const savePlaceCache = useCallback(async (place: any) => {
+  const savePlaceCache = useCallback(async (place: google.maps.places.PlaceResult) => {
     try {
       const headers = await getAuthHeaders();
       await fetch('/api/place-cache', {
@@ -564,7 +573,9 @@ export function TravelPlannerContent() {
           formatted_address: place.formatted_address ?? undefined,
         }),
       });
-    } catch (_) {}
+    } catch {
+      /* 네트워크 오류 시 무시 */
+    }
   }, [getAuthHeaders]);
 
   const fetchTrips = useCallback(async () => {
@@ -708,13 +719,13 @@ export function TravelPlannerContent() {
       (showAttractionForm && !attractionDirectInputMode) ||
       (showTransportForm && !transportDirectInputMode);
     if (!needPlacesApi) return;
-    if ((window as any).google?.maps?.places?.Autocomplete) {
+    if (getGoogleMapsNs()?.places?.Autocomplete) {
       setPlacesApiReady(true);
       return;
     }
     const waitForPlacesAutocomplete = () => {
       const iv = setInterval(() => {
-        if ((window as any).google?.maps?.places?.Autocomplete) {
+        if (getGoogleMapsNs()?.places?.Autocomplete) {
           clearInterval(iv);
           setPlacesApiReady(true);
         }
@@ -752,7 +763,7 @@ export function TravelPlannerContent() {
   // 여행 플래너 지도: 사용할 때만 초기화/표시. 숙소·먹거리·일정(관광지) 위치 표시
   useEffect(() => {
     if (!showTravelMap || typeof window === 'undefined' || !selectedTrip) {
-      travelMapMarkersRef.current.forEach((m: any) => m?.setMap?.(null));
+      travelMapMarkersRef.current.forEach((m) => m.setMap(null));
       travelMapMarkersRef.current = [];
       travelMapRef.current = null;
       return;
@@ -763,12 +774,12 @@ export function TravelPlannerContent() {
     if (!mapEl) return;
 
     const initMapAndMarkers = () => {
-      const g = (window as any).google;
-      if (!g?.maps?.Map) return;
+      const g = getGoogleMapsNs();
+      if (!g?.Map) return;
 
       if (!travelMapRef.current) {
         const center = { lat: 37.5665, lng: 126.978 };
-        travelMapRef.current = new g.maps.Map(mapEl, {
+        travelMapRef.current = new g.Map(mapEl, {
           center,
           zoom: 11,
           mapTypeControl: true,
@@ -778,10 +789,10 @@ export function TravelPlannerContent() {
       }
 
       const map = travelMapRef.current;
-      travelMapMarkersRef.current.forEach((m: any) => m?.setMap?.(null));
+      travelMapMarkersRef.current.forEach((m) => m.setMap(null));
       travelMapMarkersRef.current = [];
 
-      const bounds = new g.maps.LatLngBounds();
+      const bounds = new g.LatLngBounds();
       let hasAny = false;
 
       // 이모지 마커: 🏨 숙소 🍽️ 식당 🏛️ 관광지 ✈️ 비행기 🚗 자동차 🚲 바이크
@@ -789,7 +800,7 @@ export function TravelPlannerContent() {
         const pos = { lat, lng };
         bounds.extend(pos);
         hasAny = true;
-        const marker = new g.maps.Marker({
+        const marker = new g.Marker({
           map,
           position: pos,
           title,
@@ -813,18 +824,7 @@ export function TravelPlannerContent() {
           addMarker(a.latitude, a.longitude, shortItineraryTitle('attraction', a.name, a.address), '🏛️');
         }
       });
-      transports.forEach((t) => {
-        let emoji = '🚗';
-        if (t.transport_type === 'air') emoji = '✈️';
-        else if (t.transport_type === 'train') emoji = '🚂';
-        else if (t.transport_type === 'car') emoji = '🚗';
-        else if (t.transport_type === 'bike') emoji = '🚲';
-        const title = t.departure && t.arrival ? `${t.departure} → ${t.arrival}` : uiText.transportShort;
-        if (t.departure || t.arrival) {
-          // 출발지나 도착지 중 하나라도 있으면 지도에 표시 (좌표는 없을 수 있음)
-          // 실제로는 departure/arrival에는 좌표가 없으므로 생략
-        }
-      });
+      // transports: 출발/도착 텍스트만 있고 좌표가 없어 마커는 생략
       itineraries.forEach((i) => {
         if (i.latitude != null && i.longitude != null) {
           addMarker(i.latitude, i.longitude, shortItineraryTitle('other', i.title, i.address), '📌');
@@ -834,7 +834,7 @@ export function TravelPlannerContent() {
       if (hasAny && map) map.fitBounds(bounds);
     };
 
-    if ((window as any).google?.maps?.Map) {
+    if (getGoogleMapsNs()?.Map) {
       initMapAndMarkers();
       return;
     }
@@ -843,13 +843,13 @@ export function TravelPlannerContent() {
       return;
     }
     const t = setInterval(() => {
-      if ((window as any).google?.maps?.Map) {
+      if (getGoogleMapsNs()?.Map) {
         clearInterval(t);
         initMapAndMarkers();
       }
     }, 100);
     return () => clearInterval(t);
-  }, [showTravelMap, selectedTrip, accommodations, dining, attractions, transports, itineraries, placesApiReady]);
+  }, [showTravelMap, selectedTrip, accommodations, dining, attractions, itineraries, placesApiReady]);
 
   const attachPlacesAutocomplete = useCallback((params: {
     enabled: boolean;
@@ -858,34 +858,40 @@ export function TravelPlannerContent() {
     onSelect: (payload: { placeId: string; address: string; latitude?: number; longitude?: number; placeName: string }) => void;
   }) => {
     if (!params.enabled || !placesApiReady) return () => {};
-    const g = (window as any).google;
-    if (!g?.maps?.places?.Autocomplete) return () => {};
+    const g = getGoogleMapsNs();
+    if (!g?.places?.Autocomplete) return () => {};
     const container = placesServiceContainerRef.current;
     if (!container) return () => {};
-    if (!placesServiceRef.current) placesServiceRef.current = new g.maps.places.PlacesService(container);
+    if (!placesServiceRef.current) placesServiceRef.current = new g.places.PlacesService(container);
     const service = placesServiceRef.current;
-    const AutocompleteSessionToken = g.maps?.places?.AutocompleteSessionToken;
+    const AutocompleteSessionToken = g.places.AutocompleteSessionToken;
     if (AutocompleteSessionToken) params.sessionTokenRef.current = new AutocompleteSessionToken();
     const el = params.inputRef.current;
     if (!el) return () => {};
-    const opts: { types: string[]; sessionToken?: unknown } = { types: ['establishment', 'geocode'] };
-    if (params.sessionTokenRef.current) opts.sessionToken = params.sessionTokenRef.current;
-    const autocomplete = new g.maps.places.Autocomplete(el, opts);
+    const initialTok = params.sessionTokenRef.current as
+      | google.maps.places.AutocompleteSessionToken
+      | undefined;
+    const opts: google.maps.places.AutocompleteOptions & {
+      sessionToken?: google.maps.places.AutocompleteSessionToken;
+    } = { types: ['establishment', 'geocode'] };
+    if (initialTok) opts.sessionToken = initialTok;
+    const autocomplete = new g.places.Autocomplete(el, opts);
     const listener = autocomplete.addListener('place_changed', () => {
       cancelAccNameBlurConfirm();
       cancelDiningNameBlurConfirm();
       cancelAttractionNameBlurConfirm();
       const place = autocomplete.getPlace();
-      if (!place?.place_id) return;
+      const placeId = place.place_id;
+      if (!placeId) return;
       // 자동완성 목록에서 고른 줄과 동일한 표기(입력창 값). place_id는 place에서만 사용.
       const chosenLabel = (params.inputRef.current?.value ?? '').trim();
       const fallbackFromPlace =
         typeof place.name === 'string' && place.name.trim() ? place.name.trim() : '';
       (async () => {
-        const cached = await fetchPlaceCache(place.place_id).catch(() => null);
+        const cached = await fetchPlaceCache(placeId).catch(() => null);
         if (cached) {
           params.onSelect({
-            placeId: place.place_id,
+            placeId,
             address: cached.formatted_address ?? '',
             latitude: cached.latitude ?? undefined,
             longitude: cached.longitude ?? undefined,
@@ -895,20 +901,24 @@ export function TravelPlannerContent() {
           return;
         }
         if (!service) return;
-        const req: { placeId: string; fields: string[]; sessionToken?: unknown } = {
-          placeId: place.place_id,
+        const req: google.maps.places.PlaceDetailsRequest = {
+          placeId,
           fields: ['place_id', 'name', 'geometry', 'formatted_address'],
         };
-        if (params.sessionTokenRef.current) req.sessionToken = params.sessionTokenRef.current;
-        service.getDetails(req, (placeDetails: any, status: string) => {
-          if (status !== 'OK' || !placeDetails) return;
+        const sessionTok = params.sessionTokenRef.current as
+          | google.maps.places.AutocompleteSessionToken
+          | undefined;
+        if (sessionTok) req.sessionToken = sessionTok;
+        service.getDetails(req, (placeDetails, status) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !placeDetails) return;
           const placeName =
             chosenLabel ||
             fallbackFromPlace ||
             (typeof placeDetails.name === 'string' ? placeDetails.name : '') ||
             '';
+          const resolvedPlaceId = placeDetails.place_id ?? placeId;
           params.onSelect({
-            placeId: placeDetails.place_id,
+            placeId: resolvedPlaceId,
             address: placeDetails.formatted_address ?? '',
             latitude: placeDetails.geometry?.location?.lat?.(),
             longitude: placeDetails.geometry?.location?.lng?.(),
@@ -2397,7 +2407,7 @@ export function TravelPlannerContent() {
         emptyItineraryMessage: uiText.itineraryEmptyForPdf,
       }),
     );
-  }, [selectedTrip, sortedItineraries, uiText, tt, getItineraryTypeLabel]);
+  }, [selectedTrip, sortedItineraries, uiText, getItineraryTypeLabel]);
 
   if (!currentGroupId) {
     return (
