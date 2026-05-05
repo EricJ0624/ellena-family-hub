@@ -132,9 +132,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     editorial: 'inset-[10px]',
     gradient_rim: 'inset-[12px]',
   };
-  const forceCoverFrame = frameStyle === 'polaroid_modern' || frameStyle === 'editorial';
-  const useCoverImage =
-    forceCoverFrame || imageAspectRatio === null || imageAspectRatio >= 1;
+  const useCoverImage = frameStyle === 'polaroid_modern' || frameStyle === 'editorial';
   const frameWidthClass = isPortraitPhoto
     ? 'max-w-[320px] md:max-w-[340px]'
     : 'max-w-[380px]';
@@ -177,25 +175,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
                 <motion.div
-                  key={`${selectedPhoto.id}-${manualSeed || 'default'}`}
+                  key={String(selectedPhoto.id)}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="absolute inset-0"
                 >
-                  {/* 1) 최하단: 가우시안 블러 배경 (원본 cover + scale 1.1 + blur, 저해상도 URL 사용 시 부하 감소) */}
-                  <img
-                    src={getBlurLayerSrc(selectedPhoto.data)}
-                    alt=""
-                    aria-hidden
-                    className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 scale-105 object-cover [filter:blur(26px)_brightness(0.74)]"
-                  />
-                  {/* 2) 중간: 어두운 오버레이 (가독성) */}
-                  <div
-                    className="pointer-events-none absolute inset-0 bg-black/20"
-                  />
-                  {/* 3) 최상단: 원본 사진 (가로=cover 꽉 채움, 세로=contain + 블러가 좌우 여백 채움) */}
+                  {/* 안정성 우선: 원본 레이어만 사용해 밝기 변동/깜빡임 최소화 */}
                   <Image
                     src={selectedPhoto.data}
                     alt={tp('photo_alt_today_memory')}
@@ -220,7 +207,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a]"
                 >
                   <img
