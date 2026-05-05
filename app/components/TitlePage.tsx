@@ -118,6 +118,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const handleShuffle = useCallback(() => {
     setManualSeed(Date.now());
   }, []);
+
+  const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
+  const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
+  const frameWidthClass = isPortraitPhoto
+    ? 'max-w-[320px] md:max-w-[340px]'
+    : 'max-w-[380px]';
   
   useEffect(() => {
     if (onShuffle) onShuffle();
@@ -128,15 +134,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2 }}
-      className="relative z-30 mb-6 mx-auto w-full max-w-[380px]"
+      className={cn('relative z-30 mb-6 mx-auto w-full transition-all duration-300', frameWidthClass)}
     >
+      {/* 액자 주변 밀도 보강: noBackground 대시보드에서도 빈 느낌 완화 */}
+      <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
+      <div className="pointer-events-none absolute -inset-x-3 -inset-y-2 -z-10 rounded-[24px] border border-slate-300/45 bg-white/35 backdrop-blur-[1px]" />
+
       {/* SVG 프레임 컨테이너 (클릭 시 가족 추억 페이지로 이동) */}
       <div
         role={onFrameClick ? 'button' : undefined}
         tabIndex={onFrameClick ? 0 : undefined}
         onClick={onFrameClick}
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
-        className={cn('relative aspect-[4/3] w-full overflow-visible', onFrameClick && 'cursor-pointer')}
+        className={cn('relative w-full overflow-visible transition-all duration-300', frameAspectClass, onFrameClick && 'cursor-pointer')}
       >
         {/* SVG 프레임 (배경) */}
         <div className="absolute left-0 top-0 h-full w-full [filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.3))]">
