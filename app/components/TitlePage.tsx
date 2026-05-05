@@ -121,6 +121,17 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
   const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
+  const frameInsetClass: Record<FrameStyle, string> = {
+    baroque: 'inset-[20px]',
+    ornate: 'inset-[20px]',
+    vintage: 'inset-[20px]',
+    modern: 'inset-[20px]',
+    minimal: 'inset-[20px]',
+    soft_glass: 'inset-[12px]',
+    polaroid_modern: 'inset-x-[16px] inset-t-[16px] inset-b-[56px]',
+    editorial: 'inset-[8px]',
+    gradient_rim: 'inset-[12px]',
+  };
   const frameWidthClass = isPortraitPhoto
     ? 'max-w-[320px] md:max-w-[340px]'
     : 'max-w-[380px]';
@@ -154,7 +165,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
         {/* 내부 사진 영역 (매트 제거 → 사진이 액자에 꽉 차게) */}
         <div
-          className="absolute inset-[20px] overflow-hidden rounded"
+          className={cn('absolute overflow-hidden rounded', frameInsetClass[frameStyle])}
         >
           {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
           <div

@@ -3,7 +3,16 @@
 import React from 'react';
 
 // 프레임 스타일 타입 정의
-export type FrameStyle = 'baroque' | 'modern' | 'vintage' | 'minimal' | 'ornate';
+export type FrameStyle =
+  | 'baroque'
+  | 'modern'
+  | 'vintage'
+  | 'minimal'
+  | 'ornate'
+  | 'soft_glass'
+  | 'polaroid_modern'
+  | 'editorial'
+  | 'gradient_rim';
 
 export interface FrameConfig {
   id: FrameStyle;
@@ -47,6 +56,30 @@ export const FRAME_CONFIGS: FrameConfig[] = [
     name: '미니멀',
     description: '심플하고 세련된 프레임',
     color: '#8b7355',
+  },
+  {
+    id: 'soft_glass',
+    name: '소프트 글래스',
+    description: '반투명 유리 질감의 트렌디 프레임',
+    color: '#dbeafe',
+  },
+  {
+    id: 'polaroid_modern',
+    name: '폴라로이드 모던',
+    description: '하단 여백이 강조된 미니멀 폴라로이드',
+    color: '#f8fafc',
+  },
+  {
+    id: 'editorial',
+    name: '에디토리얼',
+    description: '거의 무프레임에 가까운 세련된 스타일',
+    color: '#111827',
+  },
+  {
+    id: 'gradient_rim',
+    name: '그라디언트 림',
+    description: '얇은 컬러 림으로 포인트를 준 스타일',
+    color: '#a78bfa',
   },
 ];
 
@@ -296,6 +329,71 @@ const MinimalFrame: React.FC<{ color: string }> = ({ color }) => {
   );
 };
 
+// 소프트 글래스 스타일 프레임 SVG
+const SoftGlassFrame: React.FC<{ color: string }> = ({ color }) => {
+  return (
+    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
+      <defs>
+        <linearGradient id="softGlassFill" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.18)" />
+        </linearGradient>
+        <linearGradient id="softGlassHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+      </defs>
+
+      <rect x="0" y="0" width="400" height="300" rx="28" fill="url(#softGlassFill)" />
+      <rect x="4" y="4" width="392" height="292" rx="24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
+      <rect x="10" y="10" width="380" height="280" rx="20" fill="none" stroke={color} strokeOpacity="0.45" strokeWidth="1" />
+      <rect x="0" y="0" width="400" height="120" rx="28" fill="url(#softGlassHighlight)" />
+    </svg>
+  );
+};
+
+// 폴라로이드 모던 스타일 프레임 SVG
+const PolaroidModernFrame: React.FC<{ color: string }> = ({ color }) => {
+  return (
+    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
+      <rect x="0" y="0" width="400" height="300" rx="16" fill={color} />
+      <rect x="6" y="6" width="388" height="288" rx="14" fill="none" stroke="rgba(15,23,42,0.15)" strokeWidth="2" />
+      <rect x="16" y="16" width="368" height="220" rx="8" fill="none" stroke="rgba(15,23,42,0.28)" strokeWidth="1.5" />
+      <rect x="16" y="242" width="368" height="42" rx="6" fill="rgba(255,255,255,0.84)" />
+    </svg>
+  );
+};
+
+// 에디토리얼 스타일 프레임 SVG
+const EditorialFrame: React.FC<{ color: string }> = ({ color }) => {
+  return (
+    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
+      <rect x="0" y="0" width="400" height="300" rx="10" fill="rgba(255,255,255,0.04)" />
+      <rect x="2.5" y="2.5" width="395" height="295" rx="9" fill="none" stroke={color} strokeOpacity="0.75" strokeWidth="1.5" />
+      <rect x="8" y="8" width="384" height="284" rx="7" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+    </svg>
+  );
+};
+
+// 그라디언트 림 스타일 프레임 SVG
+const GradientRimFrame: React.FC<{ color: string }> = ({ color }) => {
+  return (
+    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
+      <defs>
+        <linearGradient id="gradientRimStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="35%" stopColor={color} />
+          <stop offset="70%" stopColor="#f472b6" />
+          <stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="400" height="300" rx="20" fill="rgba(15,23,42,0.06)" />
+      <rect x="4" y="4" width="392" height="292" rx="18" fill="none" stroke="url(#gradientRimStroke)" strokeWidth="4" />
+      <rect x="11" y="11" width="378" height="278" rx="14" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" />
+    </svg>
+  );
+};
+
 // 메인 프레임 컴포넌트
 export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
   frameStyle,
@@ -310,6 +408,10 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
     vintage: VintageFrame,
     modern: ModernFrame,
     minimal: MinimalFrame,
+    soft_glass: SoftGlassFrame,
+    polaroid_modern: PolaroidModernFrame,
+    editorial: EditorialFrame,
+    gradient_rim: GradientRimFrame,
   }[frameStyle];
 
   return <FrameComponent color={frameColor} />;
