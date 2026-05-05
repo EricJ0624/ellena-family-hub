@@ -2397,7 +2397,7 @@ export function TravelPlannerContent() {
         emptyItineraryMessage: uiText.itineraryEmptyForPdf,
       }),
     );
-  }, [selectedTrip, sortedItineraries, uiText, tt]);
+  }, [selectedTrip, sortedItineraries, uiText, tt, getItineraryTypeLabel]);
 
   if (!currentGroupId) {
     return (
