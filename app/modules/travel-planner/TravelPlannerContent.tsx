@@ -116,6 +116,11 @@ export function TravelPlannerContent() {
         mapSectionTitle: '위치 지도 (숙소·먹거리·관광지)',
         attractionTitle: (editing: boolean) => (editing ? '관광지 수정' : '관광지 추가'),
         transportTitle: (editing: boolean) => (editing ? '교통 수정' : '교통 추가'),
+        pdfCoverKicker: 'ITINERARY',
+        pdfOverviewTitle: '일정 요약',
+        pdfDetailsTitle: '상세 일정',
+        pdfPlacesCount: (n: number) => `${n}곳`,
+        pdfSpentTotal: '지출 합계',
       };
     }
     return {
@@ -169,6 +174,11 @@ export function TravelPlannerContent() {
       mapSectionTitle: 'Location map (accommodation, dining, attractions)',
       attractionTitle: (editing: boolean) => (editing ? 'Edit attraction' : 'Add attraction'),
       transportTitle: (editing: boolean) => (editing ? 'Edit transportation' : 'Add transportation'),
+      pdfCoverKicker: 'ITINERARY',
+      pdfOverviewTitle: 'Schedule overview',
+      pdfDetailsTitle: 'Full schedule',
+      pdfPlacesCount: (n: number) => (n === 1 ? '1 stop' : `${n} stops`),
+      pdfSpentTotal: 'Total spent',
     };
   }, [lang]);
   const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
@@ -2392,8 +2402,21 @@ export function TravelPlannerContent() {
     return tt('other');
   };
 
+  const initialBudget = Number(selectedTrip?.budget) || 0;
+  const additionSum = expenses.filter((e) => e.entry_type === 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
+  const expenseSum = expenses.filter((e) => e.entry_type !== 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalBudget = initialBudget + additionSum;
+  const balance = totalBudget - expenseSum;
+
   const downloadItineraryPdf = useCallback(() => {
     if (!selectedTrip) return;
+    const cur = (selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW';
+    const loc = LOCALE_FOR_MONEY[lang] || 'en-US';
+    const expenseSummaryLines = [
+      `${tt('total_budget')}: ${formatMoneyAmount(totalBudget, cur, loc)}`,
+      `${uiText.pdfSpentTotal}: ${formatMoneyAmount(expenseSum, cur, loc)}`,
+      `${uiText.balance}: ${formatMoneyAmount(balance, cur, loc)}`,
+    ];
     void import('@/lib/modules/travel-planner/itinerary-pdf').then(({ buildAndSaveTravelItineraryPdf }) =>
       buildAndSaveTravelItineraryPdf({
         trip: {
@@ -2405,9 +2428,26 @@ export function TravelPlannerContent() {
         items: sortedItineraries,
         getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
         emptyItineraryMessage: uiText.itineraryEmptyForPdf,
+        pdfLabels: {
+          coverKicker: uiText.pdfCoverKicker,
+          overviewTitle: uiText.pdfOverviewTitle,
+          detailsTitle: uiText.pdfDetailsTitle,
+          placesCount: uiText.pdfPlacesCount,
+        },
+        expenseSummaryLines,
       }),
     );
-  }, [selectedTrip, sortedItineraries, uiText, getItineraryTypeLabel]);
+  }, [
+    selectedTrip,
+    sortedItineraries,
+    uiText,
+    getItineraryTypeLabel,
+    lang,
+    tt,
+    totalBudget,
+    expenseSum,
+    balance,
+  ]);
 
   if (!currentGroupId) {
     return (
@@ -2427,11 +2467,6 @@ export function TravelPlannerContent() {
     );
   }
 
-  const initialBudget = Number(selectedTrip?.budget) || 0;
-  const additionSum = expenses.filter((e) => e.entry_type === 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
-  const expenseSum = expenses.filter((e) => e.entry_type !== 'addition').reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalBudget = initialBudget + additionSum;
-  const balance = totalBudget - expenseSum;
   const additionList = expenses.filter((e) => e.entry_type === 'addition');
   const expenseList = expenses.filter((e) => e.entry_type !== 'addition');
 

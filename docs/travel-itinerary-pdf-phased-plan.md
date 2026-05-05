@@ -1,6 +1,6 @@
 # 여행 일정 PDF — 단계별 적용 계획 (WIP 체크포인트)
 
-**진행 상황 (2026-05):** Phase 1·2 적용됨 — `lib/modules/travel-planner/itinerary-pdf.ts`에서 Noto Sans KR(subset OTF) 임베딩·표지형 1페이지·본문은 2페이지부터. 폰트는 `public/fonts/NotoSansKR-Regular.otf` 우선, 없으면 noto-cjk raw CDN fetch 후 메모리 캐시.
+**진행 상황:** Phase 1·2·3·4 적용됨 — 표지(1p) → **일정 요약**(2p, 일차별 한 줄·카드형) → **상세**(3p~) · Noto **Bold** 보조 임베딩 · 표지에 **경비 요약** 3줄(총예산·지출합·잔액). 지도/QR은 미포함(정책·용량). 폰트: Regular/Bold subset OTF CDN 또는 `public/fonts/`.
 
 ---
 
