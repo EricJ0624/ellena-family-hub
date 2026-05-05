@@ -98,12 +98,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const selectedPhoto = photoIndex !== null && stablePhotos[photoIndex] ? stablePhotos[photoIndex] : null;
 
-  // 가로(landscape) = cover로 꽉 채움, 세로(portrait) = contain + 블러 배경 (이미지 로드 후 비율로 결정)
-  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
   useEffect(() => {
     if (!selectedPhoto) {
-      setImageAspectRatio(null);
       setImageLoadError(false);
     }
   }, [selectedPhoto]);
@@ -119,8 +116,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     setManualSeed(Date.now());
   }, []);
 
-  const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
-  const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
+  // 안정성 우선: 런타임 비율 전환으로 인한 카드 리플로우/깜빡임 방지
+  const frameAspectClass = 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
     baroque: 'inset-[20px]',
     ornate: 'inset-[20px]',
@@ -133,9 +130,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     gradient_rim: 'inset-[12px]',
   };
   const useCoverImage = frameStyle === 'polaroid_modern' || frameStyle === 'editorial';
-  const frameWidthClass = isPortraitPhoto
-    ? 'max-w-[320px] md:max-w-[340px]'
-    : 'max-w-[380px]';
+  const frameWidthClass = 'max-w-[380px]';
   
   useEffect(() => {
     if (onShuffle) onShuffle();
@@ -146,7 +141,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2 }}
-      className={cn('relative z-30 mb-6 mx-auto w-full transition-all duration-300', frameWidthClass)}
+      className={cn('relative z-30 mb-6 mx-auto w-full', frameWidthClass)}
     >
       {/* 액자 주변 밀도 보강: noBackground 대시보드에서도 빈 느낌 완화 */}
       <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
@@ -157,10 +152,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         tabIndex={onFrameClick ? 0 : undefined}
         onClick={onFrameClick}
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
-        className={cn('relative w-full overflow-visible transition-all duration-300', frameAspectClass, onFrameClick && 'cursor-pointer')}
+        className={cn('relative w-full overflow-visible', frameAspectClass, onFrameClick && 'cursor-pointer')}
       >
         {/* SVG 프레임 (배경) */}
-        <div className="absolute left-0 top-0 h-full w-full [filter:drop-shadow(0_8px_16px_rgba(0,0,0,0.3))]">
+        <div className="absolute left-0 top-0 h-full w-full">
           <PhotoFrameSVG frameStyle={frameStyle} />
         </div>
 
@@ -192,12 +187,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                       'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
                     )}
                     unoptimized={true}
-                    onLoad={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      if (target?.naturalWidth && target?.naturalHeight) {
-                        setImageAspectRatio(target.naturalWidth / target.naturalHeight);
-                      }
-                    }}
                     onError={() => setImageLoadError(true)}
                   />
                 </motion.div>

@@ -91,12 +91,12 @@ interface PhotoFrameSVGProps {
 }
 
 // 바로크 스타일 프레임 SVG
-const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
+const BaroqueFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
         {/* 나무 질감 그라데이션 */}
-        <linearGradient id="baroqueWood" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`baroqueWood-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={color} stopOpacity="1" />
           <stop offset="25%" stopColor="#4e342e" stopOpacity="1" />
           <stop offset="50%" stopColor={color} stopOpacity="1" />
@@ -105,14 +105,14 @@ const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
         </linearGradient>
         
         {/* 하이라이트 그라데이션 */}
-        <linearGradient id="baroqueHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={`baroqueHighlight-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
           <stop offset="50%" stopColor="rgba(255,255,255,0)" />
           <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
         </linearGradient>
 
         {/* 장식 패턴 */}
-        <pattern id="baroquePattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+        <pattern id={`baroquePattern-${uid}`} x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
           <rect width="20" height="20" fill="rgba(0,0,0,0.05)" />
           <line x1="0" y1="10" x2="20" y2="10" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
         </pattern>
@@ -124,13 +124,13 @@ const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
         y="0"
         width="400"
         height="300"
-        fill="url(#baroqueWood)"
+        fill={`url(#baroqueWood-${uid})`}
         stroke="rgba(0,0,0,0.5)"
         strokeWidth="2"
       />
       
       {/* 나무 결 패턴 */}
-      <rect x="0" y="0" width="400" height="300" fill="url(#baroquePattern)" />
+      <rect x="0" y="0" width="400" height="300" fill={`url(#baroquePattern-${uid})`} />
 
       {/* 내부 테두리 (입체감) */}
       <rect
@@ -149,7 +149,7 @@ const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
         y="0"
         width="400"
         height="300"
-        fill="url(#baroqueHighlight)"
+        fill={`url(#baroqueHighlight-${uid})`}
         opacity="0.3"
       />
 
@@ -213,24 +213,24 @@ const BaroqueFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 오네이트 스타일 프레임 SVG
-const OrnateFrame: React.FC<{ color: string }> = ({ color }) => {
+const OrnateFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
-        <linearGradient id="ornateWood" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`ornateWood-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={color} />
           <stop offset="50%" stopColor="#2a1208" />
           <stop offset="100%" stopColor={color} />
         </linearGradient>
         
-        <radialGradient id="ornateGlow">
+        <radialGradient id={`ornateGlow-${uid}`}>
           <stop offset="0%" stopColor="rgba(255,215,0,0.4)" />
           <stop offset="100%" stopColor="rgba(139,69,19,0)" />
         </radialGradient>
       </defs>
 
       {/* 외곽 프레임 - 두꺼운 테두리 */}
-      <rect x="0" y="0" width="400" height="300" fill="url(#ornateWood)" />
+      <rect x="0" y="0" width="400" height="300" fill={`url(#ornateWood-${uid})`} />
       
       {/* 다층 테두리 효과 */}
       <rect x="8" y="8" width="384" height="284" fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="2" />
@@ -251,7 +251,7 @@ const OrnateFrame: React.FC<{ color: string }> = ({ color }) => {
             stroke="rgba(0,0,0,0.6)"
             strokeWidth="1"
           />
-          <circle cx="12" cy="12" r="5" fill="url(#ornateGlow)" />
+          <circle cx="12" cy="12" r="5" fill={`url(#ornateGlow-${uid})`} />
           <path
             d="M 5,5 Q 12,8 20,5"
             stroke="rgba(255,215,0,0.5)"
@@ -273,7 +273,7 @@ const OrnateFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 빈티지 스타일 프레임 SVG
-const VintageFrame: React.FC<{ color: string }> = ({ color }) => {
+const VintageFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
@@ -302,17 +302,17 @@ const VintageFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 모던 스타일 프레임 SVG
-const ModernFrame: React.FC<{ color: string }> = ({ color }) => {
+const ModernFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
-        <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`modernGradient-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor={color} />
           <stop offset="100%" stopColor="#2a2a2a" />
         </linearGradient>
       </defs>
 
-      <rect x="0" y="0" width="400" height="300" fill="url(#modernGradient)" />
+      <rect x="0" y="0" width="400" height="300" fill={`url(#modernGradient-${uid})`} />
       <rect x="12" y="12" width="376" height="276" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
       <rect x="18" y="18" width="364" height="264" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
     </svg>
@@ -320,7 +320,7 @@ const ModernFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 미니멀 스타일 프레임 SVG
-const MinimalFrame: React.FC<{ color: string }> = ({ color }) => {
+const MinimalFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <rect x="0" y="0" width="400" height="300" fill={color} />
@@ -330,30 +330,30 @@ const MinimalFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 소프트 글래스 스타일 프레임 SVG
-const SoftGlassFrame: React.FC<{ color: string }> = ({ color }) => {
+const SoftGlassFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
-        <linearGradient id="softGlassFill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`softGlassFill-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.62)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
         </linearGradient>
-        <linearGradient id="softGlassHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={`softGlassHighlight-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.78)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0)" />
         </linearGradient>
       </defs>
 
-      <rect x="0" y="0" width="400" height="300" rx="24" fill="url(#softGlassFill)" />
+      <rect x="0" y="0" width="400" height="300" rx="24" fill={`url(#softGlassFill-${uid})`} />
       <rect x="3" y="3" width="394" height="294" rx="21" fill="none" stroke="rgba(255,255,255,0.86)" strokeWidth="1.8" />
       <rect x="8" y="8" width="384" height="284" rx="17" fill="none" stroke={color} strokeOpacity="0.5" strokeWidth="1.2" />
-      <rect x="0" y="0" width="400" height="100" rx="24" fill="url(#softGlassHighlight)" />
+      <rect x="0" y="0" width="400" height="100" rx="24" fill={`url(#softGlassHighlight-${uid})`} />
     </svg>
   );
 };
 
 // 폴라로이드 모던 스타일 프레임 SVG
-const PolaroidModernFrame: React.FC<{ color: string }> = ({ color }) => {
+const PolaroidModernFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <rect x="0" y="0" width="400" height="300" rx="16" fill="#f8fafc" />
@@ -366,7 +366,7 @@ const PolaroidModernFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 에디토리얼 스타일 프레임 SVG
-const EditorialFrame: React.FC<{ color: string }> = ({ color }) => {
+const EditorialFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <rect x="0" y="0" width="400" height="300" rx="10" fill="rgba(15,23,42,0.02)" />
@@ -377,11 +377,11 @@ const EditorialFrame: React.FC<{ color: string }> = ({ color }) => {
 };
 
 // 그라디언트 림 스타일 프레임 SVG
-const GradientRimFrame: React.FC<{ color: string }> = ({ color }) => {
+const GradientRimFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
-        <linearGradient id="gradientRimStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`gradientRimStroke-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#60a5fa" />
           <stop offset="35%" stopColor={color} />
           <stop offset="70%" stopColor="#f472b6" />
@@ -389,7 +389,7 @@ const GradientRimFrame: React.FC<{ color: string }> = ({ color }) => {
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="400" height="300" rx="20" fill="rgba(15,23,42,0.04)" />
-      <rect x="4" y="4" width="392" height="292" rx="18" fill="none" stroke="url(#gradientRimStroke)" strokeWidth="3" />
+      <rect x="4" y="4" width="392" height="292" rx="18" fill="none" stroke={`url(#gradientRimStroke-${uid})`} strokeWidth="3" />
       <rect x="9" y="9" width="382" height="282" rx="14" fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="1" />
     </svg>
   );
@@ -400,6 +400,7 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
   frameStyle,
   color,
 }) => {
+  const uid = React.useId().replace(/:/g, '');
   const frameConfig = FRAME_CONFIGS.find(f => f.id === frameStyle);
   const frameColor = color || frameConfig?.color || '#5d2a1f';
 
@@ -415,5 +416,5 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
     gradient_rim: GradientRimFrame,
   }[frameStyle];
 
-  return <FrameComponent color={frameColor} />;
+  return <FrameComponent color={frameColor} uid={uid} />;
 };
