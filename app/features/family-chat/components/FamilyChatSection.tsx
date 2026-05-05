@@ -5,19 +5,9 @@
 'use client';
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { ChatUiMessage } from '../types';
-
-/** `public/images` 기준 말풍선 일러스트 — WebP 리사이즈본(용량 소) */
-export const FAMILY_CHAT_BUBBLE_IMAGE_SRC = '/images/family-chat-hello-bubble.webp?v=2' as const;
-
-/** 헤더 말풍선 박스 크기 — 한곳에서 조절 */
-export const FAMILY_CHAT_BUBBLE_LAYOUT = {
-  width: 'clamp(104px, 28vw, 176px)',
-  height: 'clamp(80px, 21vw, 132px)',
-} as const;
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -57,9 +47,6 @@ interface FamilyChatSectionProps {
   };
 }
 
-const BUBBLE_TEXT_MAX_PX = 22;
-const BUBBLE_TEXT_MIN_PX = 7;
-
 /** 다언어 섹션 타이틀: 너비에 맞게 축소, 높이·절대 상한 내에서 가능한 크게 */
 const CHAT_TITLE_ABS_MAX_PX = 26;
 const CHAT_TITLE_MIN_PX = 7;
@@ -92,11 +79,7 @@ export function FamilyChatSection({
   const chatHeaderRowRef = useRef<HTMLDivElement>(null);
   const chatTitleBoxRef = useRef<HTMLDivElement>(null);
   const chatTitleRef = useRef<HTMLHeadingElement>(null);
-  const chatBubbleWrapRef = useRef<HTMLDivElement>(null);
-  const chatBubbleTextBoxRef = useRef<HTMLDivElement>(null);
-  const chatBubbleTextRef = useRef<HTMLSpanElement>(null);
   const [sectionTitleFontPx, setSectionTitleFontPx] = useState<number | null>(null);
-  const [bubbleGreetingFontPx, setBubbleGreetingFontPx] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const row = chatHeaderRowRef.current;
@@ -140,42 +123,6 @@ export function FamilyChatSection({
     return () => ro.disconnect();
   }, [t.section_title_chat, lang]);
 
-  useLayoutEffect(() => {
-    const wrap = chatBubbleWrapRef.current;
-    const box = chatBubbleTextBoxRef.current;
-    const textEl = chatBubbleTextRef.current;
-    if (!wrap || !box || !textEl) return;
-
-    const fit = () => {
-      const bw = box.clientWidth;
-      const bh = box.clientHeight;
-      if (bw <= 0 || bh <= 0) return;
-
-      let fs = BUBBLE_TEXT_MAX_PX;
-      textEl.style.fontSize = `${fs}px`;
-      void textEl.offsetHeight;
-      while (
-        (textEl.scrollWidth > bw + 1 || textEl.scrollHeight > bh + 1) &&
-        fs > BUBBLE_TEXT_MIN_PX
-      ) {
-        fs -= 0.5;
-        textEl.style.fontSize = `${fs}px`;
-        void textEl.offsetHeight;
-      }
-      setBubbleGreetingFontPx(fs);
-    };
-
-    const ro = new ResizeObserver(() => {
-      requestAnimationFrame(fit);
-    });
-    ro.observe(wrap);
-    ro.observe(box);
-    fit();
-    void document.fonts.ready.then(() => requestAnimationFrame(fit));
-
-    return () => ro.disconnect();
-  }, [t.section_chat_bubble_greeting, lang]);
-
   const handleSendClick = () => {
     if (isSendingText) return;
     const input = chatInputRef.current;
@@ -203,7 +150,7 @@ export function FamilyChatSection({
     >
       <div
         ref={chatHeaderRowRef}
-        className="section-header mb-2 mt-0 items-center justify-start gap-[clamp(2px,1.2vw,8px)]"
+        className="section-header mb-2 mt-0 items-center justify-start"
       >
         <div
           ref={chatTitleBoxRef}
@@ -221,37 +168,6 @@ export function FamilyChatSection({
           >
             {t.section_title_chat}
           </h3>
-        </div>
-        <div
-          ref={chatBubbleWrapRef}
-          className="relative shrink-0 -ml-1 -translate-y-[22px]"
-          style={{
-            width: FAMILY_CHAT_BUBBLE_LAYOUT.width,
-            height: FAMILY_CHAT_BUBBLE_LAYOUT.height,
-          }}
-        >
-          <Image
-            src={FAMILY_CHAT_BUBBLE_IMAGE_SRC}
-            alt=""
-            fill
-            sizes="(max-width: 768px) 28vw, 176px"
-            className="object-contain object-center opacity-95 mix-blend-darken dark:mix-blend-screen"
-            priority={false}
-          />
-          <div
-            ref={chatBubbleTextBoxRef}
-            className="pointer-events-none absolute left-1/2 top-1/2 box-border flex h-[46%] max-h-full w-[82%] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden text-center"
-          >
-            <span
-              ref={chatBubbleTextRef}
-              className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-black tracking-[0.04em] text-orange-600 [line-height:1.05] [text-shadow:1.5px_0_0_#0f172a,-1.5px_0_0_#0f172a,0_1.5px_0_#0f172a,0_-1.5px_0_#0f172a,2px_2px_0_rgba(15,23,42,0.2)]"
-              style={{
-                fontSize: bubbleGreetingFontPx != null ? `${bubbleGreetingFontPx}px` : `${BUBBLE_TEXT_MAX_PX}px`,
-              }}
-            >
-              {t.section_chat_bubble_greeting}
-            </span>
-          </div>
         </div>
       </div>
       <div className="section-body">
