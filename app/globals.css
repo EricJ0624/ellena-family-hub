@@ -149,6 +149,26 @@
   --glass-strong-shadow: 0 34px 78px rgba(2, 6, 23, 0.58);
 }
 
+/* Original baseline before glass theme variants */
+:root[data-ui-theme='default'] {
+  --app-shell-inner-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --app-shell-outer-bg: radial-gradient(circle at top left, #e2e8f0, #94a3b8);
+  --glass-soft-bg: rgba(255, 255, 255, 0.8);
+  --glass-medium-bg: rgba(255, 255, 255, 0.8);
+  --glass-strong-bg: rgba(255, 255, 255, 0.85);
+  --glass-soft-blur: 20px;
+  --glass-medium-blur: 20px;
+  --glass-strong-blur: 22px;
+  --glass-soft-border: rgba(255, 255, 255, 0.4);
+  --glass-medium-border: rgba(255, 255, 255, 0.45);
+  --glass-strong-border: rgba(255, 255, 255, 0.5);
+  --glass-soft-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --glass-medium-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --glass-strong-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --chalkboard-border-light: #8b6914;
+  --chalkboard-border-dark: #6b5010;
+}
+
 * {
   box-sizing: border-box;
 }
