@@ -7,7 +7,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
-import { shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
+import { buildTransportItineraryTitle, shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
 import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
@@ -2356,7 +2356,7 @@ export function TravelPlannerContent() {
         day_date: t.day_date,
         start_time: t.start_time,
         end_time: t.end_time,
-        title: `${t.departure || ''} → ${t.arrival || ''}`,
+        title: buildTransportItineraryTitle(t.departure, t.arrival),
         description: t.memo,
         departure: t.departure,
         arrival: t.arrival,
