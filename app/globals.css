@@ -75,8 +75,8 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   /* Chalkboard Colors */
   --chalkboard-bg: #0f2a08;
-  --chalkboard-border-light: #8b6914;
-  --chalkboard-border-dark: #6b5010;
+  --chalkboard-border-light: #6f5210;
+  --chalkboard-border-dark: #4d390b;
 }
 
 .dark {

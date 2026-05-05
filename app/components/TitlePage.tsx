@@ -138,7 +138,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     >
       {/* 액자 주변 밀도 보강: noBackground 대시보드에서도 빈 느낌 완화 */}
       <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
-      <div className="pointer-events-none absolute -inset-x-3 -inset-y-2 -z-10 rounded-[24px] border border-slate-300/45 bg-white/35 backdrop-blur-[1px]" />
 
       {/* SVG 프레임 컨테이너 (클릭 시 가족 추억 페이지로 이동) */}
       <div
