@@ -127,11 +127,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     vintage: 'inset-[20px]',
     modern: 'inset-[20px]',
     minimal: 'inset-[20px]',
-    soft_glass: 'inset-[12px]',
-    polaroid_modern: 'inset-x-[16px] inset-t-[16px] inset-b-[56px]',
-    editorial: 'inset-[8px]',
+    soft_glass: 'inset-[14px]',
+    polaroid_modern: 'inset-x-[14px] inset-t-[14px] inset-b-[38px]',
+    editorial: 'inset-[10px]',
     gradient_rim: 'inset-[12px]',
   };
+  const forceCoverFrame = frameStyle === 'polaroid_modern' || frameStyle === 'editorial';
+  const useCoverImage =
+    forceCoverFrame || imageAspectRatio === null || imageAspectRatio >= 1;
   const frameWidthClass = isPortraitPhoto
     ? 'max-w-[320px] md:max-w-[340px]'
     : 'max-w-[380px]';
@@ -186,7 +189,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     src={getBlurLayerSrc(selectedPhoto.data)}
                     alt=""
                     aria-hidden
-                    className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 scale-110 object-cover [filter:blur(50px)_brightness(0.7)]"
+                    className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 scale-105 object-cover [filter:blur(26px)_brightness(0.74)]"
                   />
                   {/* 2) 중간: 어두운 오버레이 (가독성) */}
                   <div
@@ -198,7 +201,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     alt={tp('photo_alt_today_memory')}
                     fill
                     className={cn(
-                      imageAspectRatio !== null && imageAspectRatio >= 1 ? 'object-cover' : 'object-contain',
+                      useCoverImage ? 'object-cover' : 'object-contain',
                       'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
                     )}
                     unoptimized={true}
@@ -282,7 +285,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
-              className="absolute bottom-[70px] right-2.5 z-50 min-w-[200px] rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px]"
+              className="absolute bottom-[70px] right-2.5 z-50 min-w-[220px] max-w-[min(92vw,320px)] max-h-[min(55vh,420px)] overflow-y-auto overscroll-contain rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px] [touch-action:pan-y]"
             >
               <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
                 {tp('frame_style_select')}

@@ -335,19 +335,19 @@ const SoftGlassFrame: React.FC<{ color: string }> = ({ color }) => {
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
       <defs>
         <linearGradient id="softGlassFill" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.18)" />
+          <stop offset="0%" stopColor="rgba(255,255,255,0.62)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
         </linearGradient>
         <linearGradient id="softGlassHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+          <stop offset="0%" stopColor="rgba(255,255,255,0.78)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0)" />
         </linearGradient>
       </defs>
 
-      <rect x="0" y="0" width="400" height="300" rx="28" fill="url(#softGlassFill)" />
-      <rect x="4" y="4" width="392" height="292" rx="24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-      <rect x="10" y="10" width="380" height="280" rx="20" fill="none" stroke={color} strokeOpacity="0.45" strokeWidth="1" />
-      <rect x="0" y="0" width="400" height="120" rx="28" fill="url(#softGlassHighlight)" />
+      <rect x="0" y="0" width="400" height="300" rx="24" fill="url(#softGlassFill)" />
+      <rect x="3" y="3" width="394" height="294" rx="21" fill="none" stroke="rgba(255,255,255,0.86)" strokeWidth="1.8" />
+      <rect x="8" y="8" width="384" height="284" rx="17" fill="none" stroke={color} strokeOpacity="0.5" strokeWidth="1.2" />
+      <rect x="0" y="0" width="400" height="100" rx="24" fill="url(#softGlassHighlight)" />
     </svg>
   );
 };
@@ -356,10 +356,11 @@ const SoftGlassFrame: React.FC<{ color: string }> = ({ color }) => {
 const PolaroidModernFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <rect x="0" y="0" width="400" height="300" rx="16" fill={color} />
-      <rect x="6" y="6" width="388" height="288" rx="14" fill="none" stroke="rgba(15,23,42,0.15)" strokeWidth="2" />
-      <rect x="16" y="16" width="368" height="220" rx="8" fill="none" stroke="rgba(15,23,42,0.28)" strokeWidth="1.5" />
-      <rect x="16" y="242" width="368" height="42" rx="6" fill="rgba(255,255,255,0.84)" />
+      <rect x="0" y="0" width="400" height="300" rx="16" fill="#f8fafc" />
+      <rect x="4" y="4" width="392" height="292" rx="14" fill="none" stroke="rgba(15,23,42,0.14)" strokeWidth="1.8" />
+      <rect x="10" y="10" width="380" height="248" rx="9" fill="none" stroke="rgba(15,23,42,0.24)" strokeWidth="1.2" />
+      <rect x="20" y="268" width="360" height="18" rx="6" fill="rgba(255,255,255,0.95)" />
+      <rect x="150" y="272" width="100" height="4" rx="2" fill={color} fillOpacity="0.35" />
     </svg>
   );
 };
@@ -368,9 +369,9 @@ const PolaroidModernFrame: React.FC<{ color: string }> = ({ color }) => {
 const EditorialFrame: React.FC<{ color: string }> = ({ color }) => {
   return (
     <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <rect x="0" y="0" width="400" height="300" rx="10" fill="rgba(255,255,255,0.04)" />
-      <rect x="2.5" y="2.5" width="395" height="295" rx="9" fill="none" stroke={color} strokeOpacity="0.75" strokeWidth="1.5" />
-      <rect x="8" y="8" width="384" height="284" rx="7" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+      <rect x="0" y="0" width="400" height="300" rx="10" fill="rgba(15,23,42,0.02)" />
+      <rect x="3" y="3" width="394" height="294" rx="8" fill="none" stroke={color} strokeOpacity="0.85" strokeWidth="1.2" />
+      <rect x="8" y="8" width="384" height="284" rx="6" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.9" />
     </svg>
   );
 };
@@ -387,9 +388,9 @@ const GradientRimFrame: React.FC<{ color: string }> = ({ color }) => {
           <stop offset="100%" stopColor="#f59e0b" />
         </linearGradient>
       </defs>
-      <rect x="0" y="0" width="400" height="300" rx="20" fill="rgba(15,23,42,0.06)" />
-      <rect x="4" y="4" width="392" height="292" rx="18" fill="none" stroke="url(#gradientRimStroke)" strokeWidth="4" />
-      <rect x="11" y="11" width="378" height="278" rx="14" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" />
+      <rect x="0" y="0" width="400" height="300" rx="20" fill="rgba(15,23,42,0.04)" />
+      <rect x="4" y="4" width="392" height="292" rx="18" fill="none" stroke="url(#gradientRimStroke)" strokeWidth="3" />
+      <rect x="9" y="9" width="382" height="282" rx="14" fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="1" />
     </svg>
   );
 };
