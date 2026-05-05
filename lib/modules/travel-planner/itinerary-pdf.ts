@@ -1,15 +1,15 @@
 /**
- * 여행 일정 PDF (jsPDF). 클라이언트 전용 — 인증/API/DB와 무관.
- * 다국어: Noto CJK/Noto Sans를 VFS에 넣고 Identity-H로 출력. (addFont 5번째 인자=encoding — 4번째에 넣으면 Unicode가 출력되지 않음)
+ * 여행 일정 PDF (pdf-lib + fontkit). 클라이언트 전용 — 인증/API/DB와 무관.
+ * 모바일 Chrome 등에서 jsPDF CID 폰트가 글자 없이 보이는 경우가 있어 pdf-lib 임베딩으로 생성한다.
  */
-import type { jsPDF } from 'jspdf';
 import type { LangCode } from '@/lib/language-fonts';
 import { shortItineraryTitle } from './short-itinerary-title';
+import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from 'pdf-lib';
 
-/** jsPDF addFont: (vfsName, id, style, fontWeight, encoding) — encoding은 5번째 */
-const IDENTITY_H = 'Identity-H' as const;
+const MM_TO_PT = 72 / 25.4;
+const A4_W_MM = 210;
+const A4_H_MM = 297;
 
-/** 앱 UI 언어별 기본 Noto 서브셋 (en은 콘텐츠에 따라 latin / CJK 서브셋 자동) */
 type PdfFontModule = 'kr' | 'jp' | 'sc' | 'tc' | 'latin';
 
 const NOTO_CJK_BASE =
@@ -18,20 +18,21 @@ const NOTO_CJK_RAW = 'https://raw.githubusercontent.com/notofonts/noto-cjk/main/
 
 const FONT_SPECS: Record<
   Exclude<PdfFontModule, 'latin'>,
-  { vfs: string; family: string; dir: 'KR' | 'JP' | 'SC' | 'TC'; file: string }
+  { dir: 'KR' | 'JP' | 'SC' | 'TC'; file: string }
 > = {
-  kr: { vfs: 'NotoSansKR-Regular.otf', family: 'NotoSansKR', dir: 'KR', file: 'NotoSansKR-Regular.otf' },
-  jp: { vfs: 'NotoSansJP-Regular.otf', family: 'NotoSansJP', dir: 'JP', file: 'NotoSansJP-Regular.otf' },
-  sc: { vfs: 'NotoSansSC-Regular.otf', family: 'NotoSansSC', dir: 'SC', file: 'NotoSansSC-Regular.otf' },
-  tc: { vfs: 'NotoSansTC-Regular.otf', family: 'NotoSansTC', dir: 'TC', file: 'NotoSansTC-Regular.otf' },
+  kr: { dir: 'KR', file: 'NotoSansKR-Regular.otf' },
+  jp: { dir: 'JP', file: 'NotoSansJP-Regular.otf' },
+  sc: { dir: 'SC', file: 'NotoSansSC-Regular.otf' },
+  tc: { dir: 'TC', file: 'NotoSansTC-Regular.otf' },
 };
 
-const BRAND_R = 79;
-const BRAND_G = 70;
-const BRAND_B = 229;
-const ACCENT_BAR_W = 3;
+const ACCENT_BAR_W_MM = 3;
 
-let cachedB64: Partial<Record<PdfFontModule, string | null>> = {};
+function rgb255(r: number, g: number, b: number) {
+  return rgb(r / 255, g / 255, b / 255);
+}
+
+let cachedBytes: Partial<Record<Exclude<PdfFontModule, 'latin'>, Uint8Array | null>> = {};
 
 export type ItineraryPdfItem = {
   type: 'accommodation' | 'dining' | 'attraction' | 'transport' | 'other';
@@ -58,20 +59,26 @@ export type ItineraryPdfLabels = {
   placesCount: (n: number) => string;
 };
 
-type ActiveFont = { kind: 'latin' } | { kind: 'embedded'; family: string };
+type FontPair = { body: PDFFont; heading: PDFFont };
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += chunk) {
-    const sub = bytes.subarray(i, i + chunk);
-    binary += String.fromCharCode.apply(null, sub as unknown as number[]);
-  }
-  return btoa(binary);
+function mm(n: number): number {
+  return n * MM_TO_PT;
 }
 
-/** 영어 UI일 때 본문에 동아시아 문자가 있으면 적절한 Noto 서브셋 선택 */
+/** y는 위에서 아래(mm), 텍스트 y는 베이스라인 근처 */
+function baselineY(pageHPt: number, yFromTopMm: number): number {
+  return pageHPt - mm(yFromTopMm);
+}
+
+function mmRectTopLeft(pageHPt: number, xMm: number, yTopMm: number, wMm: number, hMm: number) {
+  return {
+    x: mm(xMm),
+    y: pageHPt - mm(yTopMm + hMm),
+    width: mm(wMm),
+    height: mm(hMm),
+  };
+}
+
 function resolvePdfFontModule(lang: LangCode, contentBlob: string): PdfFontModule {
   if (lang === 'ko') return 'kr';
   if (lang === 'ja') return 'jp';
@@ -116,18 +123,18 @@ function collectContentBlobForFontHint(params: {
   return p.join('\n');
 }
 
-async function fetchNotoCjkBase64(module: Exclude<PdfFontModule, 'latin'>): Promise<string | null> {
-  if (cachedB64[module] !== undefined) return cachedB64[module] ?? null;
+async function fetchNotoBytes(module: Exclude<PdfFontModule, 'latin'>): Promise<Uint8Array | null> {
+  if (cachedBytes[module] !== undefined) {
+    const c = cachedBytes[module];
+    return c ?? null;
+  }
 
   const spec = FONT_SPECS[module];
   const urls: string[] = [];
   if (typeof window !== 'undefined') {
     urls.push(`${window.location.origin}/fonts/${spec.file}`);
   }
-  urls.push(
-    `${NOTO_CJK_BASE}/${spec.dir}/${spec.file}`,
-    `${NOTO_CJK_RAW}/${spec.dir}/${spec.file}`,
-  );
+  urls.push(`${NOTO_CJK_BASE}/${spec.dir}/${spec.file}`, `${NOTO_CJK_RAW}/${spec.dir}/${spec.file}`);
 
   for (const url of urls) {
     try {
@@ -135,97 +142,117 @@ async function fetchNotoCjkBase64(module: Exclude<PdfFontModule, 'latin'>): Prom
       if (!res.ok) continue;
       const buf = await res.arrayBuffer();
       if (buf.byteLength < 1000) continue;
-      const b64 = arrayBufferToBase64(buf);
-      cachedB64[module] = b64;
-      return b64;
+      const bytes = new Uint8Array(buf);
+      cachedBytes[module] = bytes;
+      return bytes;
     } catch {
-      /* try next */
+      /* next */
     }
   }
-  cachedB64[module] = null;
+  cachedBytes[module] = null;
   return null;
 }
 
-function tryRegisterNotoSubset(doc: jsPDF, module: Exclude<PdfFontModule, 'latin'>): boolean {
-  const spec = FONT_SPECS[module];
-  const b64 = cachedB64[module];
-  if (!b64) return false;
-  try {
-    doc.addFileToVFS(spec.vfs, b64);
-    /** fontWeight 4번째, encoding 5번째 — 순서 틀리면 전부 빈 텍스트 */
-    doc.addFont(spec.vfs, spec.family, 'normal', 'normal', IDENTITY_H);
-    return true;
-  } catch (e) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(`[itinerary-pdf] Noto (${module}) 등록 실패:`, e);
+/** 너비 기준 줄바꿈 (공백 우선, CJK/Glyph는 문자 단위) */
+function wrapToWidth(text: string, maxWidthPt: number, font: PDFFont, size: number): string[] {
+  const out: string[] = [];
+  for (const para of text.split(/\n/)) {
+    if (!para) {
+      out.push('');
+      continue;
     }
-    return false;
+    let rest = para;
+    while (rest.length > 0) {
+      if (font.widthOfTextAtSize(rest, size) <= maxWidthPt) {
+        out.push(rest);
+        break;
+      }
+      let lo = 0;
+      let hi = rest.length;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        const slice = rest.slice(0, mid);
+        if (font.widthOfTextAtSize(slice, size) <= maxWidthPt) lo = mid;
+        else hi = mid - 1;
+      }
+      let breakPos = lo;
+      if (breakPos === 0) breakPos = 1;
+      else {
+        const head = rest.slice(0, breakPos);
+        const sp = Math.max(head.lastIndexOf(' '), head.lastIndexOf('\t'));
+        if (sp > 0 && sp >= breakPos - 8) breakPos = sp + 1;
+      }
+      out.push(rest.slice(0, breakPos).trimEnd());
+      rest = rest.slice(breakPos).trimStart();
+      if (!rest.length) break;
+    }
   }
+  return out;
 }
 
-async function resolveActiveFont(doc: jsPDF, lang: LangCode, contentBlob: string): Promise<ActiveFont> {
-  const mod = resolvePdfFontModule(lang, contentBlob);
+async function embedFontPair(pdfDoc: PDFDocument, mod: PdfFontModule): Promise<FontPair> {
   if (mod === 'latin') {
-    return { kind: 'latin' };
+    const body = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const heading = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    return { body, heading };
   }
-  const b64 = await fetchNotoCjkBase64(mod);
-  if (!b64 || !tryRegisterNotoSubset(doc, mod)) {
+  const fontkitMod = await import('@pdf-lib/fontkit');
+  pdfDoc.registerFontkit(fontkitMod.default);
+
+  const bytes = await fetchNotoBytes(mod);
+  if (!bytes) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn('[itinerary-pdf] Noto 서브셋을 불러오지 못했습니다. Helvetica로 저장합니다(동아시아 문자는 비거나 깨질 수 있음).');
+      console.warn('[itinerary-pdf] Noto 바이너리를 받지 못해 Helvetica로 대체합니다.');
     }
-    return { kind: 'latin' };
+    const body = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const heading = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    return { body, heading };
   }
-  return { kind: 'embedded', family: FONT_SPECS[mod].family };
-}
-
-function setBodyFont(doc: jsPDF, active: ActiveFont, size: number) {
-  doc.setFontSize(size);
-  if (active.kind === 'embedded') {
-    doc.setFont(active.family, 'normal');
-  } else {
-    doc.setFont('helvetica', 'normal');
-  }
-}
-
-function setHeadingFont(doc: jsPDF, active: ActiveFont, size: number) {
-  doc.setFontSize(size);
-  if (active.kind === 'embedded') {
-    doc.setFont(active.family, 'normal');
-  } else {
-    doc.setFont('helvetica', 'bold');
-  }
-}
-
-function restoreDefaultBodyStyle(doc: jsPDF, active: ActiveFont) {
-  doc.setTextColor(55, 65, 81);
-  setBodyFont(doc, active, 10);
+  const embedded = await pdfDoc.embedFont(bytes, { subset: true });
+  return { body: embedded, heading: embedded };
 }
 
 function sanitizeFilename(title: string): string {
   return title.replace(/[^\w\u3131-\uD7A3]/g, '-');
 }
 
-function ensurePageSpace(
-  doc: jsPDF,
-  y: number,
-  needed: number,
-  margin: number,
-  active: ActiveFont,
-): number {
-  const pageH = doc.internal.pageSize.getHeight();
-  if (y + needed > pageH - margin) {
-    doc.addPage();
-    restoreDefaultBodyStyle(doc, active);
-    return margin;
+function triggerDownload(bytes: Uint8Array, filename: string) {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const blob = new Blob([copy], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+type DrawState = {
+  pdfDoc: PDFDocument;
+  page: PDFPage;
+  pageWPt: number;
+  pageHPt: number;
+  marginMm: number;
+  fonts: FontPair;
+};
+
+function ensurePageSpace(state: DrawState, yMm: number, neededMm: number): number {
+  const { pageHPt, marginMm } = state;
+  if (yMm + neededMm > A4_H_MM - marginMm) {
+    state.page = state.pdfDoc.addPage([state.pageWPt, pageHPt]);
+    return marginMm;
   }
-  return y;
+  return yMm;
 }
 
 /**
  * 일정 PDF 생성 후 브라우저 저장 대화상자.
  */
 export async function buildAndSaveTravelItineraryPdf(params: {
-  /** 앱 표시 언어 — PDF 라벨·Noto 서브셋 선택에 사용 */
   lang: LangCode;
   trip: ItineraryPdfTrip;
   items: ItineraryPdfItem[];
@@ -234,71 +261,98 @@ export async function buildAndSaveTravelItineraryPdf(params: {
   pdfLabels: ItineraryPdfLabels;
   expenseSummaryLines?: string[];
 }): Promise<void> {
-  const { jsPDF } = await import('jspdf');
-  const doc = new jsPDF({ compress: true });
-  const margin = 20;
-  const pageW = doc.internal.pageSize.getWidth();
-  const contentW = pageW - margin * 2;
-  const lineH = 6;
+  const pdfDoc = await PDFDocument.create();
+  const pageWPt = mm(A4_W_MM);
+  const pageHPt = mm(A4_H_MM);
+  const marginMm = 20;
+  const contentWPt = pageWPt - mm(marginMm * 2);
+  const lineHmm = 6;
 
-  const contentBlob = collectContentBlobForFontHint(params);
-  const active = await resolveActiveFont(doc, params.lang, contentBlob);
+  const mod = resolvePdfFontModule(params.lang, collectContentBlobForFontHint(params));
+  const fonts = await embedFontPair(pdfDoc, mod);
 
-  setHeadingFont(doc, active, 20);
-  const titleLines = doc.splitTextToSize(params.trip.title, contentW);
-  const titleLineHeight = lineH + 2;
-  const headerBarH = Math.max(44, 26 + titleLines.length * titleLineHeight + 12);
+  let page = pdfDoc.addPage([pageWPt, pageHPt]);
+  const state: DrawState = { pdfDoc, page, pageWPt, pageHPt, marginMm, fonts };
 
-  doc.setFillColor(BRAND_R, BRAND_G, BRAND_B);
-  doc.rect(0, 0, pageW, headerBarH, 'F');
+  const titleLines = wrapToWidth(params.trip.title, contentWPt, fonts.heading, 20);
+  const titleLineHmm = lineHmm + 2;
+  const headerBarHmm = Math.max(44, 26 + titleLines.length * titleLineHmm + 12);
 
-  doc.setTextColor(255, 255, 255);
-  setHeadingFont(doc, active, 20);
+  const headerR = mmRectTopLeft(pageHPt, 0, 0, A4_W_MM, headerBarHmm);
+  state.page.drawRectangle({ ...headerR, color: rgb255(79, 70, 229) });
+
   let yTitle = 26;
   for (const line of titleLines) {
-    doc.text(line, margin, yTitle);
-    yTitle += titleLineHeight;
+    state.page.drawText(line, {
+      x: mm(marginMm),
+      y: baselineY(pageHPt, yTitle),
+      size: 20,
+      font: fonts.heading,
+      color: rgb255(255, 255, 255),
+    });
+    yTitle += titleLineHmm;
   }
 
-  setBodyFont(doc, active, 10);
-  let yMeta = headerBarH + 12;
-  doc.setTextColor(55, 65, 81);
+  let yMeta = headerBarHmm + 12;
 
   if (params.trip.destination) {
-    setBodyFont(doc, active, 11);
-    doc.text(params.trip.destination, margin, yMeta);
-    yMeta += lineH;
+    state.page.drawText(params.trip.destination, {
+      x: mm(marginMm),
+      y: baselineY(pageHPt, yMeta),
+      size: 11,
+      font: fonts.body,
+      color: rgb255(55, 65, 81),
+    });
+    yMeta += lineHmm;
   }
-  setBodyFont(doc, active, 11);
-  doc.text(`${params.trip.start_date} ~ ${params.trip.end_date}`, margin, yMeta);
-  yMeta += lineH + 8;
+  state.page.drawText(`${params.trip.start_date} ~ ${params.trip.end_date}`, {
+    x: mm(marginMm),
+    y: baselineY(pageHPt, yMeta),
+    size: 11,
+    font: fonts.body,
+    color: rgb255(55, 65, 81),
+  });
+  yMeta += lineHmm + 8;
 
-  setBodyFont(doc, active, 9);
-  doc.setTextColor(100, 116, 139);
-  doc.text(params.pdfLabels.coverKicker, margin, yMeta);
-  doc.setTextColor(55, 65, 81);
+  state.page.drawText(params.pdfLabels.coverKicker, {
+    x: mm(marginMm),
+    y: baselineY(pageHPt, yMeta),
+    size: 9,
+    font: fonts.body,
+    color: rgb255(100, 116, 139),
+  });
+  yMeta += lineHmm;
+  yMeta += 8;
 
   if (params.expenseSummaryLines && params.expenseSummaryLines.length > 0) {
-    yMeta += lineH + 4;
-    setBodyFont(doc, active, 9);
-    doc.setTextColor(71, 85, 105);
+    yMeta += lineHmm + 4;
     for (const line of params.expenseSummaryLines) {
-      const sub = doc.splitTextToSize(line, contentW);
+      const sub = wrapToWidth(line, contentWPt, fonts.body, 9);
       for (const sl of sub) {
-        yMeta = ensurePageSpace(doc, yMeta, lineH + 2, margin, active);
-        doc.text(sl, margin, yMeta);
-        yMeta += lineH - 1;
+        yMeta = ensurePageSpace(state, yMeta, lineHmm + 2);
+        state.page.drawText(sl, {
+          x: mm(marginMm),
+          y: baselineY(pageHPt, yMeta),
+          size: 9,
+          font: fonts.body,
+          color: rgb255(71, 85, 105),
+        });
+        yMeta += lineHmm - 1;
       }
       yMeta += 2;
     }
-    doc.setTextColor(55, 65, 81);
   }
 
   if (params.items.length === 0) {
-    setBodyFont(doc, active, 10);
-    yMeta = ensurePageSpace(doc, yMeta, lineH + 8, margin, active);
-    doc.text(params.emptyItineraryMessage, margin, yMeta + 6);
-    doc.save(`itinerary-${sanitizeFilename(params.trip.title)}.pdf`);
+    yMeta = ensurePageSpace(state, yMeta, lineHmm + 8);
+    state.page.drawText(params.emptyItineraryMessage, {
+      x: mm(marginMm),
+      y: baselineY(pageHPt, yMeta + 6),
+      size: 10,
+      font: fonts.body,
+      color: rgb255(55, 65, 81),
+    });
+    triggerDownload(await pdfDoc.save(), `itinerary-${sanitizeFilename(params.trip.title)}.pdf`);
     return;
   }
 
@@ -310,18 +364,21 @@ export async function buildAndSaveTravelItineraryPdf(params: {
   }
   const days = Array.from(byDay.keys()).sort();
 
-  doc.addPage();
-  restoreDefaultBodyStyle(doc, active);
-  let y = margin;
+  state.page = pdfDoc.addPage([pageWPt, pageHPt]);
+  let y = marginMm;
 
-  doc.setFillColor(BRAND_R, BRAND_G, BRAND_B);
-  doc.rect(margin, y - 5, ACCENT_BAR_W, 10, 'F');
-  setHeadingFont(doc, active, 14);
-  doc.setTextColor(30, 41, 59);
-  doc.text(params.pdfLabels.overviewTitle, margin + ACCENT_BAR_W + 6, y);
-  y += lineH + 10;
-  setBodyFont(doc, active, 9);
-  doc.setTextColor(100, 116, 139);
+  const ovBar = mmRectTopLeft(pageHPt, marginMm, y - 5, ACCENT_BAR_W_MM, 10);
+  state.page.drawRectangle({ ...ovBar, color: rgb255(79, 70, 229) });
+  state.page.drawText(params.pdfLabels.overviewTitle, {
+    x: mm(marginMm + ACCENT_BAR_W_MM + 6),
+    y: baselineY(pageHPt, y),
+    size: 14,
+    font: fonts.heading,
+    color: rgb255(30, 41, 59),
+  });
+  y += lineHmm + 10;
+
+  const summaryMaxW = contentWPt - mm(ACCENT_BAR_W_MM + 8);
 
   for (let idx = 0; idx < days.length; idx++) {
     const day = days[idx]!;
@@ -330,75 +387,95 @@ export async function buildAndSaveTravelItineraryPdf(params: {
     const previewParts = dayItems.slice(0, 2).map((it) => shortItineraryTitle(it.type, it.title, it.address));
     const more = count > 2 ? ` (+${count - 2})` : '';
     const summaryCore = `${previewParts.join(' · ')}${more}`;
-    const summaryLine = doc.splitTextToSize(
-      `Day ${idx + 1} · ${day} · ${params.pdfLabels.placesCount(count)} — ${summaryCore}`,
-      contentW - ACCENT_BAR_W - 8,
-    );
+    const summaryText = `Day ${idx + 1} · ${day} · ${params.pdfLabels.placesCount(count)} — ${summaryCore}`;
+    const summaryLine = wrapToWidth(summaryText, summaryMaxW, fonts.body, 9);
 
-    y = ensurePageSpace(doc, y, summaryLine.length * (lineH + 1) + 8, margin, active);
+    y = ensurePageSpace(state, y, summaryLine.length * (lineHmm + 1) + 8);
 
-    doc.setFillColor(241, 245, 249);
-    doc.rect(margin, y - 4, pageW - margin * 2, summaryLine.length * (lineH - 1) + 10, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.2);
-    doc.rect(margin, y - 4, pageW - margin * 2, summaryLine.length * (lineH - 1) + 10, 'S');
+    const rowHmm = summaryLine.length * (lineHmm - 1) + 10;
+    const bgR = mmRectTopLeft(pageHPt, marginMm, y - 4, A4_W_MM - marginMm * 2, rowHmm);
+    state.page.drawRectangle({
+      ...bgR,
+      color: rgb255(241, 245, 249),
+      borderColor: rgb255(226, 232, 240),
+      borderWidth: 0.5,
+    });
+    const accR = mmRectTopLeft(pageHPt, marginMm, y - 4, ACCENT_BAR_W_MM, rowHmm);
+    state.page.drawRectangle({ ...accR, color: rgb255(79, 70, 229) });
 
-    doc.setFillColor(BRAND_R, BRAND_G, BRAND_B);
-    doc.rect(margin, y - 4, ACCENT_BAR_W, summaryLine.length * (lineH - 1) + 10, 'F');
-
-    setBodyFont(doc, active, 9);
-    doc.setTextColor(51, 65, 85);
     let rowY = y;
     for (const ln of summaryLine) {
-      doc.text(ln, margin + ACCENT_BAR_W + 5, rowY);
-      rowY += lineH - 0.5;
+      state.page.drawText(ln, {
+        x: mm(marginMm + ACCENT_BAR_W_MM + 5),
+        y: baselineY(pageHPt, rowY),
+        size: 9,
+        font: fonts.body,
+        color: rgb255(51, 65, 85),
+      });
+      rowY += lineHmm - 0.5;
     }
-    y = rowY + lineH + 2;
+    y = rowY + lineHmm + 2;
   }
 
-  doc.setTextColor(55, 65, 81);
+  state.page = pdfDoc.addPage([pageWPt, pageHPt]);
+  y = marginMm;
 
-  doc.addPage();
-  restoreDefaultBodyStyle(doc, active);
-  y = margin;
-
-  doc.setFillColor(BRAND_R, BRAND_G, BRAND_B);
-  doc.rect(margin, y - 5, ACCENT_BAR_W, 10, 'F');
-  setHeadingFont(doc, active, 14);
-  doc.setTextColor(30, 41, 59);
-  doc.text(params.pdfLabels.detailsTitle, margin + ACCENT_BAR_W + 6, y);
-  y += lineH + 12;
+  const detBar = mmRectTopLeft(pageHPt, marginMm, y - 5, ACCENT_BAR_W_MM, 10);
+  state.page.drawRectangle({ ...detBar, color: rgb255(79, 70, 229) });
+  state.page.drawText(params.pdfLabels.detailsTitle, {
+    x: mm(marginMm + ACCENT_BAR_W_MM + 6),
+    y: baselineY(pageHPt, y),
+    size: 14,
+    font: fonts.heading,
+    color: rgb255(30, 41, 59),
+  });
+  y += lineHmm + 12;
 
   for (let idx = 0; idx < days.length; idx++) {
-    y = ensurePageSpace(doc, y, lineH + 20, margin, active);
+    y = ensurePageSpace(state, y, lineHmm + 20);
     const day = days[idx]!;
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.3);
-    doc.line(margin, y - 4, pageW - margin, y - 4);
-    setHeadingFont(doc, active, 13);
-    doc.setTextColor(30, 41, 59);
-    doc.text(`Day ${idx + 1}  ·  ${day}`, margin, y);
-    y += lineH + 4;
-    doc.setTextColor(55, 65, 81);
-    setBodyFont(doc, active, 10);
+    state.page.drawLine({
+      start: { x: mm(marginMm), y: baselineY(pageHPt, y - 4) },
+      end: { x: pageWPt - mm(marginMm), y: baselineY(pageHPt, y - 4) },
+      thickness: 0.3,
+      color: rgb255(220, 220, 220),
+    });
+    state.page.drawText(`Day ${idx + 1}  ·  ${day}`, {
+      x: mm(marginMm),
+      y: baselineY(pageHPt, y),
+      size: 13,
+      font: fonts.heading,
+      color: rgb255(30, 41, 59),
+    });
+    y += lineHmm + 4;
 
     for (const i of byDay.get(day)!) {
-      y = ensurePageSpace(doc, y, lineH + 8, margin, active);
+      y = ensurePageSpace(state, y, lineHmm + 8);
       const label = params.getTypeLabel(i.type, i.transport_type);
       const timeStr =
         i.start_time || i.end_time ? `  ${i.start_time || '--'} ~ ${i.end_time || '--'}` : '';
       const pdfTitle = shortItineraryTitle(i.type, i.title, i.address);
-      doc.text(`[${label}] ${pdfTitle}${timeStr}`, margin, y);
-      y += lineH;
+      state.page.drawText(`[${label}] ${pdfTitle}${timeStr}`, {
+        x: mm(marginMm),
+        y: baselineY(pageHPt, y),
+        size: 10,
+        font: fonts.body,
+        color: rgb255(55, 65, 81),
+      });
+      y += lineHmm;
       if (i.description && i.description.trim()) {
-        const lines = doc.splitTextToSize(i.description.trim(), pageW - margin * 2 - 8);
-        setBodyFont(doc, active, 9);
+        const lines = wrapToWidth(i.description.trim(), pageWPt - mm(marginMm * 2 + 8), fonts.body, 9);
         for (const line of lines) {
-          y = ensurePageSpace(doc, y, 6, margin, active);
-          doc.text(line, margin + 6, y);
+          y = ensurePageSpace(state, y, 6);
+          state.page.drawText(line, {
+            x: mm(marginMm + 6),
+            y: baselineY(pageHPt, y),
+            size: 9,
+            font: fonts.body,
+            color: rgb255(55, 65, 81),
+          });
           y += 5;
         }
-        setBodyFont(doc, active, 10);
         y += 2;
       }
       y += 2;
@@ -406,5 +483,5 @@ export async function buildAndSaveTravelItineraryPdf(params: {
     y += 6;
   }
 
-  doc.save(`itinerary-${sanitizeFilename(params.trip.title)}.pdf`);
+  triggerDownload(await pdfDoc.save(), `itinerary-${sanitizeFilename(params.trip.title)}.pdf`);
 }
