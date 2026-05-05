@@ -7,6 +7,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
+import { shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
 import { formatCurrencyOptionLabel, getAllowedCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
@@ -37,36 +38,6 @@ import {
 } from '@/lib/feature-attachments-client';
 
 const API_BASE = '/api/v1/travel';
-
-/**
- * 통합 일정·지도 툴팁 등 표시용. DB name/title은 자동완성 전체 줄일 수 있음 (저장 값 불변).
- * - 한글이 앞 구간에 있으면 첫 쉼표 앞을 장소명으로 봄.
- * - 국가·도시가 앞(라틴)이고 구간이 3개 이상이면 마지막 구간(예: 에펠타워)을 표시.
- * - 구간 2개이고 뒤에만 한글이 있으면 뒤 구간 사용.
- */
-function shortItineraryTitle(
-  type: 'accommodation' | 'dining' | 'attraction' | 'transport' | 'other',
-  title: string,
-  address?: string | null,
-): string {
-  const t = (title || '').trim();
-  if (!t) return t;
-  if (type === 'transport' || type === 'other') return t;
-  const addr = typeof address === 'string' ? address.trim() : '';
-  if (!addr) return t;
-  const parts = t.split(',').map((p) => p.trim()).filter(Boolean);
-  if (parts.length < 2) return t;
-
-  const first = parts[0]!;
-  const last = parts[parts.length - 1]!;
-  const hasHangul = (s: string) => /[\uAC00-\uD7A3\u3131-\u3163]/.test(s);
-  const latinishHead = /^[A-Za-zÀ-ÿ0-9\s.'’-]+$/u.test(first);
-
-  if (hasHangul(first)) return first;
-  if (parts.length >= 3 && latinishHead && last) return last;
-  if (parts.length === 2 && hasHangul(last) && !hasHangul(first)) return last;
-  return first;
-}
 
 const TRIP_CURRENCY_OPTIONS = [...getAllowedCurrencyCodes()];
 
@@ -2413,89 +2384,20 @@ export function TravelPlannerContent() {
 
   const downloadItineraryPdf = useCallback(() => {
     if (!selectedTrip) return;
-    import('jspdf').then(({ jsPDF }) => {
-      const doc = new jsPDF();
-      const margin = 20;
-      const pageW = doc.internal.pageSize.getWidth();
-      const lineH = 6;
-      let y = 24;
-
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text(selectedTrip.title, margin, y);
-      y += lineH + 4;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      if (selectedTrip.destination) {
-        doc.text(selectedTrip.destination, margin, y);
-        y += lineH;
-      }
-      doc.text(`${selectedTrip.start_date} ~ ${selectedTrip.end_date}`, margin, y);
-      y += lineH + 10;
-
-      if (sortedItineraries.length === 0) {
-        doc.setFontSize(10);
-        doc.text(uiText.itineraryEmptyForPdf, margin, y);
-        doc.save(`itinerary-${selectedTrip.title.replace(/[^\w\u3131-\uD7A3]/g, '-')}.pdf`);
-        return;
-      }
-
-      type ItineraryItem = typeof sortedItineraries[0];
-      const byDay = new Map<string, ItineraryItem[]>();
-      for (const i of sortedItineraries) {
-        const day = i.day_date || '';
-        if (!byDay.has(day)) byDay.set(day, []);
-        byDay.get(day)!.push(i);
-      }
-      const days = Array.from(byDay.keys()).sort();
-
-      for (let idx = 0; idx < days.length; idx++) {
-        if (y > 265) {
-          doc.addPage();
-          y = 20;
-        }
-        const day = days[idx];
-        doc.setDrawColor(220, 220, 220);
-        doc.setLineWidth(0.3);
-        doc.line(margin, y - 4, pageW - margin, y - 4);
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Day ${idx + 1}  ·  ${day}`, margin, y);
-        y += lineH + 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-
-        for (const i of byDay.get(day)!) {
-          if (y > 272) {
-            doc.addPage();
-            y = 20;
-          }
-          const label = getItineraryTypeLabel(i.type, i.transport_type);
-          const timeStr = (i.start_time || i.end_time) ? `  ${i.start_time || '--'} ~ ${i.end_time || '--'}` : '';
-          const pdfTitle = shortItineraryTitle(i.type, i.title, i.address);
-          doc.text(`[${label}] ${pdfTitle}${timeStr}`, margin, y);
-          y += lineH;
-          if (i.description && i.description.trim()) {
-            const lines = doc.splitTextToSize(i.description.trim(), pageW - margin * 2 - 8);
-            doc.setFontSize(9);
-            for (const line of lines) {
-              if (y > 272) {
-                doc.addPage();
-                y = 20;
-              }
-              doc.text(line, margin + 6, y);
-              y += 5;
-            }
-            doc.setFontSize(10);
-            y += 2;
-          }
-          y += 2;
-        }
-        y += 6;
-      }
-      doc.save(`itinerary-${selectedTrip.title.replace(/[^\w\u3131-\uD7A3]/g, '-')}.pdf`);
-    });
-  }, [selectedTrip, sortedItineraries]);
+    void import('@/lib/modules/travel-planner/itinerary-pdf').then(({ buildAndSaveTravelItineraryPdf }) =>
+      buildAndSaveTravelItineraryPdf({
+        trip: {
+          title: selectedTrip.title,
+          destination: selectedTrip.destination,
+          start_date: selectedTrip.start_date,
+          end_date: selectedTrip.end_date,
+        },
+        items: sortedItineraries,
+        getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
+        emptyItineraryMessage: uiText.itineraryEmptyForPdf,
+      }),
+    );
+  }, [selectedTrip, sortedItineraries, uiText, tt]);
 
   if (!currentGroupId) {
     return (
