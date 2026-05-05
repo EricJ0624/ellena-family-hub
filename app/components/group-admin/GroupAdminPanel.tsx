@@ -428,16 +428,31 @@ export function GroupAdminPanel({
         .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000'])
         .gte('created_at', sevenDaysAgo.toISOString());
 
-      // ???�쎌??????�쎌??????
-      const { count: locationCount } = await supabase
-        .from('user_locations')
-        .select('*', { count: 'exact', head: true })
-        .in('user_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000']);
+      // 현재 위치 공유(active)는 user_locations 잔존 행이 아니라 accepted 요청 기준으로 계산
+      const nowIso = new Date().toISOString();
+      const { data: activeLocationRequests, error: activeLocationRequestsError } = await supabase
+        .from('location_requests')
+        .select('requester_id, target_id, expires_at')
+        .eq('group_id', effectiveGroupId)
+        .eq('status', 'accepted')
+        .or(`expires_at.is.null,expires_at.gte.${nowIso}`);
+
+      if (activeLocationRequestsError) throw activeLocationRequestsError;
+
+      const activeSharedUserIds = new Set<string>();
+      for (const request of activeLocationRequests || []) {
+        if (memberIds.includes(request.requester_id)) {
+          activeSharedUserIds.add(request.requester_id);
+        }
+        if (memberIds.includes(request.target_id)) {
+          activeSharedUserIds.add(request.target_id);
+        }
+      }
 
       setStats({
         totalMembers,
         totalPhotos: photoCount || 0,
-        totalLocations: locationCount || 0,
+        totalLocations: activeSharedUserIds.size,
         recentPhotos: recentPhotoCount || 0,
       });
     } catch (err: any) {
