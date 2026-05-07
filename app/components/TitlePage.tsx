@@ -136,8 +136,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     polaroid_modern: 'left-[14px] right-[14px] top-[14px] bottom-[38px]',
     editorial: 'inset-[10px]',
     gradient_rim: 'inset-[12px]',
+    no_frame: 'inset-0',
   };
-  const useCoverImage = frameStyle === 'polaroid_modern' || frameStyle === 'editorial';
+  const useCoverImage =
+    frameStyle === 'polaroid_modern' ||
+    frameStyle === 'editorial' ||
+    frameStyle === 'no_frame';
   const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
   
   useEffect(() => {
@@ -169,7 +173,13 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
         {/* 내부 사진 영역 (매트 제거 → 사진이 액자에 꽉 차게) */}
         <div
-          className={cn('absolute overflow-hidden rounded', frameInsetClass[frameStyle])}
+          className={cn(
+            'absolute overflow-hidden',
+            frameStyle === 'no_frame'
+              ? 'rounded-[2rem] border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium'
+              : 'rounded',
+            frameInsetClass[frameStyle],
+          )}
         >
           {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
           <div

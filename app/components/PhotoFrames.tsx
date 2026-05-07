@@ -12,7 +12,8 @@ export type FrameStyle =
   | 'soft_glass'
   | 'polaroid_modern'
   | 'editorial'
-  | 'gradient_rim';
+  | 'gradient_rim'
+  | 'no_frame';
 
 export interface FrameConfig {
   id: FrameStyle;
@@ -80,6 +81,12 @@ export const FRAME_CONFIGS: FrameConfig[] = [
     name: '그라디언트 림',
     description: '얇은 컬러 림으로 포인트를 준 스타일',
     color: '#a78bfa',
+  },
+  {
+    id: 'no_frame',
+    name: '프레임 없음',
+    description: '대시보드 위젯과 동일한 카드 스타일',
+    color: '#94a3b8',
   },
 ];
 
@@ -376,6 +383,9 @@ const EditorialFrame: React.FC<{ color: string; uid: string }> = ({ color }) => 
   );
 };
 
+// 프레임 없음(위젯 카드 스타일) - 컨테이너에서 글래스 토큰을 직접 적용하므로 SVG는 비움
+const NoFrame: React.FC<{ color: string; uid: string }> = () => null;
+
 // 그라디언트 림 스타일 프레임 SVG
 const GradientRimFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
@@ -414,6 +424,7 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
     polaroid_modern: PolaroidModernFrame,
     editorial: EditorialFrame,
     gradient_rim: GradientRimFrame,
+    no_frame: NoFrame,
   }[frameStyle];
 
   return <FrameComponent color={frameColor} uid={uid} />;

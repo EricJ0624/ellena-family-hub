@@ -15,6 +15,7 @@ export type TitlePageTranslations = {
   frame_polaroid_modern: string;
   frame_editorial: string;
   frame_gradient_rim: string;
+  frame_no_frame: string;
   frame_baroque_desc: string;
   frame_ornate_desc: string;
   frame_vintage_desc: string;
@@ -24,6 +25,7 @@ export type TitlePageTranslations = {
   frame_polaroid_modern_desc: string;
   frame_editorial_desc: string;
   frame_gradient_rim_desc: string;
+  frame_no_frame_desc: string;
   font_inter: string;
   font_roboto: string;
   font_poppins: string;
@@ -66,6 +68,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: '폴라로이드 모던',
     frame_editorial: '에디토리얼',
     frame_gradient_rim: '그라디언트 림',
+    frame_no_frame: '프레임 없음',
     frame_baroque_desc: '화려하고 장식적인 클래식 프레임',
     frame_ornate_desc: '정교한 조각 패턴의 고급 프레임',
     frame_vintage_desc: '우아한 빈티지 스타일 프레임',
@@ -75,6 +78,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '하단 여백이 강조된 미니멀 폴라로이드',
     frame_editorial_desc: '거의 무프레임에 가까운 세련된 스타일',
     frame_gradient_rim_desc: '얇은 컬러 림으로 포인트를 준 스타일',
+    frame_no_frame_desc: '대시보드 위젯과 동일한 카드 스타일',
     font_inter: 'Inter (모던)',
     font_roboto: 'Roboto (깔끔)',
     font_poppins: 'Poppins (세련)',
@@ -115,6 +119,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'Polaroid Modern',
     frame_editorial: 'Editorial',
     frame_gradient_rim: 'Gradient Rim',
+    frame_no_frame: 'No Frame',
     frame_baroque_desc: 'Ornate classic frame',
     frame_ornate_desc: 'Intricate carved pattern frame',
     frame_vintage_desc: 'Elegant vintage-style frame',
@@ -124,6 +129,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: 'Minimal polaroid with emphasized bottom margin',
     frame_editorial_desc: 'Sleek near-frameless editorial look',
     frame_gradient_rim_desc: 'Thin gradient rim accent style',
+    frame_no_frame_desc: 'Matches the dashboard widget card style',
     font_inter: 'Inter (Modern)',
     font_roboto: 'Roboto (Clean)',
     font_poppins: 'Poppins (Refined)',
@@ -164,6 +170,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'ポラロイドモダン',
     frame_editorial: 'エディトリアル',
     frame_gradient_rim: 'グラデーションリム',
+    frame_no_frame: 'フレームなし',
     frame_baroque_desc: '華やかなクラシックフレーム',
     frame_ornate_desc: '精巧な彫刻パターンの高級フレーム',
     frame_vintage_desc: 'エレガントなヴィンテージスタイル',
@@ -173,6 +180,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '下余白を強調したミニマルポラロイド',
     frame_editorial_desc: 'ほぼフレームレスな洗練スタイル',
     frame_gradient_rim_desc: '細いグラデーション縁のアクセント',
+    frame_no_frame_desc: 'ダッシュボードのウィジェットと同じカードスタイル',
     font_inter: 'Inter (モダン)',
     font_roboto: 'Roboto (クリーン)',
     font_poppins: 'Poppins (上品)',
@@ -213,6 +221,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: '现代拍立得',
     frame_editorial: '编辑风',
     frame_gradient_rim: '渐变边框',
+    frame_no_frame: '无相框',
     frame_baroque_desc: '华丽装饰经典相框',
     frame_ornate_desc: '精美雕刻图案高级相框',
     frame_vintage_desc: '优雅复古风格相框',
@@ -222,6 +231,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '底部留白更明显的极简拍立得',
     frame_editorial_desc: '接近无边框的编辑风格',
     frame_gradient_rim_desc: '细渐变边框点缀风格',
+    frame_no_frame_desc: '与仪表盘小组件相同的卡片样式',
     font_inter: 'Inter (现代)',
     font_roboto: 'Roboto (简洁)',
     font_poppins: 'Poppins (精致)',
@@ -262,6 +272,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: '現代拍立得',
     frame_editorial: '編輯風',
     frame_gradient_rim: '漸層邊框',
+    frame_no_frame: '無相框',
     frame_baroque_desc: '華麗裝飾經典相框',
     frame_ornate_desc: '精美雕刻圖案高級相框',
     frame_vintage_desc: '優雅復古風格相框',
@@ -271,6 +282,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '底部留白更明顯的極簡拍立得',
     frame_editorial_desc: '接近無邊框的編輯風格',
     frame_gradient_rim_desc: '細漸層邊框點綴風格',
+    frame_no_frame_desc: '與儀表板小工具相同的卡片樣式',
     font_inter: 'Inter (現代)',
     font_roboto: 'Roboto (簡潔)',
     font_poppins: 'Poppins (精緻)',
