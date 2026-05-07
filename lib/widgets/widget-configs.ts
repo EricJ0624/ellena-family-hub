@@ -4,10 +4,17 @@ import { supabase } from '@/lib/supabase';
 import {
   DASHBOARD_WIDGET_KEYS,
   DEFAULT_WIDGET_CONFIGS,
+  parseWidgetSize,
   type DashboardWidgetKey,
   type WidgetConfigDraft,
   type WidgetConfigRow,
 } from './types';
+
+function clampInt(n: number, min: number, max: number): number {
+  const x = Math.floor(Number(n));
+  if (!Number.isFinite(x)) return min;
+  return Math.min(max, Math.max(min, x));
+}
 
 function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
@@ -15,20 +22,30 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
 
   return DEFAULT_WIDGET_CONFIGS.map((base) => {
     const found = rowMap.get(base.widget_key);
-    return found
-      ? {
-          widget_key: found.widget_key,
-          is_enabled: found.is_enabled,
-          display_order: found.display_order,
-        }
-      : base;
-  }).sort((a, b) => a.display_order - b.display_order);
+    if (!found) return { ...base };
+    return {
+      widget_key: found.widget_key,
+      is_enabled: found.is_enabled,
+      display_order: found.display_order,
+      size: parseWidgetSize(found.size),
+      colSpan: clampInt(found.col_span, 1, 4),
+      rowSpan: clampInt(found.row_span, 1, 6),
+      minW: found.min_w,
+      minH: found.min_h,
+      priority: clampInt(found.priority, -9999, 9999),
+    };
+  }).sort((a, b) => {
+    if (a.display_order !== b.display_order) return a.display_order - b.display_order;
+    return b.priority - a.priority;
+  });
 }
 
 export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDraft[]> {
   const { data, error } = await supabase
     .from('widget_configs')
-    .select('id,group_id,widget_key,is_enabled,display_order')
+    .select(
+      'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority',
+    )
     .eq('group_id', groupId)
     .order('display_order', { ascending: true });
 
@@ -48,6 +65,12 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
     widget_key: c.widget_key,
     is_enabled: c.is_enabled,
     display_order: c.display_order,
+    size: c.size,
+    col_span: c.colSpan,
+    row_span: c.rowSpan,
+    min_w: c.minW,
+    min_h: c.minH,
+    priority: c.priority,
   }));
 
   const { error } = await supabase.from('widget_configs').upsert(missingRows, {
@@ -67,6 +90,12 @@ export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDra
       widget_key: d.widget_key,
       is_enabled: d.is_enabled,
       display_order: (idx + 1) * 10,
+      size: d.size,
+      col_span: clampInt(d.colSpan, 1, 4),
+      row_span: clampInt(d.rowSpan, 1, 6),
+      min_w: d.minW,
+      min_h: d.minH,
+      priority: clampInt(d.priority, -9999, 9999),
     }));
 
   const { error } = await supabase.from('widget_configs').upsert(normalized, {
@@ -74,4 +103,3 @@ export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDra
   });
   if (error) throw error;
 }
-

@@ -51,6 +51,15 @@ export type GroupAdminTranslations = {
   widgets_error_save: string;
   widgets_no_group: string;
   widgets_owner_only: string;
+  widgets_size_label: string;
+  widgets_size_hint: string;
+  widgets_size_S: string;
+  widgets_size_M: string;
+  widgets_size_L: string;
+  widgets_size_XL: string;
+  widgets_advanced_layout: string;
+  widgets_col_span: string;
+  widgets_row_span: string;
   active_theme: string;
   theme_default_short: string;
   theme_stable_glass_short: string;
@@ -108,6 +117,15 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: '위젯 설정 저장에 실패했습니다.',
     widgets_no_group: '선택된 그룹이 없습니다.',
     widgets_owner_only: '그룹 소유자만 위젯을 편집할 수 있습니다.',
+    widgets_size_label: '표시 크기',
+    widgets_size_hint: '넓은 화면에서 그리드로 배치됩니다. 좁은 화면에서는 자동으로 줄어듭니다.',
+    widgets_size_S: 'S (작게)',
+    widgets_size_M: 'M (기본)',
+    widgets_size_L: 'L (넓게)',
+    widgets_size_XL: 'XL (넓게·높게)',
+    widgets_advanced_layout: '칸(span) 직접 지정',
+    widgets_col_span: '가로 span',
+    widgets_row_span: '세로 span',
     active_theme: '현재 테마',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -163,6 +181,15 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: 'Failed to save widget settings.',
     widgets_no_group: 'No group selected.',
     widgets_owner_only: 'Only the group owner can edit widgets.',
+    widgets_size_label: 'Display size',
+    widgets_size_hint: 'Uses the dashboard grid on wide screens; narrows automatically on small screens.',
+    widgets_size_S: 'S (compact)',
+    widgets_size_M: 'M (default)',
+    widgets_size_L: 'L (wide)',
+    widgets_size_XL: 'XL (wide & tall)',
+    widgets_advanced_layout: 'Custom span',
+    widgets_col_span: 'Column span',
+    widgets_row_span: 'Row span',
     active_theme: 'Active theme',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -218,6 +245,15 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: 'ウィジェット設定の保存に失敗しました。',
     widgets_no_group: 'グループが選択されていません。',
     widgets_owner_only: 'グループオーナーのみ編集できます。',
+    widgets_size_label: '表示サイズ',
+    widgets_size_hint: '広い画面ではグリッドで配置されます。狭い画面では自動的に縮みます。',
+    widgets_size_S: 'S（小）',
+    widgets_size_M: 'M（標準）',
+    widgets_size_L: 'L（広め）',
+    widgets_size_XL: 'XL（広め・高め）',
+    widgets_advanced_layout: 'span を直接指定',
+    widgets_col_span: '横 span',
+    widgets_row_span: '縦 span',
     active_theme: '現在のテーマ',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -273,6 +309,15 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: '保存小组件设置失败。',
     widgets_no_group: '未选择群组。',
     widgets_owner_only: '仅群主可编辑小组件。',
+    widgets_size_label: '显示大小',
+    widgets_size_hint: '宽屏使用网格布局；窄屏会自动收缩。',
+    widgets_size_S: 'S（紧凑）',
+    widgets_size_M: 'M（默认）',
+    widgets_size_L: 'L（宽）',
+    widgets_size_XL: 'XL（宽且高）',
+    widgets_advanced_layout: '自定义 span',
+    widgets_col_span: '列 span',
+    widgets_row_span: '行 span',
     active_theme: '当前主题',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -328,6 +373,15 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_error_save: '儲存小工具設定失敗。',
     widgets_no_group: '未選擇群組。',
     widgets_owner_only: '僅群組擁有者可編輯小工具。',
+    widgets_size_label: '顯示大小',
+    widgets_size_hint: '寬螢幕使用網格版面；窄螢幕會自動縮小。',
+    widgets_size_S: 'S（緊湊）',
+    widgets_size_M: 'M（預設）',
+    widgets_size_L: 'L（較寬）',
+    widgets_size_XL: 'XL（較寬·較高）',
+    widgets_advanced_layout: '自訂 span',
+    widgets_col_span: '欄 span',
+    widgets_row_span: '列 span',
     active_theme: '目前主題',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',

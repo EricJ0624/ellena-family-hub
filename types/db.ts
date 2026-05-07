@@ -1045,6 +1045,61 @@ export interface Database {
           }
         ]
       }
+      widget_configs: {
+        Row: {
+          id: string
+          group_id: string
+          widget_key: 'tasks' | 'calendar' | 'chat' | 'location' | 'album' | 'travel' | 'piggy'
+          is_enabled: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+          size: 'S' | 'M' | 'L' | 'XL'
+          col_span: number
+          row_span: number
+          min_w: number | null
+          min_h: number | null
+          priority: number
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          widget_key: 'tasks' | 'calendar' | 'chat' | 'location' | 'album' | 'travel' | 'piggy'
+          is_enabled?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+          size?: 'S' | 'M' | 'L' | 'XL'
+          col_span?: number
+          row_span?: number
+          min_w?: number | null
+          min_h?: number | null
+          priority?: number
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          widget_key?: 'tasks' | 'calendar' | 'chat' | 'location' | 'album' | 'travel' | 'piggy'
+          is_enabled?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+          size?: 'S' | 'M' | 'L' | 'XL'
+          col_span?: number
+          row_span?: number
+          min_w?: number | null
+          min_h?: number | null
+          priority?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'widget_configs_group_id_fkey'
+            columns: ['group_id']
+            referencedRelation: 'groups'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       family_messages: {
         Row: {
           id: string

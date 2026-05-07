@@ -63,6 +63,8 @@ import {
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
+import { useDashboardColumnCount } from '@/lib/widgets/use-dashboard-columns';
+import { resolveWidgetGridSpans } from '@/lib/widgets/grid';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -5362,6 +5364,19 @@ export default function FamilyHub() {
     };
   }, [currentGroupId, groupIsOwner]);
 
+  const dashboardColumnCount = useDashboardColumnCount();
+
+  const orderedWidgets = useMemo(
+    () =>
+      [...widgetConfigs]
+        .filter((cfg) => cfg.is_enabled)
+        .sort((a, b) => {
+          if (a.display_order !== b.display_order) return a.display_order - b.display_order;
+          return b.priority - a.priority;
+        }),
+    [widgetConfigs],
+  );
+
   // --- [RENDER] ---
 
   if (!isMounted) return null; // Hydration mismatch 방지
@@ -5379,11 +5394,6 @@ export default function FamilyHub() {
   const isGroupLoading = groupLoading && !currentGroupId;
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
-
-  const orderedWidgetKeys = widgetConfigs
-    .filter((cfg) => cfg.is_enabled)
-    .sort((a, b) => a.display_order - b.display_order)
-    .map((cfg) => cfg.widget_key);
 
   const renderWidgetSection = (widgetKey: DashboardWidgetKey) => {
     switch (widgetKey) {
@@ -5873,11 +5883,25 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div className="sections-container">
-          {orderedWidgetKeys.map((widgetKey) => (
-            <React.Fragment key={widgetKey}>{renderWidgetSection(widgetKey)}</React.Fragment>
-          ))}
+          <div className="grid min-w-0 grid-cols-1 auto-rows-min gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {orderedWidgets.map((cfg) => {
+              const { colSpan, rowSpan } = resolveWidgetGridSpans(cfg, dashboardColumnCount);
+              return (
+                <div
+                  key={cfg.widget_key}
+                  className="min-w-0"
+                  style={{
+                    gridColumn: `span ${colSpan} / span ${colSpan}`,
+                    gridRow: `span ${rowSpan} / span ${rowSpan}`,
+                  }}
+                >
+                  {renderWidgetSection(cfg.widget_key)}
+                </div>
+              );
+            })}
+          </div>
 
-        <FamilyLocationRequestModal
+          <FamilyLocationRequestModal
           open={showLocationRequestModal}
           userId={userId}
           loadingUsers={loadingUsers}
