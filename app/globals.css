@@ -116,37 +116,73 @@
 }
 
 :root[data-ui-theme='highend_glass'] {
-  --app-shell-inner-bg: linear-gradient(140deg, #eef4ff 0%, #d8e7ff 45%, #f4e8ff 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 10% 0%, #c7dcff 0%, #dfe9f8 50%, #edf3ff 100%);
-  --glass-soft-bg: rgba(255, 255, 255, 0.64);
-  --glass-medium-bg: rgba(255, 255, 255, 0.72);
+  /* 보라·인디고·로즈 — stable(민트·틸) 계열과 분리 */
+  --app-shell-inner-bg: linear-gradient(135deg, #faf5ff 0%, #ede9fe 32%, #dbeafe 68%, #fce7f3 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 10% 0%, #e9d5ff 0%, #c4b5fd 26%, #bfdbfe 58%, #fbcfe8 100%);
+  --glass-soft-bg: rgba(255, 255, 255, 0.58);
+  --glass-medium-bg: rgba(255, 255, 255, 0.7);
   --glass-strong-bg: rgba(255, 255, 255, 0.82);
-  --glass-soft-blur: 20px;
-  --glass-medium-blur: 28px;
-  --glass-strong-blur: 36px;
-  --glass-soft-border: rgba(255, 255, 255, 0.72);
-  --glass-medium-border: rgba(255, 255, 255, 0.82);
-  --glass-strong-border: rgba(255, 255, 255, 0.9);
-  --glass-soft-shadow: 0 14px 36px rgba(37, 99, 235, 0.14);
-  --glass-medium-shadow: 0 24px 58px rgba(79, 70, 229, 0.2);
-  --glass-strong-shadow: 0 30px 70px rgba(109, 40, 217, 0.24);
-}
-
-.dark[data-ui-theme='highend_glass'] {
-  --app-shell-inner-bg: linear-gradient(140deg, #090f1f 0%, #131b34 42%, #24153a 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 12% 8%, #2d3d69 0%, #18233f 42%, #0b1220 100%);
-  --glass-soft-bg: rgba(15, 23, 42, 0.56);
-  --glass-medium-bg: rgba(15, 23, 42, 0.64);
-  --glass-strong-bg: rgba(15, 23, 42, 0.74);
   --glass-soft-blur: 22px;
   --glass-medium-blur: 30px;
   --glass-strong-blur: 38px;
-  --glass-soft-border: rgba(148, 163, 184, 0.34);
-  --glass-medium-border: rgba(165, 180, 252, 0.42);
-  --glass-strong-border: rgba(196, 181, 253, 0.5);
-  --glass-soft-shadow: 0 16px 40px rgba(2, 6, 23, 0.42);
-  --glass-medium-shadow: 0 26px 62px rgba(2, 6, 23, 0.5);
-  --glass-strong-shadow: 0 34px 78px rgba(2, 6, 23, 0.58);
+  --glass-soft-border: rgba(255, 255, 255, 0.68);
+  --glass-medium-border: rgba(255, 255, 255, 0.82);
+  --glass-strong-border: rgba(255, 255, 255, 0.92);
+  --glass-soft-shadow: 0 14px 38px rgba(91, 33, 182, 0.16);
+  --glass-medium-shadow: 0 26px 62px rgba(79, 70, 229, 0.22);
+  --glass-strong-shadow: 0 34px 76px rgba(124, 58, 237, 0.26);
+}
+
+.dark[data-ui-theme='highend_glass'] {
+  --app-shell-inner-bg: linear-gradient(135deg, #0b0618 0%, #1e1b4b 42%, #312e81 78%, #4c1d95 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 12% 8%, #5b21b6 0%, #312e81 38%, #0f172a 100%);
+  --glass-soft-bg: rgba(15, 23, 42, 0.54);
+  --glass-medium-bg: rgba(15, 23, 42, 0.64);
+  --glass-strong-bg: rgba(15, 23, 42, 0.76);
+  --glass-soft-blur: 22px;
+  --glass-medium-blur: 30px;
+  --glass-strong-blur: 38px;
+  --glass-soft-border: rgba(167, 139, 250, 0.32);
+  --glass-medium-border: rgba(196, 181, 253, 0.42);
+  --glass-strong-border: rgba(216, 180, 254, 0.52);
+  --glass-soft-shadow: 0 16px 42px rgba(49, 46, 129, 0.38);
+  --glass-medium-shadow: 0 26px 64px rgba(76, 29, 149, 0.45);
+  --glass-strong-shadow: 0 34px 80px rgba(15, 23, 42, 0.55);
+}
+
+:root[data-ui-theme='stable_glass'] {
+  /* 민트·틸·하늘 — default(슬레이트 그레이) / highend(바이올렛) 와 분리 */
+  --app-shell-inner-bg: linear-gradient(135deg, #ecfdf5 0%, #ccfbf1 38%, #e0f2fe 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 18% 12%, #f0fdf4 0%, #5eead4 32%, #64748b 100%);
+  --glass-soft-bg: rgba(255, 255, 255, 0.56);
+  --glass-medium-bg: rgba(255, 255, 255, 0.66);
+  --glass-strong-bg: rgba(255, 255, 255, 0.78);
+  --glass-soft-blur: 15px;
+  --glass-medium-blur: 22px;
+  --glass-strong-blur: 30px;
+  --glass-soft-border: rgba(255, 255, 255, 0.58);
+  --glass-medium-border: rgba(255, 255, 255, 0.72);
+  --glass-strong-border: rgba(255, 255, 255, 0.84);
+  --glass-soft-shadow: 0 12px 34px rgba(13, 148, 136, 0.14);
+  --glass-medium-shadow: 0 20px 52px rgba(13, 148, 136, 0.18);
+  --glass-strong-shadow: 0 28px 64px rgba(15, 118, 110, 0.22);
+}
+
+.dark[data-ui-theme='stable_glass'] {
+  --app-shell-inner-bg: linear-gradient(135deg, #071815 0%, #134e4a 48%, #155e75 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 15% 10%, #115e59 0%, #0f172a 58%);
+  --glass-soft-bg: rgba(15, 23, 42, 0.5);
+  --glass-medium-bg: rgba(15, 23, 42, 0.62);
+  --glass-strong-bg: rgba(15, 23, 42, 0.74);
+  --glass-soft-blur: 18px;
+  --glass-medium-blur: 24px;
+  --glass-strong-blur: 32px;
+  --glass-soft-border: rgba(45, 212, 191, 0.28);
+  --glass-medium-border: rgba(94, 234, 212, 0.34);
+  --glass-strong-border: rgba(153, 246, 228, 0.42);
+  --glass-soft-shadow: 0 14px 38px rgba(2, 44, 34, 0.45);
+  --glass-medium-shadow: 0 22px 56px rgba(2, 44, 34, 0.52);
+  --glass-strong-shadow: 0 30px 68px rgba(2, 44, 34, 0.58);
 }
 
 /* Original baseline before glass theme variants */
@@ -179,16 +215,9 @@ html {
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  background: var(--app-shell-inner-bg);
-  font-family: 'Pretendard', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: clip;
-  overscroll-behavior-x: none;
-  width: 100%;
-  max-width: 100vw;
+  @apply m-0 w-full max-w-[100vw] overflow-x-clip overscroll-x-none bg-app-shell-inner p-0 antialiased;
   touch-action: pan-y pinch-zoom;
+  font-family: 'Pretendard', sans-serif;
 }
 
 /*
@@ -217,11 +246,7 @@ select {
 
 @media (min-width: 768px) {
   body {
-    background: var(--app-shell-outer-bg);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    @apply flex min-h-screen items-center justify-center bg-app-shell-outer;
   }
 }
 
@@ -297,13 +322,7 @@ select {
 @layer components {
   /* App Container - Flexbox 기반 메인 ?�이?�웃 */
 .app-container {
-    width: 100%;
-    min-height: 100dvh;
-    background: var(--app-shell-inner-bg);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
+    @apply flex min-h-dvh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
   }
 
   @media (min-width: 768px) {
@@ -449,51 +468,26 @@ select {
   /* ============================================
      Content Section - 공통 ?�션 ?��???     ============================================ */
 .content-section {
-  width: 100%;
+  @apply flex w-full flex-col border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium;
   padding: var(--spacing-lg);
-  background: var(--glass-medium-bg);
-  -webkit-backdrop-filter: blur(var(--glass-medium-blur));
-  backdrop-filter: blur(var(--glass-medium-blur));
   border-radius: var(--border-radius-xl);
-  box-shadow: var(--glass-medium-shadow);
-  border: 1px solid var(--glass-medium-border);
-  display: flex;
-  flex-direction: column;
   animation: fadeIn 0.4s ease-out forwards;
 }
 
 /* Glass Panel Presets - Phase 1 */
 .glass-panel {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
+  @apply relative isolate overflow-hidden border border-glass-medium shadow-glass-medium backdrop-blur-glass-medium;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.28), transparent 55%), var(--glass-medium-bg);
-  -webkit-backdrop-filter: blur(var(--glass-medium-blur));
-  backdrop-filter: blur(var(--glass-medium-blur));
-  border: 1px solid var(--glass-medium-border);
-  box-shadow: var(--glass-medium-shadow);
 }
 
 .glass-panel-soft {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
+  @apply relative isolate overflow-hidden border border-glass-soft shadow-glass-soft backdrop-blur-glass-soft;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), transparent 60%), var(--glass-soft-bg);
-  -webkit-backdrop-filter: blur(var(--glass-soft-blur));
-  backdrop-filter: blur(var(--glass-soft-blur));
-  border: 1px solid var(--glass-soft-border);
-  box-shadow: var(--glass-soft-shadow);
 }
 
 .glass-panel-strong {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
+  @apply relative isolate overflow-hidden border border-glass-strong shadow-glass-strong backdrop-blur-glass-strong;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.35), transparent 55%), var(--glass-strong-bg);
-  -webkit-backdrop-filter: blur(var(--glass-strong-blur));
-  backdrop-filter: blur(var(--glass-strong-blur));
-  border: 1px solid var(--glass-strong-border);
-  box-shadow: var(--glass-strong-shadow);
 }
 
 .glass-panel-interactive {
@@ -539,45 +533,22 @@ select {
    Modal
    ============================================ */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 60;
-  background-color: var(--glass-overlay-bg);
-  -webkit-backdrop-filter: blur(var(--glass-medium-blur));
-  backdrop-filter: blur(var(--glass-medium-blur));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply fixed inset-0 z-[60] flex items-center justify-center bg-glass-overlay backdrop-blur-glass-medium;
   padding: var(--spacing-lg);
 }
 
 .modal-content {
-  width: 100%;
-  max-width: 350px;
+  @apply w-full max-w-[350px] border border-glass-strong bg-glass-strong shadow-glass-strong backdrop-blur-glass-strong;
   padding: var(--spacing-2xl);
-  background: var(--glass-strong-bg);
-  -webkit-backdrop-filter: blur(var(--glass-strong-blur));
-  backdrop-filter: blur(var(--glass-strong-blur));
   border-radius: var(--border-radius-xl);
-  box-shadow: var(--glass-strong-shadow);
-  border: 1px solid var(--glass-strong-border);
 }
 
 .glass-overlay {
-  background-color: var(--glass-overlay-bg);
-  -webkit-backdrop-filter: blur(var(--glass-medium-blur));
-  backdrop-filter: blur(var(--glass-medium-blur));
+  @apply bg-glass-overlay backdrop-blur-glass-medium;
 }
 
 .glass-modal-panel {
-  background: var(--glass-strong-bg);
-  -webkit-backdrop-filter: blur(var(--glass-strong-blur));
-  backdrop-filter: blur(var(--glass-strong-blur));
-  border: 1px solid var(--glass-strong-border);
-  box-shadow: var(--glass-strong-shadow);
+  @apply border border-glass-strong bg-glass-strong shadow-glass-strong backdrop-blur-glass-strong;
 }
 
 .modal-title {

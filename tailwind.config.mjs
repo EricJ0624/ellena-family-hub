@@ -48,6 +48,32 @@ export default {
         border: "rgb(var(--border) / <alpha-value>)",
         input: "rgb(var(--input) / <alpha-value>)",
         ring: "rgb(var(--ring) / <alpha-value>)",
+        glass: {
+          DEFAULT: "var(--glass-bg)",
+          soft: "var(--glass-soft-bg)",
+          medium: "var(--glass-medium-bg)",
+          strong: "var(--glass-strong-bg)",
+          overlay: "var(--glass-overlay-bg)",
+        },
+      },
+      backgroundImage: {
+        "app-shell-inner": "var(--app-shell-inner-bg)",
+        "app-shell-outer": "var(--app-shell-outer-bg)",
+      },
+      borderColor: {
+        "glass-soft": "var(--glass-soft-border)",
+        "glass-medium": "var(--glass-medium-border)",
+        "glass-strong": "var(--glass-strong-border)",
+      },
+      boxShadow: {
+        "glass-soft": "var(--glass-soft-shadow)",
+        "glass-medium": "var(--glass-medium-shadow)",
+        "glass-strong": "var(--glass-strong-shadow)",
+      },
+      backdropBlur: {
+        "glass-soft": "var(--glass-soft-blur)",
+        "glass-medium": "var(--glass-medium-blur)",
+        "glass-strong": "var(--glass-strong-blur)",
       },
     },
   },
