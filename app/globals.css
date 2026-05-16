@@ -333,6 +333,16 @@ select {
       border: 12px solid #1e293b;
       box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.4);
     }
+
+    /* PC 앱·전체 창 대시보드 (data-shell=desktop) */
+    .app-container[data-shell='desktop'] {
+      width: 100%;
+      max-width: 72rem;
+      min-height: min(100dvh, 100vh);
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
   }
 
   /* Main Content - Flexbox 컨테?�너 */

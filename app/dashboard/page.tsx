@@ -63,7 +63,7 @@ import {
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
-import { useDashboardColumnCount } from '@/lib/widgets/use-dashboard-columns';
+import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import { resolveWidgetGridSpans } from '@/lib/widgets/grid';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
@@ -5364,7 +5364,9 @@ export default function FamilyHub() {
     };
   }, [currentGroupId, groupIsOwner]);
 
-  const dashboardColumnCount = useDashboardColumnCount();
+  const dashboardGridRef = useRef<HTMLDivElement>(null);
+  const { columnCount: dashboardColumnCount, shell: dashboardShell } =
+    useDashboardGridLayout(dashboardGridRef);
 
   const orderedWidgets = useMemo(
     () =>
@@ -5693,7 +5695,7 @@ export default function FamilyHub() {
     realtimeSubscriptionEpoch > 0 ? realtimeSubscriptionEpoch : realtimeBootstrapIdRef.current;
 
   return (
-    <div className="app-container">
+    <div className="app-container" data-shell={dashboardShell}>
 
       {/* Nickname Modal */}
       {isNicknameModalOpen && (
@@ -5882,8 +5884,14 @@ export default function FamilyHub() {
 
 
         {/* Content Sections Container */}
-        <div className="sections-container">
-          <div className="grid min-w-0 grid-cols-1 auto-rows-min gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
+          <div
+            className="grid min-w-0 auto-rows-min gap-6"
+            style={{
+              gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
+              gridAutoFlow: 'row dense',
+            }}
+          >
             {orderedWidgets.map((cfg) => {
               const { colSpan, rowSpan } = resolveWidgetGridSpans(cfg, dashboardColumnCount);
               return (

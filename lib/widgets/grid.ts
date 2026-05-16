@@ -1,11 +1,26 @@
 import type { WidgetConfigDraft } from './types';
+import type { DashboardShell } from './layout-shell';
 
-/** Tailwind 그리드와 동일: 기본 1열 · sm 2 · lg 3 · xl 4 */
-export function getDashboardColumnCount(width: number): number {
-  if (width >= 1280) return 4;
-  if (width >= 1024) return 3;
-  if (width >= 640) return 2;
+/** PC 웹 프리뷰(430px 프레임) 안에서는 모바일과 같이 1열만 사용 */
+const WEB_PREVIEW_MAX_COLUMNS = 1;
+
+/** 컨테이너 실측 너비 기준 열 수 (모바일·PC 앱 공통 breakpoint) */
+export function getDashboardColumnCountFromWidth(width: number): number {
+  const w = Math.max(0, Math.floor(width));
+  if (w >= 1280) return 4;
+  if (w >= 1024) return 3;
+  if (w >= 640) return 2;
   return 1;
+}
+
+/**
+ * 쉘·실측 너비로 그리드 열 수 결정.
+ * 뷰포트가 아닌 위젯 그리드 컨테이너 너비를 넘겨야 PC 430px 프레임 버그가 나지 않음.
+ */
+export function getDashboardColumnCount(contentWidth: number, shell: DashboardShell): number {
+  const cols = getDashboardColumnCountFromWidth(contentWidth);
+  if (shell === 'web-preview') return Math.min(cols, WEB_PREVIEW_MAX_COLUMNS);
+  return cols;
 }
 
 export function clampGridSpan(span: number, max: number): number {
