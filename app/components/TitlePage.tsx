@@ -69,7 +69,7 @@ interface DailyPhotoFrameProps {
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   photos,
   onShuffle,
-  frameStyle = 'baroque',
+  frameStyle = 'no_frame',
   onFrameChange,
   onFrameClick,
 }) => {
@@ -690,7 +690,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [showEditor, setShowEditor] = useState(false);
-  const [frameStyle, setFrameStyle] = useState<FrameStyle>('baroque');
+  const [frameStyle, setFrameStyle] = useState<FrameStyle>('no_frame');
   const [internalTitleStyle, setInternalTitleStyle] = useState<TitleStyle>({
     content: title || ct('app_title'),
     color: '#9333ea',
