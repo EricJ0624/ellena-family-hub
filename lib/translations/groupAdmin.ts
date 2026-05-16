@@ -33,6 +33,7 @@ export type GroupAdminTranslations = {
   alert_reason_required: string;
   request_created: string;
   error_request_create: string;
+  error_access_requests_load: string;
   confirm_cancel_request: string;
   request_cancelled: string;
   error_request_cancel: string;
@@ -64,6 +65,82 @@ export type GroupAdminTranslations = {
   theme_default_short: string;
   theme_stable_glass_short: string;
   theme_highend_glass_short: string;
+  page_title: string;
+  select_admin_group: string;
+  tab_dashboard: string;
+  tab_members: string;
+  tab_settings: string;
+  tab_content: string;
+  tab_support: string;
+  tab_member_support: string;
+  tab_access_requests: string;
+  tab_piggy_archives: string;
+  stats_title: string;
+  stat_total_members: string;
+  stat_total_photos: string;
+  stat_location_sharing: string;
+  stat_recent_photos_7d: string;
+  content_section_photos: string;
+  content_section_locations: string;
+  announcement_unread_badge: string;
+  auth_required: string;
+  error_stats_load: string;
+  error_photos_load: string;
+  error_locations_load: string;
+  error_announcements_load: string;
+  error_announcements_mark_read: string;
+  error_support_load: string;
+  support_section_title: string;
+  support_section_intro: string;
+  support_new_ticket_btn: string;
+  answer_prefix: string;
+  thread_role_follow_up: string;
+  thread_role_system_reply: string;
+  thread_role_admin_reply: string;
+  thread_role_previous_reply: string;
+  follow_up_btn: string;
+  confirm_delete_support_ticket: string;
+  error_delete_failed: string;
+  ticket_compose_title: string;
+  submit_compose: string;
+  follow_up_modal_title: string;
+  follow_up_placeholder: string;
+  alert_enter_content: string;
+  error_follow_up_send: string;
+  send_btn: string;
+  member_support_section_title: string;
+  no_member_support_tickets: string;
+  error_member_support_load: string;
+  error_member_support_fetch: string;
+  confirm_delete_member_support: string;
+  error_member_support_delete: string;
+  reply_action: string;
+  reply_compose_title: string;
+  first_reply_label: string;
+  reply_placeholder: string;
+  alert_reply_required: string;
+  error_reply_save: string;
+  reply_saved: string;
+  deleting_label: string;
+  access_requests_title: string;
+  access_request_create_btn: string;
+  access_request_modal_title: string;
+  access_request_modal_hint: string;
+  submit_request: string;
+  expires_at_label: string;
+  rejection_reason_label: string;
+  requested_at_label: string;
+  approved_at_label: string;
+  rejected_at_label: string;
+  piggy_wallet_history: string;
+  piggy_bank_history: string;
+  tx_col_datetime: string;
+  tx_col_type: string;
+  tx_col_amount: string;
+  tx_col_memo: string;
+  tx_col_actor: string;
+  label_none: string;
+  amount_currency_suffix: string;
 }
 
 const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
@@ -100,6 +177,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_reason_required: '접근 요청 사유를 입력해주세요.',
     request_created: '접근 요청이 생성되었습니다.',
     error_request_create: '접근 요청 생성 중 오류가 발생했습니다.',
+    error_access_requests_load: '접근 요청을 불러오는데 실패했습니다.',
     confirm_cancel_request: '정말로 접근 요청을 취소하시겠습니까?',
     request_cancelled: '접근 요청이 취소되었습니다.',
     error_request_cancel: '접근 요청 취소 중 오류가 발생했습니다.',
@@ -130,6 +208,84 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
+    page_title: '그룹 관리자 페이지',
+    select_admin_group: '관리할 그룹 선택',
+    tab_dashboard: '대시보드',
+    tab_members: '멤버 관리',
+    tab_settings: '그룹 설정',
+    tab_content: '콘텐츠 관리',
+    tab_support: '문의하기',
+    tab_member_support: '멤버 문의',
+    tab_access_requests: '접근 요청',
+    tab_piggy_archives: '저금통 보관 내역',
+    stats_title: '그룹 통계',
+    stat_total_members: '그룹 멤버',
+    stat_total_photos: '전체 사진',
+    stat_location_sharing: '위치 공유',
+    stat_recent_photos_7d: '최근 사진 (7일)',
+    content_section_photos: '사진 (${count}개)',
+    content_section_locations: '위치 데이터 (${count}개)',
+    announcement_unread_badge: '공지',
+    auth_required: '인증이 필요합니다.',
+    error_stats_load: '통계를 불러오는데 실패했습니다.',
+    error_photos_load: '사진을 불러오는데 실패했습니다.',
+    error_locations_load: '위치 데이터를 불러오는데 실패했습니다.',
+    error_announcements_load: '공지사항을 불러오는데 실패했습니다.',
+    error_announcements_mark_read: '공지사항 읽음 처리에 실패했습니다.',
+    error_support_load: '문의를 불러오는데 실패했습니다.',
+    support_section_title: '문의하기',
+    support_section_intro:
+      '시스템 관리자에게 보내는 문의입니다. 가족 멤버 문의는 "멤버 문의" 탭에서 확인하세요.',
+    support_new_ticket_btn: '시스템 관리자에게 문의',
+    answer_prefix: '답변:',
+    thread_role_follow_up: '추가 문의',
+    thread_role_system_reply: '시스템 답변',
+    thread_role_admin_reply: '답변',
+    thread_role_previous_reply: '이전 답변',
+    follow_up_btn: '추가 문의',
+    confirm_delete_support_ticket: '이 문의를 삭제할까요?',
+    error_delete_failed: '삭제에 실패했습니다.',
+    ticket_compose_title: '문의 작성',
+    submit_compose: '작성',
+    follow_up_modal_title: '추가 문의',
+    follow_up_placeholder: '추가로 남길 내용을 입력하세요.',
+    alert_enter_content: '내용을 입력해 주세요.',
+    error_follow_up_send: '추가 문의 전송에 실패했습니다.',
+    send_btn: '보내기',
+    member_support_section_title: '멤버 문의',
+    no_member_support_tickets: '멤버 문의가 없습니다.',
+    error_member_support_load: '멤버 문의를 불러오지 못했습니다.',
+    error_member_support_fetch: '문의 조회에 실패했습니다.',
+    confirm_delete_member_support:
+      '이 문의를 삭제할까요? 그룹 관리자 삭제는 감사 로그(시스템 관리자 화면)에 기록됩니다.',
+    error_member_support_delete: '문의 삭제에 실패했습니다.',
+    reply_action: '답변하기',
+    reply_compose_title: '답변 작성',
+    first_reply_label: '첫 답변',
+    reply_placeholder: '답변 내용을 입력하세요',
+    alert_reply_required: '답변 내용을 입력해주세요.',
+    error_reply_save: '답변 저장에 실패했습니다.',
+    reply_saved: '답변이 저장되었습니다.',
+    deleting_label: '삭제 중…',
+    access_requests_title: '대시보드 접근 요청',
+    access_request_create_btn: '접근 요청',
+    access_request_modal_title: '대시보드 접근 요청',
+    access_request_modal_hint: '시스템 관리자가 본인 가족 대시보드에 접근하도록 요청합니다.',
+    submit_request: '요청',
+    expires_at_label: '만료일:',
+    rejection_reason_label: '거절 사유:',
+    requested_at_label: '요청일:',
+    approved_at_label: '승인일:',
+    rejected_at_label: '거절일:',
+    piggy_wallet_history: '용돈 내역',
+    piggy_bank_history: '저금통 내역',
+    tx_col_datetime: '일시',
+    tx_col_type: '유형',
+    tx_col_amount: '금액',
+    tx_col_memo: '메모',
+    tx_col_actor: '행위자',
+    label_none: '없음',
+    amount_currency_suffix: '원',
   },
   en: {
     checking_permission: 'Checking permission...',
@@ -164,6 +320,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_reason_required: 'Please enter a reason.',
     request_created: 'Access request created.',
     error_request_create: 'Failed to create access request.',
+    error_access_requests_load: 'Failed to load access requests.',
     confirm_cancel_request: 'Cancel this access request?',
     request_cancelled: 'Access request cancelled.',
     error_request_cancel: 'Failed to cancel request.',
@@ -194,6 +351,84 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
+    page_title: 'Group admin',
+    select_admin_group: 'Select group to manage',
+    tab_dashboard: 'Dashboard',
+    tab_members: 'Members',
+    tab_settings: 'Group settings',
+    tab_content: 'Content',
+    tab_support: 'Support',
+    tab_member_support: 'Member inquiries',
+    tab_access_requests: 'Access requests',
+    tab_piggy_archives: 'Piggy archives',
+    stats_title: 'Group stats',
+    stat_total_members: 'Members',
+    stat_total_photos: 'All photos',
+    stat_location_sharing: 'Location sharing',
+    stat_recent_photos_7d: 'Recent photos (7 days)',
+    content_section_photos: 'Photos (${count})',
+    content_section_locations: 'Location data (${count})',
+    announcement_unread_badge: 'Notice',
+    auth_required: 'Authentication required.',
+    error_stats_load: 'Failed to load stats.',
+    error_photos_load: 'Failed to load photos.',
+    error_locations_load: 'Failed to load location data.',
+    error_announcements_load: 'Failed to load announcements.',
+    error_announcements_mark_read: 'Failed to mark announcement as read.',
+    error_support_load: 'Failed to load support tickets.',
+    support_section_title: 'Contact support',
+    support_section_intro:
+      'Messages to the system admin. For family member inquiries, use the "Member inquiries" tab.',
+    support_new_ticket_btn: 'Contact system admin',
+    answer_prefix: 'Reply:',
+    thread_role_follow_up: 'Follow-up',
+    thread_role_system_reply: 'System reply',
+    thread_role_admin_reply: 'Reply',
+    thread_role_previous_reply: 'Previous reply',
+    follow_up_btn: 'Follow-up',
+    confirm_delete_support_ticket: 'Delete this ticket?',
+    error_delete_failed: 'Failed to delete.',
+    ticket_compose_title: 'New ticket',
+    submit_compose: 'Submit',
+    follow_up_modal_title: 'Follow-up',
+    follow_up_placeholder: 'Enter additional details…',
+    alert_enter_content: 'Please enter a message.',
+    error_follow_up_send: 'Failed to send follow-up.',
+    send_btn: 'Send',
+    member_support_section_title: 'Member inquiries',
+    no_member_support_tickets: 'No member inquiries.',
+    error_member_support_load: 'Failed to load member inquiries.',
+    error_member_support_fetch: 'Failed to fetch inquiry.',
+    confirm_delete_member_support:
+      'Delete this inquiry? Group admin deletions are recorded in the audit log (system admin screen).',
+    error_member_support_delete: 'Failed to delete inquiry.',
+    reply_action: 'Reply',
+    reply_compose_title: 'Write reply',
+    first_reply_label: 'First reply',
+    reply_placeholder: 'Enter your reply…',
+    alert_reply_required: 'Please enter a reply.',
+    error_reply_save: 'Failed to save reply.',
+    reply_saved: 'Reply saved.',
+    deleting_label: 'Deleting…',
+    access_requests_title: 'Dashboard access requests',
+    access_request_create_btn: 'Request access',
+    access_request_modal_title: 'Dashboard access request',
+    access_request_modal_hint: 'Request that a system admin access your family dashboard.',
+    submit_request: 'Submit request',
+    expires_at_label: 'Expires:',
+    rejection_reason_label: 'Rejection reason:',
+    requested_at_label: 'Requested:',
+    approved_at_label: 'Approved:',
+    rejected_at_label: 'Rejected:',
+    piggy_wallet_history: 'Allowance history',
+    piggy_bank_history: 'Piggy bank history',
+    tx_col_datetime: 'Date/time',
+    tx_col_type: 'Type',
+    tx_col_amount: 'Amount',
+    tx_col_memo: 'Memo',
+    tx_col_actor: 'Actor',
+    label_none: 'None',
+    amount_currency_suffix: '',
   },
   ja: {
     checking_permission: '権限確認中...',
@@ -228,6 +463,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_reason_required: '理由を入力してください。',
     request_created: 'アクセス申請を作成しました。',
     error_request_create: '作成に失敗しました。',
+    error_access_requests_load: 'アクセス申請の読み込みに失敗しました。',
     confirm_cancel_request: 'アクセス申請をキャンセルしますか？',
     request_cancelled: 'アクセス申請をキャンセルしました。',
     error_request_cancel: 'キャンセルに失敗しました。',
@@ -258,6 +494,84 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
+    page_title: 'グループ管理',
+    select_admin_group: '管理するグループを選択',
+    tab_dashboard: 'ダッシュボード',
+    tab_members: 'メンバー管理',
+    tab_settings: 'グループ設定',
+    tab_content: 'コンテンツ',
+    tab_support: 'お問い合わせ',
+    tab_member_support: 'メンバー問い合わせ',
+    tab_access_requests: 'アクセス申請',
+    tab_piggy_archives: '貯金箱アーカイブ',
+    stats_title: 'グループ統計',
+    stat_total_members: 'メンバー',
+    stat_total_photos: '写真（全体）',
+    stat_location_sharing: '位置共有',
+    stat_recent_photos_7d: '最近の写真（7日）',
+    content_section_photos: '写真（${count}件）',
+    content_section_locations: '位置データ（${count}件）',
+    announcement_unread_badge: 'お知らせ',
+    auth_required: '認証が必要です。',
+    error_stats_load: '統計の読み込みに失敗しました。',
+    error_photos_load: '写真の読み込みに失敗しました。',
+    error_locations_load: '位置データの読み込みに失敗しました。',
+    error_announcements_load: 'お知らせの読み込みに失敗しました。',
+    error_announcements_mark_read: '既読処理に失敗しました。',
+    error_support_load: 'お問い合わせの読み込みに失敗しました。',
+    support_section_title: 'お問い合わせ',
+    support_section_intro:
+      'システム管理者への問い合わせです。家族メンバーからの問い合わせは「メンバー問い合わせ」タブで確認してください。',
+    support_new_ticket_btn: 'システム管理者に問い合わせ',
+    answer_prefix: '回答:',
+    thread_role_follow_up: '追加問い合わせ',
+    thread_role_system_reply: 'システム回答',
+    thread_role_admin_reply: '回答',
+    thread_role_previous_reply: '以前の回答',
+    follow_up_btn: '追加問い合わせ',
+    confirm_delete_support_ticket: 'この問い合わせを削除しますか？',
+    error_delete_failed: '削除に失敗しました。',
+    ticket_compose_title: '問い合わせ作成',
+    submit_compose: '送信',
+    follow_up_modal_title: '追加問い合わせ',
+    follow_up_placeholder: '追加で伝える内容を入力してください。',
+    alert_enter_content: '内容を入力してください。',
+    error_follow_up_send: '追加問い合わせの送信に失敗しました。',
+    send_btn: '送信',
+    member_support_section_title: 'メンバー問い合わせ',
+    no_member_support_tickets: 'メンバー問い合わせはありません。',
+    error_member_support_load: 'メンバー問い合わせを読み込めませんでした。',
+    error_member_support_fetch: '問い合わせの取得に失敗しました。',
+    confirm_delete_member_support:
+      'この問い合わせを削除しますか？グループ管理者による削除は監査ログ（システム管理画面）に記録されます。',
+    error_member_support_delete: '問い合わせの削除に失敗しました。',
+    reply_action: '回答する',
+    reply_compose_title: '回答を作成',
+    first_reply_label: '最初の回答',
+    reply_placeholder: '回答内容を入力してください',
+    alert_reply_required: '回答内容を入力してください。',
+    error_reply_save: '回答の保存に失敗しました。',
+    reply_saved: '回答を保存しました。',
+    deleting_label: '削除中…',
+    access_requests_title: 'ダッシュボードアクセス申請',
+    access_request_create_btn: 'アクセス申請',
+    access_request_modal_title: 'ダッシュボードアクセス申請',
+    access_request_modal_hint: 'システム管理者が家族ダッシュボードにアクセスできるよう申請します。',
+    submit_request: '申請',
+    expires_at_label: '有効期限:',
+    rejection_reason_label: '却下理由:',
+    requested_at_label: '申請日:',
+    approved_at_label: '承認日:',
+    rejected_at_label: '却下日:',
+    piggy_wallet_history: 'おこづかい履歴',
+    piggy_bank_history: '貯金箱履歴',
+    tx_col_datetime: '日時',
+    tx_col_type: '種類',
+    tx_col_amount: '金額',
+    tx_col_memo: 'メモ',
+    tx_col_actor: '実行者',
+    label_none: 'なし',
+    amount_currency_suffix: '円',
   },
   'zh-CN': {
     checking_permission: '正在验证权限...',
@@ -292,6 +606,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_reason_required: '请输入理由。',
     request_created: '已创建访问请求。',
     error_request_create: '创建失败。',
+    error_access_requests_load: '加载访问请求失败。',
     confirm_cancel_request: '确定取消此访问请求？',
     request_cancelled: '已取消访问请求。',
     error_request_cancel: '取消失败。',
@@ -322,6 +637,82 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
+    page_title: '群组管理',
+    select_admin_group: '选择要管理的群组',
+    tab_dashboard: '仪表盘',
+    tab_members: '成员管理',
+    tab_settings: '群组设置',
+    tab_content: '内容管理',
+    tab_support: '联系支持',
+    tab_member_support: '成员咨询',
+    tab_access_requests: '访问申请',
+    tab_piggy_archives: '存钱罐归档',
+    stats_title: '群组统计',
+    stat_total_members: '成员',
+    stat_total_photos: '全部照片',
+    stat_location_sharing: '位置共享',
+    stat_recent_photos_7d: '最近照片（7天）',
+    content_section_photos: '照片（${count} 张）',
+    content_section_locations: '位置数据（${count} 条）',
+    announcement_unread_badge: '公告',
+    auth_required: '需要登录。',
+    error_stats_load: '加载统计失败。',
+    error_photos_load: '加载照片失败。',
+    error_locations_load: '加载位置数据失败。',
+    error_announcements_load: '加载公告失败。',
+    error_announcements_mark_read: '标记已读失败。',
+    error_support_load: '加载工单失败。',
+    support_section_title: '联系支持',
+    support_section_intro: '发送给系统管理员的咨询。家庭成员咨询请查看「成员咨询」标签。',
+    support_new_ticket_btn: '联系系统管理员',
+    answer_prefix: '回复:',
+    thread_role_follow_up: '追加咨询',
+    thread_role_system_reply: '系统回复',
+    thread_role_admin_reply: '回复',
+    thread_role_previous_reply: '先前回复',
+    follow_up_btn: '追加咨询',
+    confirm_delete_support_ticket: '确定删除此工单？',
+    error_delete_failed: '删除失败。',
+    ticket_compose_title: '新建工单',
+    submit_compose: '提交',
+    follow_up_modal_title: '追加咨询',
+    follow_up_placeholder: '请输入补充内容…',
+    alert_enter_content: '请输入内容。',
+    error_follow_up_send: '发送追加咨询失败。',
+    send_btn: '发送',
+    member_support_section_title: '成员咨询',
+    no_member_support_tickets: '暂无成员咨询。',
+    error_member_support_load: '无法加载成员咨询。',
+    error_member_support_fetch: '获取咨询失败。',
+    confirm_delete_member_support: '确定删除此咨询？群组管理员删除会记录在审计日志（系统管理界面）中。',
+    error_member_support_delete: '删除咨询失败。',
+    reply_action: '回复',
+    reply_compose_title: '撰写回复',
+    first_reply_label: '首次回复',
+    reply_placeholder: '请输入回复内容',
+    alert_reply_required: '请输入回复内容。',
+    error_reply_save: '保存回复失败。',
+    reply_saved: '回复已保存。',
+    deleting_label: '删除中…',
+    access_requests_title: '仪表盘访问申请',
+    access_request_create_btn: '申请访问',
+    access_request_modal_title: '仪表盘访问申请',
+    access_request_modal_hint: '申请系统管理员访问您的家庭仪表盘。',
+    submit_request: '提交申请',
+    expires_at_label: '到期:',
+    rejection_reason_label: '拒绝原因:',
+    requested_at_label: '申请日:',
+    approved_at_label: '批准日:',
+    rejected_at_label: '拒绝日:',
+    piggy_wallet_history: '零花钱记录',
+    piggy_bank_history: '存钱罐记录',
+    tx_col_datetime: '时间',
+    tx_col_type: '类型',
+    tx_col_amount: '金额',
+    tx_col_memo: '备注',
+    tx_col_actor: '操作者',
+    label_none: '无',
+    amount_currency_suffix: '元',
   },
   'zh-TW': {
     checking_permission: '正在驗證權限...',
@@ -356,6 +747,7 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     alert_reason_required: '請輸入理由。',
     request_created: '已建立存取請求。',
     error_request_create: '建立失敗。',
+    error_access_requests_load: '載入存取請求失敗。',
     confirm_cancel_request: '確定要取消此存取請求？',
     request_cancelled: '已取消存取請求。',
     error_request_cancel: '取消失敗。',
@@ -386,6 +778,82 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
     theme_highend_glass_short: 'High-end Glass',
+    page_title: '群組管理',
+    select_admin_group: '選擇要管理的群組',
+    tab_dashboard: '儀表板',
+    tab_members: '成員管理',
+    tab_settings: '群組設定',
+    tab_content: '內容管理',
+    tab_support: '聯絡支援',
+    tab_member_support: '成員諮詢',
+    tab_access_requests: '存取申請',
+    tab_piggy_archives: '撲滿封存',
+    stats_title: '群組統計',
+    stat_total_members: '成員',
+    stat_total_photos: '全部照片',
+    stat_location_sharing: '位置分享',
+    stat_recent_photos_7d: '最近照片（7天）',
+    content_section_photos: '照片（${count} 張）',
+    content_section_locations: '位置資料（${count} 筆）',
+    announcement_unread_badge: '公告',
+    auth_required: '需要登入。',
+    error_stats_load: '載入統計失敗。',
+    error_photos_load: '載入照片失敗。',
+    error_locations_load: '載入位置資料失敗。',
+    error_announcements_load: '載入公告失敗。',
+    error_announcements_mark_read: '標記已讀失敗。',
+    error_support_load: '載入工單失敗。',
+    support_section_title: '聯絡支援',
+    support_section_intro: '傳送給系統管理員的諮詢。家庭成員諮詢請查看「成員諮詢」分頁。',
+    support_new_ticket_btn: '聯絡系統管理員',
+    answer_prefix: '回覆:',
+    thread_role_follow_up: '追加諮詢',
+    thread_role_system_reply: '系統回覆',
+    thread_role_admin_reply: '回覆',
+    thread_role_previous_reply: '先前回覆',
+    follow_up_btn: '追加諮詢',
+    confirm_delete_support_ticket: '確定要刪除此工單？',
+    error_delete_failed: '刪除失敗。',
+    ticket_compose_title: '新增工單',
+    submit_compose: '送出',
+    follow_up_modal_title: '追加諮詢',
+    follow_up_placeholder: '請輸入補充內容…',
+    alert_enter_content: '請輸入內容。',
+    error_follow_up_send: '傳送追加諮詢失敗。',
+    send_btn: '傳送',
+    member_support_section_title: '成員諮詢',
+    no_member_support_tickets: '尚無成員諮詢。',
+    error_member_support_load: '無法載入成員諮詢。',
+    error_member_support_fetch: '取得諮詢失敗。',
+    confirm_delete_member_support: '確定要刪除此諮詢？群組管理員刪除會記錄在稽核日誌（系統管理畫面）中。',
+    error_member_support_delete: '刪除諮詢失敗。',
+    reply_action: '回覆',
+    reply_compose_title: '撰寫回覆',
+    first_reply_label: '首次回覆',
+    reply_placeholder: '請輸入回覆內容',
+    alert_reply_required: '請輸入回覆內容。',
+    error_reply_save: '儲存回覆失敗。',
+    reply_saved: '回覆已儲存。',
+    deleting_label: '刪除中…',
+    access_requests_title: '儀表板存取申請',
+    access_request_create_btn: '申請存取',
+    access_request_modal_title: '儀表板存取申請',
+    access_request_modal_hint: '申請系統管理員存取您的家庭儀表板。',
+    submit_request: '送出申請',
+    expires_at_label: '到期:',
+    rejection_reason_label: '拒絕原因:',
+    requested_at_label: '申請日:',
+    approved_at_label: '核准日:',
+    rejected_at_label: '拒絕日:',
+    piggy_wallet_history: '零用金紀錄',
+    piggy_bank_history: '撲滿紀錄',
+    tx_col_datetime: '時間',
+    tx_col_type: '類型',
+    tx_col_amount: '金額',
+    tx_col_memo: '備註',
+    tx_col_actor: '操作者',
+    label_none: '無',
+    amount_currency_suffix: '元',
   },
 };
 

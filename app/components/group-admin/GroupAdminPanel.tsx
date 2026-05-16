@@ -33,7 +33,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
-import { getAdminTranslation } from '@/lib/translations/admin';
+import { getAdminTranslation, type AdminTranslations } from '@/lib/translations/admin';
+import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
@@ -49,7 +50,8 @@ export interface GroupAdminPanelProps {
   embeddedGroupName?: string | null;
   onEmbeddedClose?: () => void;
   showPiggyArchivesTab?: boolean;
-  adminLangForPiggy?: 'ko' | 'en';
+  /** 시스템 관리자 페이지 임베드 시 관리자 UI 언어와 piggy 보관 탭 문구를 맞춤 */
+  adminLangForPiggy?: LangCode;
 }
 
 interface MemberInfo {
@@ -181,8 +183,12 @@ export function GroupAdminPanel({
   const { lang } = useLanguage();
   const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) => getGroupAdminTranslation(lang, key);
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
-  const atPiggy = (key: keyof import('@/lib/translations/admin').AdminTranslations) =>
-    getAdminTranslation(adminLangForPiggy, key);
+  const piggyLang: LangCode = isEmbedded && adminLangForPiggy ? adminLangForPiggy : lang;
+  const atPiggy = (key: keyof AdminTranslations) => getAdminTranslation(piggyLang, key);
+  const dateLocale = intlLocaleForLang(lang);
+  const formatDateTime = (iso: string) => new Date(iso).toLocaleString(dateLocale);
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString(dateLocale);
+  const withCount = (template: string, count: number) => template.replace(/\$\{count\}/g, String(count));
 
   let contextGroupId: string | null = null;
   let currentGroup: any = null;
@@ -336,7 +342,7 @@ export function GroupAdminPanel({
       }
       loadPiggyArchivesSnapshots(groupId);
     } catch (err: any) {
-      console.error('저금통 보관 내역 삭제 오류:', err);
+      console.error('piggy archive delete', err);
       setError(err.message || atPiggy('error_piggy_archive_delete_msg'));
     }
   }, [piggyArchivesDetailId, loadPiggyArchivesSnapshots]);
@@ -430,7 +436,7 @@ export function GroupAdminPanel({
         .in('uploader_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000'])
         .gte('created_at', sevenDaysAgo.toISOString());
 
-      // 현재 위치 공유(active)는 user_locations 잔존 행이 아니라 accepted 요청 기준으로 계산
+      // Active location sharing is based on accepted location_requests, not stale user_locations rows.
       const nowIso = new Date().toISOString();
       const { data: activeLocationRequests, error: activeLocationRequestsError } = await supabase
         .from('location_requests')
@@ -459,11 +465,11 @@ export function GroupAdminPanel({
       });
     } catch (err: any) {
       console.error('???�쎌????�≪뮆占????�쎌?�占?', err);
-      setError(err.message || '???�쎌???�썲????�쎈?????�쎌???????�쏙??????�쎌?????�쎌???');
+      setError(err.message || gat('error_stats_load'));
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
   // ???�쎌?�占?筌뤴뫖占??�≪뮆占?
   const loadPhotos = useCallback(async () => {
@@ -510,11 +516,11 @@ export function GroupAdminPanel({
       setPhotos(photosData || []);
     } catch (err: any) {
       console.error('???�쎌?�占?筌뤴뫖占??�≪뮆占????�쎌?�占?', err);
-      setError(err.message || '???�쎌?�占?筌뤴뫖占????�쎈?????�쎌???????�쏙??????�쎌?????�쎌???');
+      setError(err.message || gat('error_stats_load'));
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
   // ???�쎌??????�쎌?????�≪뮆占?
   const loadLocations = useCallback(async () => {
@@ -584,11 +590,11 @@ export function GroupAdminPanel({
       setLocations(locationsWithProfiles);
     } catch (err: any) {
       console.error('???�쎌??????�쎌?????�≪뮆占????�쎌?�占?', err);
-      setError(err.message || '???�쎌??????�쎌?????�쎌�?? ??�쎈?????�쎌???????�쏙??????�쎌?????�쎌???');
+      setError(err.message || gat('error_stats_load'));
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
   // ??�쎈�?????�쏙?????�≪뮆占?(?�밸챶占???�승???�싼?�쁽??
   const loadAnnouncements = useCallback(async () => {
@@ -600,7 +606,7 @@ export function GroupAdminPanel({
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('???�쎌?�占????�쎌????筌띾?�占???�쎌?�肉????�쎌???? ???�쎌????�≪�????�쏙????????�쎄???');
+        setError(gat('auth_required'));
         setLoadingData(false);
         return;
       }
@@ -616,18 +622,18 @@ export function GroupAdminPanel({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '??�쎈�?????�쏙?????�곌???????�쏙??????�쎌?????�쎌???');
+        throw new Error(result.error || gat('error_announcements_load'));
       }
 
       setAnnouncements(result.data || []);
     } catch (err: any) {
       console.error('??�쎈�?????�쏙?????�≪뮆占????�쎌?�占?', err);
-      setError(err.message || '??�쎈�?????�쏙???????�쎈?????�쎌???????�쏙??????�쎌?????�쎌???');
+      setError(err.message || gat('error_stats_load'));
       setAnnouncements([]);
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
   // ??�쎈�??筌뤴뫖占??�≪뮆占?(?�밸챶占???�승???�싼?�쁽??
   const loadSupportTickets = useCallback(async () => {
@@ -639,7 +645,7 @@ export function GroupAdminPanel({
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('???�쎌?�占????�쎌????筌띾?�占???�쎌?�肉????�쎌???? ???�쎌????�≪�????�쏙????????�쎄???');
+        setError(gat('auth_required'));
         setLoadingData(false);
         return;
       }
@@ -655,20 +661,20 @@ export function GroupAdminPanel({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '??�쎈�???�곌???????�쏙??????�쎌?????�쎌???');
+        throw new Error(result.error || gat('error_support_load'));
       }
 
       setSupportTickets(result.data || []);
     } catch (err: any) {
       console.error('??�쎈�???�≪뮆占????�쎌?�占?', err);
-      setError(err.message || '??�쎈�??�썲????�쎈?????�쎌???????�쏙??????�쎌?????�쎌???');
+      setError(err.message || gat('error_stats_load'));
       setSupportTickets([]);
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
-  // 멤버 문의 로드 (그룹 관리자)
+  // {gat('tab_member_support')} 로드 (그룹 관리자)
   const loadMemberSupportTickets = useCallback(async () => {
     if (!effectiveGroupId) return;
 
@@ -678,7 +684,7 @@ export function GroupAdminPanel({
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('인증이 필요합니다.');
+        setError(gat('auth_required'));
         setLoadingData(false);
         return;
       }
@@ -693,33 +699,29 @@ export function GroupAdminPanel({
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || '문의 조회에 실패했습니다.');
+        throw new Error(result.error || gat('error_member_support_fetch'));
       }
 
       setMemberSupportTickets(result.data || []);
     } catch (err: any) {
-      console.error('멤버 문의 로드 오류:', err);
-      setError(err.message || '멤버 문의를 불러오지 못했습니다.');
+      console.error('member support tickets load', err);
+      setError(err.message || gat('error_member_support_load'));
       setMemberSupportTickets([]);
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
   const handleDeleteMemberSupportTicket = async (ticketId: string) => {
     if (!effectiveGroupId) return;
-    if (
-      !confirm(
-        '이 문의를 삭제할까요? 그룹 관리자 삭제는 감사 로그(시스템 관리자 화면)에 기록됩니다.'
-      )
-    ) {
+    if (!confirm(gat('confirm_delete_member_support'))) {
       return;
     }
     setDeletingMemberTicketId(ticketId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        alert('인증이 필요합니다.');
+        alert(gat('auth_required'));
         return;
       }
       const res = await fetch(
@@ -731,13 +733,13 @@ export function GroupAdminPanel({
       );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(typeof json.error === 'string' ? json.error : '문의 삭제에 실패했습니다.');
+        alert(typeof json.error === 'string' ? json.error : gat('error_member_support_delete'));
         return;
       }
       setMemberSupportTickets((prev) => prev.filter((t) => t.id !== ticketId));
     } catch (e) {
-      console.error('멤버 문의 삭제 오류:', e);
-      alert('문의 삭제에 실패했습니다.');
+      console.error('member support ticket delete', e);
+      alert(gat('error_member_support_delete'));
     } finally {
       setDeletingMemberTicketId(null);
     }
@@ -753,7 +755,7 @@ export function GroupAdminPanel({
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        setError('???�쎌?�占????�쎌????筌띾?�占???�쎌?�肉????�쎌???? ???�쎌????�≪�????�쏙????????�쎄???');
+        setError(gat('auth_required'));
         setLoadingData(false);
         return;
       }
@@ -769,21 +771,21 @@ export function GroupAdminPanel({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '???�쎌??????�쎌?�占??�곌???????�쏙??????�쎌?????�쎌???');
+        throw new Error(result.error || gat('error_access_requests_load'));
       }
 
       setAccessRequests(result.data || []);
     } catch (err: any) {
       console.error('???�쎌??????�쎌?�占??�≪뮆占????�쎌?�占?', err);
-      setError(err.message || '???�쎌??????�쎌?�占????�쎈?????�쎌???????�쏙??????�쎌?????�쎌???');
+      setError(err.message || gat('error_stats_load'));
       setAccessRequests([]);
     } finally {
       setLoadingData(false);
     }
-  }, [effectiveGroupId]);
+  }, [effectiveGroupId, gat]);
 
   // ???�궰????????�쎌?????�≪뮆占?
-  // 공지사항은 페이지 로드 시 항상 로드 (배너 표시용)
+  // {gat('announcement_unread_badge')}사항은 페이지 로드 시 항상 로드 (배너 표시용)
   useEffect(() => {
     if (!isAuthorized || !effectiveGroupId) return;
     loadAnnouncements();
@@ -829,7 +831,7 @@ export function GroupAdminPanel({
       loadPhotos();
       loadStats();
     } catch (err: any) {
-      console.error('???�쎌?�占?????�쎌�?????�쎌?�占?', err);
+      console.error('group stats load', err);
       alert(err.message || gat('error_delete_photo'));
     }
   };
@@ -896,7 +898,7 @@ export function GroupAdminPanel({
             </div>
             <div>
               <h1 className="m-0 text-2xl font-bold text-slate-800">
-                그룹 관리자 페이지
+                {gat('page_title')}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                 <p className="m-0">
@@ -928,14 +930,14 @@ export function GroupAdminPanel({
             className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
           >
             <X className="h-4 w-4" />
-            닫기
+            {ct('close')}
           </button>
         </div>
 
         {canSwitchAdminGroups && (
           <div className="mb-4">
             <div className="mb-1.5 text-xs text-slate-500">
-              관리할 그룹 선택
+              {gat('select_admin_group')}
             </div>
             <select
               value={effectiveGroupId || ''}
@@ -964,21 +966,21 @@ export function GroupAdminPanel({
             className={tabButtonClass('dashboard')}
           >
             <BarChart3 className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            대시보드
+            {gat('tab_dashboard')}
           </button>
           <button
             onClick={() => setActiveTab('members')}
             className={tabButtonClass('members')}
           >
             <Users className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            멤버 관리
+            {gat('tab_members')}
           </button>
           <button
             onClick={() => setActiveTab('settings')}
             className={tabButtonClass('settings')}
           >
             <Settings className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            그룹 설정
+            {gat('tab_settings')}
           </button>
           {isOwner && !!effectiveGroupId && (
             <button
@@ -995,7 +997,7 @@ export function GroupAdminPanel({
             className={tabButtonClass('content')}
           >
             <ImageIcon className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            콘텐츠 관리
+            {gat('tab_content')}
           </button>
           <button
             onClick={() => setActiveTab('announcements')}
@@ -1014,21 +1016,21 @@ export function GroupAdminPanel({
             className={tabButtonClass('support-tickets')}
           >
             <MessageSquare className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            문의하기
+            {gat('tab_support')}
           </button>
           <button
             onClick={() => setActiveTab('member-support-tickets')}
             className={tabButtonClass('member-support-tickets')}
           >
             <MessageSquare className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            멤버 문의
+            {gat('tab_member_support')}
           </button>
           <button
             onClick={() => setActiveTab('dashboard-access-requests')}
             className={tabButtonClass('dashboard-access-requests')}
           >
             <Key className="mr-2 inline h-[18px] w-[18px] align-middle" />
-            접근 요청
+            {gat('tab_access_requests')}
           </button>
           {showPiggyArchivesTab && (
             <button
@@ -1037,7 +1039,7 @@ export function GroupAdminPanel({
               className={tabButtonClass('piggy-archives')}
             >
               <PiggyBank className="mr-2 inline h-[18px] w-[18px] align-middle" />
-              저금통 보관 내역
+              {gat('tab_piggy_archives')}
             </button>
           )}
         </div>
@@ -1062,7 +1064,7 @@ export function GroupAdminPanel({
             {/* ?????�쎌??????*/}
             {activeTab === 'dashboard' && stats && (
               <div>
-                {/* 공지사항 배너 */}
+                {/* {gat('announcement_unread_badge')}사항 배너 */}
                 <AnnouncementBanner 
                   announcements={announcements.map((announcement) => ({
                     ...announcement,
@@ -1098,7 +1100,7 @@ export function GroupAdminPanel({
                     announcements.filter(a => !a.is_read).length > 0 ? 'mt-6' : 'mt-0'
                   }`}
                 >
-                  그룹 통계
+                  {gat('stats_title')}
                 </h2>
                 <div className="group-admin-grid grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
                   <motion.div
@@ -1107,7 +1109,7 @@ export function GroupAdminPanel({
                     className="rounded-xl border border-sky-200 bg-sky-50 p-6"
                   >
                     <div className="mb-2 text-sm font-medium text-sky-700">
-                      그룹 멤버
+                      {gat('stat_total_members')}
                     </div>
                     <div className="text-[32px] font-bold text-sky-900">
                       {stats.totalMembers}
@@ -1121,7 +1123,7 @@ export function GroupAdminPanel({
                     className="rounded-xl border border-amber-200 bg-amber-100 p-6"
                   >
                     <div className="mb-2 text-sm font-medium text-amber-800">
-                      전체 사진
+                      {gat('stat_total_photos')}
                     </div>
                     <div className="text-[32px] font-bold text-amber-900">
                       {stats.totalPhotos}
@@ -1135,7 +1137,7 @@ export function GroupAdminPanel({
                     className="rounded-xl border border-purple-300 bg-purple-100 p-6"
                   >
                     <div className="mb-2 text-sm font-medium text-purple-800">
-                      위치 공유
+                      {gat('stat_location_sharing')}
                     </div>
                     <div className="text-[32px] font-bold text-purple-900">
                       {stats.totalLocations}
@@ -1149,7 +1151,7 @@ export function GroupAdminPanel({
                     className="rounded-xl border border-pink-200 bg-pink-100 p-6"
                   >
                     <div className="mb-2 text-sm font-medium text-pink-800">
-                      최근 사진 (7일)
+                      {gat('stat_recent_photos_7d')}
                     </div>
                     <div className="text-[32px] font-bold text-pink-900">
                       {stats.recentPhotos}
@@ -1187,7 +1189,7 @@ export function GroupAdminPanel({
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-[20px] font-semibold text-slate-800">
-                    콘텐츠 관리
+                    {gat('tab_content')}
                   </h2>
                   <div className="group-admin-search relative w-[300px]">
                     <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
@@ -1204,7 +1206,7 @@ export function GroupAdminPanel({
                 {/* ???�쎌?�占?筌뤴뫖占?*/}
                 <div className="mb-8">
                   <h3 className="mb-4 text-lg font-semibold text-slate-800">
-                    사진 (${filteredPhotos.length}개)
+                    {withCount(gat('content_section_photos'), filteredPhotos.length)}
                   </h3>
                   <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     {filteredPhotos.map((photo, index) => (
@@ -1227,14 +1229,14 @@ export function GroupAdminPanel({
                           {photo.original_filename || gat('no_filename')}
                         </div>
                         <div className="mb-2 text-[11px] text-slate-400">
-                          {new Date(photo.created_at).toLocaleDateString('ko-KR')}
+                          {formatDate(photo.created_at)}
                         </div>
                         <button
                           onClick={() => handleDeletePhoto(photo.id)}
                           className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-md border-none bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800 transition-colors hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                         >
                           <Trash2 className="h-[14px] w-[14px]" />
-                          삭제
+                          {ct('delete')}
                         </button>
                       </motion.div>
                     ))}
@@ -1250,7 +1252,7 @@ export function GroupAdminPanel({
                 {/* ???�쎌??????�쎌????筌뤴뫖占?*/}
                 <div>
                   <h3 className="mb-4 text-lg font-semibold text-slate-800">
-                    위치 데이터 (${locations.length}개)
+                    {withCount(gat('content_section_locations'), locations.length)}
                   </h3>
                   <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
                     {locations.map((location, index) => (
@@ -1276,7 +1278,7 @@ export function GroupAdminPanel({
                           {location.address || `${location.latitude}, ${location.longitude}`}
                         </div>
                         <div className="text-[11px] text-slate-400">
-                        {new Date(location.last_updated).toLocaleString('ko-KR')}
+                        {formatDateTime(location.last_updated)}
                         </div>
                       </motion.div>
                     ))}
@@ -1315,7 +1317,7 @@ export function GroupAdminPanel({
                         try {
                           const { data: { session } } = await supabase.auth.getSession();
                           if (!session?.access_token) {
-                            alert('???�쎌?�占????�쎌???�썲???�쎛????�쎌????????�쎌?????�쎌???');
+                            alert(gat('auth_required'));
                             return;
                           }
 
@@ -1334,13 +1336,13 @@ export function GroupAdminPanel({
                           const result = await response.json();
 
                           if (!response.ok) {
-                            throw new Error(result.error || '??�쎈�?? ???�쎌???筌ｌ�??????�쏙??????�쎌?????�쎌???');
+                            throw new Error(result.error || gat('error_announcements_mark_read'));
                           }
 
                           loadAnnouncements();
                         } catch (error: any) {
-                          console.error('??�쎈�?? ???�쎌???筌ｌ�?????�쎌?�占?', error);
-                          alert(error.message || '??�쎈�?? ???�쎌???筌ｌ�???????�쎌?�履?�첎? ?�쏆뮇占???�쎌?????�쎌???');
+                          console.error('announcement mark read', error);
+                          alert(error.message || gat('error_announcements_mark_read'));
                         }
                       }}
                     >
@@ -1352,7 +1354,7 @@ export function GroupAdminPanel({
                             </h3>
                             {!announcement.is_read && (
                               <span className="rounded-xl bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-white">
-                                공지
+                                {gat('announcement_unread_badge')}
                               </span>
                             )}
                           </div>
@@ -1362,7 +1364,7 @@ export function GroupAdminPanel({
                         </div>
                       </div>
                       <div className="mt-3 text-xs text-slate-400">
-                        {gat('written_at')} {new Date(announcement.created_at).toLocaleString('ko-KR')}
+                        {gat('written_at')} {formatDateTime(announcement.created_at)}
                       </div>
                     </motion.div>
                   ))}
@@ -1382,10 +1384,10 @@ export function GroupAdminPanel({
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <h2 className="m-0 text-[20px] font-semibold text-slate-800">
-                      문의하기
+                      {gat('support_section_title')}
                     </h2>
                     <p className="m-0 mt-1.5 text-[13px] text-slate-500">
-                      시스템 관리자에게 보내는 문의입니다. 가족 멤버 문의는 &quot;멤버 문의&quot; 탭에서 확인하세요.
+                      {gat('support_section_intro')}
                     </p>
                   </div>
                   <button
@@ -1397,7 +1399,7 @@ export function GroupAdminPanel({
                     className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                   >
                     <Plus className="h-[18px] w-[18px]" />
-                    시스템 관리자에게 문의
+                    {gat('support_new_ticket_btn')}
                   </button>
                 </div>
 
@@ -1438,7 +1440,7 @@ export function GroupAdminPanel({
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
-                                답변:
+                                {gat('answer_prefix')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
@@ -1459,13 +1461,13 @@ export function GroupAdminPanel({
                                   entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'
                                 }`}
                               >
-                                {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                                {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
                               <div className="mt-2 text-[11px] text-slate-400">
-                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                                {formatDateTime(entry.created_at)}
                               </div>
                             </div>
                           ))}
@@ -1480,7 +1482,7 @@ export function GroupAdminPanel({
                               }}
                               className="cursor-pointer whitespace-nowrap rounded-lg border-none bg-sky-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                             >
-                              추가 문의
+                              {gat('follow_up_btn')}
                             </button>
                           )}
                           <button
@@ -1491,7 +1493,7 @@ export function GroupAdminPanel({
                                 alert(gat('alert_group_info'));
                                 return;
                               }
-                              if (!confirm('이 문의를 삭제할까요?')) return;
+                              if (!confirm(gat('confirm_delete_support_ticket'))) return;
                               try {
                                 setDeletingSupportTicketId(ticket.id);
                                 const { data: { session } } = await supabase.auth.getSession();
@@ -1508,11 +1510,11 @@ export function GroupAdminPanel({
                                 );
                                 const result = await response.json();
                                 if (!response.ok) {
-                                  throw new Error(result.error || '삭제에 실패했습니다.');
+                                  throw new Error(result.error || gat('error_delete_failed'));
                                 }
                                 loadSupportTickets();
                               } catch (e: unknown) {
-                                alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+                                alert(e instanceof Error ? e.message : gat('error_delete_failed'));
                               } finally {
                                 setDeletingSupportTicketId(null);
                               }
@@ -1526,13 +1528,13 @@ export function GroupAdminPanel({
                             ) : (
                               <Trash2 className="h-[14px] w-[14px]" />
                             )}
-                            삭제
+                            {ct('delete')}
                           </button>
                         </div>
                       </div>
                       <div className="mt-3 text-xs text-slate-400">
-                        {gat('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | ${gat('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        {gat('written_at')} {formatDateTime(ticket.created_at)}
+                        {ticket.answered_at && ` | ${gat('answered_at')} ${formatDateTime(ticket.answered_at)}`}
                       </div>
                     </motion.div>
                   ))}
@@ -1555,7 +1557,7 @@ export function GroupAdminPanel({
                     onClick={(e) => e.stopPropagation()}
                     >
                       <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
-                        문의 작성
+                        {gat('ticket_compose_title')}
                       </h3>
                       <input
                         type="text"
@@ -1579,7 +1581,7 @@ export function GroupAdminPanel({
                           }}
                           className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
-                          취소
+                          {ct('cancel')}
                         </button>
                         <button
                           onClick={async () => {
@@ -1626,7 +1628,7 @@ export function GroupAdminPanel({
                               setTicketContent('');
                               loadSupportTickets();
                             } catch (error: any) {
-                              console.error('??�쎈�?????�쎌?�占????�쎌?�占?', error);
+                              console.error('announcement mark read', error);
                               alert(error.message || gat('error_ticket_create'));
                             } finally {
                               setLoadingData(false);
@@ -1634,7 +1636,7 @@ export function GroupAdminPanel({
                           }}
                           className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         >
-                          작성
+                          {gat('submit_compose')}
                         </button>
                       </div>
                     </div>
@@ -1654,7 +1656,7 @@ export function GroupAdminPanel({
                     onClick={(e) => e.stopPropagation()}
                     >
                       <h3 className="mb-3 text-lg font-semibold text-slate-800">
-                        추가 문의
+                        {gat('follow_up_btn')}
                       </h3>
                       <p className="mb-3 text-[13px] text-slate-500">
                         {followUpForTicket.title}
@@ -1662,7 +1664,7 @@ export function GroupAdminPanel({
                       <textarea
                         value={followUpBody}
                         onChange={(e) => setFollowUpBody(e.target.value)}
-                        placeholder="추가로 남길 내용을 입력하세요."
+                        placeholder={gat('follow_up_placeholder')}
                         className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm"
                       />
                       <div className="flex justify-end gap-2">
@@ -1674,13 +1676,13 @@ export function GroupAdminPanel({
                           }}
                           className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
-                          취소
+                          {ct('cancel')}
                         </button>
                         <button
                           type="button"
                           onClick={async () => {
                             if (!followUpBody.trim()) {
-                              alert('내용을 입력해 주세요.');
+                              alert(gat('alert_enter_content'));
                               return;
                             }
                             if (!effectiveGroupId || !followUpForTicket) {
@@ -1708,20 +1710,20 @@ export function GroupAdminPanel({
                               });
                               const result = await response.json();
                               if (!response.ok) {
-                                throw new Error(result.error || '추가 문의 전송에 실패했습니다.');
+                                throw new Error(result.error || gat('error_follow_up_send'));
                               }
                               setFollowUpForTicket(null);
                               setFollowUpBody('');
                               loadSupportTickets();
                             } catch (e: unknown) {
-                              alert(e instanceof Error ? e.message : '추가 문의 전송에 실패했습니다.');
+                              alert(e instanceof Error ? e.message : gat('error_follow_up_send'));
                             } finally {
                               setLoadingData(false);
                             }
                           }}
                           className="cursor-pointer rounded-lg border-none bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
                         >
-                          보내기
+                          {gat('send_btn')}
                         </button>
                       </div>
                     </div>
@@ -1730,12 +1732,12 @@ export function GroupAdminPanel({
               </div>
             )}
 
-            {/* 멤버 문의 (일반멤버 <-> 그룹관리자) */}
+            {/* {gat('tab_member_support')} (일반멤버 <-> 그룹관리자) */}
             {activeTab === 'member-support-tickets' && (
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-[20px] font-semibold text-slate-800">
-                    멤버 문의
+                    {gat('member_support_section_title')}
                   </h2>
                 </div>
 
@@ -1766,7 +1768,7 @@ export function GroupAdminPanel({
                                   : 'bg-slate-400'
                               }`}
                             >
-                              {ticket.status === 'pending' ? '대기중' : ticket.status === 'answered' ? '답변완료' : '종료'}
+                              {ticket.status === 'pending' ? gat('status_pending') : ticket.status === 'answered' ? gat('status_answered') : gat('status_closed')}
                             </span>
                           </div>
                           <p className="m-0 mb-3 whitespace-pre-wrap text-sm text-slate-500">
@@ -1775,7 +1777,7 @@ export function GroupAdminPanel({
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
-                                답변:
+                                {gat('answer_prefix')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
@@ -1796,13 +1798,13 @@ export function GroupAdminPanel({
                                   entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
                                 }`}
                               >
-                                {entry.role === 'member' ? '추가 문의' : '답변'}
+                                {entry.role === 'member' ? gat('thread_role_follow_up') : gat('thread_role_admin_reply')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
                               <div className="mt-2 text-[11px] text-slate-400">
-                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                                {formatDateTime(entry.created_at)}
                               </div>
                             </div>
                           ))}
@@ -1818,7 +1820,7 @@ export function GroupAdminPanel({
                             }}
                             className="cursor-pointer rounded-md border-none bg-blue-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                           >
-                            답변하기
+                            {gat('reply_action')}
                           </button>
                         </div>
                       )}
@@ -1827,8 +1829,8 @@ export function GroupAdminPanel({
                         className="mt-3 flex flex-wrap items-center justify-between gap-2"
                       >
                         <div className="text-xs text-slate-400">
-                          작성일: {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                          {ticket.answered_at && ` | 답변일: ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                          {gat('requested_at_label')} {formatDateTime(ticket.created_at)}
+                          {ticket.answered_at && ` | ${gat('answered_at')} ${formatDateTime(ticket.answered_at)}`}
                         </div>
                         <button
                           type="button"
@@ -1838,7 +1840,7 @@ export function GroupAdminPanel({
                             deletingMemberTicketId === ticket.id ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
                           }`}
                         >
-                          {deletingMemberTicketId === ticket.id ? '삭제 중…' : '삭제'}
+                          {deletingMemberTicketId === ticket.id ? gat('deleting_label') : ct('delete')}
                         </button>
                       </div>
                     </motion.div>
@@ -1847,7 +1849,7 @@ export function GroupAdminPanel({
                   {memberSupportTickets.length === 0 && (
                     <div className="p-12 text-center text-slate-400">
                       <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                      <p>멤버 문의가 없습니다.</p>
+                      <p>{gat('no_member_support_tickets')}</p>
                     </div>
                   )}
                 </div>
@@ -1862,7 +1864,7 @@ export function GroupAdminPanel({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
-                        답변 작성
+                        {gat('reply_compose_title')}
                       </h3>
                       {editingMemberTicket && (
                         <div className="mb-4 rounded-lg bg-slate-50 p-3 text-[13px] text-slate-600">
@@ -1870,7 +1872,7 @@ export function GroupAdminPanel({
                           <div className="mb-2 whitespace-pre-wrap">{editingMemberTicket.content}</div>
                           {editingMemberTicket.answer && (
                             <div className="mt-2 border-t border-slate-200 pt-2">
-                              <span className="text-[11px] font-semibold text-sky-700">첫 답변</span>
+                              <span className="text-[11px] font-semibold text-sky-700">{gat('first_reply_label')}</span>
                               <div className="mt-1 whitespace-pre-wrap">{editingMemberTicket.answer}</div>
                             </div>
                           )}
@@ -1881,7 +1883,7 @@ export function GroupAdminPanel({
                                   entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
                                 }`}
                               >
-                                {entry.role === 'member' ? '추가 문의' : '이전 답변'}
+                                {entry.role === 'member' ? gat('thread_role_follow_up') : gat('thread_role_previous_reply')}
                               </span>
                               <div className="mt-1 whitespace-pre-wrap">{entry.body}</div>
                             </div>
@@ -1891,7 +1893,7 @@ export function GroupAdminPanel({
                       <textarea
                         value={memberTicketAnswer}
                         onChange={(e) => setMemberTicketAnswer(e.target.value)}
-                        placeholder="답변 내용을 입력하세요"
+                        placeholder={gat('reply_placeholder')}
                         className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm"
                       />
                       <div className="flex justify-end gap-2">
@@ -1902,12 +1904,12 @@ export function GroupAdminPanel({
                           }}
                           className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
-                          취소
+                          {ct('cancel')}
                         </button>
                         <button
                           onClick={async () => {
                             if (!editingMemberTicket || !memberTicketAnswer.trim()) {
-                              alert('답변 내용을 입력해주세요.');
+                              alert(gat('alert_reply_required'));
                               return;
                             }
                             if (!effectiveGroupId) return;
@@ -1915,7 +1917,7 @@ export function GroupAdminPanel({
                               setLoadingData(true);
                               const { data: { session } } = await supabase.auth.getSession();
                               if (!session?.access_token) {
-                                alert('인증이 필요합니다.');
+                                alert(gat('auth_required'));
                                 return;
                               }
                               const response = await fetch('/api/group-admin/member-support-tickets', {
@@ -1933,22 +1935,22 @@ export function GroupAdminPanel({
                               });
                               const result = await response.json();
                               if (!response.ok) {
-                                throw new Error(result.error || '답변 저장에 실패했습니다.');
+                                throw new Error(result.error || gat('error_reply_save'));
                               }
-                              alert('답변이 저장되었습니다.');
+                              alert(gat('reply_saved'));
                               setEditingMemberTicket(null);
                               setMemberTicketAnswer('');
                               loadMemberSupportTickets();
                             } catch (e: any) {
-                              console.error('멤버 문의 답변 저장 오류:', e);
-                              alert(e.message || '답변 저장에 실패했습니다.');
+                              console.error('member support reply save', e);
+                              alert(e.message || gat('error_reply_save'));
                             } finally {
                               setLoadingData(false);
                             }
                           }}
                           className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         >
-                          저장
+                          {ct('save')}
                         </button>
                       </div>
                     </div>
@@ -1962,7 +1964,7 @@ export function GroupAdminPanel({
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-[20px] font-semibold text-slate-800">
-                    대시보드 접근 요청
+                    {gat('access_requests_title')}
                   </h2>
                   <button
                     onClick={() => {
@@ -1972,7 +1974,7 @@ export function GroupAdminPanel({
                     className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                   >
                     <Plus className="h-[18px] w-[18px]" />
-                    접근 요청
+                    {gat('access_request_create_btn')}
                   </button>
                 </div>
 
@@ -2021,13 +2023,13 @@ export function GroupAdminPanel({
                           </p>
                           {request.status === 'approved' && request.expires_at && (
                             <div className="mb-2 text-sm text-emerald-600">
-                              만료일: {new Date(request.expires_at).toLocaleString('ko-KR')}
+                              {gat('expires_at_label')} {formatDateTime(request.expires_at)}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
                             <div className="mt-3 rounded-lg border border-red-200 bg-red-100 p-3">
                               <div className="mb-1 text-xs font-semibold text-red-800">
-                                거절 사유:
+                                {gat('rejection_reason_label')}
                               </div>
                               <p className="m-0 text-sm text-slate-800">
                                 {request.rejection_reason}
@@ -2069,7 +2071,7 @@ export function GroupAdminPanel({
                                 alert(gat('request_cancelled'));
                                 loadAccessRequests();
                               } catch (error: any) {
-                                console.error('???�쎌??????�쎌?�占???�썩�?????�쎌?�占?', error);
+                                console.error('announcement mark read', error);
                                 alert(error.message || gat('error_request_cancel'));
                               } finally {
                                 setLoadingData(false);
@@ -2077,14 +2079,14 @@ export function GroupAdminPanel({
                             }}
                             className="cursor-pointer rounded-md border-none bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
                           >
-                            취소
+                            {ct('cancel')}
                           </button>
                         </div>
                       )}
                       <div className="mt-3 text-xs text-slate-400">
-                        요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
-                        {request.approved_at && ` | 승인일: ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
-                        {request.rejected_at && ` | 거절일: ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                        {gat('requested_at_label')} {formatDateTime(request.created_at)}
+                        {request.approved_at && ` | ${gat('approved_at_label')} ${formatDateTime(request.approved_at)}`}
+                        {request.rejected_at && ` | ${gat('rejected_at_label')} ${formatDateTime(request.rejected_at)}`}
                       </div>
                     </motion.div>
                   ))}
@@ -2107,10 +2109,10 @@ export function GroupAdminPanel({
                     onClick={(e) => e.stopPropagation()}
                     >
                       <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
-                        대시보드 접근 요청
+                        {gat('access_request_modal_title')}
                       </h3>
                       <p className="mb-4 text-sm text-slate-500">
-                        시스템 관리자가 본인 가족 대시보드에 접근하도록 요청합니다.
+                        {gat('access_request_modal_hint')}
                       </p>
                       <textarea
                         value={accessRequestReason}
@@ -2126,7 +2128,7 @@ export function GroupAdminPanel({
                           }}
                           className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                         >
-                          취소
+                          {ct('cancel')}
                         </button>
                         <button
                           onClick={async () => {
@@ -2171,7 +2173,7 @@ export function GroupAdminPanel({
                               setAccessRequestReason('');
                               loadAccessRequests();
                             } catch (error: any) {
-                              console.error('???�쎌??????�쎌?�占????�쎌?�占????�쎌?�占?', error);
+                              console.error('announcement mark read', error);
                               alert(error.message || gat('error_request_create'));
                             } finally {
                               setLoadingData(false);
@@ -2179,7 +2181,7 @@ export function GroupAdminPanel({
                           }}
                           className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                         >
-                          요청
+                          {gat('submit_request')}
                         </button>
                       </div>
                     </div>
@@ -2221,7 +2223,7 @@ export function GroupAdminPanel({
                       ) : (
                         piggyArchivesSnapshots.map((s) => (
                           <tr key={s.id} className="border-b border-slate-100">
-                            <td className="whitespace-nowrap px-3 py-2.5">{new Date(s.deleted_at).toLocaleString('ko-KR')}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5">{formatDateTime(s.deleted_at)}</td>
                             <td className="px-3 py-2.5">{s.user_nickname}</td>
                             <td className="px-3 py-2.5">{s.account_name || '-'}</td>
                             <td className="px-3 py-2.5">{s.deleted_by_nickname ?? '-'}</td>
@@ -2261,7 +2263,7 @@ export function GroupAdminPanel({
                         onClick={() => { setPiggyArchivesDetailId(null); setPiggyArchivesDetail(null); }}
                         className="cursor-pointer rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
                       >
-                        닫기
+                        {ct('close')}
                       </button>
                     </div>
                     {piggyArchivesDetailLoading ? (
@@ -2271,18 +2273,18 @@ export function GroupAdminPanel({
                       </div>
                     ) : piggyArchivesDetail && (piggyArchivesDetail.walletTransactions.length > 0 || piggyArchivesDetail.bankTransactions.length > 0) ? (
                       <>
-                        <h4 className="my-2 text-sm text-slate-600">용돈 내역</h4>
+                        <h4 className="my-2 text-sm text-slate-600">{gat('piggy_wallet_history')}</h4>
                         {piggyArchivesDetail.walletTransactions.length === 0 ? (
-                          <p className="m-0 text-[13px] text-slate-400">없음</p>
+                          <p className="m-0 text-[13px] text-slate-400">{gat('label_none')}</p>
                         ) : (
                           <table className="mb-4 w-full border-collapse text-xs">
                             <thead>
                               <tr className="bg-slate-100">
-                                <th className="p-2 text-left">일시</th>
-                                <th className="p-2 text-left">유형</th>
-                                <th className="p-2 text-right">금액</th>
-                                <th className="p-2 text-left">메모</th>
-                                <th className="p-2 text-left">행위자</th>
+                                <th className="p-2 text-left">{gat('tx_col_datetime')}</th>
+                                <th className="p-2 text-left">{gat('tx_col_type')}</th>
+                                <th className="p-2 text-right">{gat('tx_col_amount')}</th>
+                                <th className="p-2 text-left">{gat('tx_col_memo')}</th>
+                                <th className="p-2 text-left">{gat('tx_col_actor')}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2290,7 +2292,7 @@ export function GroupAdminPanel({
                                 <tr key={tx.id} className="border-b border-slate-200">
                                   <td className="p-2">{tx.dateLabel}</td>
                                   <td className="p-2">{tx.typeLabel}</td>
-                                  <td className="p-2 text-right">{tx.amount.toLocaleString()}원</td>
+                                  <td className="p-2 text-right">{tx.amount.toLocaleString()}{gat('amount_currency_suffix')}</td>
                                   <td className="p-2">{tx.memo || '-'}</td>
                                   <td className="p-2">{tx.actor_nickname}</td>
                                 </tr>
@@ -2298,18 +2300,18 @@ export function GroupAdminPanel({
                             </tbody>
                           </table>
                         )}
-                        <h4 className="my-2 text-sm text-slate-600">저금통 내역</h4>
+                        <h4 className="my-2 text-sm text-slate-600">{gat('piggy_bank_history')}</h4>
                         {piggyArchivesDetail.bankTransactions.length === 0 ? (
-                          <p className="m-0 text-[13px] text-slate-400">없음</p>
+                          <p className="m-0 text-[13px] text-slate-400">{gat('label_none')}</p>
                         ) : (
                           <table className="w-full border-collapse text-xs">
                             <thead>
                               <tr className="bg-slate-100">
-                                <th className="p-2 text-left">일시</th>
-                                <th className="p-2 text-left">유형</th>
-                                <th className="p-2 text-right">금액</th>
-                                <th className="p-2 text-left">메모</th>
-                                <th className="p-2 text-left">행위자</th>
+                                <th className="p-2 text-left">{gat('tx_col_datetime')}</th>
+                                <th className="p-2 text-left">{gat('tx_col_type')}</th>
+                                <th className="p-2 text-right">{gat('tx_col_amount')}</th>
+                                <th className="p-2 text-left">{gat('tx_col_memo')}</th>
+                                <th className="p-2 text-left">{gat('tx_col_actor')}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2317,7 +2319,7 @@ export function GroupAdminPanel({
                                 <tr key={tx.id} className="border-b border-slate-200">
                                   <td className="p-2">{tx.dateLabel}</td>
                                   <td className="p-2">{tx.typeLabel}</td>
-                                  <td className="p-2 text-right">{tx.amount.toLocaleString()}원</td>
+                                  <td className="p-2 text-right">{tx.amount.toLocaleString()}{gat('amount_currency_suffix')}</td>
                                   <td className="p-2">{tx.memo || '-'}</td>
                                   <td className="p-2">{tx.actor_nickname}</td>
                                 </tr>
