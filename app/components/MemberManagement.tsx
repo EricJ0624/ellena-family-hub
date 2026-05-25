@@ -6,7 +6,10 @@ import { Users, UserX, Settings, X, Crown, User, Loader2, AlertCircle, Shield, S
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
+import {
+  formatMemberManagementTranslation,
+  getMemberManagementTranslation,
+} from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import type { MembershipRole, FamilyRole } from '@/types/db';
 import GroupSettings from './GroupSettings';
@@ -373,7 +376,9 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       {/* 헤더 */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="m-0 text-xl font-semibold text-slate-800">
-          회원 목록 ({filteredMembers.length}명)
+          {formatMemberManagementTranslation(lang, 'member_list_with_count', {
+            count: filteredMembers.length,
+          })}
         </h2>
         <div className="flex items-center gap-2">
           <div className="relative w-[280px]">
@@ -613,7 +618,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
 
               {filteredMembers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                  <td colSpan={6} className="p-8 text-center text-slate-400">
                     {mmt('no_members')}
                   </td>
                 </tr>

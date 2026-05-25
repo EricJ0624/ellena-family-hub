@@ -1,6 +1,8 @@
 import type { LangCode } from '@/lib/language-fonts';
 
 export type MemberManagementTranslations = {
+  /** {count} = number only; suffix is in the string per locale (e.g. 3명 / 3 members) */
+  member_list_with_count: string;
   select_group_first: string;
   search_placeholder: string;
   group_settings_btn: string;
@@ -46,6 +48,7 @@ export type MemberManagementTranslations = {
 
 const memberManagement: Record<LangCode, MemberManagementTranslations> = {
   ko: {
+    member_list_with_count: '회원 목록 ({count}명)',
     select_group_first: '그룹을 선택해주세요.',
     search_placeholder: '이메일, 별명, ID로 검색...',
     group_settings_btn: '그룹 설정',
@@ -89,6 +92,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_modal_description: '가족에서 나를 어떻게 표시할까요? (선택사항)',
   },
   en: {
+    member_list_with_count: 'Members ({count})',
     select_group_first: 'Please select a group.',
     search_placeholder: 'Search by email, nickname, ID...',
     group_settings_btn: 'Group settings',
@@ -132,6 +136,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_modal_description: 'How would you like to be shown in the family? (Optional)',
   },
   ja: {
+    member_list_with_count: '会員一覧（{count}名）',
     select_group_first: 'グループを選択してください。',
     search_placeholder: 'メール、ニックネーム、IDで検索...',
     group_settings_btn: 'グループ設定',
@@ -175,6 +180,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_modal_description: '家族でどのように表示しますか？（任意）',
   },
   'zh-CN': {
+    member_list_with_count: '成员列表（{count}人）',
     select_group_first: '请先选择群组。',
     search_placeholder: '按邮箱、昵称、ID 搜索...',
     group_settings_btn: '群组设置',
@@ -218,6 +224,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     family_role_modal_description: '您希望在家庭中如何显示？（选填）',
   },
   'zh-TW': {
+    member_list_with_count: '成員列表（{count}人）',
     select_group_first: '請先選擇群組。',
     search_placeholder: '以電子郵件、暱稱、ID 搜尋...',
     group_settings_btn: '群組設定',
@@ -264,6 +271,18 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
 
 export function getMemberManagementTranslation(lang: LangCode, key: keyof MemberManagementTranslations): string {
   return memberManagement[lang]?.[key] ?? memberManagement.en[key] ?? (memberManagement.ko[key] as string) ?? key;
+}
+
+export function formatMemberManagementTranslation(
+  lang: LangCode,
+  key: keyof MemberManagementTranslations,
+  vars: Record<string, string | number>,
+): string {
+  let text = getMemberManagementTranslation(lang, key);
+  for (const [name, value] of Object.entries(vars)) {
+    text = text.replaceAll(`{${name}}`, String(value));
+  }
+  return text;
 }
 
 /** 가족 표시 역할 값을 다국어 라벨로 변환 (앱 전반 표시용) */
