@@ -232,8 +232,9 @@ export function FamilyTasksSection({
         </div>
       )}
 
+      <div className="chalkboard-frame">
       <section className="chalkboard-container">
-        <div className="chalkboard-decorations">
+        <div className="chalkboard-decorations" aria-hidden="true">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -323,7 +324,18 @@ export function FamilyTasksSection({
             <p className="chalkboard-empty-state">{t.todo_empty_state}</p>
           )}
         </div>
+        <div className="chalkboard-props" aria-hidden="true">
+          <svg width="36" height="14" viewBox="0 0 36 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="22" height="5" rx="1.5" transform="rotate(-8 13 5.5)" fill="#f5f0e6" stroke="rgba(255,255,255,0.5)" strokeWidth="0.5" />
+            <rect x="24" y="2" width="10" height="6" rx="1" fill="#c4a882" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
+          </svg>
+          <svg width="22" height="16" viewBox="0 0 22 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="4" width="18" height="8" rx="2" fill="#d4a5a5" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
+            <rect x="3" y="6" width="14" height="4" rx="1" fill="#e8c4c4" opacity="0.9" />
+          </svg>
+        </div>
       </section>
+      </div>
     </>
   );
 }

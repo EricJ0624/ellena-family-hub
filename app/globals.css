@@ -74,9 +74,16 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   /* Chalkboard Colors */
-  --chalkboard-bg: #0f2a08;
-  --chalkboard-border-light: #6f5210;
-  --chalkboard-border-dark: #4d390b;
+  --chalkboard-bg: #1e3a24;
+  --chalkboard-bg-deep: #162e1c;
+  --chalkboard-border-light: #9a7420;
+  --chalkboard-border-mid: #6b5010;
+  --chalkboard-border-dark: #4a3208;
+  --chalk-font: 'Caveat', 'Patrick Hand', 'Chalkboard SE', 'Chalkduster', cursive;
+  --chalk-shadow: 0 0 2px rgba(255, 255, 255, 0.6), 0 0 4px rgba(255, 255, 255, 0.4),
+    1px 1px 0 rgba(0, 0, 0, 0.25);
+  --chalkboard-grid: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }
 
 .dark {
@@ -201,8 +208,9 @@
   --glass-soft-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --glass-medium-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --glass-strong-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  --chalkboard-border-light: #8b6914;
-  --chalkboard-border-dark: #6b5010;
+  --chalkboard-border-light: #a88a28;
+  --chalkboard-border-mid: #7a5c14;
+  --chalkboard-border-dark: #5a4010;
 }
 
 * {
@@ -759,74 +767,129 @@ select {
 }
 
 /* ============================================
-   Todo Section - Chalkboard Style
+   Todo Section - Chalkboard Style (realistic)
    ============================================ */
+.chalk-text {
+  font-family: var(--chalk-font);
+  color: #ffffff;
+  text-shadow: var(--chalk-shadow);
+  letter-spacing: 0.04em;
+}
+
+/* Wood frame wrapper */
+.chalkboard-frame {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      165deg,
+      var(--chalkboard-border-light) 0%,
+      var(--chalkboard-border-mid) 28%,
+      var(--chalkboard-border-dark) 52%,
+      var(--chalkboard-border-mid) 72%,
+      var(--chalkboard-border-light) 100%
+    );
+  background-size: 100% 100%;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.45),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.chalkboard-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  opacity: 0.35;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .chalkboard-container {
   position: relative;
   min-width: 0;
   width: 100%;
-  background: var(--chalkboard-bg);
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
-  border: 16px solid;
-  border-image: 
-    repeating-linear-gradient(
-      90deg,
-      var(--chalkboard-border-light) 0px,
-      var(--chalkboard-border-light) 2px,
-      var(--chalkboard-border-dark) 2px,
-      var(--chalkboard-border-dark) 4px,
-      var(--chalkboard-border-light) 4px,
-      var(--chalkboard-border-light) 6px,
-      var(--chalkboard-border-dark) 6px,
-      var(--chalkboard-border-dark) 8px
-    ) 16;
-  border-radius: 8px;
+  background-color: var(--chalkboard-bg);
+  background-image:
+    var(--chalkboard-grid),
+    radial-gradient(ellipse 45% 35% at 18% 22%, rgba(255, 255, 255, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 82% 68%, rgba(255, 255, 255, 0.05) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 40% at 55% 88%, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 25% at 70% 15%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
+  background-size:
+    24px 24px,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  border: none;
+  border-radius: 4px;
   padding: var(--spacing-xl);
-  box-shadow: 
-    inset 0 0 20px rgba(0, 0, 0, 0.3),
-    0 10px 30px rgba(0, 0, 0, 0.4);
+  padding-bottom: calc(var(--spacing-xl) + 12px);
+  box-shadow:
+    inset 5px 5px 18px rgba(0, 0, 0, 0.45),
+    inset -2px -2px 10px rgba(255, 255, 255, 0.04),
+    inset 0 0 40px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
 .chalkboard-container::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  opacity: 0.3;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.12) 100%);
   pointer-events: none;
+  z-index: 0;
+}
+
+.chalkboard-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
 .chalkboard-family-illustration {
-  background: var(--chalkboard-bg);
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  background-size: 100% 100%, 100% 100%, 60px 60px;
-  background-position: center, center, 0 0;
-  background-repeat: no-repeat, no-repeat, repeat;
+  background-color: var(--chalkboard-bg);
+  background-image:
+    var(--chalkboard-grid),
+    radial-gradient(ellipse 45% 35% at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 70%),
+    linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
+  background-size: 24px 24px, 100% 100%, 100% 100%;
 }
 
 .chalkboard-title {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  color: #ffffff;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
-  text-shadow: 
-    2px 2px 0px rgba(0, 0, 0, 0.3),
-    0 0 10px rgba(255, 255, 255, 0.1);
   margin-bottom: var(--spacing-lg);
-  letter-spacing: 0.05em;
   position: relative;
   z-index: 1;
+}
+
+.chalkboard-title,
+.chalkboard-btn-add,
+.chalkboard-empty-state,
+.todo-text,
+.todo-assignee,
+.chalkboard-modal-title,
+.chalkboard-form-label,
+.chalkboard-form-input,
+.chalkboard-btn-secondary,
+.chalkboard-btn-primary {
+  font-family: var(--chalk-font);
+  text-shadow: var(--chalk-shadow);
 }
 
 .chalkboard-header {
@@ -836,9 +899,16 @@ select {
   align-items: center;
   gap: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+  padding-right: 108px;
+  padding-top: 4px;
   position: relative;
   z-index: 1;
   min-width: 0;
+}
+
+.chalkboard-container .section-body {
+  position: relative;
+  z-index: 1;
 }
 
 .chalkboard-header .chalkboard-title {
@@ -848,19 +918,35 @@ select {
 
 .chalkboard-decorations {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 14px;
+  right: 14px;
   display: flex;
-  gap: 12px;
-  opacity: 0.4;
-  z-index: 0;
+  gap: 14px;
+  z-index: 2;
   pointer-events: none;
 }
 
 .chalkboard-decorations svg {
-  width: 24px;
-  height: 24px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  width: 26px;
+  height: 26px;
+  opacity: 0.88;
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.75))
+    drop-shadow(0 0 3px rgba(255, 255, 255, 0.4))
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.chalkboard-props {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  opacity: 0.82;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 .chalkboard-characters {
@@ -884,22 +970,25 @@ select {
   padding: var(--spacing-xs) var(--spacing-md);
   background: transparent;
   color: #ffffff;
-  border: 2px solid #ffffff;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 255px 12px 225px 15px / 12px 225px 15px 255px;
+  font-size: 1rem;
   font-weight: 700;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
-  letter-spacing: 0.05em;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.06em;
   position: relative;
   z-index: 1;
+  box-shadow:
+    0 0 2px rgba(255, 255, 255, 0.35),
+    inset 0 0 8px rgba(255, 255, 255, 0.03);
 }
 
 .chalkboard-btn-add:hover {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.25),
+    0 0 2px rgba(255, 255, 255, 0.4);
 }
 
 .chalkboard-btn-add:active {
@@ -939,15 +1028,17 @@ select {
 .todo-checkbox {
   width: 1.5rem;
   height: 1.5rem;
-  border-radius: 4px;
-  border: 2px solid #ffffff;
+  border-radius: 255px 6px 225px 6px / 6px 225px 6px 255px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 2px rgba(255, 255, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
 .todo-checkbox:hover {
@@ -976,14 +1067,10 @@ select {
 }
 
 .todo-text {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #ffffff;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
-  text-shadow: 
-    1px 1px 0px rgba(0, 0, 0, 0.3),
-    0 0 5px rgba(255, 255, 255, 0.1);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .todo-text-done {
@@ -992,15 +1079,14 @@ select {
 }
 
 .todo-assignee {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
+  color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
   padding: 2px 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 255px 8px 225px 8px / 8px 225px 8px 255px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .chalkboard-btn-delete {
@@ -1037,12 +1123,10 @@ select {
 
 .chalkboard-empty-state {
   padding: var(--spacing-lg) 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.82);
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.25rem;
   text-align: center;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 1;
 }
@@ -1067,27 +1151,19 @@ select {
   width: 100%;
   max-width: 400px;
   padding: var(--spacing-2xl);
-  background: #2d5016;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
-  border: 16px solid;
-  border-image: 
-    repeating-linear-gradient(
-      90deg,
-      #8b6914 0px,
-      #8b6914 2px,
-      #6b5010 2px,
-      #6b5010 4px,
-      #8b6914 4px,
-      #8b6914 6px,
-      #6b5010 6px,
-      #6b5010 8px
-    ) 16;
-  border-radius: 8px;
-  box-shadow: 
-    inset 0 0 20px rgba(0, 0, 0, 0.3),
-    0 20px 60px rgba(0, 0, 0, 0.5);
+  background-color: var(--chalkboard-bg);
+  background-image:
+    var(--chalkboard-grid),
+    radial-gradient(ellipse 45% 35% at 20% 25%, rgba(255, 255, 255, 0.06) 0%, transparent 70%),
+    linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
+  background-size: 24px 24px, 100% 100%, 100% 100%;
+  border: 12px solid var(--chalkboard-border-mid);
+  border-radius: 6px;
+  box-shadow:
+    inset 4px 4px 14px rgba(0, 0, 0, 0.4),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 2px var(--chalkboard-border-light),
+    0 0 0 4px var(--chalkboard-border-dark);
   position: relative;
   overflow: hidden;
 }
@@ -1095,13 +1171,8 @@ select {
 .chalkboard-modal-content::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  opacity: 0.3;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.1) 100%);
   pointer-events: none;
 }
 
@@ -1109,10 +1180,6 @@ select {
   font-size: 1.5rem;
   font-weight: 700;
   color: #ffffff;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
-  text-shadow: 
-    2px 2px 0px rgba(0, 0, 0, 0.3),
-    0 0 10px rgba(255, 255, 255, 0.1);
   margin-bottom: var(--spacing-lg);
   display: flex;
   align-items: center;
@@ -1144,23 +1211,19 @@ select {
   font-size: 0.875rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
   margin-left: var(--spacing-xs);
 }
 
 .chalkboard-form-input {
   width: 100%;
   padding: var(--spacing-md);
-  border-radius: 8px;
-  border: 2px solid #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
   font-weight: 600;
   color: #ffffff;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
   outline: none;
   transition: all 0.2s ease;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -1186,13 +1249,11 @@ select {
   padding: var(--spacing-md) 0;
   color: #ffffff;
   font-weight: 700;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
   background: transparent;
-  border: 2px solid #ffffff;
-  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -1203,16 +1264,14 @@ select {
 .chalkboard-btn-primary {
   flex: 2;
   padding: var(--spacing-md) 0;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
-  border: 2px solid #ffffff;
-  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px;
   font-weight: 700;
-  font-family: 'Comic Sans MS', 'Marker Felt', 'Chalkduster', 'Arial Rounded MT Bold', sans-serif;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
   cursor: pointer;
-  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
 }
 
 .chalkboard-btn-primary:hover {
