@@ -3,8 +3,8 @@
 import { type RefObject, useLayoutEffect, useState } from 'react';
 import {
   detectDashboardShell,
-  TOUCH_PRIMARY_MEDIA_QUERY,
-  WEB_PREVIEW_MEDIA_QUERY,
+  TOUCH_ONLY_DEVICE_MEDIA_QUERY,
+  WIDE_VIEWPORT_MEDIA_QUERY,
   type DashboardShell,
 } from './layout-shell';
 import { getDashboardColumnCount } from './grid';
@@ -45,17 +45,17 @@ export function useDashboardGridLayout(
     const ro = new ResizeObserver(() => read());
     ro.observe(el);
 
-    const mqDesktop = window.matchMedia(WEB_PREVIEW_MEDIA_QUERY);
-    const mqTouch = window.matchMedia(TOUCH_PRIMARY_MEDIA_QUERY);
+    const mqWide = window.matchMedia(WIDE_VIEWPORT_MEDIA_QUERY);
+    const mqTouchOnly = window.matchMedia(TOUCH_ONLY_DEVICE_MEDIA_QUERY);
     const onMq = () => read();
-    mqDesktop.addEventListener('change', onMq);
-    mqTouch.addEventListener('change', onMq);
+    mqWide.addEventListener('change', onMq);
+    mqTouchOnly.addEventListener('change', onMq);
     window.addEventListener('resize', onMq);
 
     return () => {
       ro.disconnect();
-      mqDesktop.removeEventListener('change', onMq);
-      mqTouch.removeEventListener('change', onMq);
+      mqWide.removeEventListener('change', onMq);
+      mqTouchOnly.removeEventListener('change', onMq);
       window.removeEventListener('resize', onMq);
     };
   }, [gridRef, previewOrientation]);
