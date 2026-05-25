@@ -849,20 +849,6 @@ select {
   max-width: 58%;
 }
 
-.chalkboard-title--image {
-  text-shadow: none;
-  line-height: 0;
-}
-
-.chalkboard-title-img {
-  display: block;
-  height: clamp(2rem, 7.5vw, 3.1rem);
-  width: auto;
-  max-width: min(100%, 16rem);
-  object-fit: contain;
-  object-position: left top;
-}
-
 .chalkboard-title,
 .chalkboard-btn-add {
   text-shadow: var(--chalk-shadow-ui);
