@@ -79,11 +79,11 @@
   --chalkboard-border-light: #9a7420;
   --chalkboard-border-mid: #6b5010;
   --chalkboard-border-dark: #4a3208;
-  --chalk-font: 'Caveat', 'Patrick Hand', 'Chalkboard SE', 'Chalkduster', cursive;
-  --chalk-shadow: 0 0 2px rgba(255, 255, 255, 0.6), 0 0 4px rgba(255, 255, 255, 0.4),
-    1px 1px 0 rgba(0, 0, 0, 0.25);
-  --chalkboard-grid: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  --chalk-font-title: 'Gochi Hand', 'Patrick Hand', 'Chalkboard SE', cursive;
+  --chalk-font: 'Caveat', 'Patrick Hand', 'Chalkboard SE', cursive;
+  --chalk-shadow: 0 0 2px rgba(255, 255, 255, 0.65), 0 0 5px rgba(255, 255, 255, 0.45),
+    0 0 8px rgba(255, 255, 255, 0.2), 1px 1px 0 rgba(0, 0, 0, 0.2);
+  --chalkboard-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M0 11h22M11 0v22' stroke='%23ffffff' stroke-opacity='0.055' stroke-width='0.5'/%3E%3Cpath d='M11 9.8v2.4M9.8 11h2.4' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='0.55' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .dark {
@@ -776,28 +776,22 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Wood frame wrapper */
+/* Wood frame wrapper — dark classroom molding (ref: target mock) */
 .chalkboard-frame {
   position: relative;
   min-width: 0;
   width: 100%;
-  padding: 14px;
-  border-radius: 10px;
+  padding: 18px;
+  border-radius: 4px;
   background:
-    linear-gradient(
-      165deg,
-      var(--chalkboard-border-light) 0%,
-      var(--chalkboard-border-mid) 28%,
-      var(--chalkboard-border-dark) 52%,
-      var(--chalkboard-border-mid) 72%,
-      var(--chalkboard-border-light) 100%
-    );
-  background-size: 100% 100%;
+    linear-gradient(180deg, #6b4e28 0%, #4a3418 22%, #2f1f0e 48%, #3d2a14 72%, #5a4020 100%);
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.45),
-    0 4px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+    0 14px 36px rgba(0, 0, 0, 0.55),
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -5px 10px rgba(0, 0, 0, 0.45),
+    inset 3px 0 6px rgba(0, 0, 0, 0.2),
+    inset -3px 0 6px rgba(0, 0, 0, 0.2);
 }
 
 .chalkboard-frame::before {
@@ -805,10 +799,20 @@ select {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04 0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)' opacity='0.22'/%3E%3C/svg%3E");
   pointer-events: none;
   border-radius: inherit;
+}
+
+.chalkboard-frame::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    inset 0 3px 8px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
 }
 
 .chalkboard-container {
@@ -818,26 +822,29 @@ select {
   background-color: var(--chalkboard-bg);
   background-image:
     var(--chalkboard-grid),
-    radial-gradient(ellipse 45% 35% at 18% 22%, rgba(255, 255, 255, 0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 30% at 82% 68%, rgba(255, 255, 255, 0.05) 0%, transparent 65%),
-    radial-gradient(ellipse 55% 40% at 55% 88%, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse 30% 25% at 70% 15%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 12% 18%, rgba(255, 255, 255, 0.09) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 35% at 88% 25%, rgba(255, 255, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 72% 78%, rgba(255, 255, 255, 0.07) 0%, transparent 68%),
+    radial-gradient(ellipse 40% 30% at 35% 55%, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
+    radial-gradient(ellipse 35% 28% at 60% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
     linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
   background-size:
-    24px 24px,
+    22px 22px,
+    100% 100%,
     100% 100%,
     100% 100%,
     100% 100%,
     100% 100%,
     100% 100%;
   border: none;
-  border-radius: 4px;
+  border-radius: 2px;
   padding: var(--spacing-xl);
-  padding-bottom: calc(var(--spacing-xl) + 12px);
+  padding-bottom: calc(var(--spacing-xl) + 8px);
+  min-height: 220px;
   box-shadow:
-    inset 5px 5px 18px rgba(0, 0, 0, 0.45),
-    inset -2px -2px 10px rgba(255, 255, 255, 0.04),
-    inset 0 0 40px rgba(0, 0, 0, 0.2);
+    inset 6px 6px 22px rgba(0, 0, 0, 0.5),
+    inset -1px -1px 8px rgba(255, 255, 255, 0.03),
+    inset 0 0 50px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
 
@@ -867,15 +874,19 @@ select {
     var(--chalkboard-grid),
     radial-gradient(ellipse 45% 35% at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 70%),
     linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
-  background-size: 24px 24px, 100% 100%, 100% 100%;
+  background-size: 22px 22px, 100% 100%, 100% 100%;
 }
 
 .chalkboard-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: var(--spacing-lg);
+  font-family: var(--chalk-font-title);
+  font-size: 2rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
   position: relative;
   z-index: 1;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
 .chalkboard-title,
@@ -888,22 +899,38 @@ select {
 .chalkboard-form-input,
 .chalkboard-btn-secondary,
 .chalkboard-btn-primary {
-  font-family: var(--chalk-font);
   text-shadow: var(--chalk-shadow);
 }
 
-.chalkboard-header {
+.chalkboard-btn-add,
+.todo-text,
+.todo-assignee,
+.chalkboard-empty-state,
+.chalkboard-modal-title,
+.chalkboard-form-label,
+.chalkboard-form-input,
+.chalkboard-btn-secondary,
+.chalkboard-btn-primary {
+  font-family: var(--chalk-font);
+}
+
+.chalkboard-top-bar {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-sm) var(--spacing-md);
+  align-items: flex-start;
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
-  padding-right: 108px;
-  padding-top: 4px;
   position: relative;
   z-index: 1;
   min-width: 0;
+}
+
+.chalkboard-top-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .chalkboard-container .section-body {
@@ -911,42 +938,38 @@ select {
   z-index: 1;
 }
 
-.chalkboard-header .chalkboard-title {
-  min-width: 0;
-  flex: 1 1 auto;
+.chalkboard-container .section-body:has(.chalkboard-empty-state) {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chalkboard-decorations {
-  position: absolute;
-  top: 14px;
-  right: 14px;
   display: flex;
-  gap: 14px;
-  z-index: 2;
+  gap: 16px;
   pointer-events: none;
 }
 
 .chalkboard-decorations svg {
-  width: 26px;
-  height: 26px;
-  opacity: 0.88;
+  width: 28px;
+  height: 28px;
+  opacity: 0.9;
+  stroke: rgba(255, 255, 255, 0.92);
   filter:
-    drop-shadow(0 0 1px rgba(255, 255, 255, 0.75))
-    drop-shadow(0 0 3px rgba(255, 255, 255, 0.4))
-    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.45))
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
-.chalkboard-props {
+/* Single chalk stick on frame ledge (ref mock) */
+.chalkboard-ledge-chalk {
   position: absolute;
-  bottom: 6px;
-  right: 10px;
-  z-index: 2;
+  bottom: 4px;
+  right: 22px;
+  z-index: 3;
   pointer-events: none;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  opacity: 0.82;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
 }
 
 .chalkboard-characters {
@@ -967,21 +990,21 @@ select {
 }
 
 .chalkboard-btn-add {
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: 6px 14px;
   background: transparent;
-  color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  border-radius: 255px 12px 225px 15px / 12px 225px 15px 255px;
-  font-size: 1rem;
-  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 14px 10px 16px 9px / 10px 15px 9px 14px;
+  font-family: var(--chalk-font-title);
+  font-size: 1.05rem;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
-  letter-spacing: 0.06em;
-  position: relative;
-  z-index: 1;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   box-shadow:
-    0 0 2px rgba(255, 255, 255, 0.35),
-    inset 0 0 8px rgba(255, 255, 255, 0.03);
+    0 0 2px rgba(255, 255, 255, 0.4),
+    inset 0 0 6px rgba(255, 255, 255, 0.04);
 }
 
 .chalkboard-btn-add:hover {
@@ -1122,13 +1145,15 @@ select {
 }
 
 .chalkboard-empty-state {
-  padding: var(--spacing-lg) 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-weight: 600;
-  font-size: 1.25rem;
+  padding: var(--spacing-md) 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 400;
+  font-size: 1.5rem;
+  font-style: italic;
   text-align: center;
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
 /* Chalkboard Modal Styles */
@@ -1156,8 +1181,8 @@ select {
     var(--chalkboard-grid),
     radial-gradient(ellipse 45% 35% at 20% 25%, rgba(255, 255, 255, 0.06) 0%, transparent 70%),
     linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
-  background-size: 24px 24px, 100% 100%, 100% 100%;
-  border: 12px solid var(--chalkboard-border-mid);
+  background-size: 22px 22px, 100% 100%, 100% 100%;
+  border: 14px solid #3d2a14;
   border-radius: 6px;
   box-shadow:
     inset 4px 4px 14px rgba(0, 0, 0, 0.4),

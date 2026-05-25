@@ -233,54 +233,41 @@ export function FamilyTasksSection({
       )}
 
       <div className="chalkboard-frame">
-      <section className="chalkboard-container">
-        <div className="chalkboard-decorations" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        <div className="chalkboard-ledge-chalk" aria-hidden="true">
+          <svg width="44" height="12" viewBox="0 0 44 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3.5" width="38" height="5" rx="2" fill="#f2ede4" />
+            <rect x="2" y="3.5" width="38" height="5" rx="2" stroke="rgba(255,255,255,0.35)" strokeWidth="0.5" />
+            <rect x="36" y="4" width="6" height="4" rx="1" fill="#c9b896" />
           </svg>
         </div>
-
-        <div className="chalkboard-header">
+      <section className="chalkboard-container">
+        <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>
-          <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
-            {t.todo_add_btn}
-          </button>
+          <div className="chalkboard-top-actions">
+            <div className="chalkboard-decorations" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="4.5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </div>
+            <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
+              {t.todo_add_btn}
+            </button>
+          </div>
         </div>
         <div
           className={`section-body ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
@@ -323,16 +310,6 @@ export function FamilyTasksSection({
           ) : (
             <p className="chalkboard-empty-state">{t.todo_empty_state}</p>
           )}
-        </div>
-        <div className="chalkboard-props" aria-hidden="true">
-          <svg width="36" height="14" viewBox="0 0 36 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="3" width="22" height="5" rx="1.5" transform="rotate(-8 13 5.5)" fill="#f5f0e6" stroke="rgba(255,255,255,0.5)" strokeWidth="0.5" />
-            <rect x="24" y="2" width="10" height="6" rx="1" fill="#c4a882" stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
-          </svg>
-          <svg width="22" height="16" viewBox="0 0 22 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="1" y="4" width="18" height="8" rx="2" fill="#d4a5a5" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6" />
-            <rect x="3" y="6" width="14" height="4" rx="1" fill="#e8c4c4" opacity="0.9" />
-          </svg>
         </div>
       </section>
       </div>
