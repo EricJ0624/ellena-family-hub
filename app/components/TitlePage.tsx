@@ -181,7 +181,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     ornate: 'inset-[20px]',
     vintage: 'inset-[20px]',
     modern: 'inset-[20px]',
-    minimal: 'inset-[20px]',
     soft_glass: 'inset-[14px]',
     polaroid_modern: 'left-[14px] right-[14px] top-[14px] bottom-[38px]',
     editorial: 'inset-[10px]',

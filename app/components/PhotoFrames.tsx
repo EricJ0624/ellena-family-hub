@@ -7,7 +7,6 @@ export type FrameStyle =
   | 'baroque'
   | 'modern'
   | 'vintage'
-  | 'minimal'
   | 'ornate'
   | 'soft_glass'
   | 'polaroid_modern'
@@ -51,12 +50,6 @@ export const FRAME_CONFIGS: FrameConfig[] = [
     name: '모던',
     description: '깔끔하고 현대적인 프레임',
     color: '#4a4a4a',
-  },
-  {
-    id: 'minimal',
-    name: '미니멀',
-    description: '심플하고 세련된 프레임',
-    color: '#8b7355',
   },
   {
     id: 'soft_glass',
@@ -326,16 +319,6 @@ const ModernFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) =
   );
 };
 
-// 미니멀 스타일 프레임 SVG
-const MinimalFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <rect x="0" y="0" width="400" height="300" fill={color} />
-      <rect x="15" y="15" width="370" height="270" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1" />
-    </svg>
-  );
-};
-
 // 소프트 글래스 스타일 프레임 SVG
 const SoftGlassFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
   return (
@@ -419,7 +402,6 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
     ornate: OrnateFrame,
     vintage: VintageFrame,
     modern: ModernFrame,
-    minimal: MinimalFrame,
     soft_glass: SoftGlassFrame,
     polaroid_modern: PolaroidModernFrame,
     editorial: EditorialFrame,

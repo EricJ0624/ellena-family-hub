@@ -10,7 +10,6 @@ export type TitlePageTranslations = {
   frame_ornate: string;
   frame_vintage: string;
   frame_modern: string;
-  frame_minimal: string;
   frame_soft_glass: string;
   frame_polaroid_modern: string;
   frame_editorial: string;
@@ -20,7 +19,6 @@ export type TitlePageTranslations = {
   frame_ornate_desc: string;
   frame_vintage_desc: string;
   frame_modern_desc: string;
-  frame_minimal_desc: string;
   frame_soft_glass_desc: string;
   frame_polaroid_modern_desc: string;
   frame_editorial_desc: string;
@@ -63,7 +61,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate: '오네이트',
     frame_vintage: '빈티지',
     frame_modern: '모던',
-    frame_minimal: '미니멀',
     frame_soft_glass: '소프트 글래스',
     frame_polaroid_modern: '폴라로이드 모던',
     frame_editorial: '에디토리얼',
@@ -73,7 +70,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate_desc: '정교한 조각 패턴의 고급 프레임',
     frame_vintage_desc: '우아한 빈티지 스타일 프레임',
     frame_modern_desc: '깔끔하고 현대적인 프레임',
-    frame_minimal_desc: '심플하고 세련된 프레임',
     frame_soft_glass_desc: '반투명 유리 질감의 트렌디 프레임',
     frame_polaroid_modern_desc: '하단 여백이 강조된 미니멀 폴라로이드',
     frame_editorial_desc: '거의 무프레임에 가까운 세련된 스타일',
@@ -114,7 +110,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate: 'Ornate',
     frame_vintage: 'Vintage',
     frame_modern: 'Modern',
-    frame_minimal: 'Minimal',
     frame_soft_glass: 'Soft Glass',
     frame_polaroid_modern: 'Polaroid Modern',
     frame_editorial: 'Editorial',
@@ -124,7 +119,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate_desc: 'Intricate carved pattern frame',
     frame_vintage_desc: 'Elegant vintage-style frame',
     frame_modern_desc: 'Clean, modern frame',
-    frame_minimal_desc: 'Simple, refined frame',
     frame_soft_glass_desc: 'Trendy translucent glass frame',
     frame_polaroid_modern_desc: 'Minimal polaroid with emphasized bottom margin',
     frame_editorial_desc: 'Sleek near-frameless editorial look',
@@ -165,7 +159,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate: 'オーネート',
     frame_vintage: 'ヴィンテージ',
     frame_modern: 'モダン',
-    frame_minimal: 'ミニマル',
     frame_soft_glass: 'ソフトグラス',
     frame_polaroid_modern: 'ポラロイドモダン',
     frame_editorial: 'エディトリアル',
@@ -175,7 +168,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate_desc: '精巧な彫刻パターンの高級フレーム',
     frame_vintage_desc: 'エレガントなヴィンテージスタイル',
     frame_modern_desc: 'シンプルでモダンなフレーム',
-    frame_minimal_desc: 'シンプルで上品なフレーム',
     frame_soft_glass_desc: '半透明ガラス質感のトレンディフレーム',
     frame_polaroid_modern_desc: '下余白を強調したミニマルポラロイド',
     frame_editorial_desc: 'ほぼフレームレスな洗練スタイル',
@@ -216,7 +208,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate: '华丽',
     frame_vintage: '复古',
     frame_modern: '现代',
-    frame_minimal: '极简',
     frame_soft_glass: '柔光玻璃',
     frame_polaroid_modern: '现代拍立得',
     frame_editorial: '编辑风',
@@ -226,7 +217,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate_desc: '精美雕刻图案高级相框',
     frame_vintage_desc: '优雅复古风格相框',
     frame_modern_desc: '简洁现代相框',
-    frame_minimal_desc: '简约精致相框',
     frame_soft_glass_desc: '半透明玻璃质感的潮流相框',
     frame_polaroid_modern_desc: '底部留白更明显的极简拍立得',
     frame_editorial_desc: '接近无边框的编辑风格',
@@ -267,7 +257,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate: '華麗',
     frame_vintage: '復古',
     frame_modern: '現代',
-    frame_minimal: '極簡',
     frame_soft_glass: '柔光玻璃',
     frame_polaroid_modern: '現代拍立得',
     frame_editorial: '編輯風',
@@ -277,7 +266,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_ornate_desc: '精美雕刻圖案高級相框',
     frame_vintage_desc: '優雅復古風格相框',
     frame_modern_desc: '簡潔現代相框',
-    frame_minimal_desc: '簡約精緻相框',
     frame_soft_glass_desc: '半透明玻璃質感的潮流相框',
     frame_polaroid_modern_desc: '底部留白更明顯的極簡拍立得',
     frame_editorial_desc: '接近無邊框的編輯風格',
