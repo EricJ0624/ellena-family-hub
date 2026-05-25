@@ -5403,7 +5403,12 @@ export default function FamilyHub() {
     columnCount: dashboardColumnCount,
     shell: dashboardShell,
     isLandscapeGrid: dashboardIsLandscapeGrid,
-  } = useDashboardGridLayout(dashboardGridRef, previewOrientation, dashboardGridActive);
+  } = useDashboardGridLayout(
+    dashboardGridRef,
+    previewOrientation,
+    dashboardGridActive,
+    widgetConfigs,
+  );
 
   const orderedWidgets = useMemo(
     () =>

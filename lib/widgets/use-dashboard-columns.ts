@@ -9,8 +9,9 @@ import {
 } from './layout-shell';
 import {
   getDashboardColumnCount,
-  isDashboardLandscapeLayout,
+  usesLandscapeWidgetGridLayout,
 } from './grid';
+import type { WidgetConfigDraft } from './types';
 import type { AppPreviewOrientation } from './preview-orientation';
 
 export const DEVICE_ORIENTATION_LANDSCAPE_MEDIA_QUERY = '(orientation: landscape)';
@@ -39,6 +40,7 @@ export function useDashboardGridLayout(
   gridRef: RefObject<HTMLElement | null>,
   previewOrientation: AppPreviewOrientation = 'portrait',
   gridActive = false,
+  widgetConfigs: readonly WidgetConfigDraft[] = [],
 ): DashboardGridLayout {
   const [columnCount, setColumnCount] = useState(1);
   const [shell, setShell] = useState<DashboardShell>('mobile');
@@ -52,12 +54,22 @@ export function useDashboardGridLayout(
       const nextShell = detectDashboardShell();
       const w = measureContentWidth(gridRef.current);
       const deviceLandscape = window.matchMedia(DEVICE_ORIENTATION_LANDSCAPE_MEDIA_QUERY).matches;
-      const landscape = isDashboardLandscapeLayout(nextShell, previewOrientation, deviceLandscape);
+      const landscapeGrid = usesLandscapeWidgetGridLayout(
+        nextShell,
+        previewOrientation,
+        deviceLandscape,
+      );
       setShell(nextShell);
       setContentWidth(w);
-      setIsLandscapeGrid(landscape);
+      setIsLandscapeGrid(landscapeGrid);
       setColumnCount(
-        getDashboardColumnCount(w, nextShell, previewOrientation, deviceLandscape),
+        getDashboardColumnCount(
+          w,
+          nextShell,
+          previewOrientation,
+          deviceLandscape,
+          widgetConfigs,
+        ),
       );
     };
 
@@ -83,7 +95,7 @@ export function useDashboardGridLayout(
       mqLandscape.removeEventListener('change', onMq);
       window.removeEventListener('resize', onMq);
     };
-  }, [gridRef, previewOrientation, gridActive]);
+  }, [gridRef, previewOrientation, gridActive, widgetConfigs]);
 
   return { columnCount, shell, contentWidth, isLandscapeGrid };
 }
