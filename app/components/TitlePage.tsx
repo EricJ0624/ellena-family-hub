@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
 import Image from 'next/image';
@@ -78,11 +79,59 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
   const [showFrameSelector, setShowFrameSelector] = useState(false);
+  const frameButtonRef = useRef<HTMLButtonElement>(null);
+  const [framePanelLayout, setFramePanelLayout] = useState<{
+    bottom?: number;
+    top?: number;
+    right: number;
+    maxHeight: number;
+  } | null>(null);
   // Hydration 불일치 방지: 날짜/시드 기반 선택은 클라이언트 마운트 후에만 수행 (React #418)
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const updateFramePanelLayout = useCallback(() => {
+    const el = frameButtonRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const margin = 8;
+    const gap = 8;
+    const maxCap = 420;
+    const vhCap = window.innerHeight * 0.55;
+    const spaceAbove = rect.top - margin;
+    const spaceBelow = window.innerHeight - rect.bottom - margin;
+    const preferAbove = spaceAbove >= spaceBelow || spaceAbove >= 140;
+
+    if (preferAbove) {
+      setFramePanelLayout({
+        bottom: window.innerHeight - rect.top + gap,
+        right: Math.max(margin, window.innerWidth - rect.right),
+        maxHeight: Math.max(120, Math.min(maxCap, vhCap, spaceAbove - gap)),
+      });
+    } else {
+      setFramePanelLayout({
+        top: rect.bottom + gap,
+        right: Math.max(margin, window.innerWidth - rect.right),
+        maxHeight: Math.max(120, Math.min(maxCap, vhCap, spaceBelow - gap)),
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!showFrameSelector) {
+      setFramePanelLayout(null);
+      return;
+    }
+    updateFramePanelLayout();
+    window.addEventListener('resize', updateFramePanelLayout);
+    window.addEventListener('scroll', updateFramePanelLayout, true);
+    return () => {
+      window.removeEventListener('resize', updateFramePanelLayout);
+      window.removeEventListener('scroll', updateFramePanelLayout, true);
+    };
+  }, [showFrameSelector, updateFramePanelLayout]);
 
   // blob/data URL 제외 → 업로드 직후 뒤로가기 시 Hydration/렌더 에러 근본 방지
   const stablePhotos = useMemo(
@@ -244,6 +293,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         >
           {/* 프레임 선택 버튼 */}
           <motion.button
+            ref={frameButtonRef}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowFrameSelector(!showFrameSelector)}
@@ -277,56 +327,69 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
           )}
         </div>
 
-        {/* 프레임 선택 패널 - 클릭 시 액자 클릭(이동) 방지 */}
-        <AnimatePresence>
-          {showFrameSelector && (
-            <motion.div
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="absolute bottom-[70px] right-2.5 z-50 min-w-[220px] max-w-[min(92vw,320px)] max-h-[min(55vh,420px)] overflow-y-auto overscroll-contain rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px] [touch-action:pan-y]"
-            >
-              <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
-                {tp('frame_style_select')}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {FRAME_CONFIGS.map((frame) => (
-                  <motion.button
-                    key={frame.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      if (onFrameChange) {
-                        onFrameChange(frame.id);
-                      }
-                      setShowFrameSelector(false);
-                    }}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
-                      frameStyle === frame.id
-                        ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
-                        : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
-                    )}
-                  >
-                    <div
-                      className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
-                      style={{ background: frame.color }}
-                    />
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold">{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
-                      <div className="mt-0.5 text-[10px] opacity-80">
-                        {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
+        {/* 프레임 선택 패널 — body 포탈 + 버튼 위 여유 공간 기준 maxHeight (.app-header overflow 클리핑 회피) */}
+        {typeof document !== 'undefined' &&
+          showFrameSelector &&
+          framePanelLayout &&
+          createPortal(
+            <AnimatePresence>
+              <motion.div
+                key="frame-selector-panel"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  position: 'fixed',
+                  right: framePanelLayout.right,
+                  maxHeight: framePanelLayout.maxHeight,
+                  ...(framePanelLayout.bottom != null
+                    ? { bottom: framePanelLayout.bottom }
+                    : { top: framePanelLayout.top }),
+                }}
+                className="z-[120] min-w-[220px] max-w-[min(92vw,320px)] overflow-y-auto overscroll-contain rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px] [touch-action:pan-y]"
+              >
+                <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
+                  {tp('frame_style_select')}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {FRAME_CONFIGS.map((frame) => (
+                    <motion.button
+                      key={frame.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (onFrameChange) {
+                          onFrameChange(frame.id);
+                        }
+                        setShowFrameSelector(false);
+                      }}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
+                        frameStyle === frame.id
+                          ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
+                          : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
+                      )}
+                    >
+                      <div
+                        className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
+                        style={{ background: frame.color }}
+                      />
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold">{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
+                        <div className="mt-0.5 text-[10px] opacity-80">
+                          {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
+                        </div>
                       </div>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>,
+            document.body,
           )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );
