@@ -383,6 +383,9 @@ select {
 
   .dashboard-widget-grid[data-layout='landscape']:not([data-columns='1']) > * {
     align-self: stretch;
+    max-width: none;
+    width: 100%;
+    justify-self: stretch;
   }
 
 .main-content {

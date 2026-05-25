@@ -8,8 +8,8 @@ const WEB_PREVIEW_PORTRAIT_MAX_COLUMNS = 1;
 /** 가로 화면 그리드 최대 열 수 */
 export const LANDSCAPE_MAX_COLUMNS = 4;
 
-/** 가로 열 추정 시 칸당 최소 너비(px) — 너비에 따라 1~4열 */
-export const LANDSCAPE_MIN_COLUMN_WIDTH_PX = 220;
+/** 가로 열 추정 시 칸당 최소 너비(px) — 너비에 따라 1~4열 (900px 미리보기 ≈ 3열) */
+export const LANDSCAPE_MIN_COLUMN_WIDTH_PX = 280;
 
 /** 세로·좁은 mobile portrait 상한 */
 const MOBILE_PORTRAIT_MAX_COLUMNS = 2;
