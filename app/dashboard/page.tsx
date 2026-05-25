@@ -5399,11 +5399,11 @@ export default function FamilyHub() {
   const dashboardGridRef = useRef<HTMLDivElement>(null);
   /** 그리드 DOM 마운트 후 layout 훅 재실행 (초기 null return 시 shell/columns 고정 버그 방지) */
   const dashboardGridActive = isMounted && isAuthenticated;
-  const { columnCount: dashboardColumnCount, shell: dashboardShell } = useDashboardGridLayout(
-    dashboardGridRef,
-    previewOrientation,
-    dashboardGridActive,
-  );
+  const {
+    columnCount: dashboardColumnCount,
+    shell: dashboardShell,
+    isLandscapeGrid: dashboardIsLandscapeGrid,
+  } = useDashboardGridLayout(dashboardGridRef, previewOrientation, dashboardGridActive);
 
   const orderedWidgets = useMemo(
     () =>
@@ -5953,8 +5953,9 @@ export default function FamilyHub() {
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
           <div
-            className="dashboard-widget-grid grid min-w-0 auto-rows-min gap-6"
+            className="dashboard-widget-grid grid min-w-0 gap-6"
             data-columns={dashboardColumnCount}
+            data-layout={dashboardIsLandscapeGrid ? 'landscape' : 'portrait'}
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row dense',
