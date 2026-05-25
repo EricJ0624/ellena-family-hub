@@ -83,13 +83,16 @@
   --chalk-font: 'Caveat', 'Patrick Hand', 'Chalkboard SE', cursive;
   --chalk-shadow: 0 0 2px rgba(255, 255, 255, 0.65), 0 0 5px rgba(255, 255, 255, 0.45),
     0 0 8px rgba(255, 255, 255, 0.2), 1px 1px 0 rgba(0, 0, 0, 0.2);
+  --chalk-shadow-ui: 0 0 1px rgba(255, 255, 255, 0.55), 0 0 3px rgba(255, 255, 255, 0.35),
+    1px 1px 0 rgba(0, 0, 0, 0.18);
   --chalkboard-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M0 11h22M11 0v22' stroke='%23ffffff' stroke-opacity='0.055' stroke-width='0.5'/%3E%3Cpath d='M11 9.8v2.4M9.8 11h2.4' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='0.55' stroke-linecap='round'/%3E%3C/svg%3E");
   --chalkboard-bg-image: url('/family-tasks/chalkboard-bg.png');
-  --chalkboard-aspect: 1000 / 640;
-  --chalkboard-safe-top: 11%;
-  --chalkboard-safe-right: 8.5%;
-  --chalkboard-safe-bottom: 8%;
-  --chalkboard-safe-left: 9%;
+  /* Match public/family-tasks/chalkboard-bg.png (1236×864) */
+  --chalkboard-aspect: 1236 / 864;
+  --chalkboard-inset-top: 10%;
+  --chalkboard-inset-right: 7%;
+  --chalkboard-inset-bottom: 7.5%;
+  --chalkboard-inset-left: 8%;
 }
 
 .dark {
@@ -782,40 +785,37 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: raster background (replace public/family-tasks/chalkboard-bg.png with your asset) */
+/* Frame + board: raster background (shadow is baked into PNG — no extra box-shadow) */
 .chalkboard-frame {
   position: relative;
   min-width: 0;
   width: 100%;
   aspect-ratio: var(--chalkboard-aspect);
-  min-height: 240px;
+  min-height: 200px;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: none;
   border-radius: 4px;
   overflow: hidden;
   box-sizing: border-box;
-  padding:
-    var(--chalkboard-safe-top)
-    var(--chalkboard-safe-right)
-    var(--chalkboard-safe-bottom)
-    var(--chalkboard-safe-left);
+  padding: 0;
+  isolation: isolate;
 }
 
 .chalkboard-container {
-  position: relative;
+  position: absolute;
+  top: var(--chalkboard-inset-top);
+  right: var(--chalkboard-inset-right);
+  bottom: var(--chalkboard-inset-bottom);
+  left: var(--chalkboard-inset-left);
   min-width: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 180px;
   display: flex;
   flex-direction: column;
   background: transparent;
   border: none;
-  border-radius: 0;
   padding: 0;
   box-shadow: none;
   overflow: hidden;
@@ -833,18 +833,25 @@ select {
 
 .chalkboard-title {
   font-family: var(--chalk-font-title);
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4.8vw, 2.15rem);
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.96);
   margin: 0;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 1;
-  line-height: 1.1;
-  letter-spacing: 0.02em;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-shadow: var(--chalk-shadow-ui);
+  max-width: 58%;
 }
 
 .chalkboard-title,
-.chalkboard-btn-add,
+.chalkboard-btn-add {
+  text-shadow: var(--chalk-shadow-ui);
+}
+
 .chalkboard-empty-state,
 .todo-text,
 .todo-assignee,
@@ -856,7 +863,6 @@ select {
   text-shadow: var(--chalk-shadow);
 }
 
-.chalkboard-btn-add,
 .todo-text,
 .todo-assignee,
 .chalkboard-empty-state,
@@ -869,33 +875,37 @@ select {
 }
 
 .chalkboard-top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
   position: relative;
+  flex-shrink: 0;
+  height: 27%;
+  min-height: 4.75rem;
+  max-height: 7.5rem;
+  margin-bottom: 0.5rem;
   z-index: 1;
   min-width: 0;
+  pointer-events: none;
+}
+
+.chalkboard-top-bar .chalkboard-title,
+.chalkboard-top-bar .chalkboard-top-actions,
+.chalkboard-top-bar .chalkboard-btn-add {
+  pointer-events: auto;
 }
 
 .chalkboard-top-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 36%;
-  max-width: 11.5rem;
-  min-width: 7.5rem;
+  max-width: 10.5rem;
+  min-width: 6.75rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: 19%;
 }
 
-/* Icons are baked into background image — reserve top space */
 .chalkboard-top-actions::before {
-  content: '';
-  display: block;
-  height: 2.35rem;
-  flex-shrink: 0;
+  content: none;
 }
 
 .chalkboard-container .section-body {
@@ -932,20 +942,25 @@ select {
 }
 
 .chalkboard-btn-add {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44%;
+  min-height: 2rem;
   margin: 0;
-  padding: 0.65rem 0.5rem;
-  min-height: 2.75rem;
+  padding: 0 0.35rem;
   width: 100%;
   background: transparent;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.96);
   border: none;
   border-radius: 0;
   font-family: var(--chalk-font-title);
-  font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+  font-size: clamp(0.85rem, 2.4vw, 1.05rem);
   font-weight: 400;
   cursor: pointer;
   transition: color 0.2s ease, text-shadow 0.2s ease, background 0.2s ease;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -956,9 +971,9 @@ select {
 .chalkboard-btn-add:hover {
   background: rgba(255, 255, 255, 0.06);
   text-shadow:
-    0 0 3px rgba(255, 255, 255, 0.8),
-    0 0 6px rgba(255, 255, 255, 0.5),
-    var(--chalk-shadow);
+    0 0 2px rgba(255, 255, 255, 0.7),
+    0 0 4px rgba(255, 255, 255, 0.4),
+    var(--chalk-shadow-ui);
 }
 
 .chalkboard-btn-add:active {
@@ -1093,14 +1108,15 @@ select {
 
 .chalkboard-empty-state {
   padding: var(--spacing-md) 0;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 400;
-  font-size: 1.5rem;
+  font-size: clamp(1.15rem, 3.5vw, 1.45rem);
   font-style: italic;
   text-align: center;
   position: relative;
   z-index: 1;
   width: 100%;
+  text-shadow: var(--chalk-shadow-ui);
 }
 
 /* Chalkboard Modal Styles */
