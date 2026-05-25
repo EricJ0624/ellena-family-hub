@@ -40,6 +40,11 @@ export type DashboardTranslations = {
   // Admin aria
   aria_system_admin: string;
   aria_group_admin: string;
+  /** PC 웹 미리보기: 세로/가로 목업 전환 */
+  preview_portrait_btn: string;
+  preview_landscape_btn: string;
+  aria_preview_portrait: string;
+  aria_preview_landscape: string;
   // Piggy
   piggy_manage_all: string;
   piggy_go: string;
@@ -314,6 +319,10 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_created_at: '등록',
     aria_system_admin: '시스템 관리자 페이지',
     aria_group_admin: '그룹 관리자 페이지',
+    preview_portrait_btn: '세로 보기',
+    preview_landscape_btn: '가로 보기',
+    aria_preview_portrait: '앱 세로 미리보기로 전환',
+    aria_preview_landscape: '앱 가로 미리보기로 전환',
     piggy_manage_all: '전체 관리',
     piggy_go: '이동',
     piggy_request_sent: '요청 보냄',
@@ -569,6 +578,10 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_created_at: 'Created',
     aria_system_admin: 'System admin page',
     aria_group_admin: 'Group admin page',
+    preview_portrait_btn: 'Portrait',
+    preview_landscape_btn: 'Landscape',
+    aria_preview_portrait: 'Switch to portrait app preview',
+    aria_preview_landscape: 'Switch to landscape app preview',
     piggy_manage_all: 'Manage all',
     piggy_go: 'Go',
     piggy_request_sent: 'Request sent',
@@ -824,6 +837,10 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_created_at: '登録',
     aria_system_admin: 'システム管理ページ',
     aria_group_admin: 'グループ管理ページ',
+    preview_portrait_btn: '縦表示',
+    preview_landscape_btn: '横表示',
+    aria_preview_portrait: '縦向きプレビューに切り替え',
+    aria_preview_landscape: '横向きプレビューに切り替え',
     piggy_manage_all: 'すべて管理',
     piggy_go: '移動',
     piggy_request_sent: 'リクエスト送信済み',
@@ -1079,6 +1096,10 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_created_at: '创建',
     aria_system_admin: '系统管理页',
     aria_group_admin: '群组管理页',
+    preview_portrait_btn: '竖屏',
+    preview_landscape_btn: '横屏',
+    aria_preview_portrait: '切换到竖屏预览',
+    aria_preview_landscape: '切换到横屏预览',
     piggy_manage_all: '管理全部',
     piggy_go: '前往',
     piggy_request_sent: '已发送请求',
@@ -1331,6 +1352,10 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_created_at: '建立',
     aria_system_admin: '系統管理頁',
     aria_group_admin: '群組管理頁',
+    preview_portrait_btn: '直向',
+    preview_landscape_btn: '橫向',
+    aria_preview_portrait: '切換至直向預覽',
+    aria_preview_landscape: '切換至橫向預覽',
     piggy_manage_all: '管理全部',
     piggy_go: '前往',
     piggy_request_sent: '已發送請求',

@@ -1,10 +1,11 @@
 import type { WidgetConfigDraft } from './types';
 import type { DashboardShell } from './layout-shell';
+import type { AppPreviewOrientation } from './preview-orientation';
 
-/** PC 웹 프리뷰(430px 프레임) 안에서는 모바일과 같이 1열만 사용 */
-const WEB_PREVIEW_MAX_COLUMNS = 1;
+/** PC 웹 세로 미리보기(430px) 안에서는 1열만 사용 */
+const WEB_PREVIEW_PORTRAIT_MAX_COLUMNS = 1;
 
-/** 컨테이너 실측 너비 기준 열 수 (모바일·PC 앱 공통 breakpoint) */
+/** 컨테이너 실측 너비 기준 열 수 (모바일·PC 앱·PC 가로 미리보기 공통 breakpoint) */
 export function getDashboardColumnCountFromWidth(width: number): number {
   const w = Math.max(0, Math.floor(width));
   if (w >= 1280) return 4;
@@ -14,12 +15,18 @@ export function getDashboardColumnCountFromWidth(width: number): number {
 }
 
 /**
- * 쉘·실측 너비로 그리드 열 수 결정.
+ * 쉘·실측 너비·PC 미리보기 방향으로 그리드 열 수 결정.
  * 뷰포트가 아닌 위젯 그리드 컨테이너 너비를 넘겨야 PC 430px 프레임 버그가 나지 않음.
  */
-export function getDashboardColumnCount(contentWidth: number, shell: DashboardShell): number {
+export function getDashboardColumnCount(
+  contentWidth: number,
+  shell: DashboardShell,
+  previewOrientation: AppPreviewOrientation = 'portrait',
+): number {
   const cols = getDashboardColumnCountFromWidth(contentWidth);
-  if (shell === 'web-preview') return Math.min(cols, WEB_PREVIEW_MAX_COLUMNS);
+  if (shell === 'web-preview' && previewOrientation === 'portrait') {
+    return Math.min(cols, WEB_PREVIEW_PORTRAIT_MAX_COLUMNS);
+  }
   return cols;
 }
 

@@ -326,10 +326,21 @@ select {
   }
 
   @media (min-width: 768px) {
-    .app-container {
+    /* PC 브라우저 세로 미리보기만 430px 프레임 (터치 폰 가로는 data-shell=mobile → 전체 너비) */
+    .app-container[data-shell='web-preview'][data-preview-orientation='portrait'],
+    .app-container[data-shell='web-preview']:not([data-preview-orientation]) {
       width: 430px;
       min-height: 850px;
       border-radius: 3.5rem;
+      border: 12px solid #1e293b;
+      box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.4);
+    }
+
+    .app-container[data-shell='web-preview'][data-preview-orientation='landscape'] {
+      width: min(92vw, 900px);
+      max-width: 900px;
+      min-height: 430px;
+      border-radius: 2rem;
       border: 12px solid #1e293b;
       box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.4);
     }

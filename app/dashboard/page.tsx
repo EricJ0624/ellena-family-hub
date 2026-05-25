@@ -65,6 +65,11 @@ import {
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import { resolveWidgetGridSpans } from '@/lib/widgets/grid';
+import {
+  readStoredPreviewOrientation,
+  togglePreviewOrientation,
+  type AppPreviewOrientation,
+} from '@/lib/widgets/preview-orientation';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -5364,9 +5369,36 @@ export default function FamilyHub() {
     };
   }, [currentGroupId, groupIsOwner]);
 
+  useEffect(() => {
+    if (!currentGroupId) return;
+
+    const reloadWidgetConfigs = async () => {
+      try {
+        const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
+        setWidgetConfigs(configs);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('위젯 설정 재로드 실패:', error);
+        }
+      }
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void reloadWidgetConfigs();
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [currentGroupId, groupIsOwner]);
+
+  const [previewOrientation, setPreviewOrientation] = useState<AppPreviewOrientation>('portrait');
+  useEffect(() => {
+    setPreviewOrientation(readStoredPreviewOrientation());
+  }, []);
+
   const dashboardGridRef = useRef<HTMLDivElement>(null);
   const { columnCount: dashboardColumnCount, shell: dashboardShell } =
-    useDashboardGridLayout(dashboardGridRef);
+    useDashboardGridLayout(dashboardGridRef, previewOrientation);
 
   const orderedWidgets = useMemo(
     () =>
@@ -5695,7 +5727,10 @@ export default function FamilyHub() {
     realtimeSubscriptionEpoch > 0 ? realtimeSubscriptionEpoch : realtimeBootstrapIdRef.current;
 
   return (
-    <div className="app-container" data-shell={dashboardShell}>
+    <div className="app-container" data-shell={dashboardShell}
+      data-preview-orientation={
+        dashboardShell === 'web-preview' ? previewOrientation : undefined
+      }>
 
       {/* Nickname Modal */}
       {isNicknameModalOpen && (
@@ -5873,6 +5908,24 @@ export default function FamilyHub() {
                 </div>
               )}
             </div>
+            {dashboardShell === 'web-preview' ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setPreviewOrientation((prev) => togglePreviewOrientation(prev))
+                }
+                className="ml-2 cursor-pointer whitespace-nowrap rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-600 transition-all duration-300 hover:border-indigo-500/50 hover:bg-indigo-500/20"
+                aria-label={
+                  previewOrientation === 'portrait'
+                    ? dt('aria_preview_landscape')
+                    : dt('aria_preview_portrait')
+                }
+              >
+                {previewOrientation === 'portrait'
+                  ? dt('preview_landscape_btn')
+                  : dt('preview_portrait_btn')}
+              </button>
+            ) : null}
             <button
               onClick={handleLogout}
               className="ml-3 cursor-pointer whitespace-nowrap rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 transition-all duration-300 hover:border-red-500/50 hover:bg-red-500/20"
