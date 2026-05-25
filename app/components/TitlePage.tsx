@@ -10,6 +10,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTitlePageTranslation } from '@/lib/translations/titlePage';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { cn } from '@/lib/ui/cn';
+import { readStoredFrameStyle, writeStoredFrameStyle } from '@/lib/preferences/photo-frame-style';
 
 
 // 날짜 기반 해시 시드 생성 함수
@@ -737,6 +738,8 @@ interface TitlePageProps {
   noBackground?: boolean;
   /** 액자 클릭 시 호출 (예: 가족 추억 페이지로 이동) */
   onFrameClick?: () => void;
+  /** 설정 시 localStorage에 프레임 선택 저장·복원 (예: 그룹 ID) */
+  frameStyleStorageScope?: string | null;
 }
 
 const TitlePage: React.FC<TitlePageProps> = ({
@@ -749,11 +752,28 @@ const TitlePage: React.FC<TitlePageProps> = ({
   showTitle = true,
   noBackground = false,
   onFrameClick,
+  frameStyleStorageScope,
 }) => {
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const [showEditor, setShowEditor] = useState(false);
   const [frameStyle, setFrameStyle] = useState<FrameStyle>('no_frame');
+
+  useEffect(() => {
+    if (!frameStyleStorageScope) return;
+    const stored = readStoredFrameStyle(frameStyleStorageScope);
+    if (stored) setFrameStyle(stored);
+  }, [frameStyleStorageScope]);
+
+  const handleFrameChange = useCallback(
+    (style: FrameStyle) => {
+      setFrameStyle(style);
+      if (frameStyleStorageScope) {
+        writeStoredFrameStyle(frameStyleStorageScope, style);
+      }
+    },
+    [frameStyleStorageScope],
+  );
   const [internalTitleStyle, setInternalTitleStyle] = useState<TitleStyle>({
     content: title || ct('app_title'),
     color: '#9333ea',
@@ -859,7 +879,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
         <DailyPhotoFrame
           photos={photos || []}
           frameStyle={frameStyle}
-          onFrameChange={setFrameStyle}
+          onFrameChange={handleFrameChange}
           onFrameClick={onFrameClick}
         />
 

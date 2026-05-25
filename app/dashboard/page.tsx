@@ -5886,6 +5886,7 @@ export default function FamilyHub() {
             editable={false}
             showTitle={false}
             noBackground
+            frameStyleStorageScope={currentGroupId}
             onFrameClick={() => router.push('/memories')}
           />
           <div className="status-indicator">
