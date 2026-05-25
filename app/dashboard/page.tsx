@@ -5731,11 +5731,38 @@ export default function FamilyHub() {
   const effectiveRealtimeEpochForChildren =
     realtimeSubscriptionEpoch > 0 ? realtimeSubscriptionEpoch : realtimeBootstrapIdRef.current;
 
+  const previewOrientationToggle = dashboardShell === 'web-preview' ? (
+    <button
+      type="button"
+      onClick={() => {
+        setPreviewOrientation((prev) => togglePreviewOrientation(prev));
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event('resize'));
+        });
+      }}
+      className="fixed top-4 right-4 z-50 cursor-pointer whitespace-nowrap rounded-xl border border-indigo-400/40 bg-white/95 px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-indigo-500/60 hover:bg-white hover:shadow-xl md:top-6 md:right-6"
+      aria-label={
+        previewOrientation === 'portrait'
+          ? dt('aria_preview_landscape')
+          : dt('aria_preview_portrait')
+      }
+    >
+      {previewOrientation === 'portrait'
+        ? dt('preview_landscape_btn')
+        : dt('preview_portrait_btn')}
+    </button>
+  ) : null;
+
   return (
-    <div className="app-container" data-shell={dashboardShell}
-      data-preview-orientation={
-        dashboardShell === 'web-preview' ? previewOrientation : undefined
-      }>
+    <>
+      {previewOrientationToggle}
+      <div
+        className="app-container"
+        data-shell={dashboardShell}
+        data-preview-orientation={
+          dashboardShell === 'web-preview' ? previewOrientation : undefined
+        }
+      >
 
       {/* Nickname Modal */}
       {isNicknameModalOpen && (
@@ -5913,27 +5940,6 @@ export default function FamilyHub() {
                 </div>
               )}
             </div>
-            {dashboardShell === 'web-preview' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setPreviewOrientation((prev) => togglePreviewOrientation(prev));
-                  requestAnimationFrame(() => {
-                    window.dispatchEvent(new Event('resize'));
-                  });
-                }}
-                className="ml-2 cursor-pointer whitespace-nowrap rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-600 transition-all duration-300 hover:border-indigo-500/50 hover:bg-indigo-500/20"
-                aria-label={
-                  previewOrientation === 'portrait'
-                    ? dt('aria_preview_landscape')
-                    : dt('aria_preview_portrait')
-                }
-              >
-                {previewOrientation === 'portrait'
-                  ? dt('preview_landscape_btn')
-                  : dt('preview_portrait_btn')}
-              </button>
-            ) : null}
             <button
               onClick={handleLogout}
               className="ml-3 cursor-pointer whitespace-nowrap rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 transition-all duration-300 hover:border-red-500/50 hover:bg-red-500/20"
@@ -6132,5 +6138,6 @@ export default function FamilyHub() {
         </button>
       </div>
     </div>
+    </>
   );
 }
