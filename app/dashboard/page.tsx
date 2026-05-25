@@ -5972,7 +5972,7 @@ export default function FamilyHub() {
               return (
                 <div
                   key={cfg.widget_key}
-                  className="min-w-0"
+                  className="min-w-0 max-w-full overflow-x-clip"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: `span ${colSpan} / span ${colSpan}`,

@@ -388,6 +388,12 @@ select {
     justify-self: stretch;
   }
 
+  /* 다열 그리드: 위젯 칸 밖으로 버튼·헤더가 삐져나지 않도록 */
+  .dashboard-widget-grid:not([data-columns='1']) > * {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
 .main-content {
     width: 100% !important; /* 너비 제한 */
     max-width: 100% !important;
@@ -520,7 +526,7 @@ select {
   /* ============================================
      Content Section - 공통 ?�션 ?��???     ============================================ */
 .content-section {
-  @apply flex w-full flex-col border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium;
+  @apply flex min-w-0 w-full flex-col overflow-x-clip border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium;
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-xl);
   animation: fadeIn 0.4s ease-out forwards;
@@ -554,10 +560,19 @@ select {
 
 .section-header {
   width: 100%;
+  min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+}
+
+.section-header > .section-title,
+.section-header > h3.section-title {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .section-title {
@@ -576,6 +591,7 @@ select {
 
 .section-body {
   width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   color: rgb(var(--foreground));
@@ -747,6 +763,8 @@ select {
    ============================================ */
 .chalkboard-container {
   position: relative;
+  min-width: 0;
+  width: 100%;
   background: var(--chalkboard-bg);
   background-image: 
     radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
@@ -813,11 +831,19 @@ select {
 
 .chalkboard-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-sm) var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   position: relative;
   z-index: 1;
+  min-width: 0;
+}
+
+.chalkboard-header .chalkboard-title {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .chalkboard-decorations {
@@ -1394,7 +1420,17 @@ select {
   align-items: center;
   gap: var(--spacing-sm);
   width: 100%;
+  min-width: 0;
   flex-wrap: nowrap;
+}
+
+.dashboard-widget-grid:not([data-columns='1']) .chat-input-wrapper {
+  flex-wrap: wrap;
+}
+
+.dashboard-widget-grid:not([data-columns='1']) .chat-input-wrapper .chat-input {
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
 .chat-input {
