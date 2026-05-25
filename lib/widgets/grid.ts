@@ -28,7 +28,7 @@ export function getDashboardColumnCount(
 ): number {
   let cols = getDashboardColumnCountFromWidth(contentWidth);
 
-  if (shell === 'mobile') {
+  if (shell === 'mobile' || (shell === 'web-preview' && previewOrientation === 'landscape')) {
     cols = Math.min(cols, MOBILE_MAX_COLUMNS);
   }
 

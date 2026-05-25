@@ -43,9 +43,9 @@ export function isWebPreviewEnvironment(): boolean {
 }
 
 /**
- * - mobile: 스마트폰·순수 터치 (세로·가로)
- * - desktop: PC 브라우저·마우스 + 넓은 창 (앱 이용)
- * - web-preview: 폰 목업 미리보기(수동 전환·레거시)
+ * - mobile: 스마트폰·순수 터치 (세로·가로 — 기기 회전)
+ * - web-preview: PC 브라우저 — 모바일과 동일 구성, 세로/가로는 버튼으로 전환
+ * - desktop: 전체 창 PC 앱 (env·네이티브 래퍼 전용)
  */
 export function detectDashboardShell(): DashboardShell {
   if (typeof window === 'undefined') return 'mobile';
@@ -54,7 +54,6 @@ export function detectDashboardShell(): DashboardShell {
     return 'desktop';
   }
   if (isTouchOnlyDevice()) return 'mobile';
-  if (isWideViewport() && hasFinePointer()) return 'desktop';
   if (isWideViewport()) return 'web-preview';
   return 'mobile';
 }
