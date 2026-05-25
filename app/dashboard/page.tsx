@@ -5397,8 +5397,13 @@ export default function FamilyHub() {
   }, []);
 
   const dashboardGridRef = useRef<HTMLDivElement>(null);
-  const { columnCount: dashboardColumnCount, shell: dashboardShell } =
-    useDashboardGridLayout(dashboardGridRef, previewOrientation);
+  /** 그리드 DOM 마운트 후 layout 훅 재실행 (초기 null return 시 shell/columns 고정 버그 방지) */
+  const dashboardGridActive = isMounted && isAuthenticated;
+  const { columnCount: dashboardColumnCount, shell: dashboardShell } = useDashboardGridLayout(
+    dashboardGridRef,
+    previewOrientation,
+    dashboardGridActive,
+  );
 
   const orderedWidgets = useMemo(
     () =>
