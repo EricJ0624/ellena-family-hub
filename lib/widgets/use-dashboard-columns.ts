@@ -1,7 +1,12 @@
 'use client';
 
 import { type RefObject, useLayoutEffect, useState } from 'react';
-import { detectDashboardShell, WEB_PREVIEW_MEDIA_QUERY, type DashboardShell } from './layout-shell';
+import {
+  detectDashboardShell,
+  TOUCH_PRIMARY_MEDIA_QUERY,
+  WEB_PREVIEW_MEDIA_QUERY,
+  type DashboardShell,
+} from './layout-shell';
 import { getDashboardColumnCount } from './grid';
 import type { AppPreviewOrientation } from './preview-orientation';
 
@@ -41,13 +46,16 @@ export function useDashboardGridLayout(
     ro.observe(el);
 
     const mqDesktop = window.matchMedia(WEB_PREVIEW_MEDIA_QUERY);
+    const mqTouch = window.matchMedia(TOUCH_PRIMARY_MEDIA_QUERY);
     const onMq = () => read();
     mqDesktop.addEventListener('change', onMq);
+    mqTouch.addEventListener('change', onMq);
     window.addEventListener('resize', onMq);
 
     return () => {
       ro.disconnect();
       mqDesktop.removeEventListener('change', onMq);
+      mqTouch.removeEventListener('change', onMq);
       window.removeEventListener('resize', onMq);
     };
   }, [gridRef, previewOrientation]);

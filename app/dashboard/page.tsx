@@ -5911,9 +5911,12 @@ export default function FamilyHub() {
             {dashboardShell === 'web-preview' ? (
               <button
                 type="button"
-                onClick={() =>
-                  setPreviewOrientation((prev) => togglePreviewOrientation(prev))
-                }
+                onClick={() => {
+                  setPreviewOrientation((prev) => togglePreviewOrientation(prev));
+                  requestAnimationFrame(() => {
+                    window.dispatchEvent(new Event('resize'));
+                  });
+                }}
                 className="ml-2 cursor-pointer whitespace-nowrap rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-600 transition-all duration-300 hover:border-indigo-500/50 hover:bg-indigo-500/20"
                 aria-label={
                   previewOrientation === 'portrait'
@@ -5939,7 +5942,8 @@ export default function FamilyHub() {
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
           <div
-            className="grid min-w-0 auto-rows-min gap-6"
+            className="dashboard-widget-grid grid min-w-0 auto-rows-min gap-6"
+            data-columns={dashboardColumnCount}
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row dense',
@@ -5951,6 +5955,7 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   className="min-w-0"
+                  data-widget-size={cfg.size}
                   style={{
                     gridColumn: `span ${colSpan} / span ${colSpan}`,
                     gridRow: `span ${rowSpan} / span ${rowSpan}`,

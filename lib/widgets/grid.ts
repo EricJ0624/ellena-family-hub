@@ -5,6 +5,9 @@ import type { AppPreviewOrientation } from './preview-orientation';
 /** PC 웹 세로 미리보기(430px) 안에서는 1열만 사용 */
 const WEB_PREVIEW_PORTRAIT_MAX_COLUMNS = 1;
 
+/** 터치 기기 가로 등 — 과도한 다열 방지 (L/XL 배치 가독용) */
+const MOBILE_MAX_COLUMNS = 2;
+
 /** 컨테이너 실측 너비 기준 열 수 (모바일·PC 앱·PC 가로 미리보기 공통 breakpoint) */
 export function getDashboardColumnCountFromWidth(width: number): number {
   const w = Math.max(0, Math.floor(width));
@@ -23,10 +26,16 @@ export function getDashboardColumnCount(
   shell: DashboardShell,
   previewOrientation: AppPreviewOrientation = 'portrait',
 ): number {
-  const cols = getDashboardColumnCountFromWidth(contentWidth);
+  let cols = getDashboardColumnCountFromWidth(contentWidth);
+
+  if (shell === 'mobile') {
+    cols = Math.min(cols, MOBILE_MAX_COLUMNS);
+  }
+
   if (shell === 'web-preview' && previewOrientation === 'portrait') {
     return Math.min(cols, WEB_PREVIEW_PORTRAIT_MAX_COLUMNS);
   }
+
   return cols;
 }
 
@@ -37,7 +46,8 @@ export function clampGridSpan(span: number, max: number): number {
 }
 
 /**
- * 저장된 span·size를 현재 열 수에 맞게 보정 (모바일·태블릿에서 L/XL 폭 축소).
+ * 저장된 span·size를 현재 열 수에 맞게 보정.
+ * 2열 이상일 때만 L/XL 가로 span이 눈에 띄게 적용됨.
  */
 export function resolveWidgetGridSpans(
   cfg: WidgetConfigDraft,
@@ -46,10 +56,9 @@ export function resolveWidgetGridSpans(
   let col = clampGridSpan(cfg.colSpan, columnCount);
   const row = clampGridSpan(cfg.rowSpan, 6);
 
-  if (columnCount <= 2 && (cfg.size === 'L' || cfg.size === 'XL')) {
-    col = Math.min(col, columnCount);
-  }
-  if (columnCount === 1) {
+  if (columnCount >= 2 && (cfg.size === 'L' || cfg.size === 'XL')) {
+    col = Math.min(Math.max(col, 2), columnCount);
+  } else if (columnCount === 1) {
     col = 1;
   }
 

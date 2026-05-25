@@ -3,11 +3,20 @@ export type DashboardShell = 'mobile' | 'web-preview' | 'desktop';
 
 const DESKTOP_SHELL_ENV = process.env.NEXT_PUBLIC_DASHBOARD_SHELL;
 
-/** PC 브라우저(마우스·넓은 뷰포트). 터치 폰 가로(≥768px)는 제외 */
-export const WEB_PREVIEW_MEDIA_QUERY = '(min-width: 768px) and (hover: hover) and (pointer: fine)';
+/** 터치(스마트폰·태블릿) 기기 — 가로 회전 시에도 mobile 쉘 유지 */
+export const TOUCH_PRIMARY_MEDIA_QUERY = '(pointer: coarse)';
+
+/** PC 브라우저(마우스·fine pointer). 터치 primary는 제외 */
+export const WEB_PREVIEW_MEDIA_QUERY = '(min-width: 768px) and (pointer: fine)';
+
+export function isTouchPrimaryDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia(TOUCH_PRIMARY_MEDIA_QUERY).matches;
+}
 
 export function isWebPreviewEnvironment(): boolean {
   if (typeof window === 'undefined') return false;
+  if (isTouchPrimaryDevice()) return false;
   return window.matchMedia(WEB_PREVIEW_MEDIA_QUERY).matches;
 }
 
@@ -23,6 +32,7 @@ export function detectDashboardShell(): DashboardShell {
   if (typeof window !== 'undefined' && (window as Window & { __ELLENA_DESKTOP_APP__?: boolean }).__ELLENA_DESKTOP_APP__) {
     return 'desktop';
   }
-  if (isWebPreviewEnvironment()) return 'web-preview';
+  if (isTouchPrimaryDevice()) return 'mobile';
+  if (window.matchMedia('(min-width: 768px)').matches) return 'web-preview';
   return 'mobile';
 }

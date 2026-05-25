@@ -329,7 +329,8 @@ select {
     /* PC 브라우저 세로 미리보기만 430px 프레임 (터치 폰 가로는 data-shell=mobile → 전체 너비) */
     .app-container[data-shell='web-preview'][data-preview-orientation='portrait'],
     .app-container[data-shell='web-preview']:not([data-preview-orientation]) {
-      width: 430px;
+      width: 430px !important;
+      max-width: 430px;
       min-height: 850px;
       border-radius: 3.5rem;
       border: 12px solid #1e293b;
@@ -337,7 +338,7 @@ select {
     }
 
     .app-container[data-shell='web-preview'][data-preview-orientation='landscape'] {
-      width: min(92vw, 900px);
+      width: min(92vw, 900px) !important;
       max-width: 900px;
       min-height: 430px;
       border-radius: 2rem;
@@ -357,6 +358,13 @@ select {
   }
 
   /* Main Content - Flexbox 컨테?�너 */
+  .dashboard-widget-grid[data-columns='2'] > [data-widget-size='S'],
+  .dashboard-widget-grid[data-columns='3'] > [data-widget-size='S'],
+  .dashboard-widget-grid[data-columns='4'] > [data-widget-size='S'] {
+    max-width: min(100%, 17.5rem);
+    justify-self: start;
+  }
+
 .main-content {
     width: 100% !important; /* 너비 제한 */
     max-width: 100% !important;
