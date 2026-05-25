@@ -5,8 +5,16 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { LangCode } from '@/lib/language-fonts';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
+
+const FAMILY_TASKS_TITLE_PNG = '/family-tasks/title-family-tasks.png';
+
+/** English chalk title asset; other locales use styled HTML text */
+function usesFamilyTasksTitlePng(sectionTitle: string): boolean {
+  return sectionTitle.trim().toLowerCase() === 'family tasks';
+}
 
 interface FamilyTasksSectionProps {
   tasks: FamilyTask[];
@@ -26,7 +34,7 @@ interface FamilyTasksSectionProps {
     lang: any,
     role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
   ) => string;
-  lang: any;
+  lang: LangCode;
   /** 현재 그룹 멤버(소유자·멤버십, 본인 포함) — 닉네임 표시용 */
   taskMembers: FamilyTaskMemberOption[];
   translations: {
@@ -150,6 +158,8 @@ export function FamilyTasksSection({
     });
   };
 
+  const showTitlePng = usesFamilyTasksTitlePng(t.todo_section_title);
+
   const submitNewTodo = () => {
     const text = todoTextRef.current?.value;
     if (!text?.trim()) return alert(t.todo_required);
@@ -235,7 +245,18 @@ export function FamilyTasksSection({
       <div className="chalkboard-frame">
       <section className="chalkboard-container">
         <div className="chalkboard-top-bar">
-          <h3 className="chalkboard-title">{t.todo_section_title}</h3>
+          {showTitlePng ? (
+            <h3 className="chalkboard-title chalkboard-title--image">
+              <img
+                src={FAMILY_TASKS_TITLE_PNG}
+                alt={t.todo_section_title}
+                className="chalkboard-title-img"
+                decoding="async"
+              />
+            </h3>
+          ) : (
+            <h3 className="chalkboard-title">{t.todo_section_title}</h3>
+          )}
           <div className="chalkboard-top-actions">
             <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
               {t.todo_add_btn}
