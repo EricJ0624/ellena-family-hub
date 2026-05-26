@@ -16,6 +16,13 @@ function clampInt(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, x));
 }
 
+function clampNumeric(n: number | null | undefined, min: number, max: number): number | null {
+  if (n === null || n === undefined) return null;
+  const x = Number(n);
+  if (!Number.isFinite(x)) return null;
+  return Math.min(max, Math.max(min, x));
+}
+
 function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
   for (const row of rows) rowMap.set(row.widget_key, row);
@@ -33,6 +40,11 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
       minW: found.min_w,
       minH: found.min_h,
       priority: clampInt(found.priority, -9999, 9999),
+      layoutX: clampNumeric(found.layout_x, 0, 12),
+      layoutY: clampNumeric(found.layout_y, 0, 9999),
+      layoutW: clampNumeric(found.layout_w, 0.001, 12),
+      layoutH: clampNumeric(found.layout_h, 0.001, 9999),
+      layoutVersion: clampInt(found.layout_version ?? 1, 1, 9999),
     };
   }).sort((a, b) => {
     if (a.display_order !== b.display_order) return a.display_order - b.display_order;
@@ -44,7 +56,7 @@ export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDr
   const { data, error } = await supabase
     .from('widget_configs')
     .select(
-      'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority',
+      'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority,layout_x,layout_y,layout_w,layout_h,layout_version',
     )
     .eq('group_id', groupId)
     .order('display_order', { ascending: true });
@@ -71,6 +83,11 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
     min_w: c.minW,
     min_h: c.minH,
     priority: c.priority,
+    layout_x: c.layoutX,
+    layout_y: c.layoutY,
+    layout_w: c.layoutW,
+    layout_h: c.layoutH,
+    layout_version: c.layoutVersion,
   }));
 
   const { error } = await supabase.from('widget_configs').upsert(missingRows, {
@@ -96,6 +113,11 @@ export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDra
       min_w: d.minW,
       min_h: d.minH,
       priority: clampInt(d.priority, -9999, 9999),
+      layout_x: d.layoutX,
+      layout_y: d.layoutY,
+      layout_w: d.layoutW,
+      layout_h: d.layoutH,
+      layout_version: d.layoutVersion,
     }));
 
   const { error } = await supabase.from('widget_configs').upsert(normalized, {

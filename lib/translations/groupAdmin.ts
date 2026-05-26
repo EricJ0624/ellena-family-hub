@@ -61,6 +61,12 @@ export type GroupAdminTranslations = {
   widgets_advanced_layout: string;
   widgets_col_span: string;
   widgets_row_span: string;
+  widgets_restore_defaults: string;
+  widgets_restore_all: string;
+  widgets_layout_edit_hint: string;
+  widgets_preview_portrait: string;
+  widgets_preview_landscape: string;
+  widgets_disabled_section: string;
   active_theme: string;
   theme_default_short: string;
   theme_stable_glass_short: string;
@@ -205,6 +211,12 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_advanced_layout: '칸(span) 직접 지정',
     widgets_col_span: '가로 span',
     widgets_row_span: '세로 span',
+    widgets_restore_defaults: '기본 크기·위치로 복구',
+    widgets_restore_all: '전체 기본값으로 복구',
+    widgets_layout_edit_hint: '드래그로 순서 변경, 모서리를 끌어 크기 조절',
+    widgets_preview_portrait: '세로 (2열)',
+    widgets_preview_landscape: '가로 (4열)',
+    widgets_disabled_section: '비활성 위젯',
     active_theme: '현재 테마',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -349,6 +361,12 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_advanced_layout: 'Custom span',
     widgets_col_span: 'Column span',
     widgets_row_span: 'Row span',
+    widgets_restore_defaults: 'Restore default size & position',
+    widgets_restore_all: 'Restore all to defaults',
+    widgets_layout_edit_hint: 'Drag to reorder · drag corner to resize',
+    widgets_preview_portrait: 'Portrait (2 cols)',
+    widgets_preview_landscape: 'Landscape (4 cols)',
+    widgets_disabled_section: 'Disabled widgets',
     active_theme: 'Active theme',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -493,6 +511,12 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_advanced_layout: 'span を直接指定',
     widgets_col_span: '横 span',
     widgets_row_span: '縦 span',
+    widgets_restore_defaults: 'デフォルトサイズ・位置に復元',
+    widgets_restore_all: 'すべてデフォルトに復元',
+    widgets_layout_edit_hint: 'ドラッグで並び替え・端をドラッグしてリサイズ',
+    widgets_preview_portrait: '縦向き (2列)',
+    widgets_preview_landscape: '横向き (4列)',
+    widgets_disabled_section: '非アクティブなウィジェット',
     active_theme: '現在のテーマ',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -636,6 +660,12 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_advanced_layout: '自定义 span',
     widgets_col_span: '列 span',
     widgets_row_span: '行 span',
+    widgets_restore_defaults: '恢复默认尺寸与位置',
+    widgets_restore_all: '全部恢复默认',
+    widgets_layout_edit_hint: '拖拽排序 · 拖拽边角调整大小',
+    widgets_preview_portrait: '竖屏 (2列)',
+    widgets_preview_landscape: '横屏 (4列)',
+    widgets_disabled_section: '未启用的小工具',
     active_theme: '当前主题',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',
@@ -777,6 +807,12 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     widgets_advanced_layout: '自訂 span',
     widgets_col_span: '欄 span',
     widgets_row_span: '列 span',
+    widgets_restore_defaults: '恢復預設大小與位置',
+    widgets_restore_all: '全部恢復預設',
+    widgets_layout_edit_hint: '拖曳排序 · 拖曳邊角調整大小',
+    widgets_preview_portrait: '直向 (2欄)',
+    widgets_preview_landscape: '橫向 (4欄)',
+    widgets_disabled_section: '未啟用的小工具',
     active_theme: '目前主題',
     theme_default_short: 'Default',
     theme_stable_glass_short: 'Stable Glass',

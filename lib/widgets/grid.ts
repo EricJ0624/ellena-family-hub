@@ -184,3 +184,58 @@ export function resolveWidgetGridSpans(
 
   return { colSpan: col, rowSpan: row };
 }
+
+/** 12열 정규화 그리드의 기준 열 수 */
+const LAYOUT_BASE_COLS = 12;
+
+export interface WidgetGridPlacement {
+  colSpan: number;
+  rowSpan: number;
+  /**
+   * CSS grid-column-start (1-based).
+   * undefined이면 auto-flow(기존 동작) 유지.
+   */
+  gridColumnStart?: number;
+}
+
+/**
+ * layout_* 우선으로 CSS grid placement를 결정.
+ * layoutW/H/X가 null이면 resolveWidgetGridSpans 폴백 — 기존 동작 보장.
+ *
+ * 변환 공식:
+ *   actualColSpan  = clamp(round(layoutW * columnCount / 12), 1, columnCount)
+ *   actualRowSpan  = clamp(round(layoutH), 1, 6)
+ *   gridColumnStart = round(layoutX * columnCount / 12) + 1  (범위 초과 시 무시)
+ */
+export function resolveWidgetGridPlacement(
+  cfg: WidgetConfigDraft,
+  columnCount: number,
+): WidgetGridPlacement {
+  // layoutW가 없으면 기존 resolveWidgetGridSpans 폴백
+  if (cfg.layoutW == null) {
+    return resolveWidgetGridSpans(cfg, columnCount);
+  }
+
+  // layoutW → colSpan
+  const rawCol = Math.round((cfg.layoutW * columnCount) / LAYOUT_BASE_COLS);
+  const colSpan = Math.min(columnCount, Math.max(1, rawCol));
+
+  // layoutH → rowSpan (h는 abstract unit → 정수 근사)
+  const rowSpan =
+    cfg.layoutH != null
+      ? Math.min(6, Math.max(1, Math.round(cfg.layoutH)))
+      : clampGridSpan(cfg.rowSpan, 6);
+
+  // layoutX → gridColumnStart (1-based)
+  let gridColumnStart: number | undefined;
+  if (cfg.layoutX != null) {
+    const rawStart = Math.round((cfg.layoutX * columnCount) / LAYOUT_BASE_COLS) + 1;
+    const clamped = Math.min(columnCount, Math.max(1, rawStart));
+    // start + span이 열 범위를 초과하면 gridColumnStart는 무시하고 auto-flow에 맡김
+    if (clamped + colSpan - 1 <= columnCount) {
+      gridColumnStart = clamped;
+    }
+  }
+
+  return { colSpan, rowSpan, gridColumnStart };
+}

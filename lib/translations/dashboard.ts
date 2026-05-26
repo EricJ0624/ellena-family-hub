@@ -281,6 +281,10 @@ export type DashboardTranslations = {
   member_support_follow_up_success: string;
   member_support_follow_up_error: string;
   member_support_thread_extra: string;
+  /** 돋보기(팝업) 모드 열기 버튼 aria-label */
+  widgets_magnify_open: string;
+  /** 돋보기(팝업) 모드 닫기 버튼 aria-label */
+  widgets_magnify_close: string;
 };
 
 const dashboard: Record<LangCode, DashboardTranslations> = {
@@ -542,6 +546,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '추가 문의가 등록되었습니다.',
     member_support_follow_up_error: '추가 문의 등록에 실패했습니다.',
     member_support_thread_extra: '추가 문의',
+    widgets_magnify_open: '위젯 확대 보기',
+    widgets_magnify_close: '닫기',
   },
   en: {
     todo_modal_title: 'New task',
@@ -801,6 +807,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: 'Your follow-up was sent.',
     member_support_follow_up_error: 'Could not send follow-up.',
     member_support_thread_extra: 'Follow-up',
+    widgets_magnify_open: 'Expand widget',
+    widgets_magnify_close: 'Close',
   },
   ja: {
     todo_modal_title: '新しいタスク',
@@ -1060,6 +1068,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '追加のお問い合わせを受け付けました。',
     member_support_follow_up_error: '送信に失敗しました。',
     member_support_thread_extra: '追加のお問い合わせ',
+    widgets_magnify_open: 'ウィジェットを拡大',
+    widgets_magnify_close: '閉じる',
   },
   'zh-CN': {
     todo_modal_title: '新建任务',
@@ -1316,6 +1326,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '追加咨询已提交。',
     member_support_follow_up_error: '发送失败。',
     member_support_thread_extra: '追加咨询',
+    widgets_magnify_open: '放大小工具',
+    widgets_magnify_close: '关闭',
   },
   'zh-TW': {
     todo_modal_title: '新任務',
@@ -1572,6 +1584,8 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     member_support_follow_up_success: '追加諮詢已送出。',
     member_support_follow_up_error: '送出失敗。',
     member_support_thread_extra: '追加諮詢',
+    widgets_magnify_open: '放大小工具',
+    widgets_magnify_close: '關閉',
   },
 };
 

@@ -1773,6 +1773,45 @@ select {
     }
 }
 
+/* ─── WidgetChrome: container query 컨텍스트 (Phase 4) ─────────────────────
+   container-name: widget 은 Tailwind 유틸로 표현 불가 → @layer components 예외
+   .widget-chrome-scale-* 클래스는 위젯 내부에서 opt-in으로 사용
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .widget-chrome {
+    container-type: inline-size;
+    container-name: widget;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* 200px 미만: 최소 텍스트 스케일 */
+  @container widget (max-width: 199px) {
+    .widget-chrome-scale-text {
+      font-size: clamp(10px, 5cqw, 13px);
+      line-height: 1.3;
+    }
+    .widget-chrome-scale-title {
+      font-size: clamp(11px, 5.5cqw, 14px);
+    }
+  }
+
+  /* 200 ~ 319px: 중간 텍스트 스케일 */
+  @container widget (200px < width <= 319px) {
+    .widget-chrome-scale-text {
+      font-size: clamp(11px, 3.8cqw, 14px);
+    }
+    .widget-chrome-scale-title {
+      font-size: clamp(13px, 4.5cqw, 16px);
+    }
+  }
+
+  /* 이미지 비율 유지 유틸 */
+  .widget-chrome-img {
+    @apply object-contain max-h-full w-full;
+  }
+}
+
 @keyframes spin {
     to {
       transform: rotate(360deg);

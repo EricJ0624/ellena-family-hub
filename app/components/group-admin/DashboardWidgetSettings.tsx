@@ -17,6 +17,8 @@ import {
   WIDGET_SIZE_PRESETS,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, saveWidgetConfigs } from '@/lib/widgets/widget-configs';
+import { applyPresetToWidget, packLayoutsFromOrder, resetAllLayouts } from '@/lib/widgets/layout-presets';
+import { WidgetLayoutEditor } from './WidgetLayoutEditor';
 
 interface DashboardWidgetSettingsProps {
   groupId: string | null;
@@ -156,6 +158,27 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     setShowAdvancedLayout(false);
   };
 
+  /** 단일 위젯을 기본 크기·위치로 복구 */
+  const restoreOne = useCallback(
+    (key: DashboardWidgetKey) => {
+      setDrafts((prev) => {
+        const updated = prev.map((d) => (d.widget_key === key ? applyPresetToWidget(d) : d));
+        const packed = packLayoutsFromOrder(updated);
+        return updated.map((d) => {
+          const coords = packed.get(d.widget_key);
+          if (!coords) return d;
+          return { ...d, layoutX: coords.layoutX, layoutY: coords.layoutY };
+        });
+      });
+    },
+    [],
+  );
+
+  /** 전체 위젯을 기본 크기·위치로 복구 */
+  const restoreAll = useCallback(() => {
+    setDrafts((prev) => resetAllLayouts(prev));
+  }, []);
+
   if (!groupId) {
     return <p className="text-sm text-slate-500">{gat('widgets_no_group')}</p>;
   }
@@ -215,104 +238,65 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       {loading ? (
         <p className="text-sm text-slate-500">{ct('loading')}</p>
       ) : (
-        <div className="grid max-w-2xl gap-2">
-          {drafts
-            .slice()
-            .sort((a, b) => a.display_order - b.display_order)
-            .map((cfg, idx, arr) => (
-              <div
-                key={cfg.widget_key}
-                className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={cfg.is_enabled}
-                      onChange={() => toggle(cfg.widget_key)}
-                      disabled={!editMode || saving}
-                      className="shrink-0"
-                    />
-                    <span className="truncate text-sm font-medium text-slate-800">
+        <div className="max-w-2xl space-y-4">
+          <WidgetLayoutEditor
+            drafts={drafts}
+            editMode={editMode}
+            saving={saving}
+            widgetLabels={widgetLabels}
+            t={{
+              widgets_restore_defaults: gat('widgets_restore_defaults'),
+              widgets_restore_all: gat('widgets_restore_all'),
+              widgets_layout_edit_hint: gat('widgets_layout_edit_hint'),
+              widgets_preview_portrait: gat('widgets_preview_portrait'),
+              widgets_preview_landscape: gat('widgets_preview_landscape'),
+              widgets_disabled_section: gat('widgets_disabled_section'),
+            }}
+            onDraftsChange={setDrafts}
+            onToggle={toggle}
+            onRestoreOne={restoreOne}
+            onRestoreAll={restoreAll}
+          />
+
+          {/* Advanced: raw col/row span inputs */}
+          {editMode && showAdvancedLayout && (
+            <div className="space-y-2 rounded-lg border border-dashed border-slate-300 p-3">
+              {drafts
+                .slice()
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((cfg) => (
+                  <div key={cfg.widget_key} className="flex flex-wrap items-center gap-3">
+                    <span className="w-24 truncate text-xs font-medium text-slate-600">
                       {widgetLabels[cfg.widget_key]}
                     </span>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button
-                      type="button"
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 disabled:opacity-40"
-                      onClick={() => move(cfg.widget_key, 'up')}
-                      disabled={!editMode || idx === 0 || saving}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 disabled:opacity-40"
-                      onClick={() => move(cfg.widget_key, 'down')}
-                      disabled={!editMode || idx === arr.length - 1 || saving}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-
-                {editMode ? (
-                  <div className="mt-3 flex flex-col gap-3 border-t border-slate-200 pt-3 sm:flex-row sm:flex-wrap sm:items-end">
-                    <label className="flex min-w-[10rem] flex-col gap-1 text-xs font-semibold text-slate-600">
-                      {gat('widgets_size_label')}
-                      <select
-                        value={cfg.size}
+                    <label className="flex items-center gap-1 text-xs text-slate-500">
+                      {gat('widgets_col_span')}
+                      <input
+                        type="number"
+                        min={1}
+                        max={4}
+                        value={cfg.colSpan}
                         disabled={saving}
-                        onChange={(e) =>
-                          applySizePreset(cfg.widget_key, e.target.value as WidgetSize)
-                        }
-                        className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-800"
-                      >
-                        {SIZE_OPTIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {sizeOptionLabel(s)}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(e) => setNumericSpan(cfg.widget_key, 'colSpan', e.target.value)}
+                        className="ml-1 w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                      />
                     </label>
-
-                    {showAdvancedLayout ? (
-                      <div className="flex flex-wrap gap-3">
-                        <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                          {gat('widgets_col_span')}
-                          <input
-                            type="number"
-                            min={1}
-                            max={4}
-                            value={cfg.colSpan}
-                            disabled={saving}
-                            onChange={(e) =>
-                              setNumericSpan(cfg.widget_key, 'colSpan', e.target.value)
-                            }
-                            className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-800"
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                          {gat('widgets_row_span')}
-                          <input
-                            type="number"
-                            min={1}
-                            max={6}
-                            value={cfg.rowSpan}
-                            disabled={saving}
-                            onChange={(e) =>
-                              setNumericSpan(cfg.widget_key, 'rowSpan', e.target.value)
-                            }
-                            className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-normal text-slate-800"
-                          />
-                        </label>
-                      </div>
-                    ) : null}
+                    <label className="flex items-center gap-1 text-xs text-slate-500">
+                      {gat('widgets_row_span')}
+                      <input
+                        type="number"
+                        min={1}
+                        max={6}
+                        value={cfg.rowSpan}
+                        disabled={saving}
+                        onChange={(e) => setNumericSpan(cfg.widget_key, 'rowSpan', e.target.value)}
+                        className="ml-1 w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                      />
+                    </label>
                   </div>
-                ) : null}
-              </div>
-            ))}
+                ))}
+            </div>
+          )}
         </div>
       )}
     </div>

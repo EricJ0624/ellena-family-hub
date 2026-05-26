@@ -64,12 +64,14 @@ import {
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
-import { resolveWidgetGridSpans } from '@/lib/widgets/grid';
+import { resolveWidgetGridPlacement } from '@/lib/widgets/grid';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
   type AppPreviewOrientation,
 } from '@/lib/widgets/preview-orientation';
+import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
+import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -244,6 +246,20 @@ export default function FamilyHub() {
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
   const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
   const bodyFont = useMemo(() => getFontStyle(lang, 'body'), [lang]);
+
+  /** 돋보기 모달 헤더에서 사용하는 위젯별 레이블 맵 */
+  const widgetLabelMap = useMemo<Record<DashboardWidgetKey, string>>(
+    () => ({
+      tasks: dt('todo_section_title'),
+      calendar: dt('section_title_calendar'),
+      chat: dt('section_title_chat'),
+      location: dt('section_title_location'),
+      album: dt('section_title_memories'),
+      travel: tt('title'),
+      piggy: dt('piggy_section_admin_title'),
+    }),
+    [lang],
+  );
   // --- [STATE] ---
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -308,6 +324,7 @@ export default function FamilyHub() {
     target?: { id: string; email: string; nickname?: string | null };
   }>>([]);
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
+  const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
   const [selectedUserForRequest, setSelectedUserForRequest] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
@@ -5968,22 +5985,55 @@ export default function FamilyHub() {
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan } = resolveWidgetGridSpans(cfg, dashboardColumnCount);
+              const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount);
+              const isExpanded = expandedWidget === cfg.widget_key;
               return (
                 <div
                   key={cfg.widget_key}
                   className="min-w-0 max-w-full overflow-x-clip"
                   data-widget-size={cfg.size}
                   style={{
-                    gridColumn: `span ${colSpan} / span ${colSpan}`,
+                    gridColumn: gridColumnStart
+                      ? `${gridColumnStart} / span ${colSpan}`
+                      : `span ${colSpan} / span ${colSpan}`,
                     gridRow: `span ${rowSpan} / span ${rowSpan}`,
                   }}
                 >
-                  {renderWidgetSection(cfg.widget_key)}
+                  <WidgetChrome
+                    widgetKey={cfg.widget_key}
+                    layoutW={cfg.layoutW}
+                    layoutH={cfg.layoutH}
+                    colSpan={colSpan}
+                    rowSpan={rowSpan}
+                    onExpand={() => setExpandedWidget(cfg.widget_key)}
+                    expandLabel={dt('widgets_magnify_open')}
+                  >
+                    {isExpanded ? (
+                      /* 팝업으로 열린 동안 그리드 셀에 플레이스홀더 표시
+                         — 이중 렌더링(구독 중복) 방지 */
+                      <div className="flex h-full min-h-[80px] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
+                        🔍
+                      </div>
+                    ) : (
+                      renderWidgetSection(cfg.widget_key)
+                    )}
+                  </WidgetChrome>
                 </div>
               );
             })}
           </div>
+
+          {/* 돋보기(팝업) 모달 — 위젯이 사용성 임계값 미만일 때 🔍 버튼으로 열림
+              children: renderWidgetSection 1회만 호출 (구독 중복 방지) */}
+          <WidgetMagnifyModal
+            open={expandedWidget !== null}
+            widgetLabel={expandedWidget ? (widgetLabelMap[expandedWidget] ?? '') : ''}
+            isChatWidget={expandedWidget === 'chat'}
+            closeLabel={dt('widgets_magnify_close')}
+            onClose={() => setExpandedWidget(null)}
+          >
+            {expandedWidget && renderWidgetSection(expandedWidget)}
+          </WidgetMagnifyModal>
 
           <FamilyLocationRequestModal
           open={showLocationRequestModal}

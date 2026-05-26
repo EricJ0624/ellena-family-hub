@@ -1060,6 +1060,12 @@ export interface Database {
           min_w: number | null
           min_h: number | null
           priority: number
+          /** 12열 정규화 좌표 — null이면 col_span/row_span 폴백 */
+          layout_x: number | null
+          layout_y: number | null
+          layout_w: number | null
+          layout_h: number | null
+          layout_version: number
         }
         Insert: {
           id?: string
@@ -1075,6 +1081,11 @@ export interface Database {
           min_w?: number | null
           min_h?: number | null
           priority?: number
+          layout_x?: number | null
+          layout_y?: number | null
+          layout_w?: number | null
+          layout_h?: number | null
+          layout_version?: number
         }
         Update: {
           id?: string
@@ -1090,6 +1101,11 @@ export interface Database {
           min_w?: number | null
           min_h?: number | null
           priority?: number
+          layout_x?: number | null
+          layout_y?: number | null
+          layout_w?: number | null
+          layout_h?: number | null
+          layout_version?: number
         }
         Relationships: [
           {
