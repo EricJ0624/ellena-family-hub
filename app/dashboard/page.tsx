@@ -325,6 +325,24 @@ export default function FamilyHub() {
   }>>([]);
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
   const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
+  // 모달 닫힘 직후 구독 race condition 방지:
+  // tasks/calendar는 컴포넌트 내부에서 Supabase 구독을 관리하므로
+  // 모달 언마운트(구독 해제, 비동기)가 완료되기 전에 그리드에서 리마운트하면
+  // 동일 채널 이름으로 재구독 시도 → 에러 발생.
+  // 250ms 동안 그리드 플레이스홀더를 유지해 해제 완료 후 리마운트하도록 함.
+  const [recentlyClosedWidget, setRecentlyClosedWidget] = useState<DashboardWidgetKey | null>(null);
+  const recentlyClosedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleMagnifyClose = useCallback(() => {
+    if (expandedWidget) {
+      if (recentlyClosedTimerRef.current) clearTimeout(recentlyClosedTimerRef.current);
+      setRecentlyClosedWidget(expandedWidget);
+      recentlyClosedTimerRef.current = setTimeout(() => {
+        setRecentlyClosedWidget(null);
+        recentlyClosedTimerRef.current = null;
+      }, 250);
+    }
+    setExpandedWidget(null);
+  }, [expandedWidget]);
   const [selectedUserForRequest, setSelectedUserForRequest] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
@@ -5987,6 +6005,7 @@ export default function FamilyHub() {
             {orderedWidgets.map((cfg) => {
               const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount);
               const isExpanded = expandedWidget === cfg.widget_key;
+              const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
               return (
                 <div
                   key={cfg.widget_key}
@@ -6008,9 +6027,11 @@ export default function FamilyHub() {
                     onExpand={() => setExpandedWidget(cfg.widget_key)}
                     expandLabel={dt('widgets_magnify_open')}
                   >
-                    {isExpanded ? (
-                      /* 팝업으로 열린 동안 그리드 셀에 플레이스홀더 표시
-                         — 이중 렌더링(구독 중복) 방지 */
+                    {isExpanded || isRecentlyClosed ? (
+                      /* 팝업으로 열린 동안, 또는 닫힌 직후 250ms 동안 플레이스홀더 표시
+                         — 이중 렌더링(구독 중복) 방지
+                         — isRecentlyClosed: 모달 언마운트의 비동기 구독 해제 완료 후
+                           그리드 리마운트하도록 race condition 방지 */
                       <div className="flex h-full min-h-[80px] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
                         🔍
                       </div>
@@ -6030,7 +6051,7 @@ export default function FamilyHub() {
             widgetLabel={expandedWidget ? (widgetLabelMap[expandedWidget] ?? '') : ''}
             isChatWidget={expandedWidget === 'chat'}
             closeLabel={dt('widgets_magnify_close')}
-            onClose={() => setExpandedWidget(null)}
+            onClose={handleMagnifyClose}
           >
             {expandedWidget && renderWidgetSection(expandedWidget)}
           </WidgetMagnifyModal>
