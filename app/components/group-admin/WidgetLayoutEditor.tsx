@@ -161,7 +161,8 @@ const WIDGET_SKELETONS: Record<DashboardWidgetKey, () => React.ReactNode> = {
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
-type PreviewCols = 2 | 4;
+/** 1 = 모바일 세로(<640px), 2 = 태블릿/가로, 4 = 데스크톱 */
+type PreviewCols = 1 | 2 | 4;
 
 interface LiveResize {
   key: DashboardWidgetKey;
@@ -207,7 +208,7 @@ function SortableCard({
     () => ({ ...cfg, layoutW: liveW ?? cfg.layoutW, layoutH: liveH ?? cfg.layoutH }),
     [cfg, liveW, liveH],
   );
-  const { colSpan, rowSpan } = resolveWidgetGridPlacement(displayCfg, previewCols);
+  const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(displayCfg, previewCols);
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
   const SkeletonContent = WIDGET_SKELETONS[cfg.widget_key];
@@ -230,7 +231,9 @@ function SortableCard({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        gridColumn: `span ${colSpan}`,
+        gridColumn: gridColumnStart
+          ? `${gridColumnStart} / span ${colSpan}`
+          : `span ${colSpan}`,
         gridRow: `span ${Math.max(1, rowSpan)}`,
       }}
     >
@@ -238,7 +241,7 @@ function SortableCard({
       <div
         {...(editMode ? { ...listeners, ...attributes } : {})}
         className={[
-          'flex shrink-0 items-center gap-2 px-3 py-2 select-none',
+          'flex shrink-0 items-center gap-2 px-3 py-2 select-none touch-none',
           meta.bg, meta.fg,
           editMode ? 'cursor-grab active:cursor-grabbing' : '',
         ].join(' ')}
@@ -274,12 +277,14 @@ function SortableCard({
         )}
       </div>
 
-      {/* 위젯 디자인 스켈레톤 — 실제 대시보드 시각 구조 표현 */}
-      {SkeletonContent()}
+      {/* 위젯 디자인 스켈레톤 — 실제 대시보드 시각 구조 표현 (pointer 이벤트 차단) */}
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden pointer-events-none">
+        {SkeletonContent()}
+      </div>
 
-      {/* 편집 모드 컨트롤 오버레이 — 하단 고정 (리사이즈 핸들 위) */}
+      {/* 편집 모드 컨트롤 오버레이 — 하단 고정 (리사이즈 핸들 위, z-20) */}
       {editMode && (
-        <div className="absolute bottom-5 inset-x-5 flex items-center gap-2 rounded-lg bg-white/92 px-2.5 py-1.5 shadow-md border border-slate-200/80 backdrop-blur-sm">
+        <div className="absolute bottom-5 inset-x-5 z-20 flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 shadow-md border border-slate-200/80 backdrop-blur-sm">
           <input
             type="checkbox"
             checked={cfg.is_enabled}
@@ -302,10 +307,10 @@ function SortableCard({
         </div>
       )}
 
-      {/* 너비 리사이즈 핸들 — 오른쪽 (20px 터치 영역) */}
+      {/* 너비 리사이즈 핸들 — 오른쪽 (20px 터치 영역, z-10) */}
       {editMode && (
         <div
-          className="absolute right-0 top-0 h-full w-5 cursor-ew-resize rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute right-0 top-0 z-10 h-full w-5 cursor-ew-resize rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.stopPropagation();
             onResizeHStart(e);
@@ -315,10 +320,10 @@ function SortableCard({
         </div>
       )}
 
-      {/* 높이 리사이즈 핸들 — 아래쪽 (20px 터치 영역) */}
+      {/* 높이 리사이즈 핸들 — 아래쪽 (20px 터치 영역, z-10) */}
       {editMode && (
         <div
-          className="absolute bottom-0 left-0 h-5 w-full cursor-ns-resize rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute bottom-0 left-0 z-10 h-5 w-full cursor-ns-resize rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.stopPropagation();
             onResizeVStart(e);
@@ -364,7 +369,7 @@ export function WidgetLayoutEditor({
   onRestoreOne,
   onRestoreAll,
 }: WidgetLayoutEditorProps) {
-  const [previewCols, setPreviewCols] = useState<PreviewCols>(2);
+  const [previewCols, setPreviewCols] = useState<PreviewCols>(1);
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -441,7 +446,8 @@ export function WidgetLayoutEditor({
         const newW = Math.min(BASE_COLS, Math.max(snapUnit, snapped));
         setLiveResize((prev) => (prev ? { ...prev, currentW: newW } : null));
       } else if (rs.axis === 'v') {
-        const rowPx = 80;
+        // gridAutoRows: '10rem' = 160px, 이 값과 일치시켜야 리사이즈 감도가 정확함
+        const rowPx = 160;
         const newH = Math.min(12, Math.max(1, Math.round(rs.startValue + (e.clientY - rs.startPx) / rowPx)));
         setLiveResize((prev) => (prev ? { ...prev, currentH: newH } : null));
       }
@@ -500,6 +506,19 @@ export function WidgetLayoutEditor({
     <div className="space-y-4">
       {/* Toolbar: orientation toggle + restore-all */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* 세로=1열(실제 모바일), 가로=2열(태블릿), 와이드=4열(데스크톱) */}
+        <button
+          type="button"
+          onClick={() => setPreviewCols(1)}
+          className={[
+            'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+            previewCols === 1
+              ? 'bg-blue-600 text-white'
+              : 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
+          ].join(' ')}
+        >
+          {t.widgets_preview_portrait}
+        </button>
         <button
           type="button"
           onClick={() => setPreviewCols(2)}
@@ -510,7 +529,7 @@ export function WidgetLayoutEditor({
               : 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
           ].join(' ')}
         >
-          {t.widgets_preview_portrait}
+          {t.widgets_preview_landscape}
         </button>
         <button
           type="button"
@@ -522,7 +541,7 @@ export function WidgetLayoutEditor({
               : 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
           ].join(' ')}
         >
-          {t.widgets_preview_landscape}
+          {'Wide'}
         </button>
         {editMode && (
           <button
