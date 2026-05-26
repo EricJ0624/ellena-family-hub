@@ -19,10 +19,40 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  ClipboardList,
+  Calendar,
+  MessageCircle,
+  MapPin,
+  ImageIcon,
+  Plane,
+  type LucideIcon,
+} from 'lucide-react';
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
 import { resolveWidgetGridPlacement } from '@/lib/widgets/grid';
 import { BASE_COLS, toActualColSpan, packLayoutsFromOrder } from '@/lib/widgets/layout-presets';
 import type { GroupAdminTranslations } from '@/lib/translations/groupAdmin';
+
+// ─── 위젯별 시각 메타 ────────────────────────────────────────────────────────
+
+interface WidgetCardMeta {
+  icon: LucideIcon | null;
+  emoji?: string;
+  /** Tailwind bg 클래스 */
+  bg: string;
+  /** Tailwind text 클래스 */
+  fg: string;
+}
+
+const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
+  tasks:    { icon: ClipboardList,  bg: 'bg-green-900',   fg: 'text-green-100' },
+  calendar: { icon: Calendar,       bg: 'bg-violet-500',  fg: 'text-white' },
+  chat:     { icon: MessageCircle,  bg: 'bg-blue-500',    fg: 'text-white' },
+  location: { icon: MapPin,         bg: 'bg-emerald-500', fg: 'text-white' },
+  album:    { icon: ImageIcon,      bg: 'bg-pink-500',    fg: 'text-white' },
+  travel:   { icon: Plane,          bg: 'bg-sky-500',     fg: 'text-white' },
+  piggy:    { icon: null, emoji: '🐷', bg: 'bg-red-500',  fg: 'text-white' },
+};
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
@@ -73,6 +103,8 @@ function SortableCard({
     [cfg, liveW, liveH],
   );
   const { colSpan, rowSpan } = resolveWidgetGridPlacement(displayCfg, previewCols);
+  const meta = WIDGET_CARD_META[cfg.widget_key];
+  const Icon = meta.icon;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: cfg.widget_key,
@@ -83,10 +115,11 @@ function SortableCard({
     <div
       ref={setNodeRef}
       className={[
-        'relative rounded-lg border bg-white',
+        'relative rounded-xl border bg-white overflow-hidden',
         isDragging
-          ? 'z-10 border-blue-400 opacity-70 shadow-lg'
+          ? 'z-10 border-blue-400 opacity-70 shadow-xl'
           : 'border-slate-200 shadow-sm',
+        !cfg.is_enabled ? 'opacity-50' : '',
       ].join(' ')}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -95,19 +128,35 @@ function SortableCard({
         gridRow: `span ${Math.max(1, rowSpan)}`,
       }}
     >
-      {/* Drag handle */}
+      {/* 색상 아이콘 배너 — 드래그 핸들 겸용 */}
       <div
         {...(editMode ? { ...listeners, ...attributes } : {})}
         className={[
-          'flex items-center gap-2 rounded-t-lg px-3 py-2 select-none',
-          editMode
-            ? 'cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-blue-50'
-            : 'bg-slate-50',
+          'flex items-center gap-2 px-3 py-2.5 select-none',
+          meta.bg, meta.fg,
+          editMode ? 'cursor-grab active:cursor-grabbing' : '',
         ].join(' ')}
       >
+        {/* 위젯 아이콘 */}
+        {Icon ? (
+          <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden="true" />
+        ) : meta.emoji ? (
+          <span className="text-base leading-none">{meta.emoji}</span>
+        ) : null}
+
+        <span className="min-w-0 flex-1 truncate text-xs font-bold tracking-wide">
+          {label}
+        </span>
+
+        {/* 크기 배지 */}
+        <span className="shrink-0 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">
+          {colSpan}×{rowSpan}
+        </span>
+
+        {/* 드래그 6점 핸들 */}
         {editMode && (
           <svg
-            className="h-3 w-3 shrink-0 text-slate-400"
+            className="h-3.5 w-3.5 shrink-0 opacity-60"
             viewBox="0 0 12 12"
             fill="currentColor"
             aria-hidden="true"
@@ -120,15 +169,9 @@ function SortableCard({
             <circle cx="8.5" cy="9.5" r="1.2" />
           </svg>
         )}
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">
-          {label}
-        </span>
-        <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500">
-          {colSpan}×{rowSpan}
-        </span>
       </div>
 
-      {/* Body */}
+      {/* 본문: ON/OFF + 복구 버튼 */}
       <div className="flex items-center gap-2 px-3 py-2">
         <input
           type="checkbox"
@@ -151,26 +194,30 @@ function SortableCard({
         )}
       </div>
 
-      {/* Horizontal (width) resize handle — right edge */}
+      {/* 너비 리사이즈 핸들 — 오른쪽 (20px 터치 영역) */}
       {editMode && (
         <div
-          className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r-lg bg-blue-300/30 hover:bg-blue-400/60 transition-colors"
+          className="absolute right-0 top-0 h-full w-5 cursor-ew-resize rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.stopPropagation();
             onResizeHStart(e);
           }}
-        />
+        >
+          <div className="h-8 w-0.5 rounded-full bg-blue-400/60" />
+        </div>
       )}
 
-      {/* Vertical (height) resize handle — bottom edge */}
+      {/* 높이 리사이즈 핸들 — 아래쪽 (20px 터치 영역) */}
       {editMode && (
         <div
-          className="absolute bottom-0 left-0 h-2 w-full cursor-ns-resize rounded-b-lg bg-blue-300/30 hover:bg-blue-400/60 transition-colors"
+          className="absolute bottom-0 left-0 h-5 w-full cursor-ns-resize rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.stopPropagation();
             onResizeVStart(e);
           }}
-        />
+        >
+          <div className="h-0.5 w-8 rounded-full bg-blue-400/60" />
+        </div>
       )}
     </div>
   );

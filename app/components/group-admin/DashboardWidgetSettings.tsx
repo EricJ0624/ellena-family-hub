@@ -39,6 +39,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [showAdvancedLayout, setShowAdvancedLayout] = useState(false);
 
   const widgetLabels: Record<DashboardWidgetKey, string> = useMemo(
@@ -144,6 +145,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       await saveWidgetConfigs(groupId, drafts);
       setConfigs(drafts);
       setEditMode(false);
+      setIsEditorOpen(false);
       setShowAdvancedLayout(false);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : gat('widgets_error_save'));
@@ -155,7 +157,13 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   const handleCancel = () => {
     setDrafts(configs);
     setEditMode(false);
+    setIsEditorOpen(false);
     setShowAdvancedLayout(false);
+  };
+
+  const handleOpenEditor = () => {
+    setEditMode(true);
+    setIsEditorOpen(true);
   };
 
   /** 단일 위젯을 기본 크기·위치로 복구 */
@@ -187,32 +195,113 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     return <p className="text-sm text-slate-500">{gat('widgets_owner_only')}</p>;
   }
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="mb-1 text-xl font-semibold text-slate-800">{gat('widgets_panel_title')}</h2>
-        <p className="text-sm text-slate-500">{gat('widgets_panel_hint')}</p>
-        {editMode ? (
-          <p className="mt-2 text-xs text-slate-400">{gat('widgets_size_hint')}</p>
-        ) : null}
-      </div>
+  const editorProps = {
+    drafts,
+    editMode,
+    saving,
+    widgetLabels,
+    t: {
+      widgets_restore_defaults: gat('widgets_restore_defaults'),
+      widgets_restore_all: gat('widgets_restore_all'),
+      widgets_layout_edit_hint: gat('widgets_layout_edit_hint'),
+      widgets_preview_portrait: gat('widgets_preview_portrait'),
+      widgets_preview_landscape: gat('widgets_preview_landscape'),
+      widgets_disabled_section: gat('widgets_disabled_section'),
+    },
+    onDraftsChange: setDrafts,
+    onToggle: toggle,
+    onRestoreOne: restoreOne,
+    onRestoreAll: restoreAll,
+  };
 
-      <div className="flex flex-wrap items-center gap-2">
-        {!editMode ? (
-          <button
-            type="button"
-            onClick={() => setEditMode(true)}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            {gat('widgets_edit_start')}
-          </button>
+  const advancedPanel = editMode && showAdvancedLayout && (
+    <div className="space-y-2 rounded-lg border border-dashed border-slate-300 p-3">
+      {drafts
+        .slice()
+        .sort((a, b) => a.display_order - b.display_order)
+        .map((cfg) => (
+          <div key={cfg.widget_key} className="flex flex-wrap items-center gap-3">
+            <span className="w-24 truncate text-xs font-medium text-slate-600">
+              {widgetLabels[cfg.widget_key]}
+            </span>
+            <label className="flex items-center gap-1 text-xs text-slate-500">
+              {gat('widgets_col_span')}
+              <input
+                type="number"
+                min={1}
+                max={4}
+                value={cfg.colSpan}
+                disabled={saving}
+                onChange={(e) => setNumericSpan(cfg.widget_key, 'colSpan', e.target.value)}
+                className="ml-1 w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+              />
+            </label>
+            <label className="flex items-center gap-1 text-xs text-slate-500">
+              {gat('widgets_row_span')}
+              <input
+                type="number"
+                min={1}
+                max={6}
+                value={cfg.rowSpan}
+                disabled={saving}
+                onChange={(e) => setNumericSpan(cfg.widget_key, 'rowSpan', e.target.value)}
+                className="ml-1 w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+              />
+            </label>
+          </div>
+        ))}
+    </div>
+  );
+
+  return (
+    <>
+      {/* ── 인라인 요약 뷰 (모달 닫힌 상태) ── */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="mb-1 text-xl font-semibold text-slate-800">{gat('widgets_panel_title')}</h2>
+          <p className="text-sm text-slate-500">{gat('widgets_panel_hint')}</p>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-slate-500">{ct('loading')}</p>
         ) : (
           <>
+            {/* 현재 레이아웃 미리보기 (읽기 전용, 편집 모드 OFF) */}
+            <div className="max-w-2xl">
+              <WidgetLayoutEditor {...editorProps} editMode={false} />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenEditor}
+              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm"
+            >
+              {gat('widgets_edit_start')}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ── 전체화면 편집 모달 ── */}
+      {isEditorOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          {/* 모달 헤더 */}
+          <div className="flex shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <h2 className="min-w-0 flex-1 truncate text-base font-bold text-slate-800">
+              {gat('widgets_panel_title')}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowAdvancedLayout((v) => !v)}
+              className="rounded-lg border border-dashed border-slate-400 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              {gat('widgets_advanced_layout')}
+            </button>
             <button
               type="button"
               onClick={handleCancel}
               disabled={saving}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
             >
               {ct('cancel')}
             </button>
@@ -220,85 +309,19 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {saving ? ct('loading') : ct('save')}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowAdvancedLayout((v) => !v)}
-              className="rounded-lg border border-dashed border-slate-400 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-            >
-              {gat('widgets_advanced_layout')}
-            </button>
-          </>
-        )}
-      </div>
+          </div>
 
-      {loading ? (
-        <p className="text-sm text-slate-500">{ct('loading')}</p>
-      ) : (
-        <div className="max-w-2xl space-y-4">
-          <WidgetLayoutEditor
-            drafts={drafts}
-            editMode={editMode}
-            saving={saving}
-            widgetLabels={widgetLabels}
-            t={{
-              widgets_restore_defaults: gat('widgets_restore_defaults'),
-              widgets_restore_all: gat('widgets_restore_all'),
-              widgets_layout_edit_hint: gat('widgets_layout_edit_hint'),
-              widgets_preview_portrait: gat('widgets_preview_portrait'),
-              widgets_preview_landscape: gat('widgets_preview_landscape'),
-              widgets_disabled_section: gat('widgets_disabled_section'),
-            }}
-            onDraftsChange={setDrafts}
-            onToggle={toggle}
-            onRestoreOne={restoreOne}
-            onRestoreAll={restoreAll}
-          />
-
-          {/* Advanced: raw col/row span inputs */}
-          {editMode && showAdvancedLayout && (
-            <div className="space-y-2 rounded-lg border border-dashed border-slate-300 p-3">
-              {drafts
-                .slice()
-                .sort((a, b) => a.display_order - b.display_order)
-                .map((cfg) => (
-                  <div key={cfg.widget_key} className="flex flex-wrap items-center gap-3">
-                    <span className="w-24 truncate text-xs font-medium text-slate-600">
-                      {widgetLabels[cfg.widget_key]}
-                    </span>
-                    <label className="flex items-center gap-1 text-xs text-slate-500">
-                      {gat('widgets_col_span')}
-                      <input
-                        type="number"
-                        min={1}
-                        max={4}
-                        value={cfg.colSpan}
-                        disabled={saving}
-                        onChange={(e) => setNumericSpan(cfg.widget_key, 'colSpan', e.target.value)}
-                        className="ml-1 w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                      />
-                    </label>
-                    <label className="flex items-center gap-1 text-xs text-slate-500">
-                      {gat('widgets_row_span')}
-                      <input
-                        type="number"
-                        min={1}
-                        max={6}
-                        value={cfg.rowSpan}
-                        disabled={saving}
-                        onChange={(e) => setNumericSpan(cfg.widget_key, 'rowSpan', e.target.value)}
-                        className="ml-1 w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                      />
-                    </label>
-                  </div>
-                ))}
-            </div>
-          )}
+          {/* 모달 본문 (스크롤 가능) */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <WidgetLayoutEditor {...editorProps} />
+            {advancedPanel}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
