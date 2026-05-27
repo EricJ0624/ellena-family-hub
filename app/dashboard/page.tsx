@@ -1338,14 +1338,14 @@ export default function FamilyHub() {
   // 그룹에 저장된 기본 타이틀이 다른 언어(예: 영문)로만 저장된 경우에도 현재 UI 언어로 표시
   const dashboardTitleText = isDefaultAppTitleText(rawDashboardTitle) ? ct('app_title') : rawDashboardTitle;
   const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
-  // 관리자(버튼 공존): 좁은 화면에서 18px → 뷰포트 3.5% → 최대 36px
-  // 일반 사용자(버튼 없음): 28px → 뷰포트 4% → 최대 48px
+  // 관리자(버튼 공존): 모바일 24px → 뷰포트 5.5% 스케일 → 최대 68px
+  // 일반 사용자(버튼 없음): 모바일 34px → 뷰포트 6% 스케일 → 최대 68px
   // 커스텀 폰트 크기는 clamp의 상한(max)으로 사용 — 원래 fit 알고리즘의 상한 역할과 동일
   const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const customFontSizeCap = typeof effectiveTitleStyle?.fontSize === 'number' ? effectiveTitleStyle.fontSize : null;
   const titleFontSizeValue = isAdminTitleContext
-    ? `clamp(18px, 3.5vw, ${customFontSizeCap ?? 36}px)`
-    : `clamp(28px, 4vw, ${customFontSizeCap ?? 48}px)`;
+    ? `clamp(24px, 5.5vw, ${customFontSizeCap ?? 68}px)`
+    : `clamp(34px, 6vw, ${customFontSizeCap ?? 68}px)`;
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     // 남는 너비를 모두 차지하되 내용 너비로 행이 밀리지 않도록
