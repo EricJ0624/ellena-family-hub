@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   KeyboardSensor,
   useSensor,
@@ -208,7 +208,7 @@ function SortableCard({
       {/* 너비 리사이즈 핸들 — 오른쪽 (1열 모드에서는 가로 리사이즈 의미 없어 숨김) */}
       {editMode && previewCols > 1 && (
         <div
-          className="absolute right-0 top-0 z-10 h-full w-5 cursor-ew-resize rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute right-0 top-0 z-10 h-full w-5 cursor-ew-resize touch-none rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
@@ -222,7 +222,7 @@ function SortableCard({
       {/* 높이 리사이즈 핸들 — 아래쪽 (20px 터치 영역, z-10) */}
       {editMode && (
         <div
-          className="absolute bottom-0 left-0 z-10 h-5 w-full cursor-ns-resize rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute bottom-0 left-0 z-10 h-5 w-full cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
@@ -299,8 +299,10 @@ export function WidgetLayoutEditor({
   const sortedIds = useMemo(() => sortedEnabled.map((d) => d.widget_key), [sortedEnabled]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    // MouseSensor: 마우스 전용 (PC). PointerSensor 대신 사용해 TouchSensor와 센서 충돌 방지
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    // TouchSensor: 터치 전용 (모바일). delay 250ms 홀드 후 드래그 활성화
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 10 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

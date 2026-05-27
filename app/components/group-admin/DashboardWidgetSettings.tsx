@@ -318,8 +318,9 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
             </button>
           </div>
 
-          {/* 모달 본문 — 드래그 중에는 overflow-hidden+touch-none으로 스크롤 잠금하여 DnD 이벤트 보호 */}
-          <div className={`flex-1 p-4 space-y-4 ${isDragging ? 'overflow-hidden touch-none' : 'overflow-y-auto'}`}>
+          {/* 모달 본문 — 편집 모드에서 항상 touch-none으로 스크롤 컨테이너가 터치 이벤트를 선점하는 것을 방지
+               드래그 중에는 overflow-hidden을 추가로 적용해 레이아웃 이동 방지 */}
+          <div className={`flex-1 p-4 space-y-4 touch-none ${isDragging ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             <WidgetLayoutEditor {...editorProps} />
             {advancedPanel}
           </div>

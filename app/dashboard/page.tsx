@@ -428,8 +428,8 @@ export default function FamilyHub() {
     letterSpacing: 0,
     fontFamily: 'Inter',
   });
-  // 초기값 48: fit 실행 전에도 28px 기본값이 아닌 합리적인 크기를 유지. useLayoutEffect가 paint 전 동기 실행되므로 실제론 48px가 화면에 보이지 않음
-  const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number>(48);
+  // null: fit 완료 전에는 dashboardTitleStyle의 기본값(28px)을 사용. useLayoutEffect가 동기 실행되어 paint 전 fit 완료 가능
+  const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
   const [chatHasMoreOlder, setChatHasMoreOlder] = useState(false);
@@ -1373,7 +1373,7 @@ export default function FamilyHub() {
   };
   const resolvedDashboardTitleStyle: React.CSSProperties = {
     ...dashboardTitleStyle,
-    fontSize: `${fittedTitleFontSize}px`,
+    ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
   };
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
