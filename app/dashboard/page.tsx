@@ -428,7 +428,8 @@ export default function FamilyHub() {
     letterSpacing: 0,
     fontFamily: 'Inter',
   });
-  const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null); // 한 줄 맞춤 시 적용할 폰트 크기(px)
+  // 초기값 48: fit 실행 전에도 28px 기본값이 아닌 합리적인 크기를 유지. useLayoutEffect가 paint 전 동기 실행되므로 실제론 48px가 화면에 보이지 않음
+  const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number>(48);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
   const [chatHasMoreOlder, setChatHasMoreOlder] = useState(false);
@@ -1372,7 +1373,7 @@ export default function FamilyHub() {
   };
   const resolvedDashboardTitleStyle: React.CSSProperties = {
     ...dashboardTitleStyle,
-    ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
+    fontSize: `${fittedTitleFontSize}px`,
   };
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
