@@ -1340,13 +1340,12 @@ export default function FamilyHub() {
   const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
   // 관리자(버튼 공존): 좁은 화면에서 18px → 뷰포트 3.5% → 최대 36px
   // 일반 사용자(버튼 없음): 28px → 뷰포트 4% → 최대 48px
-  // 커스텀 폰트 크기가 직접 지정된 경우 그 값 우선
+  // 커스텀 폰트 크기는 clamp의 상한(max)으로 사용 — 원래 fit 알고리즘의 상한 역할과 동일
   const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
-  const titleFontSizeValue = typeof effectiveTitleStyle?.fontSize === 'number'
-    ? `${effectiveTitleStyle.fontSize}px`
-    : isAdminTitleContext
-      ? 'clamp(18px, 3.5vw, 36px)'
-      : 'clamp(28px, 4vw, 48px)';
+  const customFontSizeCap = typeof effectiveTitleStyle?.fontSize === 'number' ? effectiveTitleStyle.fontSize : null;
+  const titleFontSizeValue = isAdminTitleContext
+    ? `clamp(18px, 3.5vw, ${customFontSizeCap ?? 36}px)`
+    : `clamp(28px, 4vw, ${customFontSizeCap ?? 48}px)`;
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     // 남는 너비를 모두 차지하되 내용 너비로 행이 밀리지 않도록
