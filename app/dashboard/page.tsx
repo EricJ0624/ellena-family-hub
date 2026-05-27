@@ -1340,14 +1340,19 @@ export default function FamilyHub() {
   const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
   // 가용 폭: main-content 패딩(16px×2) + 행 px-1(4px×2) + 버튼(76px) + gap(12px)
   //   → iPhone SE(375px) 관리자 247px / 일반 사용자 335px
-  // auto-fit 실측치(Inter Bold, 영어 "Hearth: Family Haven" 기준 ~7×fontSize):
-  //   관리자: 247÷7 ≈ 35px / 일반 사용자: 335÷7 ≈ 47px
+  // 언어별 타이틀 폭 인수가 다르므로 언어마다 최솟값 별도 산출
+  //   (en 6.15×F, ko 8.33×F, ja 9.02×F, zh 8.0×F → 각 가용 폭 ÷ 인수 = 최솟값)
   // 커스텀 폰트 크기는 clamp의 상한(max)으로 사용 — 원래 fit 알고리즘의 상한 역할과 동일
+  const TITLE_FONT_MIN = {
+    admin: { en: 40, ko: 29, ja: 27, 'zh-CN': 31, 'zh-TW': 31 },
+    user:  { en: 54, ko: 40, ja: 37, 'zh-CN': 42, 'zh-TW': 42 },
+  } as const;
   const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const customFontSizeCap = typeof effectiveTitleStyle?.fontSize === 'number' ? effectiveTitleStyle.fontSize : null;
-  const titleFontSizeValue = isAdminTitleContext
-    ? `clamp(35px, 8.5vw, ${customFontSizeCap ?? 68}px)`
-    : `clamp(47px, 11.5vw, ${customFontSizeCap ?? 68}px)`;
+  const titleRole = isAdminTitleContext ? 'admin' : 'user';
+  const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
+  const titleVw = isAdminTitleContext ? 7 : 9;
+  const titleFontSizeValue = `clamp(${titleFontMin}px, ${titleVw}vw, ${customFontSizeCap ?? 68}px)`;
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     // 남는 너비를 모두 차지하되 내용 너비로 행이 밀리지 않도록
