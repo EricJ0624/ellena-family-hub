@@ -305,9 +305,9 @@ export function WidgetLayoutEditor({
   const sortedIds = useMemo(() => sortedEnabled.map((d) => d.widget_key), [sortedEnabled]);
 
   const sensors = useSensors(
-    // PointerSensor: 마우스·터치·펜 모두 통합 처리. distance:8은 즉시 반응(delay 없음)
-    // touch-none이 modal body에 적용돼 있어 스크롤 충돌 없음
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    // PointerSensor: activationConstraint 없음 → pointermove 첫 이벤트에 즉시 드래그 시작
+    // 배너가 전용 드래그 핸들이므로 즉시 반응이 가장 신뢰성 높음 (@dnd-kit 공식 예제 방식)
+    useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

@@ -277,17 +277,19 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
               {gat('widgets_edit_start')}
             </button>
 
-            {/* 현재 레이아웃 미리보기 (읽기 전용, 편집 모드 OFF) */}
-            <div className="max-w-2xl">
-              <WidgetLayoutEditor {...editorProps} editMode={false} />
-            </div>
+            {/* 현재 레이아웃 미리보기 (모달 닫혔을 때만, 읽기 전용) */}
+            {!isEditorOpen && (
+              <div className="max-w-2xl">
+                <WidgetLayoutEditor {...editorProps} editMode={false} />
+              </div>
+            )}
           </>
         )}
       </div>
 
       {/* ── 전체화면 편집 모달 ── */}
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white overflow-hidden">
           {/* 모달 헤더 */}
           <div className="flex shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
             <h2 className="min-w-0 flex-1 truncate text-base font-bold text-slate-800">
