@@ -60,12 +60,14 @@ export function getDeviceMaxUsableGridWidth(params: LandscapeGridLayoutParams): 
   return Math.max(280, LANDSCAPE_REFERENCE_MAX_WIDTH_PX - pad);
 }
 
-/** 컨테이너 실측 너비 기준 열 수 (mobile 세로 등) */
+/** 컨테이너 실측 너비 기준 열 수 (mobile 세로 등)
+ *  320px+ 부터 2열 허용 → 모바일 세로 화면도 편집기 세로 2열 미리보기와 일치
+ */
 export function getDashboardColumnCountFromWidth(width: number): number {
   const w = Math.max(0, Math.floor(width));
   if (w >= 1280) return 4;
   if (w >= 1024) return 3;
-  if (w >= 640) return 2;
+  if (w >= 320) return 2;
   return 1;
 }
 
