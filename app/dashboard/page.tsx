@@ -3,7 +3,7 @@
 // 동적 렌더링 강제 (GroupProvider 의존성 때문에)
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -412,8 +412,6 @@ export default function FamilyHub() {
   const googleMapsScriptLoadedRef = useRef<boolean>(false); // Google Maps 스크립트 로드 상태 추적
   const processingRequestsRef = useRef<Set<string>>(new Set()); // 처리 중인 요청 ID 추적 (중복 호출 방지)
   const lastLoadedGroupIdRef = useRef<string | null>(null); // 그룹 변경 시 사진 재로드 중복 방지
-  const dashboardTitleRef = useRef<HTMLHeadingElement>(null); // 한 줄 맞춤 폰트 크기 측정용
-  const dashboardTitleRowRef = useRef<HTMLDivElement>(null); // 타이틀 행 컨테이너 (리사이즈 시 재fit)
   const acceptedUserIdsRef = useRef<Set<string>>(new Set()); // 승인된 위치공유 상대 ID (첫 사라짐 방지용, 취소 시에만 제거)
   const updateMapMarkersDebounceRef = useRef<NodeJS.Timeout | null>(null); // 지도 마커 업데이트 디바운스
   const sessionWaitIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // 세션 준비 후 위치 로드용
@@ -428,8 +426,6 @@ export default function FamilyHub() {
     letterSpacing: 0,
     fontFamily: 'Inter',
   });
-  // null: fit 완료 전에는 dashboardTitleStyle의 기본값(28px)을 사용. useLayoutEffect가 동기 실행되어 paint 전 fit 완료 가능
-  const [fittedTitleFontSize, setFittedTitleFontSize] = useState<number | null>(null);
   const [chatDragOver, setChatDragOver] = useState(false);
   const [chatAttachmentsByMessage, setChatAttachmentsByMessage] = useState<Record<string, ChatAttachment[]>>({});
   const [chatHasMoreOlder, setChatHasMoreOlder] = useState(false);
@@ -1342,13 +1338,18 @@ export default function FamilyHub() {
   // 그룹에 저장된 기본 타이틀이 다른 언어(예: 영문)로만 저장된 경우에도 현재 UI 언어로 표시
   const dashboardTitleText = isDefaultAppTitleText(rawDashboardTitle) ? ct('app_title') : rawDashboardTitle;
   const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
-  // 사용자가 지정한 폰트 크기가 있으면 그 값을 상한으로, 없으면 기본/커스텀별 기본 상한 사용
-  const titleFitMaxFontSize = typeof effectiveTitleStyle?.fontSize === 'number'
-    ? effectiveTitleStyle.fontSize
-    : (isDefaultDashboardTitle ? 68 : 28);
+  // 관리자(버튼 공존): 좁은 화면에서 18px → 뷰포트 3.5% → 최대 36px
+  // 일반 사용자(버튼 없음): 28px → 뷰포트 4% → 최대 48px
+  // 커스텀 폰트 크기가 직접 지정된 경우 그 값 우선
+  const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
+  const titleFontSizeValue = typeof effectiveTitleStyle?.fontSize === 'number'
+    ? `${effectiveTitleStyle.fontSize}px`
+    : isAdminTitleContext
+      ? 'clamp(18px, 3.5vw, 36px)'
+      : 'clamp(28px, 4vw, 48px)';
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
-    // basis 0% + minWidth 0 → 남는 너비만 쓰도록 고정 (내용 너비로 행이 밀리며 fit 측정이 어긋나는 것 방지)
+    // 남는 너비를 모두 차지하되 내용 너비로 행이 밀리지 않도록
     flex: '1 1 0%',
     minWidth: 0,
     maxWidth: '100%',
@@ -1357,8 +1358,7 @@ export default function FamilyHub() {
     overflowX: 'hidden',
     overflowY: 'visible',
     textOverflow: 'clip',
-    // fit 적용 전: 읽기 좋은 기본 크기, fit 실행 후 fittedTitleFontSize로 덮어씀
-    fontSize: 28,
+    fontSize: titleFontSizeValue,
     fontWeight: titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
     fontFamily: titleFont.fontFamily,
@@ -1371,155 +1371,9 @@ export default function FamilyHub() {
         }
       : { color: effectiveTitleStyle?.color || '#1e293b' }),
   };
-  const resolvedDashboardTitleStyle: React.CSSProperties = {
-    ...dashboardTitleStyle,
-    ...(fittedTitleFontSize != null && { fontSize: `${fittedTitleFontSize}px` }),
-  };
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;
-
-  // 타이틀 오른쪽 레이아웃 영향 — effect 선언 위치에서 사용 가능한 값
-  const showAdminForTitleFit = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
-  const isGroupLoadingForTitleFit = groupLoading && !currentGroupId;
-  // 한 줄 맞춤: 모든 화면 크기·언어에서 동일하게 동작. useLayoutEffect로 DOM 직후 측정, ResizeObserver로 리사이즈 대응
-  useLayoutEffect(() => {
-    const MAX_FS = Math.max(14, Math.min(120, titleFitMaxFontSize));
-    const MIN_FS = 11;
-    /** background-clip:text·서브픽셀·letter-spacing 등으로 scrollWidth가 실제보다 작게 나오는 경우 오른쪽 잘림 방지 */
-    const TITLE_FIT_WIDTH_SLACK_PX = 8;
-    const cancelled = { current: false };
-    let ro: ResizeObserver | null = null;
-    let tryRunRafId = 0;
-    let measureRafId = 0;
-    const timeouts: (ReturnType<typeof setTimeout> | (() => void))[] = [];
-
-    /** flex basis 0% 등으로 h1.clientWidth가 0이어도, 행·형제 너비로 가용 폭을 구할 수 있음 */
-    const computeAvailableTitleWidth = (el: HTMLHeadingElement): number => {
-      const row = dashboardTitleRowRef.current;
-      if (row && row.clientWidth > 0) {
-        const rowStyle = getComputedStyle(row);
-        const gapPx = parseFloat(rowStyle.columnGap || rowStyle.gap || '12') || 12;
-        let usedBySiblings = 0;
-        for (const child of Array.from(row.children)) {
-          if (child !== el) usedBySiblings += (child as HTMLElement).offsetWidth;
-        }
-        const gapTotal = Math.max(0, row.children.length - 1) * gapPx;
-        const fromRow = Math.floor(
-          row.clientWidth - usedBySiblings - gapTotal - TITLE_FIT_WIDTH_SLACK_PX
-        );
-        if (fromRow > 0) return fromRow;
-      }
-      const fromEl = Math.max(0, el.clientWidth - TITLE_FIT_WIDTH_SLACK_PX);
-      if (fromEl > 0) return fromEl;
-      // row/el 모두 너비 0 (레이아웃 미확정) — 뷰포트 너비로 추정해 fit을 첫 실행에 반드시 동작시킴.
-      // 120px = 관리자 버튼(~80) + 간격 + 패딩 예측값. ResizeObserver가 정확한 값으로 재실행.
-      return typeof window !== 'undefined'
-        ? Math.max(60, window.innerWidth - 120 - TITLE_FIT_WIDTH_SLACK_PX)
-        : 0;
-    };
-
-    const fit = (el: HTMLHeadingElement) => {
-      if (cancelled.current) return;
-      const w = computeAvailableTitleWidth(el);
-      if (w <= 0) return;
-      let fs = MAX_FS;
-      el.style.fontSize = `${fs}px`;
-      void el.offsetHeight; // reflow
-      // 1px 단위로 수렴 (그라데이션 타이틀은 scrollWidth가 보수적으로 나오기 쉬움)
-      while (el.scrollWidth > w + 1 && fs > MIN_FS) {
-        fs -= 1;
-        el.style.fontSize = `${fs}px`;
-        void el.offsetHeight;
-      }
-      if (!cancelled.current) setFittedTitleFontSize(fs);
-    };
-
-    const runFit = (el: HTMLHeadingElement) => {
-      if (cancelled.current) return;
-      const w = computeAvailableTitleWidth(el);
-      if (w > 0) {
-        fit(el);
-      } else {
-        // 레이아웃 미준비: 여러 시점에 재시도 (다양한 기기/환경·느린 하이드레이션 대응)
-        timeouts.push(setTimeout(() => runFit(el), 0));
-        timeouts.push(setTimeout(() => runFit(el), 50));
-        timeouts.push(setTimeout(() => runFit(el), 100));
-        timeouts.push(setTimeout(() => runFit(el), 200));
-        timeouts.push(setTimeout(() => runFit(el), 400));
-        timeouts.push(setTimeout(() => runFit(el), 800));
-        timeouts.push(setTimeout(() => runFit(el), 1500));
-        timeouts.push(setTimeout(() => runFit(el), 3000));
-        timeouts.push(setTimeout(() => runFit(el), 5000));
-        timeouts.push(setTimeout(() => runFit(el), 8000));
-      }
-    };
-
-    const run = (el: HTMLHeadingElement) => {
-      const runFitForEl = () => {
-        if (cancelled.current) return;
-        runFit(el);
-      };
-      runFitForEl();
-      measureRafId = requestAnimationFrame(runFitForEl);
-      timeouts.push(setTimeout(runFitForEl, 0));
-      ro = new ResizeObserver(runFitForEl);
-      ro.observe(el);
-      // 타이틀 행 컨테이너 리사이즈 시에도 재fit (flex 레이아웃 변화·뷰포트 변경 대응)
-      const rowEl = dashboardTitleRowRef.current;
-      if (rowEl) ro.observe(rowEl);
-      // 폰트 로드 직후·늦은 로드 대비: ready 후 추가 재실행 + 보험용 늦은 한 번 더
-      document.fonts.ready.then(() => {
-        if (cancelled.current) return;
-        runFitForEl();
-        timeouts.push(setTimeout(runFitForEl, 500));
-        timeouts.push(setTimeout(runFitForEl, 1500));
-      });
-      timeouts.push(setTimeout(runFitForEl, 100));
-      timeouts.push(setTimeout(runFitForEl, 400));
-      timeouts.push(setTimeout(runFitForEl, 1200));
-      timeouts.push(setTimeout(runFitForEl, 2500));
-      timeouts.push(setTimeout(runFitForEl, 3500)); // 느린/재접속 후 폰트 로드 대비
-      timeouts.push(setTimeout(runFitForEl, 5000));
-      timeouts.push(setTimeout(runFitForEl, 8000)); // 매우 느린 레이아웃/하이드레이션 폴백
-      // 재접속 시 폰트 로드 후 타이틀 다시 맞춤 (인터넷 끊겼다 되면 조절 복구)
-      const handleOnline = () => {
-        if (cancelled.current) return;
-        document.fonts.ready.then(() => {
-          if (cancelled.current) return;
-          const currentEl = dashboardTitleRef.current;
-          if (currentEl) runFit(currentEl);
-        });
-      };
-      window.addEventListener('online', handleOnline);
-      timeouts.push(() => window.removeEventListener('online', handleOnline));
-    };
-
-    const tryRun = (retryCount: number) => {
-      const el = dashboardTitleRef.current;
-      if (el) {
-        run(el);
-        return;
-      }
-      // ref 미착근 시 재시도 횟수 확대 (느린 마운트·조건부 렌더 대응)
-      if (retryCount < 50) {
-        tryRunRafId = requestAnimationFrame(() => tryRun(retryCount + 1));
-      }
-    };
-
-    tryRun(0);
-
-    return () => {
-      cancelled.current = true;
-      cancelAnimationFrame(tryRunRafId);
-      cancelAnimationFrame(measureRafId);
-      ro?.disconnect();
-      timeouts.forEach((t) => {
-        if (typeof t === 'function') (t as () => void)();
-        else clearTimeout(t as ReturnType<typeof setTimeout>);
-      });
-    };
-  }, [titleFitMaxFontSize, dashboardTitleText, showAdminForTitleFit, isGroupLoadingForTitleFit, lang]);
 
   // Family Calendar: 해당 월의 달력 그리드 (날짜 + 일정 개수)
   // 반복 일정 포함해 해당 날짜에 표시될지 여부
@@ -5893,12 +5747,10 @@ export default function FamilyHub() {
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
         <div
-          ref={dashboardTitleRowRef}
           className="box-border flex min-h-12 w-full min-w-0 max-w-full items-center gap-3 px-1"
         >
           <h1
-            ref={dashboardTitleRef}
-            style={resolvedDashboardTitleStyle}
+            style={dashboardTitleStyle}
           >
             <AppTitleContent title={dashboardTitleText} />
           </h1>
