@@ -14,6 +14,7 @@ import {
 import {
   SortableContext,
   rectSortingStrategy,
+  verticalListSortingStrategy,
   useSortable,
   arrayMove,
   sortableKeyboardCoordinates,
@@ -209,6 +210,7 @@ function SortableCard({
         <div
           className="absolute right-0 top-0 z-10 h-full w-5 cursor-ew-resize rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
             onResizeHStart(e);
           }}
@@ -222,6 +224,7 @@ function SortableCard({
         <div
           className="absolute bottom-0 left-0 z-10 h-5 w-full cursor-ns-resize rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
             onResizeVStart(e);
           }}
@@ -253,6 +256,8 @@ export interface WidgetLayoutEditorProps {
   onToggle: (key: DashboardWidgetKey) => void;
   onRestoreOne: (key: DashboardWidgetKey) => void;
   onRestoreAll: () => void;
+  /** 드래그 시작(true)/종료(false) 시 호출 — 부모 스크롤 컨테이너 잠금용 */
+  onDragStateChange?: (active: boolean) => void;
 }
 
 export function WidgetLayoutEditor({
@@ -265,6 +270,7 @@ export function WidgetLayoutEditor({
   onToggle,
   onRestoreOne,
   onRestoreAll,
+  onDragStateChange,
 }: WidgetLayoutEditorProps) {
   const [previewCols, setPreviewCols] = useState<PreviewCols>(1);
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
@@ -343,8 +349,8 @@ export function WidgetLayoutEditor({
         const newW = Math.min(BASE_COLS, Math.max(snapUnit, snapped));
         setLiveResize((prev) => (prev ? { ...prev, currentW: newW } : null));
       } else if (rs.axis === 'v') {
-        // gridAutoRows: '10rem' = 160px, 이 값과 일치시켜야 리사이즈 감도가 정확함
-        const rowPx = 160;
+        // 80px 드래그 = 1행 변화 (gridAutoRows 최소 10rem의 절반, 감도 최적화)
+        const rowPx = 80;
         const newH = Math.min(12, Math.max(1, Math.round(rs.startValue + (e.clientY - rs.startPx) / rowPx)));
         setLiveResize((prev) => (prev ? { ...prev, currentH: newH } : null));
       }
@@ -457,8 +463,18 @@ export function WidgetLayoutEditor({
       )}
 
       {/* Sortable DnD grid */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={sortedIds} strategy={rectSortingStrategy}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={() => onDragStateChange?.(true)}
+        onDragEnd={(e) => { handleDragEnd(e); onDragStateChange?.(false); }}
+        onDragCancel={() => onDragStateChange?.(false)}
+      >
+        {/* 1열(모바일 세로)에서는 verticalListSortingStrategy가 가변 높이 아이템에 더 정확 */}
+        <SortableContext
+          items={sortedIds}
+          strategy={previewCols === 1 ? verticalListSortingStrategy : rectSortingStrategy}
+        >
           <div
             ref={gridRef}
             className="grid gap-3"

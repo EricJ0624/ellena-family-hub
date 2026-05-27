@@ -41,6 +41,8 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   const [editMode, setEditMode] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [showAdvancedLayout, setShowAdvancedLayout] = useState(false);
+  /** DnD 드래그 중 모달 스크롤 잠금 — 스크롤 컨테이너가 포인터 이벤트를 가로채는 것을 방지 */
+  const [isDragging, setIsDragging] = useState(false);
 
   const widgetLabels: Record<DashboardWidgetKey, string> = useMemo(
     () => ({
@@ -212,6 +214,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     onToggle: toggle,
     onRestoreOne: restoreOne,
     onRestoreAll: restoreAll,
+    onDragStateChange: setIsDragging,
   };
 
   const advancedPanel = editMode && showAdvancedLayout && (
@@ -315,8 +318,8 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
             </button>
           </div>
 
-          {/* 모달 본문 (스크롤 가능) */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* 모달 본문 — 드래그 중에는 overflow-hidden+touch-none으로 스크롤 잠금하여 DnD 이벤트 보호 */}
+          <div className={`flex-1 p-4 space-y-4 ${isDragging ? 'overflow-hidden touch-none' : 'overflow-y-auto'}`}>
             <WidgetLayoutEditor {...editorProps} />
             {advancedPanel}
           </div>
