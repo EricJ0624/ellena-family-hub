@@ -58,8 +58,8 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
-/** 1 = 모바일 세로(<640px), 2 = 태블릿/가로, 4 = 데스크톱 */
-type PreviewCols = 1 | 2 | 4;
+/** 1 = 모바일 세로, 2 = 태블릿/가로 */
+type PreviewCols = 1 | 2;
 
 interface LiveResize {
   key: DashboardWidgetKey;
@@ -358,7 +358,8 @@ export function WidgetLayoutEditor({
         liveResizeRef.current = next;
         setLiveResize(next);
       } else if (rs.axis === 'v') {
-        const rowPx = 80;
+        // gridAutoRows와 동일한 rowPx 기준 사용 (1열=112px, 2열=64px)
+        const rowPx = previewColsRef.current === 1 ? 112 : 64;
         const newH = Math.min(12, Math.max(1, Math.round(rs.startValue + (e.clientY - rs.startPx) / rowPx)));
         const next = { ...rs, currentH: newH };
         liveResizeRef.current = next;
@@ -454,18 +455,6 @@ export function WidgetLayoutEditor({
         >
           {t.widgets_preview_landscape}
         </button>
-        <button
-          type="button"
-          onClick={() => setPreviewCols(4)}
-          className={[
-            'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-            previewCols === 4
-              ? 'bg-blue-600 text-white'
-              : 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
-          ].join(' ')}
-        >
-          {'Wide'}
-        </button>
         {editMode && (
           <button
             type="button"
@@ -500,7 +489,9 @@ export function WidgetLayoutEditor({
             className="grid gap-3"
             style={{
               gridTemplateColumns: `repeat(${previewCols}, minmax(0, 1fr))`,
-              gridAutoRows: 'minmax(10rem, auto)',
+              // 1열: 112px/행 → 2열: 64px/행 (열이 늘어 카드 너비가 절반이 될 때 비율 유지)
+              // minmax 없이 고정값 사용 → 미리보기 콘텐츠가 행 높이를 늘리지 않도록 클리핑
+              gridAutoRows: previewCols === 1 ? '112px' : '64px',
             }}
           >
             {sortedEnabled.map((cfg) => {
