@@ -269,11 +269,6 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
           <p className="text-sm text-slate-500">{ct('loading')}</p>
         ) : (
           <>
-            {/* 현재 레이아웃 미리보기 (읽기 전용, 편집 모드 OFF) */}
-            <div className="max-w-2xl">
-              <WidgetLayoutEditor {...editorProps} editMode={false} />
-            </div>
-
             <button
               type="button"
               onClick={handleOpenEditor}
@@ -281,6 +276,11 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
             >
               {gat('widgets_edit_start')}
             </button>
+
+            {/* 현재 레이아웃 미리보기 (읽기 전용, 편집 모드 OFF) */}
+            <div className="max-w-2xl">
+              <WidgetLayoutEditor {...editorProps} editMode={false} />
+            </div>
           </>
         )}
       </div>
