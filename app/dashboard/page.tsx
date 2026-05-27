@@ -1410,7 +1410,13 @@ export default function FamilyHub() {
         );
         if (fromRow > 0) return fromRow;
       }
-      return Math.max(0, el.clientWidth - TITLE_FIT_WIDTH_SLACK_PX);
+      const fromEl = Math.max(0, el.clientWidth - TITLE_FIT_WIDTH_SLACK_PX);
+      if (fromEl > 0) return fromEl;
+      // row/el 모두 너비 0 (레이아웃 미확정) — 뷰포트 너비로 추정해 fit을 첫 실행에 반드시 동작시킴.
+      // 120px = 관리자 버튼(~80) + 간격 + 패딩 예측값. ResizeObserver가 정확한 값으로 재실행.
+      return typeof window !== 'undefined'
+        ? Math.max(60, window.innerWidth - 120 - TITLE_FIT_WIDTH_SLACK_PX)
+        : 0;
     };
 
     const fit = (el: HTMLHeadingElement) => {
