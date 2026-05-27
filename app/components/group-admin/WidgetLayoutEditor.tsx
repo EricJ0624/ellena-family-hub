@@ -13,7 +13,6 @@ import {
 import {
   SortableContext,
   rectSortingStrategy,
-  verticalListSortingStrategy,
   useSortable,
   arrayMove,
   sortableKeyboardCoordinates,
@@ -58,8 +57,11 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
-/** 1 = 모바일 세로, 2 = 태블릿/가로, 4 = PC 데스크톱 */
-type PreviewCols = 1 | 2 | 4;
+/** 2 = 모바일 세로(2열), 4 = 가로/PC(4열) */
+type PreviewCols = 2 | 4;
+/** 0=세로(2열), 1=가로(4열), 2=PC(4열) — 가로/PC는 동일 열 수지만 버튼 구분용 */
+type PreviewMode = 0 | 1 | 2;
+const PREVIEW_MODE_COLS: Record<PreviewMode, PreviewCols> = { 0: 2, 1: 4, 2: 4 };
 
 interface LiveResize {
   key: DashboardWidgetKey;
@@ -210,7 +212,7 @@ function SortableCard({
       )}
 
       {/* 너비 리사이즈 핸들 — 오른쪽 (1열 모드에서는 가로 리사이즈 의미 없어 숨김) */}
-      {editMode && previewCols > 1 && (
+      {editMode && (
         <div
           className="absolute right-0 top-0 z-30 h-full w-5 cursor-ew-resize touch-none rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
@@ -277,7 +279,8 @@ export function WidgetLayoutEditor({
   onRestoreAll,
   onDragStateChange,
 }: WidgetLayoutEditorProps) {
-  const [previewCols, setPreviewCols] = useState<PreviewCols>(1);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>(0);
+  const previewCols: PreviewCols = PREVIEW_MODE_COLS[previewMode];
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -361,8 +364,8 @@ export function WidgetLayoutEditor({
         liveResizeRef.current = next;
         setLiveResize(next);
       } else if (rs.axis === 'v') {
-        // gridAutoRows와 동일한 rowPx 기준 사용 (1열=112px, 2열=64px, 4열=48px)
-        const rowPx = previewColsRef.current === 1 ? 112 : previewColsRef.current === 2 ? 64 : 48;
+        // gridAutoRows와 동일한 rowPx 기준 사용 (2열=64px, 4열=48px)
+        const rowPx = previewColsRef.current === 2 ? 64 : 48;
         const newH = Math.min(12, Math.max(1, Math.round(rs.startValue + (e.clientY - rs.startPx) / rowPx)));
         const next = { ...rs, currentH: newH };
         liveResizeRef.current = next;
@@ -433,22 +436,22 @@ export function WidgetLayoutEditor({
     <div className="space-y-4">
       {/* Toolbar: orientation toggle + restore-all */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* 세로=1열(모바일 세로), 가로=2열(태블릿/모바일 가로), PC=4열(데스크톱) */}
-        {([1, 2, 4] as PreviewCols[]).map((cols) => (
+        {/* 세로=2열(모바일 세로), 가로=4열(모바일 가로), PC=4열(데스크톱) */}
+        {([0, 1, 2] as PreviewMode[]).map((mode) => (
           <button
-            key={cols}
+            key={mode}
             type="button"
-            onClick={() => setPreviewCols(cols)}
+            onClick={() => setPreviewMode(mode)}
             className={[
               'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-              previewCols === cols
+              previewMode === mode
                 ? 'bg-blue-600 text-white'
                 : 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-50',
             ].join(' ')}
           >
-            {cols === 1
+            {mode === 0
               ? t.widgets_preview_portrait
-              : cols === 2
+              : mode === 1
                 ? t.widgets_preview_landscape
                 : t.widgets_preview_desktop}
           </button>
@@ -477,19 +480,19 @@ export function WidgetLayoutEditor({
         onDragEnd={(e) => { handleDragEnd(e); onDragStateChange?.(false); }}
         onDragCancel={() => onDragStateChange?.(false)}
       >
-        {/* 1열(모바일 세로)에서는 verticalListSortingStrategy, 2열/4열에서는 rectSortingStrategy */}
+        {/* 2열/4열 모두 rectSortingStrategy 사용 */}
         <SortableContext
           items={sortedIds}
-          strategy={previewCols === 1 ? verticalListSortingStrategy : rectSortingStrategy}
+          strategy={rectSortingStrategy}
         >
           <div
             ref={gridRef}
             className="grid gap-3"
             style={{
               gridTemplateColumns: `repeat(${previewCols}, minmax(0, 1fr))`,
-              // 1열: 112px/행 → 2열: 64px/행 → 4열: 48px/행 (열이 늘수록 카드 너비 비례 축소)
+              // 2열: 64px/행, 4열: 48px/행 (열이 늘수록 카드 너비 비례 축소)
               // minmax 없이 고정값 사용 → 미리보기 콘텐츠가 행 높이를 늘리지 않도록 클리핑
-              gridAutoRows: previewCols === 1 ? '112px' : previewCols === 2 ? '64px' : '48px',
+              gridAutoRows: previewCols === 2 ? '64px' : '48px',
             }}
           >
             {sortedEnabled.map((cfg) => {
