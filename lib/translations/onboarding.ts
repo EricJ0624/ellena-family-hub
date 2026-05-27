@@ -62,6 +62,12 @@ export type OnboardingTranslations = {
   create_short: string; // "생성" button
   joining: string; // "가입 중..."
   join_short: string; // "가입" button
+  /** 그룹 이름 기본값 템플릿. `{name}` 을 닉네임으로 치환 */
+  default_group_name: string;
+  /** 닉네임을 알 수 없을 때 쓰는 fallback */
+  default_user_fallback: string;
+  /** 초대코드 입력 화면의 "다시 입력" 버튼 */
+  re_enter: string;
 };
 
 const onboarding: Record<LangCode, OnboardingTranslations> = {
@@ -125,6 +131,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     create_short: '생성',
     joining: '가입 중...',
     join_short: '가입',
+    default_group_name: '{name}의 가족',
+    default_user_fallback: '사용자',
+    re_enter: '다시 입력',
   },
   en: {
     loading: 'Loading...',
@@ -186,6 +195,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     create_short: 'Create',
     joining: 'Joining...',
     join_short: 'Join',
+    default_group_name: "{name}'s Family",
+    default_user_fallback: 'User',
+    re_enter: 'Re-enter',
   },
   ja: {
     loading: '読み込み中...',
@@ -247,6 +259,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     create_short: '作成',
     joining: '参加中...',
     join_short: '参加',
+    default_group_name: '{name}のファミリー',
+    default_user_fallback: 'ユーザー',
+    re_enter: '再入力',
   },
   'zh-CN': {
     loading: '加载中...',
@@ -308,6 +323,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     create_short: '创建',
     joining: '加入中...',
     join_short: '加入',
+    default_group_name: '{name}的家庭',
+    default_user_fallback: '用户',
+    re_enter: '重新输入',
   },
   'zh-TW': {
     loading: '載入中...',
@@ -369,6 +387,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     create_short: '建立',
     joining: '加入中...',
     join_short: '加入',
+    default_group_name: '{name}的家庭',
+    default_user_fallback: '使用者',
+    re_enter: '重新輸入',
   },
 };
 

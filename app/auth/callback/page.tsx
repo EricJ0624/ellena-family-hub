@@ -122,7 +122,7 @@ export default function AuthCallbackPage() {
           className="h-12 w-12 animate-spin rounded-full border-4 border-[#e2e8f0] border-t-[#9333ea]"
           aria-hidden
         />
-        <p className="text-base text-[#64748b]">인증 처리 중...</p>
+        <p className="text-base text-[#64748b]">{act('processing')}</p>
       </div>
     );
   }

@@ -237,11 +237,16 @@ export default function OnboardingPage() {
 
         if (profile?.nickname) {
           setNickname(profile.nickname);
-          setGroupName(`${profile.nickname}의 가족`);
+          setGroupName(
+            getOnboardingTranslation(lang, 'default_group_name').replace('{name}', profile.nickname)
+          );
         } else {
-          const emailNickname = user.email?.split('@')[0] || '사용자';
+          const emailNickname =
+            user.email?.split('@')[0] || getOnboardingTranslation(lang, 'default_user_fallback');
           setNickname(emailNickname);
-          setGroupName(`${emailNickname}의 가족`);
+          setGroupName(
+            getOnboardingTranslation(lang, 'default_group_name').replace('{name}', emailNickname)
+          );
         }
 
         // 초대 링크로 진입한 경우: join 단계로 이동, 코드 채우기, 그룹 미리보기 자동 검증
@@ -1145,7 +1150,7 @@ export default function OnboardingPage() {
                           joining ? 'cursor-not-allowed' : 'cursor-pointer'
                         }`}
                       >
-                        다시 입력
+                        {ot('re_enter')}
                       </button>
                       <button
                         onClick={joinFlowReady ? handleJoinCompleteGoToDashboard : handleJoinGroup}
@@ -1159,7 +1164,7 @@ export default function OnboardingPage() {
                         {joining && !joinFlowReady ? (
                           <>
                             <Loader2 className="h-[18px] w-[18px] animate-spin" />
-                            가입 중...
+                            {ot('joining')}
                           </>
                         ) : (
                           <>
