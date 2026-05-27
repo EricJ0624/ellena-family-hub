@@ -1339,13 +1339,14 @@ export default function FamilyHub() {
   const dashboardTitleText = isDefaultAppTitleText(rawDashboardTitle) ? ct('app_title') : rawDashboardTitle;
   const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
   // 가용 폭: main-content 패딩(16px×2) + 행 px-1(4px×2) + 버튼(76px) + gap(12px)
-  //   → iPhone SE(375px) 관리자 247px / 일반 사용자 335px
-  // 언어별 타이틀 폭 인수가 다르므로 언어마다 최솟값 별도 산출
-  //   (en 6.15×F, ko 8.33×F, ja 9.02×F, zh 8.0×F → 각 가용 폭 ÷ 인수 = 최솟값)
+  //   → iPhone 14(390px) 관리자 262px / 일반 사용자 350px 기준
+  // 언어별 타이틀 폭 인수 (폰트: en=Inter, ko=Pretendard, ja=Pretendard JP, zh=Noto Sans SC/TC)
+  //   en 6.15×F, ko 7.82×F(Pretendard Hangul ~0.85em), ja 9.48×F(풀-width 카타카나 1.0em), zh 8.0×F
+  //   → 가용 폭 ÷ 인수 = 최솟값 (iPhone 14 기준)
   // 커스텀 폰트 크기는 clamp의 상한(max)으로 사용 — 원래 fit 알고리즘의 상한 역할과 동일
   const TITLE_FONT_MIN = {
-    admin: { en: 40, ko: 29, ja: 27, 'zh-CN': 31, 'zh-TW': 31 },
-    user:  { en: 54, ko: 40, ja: 37, 'zh-CN': 42, 'zh-TW': 42 },
+    admin: { en: 40, ko: 33, ja: 27, 'zh-CN': 32, 'zh-TW': 32 },
+    user:  { en: 54, ko: 44, ja: 36, 'zh-CN': 43, 'zh-TW': 43 },
   } as const;
   const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const customFontSizeCap = typeof effectiveTitleStyle?.fontSize === 'number' ? effectiveTitleStyle.fontSize : null;
