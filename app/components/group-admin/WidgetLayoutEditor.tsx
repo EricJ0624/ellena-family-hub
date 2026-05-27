@@ -110,7 +110,7 @@ function SortableCard({
   const Icon = meta.icon;
   const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: cfg.widget_key,
     disabled: !editMode,
   });
@@ -137,8 +137,10 @@ function SortableCard({
         gridRow: `span ${Math.max(1, rowSpan)}`,
       }}
     >
-      {/* 색상 아이콘 배너 — 드래그 핸들 겸용 */}
+      {/* 색상 아이콘 배너 — 드래그 핸들 겸용
+           setActivatorNodeRef: @dnd-kit이 이 요소를 정식 드래그 핸들로 인식하도록 등록 */}
       <div
+        ref={editMode ? setActivatorNodeRef : undefined}
         {...(editMode ? { ...listeners, ...attributes } : {})}
         className={[
           'flex shrink-0 items-center gap-2 px-3 py-2 select-none touch-none',
