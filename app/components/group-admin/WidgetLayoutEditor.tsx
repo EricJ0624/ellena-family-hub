@@ -4,8 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -282,12 +281,14 @@ export function WidgetLayoutEditor({
   // Refs to avoid stale closures in pointer event handlers
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
-  const liveResizeRef = useRef(liveResize);
-  liveResizeRef.current = liveResize;
+  // liveResizeRef: beginResize 내부에서 직접 관리 (state와 별도)
+  const liveResizeRef = useRef<LiveResize | null>(null);
   const previewColsRef = useRef(previewCols);
   previewColsRef.current = previewCols;
   const onDraftsChangeRef = useRef(onDraftsChange);
   onDraftsChangeRef.current = onDraftsChange;
+  // 컴포넌트 언마운트 시 남은 document 리스너 정리용
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
 
   const sortedEnabled = useMemo(
     () =>
@@ -302,10 +303,9 @@ export function WidgetLayoutEditor({
   const sortedIds = useMemo(() => sortedEnabled.map((d) => d.widget_key), [sortedEnabled]);
 
   const sensors = useSensors(
-    // MouseSensor: 마우스 전용 (PC). PointerSensor 대신 사용해 TouchSensor와 센서 충돌 방지
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    // TouchSensor: 터치 전용 (모바일). delay 250ms 홀드 후 드래그 활성화
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 10 } }),
+    // PointerSensor: 마우스·터치·펜 모두 통합 처리. distance:8은 즉시 반응(delay 없음)
+    // touch-none이 modal body에 적용돼 있어 스크롤 충돌 없음
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -336,11 +336,13 @@ export function WidgetLayoutEditor({
     [sortedEnabled, drafts, onDraftsChange],
   );
 
-  // Pointer-based resize — attach handlers to document while active
-  useEffect(() => {
-    if (!liveResize) return;
+  // beginResize: onPointerDown에서 즉시 document 리스너 등록 (useEffect 비동기 지연 없음)
+  // 터치 기기에서 첫 pointermove를 놓치지 않음
+  const beginResize = useCallback((init: LiveResize) => {
+    liveResizeRef.current = init;
+    setLiveResize(init);
 
-    const handleMove = (e: PointerEvent) => {
+    const onMove = (e: PointerEvent) => {
       const rs = liveResizeRef.current;
       if (!rs) return;
       const cols = previewColsRef.current;
@@ -352,21 +354,30 @@ export function WidgetLayoutEditor({
         const rawW = rs.startValue + ((e.clientX - rs.startPx) / colPx) * snapUnit;
         const snapped = Math.round(rawW / snapUnit) * snapUnit;
         const newW = Math.min(BASE_COLS, Math.max(snapUnit, snapped));
-        setLiveResize((prev) => (prev ? { ...prev, currentW: newW } : null));
+        const next = { ...rs, currentW: newW };
+        liveResizeRef.current = next;
+        setLiveResize(next);
       } else if (rs.axis === 'v') {
-        // 80px 드래그 = 1행 변화 (gridAutoRows 최소 10rem의 절반, 감도 최적화)
         const rowPx = 80;
         const newH = Math.min(12, Math.max(1, Math.round(rs.startValue + (e.clientY - rs.startPx) / rowPx)));
-        setLiveResize((prev) => (prev ? { ...prev, currentH: newH } : null));
+        const next = { ...rs, currentH: newH };
+        liveResizeRef.current = next;
+        setLiveResize(next);
       }
     };
 
-    const handleUp = () => {
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      resizeCleanupRef.current = null;
+
       const rs = liveResizeRef.current;
+      liveResizeRef.current = null;
+      setLiveResize(null);
       if (!rs) return;
+
       const allDrafts = draftsRef.current;
       const cols = previewColsRef.current;
-
       const updated = allDrafts.map((d) => {
         if (d.widget_key !== rs.key) return d;
         const newW = rs.axis === 'h' ? rs.currentW : (d.layoutW ?? (d.colSpan * BASE_COLS) / cols);
@@ -386,18 +397,22 @@ export function WidgetLayoutEditor({
         if (!coords) return d;
         return { ...d, layoutX: coords.layoutX, layoutY: coords.layoutY };
       });
-
       onDraftsChangeRef.current(final);
-      setLiveResize(null);
     };
 
-    document.addEventListener('pointermove', handleMove);
-    document.addEventListener('pointerup', handleUp);
-    return () => {
-      document.removeEventListener('pointermove', handleMove);
-      document.removeEventListener('pointerup', handleUp);
+    // 즉시 등록 — 터치/마우스 첫 이벤트를 절대 놓치지 않음
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    resizeCleanupRef.current = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
     };
-  }, [liveResize]);
+  }, []);
+
+  // 컴포넌트 언마운트 시 혹시 남은 document 리스너 정리
+  useEffect(() => {
+    return () => { resizeCleanupRef.current?.(); };
+  }, []);
 
   const getLiveOverride = useCallback(
     (key: DashboardWidgetKey) => {
@@ -505,7 +520,7 @@ export function WidgetLayoutEditor({
                   onRestoreOne={() => onRestoreOne(cfg.widget_key)}
                   onResizeHStart={(e) => {
                     const startW = cfg.layoutW ?? (cfg.colSpan * BASE_COLS) / previewCols;
-                    setLiveResize({
+                    beginResize({
                       key: cfg.widget_key,
                       axis: 'h',
                       startPx: e.clientX,
@@ -516,7 +531,7 @@ export function WidgetLayoutEditor({
                   }}
                   onResizeVStart={(e) => {
                     const startH = cfg.layoutH ?? cfg.rowSpan;
-                    setLiveResize({
+                    beginResize({
                       key: cfg.widget_key,
                       axis: 'v',
                       startPx: e.clientY,
