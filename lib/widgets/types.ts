@@ -111,14 +111,15 @@ export const WIDGET_DEFAULT_SIZE: Record<DashboardWidgetKey, WidgetSize> = {
   piggy:    'M',
 };
 
-const _layoutNull = { layoutX: null, layoutY: null, layoutW: null, layoutH: null, layoutVersion: 1 } as const;
+/** M 사이즈 기본 레이아웃 (스마트폰 세로 최적화, ADR C항) */
+const _layoutM = { layoutX: null, layoutY: null, layoutW: WIDGET_LAYOUT_PRESETS.M.w, layoutH: WIDGET_LAYOUT_PRESETS.M.h, layoutVersion: 1 } as const;
 
 export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
-  { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
-  { widget_key: 'calendar', is_enabled: true, display_order: 20, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
-  { widget_key: 'chat',     is_enabled: true, display_order: 30, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
-  { widget_key: 'location', is_enabled: true, display_order: 40, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
-  { widget_key: 'album',    is_enabled: true, display_order: 50, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
-  { widget_key: 'travel',   is_enabled: true, display_order: 60, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
-  { widget_key: 'piggy',    is_enabled: true, display_order: 70, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutNull },
+  { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'calendar', is_enabled: true, display_order: 20, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'chat',     is_enabled: true, display_order: 30, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'location', is_enabled: true, display_order: 40, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'album',    is_enabled: true, display_order: 50, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'travel',   is_enabled: true, display_order: 60, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'piggy',    is_enabled: true, display_order: 70, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
 ];

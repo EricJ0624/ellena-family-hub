@@ -32,6 +32,7 @@ import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types'
 import { resolveWidgetGridPlacement } from '@/lib/widgets/grid';
 import { BASE_COLS, toActualColSpan, packLayoutsFromOrder } from '@/lib/widgets/layout-presets';
 import type { GroupAdminTranslations } from '@/lib/translations/groupAdmin';
+import { WIDGET_PREVIEW_MAP } from './WidgetPreviewComponents';
 
 // ─── 위젯별 시각 메타 ────────────────────────────────────────────────────────
 
@@ -54,110 +55,6 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
   piggy:    { icon: null, emoji: '🐷', bg: 'bg-red-500',  fg: 'text-white' },
 };
 
-// ─── 위젯별 디자인 스켈레톤 (실제 데이터 없이 위젯 시각 구조만 표현) ─────────
-
-const WIDGET_SKELETONS: Record<DashboardWidgetKey, () => React.ReactNode> = {
-  tasks: () => (
-    <div className="flex-1 bg-green-900 p-3 space-y-2.5 overflow-hidden min-h-0">
-      {(['w-4/5', 'w-3/5', 'w-2/3', 'w-1/2'] as const).map((w, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className={`h-4 w-4 shrink-0 rounded border border-green-500/50 ${i === 1 ? 'bg-green-500/40' : ''}`} />
-          <div className={`h-2 ${w} rounded-full bg-green-600/40`} />
-        </div>
-      ))}
-    </div>
-  ),
-  calendar: () => (
-    <div className="flex-1 p-2 overflow-hidden min-h-0">
-      <div className="grid grid-cols-7 gap-0.5 mb-2">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={i} className="text-center text-[8px] font-semibold text-violet-400">{d}</div>
-        ))}
-      </div>
-      <div className="space-y-0.5">
-        {[0, 1, 2, 3].map((row) => (
-          <div key={row} className="grid grid-cols-7 gap-0.5">
-            {[0, 1, 2, 3, 4, 5, 6].map((col) => (
-              <div
-                key={col}
-                className={`h-4 rounded-sm ${row === 1 && col === 3 ? 'bg-violet-500' : 'bg-slate-100'}`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  ),
-  chat: () => (
-    <div className="flex-1 p-2.5 space-y-2 overflow-hidden min-h-0 bg-slate-50">
-      <div className="flex gap-2 items-end">
-        <div className="h-6 w-6 shrink-0 rounded-full bg-blue-200" />
-        <div className="h-8 w-3/5 rounded-2xl rounded-bl-none bg-slate-200" />
-      </div>
-      <div className="flex gap-2 items-end justify-end">
-        <div className="h-8 w-2/5 rounded-2xl rounded-br-none bg-blue-100" />
-        <div className="h-6 w-6 shrink-0 rounded-full bg-blue-200" />
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="h-6 w-6 shrink-0 rounded-full bg-blue-200" />
-        <div className="h-6 w-1/2 rounded-2xl rounded-bl-none bg-slate-200" />
-      </div>
-    </div>
-  ),
-  location: () => (
-    <div className="flex-1 bg-emerald-50 overflow-hidden min-h-0 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-2 opacity-60">
-        <span className="text-4xl">🗺️</span>
-        <div className="flex gap-1.5">
-          <div className="h-1.5 w-10 rounded-full bg-emerald-300" />
-          <div className="h-1.5 w-6 rounded-full bg-emerald-200" />
-        </div>
-      </div>
-    </div>
-  ),
-  album: () => (
-    <div className="flex-1 p-2 grid grid-cols-2 gap-1.5 overflow-hidden min-h-0">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-lg bg-pink-100 flex items-center justify-center min-h-[2.5rem]">
-          <span className="text-lg opacity-50">🖼️</span>
-        </div>
-      ))}
-    </div>
-  ),
-  travel: () => (
-    <div className="flex-1 p-2.5 space-y-2 overflow-hidden min-h-0">
-      {[0, 1].map((i) => (
-        <div key={i} className="rounded-lg border border-sky-200 bg-sky-50 p-2">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-sm">✈️</span>
-            <div className="h-2.5 w-3/5 rounded-full bg-sky-200" />
-          </div>
-          <div className="h-1.5 w-2/5 rounded-full bg-sky-100" />
-        </div>
-      ))}
-    </div>
-  ),
-  piggy: () => (
-    <div className="flex-1 p-3 overflow-hidden min-h-0">
-      <div className="flex items-center gap-3 mb-3">
-        <span className="text-3xl">🐷</span>
-        <div className="space-y-1 flex-1">
-          <div className="h-2.5 w-3/5 rounded-full bg-red-200" />
-          <div className="h-4 w-4/5 rounded bg-red-200/60" />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        {[0, 1].map((i) => (
-          <div key={i} className="flex items-center gap-2 rounded-lg bg-red-50 px-2 py-1.5">
-            <div className="h-5 w-5 rounded-full bg-red-200 shrink-0" />
-            <div className="h-2 flex-1 rounded-full bg-red-200/60" />
-            <div className="h-2 w-10 rounded-full bg-red-300/60 shrink-0" />
-          </div>
-        ))}
-      </div>
-    </div>
-  ),
-};
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
@@ -211,7 +108,7 @@ function SortableCard({
   const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(displayCfg, previewCols);
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
-  const SkeletonContent = WIDGET_SKELETONS[cfg.widget_key];
+  const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: cfg.widget_key,
@@ -277,9 +174,9 @@ function SortableCard({
         )}
       </div>
 
-      {/* 위젯 디자인 스켈레톤 — 실제 대시보드 시각 구조 표현 (pointer 이벤트 차단) */}
+      {/* 위젯 미리보기 — 실제 CSS 클래스 사용으로 대시보드와 동일한 외관 (pointer 이벤트 차단) */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden pointer-events-none">
-        {SkeletonContent()}
+        {PreviewContent()}
       </div>
 
       {/* 편집 모드 컨트롤 오버레이 — 하단 고정 (리사이즈 핸들 위, z-20) */}
@@ -307,8 +204,8 @@ function SortableCard({
         </div>
       )}
 
-      {/* 너비 리사이즈 핸들 — 오른쪽 (20px 터치 영역, z-10) */}
-      {editMode && (
+      {/* 너비 리사이즈 핸들 — 오른쪽 (1열 모드에서는 가로 리사이즈 의미 없어 숨김) */}
+      {editMode && previewCols > 1 && (
         <div
           className="absolute right-0 top-0 z-10 h-full w-5 cursor-ew-resize rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
@@ -567,7 +464,7 @@ export function WidgetLayoutEditor({
             className="grid gap-3"
             style={{
               gridTemplateColumns: `repeat(${previewCols}, minmax(0, 1fr))`,
-              gridAutoRows: '10rem',
+              gridAutoRows: 'minmax(10rem, auto)',
             }}
           >
             {sortedEnabled.map((cfg) => {
