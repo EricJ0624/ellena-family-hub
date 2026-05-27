@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
@@ -287,9 +288,11 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
         )}
       </div>
 
-      {/* ── 전체화면 편집 모달 ── */}
-      {isEditorOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white overflow-hidden">
+      {/* ── 전체화면 편집 모달 ──
+           createPortal로 document.body에 직접 마운트:
+           glass-panel의 backdrop-filter가 fixed 좌표계를 깨는 문제를 근본 해결 */}
+      {isEditorOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-white overflow-hidden">
           {/* 모달 헤더 */}
           <div className="flex shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
             <h2 className="min-w-0 flex-1 truncate text-base font-bold text-slate-800">
@@ -327,7 +330,8 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
             <WidgetLayoutEditor {...editorProps} />
             {advancedPanel}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
