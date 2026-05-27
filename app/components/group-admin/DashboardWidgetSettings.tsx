@@ -209,6 +209,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       widgets_layout_edit_hint: gat('widgets_layout_edit_hint'),
       widgets_preview_portrait: gat('widgets_preview_portrait'),
       widgets_preview_landscape: gat('widgets_preview_landscape'),
+      widgets_preview_desktop: gat('widgets_preview_desktop'),
       widgets_disabled_section: gat('widgets_disabled_section'),
     },
     onDraftsChange: setDrafts,
