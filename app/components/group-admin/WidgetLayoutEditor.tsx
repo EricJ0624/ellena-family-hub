@@ -129,7 +129,10 @@ function SortableCard({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        gridColumn: gridColumnStart
+        // 편집 모드: gridColumnStart 제거 → @dnd-kit이 DOM 순서 기반 재정렬 가능
+        // (gridColumnStart가 있으면 드래그해도 카드가 열에 고정되어 DnD가 무력화됨)
+        // 읽기 전용: layoutX 기반 gridColumnStart 적용해 실제 대시보드 레이아웃 표현
+        gridColumn: (!editMode && gridColumnStart)
           ? `${gridColumnStart} / span ${colSpan}`
           : `span ${colSpan}`,
         gridRow: `span ${Math.max(1, rowSpan)}`,
@@ -208,7 +211,7 @@ function SortableCard({
       {/* 너비 리사이즈 핸들 — 오른쪽 (1열 모드에서는 가로 리사이즈 의미 없어 숨김) */}
       {editMode && previewCols > 1 && (
         <div
-          className="absolute right-0 top-0 z-10 h-full w-5 cursor-ew-resize touch-none rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute right-0 top-0 z-30 h-full w-5 cursor-ew-resize touch-none rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
@@ -222,7 +225,7 @@ function SortableCard({
       {/* 높이 리사이즈 핸들 — 아래쪽 (20px 터치 영역, z-10) */}
       {editMode && (
         <div
-          className="absolute bottom-0 left-0 z-10 h-5 w-full cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute bottom-0 left-0 z-30 h-5 w-full cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
