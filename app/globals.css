@@ -406,6 +406,8 @@ select {
     gap: var(--spacing-lg);
     overflow-x: hidden !important; /* 너비 제한 */
     overflow-y: auto;
+    /* iOS elastic scroll 튕김 방지: 스크롤이 부모로 전파되지 않도록 */
+    overscroll-behavior-y: contain;
     min-width: 0;
     box-sizing: border-box !important; /* 좌우 패딩이 있다면 box-sizing 적용 */
   }
@@ -1766,6 +1768,8 @@ select {
     container-name: widget;
     min-width: 0;
     width: 100%;
+    /* 그리드 셀 높이를 채워 콘텐츠가 셀 경계를 넘치지 않도록 함 */
+    height: 100%;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */

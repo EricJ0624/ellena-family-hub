@@ -333,10 +333,10 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
             </button>
           </div>
 
-          {/* 모달 본문 — 드래그 중에만 touch-none + overflow-hidden 적용
-               평상시: overflow-y-auto → 터치 스크롤 + 체크박스/버튼 클릭 정상 작동
-               드래그 중: touch-none으로 스크롤 차단 (배너 자체의 touch-none으로도 drag 보장) */}
-          <div className={`flex-1 p-4 space-y-4 ${isDragging ? 'overflow-hidden touch-none' : 'overflow-y-auto'}`}>
+          {/* 모달 본문 — 드래그 중에는 overflow-hidden으로 스크롤 위치 고정
+               touch-none은 제거: 전체 영역에 적용 시 복구 버튼 등 터치 이벤트도 차단됨.
+               DnD 핸들 자체에 touch-none이 있어 드래그는 정상 동작. */}
+          <div className={`flex-1 p-4 space-y-4 ${isDragging ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             <WidgetLayoutEditor {...editorProps} />
             {advancedPanel}
           </div>

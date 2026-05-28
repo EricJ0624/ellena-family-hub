@@ -5890,8 +5890,8 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  // backdrop-filter/z-index 효과가 인접 위젯에 시각적으로 번지는 현상 방지
-                  className="min-w-0 max-w-full overflow-x-clip isolate"
+                  // overflow-hidden: 위젯 콘텐츠가 그리드 셀 높이를 초과해 아래 위젯과 겹치는 현상 방지
+                  className="min-w-0 max-w-full overflow-hidden isolate"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
