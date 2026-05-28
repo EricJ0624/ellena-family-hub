@@ -1,11 +1,12 @@
 /**
- * 위젯 레이아웃 프리셋 헬퍼 (Phase 1)
+ * 위젯 레이아웃 프리셋 헬퍼 (Phase 1, Phase B)
  *
- * - getPresetLayout: 특정 위젯·size에 대한 12열 정규화 w/h 반환
+ * - getPresetLayout: 특정 위젯·size에 대한 portrait 12열 정규화 w/h 반환
  * - packLayoutsFromOrder: display_order 순 top-left 패킹 → layout_x/y 계산
  * - applyPresetToWidget: 단일 위젯 복구 (size → layout_w/h + pack 위치)
  * - resetAllLayouts: 전체 위젯 복구
  *
+ * BASE_COLS = 12 (portrait 기준). landscape는 LANDSCAPE_COLS=24.
  * 모든 함수는 순수 함수 — Supabase 호출 없음.
  */
 

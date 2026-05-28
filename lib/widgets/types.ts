@@ -12,12 +12,16 @@ export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 
 export type WidgetSize = 'S' | 'M' | 'L' | 'XL';
 
-/** 대시보드 관리자에서 크기 선택 시 적용되는 기본 그리드 span */
+/**
+ * 대시보드 관리자에서 크기 선택 시 적용되는 기본 그리드 span.
+ * Phase B: 12열(portrait) 기준. layoutW == null 인 폴백에도 사용.
+ * colSpan: portrait 12열 기준 / rowSpan: Phase C에서 gridAutoRows 조정 후 확정.
+ */
 export const WIDGET_SIZE_PRESETS: Record<WidgetSize, { colSpan: number; rowSpan: number }> = {
-  S: { colSpan: 1, rowSpan: 1 },
-  M: { colSpan: 1, rowSpan: 1 },
-  L: { colSpan: 2, rowSpan: 1 },
-  XL: { colSpan: 2, rowSpan: 2 },
+  S:  { colSpan: 6,  rowSpan: 3 },   // 50% portrait width
+  M:  { colSpan: 12, rowSpan: 3 },   // 100% portrait width (Phase C: h→6)
+  L:  { colSpan: 12, rowSpan: 6 },   // 100% portrait width, taller
+  XL: { colSpan: 12, rowSpan: 6 },   // Phase C에서 제거 예정
 };
 
 export function parseWidgetSize(raw: string | null | undefined): WidgetSize {
@@ -109,15 +113,19 @@ export interface WidgetConfigDraft {
 }
 
 /**
- * 12열 정규화 그리드 기준 S/M/L/XL 프리셋 크기.
- * WIDGET_SIZE_PRESETS(col_span/row_span)와 별개 — 복구·시드 전용.
- * w=6: 12열 중 절반(스마트폰 세로 1열 = 12, 2열 = 각 6).
+ * 12열 정규화 그리드 기준 S/M/L/XL 프리셋 크기 (복구·시드 전용).
+ * Phase B: portrait 12열 체계에 맞게 w 재정의.
+ *   S  = 6×h  → portrait 50% 너비
+ *   M  = 12×h → portrait 100% 너비  (landscape: 12/12×24 = 50%)
+ *   L  = 12×h → portrait 100% 너비
+ *   XL = 12×h → Phase C에서 제거 예정
+ * h 값은 Phase C(gridAutoRows 조정) 완료 후 S:6, M:6, L:12 로 확정.
  */
 export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }> = {
-  S:  { w: 4, h: 2 },
-  M:  { w: 6, h: 3 },
-  L:  { w: 8, h: 4 },
-  XL: { w: 12, h: 6 },
+  S:  { w: 6,  h: 3 },   // Phase C: h→6
+  M:  { w: 12, h: 3 },   // Phase C: h→6
+  L:  { w: 12, h: 6 },   // Phase C: h→12
+  XL: { w: 12, h: 6 },   // Phase C에서 제거
 };
 
 /** 위젯별 기본 size — 모두 M (스마트폰 세로 최적화, ADR C항) */
@@ -136,10 +144,10 @@ const _layoutM = {
   layoutX: null, layoutY: null,
   layoutW: WIDGET_LAYOUT_PRESETS.M.w, layoutH: WIDGET_LAYOUT_PRESETS.M.h,
   layoutVersion: 1,
-  // portrait (12열): M = w:6, h:3
+  // portrait (12열): M = w:12 → 전체 너비 100%
   layoutPortraitX: null, layoutPortraitY: null,
   layoutPortraitW: WIDGET_LAYOUT_PRESETS.M.w, layoutPortraitH: WIDGET_LAYOUT_PRESETS.M.h,
-  // landscape (24열): M = w:12 (6×2), h:3
+  // landscape (24열): M = w:24 (12×2) → 전체 너비 100%
   layoutLandscapeX: null, layoutLandscapeY: null,
   layoutLandscapeW: WIDGET_LAYOUT_PRESETS.M.w * 2, layoutLandscapeH: WIDGET_LAYOUT_PRESETS.M.h,
 } as const;

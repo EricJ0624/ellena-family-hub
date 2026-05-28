@@ -2,11 +2,23 @@ import type { WidgetConfigDraft } from './types';
 import type { DashboardShell } from './layout-shell';
 import type { AppPreviewOrientation } from './preview-orientation';
 
-/** PC 웹 세로 미리보기(430px) 안에서는 1열만 사용 */
-const WEB_PREVIEW_PORTRAIT_MAX_COLUMNS = 1;
+/**
+ * Phase B: 세로 화면 그리드 열 수 (12열 × 24행 체계)
+ * layout_portrait_w, layout_w 저장 단위와 일치.
+ */
+export const PORTRAIT_COLS = 12;
+
+/**
+ * Phase B: 가로 화면 그리드 열 수 (24열 × 12행 체계)
+ * layout_landscape_w 저장 단위와 일치.
+ */
+export const LANDSCAPE_COLS = 24;
+
+/** PC 웹 세로 미리보기(430px)도 PORTRAIT_COLS 와 동일하게 12열 사용 */
+const WEB_PREVIEW_PORTRAIT_MAX_COLUMNS = PORTRAIT_COLS;
 
 /** 가로 화면 그리드 최대 열 수 */
-export const LANDSCAPE_MAX_COLUMNS = 4;
+export const LANDSCAPE_MAX_COLUMNS = LANDSCAPE_COLS;
 
 /** PC 가로 미리보기 프레임 CSS 상한 (globals.css와 동기) */
 export const LANDSCAPE_REFERENCE_MAX_WIDTH_PX = 900;
@@ -16,8 +28,8 @@ const DESKTOP_MAX_FRAME_PX = 72 * 16;
 /** .main-content 좌우 padding (md+: spacing-lg × 2) */
 const MAIN_CONTENT_PADDING_X_PX = 48;
 
-/** 세로·좁은 mobile portrait 상한 */
-const MOBILE_PORTRAIT_MAX_COLUMNS = 2;
+/** 세로 mobile portrait 상한 — Phase B: 12열 */
+const MOBILE_PORTRAIT_MAX_COLUMNS = PORTRAIT_COLS;
 
 export interface LandscapeGridLayoutParams {
   shell: DashboardShell;
@@ -60,19 +72,18 @@ export function getDeviceMaxUsableGridWidth(params: LandscapeGridLayoutParams): 
   return Math.max(280, LANDSCAPE_REFERENCE_MAX_WIDTH_PX - pad);
 }
 
-/** 컨테이너 실측 너비 기준 열 수 (mobile 세로 등)
- *  320px+ 부터 2열 허용 → 모바일 세로 화면도 편집기 세로 2열 미리보기와 일치
+/**
+ * 컨테이너 실측 너비 기준 세로(portrait) 그리드 열 수.
+ * Phase B: 세로 화면은 항상 PORTRAIT_COLS(12) 고정.
+ * 가로·PC는 getLandscapeColumnCountFromWidth 별도 경로 사용.
  */
-export function getDashboardColumnCountFromWidth(width: number): number {
-  const w = Math.max(0, Math.floor(width));
-  if (w >= 1280) return 4;
-  if (w >= 1024) return 3;
-  if (w >= 320) return 2;
-  return 1;
+export function getDashboardColumnCountFromWidth(_width: number): number {
+  return PORTRAIT_COLS;
 }
 
 /**
- * 가로·desktop: 기기 최대 usable 너비 → 4열 단위, 현재 실측으로 1~4열 축소.
+ * 가로·desktop: 기기 최대 usable 너비 → LANDSCAPE_COLS(24)열 단위로 축소.
+ * PC 데스크탑: 화면 크기에 비례해 PORTRAIT_COLS(12)~LANDSCAPE_COLS(24) 범위 내 스케일.
  */
 export function getLandscapeColumnCountFromWidth(
   contentWidth: number,
@@ -86,14 +97,20 @@ export function getLandscapeColumnCountFromWidth(
 }
 
 /**
- * 위젯 span 반영: 최대 가로에서 4열까지, L/XL 등으로 한 줄 4칸 불가 시 span에 맞게 축소.
+ * 위젯 span 반영: 최대 가로 LANDSCAPE_COLS(24)열, L/XL span 맞게 축소.
+ * PC desktop: 최소 PORTRAIT_COLS(12) 보장 (화면 크기에 비례 스케일).
  */
 export function getLandscapeColumnCountForWidgets(
   contentWidth: number,
   widgets: readonly WidgetConfigDraft[],
   params: LandscapeGridLayoutParams,
 ): number {
-  const viewportCap = getLandscapeColumnCountFromWidth(contentWidth, params);
+  const raw = getLandscapeColumnCountFromWidth(contentWidth, params);
+  // PC desktop은 PORTRAIT_COLS(12) 이상 보장 (화면이 좁아도 세로 동일 해상도)
+  const viewportCap = params.shell === 'desktop'
+    ? Math.max(PORTRAIT_COLS, raw)
+    : raw;
+
   const enabled = widgets.filter((w) => w.is_enabled);
   if (enabled.length === 0) return viewportCap;
 
