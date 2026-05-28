@@ -45,6 +45,16 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
       layoutW: clampNumeric(found.layout_w, 0.001, 12),
       layoutH: clampNumeric(found.layout_h, 0.001, 9999),
       layoutVersion: clampInt(found.layout_version ?? 1, 1, 9999),
+      // portrait (12열 × 24행)
+      layoutPortraitX: clampNumeric(found.layout_portrait_x, 0, 12),
+      layoutPortraitY: clampNumeric(found.layout_portrait_y, 0, 9999),
+      layoutPortraitW: clampNumeric(found.layout_portrait_w, 0.001, 12),
+      layoutPortraitH: clampNumeric(found.layout_portrait_h, 0.001, 9999),
+      // landscape (24열 × 12행)
+      layoutLandscapeX: clampNumeric(found.layout_landscape_x, 0, 24),
+      layoutLandscapeY: clampNumeric(found.layout_landscape_y, 0, 9999),
+      layoutLandscapeW: clampNumeric(found.layout_landscape_w, 0.001, 24),
+      layoutLandscapeH: clampNumeric(found.layout_landscape_h, 0.001, 9999),
     };
   }).sort((a, b) => {
     if (a.display_order !== b.display_order) return a.display_order - b.display_order;
@@ -56,7 +66,7 @@ export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDr
   const { data, error } = await supabase
     .from('widget_configs')
     .select(
-      'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority,layout_x,layout_y,layout_w,layout_h,layout_version',
+      'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority,layout_x,layout_y,layout_w,layout_h,layout_version,layout_portrait_x,layout_portrait_y,layout_portrait_w,layout_portrait_h,layout_landscape_x,layout_landscape_y,layout_landscape_w,layout_landscape_h',
     )
     .eq('group_id', groupId)
     .order('display_order', { ascending: true });
@@ -88,6 +98,14 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
     layout_w: c.layoutW,
     layout_h: c.layoutH,
     layout_version: c.layoutVersion,
+    layout_portrait_x: c.layoutPortraitX,
+    layout_portrait_y: c.layoutPortraitY,
+    layout_portrait_w: c.layoutPortraitW,
+    layout_portrait_h: c.layoutPortraitH,
+    layout_landscape_x: c.layoutLandscapeX,
+    layout_landscape_y: c.layoutLandscapeY,
+    layout_landscape_w: c.layoutLandscapeW,
+    layout_landscape_h: c.layoutLandscapeH,
   }));
 
   const { error } = await supabase.from('widget_configs').upsert(missingRows, {
@@ -118,6 +136,14 @@ export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDra
       layout_w: d.layoutW,
       layout_h: d.layoutH,
       layout_version: d.layoutVersion,
+      layout_portrait_x: d.layoutPortraitX,
+      layout_portrait_y: d.layoutPortraitY,
+      layout_portrait_w: d.layoutPortraitW,
+      layout_portrait_h: d.layoutPortraitH,
+      layout_landscape_x: d.layoutLandscapeX,
+      layout_landscape_y: d.layoutLandscapeY,
+      layout_landscape_w: d.layoutLandscapeW,
+      layout_landscape_h: d.layoutLandscapeH,
     }));
 
   const { error } = await supabase.from('widget_configs').upsert(normalized, {

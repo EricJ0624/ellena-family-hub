@@ -55,6 +55,16 @@ export interface WidgetConfigRow {
   layout_w: number | null;
   layout_h: number | null;
   layout_version: number;
+  /** 세로 화면 전용 레이아웃 (12열 × 24행 기준, Phase A+) */
+  layout_portrait_x: number | null;
+  layout_portrait_y: number | null;
+  layout_portrait_w: number | null;
+  layout_portrait_h: number | null;
+  /** 가로 화면 전용 레이아웃 (24열 × 12행 기준, Phase A+) */
+  layout_landscape_x: number | null;
+  layout_landscape_y: number | null;
+  layout_landscape_w: number | null;
+  layout_landscape_h: number | null;
 }
 
 export interface WidgetConfigDraft {
@@ -86,6 +96,16 @@ export interface WidgetConfigDraft {
   layoutW: number | null;
   layoutH: number | null;
   layoutVersion: number;
+  /** 세로 화면 전용 레이아웃 (12열 × 24행 기준, Phase A+) */
+  layoutPortraitX: number | null;
+  layoutPortraitY: number | null;
+  layoutPortraitW: number | null;
+  layoutPortraitH: number | null;
+  /** 가로 화면 전용 레이아웃 (24열 × 12행 기준, Phase A+) */
+  layoutLandscapeX: number | null;
+  layoutLandscapeY: number | null;
+  layoutLandscapeW: number | null;
+  layoutLandscapeH: number | null;
 }
 
 /**
@@ -112,7 +132,17 @@ export const WIDGET_DEFAULT_SIZE: Record<DashboardWidgetKey, WidgetSize> = {
 };
 
 /** M 사이즈 기본 레이아웃 (스마트폰 세로 최적화, ADR C항) */
-const _layoutM = { layoutX: null, layoutY: null, layoutW: WIDGET_LAYOUT_PRESETS.M.w, layoutH: WIDGET_LAYOUT_PRESETS.M.h, layoutVersion: 1 } as const;
+const _layoutM = {
+  layoutX: null, layoutY: null,
+  layoutW: WIDGET_LAYOUT_PRESETS.M.w, layoutH: WIDGET_LAYOUT_PRESETS.M.h,
+  layoutVersion: 1,
+  // portrait (12열): M = w:6, h:3
+  layoutPortraitX: null, layoutPortraitY: null,
+  layoutPortraitW: WIDGET_LAYOUT_PRESETS.M.w, layoutPortraitH: WIDGET_LAYOUT_PRESETS.M.h,
+  // landscape (24열): M = w:12 (6×2), h:3
+  layoutLandscapeX: null, layoutLandscapeY: null,
+  layoutLandscapeW: WIDGET_LAYOUT_PRESETS.M.w * 2, layoutLandscapeH: WIDGET_LAYOUT_PRESETS.M.h,
+} as const;
 
 export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
