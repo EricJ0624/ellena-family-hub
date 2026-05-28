@@ -228,6 +228,12 @@ export interface WidgetGridPlacement {
    * undefined이면 auto-flow(기존 동작) 유지.
    */
   gridColumnStart?: number;
+  /**
+   * CSS grid-row-start (1-based).
+   * Phase D fix: layoutPortraitY/landscapeY 값이 있을 때 설정.
+   * undefined이면 auto-flow(기존 동작) 유지.
+   */
+  gridRowStart?: number;
 }
 
 /**
@@ -240,6 +246,7 @@ export interface WidgetGridPlacement {
  *   actualColSpan  = clamp(round(effectiveW * columnCount / baseCols), 1, columnCount)
  *   actualRowSpan  = clamp(round(effectiveH), 1, 24)
  *   gridColumnStart = round(effectiveX * columnCount / baseCols) + 1
+ *   gridRowStart    = round(effectiveY) + 1  (X와 Y 모두 있을 때만 설정)
  */
 export function resolveWidgetGridPlacement(
   cfg: WidgetConfigDraft,
@@ -256,6 +263,9 @@ export function resolveWidgetGridPlacement(
   const effectiveX = isLandscape
     ? (cfg.layoutLandscapeX ?? cfg.layoutX)
     : (cfg.layoutPortraitX ?? cfg.layoutX);
+  const effectiveY = isLandscape
+    ? (cfg.layoutLandscapeY ?? cfg.layoutY)
+    : (cfg.layoutPortraitY ?? cfg.layoutY);
 
   // orientation 전용 W/H/X 모두 null이고 공유 layoutW도 없으면 기존 폴백
   if (effectiveW == null) {
@@ -288,5 +298,17 @@ export function resolveWidgetGridPlacement(
     }
   }
 
-  return { colSpan, rowSpan, gridColumnStart };
+  // effectiveY → gridRowStart (1-based).
+  // X와 Y 모두 있을 때만 설정 — 하나만 있으면 auto-flow에 맡겨 레이아웃 일관성 유지.
+  // portrait/landscape 행 단위(0-based) → CSS grid-row-start(1-based) 변환.
+  let gridRowStart: number | undefined;
+  if (effectiveX != null && effectiveY != null) {
+    const rawRow = Math.round(effectiveY) + 1;
+    const maxRows = isLandscape ? 12 : 24;
+    if (rawRow >= 1 && rawRow <= maxRows) {
+      gridRowStart = rawRow;
+    }
+  }
+
+  return { colSpan, rowSpan, gridColumnStart, gridRowStart };
 }

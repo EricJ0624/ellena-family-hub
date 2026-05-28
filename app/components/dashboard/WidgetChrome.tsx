@@ -45,7 +45,9 @@ export function WidgetChrome({
 }: WidgetChromeProps) {
   return (
     <div
-      className="widget-chrome relative"
+      // isolate: 내부 stacking context를 외부와 격리해 backdrop-filter·z-index 효과가
+      // 인접 위젯이나 공지 배너 등 외부 레이어에 영향을 주지 않도록 함
+      className="widget-chrome relative isolate"
       data-widget-key={widgetKey}
       data-layout-w={layoutW ?? undefined}
       data-layout-h={layoutH ?? undefined}
@@ -56,13 +58,14 @@ export function WidgetChrome({
 
       {/* Phase E: S 사이즈 위젯 — 버튼 없이 위젯 전체가 터치 확대 영역
           onExpand가 있을 때만 렌더 (호출자가 S 사이즈 여부를 결정).
-          cursor-zoom-in 으로 확대 가능함을 암시, 키보드 접근성(Enter/Space) 지원. */}
+          touch-pan-y: iOS Safari에서 수직 스크롤 제스처는 통과시키고 탭만 onClick 처리.
+            → S 위젯 터치 시 스크롤 튕김 방지. */}
       {onExpand && (
         <div
           role="button"
           tabIndex={0}
           aria-label={expandLabel}
-          className="absolute inset-0 z-10 cursor-zoom-in"
+          className="absolute inset-0 z-10 cursor-zoom-in touch-pan-y"
           onClick={onExpand}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

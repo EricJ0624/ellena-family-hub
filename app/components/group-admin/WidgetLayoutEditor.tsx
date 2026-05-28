@@ -562,7 +562,11 @@ export function WidgetLayoutEditor({
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={() => onDragStateChange?.(true)}
-        onDragEnd={(e) => { handleDragEnd(e); onDragStateChange?.(false); }}
+        onDragEnd={(e) => {
+          // try-finally: handleDragEnd 에러 시에도 isDragging 해제 보장
+          // isDragging stuck 시 모달 body가 touch-none이 되어 복구 버튼 등 모든 클릭이 차단됨
+          try { handleDragEnd(e); } finally { onDragStateChange?.(false); }
+        }}
         onDragCancel={() => onDragStateChange?.(false)}
       >
         {/* 2열/4열 모두 rectSortingStrategy 사용 */}

@@ -5872,7 +5872,7 @@ export default function FamilyHub() {
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5889,13 +5889,18 @@ export default function FamilyHub() {
               return (
                 <div
                   key={cfg.widget_key}
-                  className="min-w-0 max-w-full overflow-x-clip"
+                  // isolate: 각 위젯이 독립 stacking context를 가지도록 해
+                  // backdrop-filter/z-index 효과가 인접 위젯에 시각적으로 번지는 현상 방지
+                  className="min-w-0 max-w-full overflow-x-clip isolate"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan} / span ${colSpan}`,
-                    gridRow: `span ${rowSpan} / span ${rowSpan}`,
+                    // gridRowStart: Phase D fix — Y 위치가 있으면 명시적 배치, 없으면 auto-flow
+                    gridRow: gridRowStart
+                      ? `${gridRowStart} / span ${rowSpan}`
+                      : `span ${rowSpan} / span ${rowSpan}`,
                   }}
                 >
                   <WidgetChrome
