@@ -64,7 +64,7 @@ import {
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
-import { resolveWidgetGridPlacement, getSquareCellRowHeight } from '@/lib/widgets/grid';
+import { resolveWidgetGridPlacement, getSquareCellRowHeight, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
@@ -5875,6 +5875,17 @@ export default function FamilyHub() {
               const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
+
+              // Phase E: S 사이즈 여부 — 실제 layout 너비가 portrait 6열(50%) 이하이면 S로 판단.
+              // landscape: 12열(24열 기준 50%) 이하. 미설정(null)이면 size 프리셋으로 폴백.
+              const sMaxUnits = dashboardIsLandscapeGrid ? LANDSCAPE_COLS / 2 : PORTRAIT_COLS / 2;
+              const effectiveW = dashboardIsLandscapeGrid
+                ? (cfg.layoutLandscapeW ?? cfg.layoutW)
+                : (cfg.layoutPortraitW ?? cfg.layoutW);
+              const isSmallWidget = effectiveW != null
+                ? effectiveW <= sMaxUnits
+                : cfg.size === 'S';
+
               return (
                 <div
                   key={cfg.widget_key}
@@ -5893,7 +5904,7 @@ export default function FamilyHub() {
                     layoutH={cfg.layoutH}
                     colSpan={colSpan}
                     rowSpan={rowSpan}
-                    onExpand={() => setExpandedWidget(cfg.widget_key)}
+                    onExpand={isSmallWidget ? () => setExpandedWidget(cfg.widget_key) : undefined}
                     expandLabel={dt('widgets_magnify_open')}
                   >
                     {isExpanded || isRecentlyClosed ? (
