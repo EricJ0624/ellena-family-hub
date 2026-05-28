@@ -376,31 +376,14 @@ select {
     }
   }
 
-  /* Main Content - Flexbox 컨테?�너 */
-  .dashboard-widget-grid[data-columns='2'] > [data-widget-size='S'],
-  .dashboard-widget-grid[data-columns='3'] > [data-widget-size='S'],
-  .dashboard-widget-grid[data-columns='4'] > [data-widget-size='S'] {
-    max-width: min(100%, 17.5rem);
-    justify-self: start;
-  }
+  /*
+   * Phase B/C: 대시보드 그리드는 12열(portrait) / 24열(landscape) 체계.
+   * grid-auto-rows는 JS(getSquareCellRowHeight)에서 인라인 스타일로 설정 → CSS 값 불필요.
+   * 아래는 Phase B 이전 낮은 열 수(2/3/4)용 규칙이었으나 dead code가 됨 → 제거됨.
+   */
 
-  /* 가로·다열: 행 최소 높이로 빈 세로 공간 완화 (2단계) */
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='2'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='3'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='4'] {
-    grid-auto-rows: minmax(10rem, auto);
-  }
-
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='2'] > [data-widget-size='L'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='2'] > [data-widget-size='XL'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='3'] > [data-widget-size='L'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='3'] > [data-widget-size='XL'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='4'] > [data-widget-size='L'],
-  .dashboard-widget-grid[data-layout='landscape'][data-columns='4'] > [data-widget-size='XL'] {
-    min-height: 11rem;
-  }
-
-  .dashboard-widget-grid[data-layout='landscape']:not([data-columns='1']) > * {
+  /* 가로 레이아웃: 위젯이 행 높이를 가득 채우도록 stretch */
+  .dashboard-widget-grid[data-layout='landscape'] > * {
     align-self: stretch;
     max-width: none;
     width: 100%;

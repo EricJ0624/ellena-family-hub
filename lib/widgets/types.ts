@@ -14,14 +14,13 @@ export type WidgetSize = 'S' | 'M' | 'L' | 'XL';
 
 /**
  * 대시보드 관리자에서 크기 선택 시 적용되는 기본 그리드 span.
- * Phase B: 12열(portrait) 기준. layoutW == null 인 폴백에도 사용.
- * colSpan: portrait 12열 기준 / rowSpan: Phase C에서 gridAutoRows 조정 후 확정.
+ * Phase B/C: 12열(portrait) 기준. layoutW == null 인 폴백에도 사용.
  */
 export const WIDGET_SIZE_PRESETS: Record<WidgetSize, { colSpan: number; rowSpan: number }> = {
-  S:  { colSpan: 6,  rowSpan: 3 },   // 50% portrait width
-  M:  { colSpan: 12, rowSpan: 3 },   // 100% portrait width (Phase C: h→6)
-  L:  { colSpan: 12, rowSpan: 6 },   // 100% portrait width, taller
-  XL: { colSpan: 12, rowSpan: 6 },   // Phase C에서 제거 예정
+  S:  { colSpan: 6,  rowSpan: 6  },  // 50% portrait width, square (6×6)
+  M:  { colSpan: 12, rowSpan: 6  },  // 100% portrait width, 2:1 (12×6)
+  L:  { colSpan: 12, rowSpan: 12 },  // 100% portrait width, square (12×12)
+  XL: { colSpan: 12, rowSpan: 12 },  // @deprecated — Phase C 이후 제거 예정 (L과 동일)
 };
 
 export function parseWidgetSize(raw: string | null | undefined): WidgetSize {
@@ -114,18 +113,32 @@ export interface WidgetConfigDraft {
 
 /**
  * 12열 정규화 그리드 기준 S/M/L/XL 프리셋 크기 (복구·시드 전용).
- * Phase B: portrait 12열 체계에 맞게 w 재정의.
- *   S  = 6×h  → portrait 50% 너비
- *   M  = 12×h → portrait 100% 너비  (landscape: 12/12×24 = 50%)
- *   L  = 12×h → portrait 100% 너비
- *   XL = 12×h → Phase C에서 제거 예정
- * h 값은 Phase C(gridAutoRows 조정) 완료 후 S:6, M:6, L:12 로 확정.
+ * Phase B/C: portrait 12열 × 24행 체계.
+ *   S  = 6×6   → portrait 50% 너비 × 정사각형
+ *   M  = 12×6  → portrait 100% 너비 × 2:1 비율
+ *   L  = 12×12 → portrait 100% 너비 × 정사각형
+ *   XL = @deprecated — L 과 동일, Phase C 이후 제거 예정
  */
 export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }> = {
-  S:  { w: 6,  h: 3 },   // Phase C: h→6
-  M:  { w: 12, h: 3 },   // Phase C: h→6
-  L:  { w: 12, h: 6 },   // Phase C: h→12
-  XL: { w: 12, h: 6 },   // Phase C에서 제거
+  S:  { w: 6,  h: 6  },
+  M:  { w: 12, h: 6  },
+  L:  { w: 12, h: 12 },
+  XL: { w: 12, h: 12 }, // @deprecated
+};
+
+/**
+ * 위젯별 이상적인 가로:세로 비율 (황금비율, Phase C).
+ * 리사이즈 시 이 비율을 유지하며 가로/세로 중 먼저 100%에 도달하는 쪽에 맞춰 최대 확대.
+ * w:h 로 표현 — 예) tasks 1:2 = 세로가 가로의 2배.
+ */
+export const WIDGET_GOLDEN_RATIOS: Record<DashboardWidgetKey, { w: number; h: number }> = {
+  tasks:    { w: 1, h: 2 },  // 세로형: 할 일 목록
+  calendar: { w: 1, h: 1 },  // 정사각형: 달력
+  chat:     { w: 1, h: 2 },  // 세로형: 채팅 흐름
+  location: { w: 4, h: 3 },  // 가로형: 지도
+  album:    { w: 1, h: 1 },  // 정사각형: 사진 그리드
+  travel:   { w: 4, h: 3 },  // 가로형: 여행 일정
+  piggy:    { w: 1, h: 1 },  // 정사각형: 저금통
 };
 
 /** 위젯별 기본 size — 모두 M (스마트폰 세로 최적화, ADR C항) */

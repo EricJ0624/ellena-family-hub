@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -28,8 +28,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
-import { resolveWidgetGridPlacement } from '@/lib/widgets/grid';
+import { resolveWidgetGridPlacement, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
 import { BASE_COLS, toActualColSpan, packLayoutsFromOrder } from '@/lib/widgets/layout-presets';
+
+/** previewMode 별 내부 CSS 그리드 기준 열 수 (BASE_COLS 단위) */
+const PREVIEW_MODE_BASE_COLS: Record<0 | 1 | 2, number> = {
+  0: PORTRAIT_COLS,   // 세로 12열 grid 기준
+  1: LANDSCAPE_COLS,  // 가로 24열 grid 기준
+  2: LANDSCAPE_COLS,  // PC 24열 grid 기준
+};
 import type { GroupAdminTranslations } from '@/lib/translations/groupAdmin';
 import { WIDGET_PREVIEW_MAP } from './WidgetPreviewComponents';
 
@@ -284,6 +291,19 @@ export function WidgetLayoutEditor({
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
+  // Phase C: 그리드 컨테이너 실측 너비 (정사각형 셀 rowHeight 계산용)
+  const [gridContainerWidth, setGridContainerWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setGridContainerWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    setGridContainerWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+
   // Refs to avoid stale closures in pointer event handlers
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
@@ -291,6 +311,10 @@ export function WidgetLayoutEditor({
   const liveResizeRef = useRef<LiveResize | null>(null);
   const previewColsRef = useRef(previewCols);
   previewColsRef.current = previewCols;
+  const previewModeRef = useRef(previewMode);
+  previewModeRef.current = previewMode;
+  const gridContainerWidthRef = useRef(gridContainerWidth);
+  gridContainerWidthRef.current = gridContainerWidth;
   const onDraftsChangeRef = useRef(onDraftsChange);
   onDraftsChangeRef.current = onDraftsChange;
   // 컴포넌트 언마운트 시 남은 document 리스너 정리용
@@ -351,22 +375,23 @@ export function WidgetLayoutEditor({
     const onMove = (e: PointerEvent) => {
       const rs = liveResizeRef.current;
       if (!rs) return;
-      const cols = previewColsRef.current;
-      const containerWidth = gridRef.current?.getBoundingClientRect().width ?? 0;
+      const containerWidth = gridContainerWidthRef.current || (gridRef.current?.getBoundingClientRect().width ?? 0);
+      const baseCols = PREVIEW_MODE_BASE_COLS[previewModeRef.current];
 
       if (rs.axis === 'h' && containerWidth > 0) {
-        const colPx = containerWidth / cols;
-        const snapUnit = BASE_COLS / cols;
-        const rawW = rs.startValue + ((e.clientX - rs.startPx) / colPx) * snapUnit;
-        const snapped = Math.round(rawW / snapUnit) * snapUnit;
-        const newW = Math.min(BASE_COLS, Math.max(snapUnit, snapped));
+        // Phase C: 소수점 단위 — 1 grid unit = containerWidth / BASE_COLS px
+        const colUnitPx = containerWidth / BASE_COLS;
+        const rawW = rs.startValue + (e.clientX - rs.startPx) / colUnitPx;
+        const newW = Math.min(BASE_COLS, Math.max(0.5, rawW));
         const next = { ...rs, currentW: newW };
         liveResizeRef.current = next;
         setLiveResize(next);
-      } else if (rs.axis === 'v') {
-        // gridAutoRows와 동일한 rowPx 기준 사용 (2열=64px, 4열=48px)
-        const rowPx = previewColsRef.current === 2 ? 64 : 48;
-        const newH = Math.min(12, Math.max(1, Math.round(rs.startValue + (e.clientY - rs.startPx) / rowPx)));
+      } else if (rs.axis === 'v' && containerWidth > 0) {
+        // Phase C: rowPx = 정사각형 셀 높이 (containerWidth / baseCols), 소수점 단위
+        const rowPx = containerWidth / baseCols;
+        const maxRows = baseCols === PORTRAIT_COLS ? 24 : 12;
+        const rawH = rs.startValue + (e.clientY - rs.startPx) / rowPx;
+        const newH = Math.min(maxRows, Math.max(0.5, rawH));
         const next = { ...rs, currentH: newH };
         liveResizeRef.current = next;
         setLiveResize(next);
@@ -389,12 +414,13 @@ export function WidgetLayoutEditor({
         if (d.widget_key !== rs.key) return d;
         const newW = rs.axis === 'h' ? rs.currentW : (d.layoutW ?? (d.colSpan * BASE_COLS) / cols);
         const newH = rs.axis === 'v' ? rs.currentH : (d.layoutH ?? d.rowSpan);
+        const maxRows = PREVIEW_MODE_BASE_COLS[previewModeRef.current] === PORTRAIT_COLS ? 24 : 12;
         return {
           ...d,
           layoutW: newW,
-          layoutH: newH,
+          layoutH: newH,           // 소수점 보존 (DB 저장용)
           colSpan: toActualColSpan(newW, cols),
-          rowSpan: Math.min(6, Math.max(1, Math.round(newH))),
+          rowSpan: Math.min(maxRows, Math.max(1, Math.round(newH))),  // 정수 (CSS 폴백용)
         };
       });
 
@@ -490,9 +516,11 @@ export function WidgetLayoutEditor({
             className="grid gap-3"
             style={{
               gridTemplateColumns: `repeat(${previewCols}, minmax(0, 1fr))`,
-              // 2열: 64px/행, 4열: 48px/행 (열이 늘수록 카드 너비 비례 축소)
-              // minmax 없이 고정값 사용 → 미리보기 콘텐츠가 행 높이를 늘리지 않도록 클리핑
-              gridAutoRows: previewCols === 2 ? '64px' : '48px',
+              // Phase C: 정사각형 셀 — rowHeight = containerWidth / baseCols
+              // portrait(12열): containerWidth/12, landscape(24열): containerWidth/24
+              gridAutoRows: gridContainerWidth > 0
+                ? `${gridContainerWidth / PREVIEW_MODE_BASE_COLS[previewMode]}px`
+                : (previewMode === 0 ? '32px' : '16px'),
             }}
           >
             {sortedEnabled.map((cfg) => {

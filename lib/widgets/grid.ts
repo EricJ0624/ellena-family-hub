@@ -185,15 +185,26 @@ export function clampGridSpan(span: number, max: number): number {
 }
 
 /**
+ * Phase C: 정사각형 셀(square cell) gridAutoRows 계산.
+ * 1 grid unit = columnWidth = contentWidth / columnCount.
+ * rowHeight = contentWidth / columnCount → 셀이 정사각형이 되어
+ * S(6×6)=1:1, M(12×6)=2:1, L(12×12)=1:1 비율이 자동 성립.
+ */
+export function getSquareCellRowHeight(contentWidth: number, columnCount: number): number {
+  if (contentWidth <= 0 || columnCount <= 0) return 40; // fallback
+  return contentWidth / columnCount;
+}
+
+/**
  * 저장된 span·size를 현재 열 수에 맞게 보정.
- * 2열 이상일 때만 L/XL 가로 span이 눈에 띄게 적용됨.
+ * Phase C: rowSpan 상한 6 → 24 (portrait 24행 체계).
  */
 export function resolveWidgetGridSpans(
   cfg: WidgetConfigDraft,
   columnCount: number,
 ): { colSpan: number; rowSpan: number } {
   let col = clampGridSpan(cfg.colSpan, columnCount);
-  const row = clampGridSpan(cfg.rowSpan, 6);
+  const row = clampGridSpan(cfg.rowSpan, 24); // Phase C: 최대 24행
 
   if (columnCount >= 2 && (cfg.size === 'L' || cfg.size === 'XL')) {
     col = Math.min(Math.max(col, 2), columnCount);
@@ -239,11 +250,11 @@ export function resolveWidgetGridPlacement(
   const rawCol = Math.round((cfg.layoutW * columnCount) / LAYOUT_BASE_COLS);
   const colSpan = Math.min(columnCount, Math.max(1, rawCol));
 
-  // layoutH → rowSpan (h는 abstract unit → 정수 근사)
+  // layoutH → rowSpan (h는 abstract unit → 정수 근사, Phase C: 최대 24행)
   const rowSpan =
     cfg.layoutH != null
-      ? Math.min(6, Math.max(1, Math.round(cfg.layoutH)))
-      : clampGridSpan(cfg.rowSpan, 6);
+      ? Math.min(24, Math.max(1, Math.round(cfg.layoutH)))
+      : clampGridSpan(cfg.rowSpan, 24);
 
   // layoutX → gridColumnStart (1-based)
   let gridColumnStart: number | undefined;

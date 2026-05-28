@@ -64,7 +64,7 @@ import {
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
-import { resolveWidgetGridPlacement } from '@/lib/widgets/grid';
+import { resolveWidgetGridPlacement, getSquareCellRowHeight } from '@/lib/widgets/grid';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
@@ -5305,6 +5305,7 @@ export default function FamilyHub() {
   const {
     columnCount: dashboardColumnCount,
     shell: dashboardShell,
+    contentWidth: dashboardContentWidth,
     isLandscapeGrid: dashboardIsLandscapeGrid,
   } = useDashboardGridLayout(
     dashboardGridRef,
@@ -5866,6 +5867,8 @@ export default function FamilyHub() {
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row dense',
+              // Phase C: 정사각형 셀 — 1행 높이 = 1열 너비, S/M/L 비율 자동 성립
+              gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
             }}
           >
             {orderedWidgets.map((cfg) => {
