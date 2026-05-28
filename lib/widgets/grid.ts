@@ -215,8 +215,10 @@ export function resolveWidgetGridSpans(
   return { colSpan: col, rowSpan: row };
 }
 
-/** 12열 정규화 그리드의 기준 열 수 */
-const LAYOUT_BASE_COLS = 12;
+/** portrait layout_w/x 저장 단위 (12열) */
+const PORTRAIT_LAYOUT_BASE = 12;
+/** landscape layout_w/x 저장 단위 (24열) */
+const LANDSCAPE_LAYOUT_BASE = 24;
 
 export interface WidgetGridPlacement {
   colSpan: number;
@@ -230,38 +232,57 @@ export interface WidgetGridPlacement {
 
 /**
  * layout_* 우선으로 CSS grid placement를 결정.
- * layoutW/H/X가 null이면 resolveWidgetGridSpans 폴백 — 기존 동작 보장.
+ * Phase D: isLandscape=true이면 layoutLandscape* 값 우선 사용 (24열 기준).
+ *          isLandscape=false(기본)이면 layoutPortrait* 값 우선 사용 (12열 기준).
+ *          orientation 전용 컬럼이 null이면 공유 layoutW/H/X(12열 단위)로 폴백.
  *
  * 변환 공식:
- *   actualColSpan  = clamp(round(layoutW * columnCount / 12), 1, columnCount)
- *   actualRowSpan  = clamp(round(layoutH), 1, 6)
- *   gridColumnStart = round(layoutX * columnCount / 12) + 1  (범위 초과 시 무시)
+ *   actualColSpan  = clamp(round(effectiveW * columnCount / baseCols), 1, columnCount)
+ *   actualRowSpan  = clamp(round(effectiveH), 1, 24)
+ *   gridColumnStart = round(effectiveX * columnCount / baseCols) + 1
  */
 export function resolveWidgetGridPlacement(
   cfg: WidgetConfigDraft,
   columnCount: number,
+  isLandscape = false,
 ): WidgetGridPlacement {
-  // layoutW가 없으면 기존 resolveWidgetGridSpans 폴백
-  if (cfg.layoutW == null) {
+  // orientation별 유효값 선택
+  const effectiveW = isLandscape
+    ? (cfg.layoutLandscapeW ?? cfg.layoutW)
+    : (cfg.layoutPortraitW ?? cfg.layoutW);
+  const effectiveH = isLandscape
+    ? (cfg.layoutLandscapeH ?? cfg.layoutH)
+    : (cfg.layoutPortraitH ?? cfg.layoutH);
+  const effectiveX = isLandscape
+    ? (cfg.layoutLandscapeX ?? cfg.layoutX)
+    : (cfg.layoutPortraitX ?? cfg.layoutX);
+
+  // orientation 전용 W/H/X 모두 null이고 공유 layoutW도 없으면 기존 폴백
+  if (effectiveW == null) {
     return resolveWidgetGridSpans(cfg, columnCount);
   }
 
-  // layoutW → colSpan
-  const rawCol = Math.round((cfg.layoutW * columnCount) / LAYOUT_BASE_COLS);
+  // 저장 단위에 맞는 기준 열 수 결정
+  // landscape 전용 값이 있으면 24열 기준, portrait 또는 공유 값이면 12열 기준
+  const storedBaseCols = (isLandscape && (cfg.layoutLandscapeW ?? null) !== null)
+    ? LANDSCAPE_LAYOUT_BASE
+    : PORTRAIT_LAYOUT_BASE;
+
+  // effectiveW → colSpan
+  const rawCol = Math.round((effectiveW * columnCount) / storedBaseCols);
   const colSpan = Math.min(columnCount, Math.max(1, rawCol));
 
-  // layoutH → rowSpan (h는 abstract unit → 정수 근사, Phase C: 최대 24행)
+  // effectiveH → rowSpan (Phase C: 최대 24행)
   const rowSpan =
-    cfg.layoutH != null
-      ? Math.min(24, Math.max(1, Math.round(cfg.layoutH)))
+    effectiveH != null
+      ? Math.min(24, Math.max(1, Math.round(effectiveH)))
       : clampGridSpan(cfg.rowSpan, 24);
 
-  // layoutX → gridColumnStart (1-based)
+  // effectiveX → gridColumnStart (1-based)
   let gridColumnStart: number | undefined;
-  if (cfg.layoutX != null) {
-    const rawStart = Math.round((cfg.layoutX * columnCount) / LAYOUT_BASE_COLS) + 1;
+  if (effectiveX != null) {
+    const rawStart = Math.round((effectiveX * columnCount) / storedBaseCols) + 1;
     const clamped = Math.min(columnCount, Math.max(1, rawStart));
-    // start + span이 열 범위를 초과하면 gridColumnStart는 무시하고 auto-flow에 맡김
     if (clamped + colSpan - 1 <= columnCount) {
       gridColumnStart = clamped;
     }

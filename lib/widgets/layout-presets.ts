@@ -1,9 +1,10 @@
 /**
- * 위젯 레이아웃 프리셋 헬퍼 (Phase 1, Phase B)
+ * 위젯 레이아웃 프리셋 헬퍼 (Phase 1, Phase B, Phase D)
  *
- * - getPresetLayout: 특정 위젯·size에 대한 portrait 12열 정규화 w/h 반환
+ * - getPresetLayout: size에 맞는 portrait 12열 기준 w/h 반환
  * - packLayoutsFromOrder: display_order 순 top-left 패킹 → layout_x/y 계산
- * - applyPresetToWidget: 단일 위젯 복구 (size → layout_w/h + pack 위치)
+ * - packOrientationLayouts: orientation별 portrait/landscape 독립 패킹 (Phase D)
+ * - applyPresetToWidget: 단일 위젯 복구
  * - resetAllLayouts: 전체 위젯 복구
  *
  * BASE_COLS = 12 (portrait 기준). landscape는 LANDSCAPE_COLS=24.
@@ -18,8 +19,10 @@ import {
   type WidgetConfigDraft,
   type WidgetSize,
 } from './types';
+import { PORTRAIT_COLS, LANDSCAPE_COLS } from './grid';
 
-export const BASE_COLS = 12;
+export const BASE_COLS = 12;    // portrait 레이아웃 저장 단위 (PORTRAIT_COLS 와 동일)
+export const LANDSCAPE_BASE_COLS = 24; // landscape 레이아웃 저장 단위 (LANDSCAPE_COLS 와 동일)
 
 export interface LayoutCoords {
   layoutX: number;
@@ -103,6 +106,54 @@ export function packLayoutsFromOrder(
 }
 
 /**
+ * Phase D: orientation별 독립 패킹.
+ * portrait → layoutPortraitX/Y 설정, landscape → layoutLandscapeX/Y 설정.
+ * 각 orientation의 w/h를 사용해 겹침 없이 배치한다.
+ */
+export function packOrientationLayouts(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): Map<DashboardWidgetKey, { x: number; y: number }> {
+  const isLandscape = orientation === 'landscape';
+  const maxCols = isLandscape ? LANDSCAPE_COLS : PORTRAIT_COLS;
+
+  const sorted = [...widgets]
+    .filter((w) => w.is_enabled)
+    .sort((a, b) =>
+      a.display_order !== b.display_order
+        ? a.display_order - b.display_order
+        : b.priority - a.priority,
+    );
+
+  const result = new Map<DashboardWidgetKey, { x: number; y: number }>();
+  let cx = 0;
+  let cy = 0;
+  let rowMaxH = 0;
+
+  for (const w of sorted) {
+    const preset = getPresetLayout(w.widget_key, w.size);
+    const ww = isLandscape
+      ? (w.layoutLandscapeW ?? w.layoutW ?? preset.w * 2)  // landscape: 24열 기준
+      : (w.layoutPortraitW ?? w.layoutW ?? preset.w);       // portrait: 12열 기준
+    const wh = isLandscape
+      ? (w.layoutLandscapeH ?? w.layoutH ?? preset.h)
+      : (w.layoutPortraitH ?? w.layoutH ?? preset.h);
+
+    if (cx + ww > maxCols) {
+      cy += rowMaxH;
+      cx = 0;
+      rowMaxH = 0;
+    }
+
+    result.set(w.widget_key, { x: cx, y: cy });
+    cx += ww;
+    rowMaxH = Math.max(rowMaxH, wh);
+  }
+
+  return result;
+}
+
+/**
  * 단일 위젯을 size 프리셋으로 복구한 새 draft 반환.
  * layoutX/Y는 packLayoutsFromOrder 결과로 덮어쓰는 것을 권장.
  * size를 명시하지 않으면 WIDGET_DEFAULT_SIZE를 사용.
@@ -122,30 +173,47 @@ export function applyPresetToWidget(
     rowSpan: spanPreset.rowSpan,
     layoutW: preset12.w,
     layoutH: preset12.h,
+    // Phase D: portrait/landscape 전용 값도 기본값으로 복구
+    layoutPortraitW: preset12.w,
+    layoutPortraitH: preset12.h,
+    layoutLandscapeW: preset12.w * 2,  // landscape 24열 기준 (portrait의 2배)
+    layoutLandscapeH: preset12.h,
     layoutVersion: draft.layoutVersion,
   };
 }
 
 /**
- * 전체 위젯을 기본 size로 복구하고 위치를 재패킹한 drafts 반환.
+ * 전체 위젯을 기본 size로 복구하고 portrait/landscape 양쪽 위치를 재패킹한 drafts 반환.
+ * Phase D: portrait와 landscape를 독립으로 패킹해 layoutPortraitXY/layoutLandscapeXY 설정.
  * 비활성 위젯은 size만 복구하고 layout 좌표는 null 유지.
  */
 export function resetAllLayouts(drafts: readonly WidgetConfigDraft[]): WidgetConfigDraft[] {
   const resetted = drafts.map((d) =>
-    d.is_enabled ? applyPresetToWidget(d) : { ...d, layoutX: null, layoutY: null },
+    d.is_enabled
+      ? applyPresetToWidget(d)
+      : {
+          ...d,
+          layoutX: null, layoutY: null,
+          layoutPortraitX: null, layoutPortraitY: null,
+          layoutLandscapeX: null, layoutLandscapeY: null,
+        },
   );
 
-  const packed = packLayoutsFromOrder(resetted);
+  const packedPortrait = packOrientationLayouts(resetted, 'portrait');
+  const packedLandscape = packOrientationLayouts(resetted, 'landscape');
 
   return resetted.map((d) => {
-    const coords = packed.get(d.widget_key);
-    if (!coords) return d;
+    const pCoords = packedPortrait.get(d.widget_key);
+    const lCoords = packedLandscape.get(d.widget_key);
     return {
       ...d,
-      layoutX: coords.layoutX,
-      layoutY: coords.layoutY,
-      layoutW: coords.layoutW,
-      layoutH: coords.layoutH,
+      // 공유 layout(폴백용)도 portrait 기준으로 업데이트
+      layoutX: pCoords?.x ?? d.layoutX,
+      layoutY: pCoords?.y ?? d.layoutY,
+      layoutPortraitX: pCoords?.x ?? null,
+      layoutPortraitY: pCoords?.y ?? null,
+      layoutLandscapeX: lCoords?.x ?? null,
+      layoutLandscapeY: lCoords?.y ?? null,
     };
   });
 }

@@ -18,7 +18,7 @@ import {
   WIDGET_SIZE_PRESETS,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, saveWidgetConfigs } from '@/lib/widgets/widget-configs';
-import { applyPresetToWidget, packLayoutsFromOrder, resetAllLayouts } from '@/lib/widgets/layout-presets';
+import { applyPresetToWidget, packOrientationLayouts, resetAllLayouts } from '@/lib/widgets/layout-presets';
 import { WidgetLayoutEditor } from './WidgetLayoutEditor';
 
 interface DashboardWidgetSettingsProps {
@@ -169,16 +169,25 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     setIsEditorOpen(true);
   };
 
-  /** 단일 위젯을 기본 크기·위치로 복구 */
+  /** 단일 위젯을 기본 크기·위치로 복구 (Phase D: portrait + landscape 양쪽 복구) */
   const restoreOne = useCallback(
     (key: DashboardWidgetKey) => {
       setDrafts((prev) => {
         const updated = prev.map((d) => (d.widget_key === key ? applyPresetToWidget(d) : d));
-        const packed = packLayoutsFromOrder(updated);
+        const packedP = packOrientationLayouts(updated, 'portrait');
+        const packedL = packOrientationLayouts(updated, 'landscape');
         return updated.map((d) => {
-          const coords = packed.get(d.widget_key);
-          if (!coords) return d;
-          return { ...d, layoutX: coords.layoutX, layoutY: coords.layoutY };
+          const pCoords = packedP.get(d.widget_key);
+          const lCoords = packedL.get(d.widget_key);
+          return {
+            ...d,
+            layoutX: pCoords?.x ?? d.layoutX,
+            layoutY: pCoords?.y ?? d.layoutY,
+            layoutPortraitX: pCoords?.x ?? null,
+            layoutPortraitY: pCoords?.y ?? null,
+            layoutLandscapeX: lCoords?.x ?? null,
+            layoutLandscapeY: lCoords?.y ?? null,
+          };
         });
       });
     },

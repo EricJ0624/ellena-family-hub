@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
 import { resolveWidgetGridPlacement, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
-import { BASE_COLS, toActualColSpan, packLayoutsFromOrder } from '@/lib/widgets/layout-presets';
+import { BASE_COLS, toActualColSpan, packOrientationLayouts } from '@/lib/widgets/layout-presets';
 
 /** previewMode 별 내부 CSS 그리드 기준 열 수 (BASE_COLS 단위) */
 const PREVIEW_MODE_BASE_COLS: Record<0 | 1 | 2, number> = {
@@ -64,11 +64,37 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
-/** 2 = 모바일 세로(2열), 4 = 가로/PC(4열) */
+/** 2 = 모바일 세로(2열), 4 = 가로/PC(4열) — CSS 그리드 열 수(시각적 열 수) */
 type PreviewCols = 2 | 4;
 /** 0=세로(2열), 1=가로(4열), 2=PC(4열) — 가로/PC는 동일 열 수지만 버튼 구분용 */
 type PreviewMode = 0 | 1 | 2;
 const PREVIEW_MODE_COLS: Record<PreviewMode, PreviewCols> = { 0: 2, 1: 4, 2: 4 };
+
+type EditorOrientation = 'portrait' | 'landscape';
+
+/**
+ * Phase D: orientation별 유효 layout 값을 가져오는 순수 헬퍼.
+ * portrait 편집 → layoutPortrait*, landscape 편집 → layoutLandscape* 우선 사용.
+ */
+function getOrientationLayout(
+  cfg: WidgetConfigDraft,
+  orientation: EditorOrientation,
+): { layoutW: number | null; layoutH: number | null; layoutX: number | null; layoutY: number | null } {
+  if (orientation === 'portrait') {
+    return {
+      layoutW: cfg.layoutPortraitW ?? cfg.layoutW,
+      layoutH: cfg.layoutPortraitH ?? cfg.layoutH,
+      layoutX: cfg.layoutPortraitX ?? cfg.layoutX,
+      layoutY: cfg.layoutPortraitY ?? cfg.layoutY,
+    };
+  }
+  return {
+    layoutW: cfg.layoutLandscapeW ?? cfg.layoutW,
+    layoutH: cfg.layoutLandscapeH ?? cfg.layoutH,
+    layoutX: cfg.layoutLandscapeX ?? cfg.layoutX,
+    layoutY: cfg.layoutLandscapeY ?? cfg.layoutY,
+  };
+}
 
 interface LiveResize {
   key: DashboardWidgetKey;
@@ -288,6 +314,8 @@ export function WidgetLayoutEditor({
 }: WidgetLayoutEditorProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>(0);
   const previewCols: PreviewCols = PREVIEW_MODE_COLS[previewMode];
+  // Phase D: orientation — portrait(0) / landscape(1,2)
+  const orientation: EditorOrientation = previewMode === 0 ? 'portrait' : 'landscape';
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -313,6 +341,8 @@ export function WidgetLayoutEditor({
   previewColsRef.current = previewCols;
   const previewModeRef = useRef(previewMode);
   previewModeRef.current = previewMode;
+  const orientationRef = useRef(orientation);
+  orientationRef.current = orientation;
   const gridContainerWidthRef = useRef(gridContainerWidth);
   gridContainerWidthRef.current = gridContainerWidth;
   const onDraftsChangeRef = useRef(onDraftsChange);
@@ -351,14 +381,20 @@ export function WidgetLayoutEditor({
       const reordered = arrayMove(sortedEnabled, oldIndex, newIndex);
       const orderMap = new Map(reordered.map((d, i) => [d.widget_key, (i + 1) * 10]));
 
+      const orient = orientationRef.current;
       const updated = drafts.map((d) =>
         orderMap.has(d.widget_key) ? { ...d, display_order: orderMap.get(d.widget_key)! } : d,
       );
-      const packed = packLayoutsFromOrder(updated);
+
+      // Phase D: orientation별 독립 좌표 패킹
+      const packed = packOrientationLayouts(updated, orient);
       const final = updated.map((d) => {
         const coords = packed.get(d.widget_key);
         if (!coords) return d;
-        return { ...d, layoutX: coords.layoutX, layoutY: coords.layoutY };
+        if (orient === 'portrait') {
+          return { ...d, layoutPortraitX: coords.x, layoutPortraitY: coords.y };
+        }
+        return { ...d, layoutLandscapeX: coords.x, layoutLandscapeY: coords.y };
       });
 
       onDraftsChange(final);
@@ -379,15 +415,15 @@ export function WidgetLayoutEditor({
       const baseCols = PREVIEW_MODE_BASE_COLS[previewModeRef.current];
 
       if (rs.axis === 'h' && containerWidth > 0) {
-        // Phase C: 소수점 단위 — 1 grid unit = containerWidth / BASE_COLS px
-        const colUnitPx = containerWidth / BASE_COLS;
+        // Phase D fix: orientation별 baseCols 사용 (portrait=12, landscape=24)
+        const colUnitPx = containerWidth / baseCols;
         const rawW = rs.startValue + (e.clientX - rs.startPx) / colUnitPx;
-        const newW = Math.min(BASE_COLS, Math.max(0.5, rawW));
+        const newW = Math.min(baseCols, Math.max(0.5, rawW));
         const next = { ...rs, currentW: newW };
         liveResizeRef.current = next;
         setLiveResize(next);
       } else if (rs.axis === 'v' && containerWidth > 0) {
-        // Phase C: rowPx = 정사각형 셀 높이 (containerWidth / baseCols), 소수점 단위
+        // 정사각형 셀 높이 (containerWidth / baseCols), 소수점 단위
         const rowPx = containerWidth / baseCols;
         const maxRows = baseCols === PORTRAIT_COLS ? 24 : 12;
         const rawH = rs.startValue + (e.clientY - rs.startPx) / rowPx;
@@ -410,25 +446,48 @@ export function WidgetLayoutEditor({
 
       const allDrafts = draftsRef.current;
       const cols = previewColsRef.current;
+      const orient = orientationRef.current;
+      const baseCols = PREVIEW_MODE_BASE_COLS[previewModeRef.current];
+      const maxRows = baseCols === PORTRAIT_COLS ? 24 : 12;
+
       const updated = allDrafts.map((d) => {
         if (d.widget_key !== rs.key) return d;
-        const newW = rs.axis === 'h' ? rs.currentW : (d.layoutW ?? (d.colSpan * BASE_COLS) / cols);
-        const newH = rs.axis === 'v' ? rs.currentH : (d.layoutH ?? d.rowSpan);
-        const maxRows = PREVIEW_MODE_BASE_COLS[previewModeRef.current] === PORTRAIT_COLS ? 24 : 12;
+        // Phase D: orientation별 현재 유효값을 startValue로 사용
+        const effLayout = getOrientationLayout(d, orient);
+        const newW = rs.axis === 'h'
+          ? rs.currentW
+          : (effLayout.layoutW ?? (d.colSpan * baseCols) / cols);
+        const newH = rs.axis === 'v'
+          ? rs.currentH
+          : (effLayout.layoutH ?? d.rowSpan);
+
+        if (orient === 'portrait') {
+          return {
+            ...d,
+            layoutPortraitW: newW,
+            layoutPortraitH: newH,
+            // colSpan/rowSpan(CSS 폴백) — portrait 기준으로만 업데이트
+            colSpan: toActualColSpan(newW, cols),
+            rowSpan: Math.min(maxRows, Math.max(1, Math.round(newH))),
+          };
+        }
         return {
           ...d,
-          layoutW: newW,
-          layoutH: newH,           // 소수점 보존 (DB 저장용)
-          colSpan: toActualColSpan(newW, cols),
-          rowSpan: Math.min(maxRows, Math.max(1, Math.round(newH))),  // 정수 (CSS 폴백용)
+          layoutLandscapeW: newW,
+          layoutLandscapeH: newH,
+          // landscape 편집 시 colSpan/rowSpan은 portrait 기준 유지 (변경 없음)
         };
       });
 
-      const packed = packLayoutsFromOrder(updated);
+      // Phase D: orientation별 독립 좌표 패킹
+      const packed = packOrientationLayouts(updated, orient);
       const final = updated.map((d) => {
         const coords = packed.get(d.widget_key);
         if (!coords) return d;
-        return { ...d, layoutX: coords.layoutX, layoutY: coords.layoutY };
+        if (orient === 'portrait') {
+          return { ...d, layoutPortraitX: coords.x, layoutPortraitY: coords.y };
+        }
+        return { ...d, layoutLandscapeX: coords.x, layoutLandscapeY: coords.y };
       });
       onDraftsChangeRef.current(final);
     };
@@ -525,10 +584,14 @@ export function WidgetLayoutEditor({
           >
             {sortedEnabled.map((cfg) => {
               const { liveW, liveH } = getLiveOverride(cfg.widget_key);
+              // Phase D: orientation별 유효 layout 값을 layoutW/H/X/Y에 주입
+              // SortableCard 내부는 항상 layoutW/H를 사용하므로 변경 없이 독립 편집 가능
+              const effCfg = { ...cfg, ...getOrientationLayout(cfg, orientation) };
+              const baseCols = PREVIEW_MODE_BASE_COLS[previewMode];
               return (
                 <SortableCard
                   key={cfg.widget_key}
-                  cfg={cfg}
+                  cfg={effCfg}
                   label={widgetLabels[cfg.widget_key]}
                   previewCols={previewCols}
                   editMode={editMode}
@@ -539,24 +602,24 @@ export function WidgetLayoutEditor({
                   onToggle={() => onToggle(cfg.widget_key)}
                   onRestoreOne={() => onRestoreOne(cfg.widget_key)}
                   onResizeHStart={(e) => {
-                    const startW = cfg.layoutW ?? (cfg.colSpan * BASE_COLS) / previewCols;
+                    const startW = effCfg.layoutW ?? (cfg.colSpan * baseCols) / previewCols;
                     beginResize({
                       key: cfg.widget_key,
                       axis: 'h',
                       startPx: e.clientX,
                       startValue: startW,
                       currentW: startW,
-                      currentH: cfg.layoutH ?? cfg.rowSpan,
+                      currentH: effCfg.layoutH ?? cfg.rowSpan,
                     });
                   }}
                   onResizeVStart={(e) => {
-                    const startH = cfg.layoutH ?? cfg.rowSpan;
+                    const startH = effCfg.layoutH ?? cfg.rowSpan;
                     beginResize({
                       key: cfg.widget_key,
                       axis: 'v',
                       startPx: e.clientY,
                       startValue: startH,
-                      currentW: cfg.layoutW ?? (cfg.colSpan * BASE_COLS) / previewCols,
+                      currentW: effCfg.layoutW ?? (cfg.colSpan * baseCols) / previewCols,
                       currentH: startH,
                     });
                   }}
