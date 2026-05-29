@@ -111,6 +111,8 @@ interface SortableCardProps {
   cfg: WidgetConfigDraft;
   label: string;
   previewCols: PreviewCols;
+  /** 가로(landscape) 탭 여부 — resolveWidgetGridPlacement에 전달해 portrait/landscape 값을 올바르게 선택 */
+  isLandscape: boolean;
   editMode: boolean;
   saving: boolean;
   liveW: number | null;
@@ -126,6 +128,7 @@ function SortableCard({
   cfg,
   label,
   previewCols,
+  isLandscape,
   editMode,
   saving,
   liveW,
@@ -140,7 +143,8 @@ function SortableCard({
     () => ({ ...cfg, layoutW: liveW ?? cfg.layoutW, layoutH: liveH ?? cfg.layoutH }),
     [cfg, liveW, liveH],
   );
-  const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(displayCfg, previewCols);
+  // isLandscape 전달 — 없으면 portrait 경로(layoutPortraitW)를 사용해 세로 편집이 가로에도 반영되는 버그 발생
+  const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(displayCfg, previewCols, isLandscape);
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
   const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
@@ -598,6 +602,7 @@ export function WidgetLayoutEditor({
                   cfg={effCfg}
                   label={widgetLabels[cfg.widget_key]}
                   previewCols={previewCols}
+                  isLandscape={orientation === 'landscape'}
                   editMode={editMode}
                   saving={saving}
                   liveW={liveW}
