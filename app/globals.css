@@ -382,9 +382,9 @@ select {
    * 아래는 Phase B 이전 낮은 열 수(2/3/4)용 규칙이었으나 dead code가 됨 → 제거됨.
    */
 
-  /* 가로 레이아웃: 위젯이 콘텐츠 높이에 맞게 시작점 정렬 (stretch 시 짧은 위젯 아래 공백 발생) */
+  /* 가로 레이아웃: 행 트랙을 꽉 채워 위젯 사이 빈 row track(어두운 배경)이 보이지 않도록 */
   .dashboard-widget-grid[data-layout='landscape'] > * {
-    align-self: start;
+    align-self: stretch;
     max-width: none;
     width: 100%;
     justify-self: stretch;
@@ -1768,11 +1768,13 @@ select {
     container-name: widget;
     min-width: 0;
     width: 100%;
-    /* height: 100% — 그리드 아이템(minHeight 지정)을 채워 위젯 크롬 아래 빈 공간 방지.
-       콘텐츠가 길면 그리드 아이템이 함께 늘어나므로 세로 방향 클리핑 없음. */
+    /* height: 100% — align-self:stretch 시 행 트랙 전체를 채움.
+       content-section이 크롬보다 짧아도 background로 어두운 앱 배경이 노출되지 않음. */
     height: 100%;
     overflow: hidden;
     border-radius: 1rem; /* rounded-2xl */
+    /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass 배경이 보이도록 */
+    background: var(--glass-medium-bg);
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
