@@ -1353,7 +1353,12 @@ export default function FamilyHub() {
   const titleRole = isAdminTitleContext ? 'admin' : 'user';
   const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
   const titleVw = isAdminTitleContext ? 7 : 9;
-  const titleFontSizeValue = `clamp(${titleFontMin}px, ${titleVw}vw, ${customFontSizeCap ?? 68}px)`;
+  // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산돼 글자가 과대하게 커지는 것 방지
+  // → 스마트폰 실제 사이즈와 유사한 48px 상한으로 제한
+  const titleFontMaxPx = (dashboardShell === 'web-preview' && previewOrientation === 'portrait')
+    ? Math.min(customFontSizeCap ?? 48, 48)
+    : customFontSizeCap ?? 68;
+  const titleFontSizeValue = `clamp(${titleFontMin}px, ${titleVw}vw, ${titleFontMaxPx}px)`;
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     // 남는 너비를 모두 차지하되 내용 너비로 행이 밀리지 않도록
@@ -5872,7 +5877,7 @@ export default function FamilyHub() {
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5897,9 +5902,7 @@ export default function FamilyHub() {
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan} / span ${colSpan}`,
-                    gridRow: gridRowStart
-                      ? `${gridRowStart} / span ${rowSpan}`
-                      : `span ${rowSpan}`,
+                    gridRow: `span ${rowSpan}`,
                   }}
                 >
                   <WidgetChrome
