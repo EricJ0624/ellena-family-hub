@@ -5873,7 +5873,8 @@ export default function FamilyHub() {
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              // gridRowStart는 더 이상 사용하지 않음 (gridAutoRows:auto + minHeight 방식으로 전환)
+              const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
