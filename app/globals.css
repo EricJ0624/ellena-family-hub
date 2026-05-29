@@ -539,6 +539,8 @@ select {
   border-radius: var(--border-radius-xl);
   animation: fadeIn 0.4s ease-out forwards;
   height: 100%;
+  /* shadow가 카드 경계 밖으로 번지지 않도록 클리핑: 위젯 액자 겹침 방지 */
+  clip-path: inset(0 round var(--border-radius-xl));
 }
 
 /* Glass Panel Presets - Phase 1 */

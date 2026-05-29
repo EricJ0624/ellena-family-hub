@@ -5866,7 +5866,7 @@ export default function FamilyHub() {
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
           <div
-            className="dashboard-widget-grid grid min-w-0 gap-4"
+            className="dashboard-widget-grid grid min-w-0 gap-5"
             data-columns={dashboardColumnCount}
             data-layout={dashboardIsLandscapeGrid ? 'landscape' : 'portrait'}
             style={{
