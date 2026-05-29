@@ -158,6 +158,17 @@ export function packOrientationLayouts(
  * layoutX/Y는 packLayoutsFromOrder 결과로 덮어쓰는 것을 권장.
  * size를 명시하지 않으면 WIDGET_DEFAULT_SIZE를 사용.
  */
+/**
+ * 사이즈별 landscape 기본 너비 (24열 기준).
+ * S=6 (25%, 4열), M=12 (50%, 2열), L/XL=24 (100%, 1열).
+ */
+const LANDSCAPE_DEFAULT_W: Record<WidgetSize, number> = {
+  S: 6,
+  M: 12,
+  L: 24,
+  XL: 24,
+};
+
 export function applyPresetToWidget(
   draft: WidgetConfigDraft,
   size?: WidgetSize,
@@ -165,6 +176,7 @@ export function applyPresetToWidget(
   const targetSize = size ?? WIDGET_DEFAULT_SIZE[draft.widget_key];
   const preset12 = getPresetLayout(draft.widget_key, targetSize);
   const spanPreset = WIDGET_SIZE_PRESETS[targetSize];
+  const landscapeW = LANDSCAPE_DEFAULT_W[targetSize] ?? 12;
 
   return {
     ...draft,
@@ -176,7 +188,7 @@ export function applyPresetToWidget(
     // Phase D: portrait/landscape 전용 값도 기본값으로 복구
     layoutPortraitW: preset12.w,
     layoutPortraitH: preset12.h,
-    layoutLandscapeW: preset12.w * 2,  // landscape 24열 기준 (portrait의 2배)
+    layoutLandscapeW: landscapeW,  // S→6(25%), M→12(50%), L→24(100%)
     layoutLandscapeH: preset12.h,
     layoutVersion: draft.layoutVersion,
   };

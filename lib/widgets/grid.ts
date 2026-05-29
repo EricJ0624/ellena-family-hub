@@ -99,6 +99,9 @@ export function getLandscapeColumnCountFromWidth(
 /**
  * 위젯 span 반영: 최대 가로 LANDSCAPE_COLS(24)열, L/XL span 맞게 축소.
  * PC desktop: 최소 PORTRAIT_COLS(12) 보장 (화면 크기에 비례 스케일).
+ *
+ * maxSpan 계산 시 stored col_span 대신 실제 layout_landscape_w 값 우선 사용.
+ * col_span은 portrait 기준 레거시 값으로 landscape 열 수 계산에 부적합.
  */
 export function getLandscapeColumnCountForWidgets(
   contentWidth: number,
@@ -114,9 +117,18 @@ export function getLandscapeColumnCountForWidgets(
   const enabled = widgets.filter((w) => w.is_enabled);
   if (enabled.length === 0) return viewportCap;
 
+  // layout_landscape_w 값이 있으면 24열 기준 비례 span 계산 (정확)
+  // 없으면 stored col_span 폴백 (레거시)
   const maxSpan = Math.max(
     1,
-    ...enabled.map((w) => resolveWidgetGridSpans(w, viewportCap).colSpan),
+    ...enabled.map((w) => {
+      const lw = w.layoutLandscapeW ?? w.layoutW;
+      if (lw != null) {
+        const storedBase = w.layoutLandscapeW != null ? LANDSCAPE_MAX_COLUMNS : PORTRAIT_COLS;
+        return Math.min(viewportCap, Math.max(1, Math.round((lw * viewportCap) / storedBase)));
+      }
+      return resolveWidgetGridSpans(w, viewportCap).colSpan;
+    }),
   );
   const fitCols = Math.floor(viewportCap / maxSpan);
   return Math.max(maxSpan, Math.min(viewportCap, Math.max(1, fitCols)));
