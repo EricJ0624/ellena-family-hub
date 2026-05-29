@@ -5861,14 +5861,15 @@ export default function FamilyHub() {
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
           <div
-            className="dashboard-widget-grid grid min-w-0 gap-6"
+            className="dashboard-widget-grid grid min-w-0 gap-4"
             data-columns={dashboardColumnCount}
             data-layout={dashboardIsLandscapeGrid ? 'landscape' : 'portrait'}
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row dense',
-              // Phase C: 정사각형 셀 — 1행 높이 = 1열 너비, S/M/L 비율 자동 성립
-              gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
+              // Phase C: 정사각형 셀 — 황금비율 최솟값 보장 + 콘텐츠가 길면 자동으로 늘어남
+              // minmax(unit_h, auto): 행 높이는 최소 1유닛 이상, 콘텐츠에 따라 auto 확장
+              gridAutoRows: `minmax(${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px, auto)`,
             }}
           >
             {orderedWidgets.map((cfg) => {
@@ -5890,8 +5891,9 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  // overflow-hidden: 위젯 콘텐츠가 그리드 셀 높이를 초과해 아래 위젯과 겹치는 현상 방지
-                  className="min-w-0 max-w-full overflow-hidden isolate"
+                  // align-self: start — 짧은 콘텐츠 위젯이 같은 행의 키 큰 위젯에 맞춰 불필요하게 늘어나지 않도록 함
+                  // overflow-x-clip: 가로 방향만 클리핑 (세로는 콘텐츠에 맞게 자동 확장)
+                  className="min-w-0 max-w-full overflow-x-clip isolate self-start"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart

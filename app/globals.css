@@ -1768,8 +1768,10 @@ select {
     container-name: widget;
     min-width: 0;
     width: 100%;
-    /* 그리드 셀 높이를 채워 콘텐츠가 셀 경계를 넘치지 않도록 함 */
-    height: 100%;
+    /* 콘텐츠를 위젯 경계 안에 가두고 둥근 모서리 적용
+       height: 100% 제거 — gridAutoRows minmax(auto)로 셀이 콘텐츠에 맞게 늘어나므로 불필요 */
+    overflow: hidden;
+    border-radius: 1rem; /* rounded-2xl */
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
