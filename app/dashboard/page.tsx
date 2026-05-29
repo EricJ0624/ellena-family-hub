@@ -1353,36 +1353,6 @@ export default function FamilyHub() {
   const titleRole = isAdminTitleContext ? 'admin' : 'user';
   const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
   const titleVw = isAdminTitleContext ? 7 : 9;
-  // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산돼 글자가 과대하게 커지는 것 방지
-  // → 스마트폰 실제 사이즈와 유사한 48px 상한으로 제한
-  const titleFontMaxPx = (dashboardShell === 'web-preview' && previewOrientation === 'portrait')
-    ? Math.min(customFontSizeCap ?? 48, 48)
-    : customFontSizeCap ?? 68;
-  const titleFontSizeValue = `clamp(${titleFontMin}px, ${titleVw}vw, ${titleFontMaxPx}px)`;
-  const dashboardTitleStyle: React.CSSProperties = {
-    margin: 0,
-    // 남는 너비를 모두 차지하되 내용 너비로 행이 밀리지 않도록
-    flex: '1 1 0%',
-    minWidth: 0,
-    maxWidth: '100%',
-    whiteSpace: 'nowrap' as const,
-    // 가로만 숨김 — 세로는 visible 유지(그라데이션 클립 텍스트와 overflow:hidden 동시 적용 시 일부 브라우저에서 이상 동작 방지)
-    overflowX: 'hidden',
-    overflowY: 'visible',
-    textOverflow: 'clip',
-    fontSize: titleFontSizeValue,
-    fontWeight: titleFont.fontWeight,
-    letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
-    fontFamily: titleFont.fontFamily,
-    ...(isDefaultDashboardTitle
-      ? {
-          background: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }
-      : { color: effectiveTitleStyle?.color || '#1e293b' }),
-  };
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;
@@ -5318,6 +5288,35 @@ export default function FamilyHub() {
     dashboardGridActive,
     widgetConfigs,
   );
+
+  // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산돼 글자가 과대하게 커지는 것 방지
+  // → 스마트폰 실제 사이즈와 유사한 48px 상한으로 제한
+  const titleFontMaxPx = (dashboardShell === 'web-preview' && previewOrientation === 'portrait')
+    ? Math.min(customFontSizeCap ?? 48, 48)
+    : customFontSizeCap ?? 68;
+  const titleFontSizeValue = `clamp(${titleFontMin}px, ${titleVw}vw, ${titleFontMaxPx}px)`;
+  const dashboardTitleStyle: React.CSSProperties = {
+    margin: 0,
+    flex: '1 1 0%',
+    minWidth: 0,
+    maxWidth: '100%',
+    whiteSpace: 'nowrap' as const,
+    overflowX: 'hidden',
+    overflowY: 'visible',
+    textOverflow: 'clip',
+    fontSize: titleFontSizeValue,
+    fontWeight: titleFont.fontWeight,
+    letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
+    fontFamily: titleFont.fontFamily,
+    ...(isDefaultDashboardTitle
+      ? {
+          background: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }
+      : { color: effectiveTitleStyle?.color || '#1e293b' }),
+  };
 
   const orderedWidgets = useMemo(
     () =>
