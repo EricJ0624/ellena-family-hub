@@ -815,7 +815,7 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -911,10 +911,10 @@ select {
 .chalkboard-container .section-body {
   position: relative;
   z-index: 1;
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
   overflow-x: clip;
-  overflow-y: visible;
+  overflow-y: auto;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
