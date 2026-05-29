@@ -1768,8 +1768,9 @@ select {
     container-name: widget;
     min-width: 0;
     width: 100%;
-    /* 콘텐츠를 위젯 경계 안에 가두고 둥근 모서리 적용
-       height: 100% 제거 — gridAutoRows minmax(auto)로 셀이 콘텐츠에 맞게 늘어나므로 불필요 */
+    /* height: 100% — 그리드 아이템(minHeight 지정)을 채워 위젯 크롬 아래 빈 공간 방지.
+       콘텐츠가 길면 그리드 아이템이 함께 늘어나므로 세로 방향 클리핑 없음. */
+    height: 100%;
     overflow: hidden;
     border-radius: 1rem; /* rounded-2xl */
   }
