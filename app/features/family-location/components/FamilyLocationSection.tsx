@@ -128,7 +128,7 @@ export function FamilyLocationSection({
 
         {!isLocationSharing ? (
           <div
-            className="mt-3 flex h-[400px] w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center p-5 text-slate-500"
+            className="mt-3 flex aspect-[4/3] w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center p-5 text-slate-500"
           >
             <p className="mb-2 text-[15px] font-semibold text-slate-600">
               {t.location_ui_map_title}
@@ -140,7 +140,7 @@ export function FamilyLocationSection({
         ) : hasGoogleMapsApiKey ? (
           mapError ? (
             <div
-              className="mt-3 flex h-[400px] w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-5 text-red-800"
+              className="mt-3 flex aspect-[4/3] w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-5 text-red-800"
             >
               <div className="max-w-[500px] text-center">
                 <p className="mb-3 text-lg font-semibold text-red-600">
@@ -183,13 +183,13 @@ export function FamilyLocationSection({
           ) : (
             <div
               id="map"
-              className="mt-3 h-[400px] w-full rounded-xl border border-slate-200"
+              className="mt-3 aspect-[4/3] w-full rounded-xl border border-slate-200"
             />
           )
         ) : null}
         {isLocationSharing && !hasGoogleMapsApiKey ? (
           <div
-            className="mt-3 flex h-[400px] w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-500"
+            className="mt-3 flex aspect-[4/3] w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-500"
           >
             <div className="max-w-[500px] text-center">
               <p className="mb-3 text-base font-semibold text-slate-800">

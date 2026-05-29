@@ -418,12 +418,12 @@ export function FamilyCalendarSection({
               </div>
             </div>
             <div
-              className="grid grid-cols-7 auto-rows-[42px] gap-1 text-center text-xs"
+              className="grid grid-cols-7 auto-rows-[clamp(14px,5.5cqw,42px)] gap-1 text-center text-xs"
             >
               {weekDays.map((day, i) => (
                 <div
                   key={i}
-                  className={`flex min-h-[34px] items-center justify-center rounded-md px-0.5 py-1.5 text-[13px] font-bold ${
+                  className={`flex items-center justify-center rounded-md px-0.5 py-0.5 text-[clamp(9px,3cqw,13px)] font-bold ${
                     i === 0
                       ? 'bg-black/[0.03] text-red-600'
                       : i === 6
@@ -450,14 +450,13 @@ export function FamilyCalendarSection({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     style={{
-                      padding: '6px 2px',
-                      minHeight: '34px',
+                      padding: '2px 1px',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
                       border: 'none',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       background: isSelected
                         ? 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'
                         : cell.isToday
@@ -477,7 +476,7 @@ export function FamilyCalendarSection({
                             : '0 1px 2px rgba(0,0,0,0.05)',
                       transition: 'all 0.15s ease',
                       position: 'relative',
-                      fontSize: '14px',
+                      fontSize: 'clamp(9px, 3.5cqw, 14px)',
                     }}
                     className="border-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                   >
