@@ -418,7 +418,7 @@ export function FamilyCalendarSection({
               </div>
             </div>
             <div
-              className="grid grid-cols-7 auto-rows-[clamp(14px,5.5cqw,42px)] gap-1 text-center text-xs"
+              className="grid grid-cols-7 auto-rows-[clamp(14px,min(5.5cqw,7cqh),42px)] gap-1 text-center text-xs"
             >
               {weekDays.map((day, i) => (
                 <div

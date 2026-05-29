@@ -210,18 +210,18 @@ export function PiggyBankSection({
                           </div>
                           <div className="grid grid-cols-2 gap-2.5">
                             <div className="rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2] p-2.5">
-                              <div className="mb-1 text-[11px] text-[#b91c1c]">
+                              <div className="mb-1 text-[clamp(9px,2.3cqw,11px)] text-[#b91c1c]">
                                 {t.wallet_balance_label}
                               </div>
-                              <div className="text-base font-bold text-[#b91c1c]">
+                              <div className="text-[clamp(12px,4cqw,16px)] font-bold text-[#b91c1c]">
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
                             </div>
                             <div className="rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed] p-2.5">
-                              <div className="mb-1 text-[11px] text-[#9a3412]">
+                              <div className="mb-1 text-[clamp(9px,2.3cqw,11px)] text-[#9a3412]">
                                 {t.bank_balance_label}
                               </div>
-                              <div className="text-base font-bold text-[#9a3412]">
+                              <div className="text-[clamp(12px,4cqw,16px)] font-bold text-[#9a3412]">
                                 {formatAmount(p.balance ?? 0, p.currency)}
                               </div>
                             </div>
@@ -236,18 +236,18 @@ export function PiggyBankSection({
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
               <div className="grid gap-2.5">
                 <div className="glass-panel-soft glass-panel-interactive rounded-xl p-3">
-                  <div className="text-xs text-[#b91c1c]">
+                  <div className="text-[clamp(10px,2.5cqw,12px)] text-[#b91c1c]">
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
-                  <div className="text-lg font-bold text-[#b91c1c]">
+                  <div className="text-[clamp(13px,4.5cqw,18px)] font-bold text-[#b91c1c]">
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
                 </div>
                 <div className="glass-panel-soft glass-panel-interactive rounded-xl p-3">
-                  <div className="text-xs text-[#9a3412]">
+                  <div className="text-[clamp(10px,2.5cqw,12px)] text-[#9a3412]">
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
-                  <div className="text-lg font-bold text-[#9a3412]">
+                  <div className="text-[clamp(13px,4.5cqw,18px)] font-bold text-[#9a3412]">
                     {formatAmount(piggySummary.bankBalance, piggySummary.currency)}
                   </div>
                 </div>

@@ -538,6 +538,7 @@ select {
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-xl);
   animation: fadeIn 0.4s ease-out forwards;
+  height: 100%;
 }
 
 /* Glass Panel Presets - Phase 1 */
@@ -603,6 +604,9 @@ select {
   display: flex;
   flex-direction: column;
   color: rgb(var(--foreground));
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* ============================================
@@ -1394,8 +1398,8 @@ select {
    Chat Section
    ============================================ */
 .chat-messages {
-  /* 한 메시지에 사진 3+장(2행)도 스크롤로 볼 수 있게 충분한 높이 */
-  max-height: min(360px, 42vh);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   margin-bottom: var(--spacing-md);
   padding-right: var(--spacing-sm);
@@ -1411,6 +1415,43 @@ select {
 
 .chat-messages::-webkit-scrollbar-thumb {
   background: rgba(100, 116, 139, 0.45);
+  border-radius: 999px;
+}
+
+/* ============================================
+   앨범 가로 스크롤 그리드
+   ============================================ */
+.album-photo-grid {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 4px; /* 스크롤바 공간 */
+}
+
+/* rowSpan 기반 행 수: 기본 1행 */
+.album-photo-grid[data-rows="1"] {
+  grid-template-rows: 1fr;
+}
+.album-photo-grid[data-rows="2"] {
+  grid-template-rows: 1fr 1fr;
+}
+.album-photo-grid[data-rows="3"] {
+  grid-template-rows: 1fr 1fr 1fr;
+}
+
+.album-photo-cell {
+  aspect-ratio: 1;
+}
+
+.album-photo-grid::-webkit-scrollbar {
+  height: 4px;
+}
+.album-photo-grid::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
   border-radius: 999px;
 }
 
@@ -1473,6 +1514,7 @@ select {
   width: 100%;
   min-width: 0;
   flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .dashboard-widget-grid:not([data-columns='1']) .chat-input-wrapper {
@@ -1768,7 +1810,7 @@ select {
    ─────────────────────────────────────────────────────────────────────────── */
 @layer components {
   .widget-chrome {
-    container-type: inline-size;
+    container-type: size;
     container-name: widget;
     min-width: 0;
     width: 100%;

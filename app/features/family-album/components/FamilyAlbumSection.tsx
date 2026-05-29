@@ -1,6 +1,7 @@
 /**
  * 가족 앨범(Family Album) 섹션 컴포넌트
- * Dashboard용 간단한 사진 그리드 뷰
+ * Dashboard용 가로 스크롤 사진 그리드 뷰
+ * rowSpan 기반으로 사진 행 수(1~3행) 자동 결정
  */
 
 'use client';
@@ -12,7 +13,7 @@ interface FamilyAlbumSectionProps {
   photos: Photo[];
   onPhotoClick?: () => void;
   onViewAllClick: () => void;
-  maxPhotos?: number;
+  rowSpan?: number;
   translations: {
     section_title: string;
     view_all: string;
@@ -25,11 +26,12 @@ export function FamilyAlbumSection({
   photos,
   onPhotoClick,
   onViewAllClick,
-  maxPhotos = 9,
+  rowSpan,
   translations: t,
 }: FamilyAlbumSectionProps) {
-  const displayPhotos = photos.slice(0, maxPhotos);
-  const hasMore = photos.length > maxPhotos;
+  // rowSpan 기반으로 사진 행 수 결정
+  // rowSpan ≤ 6 (S/M): 1행, rowSpan 7-10: 2행, rowSpan ≥ 11 (L 이상): 3행
+  const photoRows = rowSpan && rowSpan >= 11 ? 3 : rowSpan && rowSpan >= 7 ? 2 : 1;
 
   return (
     <section className="content-section">
@@ -45,17 +47,20 @@ export function FamilyAlbumSection({
         </button>
       </div>
       <div className="section-body">
-        {displayPhotos.length === 0 ? (
+        {photos.length === 0 ? (
           <p className="px-4 py-8 text-center text-[13px] text-[#64748b]">
             {t.empty_state}
           </p>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 p-1">
-            {displayPhotos.map((photo) => (
+          <div
+            className="album-photo-grid"
+            data-rows={String(photoRows)}
+          >
+            {photos.map((photo) => (
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                className="relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-[#f1f5f9] transition-[transform,box-shadow,filter] duration-200 ease-in-out hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:brightness-105"
+                className="album-photo-cell relative cursor-pointer overflow-hidden rounded-lg bg-[#f1f5f9] transition-[transform,box-shadow,filter] duration-200 ease-in-out hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:brightness-105"
               >
                 <img
                   src={photo.data}
@@ -70,17 +75,6 @@ export function FamilyAlbumSection({
                 )}
               </div>
             ))}
-          </div>
-        )}
-        {hasMore && (
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={onViewAllClick}
-              className="cursor-pointer rounded-lg border border-solid border-[#cbd5e1] bg-[#f8fafc] px-5 py-2.5 text-[13px] font-semibold text-[#475569] transition-colors hover:bg-[#f1f5f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
-            >
-              {t.photos_count.replace('{count}', String(photos.length - maxPhotos))}
-            </button>
           </div>
         )}
       </div>

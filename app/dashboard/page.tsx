@@ -5343,7 +5343,7 @@ export default function FamilyHub() {
   /** 시스템/그룹 관리자가 아닌 멤버만 그룹 관리자에게 문의 가능 */
   const showMemberInquiryFab = !isSystemAdmin && !isGroupAdmin && !!currentGroupId && !isGroupLoading;
 
-  const renderWidgetSection = (widgetKey: DashboardWidgetKey) => {
+  const renderWidgetSection = (widgetKey: DashboardWidgetKey, widgetRowSpan?: number) => {
     switch (widgetKey) {
       case 'tasks':
         return (
@@ -5561,7 +5561,7 @@ export default function FamilyHub() {
           <FamilyAlbumSection
             photos={stableAlbum}
             onViewAllClick={() => router.push('/memories')}
-            maxPhotos={9}
+            rowSpan={widgetRowSpan}
             translations={{
               section_title: dt('section_title_memories'),
               view_all: dt('album_view_all'),
@@ -5868,14 +5868,11 @@ export default function FamilyHub() {
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row dense',
-              // 행 높이를 auto로: 그리드 행이 콘텐츠에 맞게 자동 결정.
-              // 최소 높이는 각 위젯 아이템의 min-height로 별도 제어 (아래 참조).
-              gridAutoRows: 'auto',
+              gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
             }}
           >
             {orderedWidgets.map((cfg) => {
-              // gridRowStart는 더 이상 사용하지 않음 (gridAutoRows:auto + minHeight 방식으로 전환)
-              const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5894,15 +5891,15 @@ export default function FamilyHub() {
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
                   // overflow-x-clip: 가로 방향만 클리핑, 세로는 콘텐츠에 맞게 자동 확장
-                  className="min-w-0 max-w-full overflow-x-clip isolate"
+                  className="min-w-0 max-w-full overflow-hidden isolate"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan} / span ${colSpan}`,
-                    // gridRow: rowSpan 기반 행 예약 제거 → gridAutoRows: auto가 콘텐츠 높이로 결정
-                    // 황금비율 최소 높이는 minHeight로 직접 보장 (rowSpan × unit_h)
-                    minHeight: `${rowSpan * getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
+                    gridRow: gridRowStart
+                      ? `${gridRowStart} / span ${rowSpan}`
+                      : `span ${rowSpan}`,
                   }}
                 >
                   <WidgetChrome
@@ -5923,7 +5920,7 @@ export default function FamilyHub() {
                         🔍
                       </div>
                     ) : (
-                      renderWidgetSection(cfg.widget_key)
+                      renderWidgetSection(cfg.widget_key, rowSpan)
                     )}
                   </WidgetChrome>
                 </div>
