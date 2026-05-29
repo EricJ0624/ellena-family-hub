@@ -339,8 +339,7 @@ select {
    커스?�?컴포?�트 ?��???- Tailwind ?�이???�용
    ============================================ */
 @layer components {
-  /* App Container - Flexbox 기반 메인 레이아웃
-     h-dvh: 뷰포트 높이 고정 → main-content가 내부 스크롤 담당 → 배너를 flex 형제로 상단 고정 가능 */
+  /* App Container - Flexbox 기반 메인 레이아웃 */
 .app-container {
     @apply flex h-dvh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
   }
