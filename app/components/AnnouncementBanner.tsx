@@ -86,11 +86,18 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
       {/* 배너 — fixed로 뷰포트 상단에 항상 고정
            sticky는 overflow-x: hidden인 부모가 기준점이 되어 스크롤 안 되는 컨테이너에서 동작 안 함.
            fixed는 뷰포트 기준이므로 스크롤과 무관하게 상단 고정 보장.
-           외부 div: 투명 — 뷰포트 전체 z-index 확보용
-           내부 div: 시각적 스타일 + app-container 동일 max-width(72rem) 적용
-                    → PC 데스크탑에서 배너가 앱 경계 밖으로 넘치지 않음 */}
-      <div className="fixed top-0 left-0 right-0 z-[100]">
-        <div className="mx-auto w-full max-w-[72rem] overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]">
+
+           left/right = max(0, 50vw - 36rem):
+             - app-container 최대 너비 72rem(= 36rem × 2) → 중앙 정렬 공식과 동일
+             - 뷰포트 ≤ 72rem(모바일 등): max(0, 음수) = 0 → 전체 너비로 자동 축소
+             - 뷰포트 > 72rem(PC 와이드): 배너가 정확히 app-container 경계 내에 위치 */}
+      <div
+        className="fixed top-0 z-[100] overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+        style={{
+          left: 'max(0px, calc(50vw - 36rem))',
+          right: 'max(0px, calc(50vw - 36rem))',
+        }}
+      >
         <div className="flex items-center justify-between px-3 pr-6">
           {/* 아이콘 + 라벨 (최소 폭 없이 필요한 만큼만 사용) */}
           <div className="flex shrink-0 items-center gap-1">
@@ -150,7 +157,6 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
           >
             <X className="h-[18px] w-[18px]" />
           </button>
-        </div>
         </div>
       </div>
 
