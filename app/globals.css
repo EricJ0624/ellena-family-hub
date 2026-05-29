@@ -339,12 +339,18 @@ select {
    커스?�?컴포?�트 ?��???- Tailwind ?�이???�용
    ============================================ */
 @layer components {
-  /* App Container - Flexbox 기반 메인 ?�이?�웃 */
+  /* App Container - Flexbox 기반 메인 레이아웃
+     h-dvh: 뷰포트 높이 고정 → main-content가 내부 스크롤 담당 → 배너를 flex 형제로 상단 고정 가능 */
 .app-container {
-    @apply flex min-h-dvh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
+    @apply flex h-dvh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
   }
 
   @media (min-width: 768px) {
+    /* web-preview는 phone 프레임이므로 고정 높이 해제 → min-height로 프레임 크기 결정 */
+    .app-container[data-shell='web-preview'] {
+      height: auto;
+    }
+
     /* PC 브라우저 세로 미리보기만 430px 프레임 (터치 폰 가로는 data-shell=mobile → 전체 너비) */
     .app-container[data-shell='web-preview'][data-preview-orientation='portrait'],
     .app-container[data-shell='web-preview']:not([data-preview-orientation]) {
@@ -369,7 +375,6 @@ select {
     .app-container[data-shell='desktop'] {
       width: 100%;
       max-width: 72rem;
-      min-height: min(100dvh, 100vh);
       border-radius: 0;
       border: none;
       box-shadow: none;

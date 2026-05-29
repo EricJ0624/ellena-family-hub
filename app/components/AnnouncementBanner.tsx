@@ -80,16 +80,10 @@ export default function AnnouncementBanner({ announcements, onMarkAsRead, label 
 
   return (
     <>
-      {/* 자리 표시자: fixed 배너가 콘텐츠를 가리지 않도록 동일 높이 공간 확보 */}
-      <div className="h-[46px] shrink-0 pointer-events-none" aria-hidden="true" />
-
-      {/* 배너 — fixed로 뷰포트 상단에 항상 고정
-           left-1/2 -translate-x-1/2 w-full max-w-[72rem]:
-             - app-container와 동일한 최대 너비(72rem) + 중앙 정렬 패턴
-             - 뷰포트 ≤ 72rem(모바일 등): w-full = 100% → 전체 너비 자동 적용
-             - 뷰포트 > 72rem(PC 와이드): 배너가 정확히 app-container 경계 내에 위치 */}
+      {/* 배너 — app-container의 직접 flex 자식으로 렌더링되므로 fixed/sticky 불필요
+           main-content가 내부 스크롤을 담당하고 배너는 상단에 고정 위치 */}
       <div
-        className="fixed top-0 z-[100] left-1/2 w-full max-w-[72rem] -translate-x-1/2 overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+        className="w-full shrink-0 z-[10] overflow-hidden border-b-2 border-amber-200 bg-amber-50 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
       >
         <div className="flex items-center justify-between px-3 pr-6">
           {/* 아이콘 + 라벨 (최소 폭 없이 필요한 만큼만 사용) */}

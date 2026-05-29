@@ -5736,22 +5736,23 @@ export default function FamilyHub() {
         </div>
       )}
 
+      {/* 공지사항 배너 — app-container의 직접 flex 자식: main-content 위에 상단 고정 */}
+      {announcements.length > 0 && (
+        <AnnouncementBanner 
+          announcements={announcements.map((a) => {
+            const { title, content } = getAnnouncementTexts(a as Parameters<typeof getAnnouncementTexts>[0], lang);
+            return { id: a.id, title, content, created_at: a.created_at, is_read: a.is_read };
+          })}
+          onMarkAsRead={handleMarkAsRead}
+          label={dt('announcements_label')}
+        />
+      )}
+
       {/* Main Content - 본문 폰트 상속 */}
       <div
         className="main-content [font-family:var(--dashboard-body-font)]"
         style={dashboardMainContentStyle}
       >
-        {/* 공지사항 배너 (모든 멤버) */}
-        {announcements.length > 0 && (
-          <AnnouncementBanner 
-            announcements={announcements.map((a) => {
-              const { title, content } = getAnnouncementTexts(a as Parameters<typeof getAnnouncementTexts>[0], lang);
-              return { id: a.id, title, content, created_at: a.created_at, is_read: a.is_read };
-            })}
-            onMarkAsRead={handleMarkAsRead}
-            label={dt('announcements_label')}
-          />
-        )}
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
         <div
