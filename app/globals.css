@@ -382,9 +382,9 @@ select {
    * 아래는 Phase B 이전 낮은 열 수(2/3/4)용 규칙이었으나 dead code가 됨 → 제거됨.
    */
 
-  /* 가로 레이아웃: 위젯이 행 높이를 가득 채우도록 stretch */
+  /* 가로 레이아웃: 위젯이 콘텐츠 높이에 맞게 시작점 정렬 (stretch 시 짧은 위젯 아래 공백 발생) */
   .dashboard-widget-grid[data-layout='landscape'] > * {
-    align-self: stretch;
+    align-self: start;
     max-width: none;
     width: 100%;
     justify-self: stretch;
