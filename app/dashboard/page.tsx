@@ -5289,12 +5289,12 @@ export default function FamilyHub() {
     widgetConfigs,
   );
 
-  // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산돼 글자가 과대하게 커지는 것 방지
-  // → 스마트폰 실제 사이즈와 유사한 48px 상한으로 제한
-  const titleFontMaxPx = (dashboardShell === 'web-preview' && previewOrientation === 'portrait')
-    ? Math.min(customFontSizeCap ?? 48, 48)
-    : customFontSizeCap ?? 68;
-  const titleFontSizeValue = `clamp(${titleFontMin}px, ${titleVw}vw, ${titleFontMaxPx}px)`;
+  // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산되므로
+  // clamp min(44px) < 실제 적정값(~42px) → clamp 자체를 우회하고 고정 42px 사용.
+  // 계산 근거: h1 가용 폭 ≈ 262px, "A: B" 제목 전체 ~5.8em → 262/6.2≈42px이 안전 최댓값.
+  const titleFontSizeValue = (dashboardShell === 'web-preview' && previewOrientation === 'portrait')
+    ? `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`
+    : `clamp(${titleFontMin}px, ${titleVw}vw, ${customFontSizeCap ?? 68}px)`;
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     flex: '1 1 0%',
@@ -5871,12 +5871,12 @@ export default function FamilyHub() {
             data-layout={dashboardIsLandscapeGrid ? 'landscape' : 'portrait'}
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
-              gridAutoFlow: 'row dense',
+              gridAutoFlow: 'row',
               gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const { colSpan, rowSpan } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5898,9 +5898,7 @@ export default function FamilyHub() {
                   className="min-w-0 max-w-full overflow-hidden isolate"
                   data-widget-size={cfg.size}
                   style={{
-                    gridColumn: gridColumnStart
-                      ? `${gridColumnStart} / span ${colSpan}`
-                      : `span ${colSpan} / span ${colSpan}`,
+                    gridColumn: `span ${colSpan}`,
                     gridRow: `span ${rowSpan}`,
                   }}
                 >

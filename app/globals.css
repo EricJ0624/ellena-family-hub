@@ -796,8 +796,7 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 4px;
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: clip;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
