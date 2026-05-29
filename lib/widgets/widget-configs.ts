@@ -124,7 +124,7 @@ export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDra
       group_id: groupId,
       widget_key: d.widget_key,
       is_enabled: d.is_enabled,
-      display_order: (idx + 1) * 10,
+      display_order: d.display_order ?? (idx + 1) * 10,
       size: d.size,
       col_span: clampInt(d.colSpan, 1, 4),
       row_span: clampInt(d.rowSpan, 1, 6),
