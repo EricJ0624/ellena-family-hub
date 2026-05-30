@@ -24,6 +24,7 @@ import { getFontStyle } from '@/lib/language-fonts';
 import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
+import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
@@ -54,6 +55,7 @@ import { FamilyLocationSection } from '@/app/features/family-location/components
 import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
+import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
 import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '@/app/features/piggy-bank/types';
@@ -243,6 +245,7 @@ export default function FamilyHub() {
   );
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
   const tt = (key: keyof TravelTranslations) => getTravelTranslation(lang, key);
+  const gt = (key: keyof GamesTranslations) => getGamesTranslation(lang, key);
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
   const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
   const bodyFont = useMemo(() => getFontStyle(lang, 'body'), [lang]);
@@ -257,6 +260,7 @@ export default function FamilyHub() {
       album: dt('section_title_memories'),
       travel: tt('title'),
       piggy: dt('piggy_section_admin_title'),
+      games: gt('section_title'),
     }),
     [lang],
   );
@@ -5644,6 +5648,57 @@ export default function FamilyHub() {
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
             lang={lang}
+          />
+        );
+      case 'games':
+        return (
+          <FamilyGamesSection
+            currentGroupId={currentGroupId}
+            userId={userId}
+            members={familyTaskMembers}
+            translations={{
+              section_title: gt('section_title'),
+              select_group: gt('select_group'),
+              tab_ladder: gt('tab_ladder'),
+              tab_rps: gt('tab_rps'),
+              tab_roulette: gt('tab_roulette'),
+              ladder_participants: gt('ladder_participants'),
+              ladder_destinations: gt('ladder_destinations'),
+              ladder_participant_ph: gt('ladder_participant_ph'),
+              ladder_destination_ph: gt('ladder_destination_ph'),
+              ladder_add_pair: gt('ladder_add_pair'),
+              ladder_remove_pair: gt('ladder_remove_pair'),
+              ladder_min_players: gt('ladder_min_players'),
+              ladder_to_draw: gt('ladder_to_draw'),
+              ladder_draw_hint: gt('ladder_draw_hint'),
+              ladder_drawn_by: gt('ladder_drawn_by'),
+              ladder_you: gt('ladder_you'),
+              ladder_start: gt('ladder_start'),
+              ladder_reset: gt('ladder_reset'),
+              ladder_result_title: gt('ladder_result_title'),
+              ladder_path_result: gt('ladder_path_result'),
+              rps_player1: gt('rps_player1'),
+              rps_player2: gt('rps_player2'),
+              rps_rock: gt('rps_rock'),
+              rps_paper: gt('rps_paper'),
+              rps_scissors: gt('rps_scissors'),
+              rps_reveal: gt('rps_reveal'),
+              rps_reset: gt('rps_reset'),
+              rps_pick_both: gt('rps_pick_both'),
+              rps_animating: gt('rps_animating'),
+              rps_result_win: gt('rps_result_win'),
+              rps_result_draw: gt('rps_result_draw'),
+              roulette_slots: gt('roulette_slots'),
+              roulette_slot_ph: gt('roulette_slot_ph'),
+              roulette_add_slot: gt('roulette_add_slot'),
+              roulette_remove_slot: gt('roulette_remove_slot'),
+              roulette_fill_members: gt('roulette_fill_members'),
+              roulette_min_slots: gt('roulette_min_slots'),
+              roulette_spin: gt('roulette_spin'),
+              roulette_spinning: gt('roulette_spinning'),
+              roulette_reset: gt('roulette_reset'),
+              roulette_result: gt('roulette_result'),
+            }}
           />
         );
       default:

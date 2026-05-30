@@ -6,6 +6,7 @@ export const DASHBOARD_WIDGET_KEYS = [
   'album',
   'travel',
   'piggy',
+  'games',
 ] as const;
 
 export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
@@ -139,6 +140,7 @@ export const WIDGET_GOLDEN_RATIOS: Record<DashboardWidgetKey, { w: number; h: nu
   album:    { w: 1, h: 1 },  // 정사각형: 사진 그리드
   travel:   { w: 4, h: 3 },  // 가로형: 여행 일정
   piggy:    { w: 1, h: 1 },  // 정사각형: 저금통
+  games:    { w: 1, h: 1 },  // 정사각형: 결정 도구 게임
 };
 
 /** 위젯별 기본 size — 모두 M (스마트폰 세로 최적화, ADR C항) */
@@ -150,6 +152,7 @@ export const WIDGET_DEFAULT_SIZE: Record<DashboardWidgetKey, WidgetSize> = {
   album:    'M',
   travel:   'M',
   piggy:    'M',
+  games:    'L',
 };
 
 /** M 사이즈 기본 레이아웃 (스마트폰 세로 최적화, ADR C항) */
@@ -173,6 +176,7 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'games',    is_enabled: true, display_order: 80, size: 'L', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM, layoutH: WIDGET_LAYOUT_PRESETS.L.h, layoutPortraitH: WIDGET_LAYOUT_PRESETS.L.h, layoutLandscapeH: WIDGET_LAYOUT_PRESETS.L.h },
 ];
 
 /** 위젯별 기본 display_order — resetAllLayouts에서 순서 초기화 시 사용 */

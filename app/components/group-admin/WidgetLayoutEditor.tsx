@@ -25,6 +25,7 @@ import {
   MapPin,
   ImageIcon,
   Plane,
+  Dices,
   type LucideIcon,
 } from 'lucide-react';
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
@@ -59,6 +60,7 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
   album:    { icon: ImageIcon,      bg: 'bg-pink-500',    fg: 'text-white' },
   travel:   { icon: Plane,          bg: 'bg-sky-500',     fg: 'text-white' },
   piggy:    { icon: null, emoji: '🐷', bg: 'bg-red-500',  fg: 'text-white' },
+  games:    { icon: Dices,          bg: 'bg-amber-500',   fg: 'text-white' },
 };
 
 

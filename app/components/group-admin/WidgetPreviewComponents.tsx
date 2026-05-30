@@ -297,6 +297,58 @@ function PiggyPreview() {
   );
 }
 
+// ── Games (결정 게임) ───────────────────────────────────────────
+function GamesPreview() {
+  const tabs = ['사다리', '가위바위보', '룰렛'];
+  return (
+    <section className="content-section h-full">
+      <div className="section-header">
+        <h3 className="section-title">결정 게임</h3>
+      </div>
+      <div className="section-body">
+        <div className="mb-2 flex flex-wrap gap-1 rounded-lg bg-slate-900/5 p-1">
+          {tabs.map((tab, i) => (
+            <span
+              key={tab}
+              className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
+                i === 0 ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              {tab}
+            </span>
+          ))}
+        </div>
+        <div className="glass-panel-soft rounded-xl p-3">
+          <div className="mb-2 grid grid-cols-4 gap-1">
+            {['민수', '영희', '철수', '지우'].map((name) => (
+              <div key={name} className="text-center text-[9px] font-semibold text-slate-700">
+                {name}
+              </div>
+            ))}
+          </div>
+          <div className="relative mx-auto h-20 w-full max-w-[140px]">
+            <svg viewBox="0 0 100 60" className="h-full w-full">
+              {[20, 40, 60, 80].map((x) => (
+                <line key={`v-${x}`} x1={x} y1={8} x2={x} y2={52} stroke="#94a3b8" strokeWidth={1} />
+              ))}
+              <line x1={20} y1={22} x2={40} y2={22} stroke="#6366f1" strokeWidth={2} />
+              <line x1={40} y1={36} x2={60} y2={36} stroke="#94a3b8" strokeWidth={1.5} />
+              <line x1={60} y1={44} x2={80} y2={44} stroke="#6366f1" strokeWidth={2} />
+            </svg>
+          </div>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {['당번', '설거지', '치킨', '커피'].map((label) => (
+              <div key={label} className="text-center text-[9px] font-medium text-slate-600">
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── 통합 레코드 ──────────────────────────────────────────────────
 export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNode> = {
   tasks:    () => <TasksPreview />,
@@ -306,4 +358,5 @@ export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNod
   album:    () => <AlbumPreview />,
   travel:   () => <TravelPreview />,
   piggy:    () => <PiggyPreview />,
+  games:    () => <GamesPreview />,
 };

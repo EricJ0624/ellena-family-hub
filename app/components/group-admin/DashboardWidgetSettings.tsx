@@ -6,10 +6,12 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { getTravelTranslation } from '@/lib/translations/travel';
+import { getGamesTranslation } from '@/lib/translations/games';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import type { CommonTranslations } from '@/lib/translations/common';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
 import type { TravelTranslations } from '@/lib/translations/travel';
+import type { GamesTranslations } from '@/lib/translations/games';
 import type { GroupAdminTranslations } from '@/lib/translations/groupAdmin';
 import {
   type DashboardWidgetKey,
@@ -33,6 +35,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
   const tt = (key: keyof TravelTranslations) => getTravelTranslation(lang, key);
+  const gt = (key: keyof GamesTranslations) => getGamesTranslation(lang, key);
   const gat = (key: keyof GroupAdminTranslations) => getGroupAdminTranslation(lang, key);
 
   const [configs, setConfigs] = useState<WidgetConfigDraft[]>([]);
@@ -54,6 +57,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       album: dt('section_title_memories'),
       travel: tt('title'),
       piggy: dt('piggy_section_admin_title'),
+      games: gt('section_title'),
     }),
     [lang]
   );
