@@ -151,7 +151,7 @@ export function FamilyTasksSection({
     });
   };
 
-  const submitNewTodo = () => {
+  const submitNewTodo = async () => {
     const text = todoTextRef.current?.value;
     if (!text?.trim()) return alert(t.todo_required);
 
@@ -162,27 +162,45 @@ export function FamilyTasksSection({
     const assignedToUserId = selectedUserId.length > 0 ? selectedUserId : null;
     const assigneeStr = assignedToUserId ? formatAssigneeDisplay(assignedToUserId) : '누구나';
 
-    const newTask: FamilyTask = {
-      id: Date.now(),
+    const tempId = Date.now();
+    const optimisticTask: FamilyTask = {
+      id: tempId,
       text: sanitizedText,
       assignee: assigneeStr,
       done: false,
       assigned_to_user_id: assignedToUserId ?? undefined,
+      created_by: userId,
     };
 
-    onTasksChange([newTask, ...tasks]);
-
-    addTask({
-      id: newTask.id as number,
-      text: sanitizedText,
-      assignee: assigneeStr,
-      done: false,
-      assignedToUserId: assignedToUserId,
-    });
+    const previousTasks = tasks;
+    onTasksChange([optimisticTask, ...tasks]);
 
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
     setIsTodoModalOpen(false);
+
+    try {
+      const inserted = await addTask({
+        text: sanitizedText,
+        assignee: assigneeStr,
+        done: false,
+        assignedToUserId,
+      });
+
+      onTasksChange([
+        {
+          ...optimisticTask,
+          id: inserted.id,
+          created_by: inserted.created_by ?? userId,
+          done: inserted.is_completed ?? false,
+        },
+        ...previousTasks,
+      ]);
+    } catch (error) {
+      console.error('임무 추가 실패:', error);
+      onTasksChange(previousTasks);
+      alert('임무 저장에 실패했습니다. 다시 시도해 주세요.');
+    }
   };
 
   return (

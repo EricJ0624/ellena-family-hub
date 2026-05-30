@@ -47,51 +47,47 @@ export function useFamilyTasks({
   const currentTasksRef = useRef(currentTasks);
   currentTasksRef.current = currentTasks;
 
-  // ADD TODO
+  // ADD TODO — 성공 시 삽입된 행 반환, 실패 시 throw
   const addTask = async (payload: {
-    id: number;
     text: string;
     assignee: string;
     done: boolean;
     assignedToUserId?: string | null;
   }) => {
-    if (!payload || !payload.text) {
-      console.error('ADD_TODO: 잘못된 payload:', payload);
-      return;
+    if (!payload?.text) {
+      throw new Error('ADD_TODO: invalid payload');
+    }
+
+    if (!currentGroupId) {
+      throw new Error('ADD_TODO: currentGroupId가 없습니다.');
     }
 
     const encryptedText = CryptoService.encrypt(payload.text, getCurrentKey());
 
-    if (!currentGroupId) {
-      console.error('ADD_TODO: currentGroupId가 없습니다. Multi-tenant 아키텍처에서는 groupId가 필수입니다.');
-      return;
-    }
-
-    const taskData: any = {
+    const taskData: Record<string, unknown> = {
       group_id: currentGroupId,
       created_by: userId,
       title: encryptedText,
-      assigned_to: payload.assignedToUserId && isAssignedToUserUuid(payload.assignedToUserId) ? payload.assignedToUserId : null,
+      assigned_to:
+        payload.assignedToUserId && isAssignedToUserUuid(payload.assignedToUserId)
+          ? payload.assignedToUserId
+          : null,
       is_completed: payload.done || false,
     };
-
-    console.log('ADD_TODO: family_tasks 테이블에 저장:', {
-      text: payload.text.substring(0, 20),
-      assignee: payload.assignee,
-      assignedToUserId: payload.assignedToUserId,
-      groupId: currentGroupId,
-    });
 
     const { error, data } = await supabase.from('family_tasks').insert(taskData).select();
 
     if (error) {
       console.error('할일 저장 오류:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.error('에러 상세:', JSON.stringify(error, null, 2));
-      }
-    } else {
-      console.log('ADD_TODO: family_tasks 테이블 저장 성공:', data);
+      throw error;
     }
+
+    const inserted = data?.[0];
+    if (!inserted?.id) {
+      throw new Error('ADD_TODO: insert succeeded but no row returned');
+    }
+
+    return inserted as { id: string; created_by?: string; is_completed?: boolean };
   };
 
   // TOGGLE TODO
@@ -272,9 +268,7 @@ export function useFamilyTasks({
           };
         });
 
-        if (formattedTasks.length > 0) {
-          onTasksChange(formattedTasks);
-        }
+        onTasksChange(formattedTasks);
       }
     };
 
