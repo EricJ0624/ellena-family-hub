@@ -797,6 +797,7 @@ select {
   flex-direction: column;
   min-width: 0;
   width: 100%;
+  flex: 1 1 auto;
   height: auto;
   min-height: var(--tasks-min-h, 0px);
   background-color: #3d2a14;
@@ -814,11 +815,10 @@ select {
 
 .chalkboard-container {
   position: relative;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   width: 100%;
-  height: auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -1903,6 +1903,9 @@ select {
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     height: auto;
     min-height: var(--tasks-min-h, 0px);
     width: 100%;

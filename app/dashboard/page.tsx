@@ -5972,6 +5972,8 @@ export default function FamilyHub() {
                     gridRow: `span ${rowSpan}`,
                     ...(cfg.widget_key === 'tasks'
                       ? {
+                          display: 'flex',
+                          flexDirection: 'column',
                           height: 'auto',
                           minHeight: dashboardCellRowH * rowSpan,
                           ['--tasks-min-h' as string]: `${dashboardCellRowH * rowSpan}px`,
