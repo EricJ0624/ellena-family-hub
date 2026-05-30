@@ -20,7 +20,12 @@ import {
   WIDGET_SIZE_PRESETS,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, saveWidgetConfigs } from '@/lib/widgets/widget-configs';
-import { applyPresetToWidget, packOrientationLayouts, resetAllLayouts } from '@/lib/widgets/layout-presets';
+import {
+  applyPresetToWidget,
+  packDraftsOrientationCoordinates,
+  packOrientationLayouts,
+  resetAllLayouts,
+} from '@/lib/widgets/layout-presets';
 import { WidgetLayoutEditor } from './WidgetLayoutEditor';
 
 interface DashboardWidgetSettingsProps {
@@ -149,8 +154,10 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
     }
     try {
       setSaving(true);
-      await saveWidgetConfigs(groupId, drafts);
-      setConfigs(drafts);
+      const toSave = packDraftsOrientationCoordinates(drafts);
+      await saveWidgetConfigs(groupId, toSave);
+      setConfigs(toSave);
+      setDrafts(toSave);
       setEditMode(false);
       setIsEditorOpen(false);
       setShowAdvancedLayout(false);

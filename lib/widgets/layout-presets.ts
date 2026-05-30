@@ -155,6 +155,31 @@ export function packOrientationLayouts(
 }
 
 /**
+ * 저장 직전: portrait/landscape X·Y만 display_order·W/H 기준으로 재패킹 (W/H는 유지).
+ */
+export function packDraftsOrientationCoordinates(
+  widgets: readonly WidgetConfigDraft[],
+): WidgetConfigDraft[] {
+  const packedPortrait = packOrientationLayouts(widgets, 'portrait');
+  const packedLandscape = packOrientationLayouts(widgets, 'landscape');
+
+  return widgets.map((d) => {
+    const p = packedPortrait.get(d.widget_key);
+    const l = packedLandscape.get(d.widget_key);
+    if (!p && !l) return d;
+    return {
+      ...d,
+      layoutX: p?.x ?? d.layoutX,
+      layoutY: p?.y ?? d.layoutY,
+      layoutPortraitX: p?.x ?? d.layoutPortraitX,
+      layoutPortraitY: p?.y ?? d.layoutPortraitY,
+      layoutLandscapeX: l?.x ?? d.layoutLandscapeX,
+      layoutLandscapeY: l?.y ?? d.layoutLandscapeY,
+    };
+  });
+}
+
+/**
  * 단일 위젯을 size 프리셋으로 복구한 새 draft 반환.
  * layoutX/Y는 packLayoutsFromOrder 결과로 덮어쓰는 것을 권장.
  * size를 명시하지 않으면 WIDGET_DEFAULT_SIZE를 사용.
