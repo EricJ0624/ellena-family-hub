@@ -1,29 +1,37 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
-import { pickRouletteIndex } from '../types';
+import {
+  buildRouletteSegments,
+  getRouletteSlotsPerMemberOptions,
+  pickRouletteIndex,
+} from '../types';
+import { getMemberNickname } from './MemberSelect';
 
 type RouletteTranslations = {
-  roulette_slots: string;
-  roulette_slot_ph: string;
-  roulette_add_slot: string;
-  roulette_remove_slot: string;
-  roulette_fill_members: string;
-  roulette_min_slots: string;
+  roulette_participants: string;
+  roulette_slots_per_member: string;
+  roulette_slots_per_member_option: string;
+  roulette_total_slots: string;
+  roulette_select_participants: string;
+  roulette_min_participants: string;
   roulette_spin: string;
   roulette_spinning: string;
   roulette_reset: string;
   roulette_result: string;
+  no_members: string;
+  ladder_you: string;
 };
 
 interface RouletteGameTabProps {
+  userId: string;
   members: FamilyTaskMemberOption[];
   translations: RouletteTranslations;
   formatText: (template: string, vars: Record<string, string>) => string;
 }
 
-const WHEEL_COLORS = [
+const MEMBER_COLORS = [
   '#6366f1',
   '#ec4899',
   '#14b8a6',
@@ -32,23 +40,69 @@ const WHEEL_COLORS = [
   '#ef4444',
   '#22c55e',
   '#0ea5e9',
+  '#f97316',
+  '#06b6d4',
+  '#a855f7',
+  '#84cc16',
+  '#e11d48',
+  '#0d9488',
+  '#7c3aed',
 ];
 
-export function RouletteGameTab({ members, translations: t, formatText }: RouletteGameTabProps) {
-  const [slots, setSlots] = useState<string[]>(['', '']);
+export function RouletteGameTab({
+  userId,
+  members,
+  translations: t,
+  formatText,
+}: RouletteGameTabProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [slotsPerMember, setSlotsPerMember] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
 
-  const validSlots = useMemo(
-    () => slots.map((s) => s.trim()).filter(Boolean),
-    [slots],
+  const slotsPerMemberOptions = useMemo(
+    () => getRouletteSlotsPerMemberOptions(selectedIds.length),
+    [selectedIds.length],
   );
 
-  const sliceAngle = validSlots.length > 0 ? 360 / validSlots.length : 360;
+  useEffect(() => {
+    if (slotsPerMemberOptions.length === 0) return;
+    if (!slotsPerMemberOptions.includes(slotsPerMember)) {
+      setSlotsPerMember(slotsPerMemberOptions[0]);
+    }
+  }, [slotsPerMemberOptions, slotsPerMember]);
+
+  const getLabel = (memberUserId: string) =>
+    getMemberNickname(members, memberUserId, userId, t.ladder_you);
+
+  const wheelSegments = useMemo(() => {
+    if (selectedIds.length < 2) return [];
+    return buildRouletteSegments(selectedIds, slotsPerMember, getLabel);
+  }, [selectedIds, slotsPerMember, members, userId, t.ladder_you]);
+
+  const totalSlots = wheelSegments.length;
+  const sliceAngle = totalSlots > 0 ? 360 / totalSlots : 360;
+  const canSpin = selectedIds.length >= 2 && totalSlots >= 2;
+
+  const toggleParticipant = (memberUserId: string) => {
+    if (spinning) return;
+    setWinner(null);
+    setSelectedIds((prev) =>
+      prev.includes(memberUserId)
+        ? prev.filter((id) => id !== memberUserId)
+        : [...prev, memberUserId],
+    );
+  };
+
+  const selectAllMembers = () => {
+    if (spinning) return;
+    setWinner(null);
+    setSelectedIds(members.map((m) => m.userId));
+  };
 
   const spin = () => {
-    if (validSlots.length < 2 || spinning) return;
+    if (!canSpin || spinning) return;
     setWinner(null);
     setSpinning(true);
     const extraTurns = 5 + Math.floor(Math.random() * 4);
@@ -56,84 +110,119 @@ export function RouletteGameTab({ members, translations: t, formatText }: Roulet
     const nextRotation = rotation + extraTurns * 360 + randomOffset;
     setRotation(nextRotation);
     window.setTimeout(() => {
-      const index = pickRouletteIndex(validSlots.length, nextRotation);
-      setWinner(validSlots[index] ?? null);
+      const index = pickRouletteIndex(totalSlots, nextRotation);
+      setWinner(wheelSegments[index]?.label ?? null);
       setSpinning(false);
     }, 3200);
   };
 
-  const fillMembers = () => {
-    if (members.length === 0) return;
-    setSlots(members.map((m) => m.nickname));
-    setWinner(null);
-    setRotation(0);
-  };
-
-  const addSlot = () => setSlots((prev) => [...prev, '']);
-  const removeSlot = () => {
-    if (slots.length <= 2) return;
-    setSlots((prev) => prev.slice(0, -1));
-  };
-
   const reset = () => {
-    setSlots(['', '']);
+    setSelectedIds([]);
+    setSlotsPerMember(1);
     setRotation(0);
     setWinner(null);
     setSpinning(false);
   };
 
+  if (members.length === 0) {
+    return (
+      <p className="text-[#64748b]" style={{ fontSize: '4.5cqmin' }}>
+        {t.no_members}
+      </p>
+    );
+  }
+
   return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
       <div>
-        <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
-          {t.roulette_slots}
+        <div
+          className="mb-2 flex flex-wrap items-center justify-between gap-2 font-semibold text-[#334155]"
+          style={{ fontSize: '4.5cqmin' }}
+        >
+          <span>{t.roulette_participants}</span>
+          <button
+            type="button"
+            onClick={selectAllMembers}
+            disabled={spinning || selectedIds.length === members.length}
+            className="rounded-lg bg-violet-100 px-2.5 py-1 font-semibold text-violet-800 disabled:opacity-50"
+            style={{ fontSize: '3.5cqmin' }}
+          >
+            ALL
+          </button>
         </div>
-        <div className="grid" style={{ gap: '1.5cqmin' }}>
-          {slots.map((value, index) => (
-            <input
-              key={`slot-${index}`}
-              value={value}
-              onChange={(e) =>
-                setSlots((prev) => prev.map((s, i) => (i === index ? e.target.value : s)))
-              }
-              placeholder={t.roulette_slot_ph}
-              className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400"
+        <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
+          {members.map((m) => {
+            const selected = selectedIds.includes(m.userId);
+            const name = getLabel(m.userId);
+            return (
+              <button
+                key={m.userId}
+                type="button"
+                disabled={spinning}
+                onClick={() => toggleParticipant(m.userId)}
+                className={`rounded-full px-2.5 py-1.5 font-medium transition-colors disabled:opacity-60 ${
+                  selected
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+                style={{ fontSize: '3.5cqmin' }}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {selectedIds.length >= 2 && slotsPerMemberOptions.length > 0 && (
+        <div className="grid sm:grid-cols-2" style={{ gap: '2cqmin' }}>
+          <div>
+            <label
+              className="mb-2 block font-semibold text-[#334155]"
               style={{ fontSize: '4.5cqmin' }}
-            />
-          ))}
+              htmlFor="roulette-slots-per-member"
+            >
+              {t.roulette_slots_per_member}
+            </label>
+            <select
+              id="roulette-slots-per-member"
+              value={slotsPerMember}
+              disabled={spinning}
+              onChange={(e) => {
+                setWinner(null);
+                setSlotsPerMember(Number(e.target.value));
+              }}
+              className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60"
+              style={{ fontSize: '4.5cqmin' }}
+            >
+              {slotsPerMemberOptions.map((each) => {
+                const total = each * selectedIds.length;
+                return (
+                  <option key={each} value={each}>
+                    {formatText(t.roulette_slots_per_member_option, {
+                      each: String(each),
+                      total: String(total),
+                    })}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <p className="font-medium text-indigo-700" style={{ fontSize: '4.5cqmin' }}>
+              {formatText(t.roulette_total_slots, {
+                total: String(totalSlots),
+                count: String(selectedIds.length),
+              })}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
-        <button
-          type="button"
-          onClick={addSlot}
-          className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white"
-          style={{ fontSize: '4cqmin' }}
-        >
-          {t.roulette_add_slot}
-        </button>
-        <button
-          type="button"
-          onClick={removeSlot}
-          disabled={slots.length <= 2}
-          className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:opacity-50"
-          style={{ fontSize: '4cqmin' }}
-        >
-          {t.roulette_remove_slot}
-        </button>
-        <button
-          type="button"
-          onClick={fillMembers}
-          disabled={members.length === 0}
-          className="rounded-lg bg-violet-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
-          style={{ fontSize: '4cqmin' }}
-        >
-          {t.roulette_fill_members}
-        </button>
-      </div>
-
-      <div className="relative mx-auto flex items-center justify-center" style={{ width: 'min(100%, 55cqmin)', aspectRatio: '1' }}>
+      <div
+        className="relative mx-auto flex items-center justify-center"
+        style={{ width: 'min(100%, 55cqmin)', aspectRatio: '1' }}
+      >
         <div
           className="absolute top-0 z-10 -translate-y-1/2"
           style={{
@@ -152,8 +241,8 @@ export function RouletteGameTab({ members, translations: t, formatText }: Roulet
           }}
         >
           <svg viewBox="0 0 100 100" className="h-full w-full">
-            {validSlots.length > 0 ? (
-              validSlots.map((label, index) => {
+            {wheelSegments.length > 0 ? (
+              wheelSegments.map((segment, index) => {
                 const start = index * sliceAngle;
                 const end = start + sliceAngle;
                 const largeArc = sliceAngle > 180 ? 1 : 0;
@@ -167,9 +256,10 @@ export function RouletteGameTab({ members, translations: t, formatText }: Roulet
                 const midRad = ((midAngle - 90) * Math.PI) / 180;
                 const tx = 50 + 32 * Math.cos(midRad);
                 const ty = 50 + 32 * Math.sin(midRad);
-                const color = WHEEL_COLORS[index % WHEEL_COLORS.length];
+                const color = MEMBER_COLORS[segment.memberIndex % MEMBER_COLORS.length];
+                const fontSize = totalSlots > 10 ? 3.5 : 5;
                 return (
-                  <g key={`slice-${index}`}>
+                  <g key={`slice-${segment.userId}-${index}`}>
                     <path
                       d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
                       fill={color}
@@ -182,10 +272,10 @@ export function RouletteGameTab({ members, translations: t, formatText }: Roulet
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="#fff"
-                      style={{ fontSize: 5, fontWeight: 700 }}
+                      style={{ fontSize, fontWeight: 700 }}
                       transform={`rotate(${midAngle}, ${tx}, ${ty})`}
                     >
-                      {label.slice(0, 8)}
+                      {segment.label.slice(0, totalSlots > 12 ? 4 : 8)}
                     </text>
                   </g>
                 );
@@ -197,9 +287,9 @@ export function RouletteGameTab({ members, translations: t, formatText }: Roulet
         </div>
       </div>
 
-      {validSlots.length < 2 && (
+      {selectedIds.length < 2 && (
         <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-          {t.roulette_min_slots}
+          {selectedIds.length === 0 ? t.roulette_select_participants : t.roulette_min_participants}
         </p>
       )}
 
@@ -213,7 +303,7 @@ export function RouletteGameTab({ members, translations: t, formatText }: Roulet
         <button
           type="button"
           onClick={spin}
-          disabled={validSlots.length < 2 || spinning}
+          disabled={!canSpin || spinning}
           className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
           style={{ fontSize: '4.5cqmin' }}
         >

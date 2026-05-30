@@ -87,3 +87,38 @@ export function pickRouletteIndex(slotCount: number, rotationDeg: number): numbe
 }
 
 export type GameTab = 'ladder' | 'rps' | 'roulette';
+
+/** 룰렛판 최대 칸 수 */
+export const ROULETTE_MAX_SLOTS = 15;
+
+/** 참가 인원 기준 멤버당 선택 가능한 칸 수 (1~floor(15/n)) */
+export function getRouletteSlotsPerMemberOptions(participantCount: number): number[] {
+  if (participantCount <= 0) return [];
+  const maxPerMember = Math.floor(ROULETTE_MAX_SLOTS / participantCount);
+  return Array.from({ length: maxPerMember }, (_, i) => i + 1);
+}
+
+export type RouletteSegment = {
+  userId: string;
+  label: string;
+  memberIndex: number;
+};
+
+/** 멤버당 동일 칸 수로 룰렛 세그먼트 생성 (라운드로빈 배치) */
+export function buildRouletteSegments(
+  participantIds: string[],
+  slotsPerMember: number,
+  getLabel: (userId: string) => string,
+): RouletteSegment[] {
+  const segments: RouletteSegment[] = [];
+  for (let round = 0; round < slotsPerMember; round += 1) {
+    participantIds.forEach((id, memberIndex) => {
+      segments.push({
+        userId: id,
+        label: getLabel(id),
+        memberIndex,
+      });
+    });
+  }
+  return segments;
+}

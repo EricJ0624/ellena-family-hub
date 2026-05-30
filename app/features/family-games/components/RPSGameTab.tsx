@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { resolveRPS, type RPSChoice } from '../types';
+import { getMemberNickname, MemberSelect } from './MemberSelect';
 
 type RPSTranslations = {
   rps_player1: string;
@@ -11,13 +13,21 @@ type RPSTranslations = {
   rps_scissors: string;
   rps_reveal: string;
   rps_reset: string;
+  rps_select_members: string;
+  rps_pick_choices: string;
   rps_pick_both: string;
   rps_animating: string;
   rps_result_win: string;
   rps_result_draw: string;
+  select_member: string;
+  no_members: string;
+  duplicate_member: string;
+  ladder_you: string;
 };
 
 interface RPSGameTabProps {
+  userId: string;
+  members: FamilyTaskMemberOption[];
   translations: RPSTranslations;
   formatText: (template: string, vars: Record<string, string>) => string;
 }
@@ -30,7 +40,9 @@ const CHOICE_EMOJI: Record<RPSChoice, string> = {
   scissors: '✌️',
 };
 
-export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
+export function RPSGameTab({ userId, members, translations: t, formatText }: RPSGameTabProps) {
+  const [p1UserId, setP1UserId] = useState('');
+  const [p2UserId, setP2UserId] = useState('');
   const [p1Choice, setP1Choice] = useState<RPSChoice | null>(null);
   const [p2Choice, setP2Choice] = useState<RPSChoice | null>(null);
   const [animating, setAnimating] = useState(false);
@@ -38,6 +50,18 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
   const [displayP2, setDisplayP2] = useState<RPSChoice>('rock');
   const [revealed, setRevealed] = useState(false);
   const [resultText, setResultText] = useState<string | null>(null);
+
+  const p1Name = useMemo(
+    () => getMemberNickname(members, p1UserId, userId, t.ladder_you),
+    [members, p1UserId, userId, t.ladder_you],
+  );
+  const p2Name = useMemo(
+    () => getMemberNickname(members, p2UserId, userId, t.ladder_you),
+    [members, p2UserId, userId, t.ladder_you],
+  );
+
+  const playersReady = Boolean(p1UserId && p2UserId && p1UserId !== p2UserId);
+  const choicesReady = Boolean(p1Choice && p2Choice);
 
   useEffect(() => {
     if (!animating || !p1Choice || !p2Choice) return undefined;
@@ -58,7 +82,7 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
       } else {
         setResultText(
           formatText(t.rps_result_win, {
-            winner: outcome === 'p1' ? t.rps_player1 : t.rps_player2,
+            winner: outcome === 'p1' ? p1Name : p2Name,
           }),
         );
       }
@@ -69,16 +93,18 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
       window.clearInterval(interval);
       window.clearTimeout(timeout);
     };
-  }, [animating, p1Choice, p2Choice, t, formatText]);
+  }, [animating, p1Choice, p2Choice, t, formatText, p1Name, p2Name]);
 
   const reveal = () => {
-    if (!p1Choice || !p2Choice || animating) return;
+    if (!playersReady || !choicesReady || animating) return;
     setRevealed(false);
     setResultText(null);
     setAnimating(true);
   };
 
   const reset = () => {
+    setP1UserId('');
+    setP2UserId('');
     setP1Choice(null);
     setP2Choice(null);
     setAnimating(false);
@@ -98,13 +124,14 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
     player: 'p1' | 'p2',
     selected: RPSChoice | null,
     onSelect: (c: RPSChoice) => void,
+    disabled: boolean,
   ) => (
     <div className="grid grid-cols-3" style={{ gap: '1.5cqmin' }}>
       {CHOICES.map((choice) => (
         <button
           key={`${player}-${choice}`}
           type="button"
-          disabled={animating || revealed}
+          disabled={disabled || animating || revealed}
           onClick={() => onSelect(choice)}
           className={`rounded-xl border-2 px-2 py-3 font-semibold transition-colors disabled:opacity-60 ${
             selected === choice
@@ -120,6 +147,14 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
     </div>
   );
 
+  if (members.length < 2) {
+    return (
+      <p className="text-[#64748b]" style={{ fontSize: '4.5cqmin' }}>
+        {t.no_members}
+      </p>
+    );
+  }
+
   return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
       <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
@@ -127,26 +162,56 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
           <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
             {t.rps_player1}
           </div>
-          {renderChoiceButtons('p1', p1Choice, setP1Choice)}
+          <div className="mb-3">
+            <MemberSelect
+              members={members}
+              value={p1UserId}
+              onChange={setP1UserId}
+              placeholder={t.select_member}
+              currentUserId={userId}
+              youLabel={t.ladder_you}
+              excludeUserIds={[p2UserId]}
+              disabled={animating || revealed}
+            />
+          </div>
+          {renderChoiceButtons('p1', p1Choice, setP1Choice, !p1UserId)}
         </div>
         <div className="glass-panel-soft rounded-xl" style={{ padding: '2.5cqmin' }}>
           <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
             {t.rps_player2}
           </div>
-          {renderChoiceButtons('p2', p2Choice, setP2Choice)}
+          <div className="mb-3">
+            <MemberSelect
+              members={members}
+              value={p2UserId}
+              onChange={setP2UserId}
+              placeholder={t.select_member}
+              currentUserId={userId}
+              youLabel={t.ladder_you}
+              excludeUserIds={[p1UserId]}
+              disabled={animating || revealed}
+            />
+          </div>
+          {renderChoiceButtons('p2', p2Choice, setP2Choice, !p2UserId)}
         </div>
       </div>
 
-      {(animating || revealed) && (
+      {p1UserId && p2UserId && p1UserId === p2UserId && (
+        <p className="text-center text-[#b91c1c]" style={{ fontSize: '4cqmin' }}>
+          {t.duplicate_member}
+        </p>
+      )}
+
+      {(animating || revealed) && playersReady && (
         <div className="flex items-center justify-center rounded-xl bg-slate-900/5" style={{ gap: '4cqmin', padding: '3cqmin' }}>
           <div className="text-center">
             <div style={{ fontSize: '12cqmin' }}>{CHOICE_EMOJI[displayP1]}</div>
-            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>{t.rps_player1}</div>
+            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>{p1Name || t.rps_player1}</div>
           </div>
           <div className="font-bold text-[#94a3b8]" style={{ fontSize: '6cqmin' }}>VS</div>
           <div className="text-center">
             <div style={{ fontSize: '12cqmin' }}>{CHOICE_EMOJI[displayP2]}</div>
-            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>{t.rps_player2}</div>
+            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>{p2Name || t.rps_player2}</div>
           </div>
         </div>
       )}
@@ -167,7 +232,7 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
         <button
           type="button"
           onClick={reveal}
-          disabled={!p1Choice || !p2Choice || animating}
+          disabled={!playersReady || !choicesReady || animating}
           className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
           style={{ fontSize: '4.5cqmin' }}
         >
@@ -183,9 +248,13 @@ export function RPSGameTab({ translations: t, formatText }: RPSGameTabProps) {
         </button>
       </div>
 
-      {!p1Choice || !p2Choice ? (
+      {!playersReady ? (
         <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-          {t.rps_pick_both}
+          {t.rps_select_members}
+        </p>
+      ) : !choicesReady ? (
+        <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+          {t.rps_pick_choices}
         </p>
       ) : null}
     </div>

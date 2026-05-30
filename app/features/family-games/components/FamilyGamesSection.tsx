@@ -22,12 +22,14 @@ export interface FamilyGamesSectionProps {
     ladder_destinations: string;
     ladder_participant_ph: string;
     ladder_destination_ph: string;
+    select_member: string;
+    no_members: string;
     ladder_add_pair: string;
     ladder_remove_pair: string;
     ladder_min_players: string;
-    ladder_to_draw: string;
     ladder_draw_hint: string;
     ladder_drawn_by: string;
+    ladder_draw_progress: string;
     ladder_you: string;
     ladder_start: string;
     ladder_reset: string;
@@ -40,16 +42,20 @@ export interface FamilyGamesSectionProps {
     rps_scissors: string;
     rps_reveal: string;
     rps_reset: string;
+    rps_select_members: string;
+    rps_pick_choices: string;
     rps_pick_both: string;
     rps_animating: string;
     rps_result_win: string;
     rps_result_draw: string;
+    duplicate_member: string;
     roulette_slots: string;
-    roulette_slot_ph: string;
-    roulette_add_slot: string;
-    roulette_remove_slot: string;
-    roulette_fill_members: string;
-    roulette_min_slots: string;
+    roulette_participants: string;
+    roulette_slots_per_member: string;
+    roulette_slots_per_member_option: string;
+    roulette_total_slots: string;
+    roulette_select_participants: string;
+    roulette_min_participants: string;
     roulette_spin: string;
     roulette_spinning: string;
     roulette_reset: string;
@@ -123,10 +129,20 @@ export function FamilyGamesSection({
               />
             )}
             {activeTab === 'rps' && (
-              <RPSGameTab translations={t} formatText={formatText} />
+              <RPSGameTab
+                userId={userId}
+                members={members}
+                translations={t}
+                formatText={formatText}
+              />
             )}
             {activeTab === 'roulette' && (
-              <RouletteGameTab members={members} translations={t} formatText={formatText} />
+              <RouletteGameTab
+                userId={userId}
+                members={members}
+                translations={t}
+                formatText={formatText}
+              />
             )}
           </div>
         )}
