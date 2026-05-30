@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: --chalkboard-min-h(px) = 그리드 셀 → cqmin 스케일 기준; 임무 넘치면 auto 성장 */
+/* Frame + board: 위젯 프레임 100% 채움 (height:100% + container-type:size → cqmin 비율 스케일) */
 .chalkboard-frame {
   container-type: size;
   position: relative;
@@ -795,9 +795,7 @@ select {
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
-  height: auto;
-  flex: 1 1 auto;
+  height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -805,8 +803,7 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 4px;
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: clip;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
@@ -818,7 +815,6 @@ select {
   min-width: 0;
   min-height: 0;
   width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -885,8 +881,8 @@ select {
 .chalkboard-top-bar {
   position: relative;
   flex-shrink: 0;
-  /* absolute 자식(title·+ADD)이 차지하는 영역 — PNG 이모지·버튼과 겹치지 않게 */
-  min-height: max(36cqmin, calc(22cqh + 2cqmin));
+  height: auto;
+  min-height: 40cqmin;
   margin-bottom: 4cqmin;
   z-index: 2;
   min-width: 0;
@@ -911,19 +907,9 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* PNG 이모지(집·태양·하트) 바로 아래 — cqmin으로 위젯 크기에 비례 */
+  /* PNG 우상단 이모지(집·태양·하트) 바로 아래 — cqmin 비율 스케일 */
   padding-top: 23cqmin;
   gap: 3.5cqmin;
-}
-
-/* 세로형(모바일) 칠판: +ADD 버튼을 조금 더 위로 */
-@container (max-aspect-ratio: 5/4) {
-  .chalkboard-top-actions {
-    padding-top: 16cqmin;
-  }
-  .chalkboard-top-bar {
-    min-height: max(32cqmin, calc(18cqh + 2cqmin));
-  }
 }
 
 .chalkboard-top-actions::before {
@@ -933,17 +919,15 @@ select {
 .chalkboard-container .section-body {
   position: relative;
   z-index: 1;
-  /* flex:1 → 기본 상태에서 top-bar 아래 남는 공간 채움; 콘텐츠 넘치면 auto로 성장 */
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
   overflow-x: clip;
   overflow-y: visible;
 }
 
-/* 임무 목록: 콘텐츠 높이 + 프레임 min-h 유지; 넘치면 프레임·그리드 행이 함께 성장 */
+/* 임무 목록: 콘텐츠 높이만 반영 (scrollHeight 측정·겹침 방지) */
 .chalkboard-container .section-body:has(.todo-list) {
-  flex: 1 1 auto;
-  align-items: stretch;
+  flex: 0 0 auto;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
@@ -1857,25 +1841,6 @@ select {
     border-radius: 1rem; /* rounded-2xl */
     /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass 배경이 보이도록 */
     background: var(--glass-medium-bg);
-  }
-
-  /* 칠판: 그리드 셀(--chalkboard-min-h)을 채우고 콘텐츠 성장 허용 */
-  .widget-chrome:has(.chalkboard-frame) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
-    height: auto;
-    overflow: visible;
-    background: transparent;
-  }
-
-  .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    display: flex;
-    flex-direction: column;
-    align-self: start;
-    overflow: visible;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
