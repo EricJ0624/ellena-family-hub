@@ -5913,9 +5913,8 @@ export default function FamilyHub() {
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
-                    gridRow: gridRowStart
-                      ? `${gridRowStart} / span ${rowSpan}`
-                      : `span ${rowSpan}`,
+                    // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
+                    gridRow: `span ${rowSpan}`,
                   }}
                 >
                   <WidgetChrome
