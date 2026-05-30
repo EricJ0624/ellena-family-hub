@@ -1,6 +1,6 @@
 'use client';
 
-import { compactDraftsLayoutCoordinates } from './layout-presets';
+import { compactDraftsLayoutCoordinates, layoutWHToLegacySpans } from './layout-presets';
 import { supabase } from '@/lib/supabase';
 import {
   DASHBOARD_WIDGET_KEYS,
@@ -91,8 +91,8 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
       is_enabled: found.is_enabled,
       display_order: found.display_order,
       size: parseWidgetSize(found.size),
-      colSpan: clampInt(found.col_span, 1, 12),
-      rowSpan: clampInt(found.row_span, 1, 24),
+      colSpan: clampInt(found.col_span, 1, 4),
+      rowSpan: clampInt(found.row_span, 1, 6),
       minW: found.min_w,
       minH: found.min_h,
       priority: clampInt(found.priority, -9999, 9999),
@@ -180,14 +180,18 @@ export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDra
     .filter((d) => DASHBOARD_WIDGET_KEYS.includes(d.widget_key))
     .map((d, idx) => {
       const layout = sanitizeDraftLayoutForSave(d);
+      const legacySpan = layoutWHToLegacySpans(
+        layout.layoutPortraitW ?? layout.layoutW ?? 12,
+        layout.layoutPortraitH ?? layout.layoutH ?? 8,
+      );
       return {
         group_id: groupId,
         widget_key: d.widget_key,
         is_enabled: d.is_enabled,
         display_order: d.display_order ?? (idx + 1) * 10,
         size: d.size,
-        col_span: clampInt(d.colSpan, 1, 12),
-        row_span: clampInt(d.rowSpan, 1, 24),
+        col_span: legacySpan.colSpan,
+        row_span: legacySpan.rowSpan,
         min_w: d.minW,
         min_h: d.minH,
         priority: clampInt(d.priority, -9999, 9999),

@@ -25,6 +25,17 @@ import { detectGridOverlaps, PORTRAIT_COLS, LANDSCAPE_COLS } from './grid';
 export const BASE_COLS = 12;    // portrait 레이아웃 저장 단위 (PORTRAIT_COLS 와 동일)
 export const LANDSCAPE_BASE_COLS = 24; // landscape 레이아웃 저장 단위 (LANDSCAPE_COLS 와 동일)
 
+/** DB CHECK(col_span 1~4, row_span 1~6)용 — layout_w/h(12열)에서 역산 */
+export function layoutWHToLegacySpans(
+  layoutW: number,
+  layoutH: number,
+): { colSpan: number; rowSpan: number } {
+  return {
+    colSpan: Math.min(4, Math.max(1, Math.round((layoutW / BASE_COLS) * 4))),
+    rowSpan: Math.min(6, Math.max(1, Math.round(layoutH))),
+  };
+}
+
 export interface LayoutCoords {
   layoutX: number;
   layoutY: number;
@@ -529,10 +540,11 @@ export function finalizeDraftsLayoutForOrientation(
     if (!d.is_enabled) return d;
     const w = effectiveLayoutW(d, orientation);
     const h = effectiveLayoutH(d, orientation);
+    const legacy = layoutWHToLegacySpans(w, h);
     return {
       ...d,
-      colSpan: toActualColSpan(w, baseCols),
-      rowSpan: Math.min(24, Math.max(1, Math.round(h))),
+      colSpan: legacy.colSpan,
+      rowSpan: legacy.rowSpan,
     };
   });
 }

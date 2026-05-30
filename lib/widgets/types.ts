@@ -14,14 +14,14 @@ export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 export type WidgetSize = 'S' | 'M' | 'L' | 'XL';
 
 /**
- * 대시보드 관리자에서 크기 선택 시 적용되는 기본 그리드 span.
- * Phase B/C: 12열(portrait) 기준. layoutW == null 인 폴백에도 사용.
+ * DB widget_configs.col_span / row_span (CHECK: 1~4, 1~6) — 레거시 2/4열 UI용.
+ * 실제 배치는 layout_* (12/24열) 가 단일 소스. layout-migrate.inferLayoutW/H 참고.
  */
 export const WIDGET_SIZE_PRESETS: Record<WidgetSize, { colSpan: number; rowSpan: number }> = {
-  S:  { colSpan: 6,  rowSpan: 6  },  // 50% portrait width, square (6×6)
-  M:  { colSpan: 12, rowSpan: 8  },  // 100% portrait width (12×8)
-  L:  { colSpan: 12, rowSpan: 12 },  // 100% portrait width, square (12×12)
-  XL: { colSpan: 12, rowSpan: 12 },  // @deprecated — Phase C 이후 제거 예정 (L과 동일)
+  S:  { colSpan: 1, rowSpan: 3 },
+  M:  { colSpan: 2, rowSpan: 3 },
+  L:  { colSpan: 4, rowSpan: 6 },
+  XL: { colSpan: 4, rowSpan: 6 },
 };
 
 export function parseWidgetSize(raw: string | null | undefined): WidgetSize {
