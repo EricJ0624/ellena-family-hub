@@ -51,8 +51,6 @@ interface FamilyTasksSectionProps {
   onChatDragOver: (e: React.DragEvent) => void;
   onChatDragLeave: () => void;
   onChatDrop: (e: React.DragEvent) => void;
-  /** 칠판 콘텐츠 실제 높이(px) — 대시보드 rowSpan 동적 조정용 */
-  onContentHeightChange?: (heightPx: number) => void;
 }
 
 export function FamilyTasksSection({
@@ -75,22 +73,10 @@ export function FamilyTasksSection({
   onChatDragOver,
   onChatDragLeave,
   onChatDrop,
-  onContentHeightChange,
 }: FamilyTasksSectionProps) {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
-  const chalkboardContainerRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!onContentHeightChange || !chalkboardContainerRef.current) return;
-    const el = chalkboardContainerRef.current;
-    const report = () => onContentHeightChange(el.scrollHeight);
-    report();
-    const ro = new ResizeObserver(report);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [tasks, onContentHeightChange]);
 
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
@@ -248,7 +234,7 @@ export function FamilyTasksSection({
       , document.body)}
 
       <div className="chalkboard-frame">
-      <section className="chalkboard-container" ref={chalkboardContainerRef}>
+      <section className="chalkboard-container">
         <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>
           <div className="chalkboard-top-actions">
