@@ -1050,8 +1050,8 @@ select {
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 2cqw;
-  padding: 1.5cqw 0;
+  gap: 1.5cqw;
+  padding: 1cqw 0;
   position: relative;
   min-width: 0;
   max-width: 100%;
@@ -1061,10 +1061,10 @@ select {
 .todo-content {
   display: flex;
   align-items: center;
-  gap: 4cqw;
+  gap: 3cqw;
   flex: 1;
   min-width: 0;
-  max-width: calc(100% - 12cqw);
+  max-width: calc(100% - 10cqw);
   cursor: pointer;
 }
 
@@ -1074,8 +1074,8 @@ select {
 }
 
 .todo-checkbox {
-  width: 9cqw;
-  height: 9cqw;
+  width: 7.5cqw;
+  height: 7.5cqw;
   border-radius: 255px 6px 225px 6px / 6px 225px 6px 255px;
   border: 0.16cqw solid rgba(255, 255, 255, 0.9);
   background: transparent;
@@ -1099,8 +1099,8 @@ select {
 }
 
 .todo-checkmark {
-  width: 6cqw;
-  height: 6cqw;
+  width: 5cqw;
+  height: 5cqw;
   color: #ffffff;
   stroke-width: 0.24cqw;
   filter: drop-shadow(0 0.08cqw 0.16cqw rgba(0, 0, 0, 0.3));
@@ -1117,7 +1117,7 @@ select {
 }
 
 .todo-text {
-  font-size: 7cqw;
+  font-size: 5.5cqw;
   font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.03em;
@@ -1133,7 +1133,7 @@ select {
 }
 
 .todo-assignee {
-  font-size: 5cqw;
+  font-size: 4cqw;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   white-space: normal;
@@ -1890,21 +1890,24 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: 셀·chrome·frame 모두 내용 높이 — frame에만 rowSpan 바닥(min-height) */
+  /* Family Tasks: --tasks-min-h를 셀·chrome·frame에 동일 적용(0으로 접히는 것 방지) + 내용만큼 height:auto 성장 */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
-    display: block;
-    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: var(--tasks-min-h, auto);
     height: auto;
-    overflow: hidden;
     width: 100%;
     max-width: 100%;
+    overflow: visible;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
     height: auto;
-    min-height: 0;
+    min-height: var(--tasks-min-h, auto);
     width: 100%;
     min-width: 0;
   }
@@ -1912,14 +1915,17 @@ select {
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     height: auto;
-    min-height: 0;
+    min-height: var(--tasks-min-h, auto);
     overflow: hidden;
     border-radius: 1rem;
   }
 
   .widget-chrome:has(.chalkboard-frame) > .chalkboard-frame {
+    flex: 1 0 auto;
     width: 100%;
     min-width: 0;
+    min-height: var(--tasks-min-h, auto);
+    height: auto;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
