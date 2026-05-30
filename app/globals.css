@@ -820,6 +820,7 @@ select {
 
 .chalkboard-frame:has(.todo-list) .chalkboard-container {
   overflow: visible;
+  justify-content: flex-start;
 }
 
 .chalkboard-container {
@@ -947,38 +948,41 @@ select {
   content: none;
 }
 
-.chalkboard-container .section-body {
+/* 전역 .section-body { flex:1 } 와 분리 — 칠판 임무는 top-bar 바로 아래부터 */
+.chalkboard-task-area {
   position: relative;
   z-index: 1;
-  flex: 1;
-  min-height: 0;
-  overflow-x: clip;
-  overflow-y: visible;
-}
-
-.chalkboard-container .section-body:has(.todo-list) {
-  flex: none;
-  height: auto;
-  min-height: 0;
-  justify-content: flex-start;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
+  justify-content: flex-start;
   overflow-x: clip;
   overflow-y: visible;
   padding-top: 2cqmin;
   padding-bottom: 4cqmin;
 }
 
-.chalkboard-container .section-body:has(.todo-list) .todo-list {
-  flex: 0 0 auto;
-  width: 100%;
-}
-
-.chalkboard-container .section-body:has(.chalkboard-empty-state) {
-  display: flex;
+.chalkboard-task-area:has(.chalkboard-empty-state) {
+  flex: 1 1 auto;
+  min-height: 0;
   align-items: center;
   justify-content: center;
   padding-top: 4cqmin;
   padding-bottom: 10cqmin;
+}
+
+.chalkboard-task-area .todo-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex: none;
+  gap: 3cqmin;
+  width: 100%;
+  margin: 0;
 }
 
 .chalkboard-characters {
@@ -1045,6 +1049,7 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: flex-start;
   gap: 3cqmin;
   width: 100%;
   position: relative;

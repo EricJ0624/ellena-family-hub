@@ -53,6 +53,39 @@ interface FamilyTasksSectionProps {
   onChatDrop: (e: React.DragEvent) => void;
 }
 
+function isTempTaskId(id: number | string): boolean {
+  return typeof id === 'number' || /^\d+$/.test(String(id));
+}
+
+/** optimistic·Realtime·insert가 겹치면 id·동일 제목 중복 행 제거 */
+function dedupeFamilyTasks(tasks: FamilyTask[]): FamilyTask[] {
+  const seenIds = new Set<string>();
+  const textToIndex = new Map<string, number>();
+  const out: FamilyTask[] = [];
+
+  for (const task of tasks) {
+    const id = String(task.id);
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+
+    const textKey = task.text.trim();
+    if (textKey && textToIndex.has(textKey)) {
+      const idx = textToIndex.get(textKey)!;
+      const prev = out[idx];
+      if (isTempTaskId(prev.id) && !isTempTaskId(task.id)) {
+        out[idx] = task;
+      }
+      continue;
+    }
+
+    const idx = out.length;
+    out.push(task);
+    if (textKey) textToIndex.set(textKey, idx);
+  }
+
+  return out;
+}
+
 export function FamilyTasksSection({
   tasks,
   onTasksChange,
@@ -203,6 +236,8 @@ export function FamilyTasksSection({
     }
   };
 
+  const visibleTasks = dedupeFamilyTasks(tasks || []);
+
   return (
     <>
       {isTodoModalOpen && createPortal(
@@ -262,15 +297,15 @@ export function FamilyTasksSection({
           </div>
         </div>
         <div
-          className={`section-body ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
+          className={`chalkboard-task-area ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
           ref={chatDropRef}
           onDragOver={onChatDragOver}
           onDragLeave={onChatDragLeave}
           onDrop={onChatDrop}
         >
-          {(tasks || []).length > 0 ? (
+          {visibleTasks.length > 0 ? (
             <div className="todo-list">
-              {(tasks || []).map((task) => (
+              {visibleTasks.map((task) => (
                 <div key={task.id} className="todo-item">
                   <div onClick={() => handleToggleTask(task.id)} className="todo-content">
                     <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
