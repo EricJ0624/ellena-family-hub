@@ -11,6 +11,7 @@ import {
   pointsToSvgPath,
   traceLadderPath,
   traceLadderPathPoints,
+  type LadderLaunchConfig,
   type LadderPhase,
   type LadderRung,
 } from '../types';
@@ -37,25 +38,45 @@ type LadderTranslations = {
   ladder_path_result: string;
 };
 
-interface LadderGameTabProps {
+type LadderGameTabBaseProps = {
   userId: string;
   members: FamilyTaskMemberOption[];
   translations: LadderTranslations;
   formatText: (template: string, vars: Record<string, string>) => string;
-}
+};
+
+type LadderGameTabSetupProps = LadderGameTabBaseProps & {
+  mode: 'setup';
+  launchLabel: string;
+  onLaunch: (config: LadderLaunchConfig) => void;
+  launchConfig?: never;
+};
+
+type LadderGameTabPlayProps = LadderGameTabBaseProps & {
+  mode: 'play';
+  launchConfig: LadderLaunchConfig;
+  launchLabel?: never;
+  onLaunch?: never;
+};
+
+export type LadderGameTabProps = LadderGameTabSetupProps | LadderGameTabPlayProps;
 
 const SVG_TOP = 10;
 const SVG_BOTTOM = 90;
 
-export function LadderGameTab({
-  userId,
-  members,
-  translations: t,
-  formatText,
-}: LadderGameTabProps) {
-  const [phase, setPhase] = useState<LadderPhase>('setup');
-  const [participantIds, setParticipantIds] = useState<string[]>(['', '']);
-  const [destinations, setDestinations] = useState<string[]>(['', '']);
+export function LadderGameTab(props: LadderGameTabProps) {
+  const { userId, members, translations: t, formatText, mode } = props;
+
+  const isSetup = mode === 'setup';
+  const playConfig = mode === 'play' ? props.launchConfig : null;
+
+  const [participantIds, setParticipantIds] = useState<string[]>(
+    playConfig?.participantIds ?? ['', ''],
+  );
+  const [destinations, setDestinations] = useState<string[]>(
+    playConfig?.destinations ?? ['', ''],
+  );
+  const [phase, setPhase] = useState<LadderPhase>(isSetup ? 'setup' : 'draw');
   const [userRungs, setUserRungs] = useState<LadderRung[]>([]);
   const [finalRungs, setFinalRungs] = useState<LadderRung[]>([]);
   const [displayRungs, setDisplayRungs] = useState<LadderRung[]>([]);
@@ -113,23 +134,25 @@ export function LadderGameTab({
   const rowY = (row: number) => 12 + (row / Math.max(1, LADDER_ROW_COUNT - 1)) * 68;
 
   useEffect(() => {
+    if (isSetup) return;
     setUserRungs([]);
     setFinalRungs([]);
     setDisplayRungs([]);
     setShowPaths(false);
     setIsRevealing(false);
-    if (phase === 'result') setPhase('setup');
-  }, [configKey]);
+    setPhase('draw');
+    setActiveDrawerId(userId);
+  }, [configKey, isSetup, userId]);
 
   useEffect(() => {
-    if (!setupReady || phase === 'result') return;
+    if (isSetup || !setupReady || phase === 'result') return;
     setActiveDrawerId((prev) => {
       if (participantIds.includes(prev) && !drawnParticipantIds.has(prev)) return prev;
       if (participantIds.includes(userId) && !drawnParticipantIds.has(userId)) return userId;
       const nextUndrawn = participantIds.find((id) => !drawnParticipantIds.has(id));
       return nextUndrawn ?? participantIds[0] ?? userId;
     });
-  }, [setupReady, participantIds, userId, userRungs, phase, drawnParticipantIds]);
+  }, [isSetup, setupReady, participantIds, userId, userRungs, phase, drawnParticipantIds]);
 
   const updateParticipant = (index: number, value: string) => {
     setParticipantIds((prev) => prev.map((p, i) => (i === index ? value : p)));
@@ -152,14 +175,14 @@ export function LadderGameTab({
   };
 
   const handleRungClick = (leftLane: number, row: number) => {
-    if (!setupReady || phase === 'result' || isRevealing || userHasDrawn || !activeDrawerId) return;
+    if (isSetup || !setupReady || phase === 'result' || isRevealing || userHasDrawn || !activeDrawerId) return;
     const exists = userRungs.some((r) => r.leftLane === leftLane && r.row === row);
     if (exists) return;
     setUserRungs((prev) => [...prev, { leftLane, row, drawnBy: activeDrawerId }]);
   };
 
   const startLadder = () => {
-    if (!setupReady || isRevealing) return;
+    if (isSetup || !setupReady || isRevealing) return;
     const generated = generateDenseLadderRungs(laneCount, userRungs, LADDER_ROW_COUNT);
     const autoRungs = generated.filter((r) => !r.drawnBy);
 
@@ -183,15 +206,13 @@ export function LadderGameTab({
     }, 35);
   };
 
-  const reset = () => {
-    setPhase('setup');
+  const resetPlay = () => {
     setUserRungs([]);
     setFinalRungs([]);
     setDisplayRungs([]);
     setShowPaths(false);
     setIsRevealing(false);
-    setParticipantIds(['', '']);
-    setDestinations(['', '']);
+    setPhase('draw');
     setActiveDrawerId(userId);
   };
 
@@ -319,6 +340,92 @@ export function LadderGameTab({
     );
   }
 
+  if (isSetup) {
+    return (
+      <div className="grid" style={{ gap: '2.5cqmin' }}>
+        <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
+          <div>
+            <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
+              {t.ladder_participants}
+            </div>
+            <div className="grid" style={{ gap: '1.5cqmin' }}>
+              {participantIds.map((value, index) => (
+                <MemberSelect
+                  key={`p-${index}`}
+                  members={members}
+                  value={value}
+                  onChange={(next) => updateParticipant(index, next)}
+                  placeholder={t.ladder_participant_ph}
+                  currentUserId={userId}
+                  youLabel={t.ladder_you}
+                  excludeUserIds={participantIds.filter((_, i) => i !== index)}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
+              {t.ladder_destinations}
+            </div>
+            <div className="grid" style={{ gap: '1.5cqmin' }}>
+              {destinations.map((value, index) => (
+                <input
+                  key={`d-${index}`}
+                  value={value}
+                  onChange={(e) => updateDestination(index, e.target.value)}
+                  placeholder={t.ladder_destination_ph}
+                  className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400"
+                  style={{ fontSize: '4.5cqmin' }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
+          <button
+            type="button"
+            onClick={addPair}
+            disabled={laneCount >= LADDER_MAX_LANES || laneCount >= members.length}
+            className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
+            style={{ fontSize: '4cqmin' }}
+          >
+            {t.ladder_add_pair}
+          </button>
+          <button
+            type="button"
+            onClick={removePair}
+            disabled={laneCount <= LADDER_MIN_LANES}
+            className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:opacity-50"
+            style={{ fontSize: '4cqmin' }}
+          >
+            {t.ladder_remove_pair}
+          </button>
+        </div>
+
+        {!setupReady ? (
+          <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+            {t.ladder_min_players}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              props.onLaunch({
+                participantIds: [...participantIds],
+                destinations: [...destinations],
+              })
+            }
+            className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
+            style={{ fontSize: '4.5cqmin' }}
+          >
+            {props.launchLabel}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   if (phase === 'result') {
     return (
       <div className="grid" style={{ gap: '2cqmin' }}>
@@ -328,7 +435,7 @@ export function LadderGameTab({
           </p>
           <button
             type="button"
-            onClick={reset}
+            onClick={resetPlay}
             className="rounded-lg bg-slate-200 px-3 py-1.5 font-semibold text-slate-700"
             style={{ fontSize: '4cqmin' }}
           >
@@ -364,150 +471,80 @@ export function LadderGameTab({
   }
 
   return (
-    <div className="grid" style={{ gap: '2.5cqmin' }}>
-      <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
-        <div>
-          <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
-            {t.ladder_participants}
-          </div>
-          <div className="grid" style={{ gap: '1.5cqmin' }}>
-            {participantIds.map((value, index) => (
-              <MemberSelect
-                key={`p-${index}`}
-                members={members}
-                value={value}
-                onChange={(next) => updateParticipant(index, next)}
-                placeholder={t.ladder_participant_ph}
-                currentUserId={userId}
-                youLabel={t.ladder_you}
-                excludeUserIds={participantIds.filter((_, i) => i !== index)}
-              />
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
-            {t.ladder_destinations}
-          </div>
-          <div className="grid" style={{ gap: '1.5cqmin' }}>
-            {destinations.map((value, index) => (
-              <input
-                key={`d-${index}`}
-                value={value}
-                onChange={(e) => updateDestination(index, e.target.value)}
-                placeholder={t.ladder_destination_ph}
-                className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400"
-                style={{ fontSize: '4.5cqmin' }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="grid" style={{ gap: '2cqmin' }}>
+      <p className="text-[#475569]" style={{ fontSize: '4cqmin' }}>
+        {t.ladder_draw_hint}
+      </p>
 
-      <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
-        <button
-          type="button"
-          onClick={addPair}
-          disabled={laneCount >= LADDER_MAX_LANES || laneCount >= members.length}
-          className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
-          style={{ fontSize: '4cqmin' }}
-        >
-          {t.ladder_add_pair}
-        </button>
-        <button
-          type="button"
-          onClick={removePair}
-          disabled={laneCount <= LADDER_MIN_LANES}
-          className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:opacity-50"
-          style={{ fontSize: '4cqmin' }}
-        >
-          {t.ladder_remove_pair}
-        </button>
-      </div>
-
-      {!setupReady && (
-        <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-          {t.ladder_min_players}
-        </p>
-      )}
-
-      {setupReady && (
-        <div className="grid" style={{ gap: '2cqmin' }}>
-          <p className="text-[#475569]" style={{ fontSize: '4cqmin' }}>
-            {t.ladder_draw_hint}
-          </p>
-
-          <div className="flex flex-wrap items-center justify-between" style={{ gap: '1.5cqmin' }}>
-            <div className="flex flex-wrap items-center" style={{ gap: '1cqmin' }}>
-              <MemberSelect
-                members={participantMembers}
-                value={activeDrawerId}
-                onChange={setActiveDrawerId}
-                placeholder={t.select_member}
-                currentUserId={userId}
-                youLabel={t.ladder_you}
-              />
-              {userHasDrawn && (
-                <span
-                  className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800"
-                  style={{ fontSize: '3.5cqmin' }}
-                >
-                  {formatText(t.ladder_drawn_by, {
-                    name: getMemberNickname(members, activeDrawerId, userId, t.ladder_you),
-                  })}
-                </span>
-              )}
-            </div>
-            <span className="font-medium text-indigo-700" style={{ fontSize: '4cqmin' }}>
-              {formatText(t.ladder_draw_progress, {
-                done: String(drawnParticipantIds.size),
-                total: String(participantIds.length),
+      <div className="flex flex-wrap items-center justify-between" style={{ gap: '1.5cqmin' }}>
+        <div className="flex flex-wrap items-center" style={{ gap: '1cqmin' }}>
+          <MemberSelect
+            members={participantMembers}
+            value={activeDrawerId}
+            onChange={setActiveDrawerId}
+            placeholder={t.select_member}
+            currentUserId={userId}
+            youLabel={t.ladder_you}
+          />
+          {userHasDrawn && (
+            <span
+              className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800"
+              style={{ fontSize: '3.5cqmin' }}
+            >
+              {formatText(t.ladder_drawn_by, {
+                name: getMemberNickname(members, activeDrawerId, userId, t.ladder_you),
               })}
             </span>
-          </div>
-
-          <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
-            {participantIds.map((id) => {
-              const done = drawnParticipantIds.has(id);
-              const name = getMemberNickname(members, id, userId, t.ladder_you);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setActiveDrawerId(id)}
-                  className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
-                    activeDrawerId === id
-                      ? 'bg-indigo-600 text-white'
-                      : done
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-100 text-slate-700'
-                  }`}
-                  style={{ fontSize: '3.5cqmin' }}
-                >
-                  {name}
-                  {done ? ' ✓' : ''}
-                </button>
-              );
-            })}
-          </div>
-
-          {renderLadderSvg(userRungs, { interactive: true, showResultPaths: false })}
-
-          <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-            {t.ladder_start_hint}
-          </p>
-
-          <button
-            type="button"
-            onClick={startLadder}
-            disabled={isRevealing}
-            className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
-            style={{ fontSize: '4.5cqmin' }}
-          >
-            {t.ladder_start}
-          </button>
+          )}
         </div>
-      )}
+        <span className="font-medium text-indigo-700" style={{ fontSize: '4cqmin' }}>
+          {formatText(t.ladder_draw_progress, {
+            done: String(drawnParticipantIds.size),
+            total: String(participantIds.length),
+          })}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
+        {participantIds.map((id) => {
+          const done = drawnParticipantIds.has(id);
+          const name = getMemberNickname(members, id, userId, t.ladder_you);
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveDrawerId(id)}
+              className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
+                activeDrawerId === id
+                  ? 'bg-indigo-600 text-white'
+                  : done
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-slate-100 text-slate-700'
+              }`}
+              style={{ fontSize: '3.5cqmin' }}
+            >
+              {name}
+              {done ? ' ✓' : ''}
+            </button>
+          );
+        })}
+      </div>
+
+      {renderLadderSvg(userRungs, { interactive: true, showResultPaths: false })}
+
+      <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+        {t.ladder_start_hint}
+      </p>
+
+      <button
+        type="button"
+        onClick={startLadder}
+        disabled={isRevealing}
+        className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
+        style={{ fontSize: '4.5cqmin' }}
+      >
+        {t.ladder_start}
+      </button>
     </div>
   );
 }

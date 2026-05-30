@@ -50,6 +50,8 @@ export type GamesTranslations = {
   roulette_spinning: string;
   roulette_reset: string;
   roulette_result: string;
+  games_launch: string;
+  games_modal_close: string;
 };
 
 const games: Record<LangCode, GamesTranslations> = {
@@ -103,6 +105,8 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_spinning: '돌리는 중…',
     roulette_reset: '다시 하기',
     roulette_result: '당첨: {name}',
+    games_launch: '시작',
+    games_modal_close: '닫기',
   },
   en: {
     section_title: 'Decision Games',
@@ -154,6 +158,8 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_spinning: 'Spinning…',
     roulette_reset: 'Reset',
     roulette_result: 'Winner: {name}',
+    games_launch: 'Start',
+    games_modal_close: 'Close',
   },
   ja: {
     section_title: '決定ゲーム',
@@ -205,6 +211,8 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_spinning: '回転中…',
     roulette_reset: 'リセット',
     roulette_result: '当選: {name}',
+    games_launch: '開始',
+    games_modal_close: '閉じる',
   },
   'zh-CN': {
     section_title: '决定游戏',
@@ -256,6 +264,8 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_spinning: '旋转中…',
     roulette_reset: '重新开始',
     roulette_result: '中奖: {name}',
+    games_launch: '开始',
+    games_modal_close: '关闭',
   },
   'zh-TW': {
     section_title: '決定遊戲',
@@ -307,6 +317,8 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_spinning: '旋轉中…',
     roulette_reset: '重新開始',
     roulette_result: '中獎: {name}',
+    games_launch: '開始',
+    games_modal_close: '關閉',
   },
 };
 

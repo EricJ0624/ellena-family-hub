@@ -73,7 +73,6 @@ import {
   PORTRAIT_COLS,
   LANDSCAPE_COLS,
 } from '@/lib/widgets/grid';
-import { useTasksGridRowSpan } from '@/app/dashboard/useTasksGridRowSpan';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
@@ -5341,22 +5340,6 @@ export default function FamilyHub() {
     [widgetConfigs],
   );
 
-  const tasksGridCellRef = useRef<HTMLDivElement>(null);
-  const tasksWidgetCfg = useMemo(
-    () => orderedWidgets.find((c) => c.widget_key === 'tasks'),
-    [orderedWidgets],
-  );
-  const tasksLayoutRowSpan = useMemo(() => {
-    if (!tasksWidgetCfg) return 6;
-    return resolveWidgetGridPlacement(tasksWidgetCfg, dashboardColumnCount, dashboardIsLandscapeGrid).rowSpan;
-  }, [tasksWidgetCfg, dashboardColumnCount, dashboardIsLandscapeGrid]);
-  const tasksGridRowSpan = useTasksGridRowSpan(
-    tasksGridCellRef,
-    tasksLayoutRowSpan,
-    dashboardCellRowH,
-    tasksWidgetCfg != null && expandedWidget !== 'tasks' && recentlyClosedWidget !== 'tasks',
-  );
-
   // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
@@ -5728,6 +5711,8 @@ export default function FamilyHub() {
               roulette_spinning: gt('roulette_spinning'),
               roulette_reset: gt('roulette_reset'),
               roulette_result: gt('roulette_result'),
+              games_launch: gt('games_launch'),
+              games_modal_close: gt('games_modal_close'),
             }}
           />
         );
@@ -5991,18 +5976,19 @@ export default function FamilyHub() {
               return (
                 <div
                   key={cfg.widget_key}
-                  ref={cfg.widget_key === 'tasks' ? tasksGridCellRef : undefined}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'relative z-[1] overflow-visible' : 'overflow-hidden'}`}
+                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'overflow-visible' : 'overflow-hidden'}`}
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
-                    gridRow: `span ${cfg.widget_key === 'tasks' ? tasksGridRowSpan : rowSpan}`,
+                    // tasks: 1행 auto-grow → gap-5만 캘린더와 간격(다른 위젯과 동일). span N은 행 최소합으로 빈칸 발생.
+                    gridRow: cfg.widget_key === 'tasks' ? 'auto' : `span ${rowSpan}`,
                     ...(cfg.widget_key === 'tasks'
                       ? {
                           height: 'auto',
+                          minHeight: dashboardCellRowH * rowSpan,
                           ['--tasks-min-h' as string]: `${dashboardCellRowH * rowSpan}px`,
                         }
                       : {}),

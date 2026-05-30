@@ -1,3 +1,25 @@
+export type GameTab = 'ladder' | 'rps' | 'roulette';
+
+export type LadderLaunchConfig = {
+  participantIds: string[];
+  destinations: string[];
+};
+
+export type RPSLaunchConfig = {
+  p1UserId: string;
+  p2UserId: string;
+};
+
+export type RouletteLaunchConfig = {
+  selectedIds: string[];
+  slotsPerMember: number;
+};
+
+export type GamePlaySession =
+  | { game: 'ladder'; config: LadderLaunchConfig }
+  | { game: 'rps'; config: RPSLaunchConfig }
+  | { game: 'roulette'; config: RouletteLaunchConfig };
+
 export type LadderRung = {
   leftLane: number;
   row: number;
@@ -154,8 +176,6 @@ export function pickRouletteIndex(slotCount: number, rotationDeg: number): numbe
   const index = Math.floor(pointerAngle / slice) % slotCount;
   return index;
 }
-
-export type GameTab = 'ladder' | 'rps' | 'roulette';
 
 /** 룰렛판 최대 칸 수 */
 export const ROULETTE_MAX_SLOTS = 15;

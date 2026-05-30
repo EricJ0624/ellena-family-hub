@@ -1891,11 +1891,11 @@ select {
   }
 
   /*
-   * Family Tasks: rowSpan(에디터 바닥 + 임무별 추가 행은 page.tsx) · 칠판 min-height · height:auto
-   * overflow:visible — hidden이면 min-content 잘림; 캘린더 겹침은 rowSpan 확장으로 방지
+   * Family Tasks: grid-row auto(1트랙) + --tasks-min-h(에디터 M 바닥) + height:auto
+   * align-self stretch — auto-flow 다음 위젯과 gap-5만 유지(span N 행 예약 시 빈칸 과다)
    */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    align-self: start;
+    align-self: stretch;
     display: block;
     min-height: var(--tasks-min-h, auto);
     height: auto;
