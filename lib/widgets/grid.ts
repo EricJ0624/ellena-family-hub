@@ -215,10 +215,22 @@ export function estimateTasksGridRowSpan(layoutRowSpan: number, taskCount: numbe
   const base = clampGridSpan(layoutRowSpan, 24);
   const n = Math.max(0, Math.floor(taskCount));
   if (n === 0) return base;
-  const headerRows = 3;
-  const rowsPerTask = 1;
+  const headerRows = 3.5;
+  const rowsPerTask = 1.35;
   const needed = Math.ceil(headerRows + n * rowsPerTask);
   return Math.min(24, Math.max(base, needed));
+}
+
+/** 칠판 실측 높이(px) → 그리드 rowSpan (layout 바닥 이상) */
+export function rowSpanFromChalkboardHeight(
+  heightPx: number,
+  cellRowH: number,
+  layoutRowSpan: number,
+): number {
+  const base = clampGridSpan(layoutRowSpan, 24);
+  if (cellRowH <= 0 || !Number.isFinite(heightPx) || heightPx <= 0) return base;
+  const rows = Math.ceil(heightPx / cellRowH);
+  return Math.min(24, Math.max(base, rows));
 }
 
 /**
