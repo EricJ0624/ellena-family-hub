@@ -926,6 +926,8 @@ select {
   overflow-x: clip;
   /* hidden: 스크롤바 없이 클립, scrollHeight > clientHeight 로 넘침량 측정 가능 */
   overflow-y: hidden;
+  /* 마지막 task가 wooden frame에 붙지 않도록 하단 여백 */
+  padding-bottom: 3cqmin;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
@@ -1000,6 +1002,9 @@ select {
   display: flex;
   flex-direction: column;
   /* flex:1·space-around 제거 → 자연 높이 사용해야 overflow 측정 및 rowSpan 증가가 동작함 */
+  /* flex-shrink:0 필수: 기본값(1)이면 section-body가 좁을 때 todo-list가 압축되어
+     scrollHeight=clientHeight → overflow=0 → rowSpan 증가 불가 */
+  flex-shrink: 0;
   gap: 4cqmin;
   position: relative;
   z-index: 1;
