@@ -351,8 +351,8 @@ export function layoutYHToCssGridRowStart(
 
 /**
  * resolveWidgetGridPlacement → CSS gridColumn/gridRow.
- * tasks: 기존 gridRowStart + span rowSpan (칠판·임무 높이 성장).
- * 그 외: CSS 행 span 1 + minHeight(layout_h×cellRowH) — gap-3가 span 내부 행에 중복 적용되지 않음.
+ * 공통: layout y/h → CSS 행 슬롯(span 1) + minHeight(layout_h×cellRowH).
+ * gap-3는 위젯 사이만; tasks는 height:auto·--tasks-min-h로 임무 증가 시 행 성장.
  */
 export function buildWidgetGridItemStyle(
   widgetKey: DashboardWidgetKey,
@@ -364,25 +364,13 @@ export function buildWidgetGridItemStyle(
     ? `${gridColumnStart} / span ${colSpan}`
     : `span ${colSpan}`;
 
-  if (widgetKey === 'tasks') {
-    const minPx = cellRowH > 0 ? cellRowH * rowSpan : 0;
-    const style: WidgetGridItemStyle = {
-      gridColumn,
-      gridRow: gridRowStart != null ? `${gridRowStart} / span ${rowSpan}` : 'auto',
-      alignSelf: 'start',
-      height: 'auto',
-    };
-    if (minPx > 0) {
-      style.minHeight = minPx;
-      style['--tasks-min-h'] = `${minPx}px`;
-    }
-    return style;
-  }
-
   const minPx = cellRowH > 0 ? cellRowH * rowSpan : 0;
   const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
-  const gridRow =
-    cssRowStart != null ? `${cssRowStart} / span 1` : 'span 1';
+  const gridRow = cssRowStart != null
+    ? `${cssRowStart} / span 1`
+    : widgetKey === 'tasks'
+      ? 'auto'
+      : 'span 1';
 
   const style: WidgetGridItemStyle = {
     gridColumn,
@@ -392,7 +380,11 @@ export function buildWidgetGridItemStyle(
   };
   if (minPx > 0) {
     style.minHeight = minPx;
-    style['--widget-min-h'] = `${minPx}px`;
+    if (widgetKey === 'tasks') {
+      style['--tasks-min-h'] = `${minPx}px`;
+    } else {
+      style['--widget-min-h'] = `${minPx}px`;
+    }
   }
   return style;
 }
@@ -425,15 +417,9 @@ export function detectGridOverlaps(
       resolveWidgetGridPlacement(cfg, columnCount, isLandscape);
     if (gridColumnStart == null || gridRowStart == null) continue;
 
-    let rowStart = gridRowStart;
-    let rowEnd = gridRowStart + rowSpan;
-    if (cfg.widget_key !== 'tasks') {
-      const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
-      if (cssRowStart != null) {
-        rowStart = cssRowStart;
-        rowEnd = cssRowStart + 1;
-      }
-    }
+    const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
+    const rowStart = cssRowStart ?? gridRowStart;
+    const rowEnd = rowStart + 1;
 
     placed.push({
       key: cfg.widget_key,
