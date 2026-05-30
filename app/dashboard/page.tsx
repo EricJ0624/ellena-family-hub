@@ -291,6 +291,8 @@ export default function FamilyHub() {
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
+  /** 칠판 위젯 rowSpan 동적 조정을 위한 콘텐츠 높이 (chalkboard-frame.scrollHeight) */
+  const [tasksFrameScrollHeight, setTasksFrameScrollHeight] = useState(0);
   /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
   const isLocationSharingRef = useRef(false);
   isLocationSharingRef.current = isLocationSharing;
@@ -5406,6 +5408,7 @@ export default function FamilyHub() {
               const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
               handleDropChatFiles(files);
             }}
+            onContentHeightChange={setTasksFrameScrollHeight}
           />
         );
       case 'calendar':
@@ -5884,7 +5887,7 @@ export default function FamilyHub() {
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row',
-              gridAutoRows: `minmax(${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px, auto)`,
+              gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
             }}
           >
             {orderedWidgets.map((cfg) => {
@@ -5902,6 +5905,13 @@ export default function FamilyHub() {
                 ? effectiveW <= sMaxUnits
                 : cfg.size === 'S';
 
+              // 칠판(tasks) 위젯: chalkboard-frame.scrollHeight 기준으로 rowSpan 동적 계산
+              // height:100% 비율 스케일 로직은 건드리지 않고, rowSpan만 늘려 위젯 셀을 확장
+              const rowHeight = getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount);
+              const effectiveRowSpan = cfg.widget_key === 'tasks' && tasksFrameScrollHeight > rowSpan * rowHeight
+                ? Math.ceil(tasksFrameScrollHeight / rowHeight)
+                : rowSpan;
+
               return (
                 <div
                   key={cfg.widget_key}
@@ -5914,10 +5924,8 @@ export default function FamilyHub() {
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
-                    gridRow: `span ${rowSpan}`,
-                    // 칠판 위젯 세로 성장을 위한 최소 높이 전달 (min-height: % 는 height: auto 부모에서 0으로 해석되므로 절대값 사용)
-                    '--row-min-h': `${rowSpan * getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
-                  } as React.CSSProperties}
+                    gridRow: `span ${effectiveRowSpan}`,
+                  }}
                 >
                   <WidgetChrome
                     widgetKey={cfg.widget_key}

@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: 위젯 콘텐츠 기준 자연 높이로 성장 (gridAutoRows: minmax와 연동) */
+/* Frame + board: 위젯 프레임 전체를 채움 (height: 100% + container-type: size → cqmin 사용 가능) */
 .chalkboard-frame {
   container-type: size;
   position: relative;
@@ -795,9 +795,7 @@ select {
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  /* height: auto + min-height: CSS 변수(절대값) → % 방식은 부모 height:auto 시 0으로 해석되므로 사용 불가 */
-  height: auto;
-  min-height: var(--row-min-h, 0px);
+  height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -805,7 +803,7 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 4px;
-  overflow: visible;
+  overflow: clip;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
@@ -823,7 +821,7 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -924,14 +922,6 @@ select {
   flex: 1;
   min-height: 0;
   overflow-x: clip;
-  overflow-y: visible;
-}
-
-/* 작업 목록이 있을 때: 자연 높이로 성장 (스크롤 없이 위젯이 세로 확장) */
-.chalkboard-container .section-body:has(.todo-list) {
-  flex: none;
-  height: auto;
-  min-height: 0;
   overflow-y: visible;
 }
 
@@ -1841,20 +1831,6 @@ select {
     border-radius: 1rem; /* rounded-2xl */
     /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass 배경이 보이도록 */
     background: var(--glass-medium-bg);
-  }
-
-  /* 칠판 위젯: 작업 추가 시 세로로 성장 */
-  .widget-chrome:has(.chalkboard-frame) {
-    height: auto;
-    min-height: var(--row-min-h, 0px);
-    overflow: visible;
-    background: transparent;
-  }
-
-  /* 칠판을 담은 grid 셀: 세로 성장 허용, align-self:start로 콘텐츠 높이 기준 */
-  .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    overflow: visible;
-    align-self: start;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */

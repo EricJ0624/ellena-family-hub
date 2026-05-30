@@ -51,6 +51,8 @@ interface FamilyTasksSectionProps {
   onChatDragOver: (e: React.DragEvent) => void;
   onChatDragLeave: () => void;
   onChatDrop: (e: React.DragEvent) => void;
+  /** 칠판 프레임의 scrollHeight 변화를 부모(dashboard)에 알림 → rowSpan 동적 조정용 */
+  onContentHeightChange?: (scrollHeight: number) => void;
 }
 
 export function FamilyTasksSection({
@@ -73,10 +75,20 @@ export function FamilyTasksSection({
   onChatDragOver,
   onChatDragLeave,
   onChatDrop,
+  onContentHeightChange,
 }: FamilyTasksSectionProps) {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
+  /** chalkboard-frame 요소 ref — scrollHeight로 rowSpan 동적 조정 */
+  const chalkboardFrameRef = useRef<HTMLDivElement>(null);
+
+  // tasks 변경 시 chalkboard-frame.scrollHeight 를 부모에 전달
+  // → 부모(dashboard)는 이 값으로 effectiveRowSpan을 계산해 위젯을 세로로 늘림
+  useEffect(() => {
+    if (!onContentHeightChange || !chalkboardFrameRef.current) return;
+    onContentHeightChange(chalkboardFrameRef.current.scrollHeight);
+  }, [tasks, onContentHeightChange]);
 
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
@@ -233,7 +245,7 @@ export function FamilyTasksSection({
         </div>
       , document.body)}
 
-      <div className="chalkboard-frame">
+      <div className="chalkboard-frame" ref={chalkboardFrameRef}>
       <section className="chalkboard-container">
         <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>
