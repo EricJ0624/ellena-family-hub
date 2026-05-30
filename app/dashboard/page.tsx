@@ -5288,6 +5288,7 @@ export default function FamilyHub() {
     dashboardGridActive,
     widgetConfigs,
   );
+  const dashboardCellRowH = getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount);
 
   // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산되므로
   // clamp min(44px) < 실제 적정값(~42px) → clamp 자체를 우회하고 고정 42px 사용.
@@ -5884,7 +5885,7 @@ export default function FamilyHub() {
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row',
-              gridAutoRows: `minmax(${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px, auto)`,
+              gridAutoRows: `minmax(${dashboardCellRowH}px, auto)`,
             }}
           >
             {orderedWidgets.map((cfg) => {
@@ -5906,7 +5907,7 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'overflow-visible' : 'overflow-hidden'}`}
+                  className="min-w-0 max-w-full isolate overflow-hidden"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
@@ -5914,6 +5915,8 @@ export default function FamilyHub() {
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
                     gridRow: `span ${rowSpan}`,
+                    // tasks: rowSpan 최소 높이 보장(빈 칠판) + 내용 성장 시 gridAutoRows auto로 행 확장
+                    ...(cfg.widget_key === 'tasks' ? { minHeight: dashboardCellRowH * rowSpan } : {}),
                   }}
                 >
                   <WidgetChrome

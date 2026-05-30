@@ -1885,16 +1885,24 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: glass 제거 + 칠판 세로 성장(cqw 스케일 — 임무 유무 분기 없음) */
+  /* Family Tasks: 그리드 셀 안에서만 그림 — overflow:visible은 아래 위젯과 시각적 겹침 유발 */
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
-    overflow: visible;
+    overflow: hidden;
     height: auto;
     min-height: 100%;
+    width: 100%;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    overflow: visible;
+    align-self: start;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape'] > *:has(.chalkboard-frame) {
+    align-self: start;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
