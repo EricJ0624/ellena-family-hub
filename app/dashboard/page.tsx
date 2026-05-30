@@ -5681,6 +5681,7 @@ export default function FamilyHub() {
               ladder_draw_hint: gt('ladder_draw_hint'),
               ladder_drawn_by: gt('ladder_drawn_by'),
               ladder_draw_progress: gt('ladder_draw_progress'),
+              ladder_start_hint: gt('ladder_start_hint'),
               ladder_you: gt('ladder_you'),
               ladder_start: gt('ladder_start'),
               ladder_reset: gt('ladder_reset'),

@@ -6,9 +6,66 @@ export type LadderRung = {
 
 export type LadderPhase = 'setup' | 'draw' | 'result';
 
-export const LADDER_ROW_COUNT = 10;
+export const LADDER_ROW_COUNT = 14;
 export const LADDER_MIN_LANES = 2;
 export const LADDER_MAX_LANES = 8;
+
+const LADDER_PATH_COLORS = [
+  '#2563eb',
+  '#dc2626',
+  '#059669',
+  '#d97706',
+  '#7c3aed',
+  '#db2777',
+  '#0891b2',
+  '#65a30d',
+];
+
+export function getLadderPathColor(laneIndex: number): string {
+  return LADDER_PATH_COLORS[laneIndex % LADDER_PATH_COLORS.length];
+}
+
+export type LadderPoint = { x: number; y: number };
+
+/** 위→아래 경로 좌표 (결과 하이라이트용) */
+export function traceLadderPathPoints(
+  startLane: number,
+  rungs: LadderRung[],
+  totalRows: number,
+  laneToX: (lane: number) => number,
+  rowToY: (row: number) => number,
+  topY: number,
+  bottomY: number,
+): LadderPoint[] {
+  let lane = startLane;
+  const points: LadderPoint[] = [{ x: laneToX(lane), y: topY }];
+
+  const rungAt = new Map<string, LadderRung>();
+  for (const rung of rungs) {
+    rungAt.set(`${rung.row}:${rung.leftLane}`, rung);
+  }
+
+  for (let row = 0; row < totalRows; row += 1) {
+    const y = rowToY(row);
+    points.push({ x: laneToX(lane), y });
+
+    if (rungAt.has(`${row}:${lane}`)) {
+      lane += 1;
+      points.push({ x: laneToX(lane), y });
+    } else if (rungAt.has(`${row}:${lane - 1}`)) {
+      lane -= 1;
+      points.push({ x: laneToX(lane), y });
+    }
+  }
+
+  points.push({ x: laneToX(lane), y: bottomY });
+  return points;
+}
+
+export function pointsToSvgPath(points: LadderPoint[]): string {
+  if (points.length === 0) return '';
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+}
 
 export function traceLadderPath(startLane: number, rungs: LadderRung[], totalRows: number): number {
   let lane = startLane;
@@ -32,35 +89,47 @@ export function traceLadderPath(startLane: number, rungs: LadderRung[], totalRow
   return lane;
 }
 
-export function fillRandomRungs(
+/** 사용자가 그린 가로줄 + 나머지 랜덤 채움 (사다리타기 밀도) */
+export function generateDenseLadderRungs(
   laneCount: number,
-  existing: LadderRung[],
+  userRungs: LadderRung[],
   totalRows: number,
 ): LadderRung[] {
-  const occupied = new Set(existing.map((r) => `${r.leftLane}:${r.row}`));
-  const result = [...existing];
+  const occupied = new Set(userRungs.map((r) => `${r.leftLane}:${r.row}`));
+  const result = [...userRungs];
 
   for (let row = 0; row < totalRows; row += 1) {
     for (let leftLane = 0; leftLane < laneCount - 1; leftLane += 1) {
       const key = `${leftLane}:${row}`;
       if (occupied.has(key)) continue;
-      if (Math.random() < 0.35) {
+      if (Math.random() < 0.62) {
         result.push({ leftLane, row });
         occupied.add(key);
       }
     }
   }
 
-  if (result.length === existing.length) {
-    const leftLane = Math.floor(Math.random() * Math.max(1, laneCount - 1));
-    const row = Math.floor(Math.random() * totalRows);
+  for (let row = 0; row < totalRows; row += 1) {
+    const hasRungInRow = result.some((r) => r.row === row);
+    if (hasRungInRow || laneCount <= 1) continue;
+    const leftLane = Math.floor(Math.random() * (laneCount - 1));
     const key = `${leftLane}:${row}`;
     if (!occupied.has(key)) {
       result.push({ leftLane, row });
+      occupied.add(key);
     }
   }
 
   return result;
+}
+
+/** @deprecated generateDenseLadderRungs 사용 */
+export function fillRandomRungs(
+  laneCount: number,
+  existing: LadderRung[],
+  totalRows: number,
+): LadderRung[] {
+  return generateDenseLadderRungs(laneCount, existing, totalRows);
 }
 
 export type RPSChoice = 'rock' | 'paper' | 'scissors';

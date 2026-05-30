@@ -20,6 +20,7 @@ export type GamesTranslations = {
   ladder_min_players: string;
   ladder_to_draw: string;
   ladder_draw_hint: string;
+  ladder_start_hint: string;
   ladder_drawn_by: string;
   ladder_draw_progress: string;
   ladder_you: string;
@@ -71,7 +72,8 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_remove_pair: '줄 삭제',
     ladder_min_players: '최소 2명의 멤버를 선택해 주세요.',
     ladder_to_draw: '가로줄 그리기',
-    ladder_draw_hint: '참가자별로 한 번만 탭해 가로줄을 그어 주세요.',
+    ladder_draw_hint: '원하면 참가자별로 한 번씩 가로줄을 추가한 뒤, 시작을 눌러 주세요.',
+    ladder_start_hint: '시작을 누르면 사다리가 자동으로 그려집니다.',
     ladder_drawn_by: '{name} 완료',
     ladder_draw_progress: '{done}/{total}명 가로줄 완료',
     ladder_you: '나',
@@ -121,7 +123,8 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_remove_pair: 'Remove lane',
     ladder_min_players: 'Select at least 2 members.',
     ladder_to_draw: 'Draw rungs',
-    ladder_draw_hint: 'Each participant taps once to add a rung.',
+    ladder_draw_hint: 'Optionally add one rung per participant, then press Start.',
+    ladder_start_hint: 'Press Start to draw the ladder automatically.',
     ladder_drawn_by: '{name} done',
     ladder_draw_progress: '{done}/{total} rungs placed',
     ladder_you: 'Me',
@@ -171,7 +174,8 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_remove_pair: '列を削除',
     ladder_min_players: '2名以上のメンバーを選択してください。',
     ladder_to_draw: '横線を引く',
-    ladder_draw_hint: '参加者は1回だけタップして横線を引いてください。',
+    ladder_draw_hint: '必要なら参加者ごとに1本追加してから開始してください。',
+    ladder_start_hint: '開始を押すと自動ではしごを描きます。',
     ladder_drawn_by: '{name} 完了',
     ladder_draw_progress: '{done}/{total}人完了',
     ladder_you: '自分',
@@ -221,7 +225,8 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_remove_pair: '删除列',
     ladder_min_players: '请至少选择2名成员。',
     ladder_to_draw: '画横线',
-    ladder_draw_hint: '每位参与者只能轻触一次添加横线。',
+    ladder_draw_hint: '可选：每位参与者添加一条横线后，再按开始。',
+    ladder_start_hint: '按开始后将自动绘制梯子。',
     ladder_drawn_by: '{name} 已完成',
     ladder_draw_progress: '{done}/{total} 人已完成',
     ladder_you: '我',
@@ -271,7 +276,8 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_remove_pair: '刪除列',
     ladder_min_players: '請至少選擇2名成員。',
     ladder_to_draw: '畫橫線',
-    ladder_draw_hint: '每位參與者只能輕觸一次新增橫線。',
+    ladder_draw_hint: '可選：每位參與者新增一條橫線後，再按開始。',
+    ladder_start_hint: '按開始後將自動繪製梯子。',
     ladder_drawn_by: '{name} 已完成',
     ladder_draw_progress: '{done}/{total} 人已完成',
     ladder_you: '我',

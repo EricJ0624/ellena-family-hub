@@ -28,6 +28,7 @@ export interface FamilyGamesSectionProps {
     ladder_remove_pair: string;
     ladder_min_players: string;
     ladder_draw_hint: string;
+    ladder_start_hint: string;
     ladder_drawn_by: string;
     ladder_draw_progress: string;
     ladder_you: string;

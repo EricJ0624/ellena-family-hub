@@ -6,8 +6,11 @@ import {
   LADDER_MAX_LANES,
   LADDER_MIN_LANES,
   LADDER_ROW_COUNT,
-  fillRandomRungs,
+  generateDenseLadderRungs,
+  getLadderPathColor,
+  pointsToSvgPath,
   traceLadderPath,
+  traceLadderPathPoints,
   type LadderPhase,
   type LadderRung,
 } from '../types';
@@ -24,6 +27,7 @@ type LadderTranslations = {
   ladder_remove_pair: string;
   ladder_min_players: string;
   ladder_draw_hint: string;
+  ladder_start_hint: string;
   ladder_drawn_by: string;
   ladder_draw_progress: string;
   ladder_you: string;
@@ -40,6 +44,9 @@ interface LadderGameTabProps {
   formatText: (template: string, vars: Record<string, string>) => string;
 }
 
+const SVG_TOP = 10;
+const SVG_BOTTOM = 90;
+
 export function LadderGameTab({
   userId,
   members,
@@ -49,9 +56,12 @@ export function LadderGameTab({
   const [phase, setPhase] = useState<LadderPhase>('setup');
   const [participantIds, setParticipantIds] = useState<string[]>(['', '']);
   const [destinations, setDestinations] = useState<string[]>(['', '']);
-  const [drawnRungs, setDrawnRungs] = useState<LadderRung[]>([]);
+  const [userRungs, setUserRungs] = useState<LadderRung[]>([]);
   const [finalRungs, setFinalRungs] = useState<LadderRung[]>([]);
+  const [displayRungs, setDisplayRungs] = useState<LadderRung[]>([]);
   const [activeDrawerId, setActiveDrawerId] = useState<string>(userId);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [showPaths, setShowPaths] = useState(false);
 
   const laneCount = participantIds.length;
   const configKey = `${participantIds.join('|')}::${destinations.join('|')}`;
@@ -81,39 +91,45 @@ export function LadderGameTab({
   );
 
   const drawnParticipantIds = useMemo(
-    () => new Set(drawnRungs.map((r) => r.drawnBy).filter(Boolean)),
-    [drawnRungs],
+    () => new Set(userRungs.map((r) => r.drawnBy).filter(Boolean)),
+    [userRungs],
   );
 
   const userHasDrawn = drawnParticipantIds.has(activeDrawerId);
-  const allParticipantsDrawn =
-    setupReady && participantIds.every((id) => drawnParticipantIds.has(id));
 
   const results = useMemo(() => {
-    if (phase !== 'result') return [];
+    if (phase !== 'result' || finalRungs.length === 0) return [];
     return participantIds.map((fromId, startLane) => {
       const endLane = traceLadderPath(startLane, finalRungs, LADDER_ROW_COUNT);
       const from = getMemberNickname(members, fromId, userId, t.ladder_you);
       const to = destinations[endLane] ?? '';
-      return { from, to };
+      return { from, to, startLane, endLane };
     });
   }, [phase, participantIds, destinations, finalRungs, members, userId, t.ladder_you]);
 
+  const svgWidth = 100;
+  const svgHeight = 100;
+  const laneX = (lane: number) => (lane / Math.max(1, laneCount - 1)) * svgWidth;
+  const rowY = (row: number) => 12 + (row / Math.max(1, LADDER_ROW_COUNT - 1)) * 68;
+
   useEffect(() => {
-    setDrawnRungs([]);
+    setUserRungs([]);
     setFinalRungs([]);
+    setDisplayRungs([]);
+    setShowPaths(false);
+    setIsRevealing(false);
     if (phase === 'result') setPhase('setup');
   }, [configKey]);
 
   useEffect(() => {
-    if (!setupReady) return;
+    if (!setupReady || phase === 'result') return;
     setActiveDrawerId((prev) => {
       if (participantIds.includes(prev) && !drawnParticipantIds.has(prev)) return prev;
       if (participantIds.includes(userId) && !drawnParticipantIds.has(userId)) return userId;
       const nextUndrawn = participantIds.find((id) => !drawnParticipantIds.has(id));
       return nextUndrawn ?? participantIds[0] ?? userId;
     });
-  }, [setupReady, participantIds, userId, drawnRungs]);
+  }, [setupReady, participantIds, userId, userRungs, phase, drawnParticipantIds]);
 
   const updateParticipant = (index: number, value: string) => {
     setParticipantIds((prev) => prev.map((p, i) => (i === index ? value : p)));
@@ -136,38 +152,58 @@ export function LadderGameTab({
   };
 
   const handleRungClick = (leftLane: number, row: number) => {
-    if (!setupReady || phase === 'result' || userHasDrawn || !activeDrawerId) return;
-    const exists = drawnRungs.some((r) => r.leftLane === leftLane && r.row === row);
+    if (!setupReady || phase === 'result' || isRevealing || userHasDrawn || !activeDrawerId) return;
+    const exists = userRungs.some((r) => r.leftLane === leftLane && r.row === row);
     if (exists) return;
-    setDrawnRungs((prev) => [...prev, { leftLane, row, drawnBy: activeDrawerId }]);
+    setUserRungs((prev) => [...prev, { leftLane, row, drawnBy: activeDrawerId }]);
   };
 
-  const finishLadder = () => {
-    const filled = fillRandomRungs(laneCount, drawnRungs, LADDER_ROW_COUNT);
-    setFinalRungs(filled);
+  const startLadder = () => {
+    if (!setupReady || isRevealing) return;
+    const generated = generateDenseLadderRungs(laneCount, userRungs, LADDER_ROW_COUNT);
+    const autoRungs = generated.filter((r) => !r.drawnBy);
+
+    setFinalRungs(generated);
     setPhase('result');
+    setIsRevealing(true);
+    setShowPaths(false);
+    setDisplayRungs([...userRungs]);
+
+    let index = 0;
+    const timer = window.setInterval(() => {
+      if (index >= autoRungs.length) {
+        window.clearInterval(timer);
+        setIsRevealing(false);
+        window.setTimeout(() => setShowPaths(true), 200);
+        return;
+      }
+      const next = autoRungs[index];
+      setDisplayRungs((prev) => [...prev, next]);
+      index += 1;
+    }, 35);
   };
 
   const reset = () => {
     setPhase('setup');
-    setDrawnRungs([]);
+    setUserRungs([]);
     setFinalRungs([]);
+    setDisplayRungs([]);
+    setShowPaths(false);
+    setIsRevealing(false);
     setParticipantIds(['', '']);
     setDestinations(['', '']);
     setActiveDrawerId(userId);
   };
 
-  const svgWidth = 100;
-  const svgHeight = 100;
-  const laneX = (lane: number) => (lane / Math.max(1, laneCount - 1)) * svgWidth;
-  const rowY = (row: number) => 12 + (row / Math.max(1, LADDER_ROW_COUNT - 1)) * 68;
-
-  const renderLadderSvg = (rungs: LadderRung[], interactive: boolean) => (
+  const renderLadderSvg = (
+    rungs: LadderRung[],
+    options: { interactive: boolean; showResultPaths: boolean },
+  ) => (
     <div className="glass-panel-soft overflow-x-auto rounded-xl" style={{ padding: '2cqmin' }}>
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         className="mx-auto w-full max-w-full"
-        style={{ minHeight: '40cqmin' }}
+        style={{ minHeight: '45cqmin' }}
         role="img"
         aria-label="ladder"
       >
@@ -177,10 +213,10 @@ export function LadderGameTab({
             x={laneX(lane)}
             y={6}
             textAnchor="middle"
-            className="fill-slate-700"
+            className="fill-slate-800 font-semibold"
             style={{ fontSize: 4 }}
           >
-            {label.slice(0, 6)}
+            {label.slice(0, 8)}
           </text>
         ))}
         {destinations.map((label, lane) => (
@@ -190,20 +226,20 @@ export function LadderGameTab({
             y={98}
             textAnchor="middle"
             className="fill-slate-700"
-            style={{ fontSize: 4 }}
+            style={{ fontSize: 3.5 }}
           >
-            {label.slice(0, 6)}
+            {label.slice(0, 10)}
           </text>
         ))}
         {Array.from({ length: laneCount }).map((_, lane) => (
           <line
             key={`v-${lane}`}
             x1={laneX(lane)}
-            y1={10}
+            y1={SVG_TOP}
             x2={laneX(lane)}
-            y2={90}
-            stroke="#64748b"
-            strokeWidth={0.6}
+            y2={SVG_BOTTOM}
+            stroke="#475569"
+            strokeWidth={0.8}
           />
         ))}
         {rungs.map((rung, idx) => {
@@ -212,17 +248,43 @@ export function LadderGameTab({
           const y = rowY(rung.row);
           return (
             <line
-              key={`h-${idx}`}
+              key={`h-${idx}-${rung.leftLane}-${rung.row}`}
               x1={x1}
               y1={y}
               x2={x2}
               y2={y}
-              stroke={rung.drawnBy ? '#6366f1' : '#94a3b8'}
-              strokeWidth={1.2}
+              stroke={rung.drawnBy ? '#6366f1' : '#334155'}
+              strokeWidth={rung.drawnBy ? 1.4 : 1.1}
+              strokeLinecap="round"
             />
           );
         })}
-        {interactive &&
+        {options.showResultPaths &&
+          participantIds.map((_, startLane) => {
+            const pathPoints = traceLadderPathPoints(
+              startLane,
+              rungs,
+              LADDER_ROW_COUNT,
+              laneX,
+              rowY,
+              SVG_TOP,
+              SVG_BOTTOM,
+            );
+            const color = getLadderPathColor(startLane);
+            return (
+              <path
+                key={`path-${startLane}`}
+                d={pointsToSvgPath(pathPoints)}
+                fill="none"
+                stroke={color}
+                strokeWidth={1.6}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.85}
+              />
+            );
+          })}
+        {options.interactive &&
           Array.from({ length: LADDER_ROW_COUNT }).map((_, row) =>
             Array.from({ length: laneCount - 1 }).map((_, leftLane) => {
               const taken = rungs.some((r) => r.leftLane === leftLane && r.row === row);
@@ -273,18 +335,30 @@ export function LadderGameTab({
             {t.ladder_reset}
           </button>
         </div>
-        {renderLadderSvg(finalRungs, false)}
-        <ul className="m-0 list-none p-0" style={{ gap: '1cqmin' }}>
-          {results.map((r, i) => (
-            <li
-              key={i}
-              className="glass-panel-soft rounded-lg text-[#1e293b]"
-              style={{ padding: '2cqmin 2.5cqmin', fontSize: '4.5cqmin', marginBottom: '1cqmin' }}
-            >
-              {formatText(t.ladder_path_result, { from: r.from, to: r.to })}
-            </li>
-          ))}
-        </ul>
+        {renderLadderSvg(displayRungs, { interactive: false, showResultPaths: showPaths })}
+        {showPaths && (
+          <ul className="m-0 list-none p-0" style={{ gap: '1cqmin' }}>
+            {results.map((r, i) => (
+              <li
+                key={i}
+                className="glass-panel-soft rounded-lg text-[#1e293b]"
+                style={{
+                  padding: '2cqmin 2.5cqmin',
+                  fontSize: '4.5cqmin',
+                  marginBottom: '1cqmin',
+                  borderLeft: `4px solid ${getLadderPathColor(r.startLane)}`,
+                }}
+              >
+                {formatText(t.ladder_path_result, { from: r.from, to: r.to })}
+              </li>
+            ))}
+          </ul>
+        )}
+        {isRevealing && (
+          <p className="text-center font-medium text-indigo-600" style={{ fontSize: '4cqmin' }}>
+            …
+          </p>
+        )}
       </div>
     );
   }
@@ -359,37 +433,37 @@ export function LadderGameTab({
 
       {setupReady && (
         <div className="grid" style={{ gap: '2cqmin' }}>
+          <p className="text-[#475569]" style={{ fontSize: '4cqmin' }}>
+            {t.ladder_draw_hint}
+          </p>
+
           <div className="flex flex-wrap items-center justify-between" style={{ gap: '1.5cqmin' }}>
-            <p className="text-[#475569]" style={{ fontSize: '4cqmin' }}>
-              {t.ladder_draw_hint}
-            </p>
+            <div className="flex flex-wrap items-center" style={{ gap: '1cqmin' }}>
+              <MemberSelect
+                members={participantMembers}
+                value={activeDrawerId}
+                onChange={setActiveDrawerId}
+                placeholder={t.select_member}
+                currentUserId={userId}
+                youLabel={t.ladder_you}
+              />
+              {userHasDrawn && (
+                <span
+                  className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800"
+                  style={{ fontSize: '3.5cqmin' }}
+                >
+                  {formatText(t.ladder_drawn_by, {
+                    name: getMemberNickname(members, activeDrawerId, userId, t.ladder_you),
+                  })}
+                </span>
+              )}
+            </div>
             <span className="font-medium text-indigo-700" style={{ fontSize: '4cqmin' }}>
               {formatText(t.ladder_draw_progress, {
                 done: String(drawnParticipantIds.size),
                 total: String(participantIds.length),
               })}
             </span>
-          </div>
-
-          <div className="flex flex-wrap items-center" style={{ gap: '1cqmin' }}>
-            <MemberSelect
-              members={participantMembers}
-              value={activeDrawerId}
-              onChange={setActiveDrawerId}
-              placeholder={t.select_member}
-              currentUserId={userId}
-              youLabel={t.ladder_you}
-            />
-            {userHasDrawn && (
-              <span
-                className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800"
-                style={{ fontSize: '3.5cqmin' }}
-              >
-                {formatText(t.ladder_drawn_by, {
-                  name: getMemberNickname(members, activeDrawerId, userId, t.ladder_you),
-                })}
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
@@ -417,12 +491,16 @@ export function LadderGameTab({
             })}
           </div>
 
-          {renderLadderSvg(drawnRungs, true)}
+          {renderLadderSvg(userRungs, { interactive: true, showResultPaths: false })}
+
+          <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+            {t.ladder_start_hint}
+          </p>
 
           <button
             type="button"
-            onClick={finishLadder}
-            disabled={!allParticipantsDrawn}
+            onClick={startLadder}
+            disabled={isRevealing}
             className="rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
             style={{ fontSize: '4.5cqmin' }}
           >
