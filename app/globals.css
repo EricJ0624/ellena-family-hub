@@ -787,15 +787,16 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame: WidgetChrome(height 100%)과 동일 체인 — 8281420 패턴 + 임무 많을 때 행 성장은 grid minmax(auto) */
+/* Frame: WidgetChrome(height 100%)과 동일 체인 — cqh는 height:100%일 때만 유효; 성장 시 --cb-h(cqw) fallback */
 .chalkboard-frame {
+  --cb-h: calc(100cqw * 864 / 1236);
   container-type: size;
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
   min-height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
@@ -810,13 +811,22 @@ select {
   isolation: isolate;
 }
 
+/* 임무 있을 때만 아래로 성장 — 빈 칠판은 height:100% 유지해 cqh·+ADD 위치 보존 */
+.chalkboard-frame:has(.todo-list) {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
+.chalkboard-frame:has(.todo-list) .chalkboard-container {
+  overflow: visible;
+}
+
 .chalkboard-container {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 100%;
   width: 100%;
-  height: auto;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -885,7 +895,7 @@ select {
   flex-shrink: 0;
   height: auto;
   /* absolute 자식(title·+ADD) — PNG 이모지·버튼과 겹치지 않게 (8b32daa 기준) */
-  min-height: 40cqmin;
+  min-height: max(40cqmin, calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.4));
   margin-bottom: 4cqmin;
   z-index: 1;
   min-width: 0;
@@ -911,17 +921,25 @@ select {
   flex-direction: column;
   align-items: stretch;
   /* PNG(1236×864) 일러스트 바닥 ≈33cqh, inset-top 10cqw → 이모지 바로 아래 +ADD */
-  padding-top: max(calc(34cqh - 10cqw), 0px);
+  padding-top: max(
+    calc(34cqh - 10cqw),
+    calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.34 - 10cqw),
+    0px
+  );
   gap: 3cqmin;
 }
 
 /* 세로형 칠판: +ADD를 이모지에 더 가깝게 */
 @container (max-aspect-ratio: 5/4) {
   .chalkboard-top-actions {
-    padding-top: max(calc(30cqh - 8cqw), 0px);
+    padding-top: max(
+      calc(30cqh - 8cqw),
+      calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.3 - 8cqw),
+      0px
+    );
   }
   .chalkboard-top-bar {
-    min-height: 36cqmin;
+    min-height: max(36cqmin, calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.36));
   }
 }
 
@@ -939,7 +957,8 @@ select {
 }
 
 .chalkboard-container .section-body:has(.todo-list) {
-  flex: 1 1 auto;
+  flex: none;
+  height: auto;
   min-height: 0;
   justify-content: flex-start;
   align-items: stretch;
@@ -1872,9 +1891,15 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: glass 제거 + 성장 시 클립 방지 (height:100% 체인 유지 — fit-content 금지) */
+  /* Family Tasks: glass 제거 + 성장 시 클립 방지 (빈 칠판은 height:100% — fit-content 금지) */
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
+    overflow: visible;
+  }
+
+  .widget-chrome:has(.chalkboard-frame:has(.todo-list)) {
+    height: auto;
+    min-height: 100%;
     overflow: visible;
   }
 
