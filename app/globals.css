@@ -1891,19 +1891,17 @@ select {
   }
 
   /*
-   * Family Tasks (대시보드 grid-row: auto — 1트랙이 임무 높이만큼 커짐, 캘린더는 다음 행):
-   * 1) 셀·chrome·frame min-height: var(--tasks-min-h) (에디터 rowSpan 바닥)
-   * 2) height: auto — flex:1 / height:100% 금지
-   * 3) overflow: hidden — 박스=레이아웃; visible은 겹침만 만들고 행은 안 밀림
+   * Family Tasks: rowSpan(에디터 바닥 + 임무별 추가 행은 page.tsx) · 칠판 min-height · height:auto
+   * overflow:visible — hidden이면 min-content 잘림; 캘린더 겹침은 rowSpan 확장으로 방지
    */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    align-self: stretch;
+    align-self: start;
     display: block;
     min-height: var(--tasks-min-h, auto);
     height: auto;
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
@@ -1912,14 +1910,14 @@ select {
     min-height: var(--tasks-min-h, auto);
     width: 100%;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     height: auto;
     min-height: var(--tasks-min-h, auto);
-    overflow: hidden;
+    overflow: visible;
     border-radius: 1rem;
   }
 

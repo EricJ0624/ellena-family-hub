@@ -66,7 +66,14 @@ import {
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
-import { resolveWidgetGridPlacement, getSquareCellRowHeight, detectGridOverlaps, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
+import {
+  resolveWidgetGridPlacement,
+  getSquareCellRowHeight,
+  estimateTasksGridRowSpan,
+  detectGridOverlaps,
+  PORTRAIT_COLS,
+  LANDSCAPE_COLS,
+} from '@/lib/widgets/grid';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
@@ -5951,6 +5958,10 @@ export default function FamilyHub() {
           >
             {orderedWidgets.map((cfg) => {
               const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const tasksGridRowSpan =
+                cfg.widget_key === 'tasks'
+                  ? estimateTasksGridRowSpan(rowSpan, state.todos.length)
+                  : rowSpan;
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5968,17 +5979,13 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className="min-w-0 max-w-full isolate overflow-hidden"
+                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'relative z-[1] overflow-visible' : 'overflow-hidden'}`}
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
-                    // tasks: span 고정 시 임무가 늘어나도 그리드는 rowSpan만 예약 → 캘린더와 겹침. 1행 auto로 트랙만 성장.
-                    gridRow:
-                      cfg.widget_key === 'tasks'
-                        ? 'auto'
-                        : `span ${rowSpan}`,
+                    gridRow: `span ${cfg.widget_key === 'tasks' ? tasksGridRowSpan : rowSpan}`,
                     ...(cfg.widget_key === 'tasks'
                       ? {
                           height: 'auto',

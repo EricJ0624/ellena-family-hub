@@ -208,6 +208,20 @@ export function getSquareCellRowHeight(contentWidth: number, columnCount: number
 }
 
 /**
+ * Family Tasks: 에디터 layout rowSpan(바닥) + 임무 줄 수로 그리드 행 예약.
+ * span을 늘려 auto-flow 시 캘린더가 칠판 아래에 배치되게 함 (grid-row:auto 대신).
+ */
+export function estimateTasksGridRowSpan(layoutRowSpan: number, taskCount: number): number {
+  const base = clampGridSpan(layoutRowSpan, 24);
+  const n = Math.max(0, Math.floor(taskCount));
+  if (n === 0) return base;
+  const headerRows = 3;
+  const rowsPerTask = 1;
+  const needed = Math.ceil(headerRows + n * rowsPerTask);
+  return Math.min(24, Math.max(base, needed));
+}
+
+/**
  * 저장된 span·size를 현재 열 수에 맞게 보정.
  * Phase C: rowSpan 상한 6 → 24 (portrait 24행 체계).
  */
