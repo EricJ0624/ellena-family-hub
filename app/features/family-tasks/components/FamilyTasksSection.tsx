@@ -51,8 +51,6 @@ interface FamilyTasksSectionProps {
   onChatDragOver: (e: React.DragEvent) => void;
   onChatDragLeave: () => void;
   onChatDrop: (e: React.DragEvent) => void;
-  /** 칠판 프레임의 scrollHeight 변화를 부모(dashboard)에 알림 → rowSpan 동적 조정용 */
-  onContentHeightChange?: (scrollHeight: number) => void;
 }
 
 export function FamilyTasksSection({
@@ -75,34 +73,10 @@ export function FamilyTasksSection({
   onChatDragOver,
   onChatDragLeave,
   onChatDrop,
-  onContentHeightChange,
 }: FamilyTasksSectionProps) {
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
-  /**
-   * section-body ref — section-body.scrollHeight - clientHeight = 넘침 픽셀량
-   * chatDropRef(DnD용)와 같은 DOM 요소를 공유하기 위해 callback ref로 통합
-   */
-  const sectionBodyRef = useRef<HTMLDivElement | null>(null);
-  const sectionBodyCallbackRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      sectionBodyRef.current = el;
-      // chatDropRef도 같은 요소를 참조하도록 유지 (DnD 기능 보존)
-      if (chatDropRef && typeof chatDropRef === 'object') {
-        (chatDropRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-      }
-    },
-    [chatDropRef]
-  );
-
-  // tasks 변경 시 section-body 넘침량(scrollHeight - clientHeight)을 부모에 전달
-  // → 0이면 모든 작업이 보임 / 양수면 그만큼 rowSpan을 늘려야 함
-  useEffect(() => {
-    if (!onContentHeightChange || !sectionBodyRef.current) return;
-    const el = sectionBodyRef.current;
-    onContentHeightChange(Math.max(0, el.scrollHeight - el.clientHeight));
-  }, [tasks, onContentHeightChange]);
 
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
@@ -271,7 +245,7 @@ export function FamilyTasksSection({
         </div>
         <div
           className={`section-body ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
-          ref={sectionBodyCallbackRef}
+          ref={chatDropRef}
           onDragOver={onChatDragOver}
           onDragLeave={onChatDragLeave}
           onDrop={onChatDrop}

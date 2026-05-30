@@ -787,15 +787,17 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: 위젯 프레임 전체를 채움 (height: 100% + container-type: size → cqmin 사용 가능) */
+/* Frame + board: 기본은 위젯 프레임 100% 채움, 임무 넘칠 때만 아래로 성장 (cqmin 비율 스케일) */
 .chalkboard-frame {
   container-type: size;
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -803,7 +805,8 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 4px;
-  overflow: clip;
+  overflow-x: clip;
+  overflow-y: visible;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
@@ -821,7 +824,7 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -881,8 +884,7 @@ select {
   position: relative;
   flex-shrink: 0;
   height: auto;
-  /* 버튼이 top-bar 안에 완전히 들어오도록: 40cqmin 또는 버튼 바닥(≈22cqh) 중 큰 값 */
-  min-height: max(40cqmin, calc(22cqh - 10cqw));
+  min-height: 40cqmin;
   margin-bottom: 4cqmin;
   z-index: 1;
   min-width: 0;
@@ -907,10 +909,8 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* PNG(1236×864) 이모지(집·태양·하트)는 프레임 상단에서 약 18% 위치
-     container padding-top = 10cqw 이미 적용됨
-     → 버튼 위치 = 18cqh 가 되도록 padding = max(18cqh − 10cqw, 0) */
-  padding-top: max(calc(18cqh - 10cqw), 0px);
+  /* PNG 이모지(집·태양·하트) 바로 아래 — 프레임 높이(cqh) 기준, container inset(10% width) 보정 */
+  padding-top: max(calc(24cqh - 10cqw), 3cqmin);
   gap: 3.5cqmin;
 }
 
@@ -921,13 +921,11 @@ select {
 .chalkboard-container .section-body {
   position: relative;
   z-index: 1;
-  flex: 1;
+  /* flex:1 → 기본 상태에서 top-bar 아래 남는 공간 채움; 콘텐츠 넘치면 auto로 성장 */
+  flex: 1 1 auto;
   min-height: 0;
   overflow-x: clip;
-  /* hidden: 스크롤바 없이 클립, scrollHeight > clientHeight 로 넘침량 측정 가능 */
-  overflow-y: hidden;
-  /* 마지막 task가 wooden frame에 붙지 않도록 하단 여백 */
-  padding-bottom: 3cqmin;
+  overflow-y: visible;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
@@ -1001,11 +999,8 @@ select {
 .todo-list {
   display: flex;
   flex-direction: column;
-  /* flex:1·space-around 제거 → 자연 높이 사용해야 overflow 측정 및 rowSpan 증가가 동작함 */
-  /* flex-shrink:0 필수: 기본값(1)이면 section-body가 좁을 때 todo-list가 압축되어
-     scrollHeight=clientHeight → overflow=0 → rowSpan 증가 불가 */
-  flex-shrink: 0;
   gap: 4cqmin;
+  width: 100%;
   position: relative;
   z-index: 1;
 }
@@ -1014,9 +1009,10 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* 세로 패딩 축소: 6cqmin → 3cqmin */
+  gap: 3cqmin;
   padding: 3cqmin 0;
   position: relative;
+  min-width: 0;
 }
 
 .todo-content {
@@ -1079,6 +1075,9 @@ select {
   font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.03em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .todo-text-done {
@@ -1839,6 +1838,22 @@ select {
     border-radius: 1rem; /* rounded-2xl */
     /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass 배경이 보이도록 */
     background: var(--glass-medium-bg);
+  }
+
+  /* 칠판: 기본 min-height 100%로 프레임 채움, 임무 추가 시 height:auto로 아래 성장 */
+  .widget-chrome:has(.chalkboard-frame) {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .dashboard-widget-grid > *:has(.chalkboard-frame) {
+    align-self: start;
+    min-height: 100%;
+    overflow: visible;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */

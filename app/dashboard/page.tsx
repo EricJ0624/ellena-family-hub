@@ -291,8 +291,7 @@ export default function FamilyHub() {
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
-  /** 칠판 위젯 rowSpan 동적 조정: section-body 넘침 픽셀량 (scrollHeight - clientHeight) */
-  const [tasksScrollOverflow, setTasksScrollOverflow] = useState(0);  /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
+  /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
   const isLocationSharingRef = useRef(false);
   isLocationSharingRef.current = isLocationSharing;
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -5407,7 +5406,6 @@ export default function FamilyHub() {
               const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
               handleDropChatFiles(files);
             }}
-            onContentHeightChange={setTasksScrollOverflow}
           />
         );
       case 'calendar':
@@ -5886,13 +5884,14 @@ export default function FamilyHub() {
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row',
-              gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
+              gridAutoRows: `minmax(${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px, auto)`,
             }}
           >
             {orderedWidgets.map((cfg) => {
               const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
+              const isTasksWidget = cfg.widget_key === 'tasks';
 
               // Phase E: S 사이즈 여부 — 실제 layout 너비가 portrait 6열(50%) 이하이면 S로 판단.
               // landscape: 12열(24열 기준 50%) 이하. 미설정(null)이면 size 프리셋으로 폴백.
@@ -5904,26 +5903,18 @@ export default function FamilyHub() {
                 ? effectiveW <= sMaxUnits
                 : cfg.size === 'S';
 
-              // 칠판(tasks) 위젯: chalkboard-frame.scrollHeight 기준으로 rowSpan 동적 계산
-              // height:100% 비율 스케일 로직은 건드리지 않고, rowSpan만 늘려 위젯 셀을 확장
-              const rowHeight = getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount);
-              const effectiveRowSpan = cfg.widget_key === 'tasks' && tasksScrollOverflow > 0
-                ? rowSpan + Math.ceil(tasksScrollOverflow / rowHeight)
-                : rowSpan;
-
               return (
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  // overflow-x-clip: 가로 방향만 클리핑, 세로는 콘텐츠에 맞게 자동 확장
-                  className="min-w-0 max-w-full overflow-hidden isolate"
+                  className={`min-w-0 max-w-full isolate ${isTasksWidget ? 'min-h-full self-start overflow-visible' : 'overflow-hidden'}`}
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
-                    gridRow: `span ${effectiveRowSpan}`,
+                    gridRow: `span ${rowSpan}`,
                   }}
                 >
                   <WidgetChrome
