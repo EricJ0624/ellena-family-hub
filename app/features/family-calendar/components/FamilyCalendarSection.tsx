@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { FamilyEvent } from '../types';
@@ -286,8 +287,8 @@ export function FamilyCalendarSection({
 
   return (
     <>
-      {/* Event Modal */}
-      {showEventModal && (
+      {/* Event Modal — createPortal로 widget-chrome CSS containment 범위 밖에 렌더링 */}
+      {showEventModal && createPortal(
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
           onClick={closeEventModal}
@@ -374,7 +375,7 @@ export function FamilyCalendarSection({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Calendar Section */}
       <section

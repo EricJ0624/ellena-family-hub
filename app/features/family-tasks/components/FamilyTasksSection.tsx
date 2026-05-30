@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 
@@ -186,7 +187,7 @@ export function FamilyTasksSection({
 
   return (
     <>
-      {isTodoModalOpen && (
+      {isTodoModalOpen && createPortal(
         <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
           <div className="chalkboard-modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 className="chalkboard-modal-title">
@@ -230,7 +231,7 @@ export function FamilyTasksSection({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       <div className="chalkboard-frame">
       <section className="chalkboard-container">
