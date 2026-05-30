@@ -508,6 +508,8 @@ export function WidgetLayoutEditor({
             ...d,
             layoutPortraitW: newW,
             layoutPortraitH: newH,
+            layoutW: newW,
+            layoutH: newH,
             // colSpan/rowSpan(CSS 폴백) — 12열 기준
             colSpan: toActualColSpan(newW, placementCols),
             rowSpan: Math.min(maxRows, Math.max(1, Math.round(newH))),

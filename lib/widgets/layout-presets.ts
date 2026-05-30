@@ -167,14 +167,19 @@ export function packDraftsOrientationCoordinates(
     const p = packedPortrait.get(d.widget_key);
     const l = packedLandscape.get(d.widget_key);
     if (!p && !l) return d;
+    const portraitW = d.layoutPortraitW ?? d.layoutW;
+    const portraitH = d.layoutPortraitH ?? d.layoutH;
     return {
       ...d,
-      layoutX: p?.x ?? d.layoutX,
-      layoutY: p?.y ?? d.layoutY,
       layoutPortraitX: p?.x ?? d.layoutPortraitX,
       layoutPortraitY: p?.y ?? d.layoutPortraitY,
       layoutLandscapeX: l?.x ?? d.layoutLandscapeX,
       layoutLandscapeY: l?.y ?? d.layoutLandscapeY,
+      // 공유 layout_* — DB layout_x+layout_w<=12 제약과 portrait 동기화
+      layoutX: p?.x ?? d.layoutPortraitX ?? d.layoutX,
+      layoutY: p?.y ?? d.layoutPortraitY ?? d.layoutY,
+      layoutW: portraitW,
+      layoutH: portraitH,
     };
   });
 }

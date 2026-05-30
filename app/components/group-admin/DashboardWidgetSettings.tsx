@@ -162,7 +162,16 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       setIsEditorOpen(false);
       setShowAdvancedLayout(false);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : gat('widgets_error_save'));
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e !== null && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : gat('widgets_error_save');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('saveWidgetConfigs', e);
+      }
+      alert(msg || gat('widgets_error_save'));
     } finally {
       setSaving(false);
     }

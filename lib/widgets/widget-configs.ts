@@ -23,6 +23,61 @@ function clampNumeric(n: number | null | undefined, min: number, max: number): n
   return Math.min(max, Math.max(min, x));
 }
 
+/** layout_x + layout_w <= maxCols (DB CHECK) — x를 줄여 맞춤 */
+function fitLayoutXToWidth(
+  x: number | null,
+  w: number | null,
+  maxCols: number,
+): number | null {
+  if (x == null || w == null) return x;
+  if (x + w <= maxCols) return x;
+  return Math.max(0, maxCols - w);
+}
+
+/** 저장용: portrait/landscape·공유 layout_* 클램프 및 x+w 제약 만족 */
+function sanitizeDraftLayoutForSave(d: WidgetConfigDraft): Pick<
+  WidgetConfigDraft,
+  | 'layoutX'
+  | 'layoutY'
+  | 'layoutW'
+  | 'layoutH'
+  | 'layoutPortraitX'
+  | 'layoutPortraitY'
+  | 'layoutPortraitW'
+  | 'layoutPortraitH'
+  | 'layoutLandscapeX'
+  | 'layoutLandscapeY'
+  | 'layoutLandscapeW'
+  | 'layoutLandscapeH'
+> {
+  const portraitW = clampNumeric(d.layoutPortraitW ?? d.layoutW, 0.001, 12);
+  const portraitH = clampNumeric(d.layoutPortraitH ?? d.layoutH, 0.001, 9999);
+  let portraitX = clampNumeric(d.layoutPortraitX ?? d.layoutX, 0, 12);
+  const portraitY = clampNumeric(d.layoutPortraitY ?? d.layoutY, 0, 9999);
+  portraitX = fitLayoutXToWidth(portraitX, portraitW, 12);
+
+  const landscapeW = clampNumeric(d.layoutLandscapeW ?? d.layoutW, 0.001, 24);
+  const landscapeH = clampNumeric(d.layoutLandscapeH ?? d.layoutH, 0.001, 9999);
+  let landscapeX = clampNumeric(d.layoutLandscapeX ?? d.layoutX, 0, 24);
+  const landscapeY = clampNumeric(d.layoutLandscapeY ?? d.layoutY, 0, 9999);
+  landscapeX = fitLayoutXToWidth(landscapeX, landscapeW, 24);
+
+  return {
+    layoutPortraitX: portraitX,
+    layoutPortraitY: portraitY,
+    layoutPortraitW: portraitW,
+    layoutPortraitH: portraitH,
+    layoutLandscapeX: landscapeX,
+    layoutLandscapeY: landscapeY,
+    layoutLandscapeW: landscapeW,
+    layoutLandscapeH: landscapeH,
+    layoutX: portraitX,
+    layoutY: portraitY,
+    layoutW: portraitW,
+    layoutH: portraitH,
+  };
+}
+
 function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
   for (const row of rows) rowMap.set(row.widget_key, row);
@@ -120,31 +175,34 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
 export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDraft[]): Promise<void> {
   const normalized = drafts
     .filter((d) => DASHBOARD_WIDGET_KEYS.includes(d.widget_key))
-    .map((d, idx) => ({
-      group_id: groupId,
-      widget_key: d.widget_key,
-      is_enabled: d.is_enabled,
-      display_order: d.display_order ?? (idx + 1) * 10,
-      size: d.size,
-      col_span: clampInt(d.colSpan, 1, 4),
-      row_span: clampInt(d.rowSpan, 1, 6),
-      min_w: d.minW,
-      min_h: d.minH,
-      priority: clampInt(d.priority, -9999, 9999),
-      layout_x: d.layoutX,
-      layout_y: d.layoutY,
-      layout_w: d.layoutW,
-      layout_h: d.layoutH,
-      layout_version: d.layoutVersion,
-      layout_portrait_x: d.layoutPortraitX,
-      layout_portrait_y: d.layoutPortraitY,
-      layout_portrait_w: d.layoutPortraitW,
-      layout_portrait_h: d.layoutPortraitH,
-      layout_landscape_x: d.layoutLandscapeX,
-      layout_landscape_y: d.layoutLandscapeY,
-      layout_landscape_w: d.layoutLandscapeW,
-      layout_landscape_h: d.layoutLandscapeH,
-    }));
+    .map((d, idx) => {
+      const layout = sanitizeDraftLayoutForSave(d);
+      return {
+        group_id: groupId,
+        widget_key: d.widget_key,
+        is_enabled: d.is_enabled,
+        display_order: d.display_order ?? (idx + 1) * 10,
+        size: d.size,
+        col_span: clampInt(d.colSpan, 1, 4),
+        row_span: clampInt(d.rowSpan, 1, 6),
+        min_w: d.minW,
+        min_h: d.minH,
+        priority: clampInt(d.priority, -9999, 9999),
+        layout_version: d.layoutVersion,
+        layout_x: layout.layoutX,
+        layout_y: layout.layoutY,
+        layout_w: layout.layoutW,
+        layout_h: layout.layoutH,
+        layout_portrait_x: layout.layoutPortraitX,
+        layout_portrait_y: layout.layoutPortraitY,
+        layout_portrait_w: layout.layoutPortraitW,
+        layout_portrait_h: layout.layoutPortraitH,
+        layout_landscape_x: layout.layoutLandscapeX,
+        layout_landscape_y: layout.layoutLandscapeY,
+        layout_landscape_w: layout.layoutLandscapeW,
+        layout_landscape_h: layout.layoutLandscapeH,
+      };
+    });
 
   const { error } = await supabase.from('widget_configs').upsert(normalized, {
     onConflict: 'group_id,widget_key',
