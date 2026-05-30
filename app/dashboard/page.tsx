@@ -5903,11 +5903,14 @@ export default function FamilyHub() {
                 ? effectiveW <= sMaxUnits
                 : cfg.size === 'S';
 
+              const rowHeight = getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount);
+              const tasksGridMinHeight = isTasksWidget ? rowSpan * rowHeight : undefined;
+
               return (
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className={`min-w-0 max-w-full isolate ${isTasksWidget ? 'min-h-full self-start overflow-visible' : 'overflow-hidden'}`}
+                  className={`min-w-0 max-w-full isolate ${isTasksWidget ? 'self-start overflow-visible' : 'overflow-hidden'}`}
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
@@ -5915,6 +5918,9 @@ export default function FamilyHub() {
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
                     gridRow: `span ${rowSpan}`,
+                    ...(tasksGridMinHeight != null
+                      ? ({ '--chalkboard-min-h': `${tasksGridMinHeight}px` } as React.CSSProperties)
+                      : {}),
                   }}
                 >
                   <WidgetChrome

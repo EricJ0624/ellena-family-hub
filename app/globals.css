@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: 기본은 위젯 프레임 100% 채움, 임무 넘칠 때만 아래로 성장 (cqmin 비율 스케일) */
+/* Frame + board: --chalkboard-min-h(그리드 셀 px)로 최소 높이 보장, 넘치면 height:auto 성장 */
 .chalkboard-frame {
   container-type: size;
   position: relative;
@@ -797,7 +797,7 @@ select {
   min-width: 0;
   width: 100%;
   height: auto;
-  min-height: 100%;
+  min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -1840,19 +1840,18 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* 칠판: 기본 min-height 100%로 프레임 채움, 임무 추가 시 height:auto로 아래 성장 */
+  /* 칠판: --chalkboard-min-h(px)로 그리드 셀 최소 높이 보장 — min-height:100%는 부모 auto 시 0으로 붕괴 */
   .widget-chrome:has(.chalkboard-frame) {
     display: flex;
     flex-direction: column;
     height: auto;
-    min-height: 100%;
+    min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
     overflow: visible;
     background: transparent;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
-    min-height: 100%;
     overflow: visible;
   }
 
