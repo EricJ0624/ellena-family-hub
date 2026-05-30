@@ -787,16 +787,17 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame: WidgetChrome(height 100%)과 동일 체인 — cqh는 height:100%일 때만 유효; 성장 시 --cb-h(cqw) fallback */
+/* Frame: inline-size(cqw)만 사용 — height 성장 시 cqh/cqmin 폭주 방지 (8281420 + 성장) */
 .chalkboard-frame {
   --cb-h: calc(100cqw * 864 / 1236);
-  container-type: size;
+  container-type: inline-size;
+  container-name: chalkboard;
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
@@ -811,16 +812,6 @@ select {
   isolation: isolate;
 }
 
-/* 임무 있을 때: 프레임 height는 100% 유지(container query·타이틀/+ADD 고정). 성장은 WidgetChrome만 */
-.chalkboard-frame:has(.todo-list) {
-  overflow: visible;
-}
-
-.chalkboard-frame:has(.todo-list) .chalkboard-container {
-  overflow: visible;
-  justify-content: flex-start;
-}
-
 .chalkboard-container {
   position: relative;
   flex: 1 1 auto;
@@ -828,6 +819,7 @@ select {
   width: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   background: transparent;
   border: none;
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
@@ -848,7 +840,7 @@ select {
 
 .chalkboard-title {
   font-family: var(--chalk-font-title);
-  font-size: clamp(0.8rem, 14.5cqmin, 3rem);
+  font-size: clamp(0.8rem, 10cqw, 1.75rem);
   font-weight: 400;
   color: rgba(255, 255, 255, 0.97);
   margin: 0;
@@ -893,9 +885,9 @@ select {
   position: relative;
   flex-shrink: 0;
   height: auto;
-  /* absolute 자식(title·+ADD) — PNG 이모지·버튼과 겹치지 않게 (8b32daa 기준) */
-  min-height: max(40cqmin, calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.4));
-  margin-bottom: 4cqmin;
+  /* absolute 자식(title·+ADD) — PNG 이모지·버튼과 겹치지 않게 (8b32daa 기준, cqw/--cb-h) */
+  min-height: calc(var(--cb-h) * 0.4);
+  margin-bottom: 3cqw;
   z-index: 1;
   min-width: 0;
   pointer-events: none;
@@ -919,26 +911,17 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* PNG(1236×864) 일러스트 바닥 ≈33cqh, inset-top 10cqw → 이모지 바로 아래 +ADD */
-  padding-top: max(
-    calc(34cqh - 10cqw),
-    calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.34 - 10cqw),
-    0px
-  );
-  gap: 3cqmin;
+  /* PNG(1236×864) 일러스트 바닥 ≈33% 높이, inset-top → 이모지 바로 아래 +ADD */
+  padding-top: max(calc(var(--cb-h) * 0.34 - 10cqw), 0px);
+  gap: 2cqw;
 }
 
-/* 세로형 칠판: +ADD를 이모지에 더 가깝게 */
-@container (max-aspect-ratio: 5/4) {
+@container chalkboard (max-width: 280px) {
   .chalkboard-top-actions {
-    padding-top: max(
-      calc(30cqh - 8cqw),
-      calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.3 - 8cqw),
-      0px
-    );
+    padding-top: max(calc(var(--cb-h) * 0.3 - 8cqw), 0px);
   }
   .chalkboard-top-bar {
-    min-height: max(36cqmin, calc(var(--cb-h, calc(100cqw * 864 / 1236)) * 0.36));
+    min-height: calc(var(--cb-h) * 0.36);
   }
 }
 
@@ -953,14 +936,15 @@ select {
   flex: 0 0 auto;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
   overflow-x: clip;
   overflow-y: visible;
-  padding-top: 2cqmin;
-  padding-bottom: 4cqmin;
+  padding-top: 1.5cqw;
+  padding-bottom: 3cqw;
 }
 
 .chalkboard-task-area:has(.chalkboard-empty-state) {
@@ -968,8 +952,8 @@ select {
   min-height: 0;
   align-items: center;
   justify-content: center;
-  padding-top: 4cqmin;
-  padding-bottom: 10cqmin;
+  padding-top: 3cqw;
+  padding-bottom: 8cqw;
 }
 
 .chalkboard-task-area .todo-list {
@@ -978,8 +962,9 @@ select {
   align-items: stretch;
   justify-content: flex-start;
   flex: none;
-  gap: 3cqmin;
+  gap: 2cqw;
   width: 100%;
+  max-width: 100%;
   margin: 0;
 }
 
@@ -1003,15 +988,15 @@ select {
 .chalkboard-btn-add {
   position: relative;
   margin: 0;
-  padding: 3.5cqmin 7cqmin;
-  min-height: 20cqmin;
+  padding: 2.5cqw 5cqw;
+  min-height: 14cqw;
   width: 100%;
   background: transparent;
   color: rgba(255, 255, 255, 0.97);
   border: 2px solid rgba(255, 255, 255, 0.88);
   border-radius: var(--chalk-sketch-radius);
   font-family: var(--chalk-font-title);
-  font-size: clamp(0.55rem, 8cqmin, 1.8rem);
+  font-size: clamp(0.55rem, 5.5cqw, 1.125rem);
   font-weight: 400;
   cursor: pointer;
   transition:
@@ -1048,8 +1033,9 @@ select {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 3cqmin;
+  gap: 2cqw;
   width: 100%;
+  max-width: 100%;
   position: relative;
   z-index: 1;
 }
@@ -1059,19 +1045,21 @@ select {
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 2.5cqmin;
-  padding: 2cqmin 0;
+  gap: 2cqw;
+  padding: 1.5cqw 0;
   position: relative;
   min-width: 0;
+  max-width: 100%;
   width: 100%;
 }
 
 .todo-content {
   display: flex;
   align-items: center;
-  gap: 6cqmin;
+  gap: 4cqw;
   flex: 1;
   min-width: 0;
+  max-width: calc(100% - 12cqw);
   cursor: pointer;
 }
 
@@ -1081,8 +1069,8 @@ select {
 }
 
 .todo-checkbox {
-  width: 13cqmin;
-  height: 13cqmin;
+  width: clamp(0.875rem, 9cqw, 1.25rem);
+  height: clamp(0.875rem, 9cqw, 1.25rem);
   border-radius: 255px 6px 225px 6px / 6px 225px 6px 255px;
   border: 2px solid rgba(255, 255, 255, 0.9);
   background: transparent;
@@ -1106,8 +1094,8 @@ select {
 }
 
 .todo-checkmark {
-  width: 8.5cqmin;
-  height: 8.5cqmin;
+  width: clamp(0.5rem, 6cqw, 0.875rem);
+  height: clamp(0.5rem, 6cqw, 0.875rem);
   color: #ffffff;
   stroke-width: 3;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
@@ -1117,17 +1105,19 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4cqmin;
+  gap: 3cqw;
   flex: 1;
   min-width: 0;
+  max-width: 100%;
 }
 
 .todo-text {
-  font-size: clamp(0.7rem, 10cqmin, 2.2rem);
+  font-size: clamp(0.65rem, 7cqw, 1.125rem);
   font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.03em;
   min-width: 0;
+  max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -1138,20 +1128,20 @@ select {
 }
 
 .todo-assignee {
-  font-size: clamp(0.55rem, 7cqmin, 1.6rem);
+  font-size: clamp(0.55rem, 5cqw, 0.9375rem);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   white-space: normal;
   overflow-wrap: anywhere;
   max-width: 100%;
-  padding: 1cqmin 4cqmin;
+  padding: 1cqw 3cqw;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 255px 8px 225px 8px / 8px 225px 8px 255px;
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .chalkboard-btn-delete {
-  padding: 4cqmin;
+  padding: 2cqw;
   color: #ffffff;
   background: transparent;
   border: 2px solid #ffffff;
@@ -1161,8 +1151,9 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 15.5cqmin;
-  height: 15.5cqmin;
+  flex-shrink: 0;
+  width: clamp(1.25rem, 11cqw, 1.5rem);
+  height: clamp(1.25rem, 11cqw, 1.5rem);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -1176,18 +1167,18 @@ select {
 }
 
 .chalkboard-icon-delete {
-  width: 7.5cqmin;
-  height: 7.5cqmin;
+  width: clamp(0.625rem, 5.25cqw, 0.875rem);
+  height: clamp(0.625rem, 5.25cqw, 0.875rem);
   stroke-width: 3;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .chalkboard-empty-state {
-  padding: 8cqmin 0;
+  padding: 6cqw 0;
   color: rgba(255, 255, 255, 0.92);
   font-family: var(--chalk-font-body);
   font-weight: 400;
-  font-size: clamp(0.7rem, 11cqmin, 2.8rem);
+  font-size: clamp(0.7rem, 7.5cqw, 1.375rem);
   font-style: italic;
   text-align: center;
   position: relative;
@@ -1894,16 +1885,12 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: glass 제거 + 임무 많을 때만 크롬 세로 성장(칠판 frame height:100% 유지 → cqh 고정) */
+  /* Family Tasks: glass 제거 + 칠판 세로 성장(cqw 스케일 — 임무 유무 분기 없음) */
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     overflow: visible;
-  }
-
-  .widget-chrome:has(.chalkboard-frame:has(.todo-list)) {
     height: auto;
     min-height: 100%;
-    overflow: visible;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
