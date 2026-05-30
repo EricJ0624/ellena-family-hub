@@ -922,7 +922,8 @@ select {
   flex: 1;
   min-height: 0;
   overflow-x: clip;
-  overflow-y: visible;
+  /* hidden: 스크롤바 없이 클립, scrollHeight > clientHeight 로 넘침량 측정 가능 */
+  overflow-y: hidden;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {

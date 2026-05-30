@@ -80,14 +80,28 @@ export function FamilyTasksSection({
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
-  /** chalkboard-frame 요소 ref — scrollHeight로 rowSpan 동적 조정 */
-  const chalkboardFrameRef = useRef<HTMLDivElement>(null);
+  /**
+   * section-body ref — section-body.scrollHeight - clientHeight = 넘침 픽셀량
+   * chatDropRef(DnD용)와 같은 DOM 요소를 공유하기 위해 callback ref로 통합
+   */
+  const sectionBodyRef = useRef<HTMLDivElement | null>(null);
+  const sectionBodyCallbackRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      sectionBodyRef.current = el;
+      // chatDropRef도 같은 요소를 참조하도록 유지 (DnD 기능 보존)
+      if (chatDropRef && typeof chatDropRef === 'object') {
+        (chatDropRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      }
+    },
+    [chatDropRef]
+  );
 
-  // tasks 변경 시 chalkboard-frame.scrollHeight 를 부모에 전달
-  // → 부모(dashboard)는 이 값으로 effectiveRowSpan을 계산해 위젯을 세로로 늘림
+  // tasks 변경 시 section-body 넘침량(scrollHeight - clientHeight)을 부모에 전달
+  // → 0이면 모든 작업이 보임 / 양수면 그만큼 rowSpan을 늘려야 함
   useEffect(() => {
-    if (!onContentHeightChange || !chalkboardFrameRef.current) return;
-    onContentHeightChange(chalkboardFrameRef.current.scrollHeight);
+    if (!onContentHeightChange || !sectionBodyRef.current) return;
+    const el = sectionBodyRef.current;
+    onContentHeightChange(Math.max(0, el.scrollHeight - el.clientHeight));
   }, [tasks, onContentHeightChange]);
 
   const formatAssigneeDisplay = useCallback(
@@ -245,7 +259,7 @@ export function FamilyTasksSection({
         </div>
       , document.body)}
 
-      <div className="chalkboard-frame" ref={chalkboardFrameRef}>
+      <div className="chalkboard-frame">
       <section className="chalkboard-container">
         <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>
@@ -257,7 +271,7 @@ export function FamilyTasksSection({
         </div>
         <div
           className={`section-body ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
-          ref={chatDropRef}
+          ref={sectionBodyCallbackRef}
           onDragOver={onChatDragOver}
           onDragLeave={onChatDragLeave}
           onDrop={onChatDrop}

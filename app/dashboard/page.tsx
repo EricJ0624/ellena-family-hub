@@ -291,9 +291,8 @@ export default function FamilyHub() {
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
   const [isLocationSharing, setIsLocationSharing] = useState(false);
-  /** 칠판 위젯 rowSpan 동적 조정을 위한 콘텐츠 높이 (chalkboard-frame.scrollHeight) */
-  const [tasksFrameScrollHeight, setTasksFrameScrollHeight] = useState(0);
-  /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
+  /** 칠판 위젯 rowSpan 동적 조정: section-body 넘침 픽셀량 (scrollHeight - clientHeight) */
+  const [tasksScrollOverflow, setTasksScrollOverflow] = useState(0);  /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
   const isLocationSharingRef = useRef(false);
   isLocationSharingRef.current = isLocationSharing;
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -5408,7 +5407,7 @@ export default function FamilyHub() {
               const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
               handleDropChatFiles(files);
             }}
-            onContentHeightChange={setTasksFrameScrollHeight}
+            onContentHeightChange={setTasksScrollOverflow}
           />
         );
       case 'calendar':
@@ -5908,8 +5907,8 @@ export default function FamilyHub() {
               // 칠판(tasks) 위젯: chalkboard-frame.scrollHeight 기준으로 rowSpan 동적 계산
               // height:100% 비율 스케일 로직은 건드리지 않고, rowSpan만 늘려 위젯 셀을 확장
               const rowHeight = getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount);
-              const effectiveRowSpan = cfg.widget_key === 'tasks' && tasksFrameScrollHeight > rowSpan * rowHeight
-                ? Math.ceil(tasksFrameScrollHeight / rowHeight)
+              const effectiveRowSpan = cfg.widget_key === 'tasks' && tasksScrollOverflow > 0
+                ? rowSpan + Math.ceil(tasksScrollOverflow / rowHeight)
                 : rowSpan;
 
               return (
