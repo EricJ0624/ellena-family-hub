@@ -939,11 +939,19 @@ select {
 }
 
 .chalkboard-container .section-body:has(.todo-list) {
-  flex: none;
-  height: auto;
+  flex: 1 1 auto;
   min-height: 0;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-x: clip;
+  overflow-y: visible;
   padding-top: 2cqmin;
-  padding-bottom: 2cqmin;
+  padding-bottom: 4cqmin;
+}
+
+.chalkboard-container .section-body:has(.todo-list) .todo-list {
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
@@ -1026,12 +1034,14 @@ select {
 
 .todo-item {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 2.5cqmin;
   padding: 2cqmin 0;
   position: relative;
   min-width: 0;
+  width: 100%;
 }
 
 .todo-content {
@@ -1083,8 +1093,9 @@ select {
 
 .todo-text-wrapper {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6cqmin;
+  gap: 4cqmin;
   flex: 1;
   min-width: 0;
 }
@@ -1108,7 +1119,9 @@ select {
   font-size: clamp(0.55rem, 7cqmin, 1.6rem);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
   padding: 1cqmin 4cqmin;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 255px 8px 225px 8px / 8px 225px 8px 255px;

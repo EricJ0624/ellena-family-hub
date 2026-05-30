@@ -194,7 +194,7 @@ export function FamilyTasksSection({
           created_by: inserted.created_by ?? userId,
           done: inserted.is_completed ?? false,
         },
-        ...previousTasks,
+        ...previousTasks.filter((t) => t.id !== tempId && t.id !== inserted.id),
       ]);
     } catch (error) {
       console.error('임무 추가 실패:', error);
@@ -251,7 +251,7 @@ export function FamilyTasksSection({
         </div>
       , document.body)}
 
-      <div className="chalkboard-frame h-full min-h-0 w-full">
+      <div className="chalkboard-frame w-full min-w-0">
       <section className="chalkboard-container">
         <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>
