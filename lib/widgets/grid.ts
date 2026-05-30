@@ -207,6 +207,17 @@ export function getSquareCellRowHeight(contentWidth: number, columnCount: number
   return contentWidth / columnCount;
 }
 
+/** 칠판 실측 높이(px) → grid-row span (에디터 layoutRowSpan 바닥, ceil만 사용) */
+export function rowSpanFromChalkboardHeight(
+  heightPx: number,
+  cellRowH: number,
+  layoutRowSpan: number,
+): number {
+  const base = clampGridSpan(layoutRowSpan, 24);
+  if (cellRowH <= 0 || !Number.isFinite(heightPx) || heightPx <= 0) return base;
+  return Math.min(24, Math.max(base, Math.ceil((heightPx + 1) / cellRowH)));
+}
+
 /**
  * 저장된 span·size를 현재 열 수에 맞게 보정.
  * Phase C: rowSpan 상한 6 → 24 (portrait 24행 체계).
