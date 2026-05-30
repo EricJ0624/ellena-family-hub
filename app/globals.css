@@ -827,7 +827,7 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .chalkboard-frame:has(.chalkboard-empty-state) .chalkboard-container {
@@ -1890,11 +1890,15 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: --tasks-min-h를 셀·chrome·frame에 동일 적용(0으로 접히는 것 방지) + 내용만큼 height:auto 성장 */
+  /*
+   * Family Tasks 레이아웃 (고정 규칙 — 왔다갔다 패치 금지):
+   * 1) 셀·chrome·frame 모두 min-height: var(--tasks-min-h)
+   * 2) height: auto — flex:1 / height:100% 로 rowSpan에 고정하지 않음
+   * 3) overflow: visible — hidden이면 min-content가 잘려 칠판이 rowSpan 높이에 클립됨
+   */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
-    display: flex;
-    flex-direction: column;
+    display: block;
     min-height: var(--tasks-min-h, auto);
     height: auto;
     width: 100%;
@@ -1903,25 +1907,25 @@ select {
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
-    display: flex;
-    flex-direction: column;
-    flex: 1 0 auto;
+    display: block;
     height: auto;
     min-height: var(--tasks-min-h, auto);
     width: 100%;
     min-width: 0;
+    overflow: visible;
   }
 
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     height: auto;
     min-height: var(--tasks-min-h, auto);
-    overflow: hidden;
+    overflow: visible;
     border-radius: 1rem;
   }
 
   .widget-chrome:has(.chalkboard-frame) > .chalkboard-frame {
-    flex: 1 0 auto;
+    display: flex;
+    flex: none;
     width: 100%;
     min-width: 0;
     min-height: var(--tasks-min-h, auto);
