@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame: inline-size(cqw)만 사용 — height 성장 시 cqh/cqmin 폭주 방지 (8281420 + 성장) */
+/* Frame: inline-size(cqw) + height 100% 체인 — auto/min-height%·align-self:start는 0-height 순환(위젯 소멸) */
 .chalkboard-frame {
   --cb-h: calc(100cqw * 864 / 1236);
   container-type: inline-size;
@@ -797,8 +797,7 @@ select {
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  height: auto;
-  min-height: 100%;
+  height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -816,7 +815,9 @@ select {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -929,11 +930,12 @@ select {
   content: none;
 }
 
-/* 전역 .section-body { flex:1 } 와 분리 — 칠판 임무는 top-bar 바로 아래부터 */
+/* top-bar 아래 — 임무 많으면 칠판 안에서만 스크롤(셀 밖 overflow 금지) */
 .chalkboard-task-area {
   position: relative;
   z-index: 1;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -942,16 +944,15 @@ select {
   align-items: stretch;
   justify-content: flex-start;
   overflow-x: clip;
-  overflow-y: visible;
+  overflow-y: auto;
   padding-top: 1.5cqw;
   padding-bottom: 3cqw;
 }
 
 .chalkboard-task-area:has(.chalkboard-empty-state) {
-  flex: 1 1 auto;
-  min-height: 0;
   align-items: center;
   justify-content: center;
+  overflow-y: hidden;
   padding-top: 3cqw;
   padding-bottom: 8cqw;
 }
@@ -1885,24 +1886,10 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: 그리드 셀 안에서만 그림 — overflow:visible은 아래 위젯과 시각적 겹침 유발 */
+  /* Family Tasks: 8281420 height 100% 체인 유지 — fit-content/auto/min-height% 금지 */
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     overflow: hidden;
-    height: auto;
-    min-height: 100%;
-    width: 100%;
-  }
-
-  .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    align-self: start;
-    overflow: hidden;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .dashboard-widget-grid[data-layout='landscape'] > *:has(.chalkboard-frame) {
-    align-self: start;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */

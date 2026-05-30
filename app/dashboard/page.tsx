@@ -5915,8 +5915,6 @@ export default function FamilyHub() {
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
                     gridRow: `span ${rowSpan}`,
-                    // tasks: rowSpan 최소 높이 보장(빈 칠판) + 내용 성장 시 gridAutoRows auto로 행 확장
-                    ...(cfg.widget_key === 'tasks' ? { minHeight: dashboardCellRowH * rowSpan } : {}),
                   }}
                 >
                   <WidgetChrome
