@@ -884,9 +884,10 @@ select {
   position: relative;
   flex-shrink: 0;
   height: auto;
-  min-height: 40cqmin;
+  /* title·+ADD가 absolute → min-height로 버튼 영역까지 반드시 확보 (겹침 방지) */
+  min-height: max(40cqmin, calc(24cqh - 10cqw + 16cqmin));
   margin-bottom: 4cqmin;
-  z-index: 1;
+  z-index: 2;
   min-width: 0;
   pointer-events: none;
 }
@@ -926,6 +927,11 @@ select {
   min-height: 0;
   overflow-x: clip;
   overflow-y: visible;
+}
+
+/* 임무 목록: 콘텐츠 높이만 사용 — flex:1로 늘려 space 분배·겹침 유발하지 않음 */
+.chalkboard-container .section-body:has(.todo-list) {
+  flex: 0 0 auto;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
@@ -999,6 +1005,7 @@ select {
 .todo-list {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 4cqmin;
   width: 100%;
   position: relative;
