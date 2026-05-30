@@ -787,15 +787,15 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: 높이는 할 일 목록에 맞춰 늘어남 (최소 비율만 유지) */
+/* Frame + board: 위젯 프레임 전체를 채움 (height: 100% + container-type: size → cqmin 사용 가능) */
 .chalkboard-frame {
-  container-type: inline-size;
+  container-type: size;
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  min-height: max(12.5rem, calc(100cqw * 864 / 1236));
+  height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -836,7 +836,7 @@ select {
 
 .chalkboard-title {
   font-family: var(--chalk-font-title);
-  font-size: clamp(1.65rem, 5.2vw, 2.35rem);
+  font-size: clamp(0.8rem, 14.5cqmin, 3rem);
   font-weight: 400;
   color: rgba(255, 255, 255, 0.97);
   margin: 0;
@@ -881,8 +881,8 @@ select {
   position: relative;
   flex-shrink: 0;
   height: auto;
-  min-height: 4.75rem;
-  margin-bottom: 0.5rem;
+  min-height: 40cqmin;
+  margin-bottom: 4cqmin;
   z-index: 1;
   min-width: 0;
   pointer-events: none;
@@ -906,8 +906,8 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding-top: 2.65rem;
-  gap: 0.4rem;
+  padding-top: 23cqmin;
+  gap: 3.5cqmin;
 }
 
 .chalkboard-top-actions::before {
@@ -927,8 +927,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 0.5rem;
-  padding-bottom: 1.25rem;
+  padding-top: 4cqmin;
+  padding-bottom: 10cqmin;
 }
 
 .chalkboard-characters {
@@ -951,15 +951,15 @@ select {
 .chalkboard-btn-add {
   position: relative;
   margin: 0;
-  padding: 0.45rem 0.85rem;
-  min-height: 2.5rem;
+  padding: 4cqmin 7.5cqmin;
+  min-height: 22cqmin;
   width: 100%;
   background: transparent;
   color: rgba(255, 255, 255, 0.97);
   border: 2px solid rgba(255, 255, 255, 0.88);
   border-radius: var(--chalk-sketch-radius);
   font-family: var(--chalk-font-title);
-  font-size: clamp(0.95rem, 2.8vw, 1.15rem);
+  font-size: clamp(0.55rem, 8cqmin, 1.8rem);
   font-weight: 400;
   cursor: pointer;
   transition:
@@ -994,7 +994,9 @@ select {
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 8cqmin;
+  justify-content: space-around;
+  flex: 1;
   position: relative;
   z-index: 1;
 }
@@ -1003,14 +1005,14 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-sm) 0;
+  padding: 6cqmin 0;
   position: relative;
 }
 
 .todo-content {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 8cqmin;
   flex: 1;
   min-width: 0;
   cursor: pointer;
@@ -1022,8 +1024,8 @@ select {
 }
 
 .todo-checkbox {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 13cqmin;
+  height: 13cqmin;
   border-radius: 255px 6px 225px 6px / 6px 225px 6px 255px;
   border: 2px solid rgba(255, 255, 255, 0.9);
   background: transparent;
@@ -1047,8 +1049,8 @@ select {
 }
 
 .todo-checkmark {
-  width: 1rem;
-  height: 1rem;
+  width: 8.5cqmin;
+  height: 8.5cqmin;
   color: #ffffff;
   stroke-width: 3;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
@@ -1057,13 +1059,13 @@ select {
 .todo-text-wrapper {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 6cqmin;
   flex: 1;
   min-width: 0;
 }
 
 .todo-text {
-  font-size: 1.125rem;
+  font-size: clamp(0.7rem, 10cqmin, 2.2rem);
   font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.03em;
@@ -1075,18 +1077,18 @@ select {
 }
 
 .todo-assignee {
-  font-size: 0.8125rem;
+  font-size: clamp(0.55rem, 7cqmin, 1.6rem);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   white-space: nowrap;
-  padding: 2px 8px;
+  padding: 1cqmin 4cqmin;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 255px 8px 225px 8px / 8px 225px 8px 255px;
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .chalkboard-btn-delete {
-  padding: var(--spacing-xs);
+  padding: 4cqmin;
   color: #ffffff;
   background: transparent;
   border: 2px solid #ffffff;
@@ -1096,8 +1098,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 15.5cqmin;
+  height: 15.5cqmin;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -1111,18 +1113,18 @@ select {
 }
 
 .chalkboard-icon-delete {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 7.5cqmin;
+  height: 7.5cqmin;
   stroke-width: 3;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .chalkboard-empty-state {
-  padding: var(--spacing-md) 0;
+  padding: 8cqmin 0;
   color: rgba(255, 255, 255, 0.92);
   font-family: var(--chalk-font-body);
   font-weight: 400;
-  font-size: clamp(1.2rem, 3.8vw, 1.55rem);
+  font-size: clamp(0.7rem, 11cqmin, 2.8rem);
   font-style: italic;
   text-align: center;
   position: relative;
