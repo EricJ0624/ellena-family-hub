@@ -14,14 +14,33 @@ export type DashboardWidgetKey = (typeof DASHBOARD_WIDGET_KEYS)[number];
 export type WidgetSize = 'S' | 'M' | 'L' | 'XL';
 
 /**
- * DB widget_configs.col_span / row_span (CHECK: 1~4, 1~6) — 레거시 2/4열 UI용.
- * 실제 배치는 layout_* (12/24열) 가 단일 소스. layout-migrate.inferLayoutW/H 참고.
+ * 12열 정규화 그리드 기준 S/M/L/XL (단일 소스 — 복구·시드·렌더 layout_*).
+ *   S  = 6×6   → portrait 50% 너비
+ *   M  = 12×8  → portrait 100% 너비
+ *   L  = 12×12 → portrait 100% × 정사각형
+ * landscape 너비 = portrait w × 2 (24열에서 동일 비율).
  */
+export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }> = {
+  S:  { w: 6,  h: 6  },
+  M:  { w: 12, h: 8  },
+  L:  { w: 12, h: 12 },
+  XL: { w: 12, h: 12 }, // @deprecated — L 과 동일
+};
+
+/** layout_w/h(12열) → DB col_span/row_span (CHECK 1~4, 1~6). layout-presets.layoutWHToLegacySpans 와 동일 */
+function legacySpanFromLayoutWH(w: number, h: number): { colSpan: number; rowSpan: number } {
+  return {
+    colSpan: Math.min(4, Math.max(1, Math.round((w / 12) * 4))),
+    rowSpan: Math.min(6, Math.max(1, Math.round(h))),
+  };
+}
+
+/** DB 레거시 span — WIDGET_LAYOUT_PRESETS 에서만 파생 (수동 값 금지) */
 export const WIDGET_SIZE_PRESETS: Record<WidgetSize, { colSpan: number; rowSpan: number }> = {
-  S:  { colSpan: 1, rowSpan: 3 },
-  M:  { colSpan: 2, rowSpan: 3 },
-  L:  { colSpan: 4, rowSpan: 6 },
-  XL: { colSpan: 4, rowSpan: 6 },
+  S:  legacySpanFromLayoutWH(WIDGET_LAYOUT_PRESETS.S.w, WIDGET_LAYOUT_PRESETS.S.h),
+  M:  legacySpanFromLayoutWH(WIDGET_LAYOUT_PRESETS.M.w, WIDGET_LAYOUT_PRESETS.M.h),
+  L:  legacySpanFromLayoutWH(WIDGET_LAYOUT_PRESETS.L.w, WIDGET_LAYOUT_PRESETS.L.h),
+  XL: legacySpanFromLayoutWH(WIDGET_LAYOUT_PRESETS.XL.w, WIDGET_LAYOUT_PRESETS.XL.h),
 };
 
 export function parseWidgetSize(raw: string | null | undefined): WidgetSize {
@@ -113,21 +132,7 @@ export interface WidgetConfigDraft {
 }
 
 /**
- * 12열 정규화 그리드 기준 S/M/L/XL 프리셋 크기 (복구·시드 전용).
- * Phase B/C: portrait 12열 × 24행 체계.
- *   S  = 6×6   → portrait 50% 너비 × 정사각형
- *   M  = 12×8  → portrait 100% 너비 (세로 여유)
- *   L  = 12×12 → portrait 100% 너비 × 정사각형
- *   XL = @deprecated — L 과 동일, Phase C 이후 제거 예정
- */
-export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }> = {
-  S:  { w: 6,  h: 6  },
-  M:  { w: 12, h: 8  },
-  L:  { w: 12, h: 12 },
-  XL: { w: 12, h: 12 }, // @deprecated
-};
 
-/**
  * 위젯별 이상적인 가로:세로 비율 (황금비율, Phase C).
  * 리사이즈 시 이 비율을 유지하며 가로/세로 중 먼저 100%에 도달하는 쪽에 맞춰 최대 확대.
  * w:h 로 표현 — 예) tasks 1:2 = 세로가 가로의 2배.

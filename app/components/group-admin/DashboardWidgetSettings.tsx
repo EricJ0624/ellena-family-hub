@@ -17,7 +17,6 @@ import {
   type DashboardWidgetKey,
   type WidgetConfigDraft,
   type WidgetSize,
-  WIDGET_SIZE_PRESETS,
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs, saveWidgetConfigs } from '@/lib/widgets/widget-configs';
 import {
@@ -131,12 +130,26 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   };
 
   const applySizePreset = (key: DashboardWidgetKey, size: WidgetSize) => {
-    const preset = WIDGET_SIZE_PRESETS[size];
-    setDrafts((prev) =>
-      prev.map((c) =>
-        c.widget_key === key ? { ...c, size, colSpan: preset.colSpan, rowSpan: preset.rowSpan } : c
-      )
-    );
+    setDrafts((prev) => {
+      const updated = prev.map((c) =>
+        c.widget_key === key ? applyPresetToWidget(c, size) : c,
+      );
+      const packedP = packOrientationLayouts(updated, 'portrait');
+      const packedL = packOrientationLayouts(updated, 'landscape');
+      return updated.map((d) => {
+        const pCoords = packedP.get(d.widget_key);
+        const lCoords = packedL.get(d.widget_key);
+        return {
+          ...d,
+          layoutPortraitX: pCoords?.x ?? d.layoutPortraitX,
+          layoutPortraitY: pCoords?.y ?? d.layoutPortraitY,
+          layoutLandscapeX: lCoords?.x ?? d.layoutLandscapeX,
+          layoutLandscapeY: lCoords?.y ?? d.layoutLandscapeY,
+          layoutX: pCoords?.x ?? d.layoutX,
+          layoutY: pCoords?.y ?? d.layoutY,
+        };
+      });
+    });
   };
 
   const setNumericSpan = (key: DashboardWidgetKey, field: 'colSpan' | 'rowSpan', raw: string) => {
