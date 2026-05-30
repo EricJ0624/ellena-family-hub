@@ -144,7 +144,7 @@ function SortableCard({
     [cfg, liveW, liveH],
   );
   // isLandscape 전달 — 없으면 portrait 경로(layoutPortraitW)를 사용해 세로 편집이 가로에도 반영되는 버그 발생
-  const { colSpan, rowSpan, gridColumnStart } = resolveWidgetGridPlacement(displayCfg, previewCols, isLandscape);
+  const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(displayCfg, previewCols, isLandscape);
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
   const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
@@ -167,13 +167,15 @@ function SortableCard({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        // 편집 모드: gridColumnStart 제거 → @dnd-kit이 DOM 순서 기반 재정렬 가능
-        // (gridColumnStart가 있으면 드래그해도 카드가 열에 고정되어 DnD가 무력화됨)
-        // 읽기 전용: layoutX 기반 gridColumnStart 적용해 실제 대시보드 레이아웃 표현
+        // 편집 모드: gridColumnStart/gridRowStart 제거 → @dnd-kit이 DOM 순서 기반 재정렬 가능
+        // (명시적 grid 위치가 있으면 드래그해도 카드가 셀에 고정되어 DnD가 무력화됨)
+        // 읽기 전용: layoutX/Y 기반 explicit 배치로 실제 대시보드 레이아웃 표현
         gridColumn: (!editMode && gridColumnStart)
           ? `${gridColumnStart} / span ${colSpan}`
           : `span ${colSpan}`,
-        gridRow: `span ${Math.max(1, rowSpan)}`,
+        gridRow: (!editMode && gridRowStart)
+          ? `${gridRowStart} / span ${Math.max(1, rowSpan)}`
+          : `span ${Math.max(1, rowSpan)}`,
       }}
     >
       {/* 색상 아이콘 배너 — 드래그 핸들 겸용

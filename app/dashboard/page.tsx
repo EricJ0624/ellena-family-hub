@@ -64,7 +64,7 @@ import {
 } from '@/lib/widgets/types';
 import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
-import { resolveWidgetGridPlacement, getSquareCellRowHeight, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
+import { resolveWidgetGridPlacement, getSquareCellRowHeight, detectGridOverlaps, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
@@ -5329,6 +5329,18 @@ export default function FamilyHub() {
     [widgetConfigs],
   );
 
+  // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    const overlaps = detectGridOverlaps(orderedWidgets, dashboardColumnCount, dashboardIsLandscapeGrid);
+    if (overlaps.length > 0) {
+      console.warn(
+        '[WidgetGrid] 겹침 감지 — 아래 위젯 쌍이 같은 셀을 공유합니다. packOrientationLayouts 재실행 필요:',
+        overlaps,
+      );
+    }
+  }, [orderedWidgets, dashboardColumnCount, dashboardIsLandscapeGrid]);
+
   // --- [RENDER] ---
 
   if (!isMounted) return null; // Hydration mismatch 방지
@@ -5876,7 +5888,7 @@ export default function FamilyHub() {
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5898,8 +5910,12 @@ export default function FamilyHub() {
                   className="min-w-0 max-w-full overflow-hidden isolate"
                   data-widget-size={cfg.size}
                   style={{
-                    gridColumn: `span ${colSpan}`,
-                    gridRow: `span ${rowSpan}`,
+                    gridColumn: gridColumnStart
+                      ? `${gridColumnStart} / span ${colSpan}`
+                      : `span ${colSpan}`,
+                    gridRow: gridRowStart
+                      ? `${gridRowStart} / span ${rowSpan}`
+                      : `span ${rowSpan}`,
                   }}
                 >
                   <WidgetChrome

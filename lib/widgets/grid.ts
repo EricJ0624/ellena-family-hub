@@ -324,3 +324,54 @@ export function resolveWidgetGridPlacement(
 
   return { colSpan, rowSpan, gridColumnStart, gridRowStart };
 }
+
+// ─── 그리드 배치 검증 ─────────────────────────────────────────────────────────
+
+export interface GridPlacedWidget {
+  key: string;
+  colStart: number; // 1-based
+  colEnd: number;   // exclusive (colStart + colSpan)
+  rowStart: number; // 1-based
+  rowEnd: number;   // exclusive (rowStart + rowSpan)
+}
+
+/**
+ * 활성 위젯 목록에서 CSS grid 배치 충돌(겹침) 쌍을 반환.
+ * gridColumnStart / gridRowStart 가 undefined 인 위젯은 auto-flow 이므로
+ * 명시적 배치 위젯과의 비교에서 제외.
+ * 빈 배열이면 충돌 없음.
+ */
+export function detectGridOverlaps(
+  widgets: readonly WidgetConfigDraft[],
+  columnCount: number,
+  isLandscape = false,
+): Array<[string, string]> {
+  const placed: GridPlacedWidget[] = [];
+
+  for (const cfg of widgets) {
+    const { colSpan, rowSpan, gridColumnStart, gridRowStart } =
+      resolveWidgetGridPlacement(cfg, columnCount, isLandscape);
+    if (gridColumnStart == null || gridRowStart == null) continue;
+    placed.push({
+      key: cfg.widget_key,
+      colStart: gridColumnStart,
+      colEnd: gridColumnStart + colSpan,
+      rowStart: gridRowStart,
+      rowEnd: gridRowStart + rowSpan,
+    });
+  }
+
+  const overlaps: Array<[string, string]> = [];
+  for (let i = 0; i < placed.length; i++) {
+    for (let j = i + 1; j < placed.length; j++) {
+      const a = placed[i];
+      const b = placed[j];
+      const colOverlap = a.colStart < b.colEnd && a.colEnd > b.colStart;
+      const rowOverlap = a.rowStart < b.rowEnd && a.rowEnd > b.rowStart;
+      if (colOverlap && rowOverlap) {
+        overlaps.push([a.key, b.key]);
+      }
+    }
+  }
+  return overlaps;
+}
