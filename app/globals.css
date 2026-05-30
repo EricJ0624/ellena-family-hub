@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: --chalkboard-min-h(px) = 그리드 셀 → cqmin 스케일 기준 */
+/* Frame + board: --chalkboard-min-h(px) = 그리드 셀 최소 높이; 콘텐츠 많으면 auto 성장 */
 .chalkboard-frame {
   container-type: size;
   position: relative;
@@ -812,27 +812,13 @@ select {
   isolation: isolate;
 }
 
-/* Step 1: 임무 없을 때 위젯 프레임 높이 꽉 채움 */
-.chalkboard-frame:not(:has(.todo-list)) {
-  height: 100%;
-}
-
-/* Step 2: 임무 있을 때 콘텐츠 높이만큼 칠판 PNG 성장 */
-.chalkboard-frame:has(.todo-list) {
-  height: auto;
-  flex: 0 0 auto;
-}
-
-.chalkboard-frame:has(.todo-list) .chalkboard-container {
-  flex: 0 0 auto;
-  height: auto;
-}
-
 .chalkboard-container {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
+  min-height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -841,12 +827,6 @@ select {
     var(--chalkboard-inset-left);
   box-shadow: none;
   overflow: visible;
-}
-
-/* Step 1: 빈 칠판 — 프레임 height 100% 체인 */
-.chalkboard-frame:not(:has(.todo-list)) .chalkboard-container {
-  min-height: 0;
-  height: 100%;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -1872,27 +1852,16 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* 칠판 공통 — Family Tasks 전용 */
+  /* 칠판 — 항상 셀 최소 높이 채움, 임무 많으면 auto 성장 */
   .widget-chrome:has(.chalkboard-frame) {
     display: flex;
     flex-direction: column;
     width: 100%;
+    flex: 1 1 auto;
     min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
+    height: auto;
     overflow: visible;
     background: transparent;
-  }
-
-  /* 빈 칠판: 그리드 셀(minHeight) → chrome 100% → frame 100% 체인 */
-  .widget-chrome:has(.chalkboard-frame):not(:has(.todo-list)) {
-    flex: 1 1 auto;
-    height: 100%;
-    min-height: 0;
-  }
-
-  /* 임무 있음: 콘텐츠 높이만큼 chrome·칠판 함께 성장 */
-  .widget-chrome:has(.chalkboard-frame):has(.todo-list) {
-    flex: 0 0 auto;
-    height: auto;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
@@ -1900,10 +1869,8 @@ select {
     flex-direction: column;
     align-self: start;
     overflow: visible;
-  }
-
-  .dashboard-widget-grid > *:has(.chalkboard-frame):not(:has(.todo-list)) {
     min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
+    height: auto;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
