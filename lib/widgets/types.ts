@@ -152,7 +152,7 @@ export const WIDGET_DEFAULT_SIZE: Record<DashboardWidgetKey, WidgetSize> = {
   album:    'M',
   travel:   'M',
   piggy:    'M',
-  games:    'L',
+  games:    'M',
 };
 
 /** M 사이즈 기본 레이아웃 (스마트폰 세로 최적화, ADR C항) */
@@ -176,7 +176,7 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'games',    is_enabled: true, display_order: 80, size: 'L', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM, layoutH: WIDGET_LAYOUT_PRESETS.L.h, layoutPortraitH: WIDGET_LAYOUT_PRESETS.L.h, layoutLandscapeH: WIDGET_LAYOUT_PRESETS.L.h },
+  { widget_key: 'games',    is_enabled: true, display_order: 80, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
 ];
 
 /** 위젯별 기본 display_order — resetAllLayouts에서 순서 초기화 시 사용 */
