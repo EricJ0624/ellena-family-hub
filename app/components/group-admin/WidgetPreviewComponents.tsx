@@ -18,7 +18,7 @@ function TasksPreview() {
     { text: '주말 청소', done: false, assignee: null },
   ];
   return (
-    <div className="chalkboard-frame flex h-full min-h-0 w-full flex-1 flex-col">
+    <div className="chalkboard-frame flex h-full min-h-[var(--tasks-min-h,0px)] w-full flex-1 flex-col">
       <section className="chalkboard-container flex h-full min-h-0 flex-1 flex-col">
         <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">Family Tasks</h3>

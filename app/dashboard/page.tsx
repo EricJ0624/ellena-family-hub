@@ -5980,7 +5980,7 @@ export default function FamilyHub() {
                       ? {
                           display: 'flex',
                           flexDirection: 'column',
-                          height: 'auto',
+                          height: '100%',
                           minHeight: dashboardCellRowH * rowSpan,
                           ['--tasks-min-h' as string]: `${dashboardCellRowH * rowSpan}px`,
                         }
