@@ -34,7 +34,7 @@ export function TravelPlannerSection({
 }: TravelPlannerSectionProps) {
   return (
     <section className="content-section">
-      <div className="section-header flex-wrap gap-x-3 gap-y-2">
+      <div className="section-header flex-wrap" style={{ gap: '1.5cqmin 2.5cqmin' }}>
         <h3 className="section-title m-0 min-w-0 flex-1">
           {t.section_title}
         </h3>
@@ -43,9 +43,10 @@ export function TravelPlannerSection({
             <button
               type="button"
               onClick={onAddClick}
-              className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-[#9333ea] px-3 py-2 font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
+              className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border-none bg-[#9333ea] font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
+              style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '5cqmin' }}
             >
-              <Plus className="h-4 w-4" />
+              <Plus style={{ width: '5cqmin', height: '5cqmin' }} />
               {t.add_trip}
             </button>
           ) : null}
@@ -53,15 +54,15 @@ export function TravelPlannerSection({
       </div>
       <div className="section-body">
         {!currentGroupId ? (
-          <div className="text-[13px] text-[#64748b]">
+          <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">
             {t.select_group}
           </div>
         ) : loading ? (
-          <div className="text-[13px] text-[#64748b]">
+          <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">
             {t.trips_loading}
           </div>
         ) : trips.length === 0 ? (
-          <div className="text-[13px] leading-[1.6] text-[#475569] [word-break:keep-all]">
+          <div style={{ fontSize: '5cqmin', lineHeight: 1.6 }} className="text-[#475569] [word-break:keep-all]">
             {t.empty_state}
           </div>
         ) : (
@@ -70,10 +71,11 @@ export function TravelPlannerSection({
               <li
                 key={trip.id}
                 onClick={() => onTripClick(trip.id)}
-                className="glass-panel-soft glass-panel-interactive mb-1.5 cursor-pointer rounded-lg px-3 py-2.5 text-[13px] text-[#1e293b] transition-colors hover:bg-white/50"
+                className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-lg text-[#1e293b] transition-colors hover:bg-white/50"
+                style={{ marginBottom: '1.5cqmin', padding: '2.5cqmin 3cqmin', fontSize: '5cqmin' }}
               >
                 <div className="font-semibold">{trip.title}</div>
-                <div className="mt-0.5 text-xs text-[#64748b]">
+                <div className="text-[#64748b]" style={{ marginTop: '0.5cqmin', fontSize: '4cqmin' }}>
                   {trip.start_date} ~ {trip.end_date}
                 </div>
               </li>

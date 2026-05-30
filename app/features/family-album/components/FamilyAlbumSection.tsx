@@ -40,7 +40,8 @@ export function FamilyAlbumSection({
         <button
           type="button"
           onClick={onViewAllClick}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#8b5cf6] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#7c3aed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
+          className="inline-flex cursor-pointer items-center rounded-lg border-0 bg-[#8b5cf6] font-bold text-white transition-colors hover:bg-[#7c3aed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
+          style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '4cqmin' }}
         >
           📸 {t.view_all}
           {photos.length > 0 && ` (${photos.length})`}
@@ -48,7 +49,7 @@ export function FamilyAlbumSection({
       </div>
       <div className="section-body">
         {photos.length === 0 ? (
-          <p className="px-4 py-8 text-center text-[13px] text-[#64748b]">
+          <p className="text-center text-[#64748b]" style={{ padding: '8cqmin 4cqmin', fontSize: '5cqmin' }}>
             {t.empty_state}
           </p>
         ) : (
@@ -69,7 +70,7 @@ export function FamilyAlbumSection({
                   loading="lazy"
                 />
                 {photo.isUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs font-semibold text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 font-semibold text-white" style={{ fontSize: '4cqmin' }}>
                     업로드 중...
                   </div>
                 )}

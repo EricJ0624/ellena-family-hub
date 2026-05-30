@@ -138,11 +138,13 @@ export function FamilyChatSection({
 
   return (
     <section
-      className="content-section px-[var(--spacing-lg)] py-[0.65rem]"
+      className="content-section"
+      style={{ paddingLeft: '4cqmin', paddingRight: '4cqmin', paddingTop: '2cqmin', paddingBottom: '2cqmin' }}
     >
       <div
         ref={chatHeaderRowRef}
-        className="section-header mb-2 mt-0 items-center justify-start"
+        className="section-header mt-0 items-center justify-start"
+        style={{ marginBottom: '2cqmin' }}
       >
         <div
           ref={chatTitleBoxRef}
@@ -165,12 +167,13 @@ export function FamilyChatSection({
       <div className="section-body">
         <div ref={chatBoxRef} className="chat-messages">
           {chatHasMoreOlder && (
-            <div className="px-0 pb-1 pt-2 text-center">
+            <div className="text-center" style={{ padding: '2cqmin 0 1cqmin' }}>
               <button
                 type="button"
                 onClick={onLoadOlderMessages}
                 disabled={chatLoadingOlder}
-                className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-[13px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-wait disabled:opacity-75"
+                className="cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-wait disabled:opacity-75"
+                style={{ padding: '1.5cqmin 3.5cqmin', fontSize: '4cqmin' }}
               >
                 {chatLoadingOlder ? t.chat_loading_older : t.chat_load_older}
               </button>
@@ -182,10 +185,10 @@ export function FamilyChatSection({
                 <span className="message-user flex items-center gap-1">
                   {m.sender_id && familyRoleByUserId[m.sender_id] && (
                     <>
-                      <span className="text-[20px] leading-none">
+                      <span style={{ fontSize: '6cqmin', lineHeight: 1 }}>
                         {getFamilyRoleEmoji(familyRoleByUserId[m.sender_id])}
                       </span>
-                      <span className="text-[13px] font-semibold text-slate-500">
+                      <span className="font-semibold text-slate-500" style={{ fontSize: '3cqmin' }}>
                         {getFamilyRoleLabel(lang, familyRoleByUserId[m.sender_id])}
                       </span>
                     </>
@@ -207,7 +210,7 @@ export function FamilyChatSection({
                   const showLocalPreviews = previews.length > 0 && rows.length === 0;
                   if (rows.length === 0 && !showLocalPreviews) return null;
                   return (
-                    <div className="mb-2 grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-3" style={{ marginBottom: '2cqmin', gap: '1.5cqmin' }}>
                       {showLocalPreviews &&
                         previews.map((src, pi) => (
                           <div
@@ -218,10 +221,12 @@ export function FamilyChatSection({
                             <img
                               src={src}
                               alt=""
-                              className="h-[84px] w-full rounded-lg object-cover opacity-90"
+                              className="w-full rounded-lg object-cover opacity-90"
+                              style={{ height: '20cqmin' }}
                             />
                             <span
-                              className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-slate-900/35 text-[11px] font-bold text-white"
+                              className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-slate-900/35 font-bold text-white"
+                              style={{ fontSize: '4cqmin' }}
                             >
                               …
                             </span>
@@ -233,7 +238,8 @@ export function FamilyChatSection({
                             <img
                               src={att.thumbnail_url || att.image_url}
                               alt={att.original_filename}
-                              className="h-[84px] w-full rounded-lg object-cover"
+                              className="w-full rounded-lg object-cover"
+                              style={{ height: '20cqmin' }}
                             />
                           </a>
                           {m.sender_id === userId && (
@@ -243,7 +249,8 @@ export function FamilyChatSection({
                                 if (!currentGroupId) return;
                                 void onDeleteAttachment(att.id);
                               }}
-                              className="chat-attachment-delete-btn absolute right-1 top-1 h-[18px] w-[18px] cursor-pointer rounded-full border-none bg-red-500/95 p-0 text-[11px] leading-[18px] text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
+                              className="chat-attachment-delete-btn absolute right-1 top-1 cursor-pointer rounded-full border-none bg-red-500/95 p-0 font-bold leading-none text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
+                              style={{ width: '5cqmin', height: '5cqmin', fontSize: '3cqmin' }}
                               aria-label={t.chat_remove_attachment_aria}
                             >
                               x
@@ -259,34 +266,36 @@ export function FamilyChatSection({
             </div>
           ))}
         </div>
-        <div className="chat-input-wrapper gap-1.5">
+        <div className="chat-input-wrapper" style={{ gap: '1.5cqmin' }}>
           <input
             ref={chatInputRef}
             type="text"
             aria-busy={isSendingText}
             onKeyDown={handleKeyDown}
-            className={`chat-input min-w-0 flex-1 px-3 py-[11px] ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
+            className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
             placeholder={t.chat_placeholder}
           />
           <button
             type="button"
             onClick={handleSendClick}
             disabled={isSendingText}
-            className={`btn-send px-3 py-2 text-xs ${isSendingText ? 'opacity-70' : 'opacity-100'}`}
+            className={`btn-send ${isSendingText ? 'opacity-70' : 'opacity-100'}`}
           >
             {t.chat_send}
           </button>
           <button
             type="button"
             onClick={() => chatFileInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 px-2.5 py-[7px] text-xs font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+            style={{ padding: '2cqmin 2.5cqmin', fontSize: '4cqmin' }}
           >
             {t.chat_album_btn}
           </button>
           <button
             type="button"
             onClick={() => chatCameraInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 px-2.5 py-[7px] text-xs font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+            style={{ padding: '2cqmin 2.5cqmin', fontSize: '4cqmin' }}
           >
             {t.chat_camera_btn}
           </button>

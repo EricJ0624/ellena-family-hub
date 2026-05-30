@@ -84,9 +84,8 @@ export function PiggyBankSection({
         {currentGroupId && (
           <button
             onClick={isAdmin ? onManageClick : onGoClick}
-            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-[#ef4444] text-white ${
-              isAdmin ? 'px-2.5 py-1.5 text-sm font-semibold' : 'px-3 py-2 font-bold'
-            }`}
+            className="inline-flex cursor-pointer items-center gap-[2cqmin] rounded-lg border-0 bg-[#ef4444] text-white"
+            style={{ padding: '2cqmin 3.5cqmin', fontSize: '5cqmin', fontWeight: 700 }}
           >
             <span>🐷</span>
             {buttonText}
@@ -95,45 +94,47 @@ export function PiggyBankSection({
       </div>
       <div className="section-body">
         {!currentGroupId ? (
-          <div className="text-[13px] text-[#64748b]">
+          <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">
             {t.select_group}
           </div>
         ) : (
-          <div className="grid gap-2.5">
+          <div className="grid" style={{ gap: '2.5cqmin' }}>
             {piggySummaryError && (
-              <div className="rounded-lg bg-[#fee2e2] px-2.5 py-2 text-xs text-[#b91c1c]">
+              <div className="rounded-lg bg-[#fee2e2] text-[#b91c1c]" style={{ padding: '2cqmin 3cqmin', fontSize: '4cqmin' }}>
                 {piggySummaryError}
               </div>
             )}
             {!piggyLoaded ? (
-              <div className="text-[13px] text-[#64748b]">{t.loading}</div>
+              <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">{t.loading}</div>
             ) : isAdmin && piggyMemberPiggies !== null ? (
               /* 관리자: 저금통 요청 리스트 + 멤버별 카드 */
               (() => {
                 const hasAnyAccount = piggyMemberPiggies.some((p) => !p.noAccount);
                 return (
-                  <div className="grid gap-3">
+                  <div className="grid" style={{ gap: '3cqmin' }}>
                     {pendingAccountRequests.length > 0 && (
-                      <div className="glass-panel-soft mb-1 rounded-xl p-3">
-                        <div className="mb-2 text-[13px] font-bold text-[#92400e]">
+                      <div className="glass-panel-soft rounded-xl" style={{ padding: '3cqmin', marginBottom: '1cqmin' }}>
+                        <div className="font-bold text-[#92400e]" style={{ fontSize: '5cqmin', marginBottom: '2cqmin' }}>
                           {t.pending_requests.replace(/\{count\}/g, String(pendingAccountRequests.length))}
                         </div>
                         {pendingAccountRequests.map((req) => (
                           <div
                             key={req.id}
-                            className="flex items-center justify-between border-b border-[#fde68a] py-2"
+                            className="flex items-center justify-between border-b border-[#fde68a]"
+                            style={{ padding: '2cqmin 0' }}
                           >
-                            <span className="text-[13px] text-[#78350f]">
+                            <span className="text-[#78350f]" style={{ fontSize: '5cqmin' }}>
                               {req.nickname || t.member}
                             </span>
-                            <div className="flex gap-1.5">
+                            <div className="flex" style={{ gap: '1.5cqmin' }}>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onRejectRequest(req.id);
                                 }}
-                                className="cursor-pointer rounded-md border border-solid border-[#e2e8f0] bg-[#f1f5f9] px-2.5 py-1 text-xs font-semibold text-[#475569]"
+                                className="cursor-pointer rounded-md border border-solid border-[#e2e8f0] bg-[#f1f5f9] font-semibold text-[#475569]"
+                                style={{ padding: '1.5cqmin 2.5cqmin', fontSize: '4cqmin' }}
                               >
                                 {t.reject_btn}
                               </button>
@@ -143,7 +144,8 @@ export function PiggyBankSection({
                                   e.stopPropagation();
                                   onApproveRequest(req.id);
                                 }}
-                                className="cursor-pointer rounded-md border-0 bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white"
+                                className="cursor-pointer rounded-md border-0 bg-[#22c55e] font-semibold text-white"
+                                style={{ padding: '1.5cqmin 2.5cqmin', fontSize: '4cqmin' }}
                               >
                                 {t.approve_btn}
                               </button>
@@ -153,7 +155,7 @@ export function PiggyBankSection({
                       </div>
                     )}
                     {!hasAnyAccount && piggyMemberPiggies.length === 0 && (
-                      <div className="p-3 text-center text-sm text-[#64748b]">
+                      <div className="text-center text-[#64748b]" style={{ padding: '3cqmin', fontSize: '5cqmin' }}>
                         {t.no_account_holders}
                       </div>
                     )}
@@ -161,13 +163,14 @@ export function PiggyBankSection({
                       p.noAccount ? (
                         <div
                           key={p.user_id}
-                          className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 bg-white p-4"
+                          className="flex flex-wrap items-center justify-between rounded-xl border border-slate-200 bg-white"
+                          style={{ gap: '2.5cqmin', padding: '4cqmin' }}
                         >
                           <div>
-                            <div className="text-base font-bold text-[#1f2937]">
+                            <div className="font-bold text-[#1f2937]" style={{ fontSize: '6cqmin' }}>
                               {p.ownerNickname || t.member}
                             </div>
-                            <div className="mt-1 text-[13px] text-[#64748b]">
+                            <div className="text-[#64748b]" style={{ marginTop: '1cqmin', fontSize: '5cqmin' }}>
                               {t.member_no_account_line}
                             </div>
                           </div>
@@ -177,7 +180,8 @@ export function PiggyBankSection({
                               e.stopPropagation();
                               onAddPiggy(p.user_id);
                             }}
-                            className="cursor-pointer rounded-lg border-0 bg-[#22c55e] px-3.5 py-2 font-semibold text-white"
+                            className="cursor-pointer rounded-lg border-0 bg-[#22c55e] font-semibold text-white"
+                            style={{ padding: '2cqmin 3.5cqmin', fontSize: '5cqmin' }}
                           >
                             {t.add_account_btn}
                           </button>
@@ -185,43 +189,46 @@ export function PiggyBankSection({
                       ) : (
                         <div
                           key={p.id}
-                          className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4"
+                          className="cursor-pointer rounded-xl border border-slate-200 bg-white"
+                          style={{ padding: '4cqmin' }}
                           onClick={() => {
                             if (p.user_id) onMemberClick(p.user_id);
                           }}
                         >
-                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <h4 className="m-0 text-base font-bold text-[#1f2937]">
+                          <div className="flex flex-wrap items-center justify-between" style={{ marginBottom: '3cqmin', gap: '2cqmin' }}>
+                            <h4 className="m-0 font-bold text-[#1f2937]" style={{ fontSize: '6cqmin' }}>
                               {t.card_title.replace(/\{name\}/g, p.ownerNickname?.trim() || 'Ellena')}
                             </h4>
                             <div
-                              className="flex items-center gap-2"
+                              className="flex items-center"
+                              style={{ gap: '2cqmin' }}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <button
                                 type="button"
                                 onClick={() => p.user_id && onDeletePiggy(p.user_id)}
-                                className="cursor-pointer rounded-md border border-solid border-[#fecaca] bg-[#fef2f2] px-2 py-1 text-[11px] font-semibold text-[#b91c1c]"
+                                className="cursor-pointer rounded-md border border-solid border-[#fecaca] bg-[#fef2f2] font-semibold text-[#b91c1c]"
+                                style={{ padding: '1cqmin 2cqmin', fontSize: '4cqmin' }}
                               >
                                 {t.delete_account_btn}
                               </button>
-                              <span className="text-xs text-[#64748b]">→</span>
+                              <span className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>→</span>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2.5">
-                            <div className="rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2] p-2.5">
-                              <div className="mb-1 text-[clamp(9px,2.3cqw,11px)] text-[#b91c1c]">
+                          <div className="grid grid-cols-2" style={{ gap: '2.5cqmin' }}>
+                            <div className="rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: '2.5cqmin' }}>
+                              <div className="text-[#b91c1c]" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.wallet_balance_label}
                               </div>
-                              <div className="text-[clamp(12px,4cqw,16px)] font-bold text-[#b91c1c]">
+                              <div className="font-bold text-[#b91c1c]" style={{ fontSize: '6cqmin' }}>
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
                             </div>
-                            <div className="rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed] p-2.5">
-                              <div className="mb-1 text-[clamp(9px,2.3cqw,11px)] text-[#9a3412]">
+                            <div className="rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: '2.5cqmin' }}>
+                              <div className="text-[#9a3412]" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.bank_balance_label}
                               </div>
-                              <div className="text-[clamp(12px,4cqw,16px)] font-bold text-[#9a3412]">
+                              <div className="font-bold text-[#9a3412]" style={{ fontSize: '6cqmin' }}>
                                 {formatAmount(p.balance ?? 0, p.currency)}
                               </div>
                             </div>
@@ -234,34 +241,35 @@ export function PiggyBankSection({
               })()
             ) : piggySummary ? (
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
-              <div className="grid gap-2.5">
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[clamp(10px,2.5cqw,12px)] text-[#b91c1c]">
+              <div className="grid" style={{ gap: '2.5cqmin' }}>
+                <div className="rounded-xl border border-slate-200 bg-white" style={{ padding: '3cqmin' }}>
+                  <div className="text-[#b91c1c]" style={{ fontSize: '4.5cqmin' }}>
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
-                  <div className="text-[clamp(13px,4.5cqw,18px)] font-bold text-[#b91c1c]">
+                  <div className="font-bold text-[#b91c1c]" style={{ fontSize: '7cqmin' }}>
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <div className="text-[clamp(10px,2.5cqw,12px)] text-[#9a3412]">
+                <div className="rounded-xl border border-slate-200 bg-white" style={{ padding: '3cqmin' }}>
+                  <div className="text-[#9a3412]" style={{ fontSize: '4.5cqmin' }}>
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
-                  <div className="text-[clamp(13px,4.5cqw,18px)] font-bold text-[#9a3412]">
+                  <div className="font-bold text-[#9a3412]" style={{ fontSize: '7cqmin' }}>
                     {formatAmount(piggySummary.bankBalance, piggySummary.currency)}
                   </div>
                 </div>
               </div>
             ) : (
               /* 일반 사용자: 저금통 없음 */
-              <div className="p-4 text-center">
-                <div className="mb-3 text-sm text-[#64748b]">
+              <div className="text-center" style={{ padding: '4cqmin' }}>
+                <div className="text-[#64748b]" style={{ marginBottom: '3cqmin', fontSize: '5cqmin' }}>
                   {t.empty_ask_admin}
                 </div>
                 <button
                   type="button"
                   onClick={onRequestAccount}
-                  className="cursor-pointer rounded-lg border border-solid border-[#94a3b8] bg-[#f1f5f9] px-4 py-2.5 font-semibold text-[#475569]"
+                  className="cursor-pointer rounded-lg border border-solid border-[#94a3b8] bg-[#f1f5f9] font-semibold text-[#475569]"
+                  style={{ padding: '2.5cqmin 4cqmin', fontSize: '5cqmin' }}
                 >
                   {t.request_account_btn}
                 </button>

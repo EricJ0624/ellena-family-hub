@@ -1,0 +1,9 @@
+﻿fix(widget-editor): fix toggle click on mobile + proper DnD handle registration
+
+- DashboardWidgetSettings: touch-none on modal body now only applied when isDragging
+  * Previously always-on touch-none blocked iOS/Android click synthesis on checkboxes
+  * Now: normal scroll + click works when idle; touch-none only during drag
+  * Banner has its own touch-none so drag still activates correctly from banner
+- WidgetLayoutEditor: add setActivatorNodeRef to banner div
+  * Registers banner as the official @dnd-kit drag handle (recommended pattern)
+  * Ensures PointerSensor correctly identifies the activator element

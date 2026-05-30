@@ -380,9 +380,9 @@ export function FamilyCalendarSection({
       <section
         className="content-section bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50"
       >
-        <div className="section-header mb-2.5">
-          <h3 className="section-title m-0 flex items-center gap-2.5">
-            <Calendar className="h-6 w-6 text-violet-600" />
+        <div className="section-header" style={{ marginBottom: '2.5cqmin' }}>
+          <h3 className="section-title m-0 flex items-center" style={{ gap: '2.5cqmin' }}>
+            <Calendar style={{ width: '6cqmin', height: '6cqmin' }} className="text-violet-600" />
             {t.section_title_calendar}
           </h3>
         </div>
@@ -392,44 +392,48 @@ export function FamilyCalendarSection({
             initial={{ opacity: 0.7 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            className="mb-2.5"
+            style={{ marginBottom: '2.5cqmin' }}
           >
-            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="m-0 text-lg font-bold text-slate-800">
+            <div className="flex flex-wrap items-center justify-between" style={{ marginBottom: '2.5cqmin', gap: '2cqmin' }}>
+              <h4 className="m-0 font-bold text-slate-800" style={{ fontSize: '7cqmin' }}>
                 {formatMonthYear(calendarGrid.year, calendarGrid.month)}
               </h4>
-              <div className="flex gap-2">
+              <div className="flex" style={{ gap: '2cqmin' }}>
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  className="flex cursor-pointer items-center rounded-[10px] border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  style={{ gap: '1.5cqmin', padding: '2cqmin 3.5cqmin', fontSize: '4.5cqmin' }}
                 >
-                  <ChevronLeft className="h-[18px] w-[18px]" />
+                  <ChevronLeft style={{ width: '4.5cqmin', height: '4.5cqmin' }} />
                   {t.calendar_prev_month}
                 </button>
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3.5 py-2 text-sm shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  className="flex cursor-pointer items-center rounded-[10px] border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  style={{ gap: '1.5cqmin', padding: '2cqmin 3.5cqmin', fontSize: '4.5cqmin' }}
                 >
                   {t.calendar_next_month}
-                  <ChevronRight className="h-[18px] w-[18px]" />
+                  <ChevronRight style={{ width: '4.5cqmin', height: '4.5cqmin' }} />
                 </button>
               </div>
             </div>
             <div
-              className="grid grid-cols-7 auto-rows-[clamp(14px,min(5.5cqw,7cqh),42px)] gap-1 text-center text-xs"
+              className="grid grid-cols-7 gap-1 text-center"
+              style={{ gridAutoRows: '6cqmin' }}
             >
               {weekDays.map((day, i) => (
                 <div
                   key={i}
-                  className={`flex items-center justify-center rounded-md px-0.5 py-0.5 text-[clamp(9px,3cqw,13px)] font-bold ${
+                  className={`flex items-center justify-center rounded-md font-bold ${
                     i === 0
                       ? 'bg-black/[0.03] text-red-600'
                       : i === 6
                         ? 'bg-black/[0.03] text-blue-600'
                         : 'bg-transparent text-slate-500'
                   }`}
+                  style={{ fontSize: '3.5cqmin' }}
                 >
                   {day}
                 </div>
@@ -450,7 +454,7 @@ export function FamilyCalendarSection({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     style={{
-                      padding: '2px 1px',
+                      padding: '0.5cqmin',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
@@ -476,16 +480,17 @@ export function FamilyCalendarSection({
                             : '0 1px 2px rgba(0,0,0,0.05)',
                       transition: 'all 0.15s ease',
                       position: 'relative',
-                      fontSize: 'clamp(9px, 3.5cqw, 14px)',
+                      fontSize: '4cqmin',
                     }}
                     className="border-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                   >
                     <span>{cell.day}</span>
                     {cell.eventCount > 0 && (
                       <span
-                        className={`mt-px text-[9px] font-bold ${
+                        className={`font-bold ${
                           isSelected || cell.isToday ? 'text-white/90' : 'text-violet-600'
                         }`}
+                        style={{ marginTop: '0.5cqmin', fontSize: '2.5cqmin' }}
                       >
                         {cell.eventCount}개
                       </span>
@@ -504,42 +509,45 @@ export function FamilyCalendarSection({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
-                className="mt-3.5 rounded-xl border border-slate-200 bg-white/80 p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+                className="rounded-xl border border-slate-200 bg-white/80 shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+                style={{ marginTop: '3.5cqmin', padding: '3.5cqmin' }}
               >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="m-0 flex items-center gap-1.5 text-[15px] font-bold text-slate-800">
-                    <CalendarDays className="h-5 w-5 text-violet-600" />
+                <div className="flex flex-wrap items-center justify-between" style={{ marginBottom: '3cqmin', gap: '2cqmin' }}>
+                  <h4 className="m-0 flex items-center font-bold text-slate-800" style={{ gap: '1.5cqmin', fontSize: '5.5cqmin' }}>
+                    <CalendarDays style={{ width: '5.5cqmin', height: '5.5cqmin' }} className="text-violet-600" />
                     {t.calendar_day_events_title.replace(/\{date\}/g, formatLongDate(selectedDate))}
                   </h4>
                   <button
                     type="button"
                     onClick={() => setSelectedDate(null)}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-[13px] transition-all duration-200 hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                    className="flex cursor-pointer items-center rounded-[10px] border border-slate-200 bg-white transition-all duration-200 hover:border-slate-300 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                    style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '4.5cqmin' }}
                   >
-                    <X className="h-4 w-4" />
+                    <X style={{ width: '4.5cqmin', height: '4.5cqmin' }} />
                     {t.close}
                   </button>
                 </div>
                 {eventsOnSelectedDate.length > 0 ? (
-                  <div className="flex flex-col gap-3.5">
+                  <div className="flex flex-col" style={{ gap: '3.5cqmin' }}>
                     {eventsOnSelectedDate.map((e, i) => (
                       <motion.div
                         key={e.id}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05, duration: 0.2 }}
-                        className="rounded-xl border border-l-4 border-slate-200 border-l-violet-600 bg-white px-3.5 py-3.5 pl-[18px] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]"
+                        className="rounded-xl border border-l-4 border-slate-200 border-l-violet-600 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(124,58,237,0.12)]"
+                        style={{ padding: '3.5cqmin 3.5cqmin 3.5cqmin 4.5cqmin' }}
                       >
-                        <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-start justify-between" style={{ gap: '2.5cqmin' }}>
                           <div className="flex-1">
-                            <h5 className="mb-2 mt-0 text-base font-semibold text-slate-800">{e.title}</h5>
+                            <h5 className="mt-0 font-semibold text-slate-800" style={{ marginBottom: '2cqmin', fontSize: '6cqmin' }}>{e.title}</h5>
                             {(e.repeat_type === 'monthly' || e.repeat_type === 'yearly') && (
-                              <p className="mb-1 mt-0 text-xs text-violet-600">
+                              <p className="mt-0 text-violet-600" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {e.repeat_type === 'monthly' ? t.event_repeat_monthly : t.event_repeat_yearly}
                               </p>
                             )}
                             {e.created_by != null && (
-                              <p className="mb-1 mt-0 text-xs text-slate-500">
+                              <p className="mt-0 text-slate-500" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.event_author}:{' '}
                                 {e.created_by === userId ? t.me : eventAuthorNames[e.created_by] ?? t.unknown}
                                 {familyRoleByUserId[e.created_by]
@@ -548,12 +556,12 @@ export function FamilyCalendarSection({
                               </p>
                             )}
                             {e.desc && (
-                              <p className="m-0 whitespace-pre-wrap text-sm leading-[1.5] text-slate-600">
+                              <p className="m-0 whitespace-pre-wrap leading-[1.5] text-slate-600" style={{ fontSize: '4.5cqmin' }}>
                                 {e.desc}
                               </p>
                             )}
                             {e.created_at && (
-                              <p className="mb-0 mt-2.5 text-xs text-slate-400">
+                              <p className="mb-0 text-slate-400" style={{ marginTop: '2.5cqmin', fontSize: '3.5cqmin' }}>
                                 등록: {new Date(e.created_at).toLocaleString('ko-KR')}
                               </p>
                             )}
@@ -562,10 +570,11 @@ export function FamilyCalendarSection({
                             <button
                               type="button"
                               onClick={() => handleDeleteEvent(e.id)}
-                              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1.5 text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                              style={{ padding: '1.5cqmin' }}
                               aria-label={t.delete}
                             >
-                              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg style={{ width: '5cqmin', height: '5cqmin' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             </button>
@@ -575,10 +584,10 @@ export function FamilyCalendarSection({
                     ))}
                   </div>
                 ) : (
-                  <div className="px-4 py-6 text-center">
-                    <Calendar className="mx-auto mb-3 block h-12 w-12 text-slate-300" />
-                    <p className="m-0 text-sm text-slate-500">{t.event_no_events}</p>
-                    <p className="mb-0 mt-2 text-[13px] text-slate-400">{t.event_add_hint}</p>
+                  <div className="text-center" style={{ padding: '6cqmin 4cqmin' }}>
+                    <Calendar style={{ width: '12cqmin', height: '12cqmin', marginBottom: '3cqmin' }} className="mx-auto block text-slate-300" />
+                    <p className="m-0 text-slate-500" style={{ fontSize: '5cqmin' }}>{t.event_no_events}</p>
+                    <p className="mb-0 text-slate-400" style={{ marginTop: '2cqmin', fontSize: '4.5cqmin' }}>{t.event_add_hint}</p>
                   </div>
                 )}
               </motion.div>
@@ -588,9 +597,10 @@ export function FamilyCalendarSection({
           <button
             type="button"
             onClick={openEventModal}
-            className="mt-3.5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border-none bg-gradient-to-br from-violet-600 to-violet-800 px-3 py-3 text-[15px] font-semibold text-white shadow-[0_4px_12px_rgba(124,58,237,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+            className="flex w-full cursor-pointer items-center justify-center rounded-[10px] border-none bg-gradient-to-br from-violet-600 to-violet-800 font-semibold text-white shadow-[0_4px_12px_rgba(124,58,237,0.3)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+            style={{ marginTop: '3.5cqmin', gap: '2cqmin', padding: '3cqmin', fontSize: '5.5cqmin' }}
           >
-            <Plus className="h-5 w-5" />
+            <Plus style={{ width: '5.5cqmin', height: '5.5cqmin' }} />
             {t.event_add_title}
           </button>
         </div>

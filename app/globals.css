@@ -1856,6 +1856,52 @@ select {
   .widget-chrome-img {
     @apply object-contain max-h-full w-full;
   }
+
+  /* ── 위젯 컨텍스트 내 공통 section 클래스 비율 스케일링 ──────────────────
+     widget-chrome(container-type: size)가 컨테이너이므로 cqmin 참조 가능.
+     모달·설정 페이지 등 widget 밖에서는 기존 vw/rem 값이 유지됨. */
+  @container widget (min-width: 0px) {
+    .content-section {
+      padding: 4cqmin;
+    }
+    .section-title {
+      font-size: 4.5cqmin;
+      letter-spacing: 0.12em;
+    }
+    .section-header {
+      margin-bottom: 3cqmin;
+      gap: 1.5cqmin 2.5cqmin;
+    }
+
+    /* 채팅 위젯 메시지/입력 비율 스케일 */
+    .message-user,
+    .message-time {
+      font-size: 3cqmin;
+    }
+    .message-header {
+      gap: 1.5cqmin;
+    }
+    .message-bubble {
+      padding: 2cqmin 3cqmin;
+    }
+    .message-text {
+      font-size: 4.5cqmin;
+    }
+    .chat-messages {
+      margin-bottom: 2cqmin;
+    }
+    .chat-input {
+      padding: 2cqmin 3cqmin;
+      font-size: 4.5cqmin;
+    }
+    .btn-send {
+      padding: 2cqmin 3cqmin;
+      font-size: 4cqmin;
+    }
+    .chat-input-wrapper {
+      gap: 1.5cqmin;
+    }
+  }
 }
 
 @keyframes spin {

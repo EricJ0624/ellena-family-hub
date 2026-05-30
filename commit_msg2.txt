@@ -1,0 +1,9 @@
+﻿fix(widget-editor): fix preview proportions and remove redundant Wide button
+
+- gridAutoRows: minmax(10rem,auto) -> fixed 112px(1-col) / 64px(2-col)
+  * auto was letting preview content stretch rows, making landscape too tall
+  * fixed value clips content and maintains consistent aspect ratio
+- rowPx for v-resize now synced to gridAutoRows value
+- Remove Wide(4-col) button: with default layoutW=6, 4-col looks identical to 2-col
+  (colSpan=2/4 = 50% width, same as colSpan=1/2 in 2-col)
+- PreviewCols type simplified to 1|2
