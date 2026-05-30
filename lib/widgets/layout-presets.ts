@@ -164,6 +164,87 @@ function effectiveLayoutX(
     : (d.layoutLandscapeX ?? d.layoutX);
 }
 
+function effectiveLayoutY(
+  d: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): number {
+  const y = orientation === 'portrait'
+    ? (d.layoutPortraitY ?? d.layoutY)
+    : (d.layoutLandscapeY ?? d.layoutY);
+  return y ?? 0;
+}
+
+function effectiveLayoutH(
+  d: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): number {
+  const h = orientation === 'portrait'
+    ? (d.layoutPortraitH ?? d.layoutH)
+    : (d.layoutLandscapeH ?? d.layoutH);
+  if (h != null && h > 0) return h;
+  const preset = getPresetLayout(d.widget_key, d.size);
+  return preset.h;
+}
+
+/**
+ * 같은 열(x 동일) 안에서 y를 연속으로 압축 — 빈 grid row 제거.
+ * 위젯 간 간격은 CSS grid gap만 사용 (layout Y에 gap 행 단위 추가 없음).
+ */
+export function compactOrientationLayoutY(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const yByKey = new Map<DashboardWidgetKey, number>();
+  const byColumn = new Map<number, WidgetConfigDraft[]>();
+
+  for (const w of widgets) {
+    if (!w.is_enabled) continue;
+    const x = effectiveLayoutX(w, orientation);
+    if (x == null) continue;
+    const col = Math.round(x);
+    const list = byColumn.get(col) ?? [];
+    list.push(w);
+    byColumn.set(col, list);
+  }
+
+  for (const list of byColumn.values()) {
+    list.sort((a, b) => {
+      const dy = effectiveLayoutY(a, orientation) - effectiveLayoutY(b, orientation);
+      if (dy !== 0) return dy;
+      return a.display_order - b.display_order;
+    });
+    let cy = 0;
+    for (const w of list) {
+      yByKey.set(w.widget_key, cy);
+      cy += effectiveLayoutH(w, orientation);
+    }
+  }
+
+  return widgets.map((d) => {
+    const ny = yByKey.get(d.widget_key);
+    if (ny === undefined) return d;
+    if (orientation === 'portrait') {
+      return { ...d, layoutPortraitY: ny, layoutY: ny };
+    }
+    return { ...d, layoutLandscapeY: ny };
+  });
+}
+
+/** portrait/landscape Y 압축 후 공유 layout_x/y 동기화 */
+function syncSharedLayoutFromPortrait(d: WidgetConfigDraft): WidgetConfigDraft {
+  const portraitX = d.layoutPortraitX ?? d.layoutX;
+  const portraitY = d.layoutPortraitY ?? d.layoutY;
+  const portraitW = d.layoutPortraitW ?? d.layoutW;
+  const portraitH = d.layoutPortraitH ?? d.layoutH;
+  return {
+    ...d,
+    layoutX: portraitX,
+    layoutY: portraitY,
+    layoutW: portraitW,
+    layoutH: portraitH,
+  };
+}
+
 /** 같은 열(동일 layoutX) 여부 — 세로 스택 드롭 판정 */
 export function layoutSameColumn(
   a: WidgetConfigDraft,
@@ -211,13 +292,13 @@ export function applyStackBelowDraft(
 }
 
 /**
- * 저장 직전: 사용자가 잡은 X/Y/W/H 유지, 공유 layout_*·orientation 필드만 동기화.
+ * 저장·로드 직전: X/W/H 유지, 같은 열 Y 연속 압축, 공유 layout_* 동기화.
  * (display_order 2×2 강제 패킹 없음 — 열 스택·다른 높이 보존)
  */
 export function packDraftsOrientationCoordinates(
   widgets: readonly WidgetConfigDraft[],
 ): WidgetConfigDraft[] {
-  return widgets.map((d) => {
+  const synced = widgets.map((d) => {
     const portraitW = d.layoutPortraitW ?? d.layoutW;
     const portraitH = d.layoutPortraitH ?? d.layoutH;
     const portraitX = d.layoutPortraitX ?? d.layoutX;
@@ -237,12 +318,19 @@ export function packDraftsOrientationCoordinates(
       layoutLandscapeY: landscapeY,
       layoutLandscapeW: landscapeW,
       layoutLandscapeH: landscapeH,
-      layoutX: portraitX,
-      layoutY: portraitY,
-      layoutW: portraitW,
-      layoutH: portraitH,
     };
   });
+
+  const compactedP = compactOrientationLayoutY(synced, 'portrait');
+  const compactedPL = compactOrientationLayoutY(compactedP, 'landscape');
+  return compactedPL.map(syncSharedLayoutFromPortrait);
+}
+
+/** DB 로드 후 normalizeRows 결과에 Y 압축 적용 */
+export function compactDraftsLayoutCoordinates(
+  widgets: readonly WidgetConfigDraft[],
+): WidgetConfigDraft[] {
+  return packDraftsOrientationCoordinates(widgets);
 }
 
 /**

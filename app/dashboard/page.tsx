@@ -5949,8 +5949,9 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
+          {/* 위젯 간 간격: CSS gap-3만 — layout Y에 gap 행 단위 없음 */}
           <div
-            className="dashboard-widget-grid grid min-w-0 gap-5"
+            className="dashboard-widget-grid grid min-w-0 gap-3"
             data-columns={dashboardColumnCount}
             data-layout={dashboardIsLandscapeGrid ? 'landscape' : 'portrait'}
             style={{

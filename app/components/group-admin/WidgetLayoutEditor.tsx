@@ -435,7 +435,7 @@ export function WidgetLayoutEditor({
         return;
       }
 
-      // 드롭 대상 바로 아래·같은 열(x) — 간격은 grid gap-5
+      // 드롭 대상 바로 아래·같은 열(x) — 간격은 CSS grid gap-3만 (layout Y에 gap 없음)
       const stacked = applyStackBelowDraft(activeDraft, overDraft, orient);
       const final = updated.map((d) => (d.widget_key === active.id ? stacked : d));
       onDraftsChange(final);
@@ -618,7 +618,7 @@ export function WidgetLayoutEditor({
         >
           <div
             ref={gridRef}
-            className="grid gap-5"
+            className="grid gap-3"
             style={{
               gridTemplateColumns: `repeat(${placementGridCols}, minmax(0, 1fr))`,
               // Phase C: 정사각형 셀 — rowHeight = containerWidth / baseCols

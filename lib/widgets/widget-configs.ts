@@ -1,5 +1,6 @@
 'use client';
 
+import { compactDraftsLayoutCoordinates } from './layout-presets';
 import { supabase } from '@/lib/supabase';
 import {
   DASHBOARD_WIDGET_KEYS,
@@ -82,7 +83,7 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
   for (const row of rows) rowMap.set(row.widget_key, row);
 
-  return DEFAULT_WIDGET_CONFIGS.map((base) => {
+  const sorted = DEFAULT_WIDGET_CONFIGS.map((base) => {
     const found = rowMap.get(base.widget_key);
     if (!found) return { ...base };
     return {
@@ -115,6 +116,8 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
     if (a.display_order !== b.display_order) return a.display_order - b.display_order;
     return b.priority - a.priority;
   });
+
+  return compactDraftsLayoutCoordinates(sorted);
 }
 
 export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDraft[]> {
