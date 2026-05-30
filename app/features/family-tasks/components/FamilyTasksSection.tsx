@@ -286,7 +286,7 @@ export function FamilyTasksSection({
         </div>
       , document.body)}
 
-      <div className="chalkboard-frame flex h-full min-h-[var(--tasks-min-h,0px)] w-full min-w-0 flex-1 flex-col">
+      <div className="chalkboard-frame flex min-h-[max(var(--tasks-min-h,0px),100%)] w-full min-w-0 flex-1 flex-col">
       <section className="chalkboard-container flex min-h-0 flex-1 flex-col">
         <div className="chalkboard-top-bar">
           <h3 className="chalkboard-title">{t.todo_section_title}</h3>

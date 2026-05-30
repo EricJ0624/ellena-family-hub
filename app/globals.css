@@ -807,7 +807,8 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 1rem;
-  overflow: clip;
+  /* clip이면 임무가 rowSpan 고정 높이 밖으로 나갈 때 하단이 프레임에 잘림 → 위젯 성장과 함께 visible */
+  overflow: visible;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
@@ -819,7 +820,8 @@ select {
   min-width: 0;
   min-height: 0;
   width: 100%;
-  height: 100%;
+  height: auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -828,7 +830,7 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -1892,8 +1894,8 @@ select {
     display: flex;
     flex-direction: column;
     min-height: var(--tasks-min-h, auto);
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
     width: 100%;
     max-width: 100%;
   }
@@ -1910,7 +1912,9 @@ select {
 
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
-    overflow: hidden;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
     border-radius: 1rem;
   }
 
@@ -1919,8 +1923,8 @@ select {
     align-self: stretch;
     width: 100%;
     min-width: 0;
-    min-height: 100%;
-    height: 100%;
+    min-height: max(var(--tasks-min-h, 0px), 100%);
+    height: auto;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
