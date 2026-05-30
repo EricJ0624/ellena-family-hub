@@ -5884,7 +5884,7 @@ export default function FamilyHub() {
             style={{
               gridTemplateColumns: `repeat(${dashboardColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row',
-              gridAutoRows: `${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
+              gridAutoRows: `minmax(${getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px, auto)`,
             }}
           >
             {orderedWidgets.map((cfg) => {
