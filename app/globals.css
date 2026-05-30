@@ -1892,12 +1892,12 @@ select {
 
   /*
    * Family Tasks — 그리드 배치만 (칠판·임무 스타일은 .chalkboard-* 유지):
-   * start/fit-content로 stretch·짧은 행 겹침 방지. 셀 min-height는 page 실측.
+   * stretch면 행이 짧아져 겹침 → start + height:auto 로 내용 높이에 맞춤.
    */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
     display: block;
-    height: fit-content;
+    height: auto;
     width: 100%;
     max-width: 100%;
   }
