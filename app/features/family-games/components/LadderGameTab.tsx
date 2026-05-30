@@ -95,6 +95,13 @@ export function LadderGameTab(props: LadderGameTabProps) {
     return idsOk && destinationsOk && laneCount >= LADDER_MIN_LANES && members.length > 0;
   }, [participantIds, destinations, laneCount, members.length]);
 
+  const participantsReady = useMemo(() => {
+    const idsOk =
+      participantIds.every((id) => id.trim()) &&
+      new Set(participantIds).size === participantIds.length;
+    return idsOk && laneCount >= LADDER_MIN_LANES && members.length > 0;
+  }, [participantIds, laneCount, members.length]);
+
   const participantMembers = useMemo(
     () =>
       participantIds
@@ -172,6 +179,17 @@ export function LadderGameTab(props: LadderGameTabProps) {
     if (laneCount <= LADDER_MIN_LANES) return;
     setParticipantIds((prev) => prev.slice(0, -1));
     setDestinations((prev) => prev.slice(0, -1));
+  };
+
+  const launchLadderGame = () => {
+    if (mode !== 'setup' || !participantsReady) return;
+    const resolvedDestinations = destinations.map((d, index) =>
+      d.trim() ? d.trim() : `${t.ladder_destination_ph} ${index + 1}`,
+    );
+    props.onLaunch({
+      participantIds: [...participantIds],
+      destinations: resolvedDestinations,
+    });
   };
 
   const handleRungClick = (leftLane: number, row: number) => {
@@ -385,17 +403,23 @@ export function LadderGameTab(props: LadderGameTabProps) {
         <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
           <button
             type="button"
-            onClick={addPair}
-            disabled={laneCount >= LADDER_MAX_LANES || laneCount >= members.length}
-            className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
+            onClick={participantsReady ? launchLadderGame : addPair}
+            disabled={
+              participantsReady
+                ? false
+                : laneCount >= LADDER_MAX_LANES || laneCount >= members.length
+            }
+            className={`rounded-lg px-3 py-2 font-semibold text-white disabled:opacity-50 ${
+              participantsReady ? 'bg-emerald-600' : 'bg-indigo-600'
+            }`}
             style={{ fontSize: '4cqmin' }}
           >
-            {t.ladder_add_pair}
+            {participantsReady ? props.launchLabel : t.ladder_add_pair}
           </button>
           <button
             type="button"
             onClick={removePair}
-            disabled={laneCount <= LADDER_MIN_LANES}
+            disabled={laneCount <= LADDER_MIN_LANES || participantsReady}
             className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:opacity-50"
             style={{ fontSize: '4cqmin' }}
           >
@@ -403,24 +427,10 @@ export function LadderGameTab(props: LadderGameTabProps) {
           </button>
         </div>
 
-        {!setupReady ? (
+        {!participantsReady && (
           <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
             {t.ladder_min_players}
           </p>
-        ) : (
-          <button
-            type="button"
-            onClick={() =>
-              props.onLaunch({
-                participantIds: [...participantIds],
-                destinations: [...destinations],
-              })
-            }
-            className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
-            style={{ fontSize: '4.5cqmin' }}
-          >
-            {props.launchLabel}
-          </button>
         )}
       </div>
     );
