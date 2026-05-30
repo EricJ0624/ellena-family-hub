@@ -1,4 +1,4 @@
-import type { WidgetConfigDraft } from './types';
+import type { DashboardWidgetKey, WidgetConfigDraft } from './types';
 import type { DashboardShell } from './layout-shell';
 import type { AppPreviewOrientation } from './preview-orientation';
 
@@ -323,6 +323,49 @@ export function resolveWidgetGridPlacement(
   }
 
   return { colSpan, rowSpan, gridColumnStart, gridRowStart };
+}
+
+/** 대시보드·편집 읽기 전용 그리드 셀 인라인 스타일 (배치만 — 위젯 내용/로직 무관) */
+export type WidgetGridItemStyle = {
+  gridColumn: string;
+  gridRow: string;
+  height?: 'auto';
+  minHeight?: number;
+  ['--tasks-min-h']?: string;
+};
+
+/**
+ * resolveWidgetGridPlacement → CSS gridColumn/gridRow.
+ * tasks: 위치는 gridRowStart/span, 높이 성장은 height:auto + --tasks-min-h 유지.
+ */
+export function buildWidgetGridItemStyle(
+  widgetKey: DashboardWidgetKey,
+  placement: WidgetGridPlacement,
+  cellRowH: number,
+): WidgetGridItemStyle {
+  const { colSpan, rowSpan, gridColumnStart, gridRowStart } = placement;
+  const gridColumn = gridColumnStart
+    ? `${gridColumnStart} / span ${colSpan}`
+    : `span ${colSpan}`;
+
+  if (widgetKey === 'tasks') {
+    const minPx = cellRowH > 0 ? cellRowH * rowSpan : 0;
+    const style: WidgetGridItemStyle = {
+      gridColumn,
+      gridRow: gridRowStart != null ? `${gridRowStart} / span ${rowSpan}` : 'auto',
+      height: 'auto',
+    };
+    if (minPx > 0) {
+      style.minHeight = minPx;
+      style['--tasks-min-h'] = `${minPx}px`;
+    }
+    return style;
+  }
+
+  return {
+    gridColumn,
+    gridRow: gridRowStart != null ? `${gridRowStart} / span ${rowSpan}` : `span ${rowSpan}`,
+  };
 }
 
 // ─── 그리드 배치 검증 ─────────────────────────────────────────────────────────

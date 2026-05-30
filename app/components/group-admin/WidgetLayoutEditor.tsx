@@ -29,7 +29,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
-import { resolveWidgetGridPlacement, PORTRAIT_COLS, LANDSCAPE_COLS } from '@/lib/widgets/grid';
+import {
+  buildWidgetGridItemStyle,
+  resolveWidgetGridPlacement,
+  PORTRAIT_COLS,
+  LANDSCAPE_COLS,
+} from '@/lib/widgets/grid';
 import { BASE_COLS, toActualColSpan, packOrientationLayouts } from '@/lib/widgets/layout-presets';
 
 /** previewMode 별 내부 CSS 그리드 기준 열 수 (BASE_COLS 단위) */
@@ -124,6 +129,8 @@ interface SortableCardProps {
   onRestoreOne: () => void;
   onResizeHStart: (e: React.PointerEvent) => void;
   onResizeVStart: (e: React.PointerEvent) => void;
+  /** 12/24열 기준 셀 높이 — 읽기 전용 배치를 대시보드와 동일하게 */
+  placementCellRowH: number;
 }
 
 function SortableCard({
@@ -140,13 +147,20 @@ function SortableCard({
   onRestoreOne,
   onResizeHStart,
   onResizeVStart,
+  placementCellRowH,
 }: SortableCardProps) {
   const displayCfg = useMemo(
     () => ({ ...cfg, layoutW: liveW ?? cfg.layoutW, layoutH: liveH ?? cfg.layoutH }),
     [cfg, liveW, liveH],
   );
-  // isLandscape 전달 — 없으면 portrait 경로(layoutPortraitW)를 사용해 세로 편집이 가로에도 반영되는 버그 발생
-  const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(displayCfg, previewCols, isLandscape);
+  const placementColumnCount = isLandscape ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  // 편집 중: 2·4열 시각 span. 읽기 전용: 12·24열 — 대시보드와 동일 placement
+  const placement = resolveWidgetGridPlacement(
+    displayCfg,
+    editMode ? previewCols : placementColumnCount,
+    isLandscape,
+  );
+  const { colSpan, rowSpan } = placement;
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
   const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
@@ -169,13 +183,12 @@ function SortableCard({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        // 편집 모드: gridColumnStart 제거 → @dnd-kit이 DOM 순서 기반 재정렬 가능
-        // 읽기 전용: layoutX 기반 gridColumnStart 적용해 실제 대시보드 레이아웃 표현
-        // 수직(행) 배치는 항상 CSS auto-flow — 대시보드와 동일한 방식
-        gridColumn: (!editMode && gridColumnStart)
-          ? `${gridColumnStart} / span ${colSpan}`
-          : `span ${colSpan}`,
-        gridRow: `span ${Math.max(1, rowSpan)}`,
+        ...(editMode
+          ? {
+              gridColumn: `span ${colSpan}`,
+              gridRow: `span ${Math.max(1, rowSpan)}`,
+            }
+          : buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH)),
       }}
     >
       {/* 색상 아이콘 배너 — 드래그 핸들 겸용
@@ -598,6 +611,8 @@ export function WidgetLayoutEditor({
               // SortableCard 내부는 항상 layoutW/H를 사용하므로 변경 없이 독립 편집 가능
               const effCfg = { ...cfg, ...getOrientationLayout(cfg, orientation) };
               const baseCols = PREVIEW_MODE_BASE_COLS[previewMode];
+              const placementCellRowH =
+                gridContainerWidth > 0 && baseCols > 0 ? gridContainerWidth / baseCols : 0;
               return (
                 <SortableCard
                   key={cfg.widget_key}
@@ -609,6 +624,7 @@ export function WidgetLayoutEditor({
                   saving={saving}
                   liveW={liveW}
                   liveH={liveH}
+                  placementCellRowH={placementCellRowH}
                   restoreLabel={t.widgets_restore_defaults}
                   onToggle={() => onToggle(cfg.widget_key)}
                   onRestoreOne={() => onRestoreOne(cfg.widget_key)}

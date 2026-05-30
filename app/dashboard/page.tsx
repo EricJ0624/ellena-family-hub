@@ -68,6 +68,7 @@ import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   resolveWidgetGridPlacement,
+  buildWidgetGridItemStyle,
   getSquareCellRowHeight,
   detectGridOverlaps,
   PORTRAIT_COLS,
@@ -5959,7 +5960,8 @@ export default function FamilyHub() {
             }}
           >
             {orderedWidgets.map((cfg) => {
-              const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const placement = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+              const { colSpan, rowSpan } = placement;
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
@@ -5984,20 +5986,7 @@ export default function FamilyHub() {
                       : 'min-w-0 max-w-full isolate overflow-hidden'
                   }
                   data-widget-size={cfg.size}
-                  style={{
-                    gridColumn: gridColumnStart
-                      ? `${gridColumnStart} / span ${colSpan}`
-                      : `span ${colSpan}`,
-                    /* tasks: 1행 auto-grow, stretch 대신 start(CSS). 칠판/--tasks-min-h는 그대로 */
-                    gridRow: cfg.widget_key === 'tasks' ? 'auto' : `span ${rowSpan}`,
-                    ...(cfg.widget_key === 'tasks'
-                      ? {
-                          height: 'auto',
-                          minHeight: dashboardCellRowH * rowSpan,
-                          ['--tasks-min-h' as string]: `${dashboardCellRowH * rowSpan}px`,
-                        }
-                      : {}),
-                  }}
+                  style={buildWidgetGridItemStyle(cfg.widget_key, placement, dashboardCellRowH)}
                 >
                   <WidgetChrome
                     widgetKey={cfg.widget_key}
