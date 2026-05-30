@@ -1,6 +1,12 @@
 // Web Push API를 사용한 푸시 알림 설정
 // Supabase를 사용하여 푸시 알림 구현
 
+function isPushUnavailableError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  const msg = error instanceof Error ? error.message : String(error);
+  return /push service not available|registration failed/i.test(msg);
+}
+
 // Web Push 토큰 가져오기
 export async function getPushToken(): Promise<string | null> {
   try {
@@ -40,7 +46,13 @@ export async function getPushToken(): Promise<string | null> {
     
     return subscriptionJson;
   } catch (error) {
-    console.error('Web Push 토큰 가져오기 오류:', error);
+    if (isPushUnavailableError(error)) {
+      console.warn(
+        'Web Push를 사용할 수 없습니다(로컬 http·브라우저 제한 등). 배포(https) 환경에서 푸시가 동작합니다.',
+      );
+      return null;
+    }
+    console.warn('Web Push 토큰 가져오기 실패:', error);
     return null;
   }
 }

@@ -19,7 +19,7 @@ export type WidgetSize = 'S' | 'M' | 'L' | 'XL';
  */
 export const WIDGET_SIZE_PRESETS: Record<WidgetSize, { colSpan: number; rowSpan: number }> = {
   S:  { colSpan: 6,  rowSpan: 6  },  // 50% portrait width, square (6×6)
-  M:  { colSpan: 12, rowSpan: 6  },  // 100% portrait width, 2:1 (12×6)
+  M:  { colSpan: 12, rowSpan: 8  },  // 100% portrait width (12×8)
   L:  { colSpan: 12, rowSpan: 12 },  // 100% portrait width, square (12×12)
   XL: { colSpan: 12, rowSpan: 12 },  // @deprecated — Phase C 이후 제거 예정 (L과 동일)
 };
@@ -116,13 +116,13 @@ export interface WidgetConfigDraft {
  * 12열 정규화 그리드 기준 S/M/L/XL 프리셋 크기 (복구·시드 전용).
  * Phase B/C: portrait 12열 × 24행 체계.
  *   S  = 6×6   → portrait 50% 너비 × 정사각형
- *   M  = 12×6  → portrait 100% 너비 × 2:1 비율
+ *   M  = 12×8  → portrait 100% 너비 (세로 여유)
  *   L  = 12×12 → portrait 100% 너비 × 정사각형
  *   XL = @deprecated — L 과 동일, Phase C 이후 제거 예정
  */
 export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }> = {
   S:  { w: 6,  h: 6  },
-  M:  { w: 12, h: 6  },
+  M:  { w: 12, h: 8  },
   L:  { w: 12, h: 12 },
   XL: { w: 12, h: 12 }, // @deprecated
 };

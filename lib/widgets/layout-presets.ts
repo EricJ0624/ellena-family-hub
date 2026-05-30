@@ -210,6 +210,48 @@ function layoutRectsOverlap(a: LayoutRect, b: LayoutRect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+function applyOrientationWH(
+  d: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+  w: number,
+  h: number,
+): WidgetConfigDraft {
+  if (orientation === 'portrait') {
+    return {
+      ...d,
+      layoutPortraitW: w,
+      layoutPortraitH: h,
+      layoutW: w,
+      layoutH: h,
+    };
+  }
+  return {
+    ...d,
+    layoutLandscapeW: w,
+    layoutLandscapeH: h,
+  };
+}
+
+/** x+w가 열 수를 넘지 않도록 layout 좌표 보정 (저장·로드 정규화) */
+function clampWidgetLayoutExtents(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const maxCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  return widgets.map((d) => {
+    if (!d.is_enabled) return d;
+    let w = effectiveLayoutW(d, orientation);
+    let x = effectiveLayoutX(d, orientation) ?? 0;
+    const h = effectiveLayoutH(d, orientation);
+    if (w > maxCols) w = maxCols;
+    if (x < 0) x = 0;
+    if (x + w > maxCols) x = Math.max(0, maxCols - w);
+    let next = applyOrientationXY(d, orientation, x, effectiveLayoutY(d, orientation));
+    next = applyOrientationWH(next, orientation, w, h);
+    return next;
+  });
+}
+
 function applyOrientationXY(
   d: WidgetConfigDraft,
   orientation: 'portrait' | 'landscape',
@@ -444,9 +486,11 @@ export function packDraftsOrientationCoordinates(
     };
   });
 
-  const compactedP = compactOrientationLayoutY(synced, 'portrait');
+  const clampedP = clampWidgetLayoutExtents(synced, 'portrait');
+  const compactedP = compactOrientationLayoutY(clampedP, 'portrait');
   const noOverlapP = ensureOrientationNoGridOverlaps(compactedP, 'portrait');
-  const compactedPL = compactOrientationLayoutY(noOverlapP, 'landscape');
+  const clampedPL = clampWidgetLayoutExtents(noOverlapP, 'landscape');
+  const compactedPL = compactOrientationLayoutY(clampedPL, 'landscape');
   const noOverlapPL = ensureOrientationNoGridOverlaps(compactedPL, 'landscape');
   return noOverlapPL.map(syncSharedLayoutFromPortrait);
 }

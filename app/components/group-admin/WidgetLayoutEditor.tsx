@@ -199,10 +199,10 @@ function SortableCard({
     <div
       ref={setNodeRef}
       className={[
-        'relative rounded-xl border overflow-hidden flex flex-col',
+        'relative min-w-0 max-w-full flex flex-col',
         isDragging
-          ? 'z-10 border-blue-400 opacity-70 shadow-xl'
-          : 'border-slate-200 shadow-sm',
+          ? 'z-10 overflow-hidden rounded-xl border border-blue-400 opacity-70 shadow-xl'
+          : 'overflow-x-clip overflow-y-visible rounded-xl border border-slate-200 shadow-sm',
         !cfg.is_enabled ? 'opacity-40' : '',
       ].join(' ')}
       style={{
@@ -258,8 +258,8 @@ function SortableCard({
         )}
       </div>
 
-      {/* 위젯 미리보기 — 실제 CSS 클래스 사용으로 대시보드와 동일한 외관 (pointer 이벤트 차단) */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden pointer-events-none">
+      {/* 위젯 미리보기 — widget 컨테이너 쿼리 컨텍스트(대시보드 chrome과 동일) */}
+      <div className="editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
         {PreviewContent()}
       </div>
 
@@ -647,14 +647,18 @@ export function WidgetLayoutEditor({
         >
           <div
             ref={gridRef}
-            className="grid gap-3"
+            className="dashboard-widget-grid grid min-w-0 gap-3"
+            data-columns={placementGridCols}
+            data-layout={orientation === 'landscape' ? 'landscape' : 'portrait'}
             style={{
               gridTemplateColumns: `repeat(${placementGridCols}, minmax(0, 1fr))`,
-              // Phase C: 정사각형 셀 — rowHeight = containerWidth / baseCols
-              // portrait(12열): containerWidth/12, landscape(24열): containerWidth/24
-              gridAutoRows: gridContainerWidth > 0
-                ? `${gridContainerWidth / PREVIEW_MODE_BASE_COLS[previewMode]}px`
-                : (previewMode === 0 ? '32px' : '16px'),
+              gridAutoFlow: 'row',
+              gridAutoRows:
+                gridContainerWidth > 0 && PREVIEW_MODE_BASE_COLS[previewMode] > 0
+                  ? `minmax(${gridContainerWidth / PREVIEW_MODE_BASE_COLS[previewMode]}px, auto)`
+                  : previewMode === 0
+                    ? 'minmax(32px, auto)'
+                    : 'minmax(16px, auto)',
             }}
           >
             {sortedEnabled.map((cfg) => {

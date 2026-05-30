@@ -975,7 +975,7 @@ export default function FamilyHub() {
             .from('profiles')
             .select('nickname')
             .eq('id', currentUserId)
-            .single();
+            .maybeSingle();
 
           const name = profileData?.nickname
             || session.user.user_metadata?.nickname
@@ -2849,7 +2849,7 @@ export default function FamilyHub() {
     }
     let cancelled = false;
     (async () => {
-      const { data: groupRow } = await supabase.from('groups').select('owner_id').eq('id', currentGroupId).single();
+      const { data: groupRow } = await supabase.from('groups').select('owner_id').eq('id', currentGroupId).maybeSingle();
       const { data: memRows } = await supabase.from('memberships').select('user_id').eq('group_id', currentGroupId);
       const ids = new Set<string>();
       if (groupRow?.owner_id) ids.add(groupRow.owner_id as string);
@@ -5984,7 +5984,7 @@ export default function FamilyHub() {
                   className={
                     cfg.widget_key === 'tasks'
                       ? 'min-w-0 max-w-full isolate overflow-visible'
-                      : 'min-w-0 max-w-full isolate overflow-hidden'
+                      : 'min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible'
                   }
                   data-widget-size={cfg.size}
                   style={buildWidgetGridItemStyle(cfg.widget_key, placement, dashboardCellRowH)}

@@ -239,7 +239,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         .from('groups')
         .select('owner_id')
         .eq('id', currentGroupId)
-        .single();
+        .maybeSingle();
 
       if (groupData) {
         const owner = groupData.owner_id === userId;
@@ -254,7 +254,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
             .select('role')
             .eq('user_id', userId)
             .eq('group_id', currentGroupId)
-            .single();
+            .maybeSingle();
 
           if (membershipData) {
             setUserRole(membershipData.role as MembershipRole);
@@ -269,10 +269,15 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         .from('groups')
         .select('*')
         .eq('id', currentGroupId)
-        .single();
+        .maybeSingle();
 
       if (groupInfo) {
         setCurrentGroup(groupInfo);
+      } else if (typeof window !== 'undefined') {
+        // RLS/삭제로 조회 불가한 그룹 ID가 localStorage에 남은 경우
+        localStorage.removeItem('currentGroupId');
+        setCurrentGroupIdState(null);
+        setCurrentGroup(null);
       }
     } catch (err: any) {
       console.error('멤버십 정보 로드 실패:', err);

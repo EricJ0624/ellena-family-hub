@@ -404,11 +404,36 @@ select {
   .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) {
     align-self: start;
     height: auto;
+    overflow: visible;
   }
 
+  /*
+   * portrait + height:auto: container-type:size 이면 블록 높이 0 → cqmin≈0 으로
+   * 달력·채팅 등 본문이 사라짐. inline-size 로 너비 기준 스케일만 사용 (칠판과 동일).
+   */
   .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome {
+    display: flex;
+    flex-direction: column;
+    container-type: inline-size;
     height: auto;
     min-height: var(--widget-min-h, auto);
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome > .content-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+  }
+
+  /* 편집기 미리보기: 목업도 widget 컨테이너 쿼리(cqmin) 적용 */
+  .dashboard-widget-grid .editor-widget-preview-inner {
+    container-type: inline-size;
+    container-name: widget;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
   }
 
   /* 다열 그리드: 위젯 칸 밖으로 버튼·헤더가 삐져나지 않도록 */

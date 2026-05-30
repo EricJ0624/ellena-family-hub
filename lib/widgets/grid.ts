@@ -300,14 +300,14 @@ export function resolveWidgetGridPlacement(
       ? Math.min(24, Math.max(1, Math.round(effectiveH)))
       : clampGridSpan(cfg.rowSpan, 24);
 
-  // effectiveX → gridColumnStart (1-based)
+  // effectiveX → gridColumnStart (1-based). 너비 초과 시 x를 왼쪽으로 밀어 span-only 폴백 방지.
   let gridColumnStart: number | undefined;
   if (effectiveX != null) {
-    const rawStart = Math.round((effectiveX * columnCount) / storedBaseCols) + 1;
-    const clamped = Math.min(columnCount, Math.max(1, rawStart));
-    if (clamped + colSpan - 1 <= columnCount) {
-      gridColumnStart = clamped;
+    let rawStart = Math.round((effectiveX * columnCount) / storedBaseCols) + 1;
+    if (rawStart + colSpan - 1 > columnCount) {
+      rawStart = Math.max(1, columnCount - colSpan + 1);
     }
+    gridColumnStart = Math.min(columnCount, Math.max(1, rawStart));
   }
 
   // effectiveY → gridRowStart (1-based).
