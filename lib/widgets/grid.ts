@@ -258,7 +258,7 @@ export interface WidgetGridPlacement {
  *   actualColSpan  = clamp(round(effectiveW * columnCount / baseCols), 1, columnCount)
  *   actualRowSpan  = clamp(round(effectiveH), 1, 24)
  *   gridColumnStart = round(effectiveX * columnCount / baseCols) + 1
- *   gridRowStart    = round(effectiveY) + 1  (X와 Y 모두 있을 때만 설정)
+ *   gridRowStart    = round(effectiveY) + 1  (layout Y 단위; CSS 행은 buildWidgetGridItemStyle에서 y/h 슬롯 변환)
  */
 export function resolveWidgetGridPlacement(
   cfg: WidgetConfigDraft,
@@ -337,8 +337,22 @@ export type WidgetGridItemStyle = {
 };
 
 /**
+ * layout_y(0-based) + layout_h → CSS grid 행 슬롯(1-based).
+ * layout_y는 0,8,16… 처럼 h 단위 누적값 — CSS rowStart = round(y/h)+1, span은 1만 사용.
+ */
+export function layoutYHToCssGridRowStart(
+  gridRowStart: number | undefined,
+  layoutRowSpan: number,
+): number | undefined {
+  if (gridRowStart == null || layoutRowSpan < 1) return undefined;
+  const layoutY = gridRowStart - 1;
+  return 1 + Math.round(layoutY / layoutRowSpan);
+}
+
+/**
  * resolveWidgetGridPlacement → CSS gridColumn/gridRow.
- * tasks: 위치는 gridRowStart/span, 높이 성장은 height:auto + --tasks-min-h 유지.
+ * tasks: 기존 gridRowStart + span rowSpan (칠판·임무 높이 성장).
+ * 그 외: CSS 행 span 1 + minHeight(layout_h×cellRowH) — gap-3가 span 내부 행에 중복 적용되지 않음.
  */
 export function buildWidgetGridItemStyle(
   widgetKey: DashboardWidgetKey,
@@ -366,9 +380,13 @@ export function buildWidgetGridItemStyle(
   }
 
   const minPx = cellRowH > 0 ? cellRowH * rowSpan : 0;
+  const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
+  const gridRow =
+    cssRowStart != null ? `${cssRowStart} / span 1` : 'span 1';
+
   const style: WidgetGridItemStyle = {
     gridColumn,
-    gridRow: gridRowStart != null ? `${gridRowStart} / span ${rowSpan}` : `span ${rowSpan}`,
+    gridRow,
     alignSelf: 'start',
     height: 'auto',
   };
@@ -406,12 +424,23 @@ export function detectGridOverlaps(
     const { colSpan, rowSpan, gridColumnStart, gridRowStart } =
       resolveWidgetGridPlacement(cfg, columnCount, isLandscape);
     if (gridColumnStart == null || gridRowStart == null) continue;
+
+    let rowStart = gridRowStart;
+    let rowEnd = gridRowStart + rowSpan;
+    if (cfg.widget_key !== 'tasks') {
+      const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
+      if (cssRowStart != null) {
+        rowStart = cssRowStart;
+        rowEnd = cssRowStart + 1;
+      }
+    }
+
     placed.push({
       key: cfg.widget_key,
       colStart: gridColumnStart,
       colEnd: gridColumnStart + colSpan,
-      rowStart: gridRowStart,
-      rowEnd: gridRowStart + rowSpan,
+      rowStart,
+      rowEnd,
     });
   }
 
