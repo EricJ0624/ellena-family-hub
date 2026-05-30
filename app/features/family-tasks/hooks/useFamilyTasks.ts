@@ -124,19 +124,12 @@ export function useFamilyTasks({
     }
   };
 
-  // DELETE TODO
+  // DELETE TODO — 성공 시 delete 1회만; 0행일 때만 select로 권한/부재 구분
   const deleteTask = async (taskId: number | string) => {
     const taskIdStr = String(taskId);
     const isNumericId = typeof taskId === 'number' || /^\d+$/.test(taskIdStr);
 
-    console.log('saveToSupabase DELETE_TODO:', {
-      taskId: taskIdStr,
-      isNumericId,
-      payloadType: typeof taskId,
-    });
-
     if (isNumericId) {
-      console.log('로컬 데이터 삭제 (Supabase 삭제 건너뜀):', taskIdStr);
       return;
     }
 
@@ -145,56 +138,39 @@ export function useFamilyTasks({
       return;
     }
 
-    console.log('Supabase 삭제 시도:', { taskId: taskIdStr, userId });
-
-    const { data: existingTask } = await supabase
-      .from('family_tasks')
-      .select('id, created_by, title, group_id')
-      .eq('id', taskIdStr)
-      .eq('group_id', currentGroupId)
-      .single();
-
-    if (existingTask) {
-      console.log('삭제할 할일 확인:', {
-        id: existingTask.id,
-        created_by: existingTask.created_by,
-        title: existingTask.title?.substring(0, 30),
-        group_id: existingTask.group_id,
-      });
-    }
-
     const { error, data } = await supabase
       .from('family_tasks')
       .delete()
       .eq('id', taskIdStr)
       .eq('group_id', currentGroupId)
-      .select();
+      .select('id, created_by');
 
     if (error) {
       console.error('할일 삭제 오류:', error);
-      console.error('삭제 시도한 ID:', taskIdStr, '타입:', typeof taskIdStr, 'userId:', userId);
       if (process.env.NODE_ENV === 'development') {
         console.error('에러 상세:', JSON.stringify(error, null, 2));
       }
       throw error;
-    } else {
-      const deletedCount = data?.length || 0;
-      console.log('할일 삭제 결과:', { taskId: taskIdStr, deletedCount, deletedData: data, userId });
+    }
 
-      if (deletedCount === 0 && existingTask) {
-        console.error('⚠️ 할일 삭제 실패: 할일은 존재하지만 삭제 권한이 없습니다.', {
-          taskId: taskIdStr,
-          existingTaskCreatedBy: existingTask.created_by,
-          currentUserId: userId,
-          isOwner: existingTask.created_by === userId,
-        });
-        throw new Error('삭제 권한이 없습니다. 이 할일을 삭제할 수 없습니다.');
-      } else if (deletedCount === 0) {
-        console.warn(
-          '⚠️ 할일 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:',
-          taskIdStr
-        );
-      }
+    const deletedCount = data?.length ?? 0;
+    if (deletedCount > 0) {
+      return;
+    }
+
+    const { data: existingTask } = await supabase
+      .from('family_tasks')
+      .select('id, created_by')
+      .eq('id', taskIdStr)
+      .eq('group_id', currentGroupId)
+      .maybeSingle();
+
+    if (existingTask) {
+      throw new Error('삭제 권한이 없습니다. 이 할일을 삭제할 수 없습니다.');
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('할일 삭제: 삭제된 행 없음(이미 삭제됐을 수 있음):', taskIdStr);
     }
   };
 

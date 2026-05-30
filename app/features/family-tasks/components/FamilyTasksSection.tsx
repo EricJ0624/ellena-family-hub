@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
@@ -162,18 +162,24 @@ export function FamilyTasksSection({
     toggleTask(taskId, !task.done);
   };
 
-  const handleDeleteTask = async (taskId: number | string) => {
+  const handleDeleteTask = (taskId: number | string) => {
     if (!confirm(t.delete_confirm)) return;
 
     const previousTasks = tasks;
-    onTasksChange(tasks.filter((x) => x.id !== taskId));
+    startTransition(() => {
+      onTasksChange(tasks.filter((x) => x.id !== taskId));
+    });
 
-    try {
-      await deleteTask(taskId);
-    } catch (error) {
-      onTasksChange(previousTasks);
-      alert('삭제에 실패했습니다.');
-    }
+    void (async () => {
+      try {
+        await deleteTask(taskId);
+      } catch {
+        startTransition(() => {
+          onTasksChange(previousTasks);
+        });
+        alert('삭제에 실패했습니다.');
+      }
+    })();
   };
 
   const openTodoModal = () => {
