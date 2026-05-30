@@ -1891,19 +1891,19 @@ select {
   }
 
   /*
-   * Family Tasks 레이아웃 (고정 규칙 — 왔다갔다 패치 금지):
-   * 1) 셀·chrome·frame 모두 min-height: var(--tasks-min-h)
-   * 2) height: auto — flex:1 / height:100% 로 rowSpan에 고정하지 않음
-   * 3) overflow: visible — hidden이면 min-content가 잘려 칠판이 rowSpan 높이에 클립됨
+   * Family Tasks (대시보드 grid-row: auto — 1트랙이 임무 높이만큼 커짐, 캘린더는 다음 행):
+   * 1) 셀·chrome·frame min-height: var(--tasks-min-h) (에디터 rowSpan 바닥)
+   * 2) height: auto — flex:1 / height:100% 금지
+   * 3) overflow: hidden — 박스=레이아웃; visible은 겹침만 만들고 행은 안 밀림
    */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    align-self: start;
+    align-self: stretch;
     display: block;
     min-height: var(--tasks-min-h, auto);
     height: auto;
     width: 100%;
     max-width: 100%;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
@@ -1912,14 +1912,14 @@ select {
     min-height: var(--tasks-min-h, auto);
     width: 100%;
     min-width: 0;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     height: auto;
     min-height: var(--tasks-min-h, auto);
-    overflow: visible;
+    overflow: hidden;
     border-radius: 1rem;
   }
 

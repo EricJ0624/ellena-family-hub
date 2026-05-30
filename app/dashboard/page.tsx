@@ -5968,14 +5968,17 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'overflow-visible' : 'overflow-hidden'}`}
+                  className="min-w-0 max-w-full isolate overflow-hidden"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
-                    // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
-                    gridRow: `span ${rowSpan}`,
+                    // tasks: span 고정 시 임무가 늘어나도 그리드는 rowSpan만 예약 → 캘린더와 겹침. 1행 auto로 트랙만 성장.
+                    gridRow:
+                      cfg.widget_key === 'tasks'
+                        ? 'auto'
+                        : `span ${rowSpan}`,
                     ...(cfg.widget_key === 'tasks'
                       ? {
                           height: 'auto',
