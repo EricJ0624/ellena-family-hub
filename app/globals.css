@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame: 위젯(셀·chrome) 크기에 fill + 너비(cqw) 비율 스케일 · 임무 증가 시 위젯만 성장 */
+/* Frame: 위젯(셀·chrome)과 동일 크기 fill + cqw 비율 스케일(내용 min/max clamp 없음) */
 .chalkboard-frame {
   --cb-h: calc(100cqw * 864 / 1236);
   container-type: inline-size;
@@ -972,19 +972,19 @@ select {
 
 .chalkboard-characters {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  bottom: 2.5cqw;
+  right: 2.5cqw;
   display: flex;
-  gap: 8px;
+  gap: 2cqw;
   z-index: 0;
   pointer-events: none;
   opacity: 0.6;
 }
 
 .chalkboard-characters svg {
-  width: 40px;
-  height: 40px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  width: 10cqw;
+  height: 10cqw;
+  filter: drop-shadow(0 0.16cqw 0.32cqw rgba(0, 0, 0, 0.3));
 }
 
 .chalkboard-btn-add {
@@ -1082,8 +1082,8 @@ select {
   flex-shrink: 0;
   transition: all 0.2s ease;
   box-shadow:
-    0 0 2px rgba(255, 255, 255, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.25);
+    0 0 0.16cqw rgba(255, 255, 255, 0.3),
+    0 0.16cqw 0.32cqw rgba(0, 0, 0, 0.25);
 }
 
 .todo-checkbox:hover {
@@ -1099,8 +1099,8 @@ select {
   width: 6cqw;
   height: 6cqw;
   color: #ffffff;
-  stroke-width: 3;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  stroke-width: 0.24cqw;
+  filter: drop-shadow(0 0.08cqw 0.16cqw rgba(0, 0, 0, 0.3));
 }
 
 .todo-text-wrapper {
@@ -1147,7 +1147,7 @@ select {
   color: #ffffff;
   background: transparent;
   border: 0.16cqw solid #ffffff;
-  border-radius: 4px;
+  border-radius: 0.32cqw;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -1171,8 +1171,8 @@ select {
 .chalkboard-icon-delete {
   width: 5.25cqw;
   height: 5.25cqw;
-  stroke-width: 3;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  stroke-width: 0.24cqw;
+  filter: drop-shadow(0 0.08cqw 0.16cqw rgba(0, 0, 0, 0.3));
 }
 
 .chalkboard-empty-state {
@@ -1917,6 +1917,8 @@ select {
 
   .widget-chrome:has(.chalkboard-frame) > .chalkboard-frame {
     flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
     min-height: 100%;
     min-width: 0;
   }
