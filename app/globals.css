@@ -811,10 +811,8 @@ select {
   isolation: isolate;
 }
 
-/* 임무 있을 때만 아래로 성장 — 빈 칠판은 height:100% 유지해 cqh·+ADD 위치 보존 */
+/* 임무 있을 때: 프레임 height는 100% 유지(container query·타이틀/+ADD 고정). 성장은 WidgetChrome만 */
 .chalkboard-frame:has(.todo-list) {
-  height: auto;
-  min-height: 100%;
   overflow: visible;
 }
 
@@ -1896,7 +1894,7 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: glass 제거 + 성장 시 클립 방지 (빈 칠판은 height:100% — fit-content 금지) */
+  /* Family Tasks: glass 제거 + 임무 많을 때만 크롬 세로 성장(칠판 frame height:100% 유지 → cqh 고정) */
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     overflow: visible;
