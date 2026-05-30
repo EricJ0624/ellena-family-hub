@@ -31,11 +31,17 @@ import {
 import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types';
 import {
   buildWidgetGridItemStyle,
+  detectGridOverlaps,
   resolveWidgetGridPlacement,
   PORTRAIT_COLS,
   LANDSCAPE_COLS,
 } from '@/lib/widgets/grid';
-import { BASE_COLS, toActualColSpan, applyStackBelowDraft } from '@/lib/widgets/layout-presets';
+import {
+  BASE_COLS,
+  toActualColSpan,
+  applyStackBelowDraft,
+  layoutSameColumn,
+} from '@/lib/widgets/layout-presets';
 
 /** previewMode 별 내부 CSS 그리드 기준 열 수 (BASE_COLS 단위) */
 const PREVIEW_MODE_BASE_COLS: Record<0 | 1 | 2, number> = {
@@ -404,6 +410,24 @@ export function WidgetLayoutEditor({
   );
   const sortedIds = useMemo(() => sortedEnabled.map((d) => d.widget_key), [sortedEnabled]);
 
+  const placementIsLandscape = orientation === 'landscape';
+
+  // 개발 모드: 대시보드와 동일한 겹침 감지 (읽기·편집 비드래그 시 buildWidgetGridItemStyle 기준)
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+    const overlaps = detectGridOverlaps(
+      sortedEnabled,
+      placementGridCols,
+      placementIsLandscape,
+    );
+    if (overlaps.length > 0) {
+      console.warn(
+        '[WidgetLayoutEditor] 겹침 감지 — 저장 시 packDraftsOrientationCoordinates로 정규화됩니다:',
+        overlaps,
+      );
+    }
+  }, [sortedEnabled, placementGridCols, placementIsLandscape]);
+
   const sensors = useSensors(
     // PointerSensor: activationConstraint 없음 → pointermove 첫 이벤트에 즉시 드래그 시작
     // 배너가 전용 드래그 핸들이므로 즉시 반응이 가장 신뢰성 높음 (@dnd-kit 공식 예제 방식)
@@ -435,10 +459,15 @@ export function WidgetLayoutEditor({
         return;
       }
 
-      // 드롭 대상 바로 아래·같은 열(x) — 간격은 CSS grid gap-3만 (layout Y에 gap 없음)
-      const stacked = applyStackBelowDraft(activeDraft, overDraft, orient);
-      const final = updated.map((d) => (d.widget_key === active.id ? stacked : d));
-      onDraftsChange(final);
+      if (layoutSameColumn(activeDraft, overDraft, orient)) {
+        // 같은 열: anchor 아래 스택 (간격은 CSS grid gap-3만)
+        const stacked = applyStackBelowDraft(activeDraft, overDraft, orient);
+        const final = updated.map((d) => (d.widget_key === active.id ? stacked : d));
+        onDraftsChange(final);
+      } else {
+        // 다른 열: display_order만 변경, x/y 유지
+        onDraftsChange(updated);
+      }
     },
     [sortedEnabled, drafts, onDraftsChange],
   );

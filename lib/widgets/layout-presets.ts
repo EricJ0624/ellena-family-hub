@@ -20,7 +20,7 @@ import {
   type WidgetConfigDraft,
   type WidgetSize,
 } from './types';
-import { PORTRAIT_COLS, LANDSCAPE_COLS } from './grid';
+import { detectGridOverlaps, PORTRAIT_COLS, LANDSCAPE_COLS } from './grid';
 
 export const BASE_COLS = 12;    // portrait 레이아웃 저장 단위 (PORTRAIT_COLS 와 동일)
 export const LANDSCAPE_BASE_COLS = 24; // landscape 레이아웃 저장 단위 (LANDSCAPE_COLS 와 동일)
@@ -186,6 +186,129 @@ function effectiveLayoutH(
   return preset.h;
 }
 
+function effectiveLayoutW(
+  d: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): number {
+  const w = orientation === 'portrait'
+    ? (d.layoutPortraitW ?? d.layoutW)
+    : (d.layoutLandscapeW ?? d.layoutW);
+  if (w != null && w > 0) return w;
+  const preset = getPresetLayout(d.widget_key, d.size);
+  return orientation === 'landscape' ? preset.w * 2 : preset.w;
+}
+
+interface LayoutRect {
+  key: DashboardWidgetKey;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+function layoutRectsOverlap(a: LayoutRect, b: LayoutRect): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function applyOrientationXY(
+  d: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+  x: number,
+  y: number,
+): WidgetConfigDraft {
+  if (orientation === 'portrait') {
+    return {
+      ...d,
+      layoutPortraitX: x,
+      layoutPortraitY: y,
+      layoutX: x,
+      layoutY: y,
+    };
+  }
+  return {
+    ...d,
+    layoutLandscapeX: x,
+    layoutLandscapeY: y,
+  };
+}
+
+/**
+ * display_order 순으로 배치 사각형 겹침을 해소 (w/h 유지, x·y만 조정).
+ * 같은 행(y 대역)에서는 오른쪽으로 밀고, 너비 초과 시 아래 행으로 내린다.
+ */
+export function resolveOrientationLayoutOverlaps(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const maxCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const sorted = [...widgets]
+    .filter((w) => w.is_enabled)
+    .sort((a, b) =>
+      a.display_order !== b.display_order
+        ? a.display_order - b.display_order
+        : b.priority - a.priority,
+    );
+
+  const placed: LayoutRect[] = [];
+  const xyByKey = new Map<DashboardWidgetKey, { x: number; y: number }>();
+
+  for (const w of sorted) {
+    const anchorX = effectiveLayoutX(w, orientation) ?? 0;
+    let x = anchorX;
+    let y = effectiveLayoutY(w, orientation);
+    const ww = effectiveLayoutW(w, orientation);
+    const wh = effectiveLayoutH(w, orientation);
+
+    for (let attempt = 0; attempt < 64; attempt++) {
+      const rect: LayoutRect = { key: w.widget_key, x, y, w: ww, h: wh };
+      const conflicts = placed.filter((p) => layoutRectsOverlap(rect, p));
+      if (conflicts.length === 0) {
+        placed.push(rect);
+        xyByKey.set(w.widget_key, { x, y });
+        break;
+      }
+      const pushX = Math.max(...conflicts.map((c) => c.x + c.w));
+      if (pushX + ww <= maxCols) {
+        x = pushX;
+        continue;
+      }
+      y = Math.max(y, ...conflicts.map((c) => c.y + c.h));
+      x = anchorX;
+    }
+  }
+
+  return widgets.map((d) => {
+    const xy = xyByKey.get(d.widget_key);
+    if (!xy) return d;
+    return applyOrientationXY(d, orientation, xy.x, xy.y);
+  });
+}
+
+/** detectGridOverlaps 기준 충돌 없을 때까지 resolve → 필요 시 packOrientationLayouts(x,y만) */
+function ensureOrientationNoGridOverlaps(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const columnCount = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const isLandscape = orientation === 'landscape';
+
+  let result = resolveOrientationLayoutOverlaps(widgets, orientation);
+  result = compactOrientationLayoutY(result, orientation);
+
+  if (detectGridOverlaps(result, columnCount, isLandscape).length === 0) {
+    return result;
+  }
+
+  const packed = packOrientationLayouts(result, orientation);
+  result = result.map((d) => {
+    if (!d.is_enabled) return d;
+    const coords = packed.get(d.widget_key);
+    if (!coords) return d;
+    return applyOrientationXY(d, orientation, coords.x, coords.y);
+  });
+  return compactOrientationLayoutY(result, orientation);
+}
+
 /**
  * 같은 열(x 동일) 안에서 y를 연속으로 압축 — 빈 grid row 제거.
  * 위젯 간 간격은 CSS grid gap만 사용 (layout Y에 gap 행 단위 추가 없음).
@@ -322,8 +445,10 @@ export function packDraftsOrientationCoordinates(
   });
 
   const compactedP = compactOrientationLayoutY(synced, 'portrait');
-  const compactedPL = compactOrientationLayoutY(compactedP, 'landscape');
-  return compactedPL.map(syncSharedLayoutFromPortrait);
+  const noOverlapP = ensureOrientationNoGridOverlaps(compactedP, 'portrait');
+  const compactedPL = compactOrientationLayoutY(noOverlapP, 'landscape');
+  const noOverlapPL = ensureOrientationNoGridOverlaps(compactedPL, 'landscape');
+  return noOverlapPL.map(syncSharedLayoutFromPortrait);
 }
 
 /** DB 로드 후 normalizeRows 결과에 Y 압축 적용 */
