@@ -40,6 +40,8 @@ import {
   BASE_COLS,
   toActualColSpan,
   applyStackBelowDraft,
+  applyDisplayOrderPacking,
+  finalizeDraftsLayoutForOrientation,
   layoutSameColumn,
 } from '@/lib/widgets/layout-presets';
 
@@ -459,15 +461,14 @@ export function WidgetLayoutEditor({
         return;
       }
 
+      let result = updated;
       if (layoutSameColumn(activeDraft, overDraft, orient)) {
-        // 같은 열: anchor 아래 스택 (간격은 CSS grid gap-3만)
         const stacked = applyStackBelowDraft(activeDraft, overDraft, orient);
-        const final = updated.map((d) => (d.widget_key === active.id ? stacked : d));
-        onDraftsChange(final);
+        result = updated.map((d) => (d.widget_key === active.id ? stacked : d));
       } else {
-        // 다른 열: display_order만 변경, x/y 유지
-        onDraftsChange(updated);
+        result = applyDisplayOrderPacking(updated, orient);
       }
+      onDraftsChange(finalizeDraftsLayoutForOrientation(result, orient));
     },
     [sortedEnabled, drafts, onDraftsChange],
   );
@@ -551,7 +552,9 @@ export function WidgetLayoutEditor({
         };
       });
 
-      onDraftsChangeRef.current(updated);
+      onDraftsChangeRef.current(
+        finalizeDraftsLayoutForOrientation(updated, orient),
+      );
     };
 
     // 즉시 등록 — 터치/마우스 첫 이벤트를 절대 놓치지 않음

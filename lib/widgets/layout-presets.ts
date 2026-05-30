@@ -502,6 +502,41 @@ export function compactDraftsLayoutCoordinates(
   return packDraftsOrientationCoordinates(widgets);
 }
 
+/** display_order 순 top-left 패킹으로 x/y만 갱신 (w/h 유지) */
+export function applyDisplayOrderPacking(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const packed = packOrientationLayouts(widgets, orientation);
+  const placed = widgets.map((d) => {
+    if (!d.is_enabled) return d;
+    const c = packed.get(d.widget_key);
+    if (!c) return d;
+    return applyOrientationXY(d, orientation, c.x, c.y);
+  });
+  return compactOrientationLayoutY(placed, orientation);
+}
+
+/** 편집기 드래그·리사이즈 후: clamp → Y압축 → colSpan/rowSpan 동기화 */
+export function finalizeDraftsLayoutForOrientation(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const baseCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const clamped = clampWidgetLayoutExtents(widgets, orientation);
+  const compacted = compactOrientationLayoutY(clamped, orientation);
+  return compacted.map((d) => {
+    if (!d.is_enabled) return d;
+    const w = effectiveLayoutW(d, orientation);
+    const h = effectiveLayoutH(d, orientation);
+    return {
+      ...d,
+      colSpan: toActualColSpan(w, baseCols),
+      rowSpan: Math.min(24, Math.max(1, Math.round(h))),
+    };
+  });
+}
+
 /**
  * 단일 위젯을 size 프리셋으로 복구한 새 draft 반환.
  * layoutX/Y는 packLayoutsFromOrder 결과로 덮어쓰는 것을 권장.
@@ -568,12 +603,11 @@ export function resetAllLayouts(drafts: readonly WidgetConfigDraft[]): WidgetCon
   const packedPortrait = packOrientationLayouts(resetted, 'portrait');
   const packedLandscape = packOrientationLayouts(resetted, 'landscape');
 
-  return resetted.map((d) => {
+  const withCoords = resetted.map((d) => {
     const pCoords = packedPortrait.get(d.widget_key);
     const lCoords = packedLandscape.get(d.widget_key);
     return {
       ...d,
-      // 공유 layout(폴백용)도 portrait 기준으로 업데이트
       layoutX: pCoords?.x ?? d.layoutX,
       layoutY: pCoords?.y ?? d.layoutY,
       layoutPortraitX: pCoords?.x ?? null,
@@ -582,4 +616,6 @@ export function resetAllLayouts(drafts: readonly WidgetConfigDraft[]): WidgetCon
       layoutLandscapeY: lCoords?.y ?? null,
     };
   });
+
+  return packDraftsOrientationCoordinates(withCoords);
 }
