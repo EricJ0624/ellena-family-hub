@@ -154,30 +154,91 @@ export function packOrientationLayouts(
   return result;
 }
 
+/** orientation별 유효 x (같은 열 판정) */
+function effectiveLayoutX(
+  d: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): number | null {
+  return orientation === 'portrait'
+    ? (d.layoutPortraitX ?? d.layoutX)
+    : (d.layoutLandscapeX ?? d.layoutX);
+}
+
+/** 같은 열(동일 layoutX) 여부 — 세로 스택 드롭 판정 */
+export function layoutSameColumn(
+  a: WidgetConfigDraft,
+  b: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): boolean {
+  const ax = effectiveLayoutX(a, orientation);
+  const bx = effectiveLayoutX(b, orientation);
+  if (ax == null || bx == null) return false;
+  return Math.round(ax) === Math.round(bx);
+}
+
 /**
- * 저장 직전: portrait/landscape X·Y만 display_order·W/H 기준으로 재패킹 (W/H는 유지).
+ * anchor 바로 아래에 draft 배치 (y = anchor.y + anchor.h, x = anchor.x).
+ * 간격은 CSS grid gap — layout Y에 gap 행 단위 추가 없음.
+ */
+export function applyStackBelowDraft(
+  draft: WidgetConfigDraft,
+  anchor: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft {
+  const ax = effectiveLayoutX(anchor, orientation);
+  const ay = orientation === 'portrait'
+    ? (anchor.layoutPortraitY ?? anchor.layoutY)
+    : (anchor.layoutLandscapeY ?? anchor.layoutY);
+  const ah = orientation === 'portrait'
+    ? (anchor.layoutPortraitH ?? anchor.layoutH)
+    : (anchor.layoutLandscapeH ?? anchor.layoutH);
+  const nextY = (ay ?? 0) + (ah ?? 0);
+
+  if (orientation === 'portrait') {
+    return {
+      ...draft,
+      layoutPortraitX: ax ?? draft.layoutPortraitX,
+      layoutPortraitY: nextY,
+      layoutX: ax ?? draft.layoutX,
+      layoutY: nextY,
+    };
+  }
+  return {
+    ...draft,
+    layoutLandscapeX: ax ?? draft.layoutLandscapeX,
+    layoutLandscapeY: nextY,
+  };
+}
+
+/**
+ * 저장 직전: 사용자가 잡은 X/Y/W/H 유지, 공유 layout_*·orientation 필드만 동기화.
+ * (display_order 2×2 강제 패킹 없음 — 열 스택·다른 높이 보존)
  */
 export function packDraftsOrientationCoordinates(
   widgets: readonly WidgetConfigDraft[],
 ): WidgetConfigDraft[] {
-  const packedPortrait = packOrientationLayouts(widgets, 'portrait');
-  const packedLandscape = packOrientationLayouts(widgets, 'landscape');
-
   return widgets.map((d) => {
-    const p = packedPortrait.get(d.widget_key);
-    const l = packedLandscape.get(d.widget_key);
-    if (!p && !l) return d;
     const portraitW = d.layoutPortraitW ?? d.layoutW;
     const portraitH = d.layoutPortraitH ?? d.layoutH;
+    const portraitX = d.layoutPortraitX ?? d.layoutX;
+    const portraitY = d.layoutPortraitY ?? d.layoutY;
+    const landscapeW = d.layoutLandscapeW ?? d.layoutW;
+    const landscapeH = d.layoutLandscapeH ?? d.layoutH;
+    const landscapeX = d.layoutLandscapeX ?? d.layoutX;
+    const landscapeY = d.layoutLandscapeY ?? d.layoutY;
+
     return {
       ...d,
-      layoutPortraitX: p?.x ?? d.layoutPortraitX,
-      layoutPortraitY: p?.y ?? d.layoutPortraitY,
-      layoutLandscapeX: l?.x ?? d.layoutLandscapeX,
-      layoutLandscapeY: l?.y ?? d.layoutLandscapeY,
-      // 공유 layout_* — DB layout_x+layout_w<=12 제약과 portrait 동기화
-      layoutX: p?.x ?? d.layoutPortraitX ?? d.layoutX,
-      layoutY: p?.y ?? d.layoutPortraitY ?? d.layoutY,
+      layoutPortraitX: portraitX,
+      layoutPortraitY: portraitY,
+      layoutPortraitW: portraitW,
+      layoutPortraitH: portraitH,
+      layoutLandscapeX: landscapeX,
+      layoutLandscapeY: landscapeY,
+      layoutLandscapeW: landscapeW,
+      layoutLandscapeH: landscapeH,
+      layoutX: portraitX,
+      layoutY: portraitY,
       layoutW: portraitW,
       layoutH: portraitH,
     };

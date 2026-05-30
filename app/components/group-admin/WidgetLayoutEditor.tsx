@@ -35,7 +35,7 @@ import {
   PORTRAIT_COLS,
   LANDSCAPE_COLS,
 } from '@/lib/widgets/grid';
-import { BASE_COLS, toActualColSpan, packOrientationLayouts } from '@/lib/widgets/layout-presets';
+import { BASE_COLS, toActualColSpan, applyStackBelowDraft } from '@/lib/widgets/layout-presets';
 
 /** previewMode 별 내부 CSS 그리드 기준 열 수 (BASE_COLS 단위) */
 const PREVIEW_MODE_BASE_COLS: Record<0 | 1 | 2, number> = {
@@ -428,17 +428,16 @@ export function WidgetLayoutEditor({
         orderMap.has(d.widget_key) ? { ...d, display_order: orderMap.get(d.widget_key)! } : d,
       );
 
-      // Phase D: orientation별 독립 좌표 패킹
-      const packed = packOrientationLayouts(updated, orient);
-      const final = updated.map((d) => {
-        const coords = packed.get(d.widget_key);
-        if (!coords) return d;
-        if (orient === 'portrait') {
-          return { ...d, layoutPortraitX: coords.x, layoutPortraitY: coords.y };
-        }
-        return { ...d, layoutLandscapeX: coords.x, layoutLandscapeY: coords.y };
-      });
+      const activeDraft = updated.find((d) => d.widget_key === active.id);
+      const overDraft = updated.find((d) => d.widget_key === over.id);
+      if (!activeDraft || !overDraft) {
+        onDraftsChange(updated);
+        return;
+      }
 
+      // 드롭 대상 바로 아래·같은 열(x) — 간격은 grid gap-5
+      const stacked = applyStackBelowDraft(activeDraft, overDraft, orient);
+      const final = updated.map((d) => (d.widget_key === active.id ? stacked : d));
       onDraftsChange(final);
     },
     [sortedEnabled, drafts, onDraftsChange],
@@ -523,17 +522,7 @@ export function WidgetLayoutEditor({
         };
       });
 
-      // Phase D: orientation별 독립 좌표 패킹
-      const packed = packOrientationLayouts(updated, orient);
-      const final = updated.map((d) => {
-        const coords = packed.get(d.widget_key);
-        if (!coords) return d;
-        if (orient === 'portrait') {
-          return { ...d, layoutPortraitX: coords.x, layoutPortraitY: coords.y };
-        }
-        return { ...d, layoutLandscapeX: coords.x, layoutLandscapeY: coords.y };
-      });
-      onDraftsChangeRef.current(final);
+      onDraftsChangeRef.current(updated);
     };
 
     // 즉시 등록 — 터치/마우스 첫 이벤트를 절대 놓치지 않음
@@ -629,7 +618,7 @@ export function WidgetLayoutEditor({
         >
           <div
             ref={gridRef}
-            className="grid gap-3"
+            className="grid gap-5"
             style={{
               gridTemplateColumns: `repeat(${placementGridCols}, minmax(0, 1fr))`,
               // Phase C: 정사각형 셀 — rowHeight = containerWidth / baseCols

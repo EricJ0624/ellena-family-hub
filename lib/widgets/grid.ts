@@ -329,9 +329,11 @@ export function resolveWidgetGridPlacement(
 export type WidgetGridItemStyle = {
   gridColumn: string;
   gridRow: string;
+  alignSelf?: 'start';
   height?: 'auto';
   minHeight?: number;
   ['--tasks-min-h']?: string;
+  ['--widget-min-h']?: string;
 };
 
 /**
@@ -353,6 +355,7 @@ export function buildWidgetGridItemStyle(
     const style: WidgetGridItemStyle = {
       gridColumn,
       gridRow: gridRowStart != null ? `${gridRowStart} / span ${rowSpan}` : 'auto',
+      alignSelf: 'start',
       height: 'auto',
     };
     if (minPx > 0) {
@@ -362,10 +365,18 @@ export function buildWidgetGridItemStyle(
     return style;
   }
 
-  return {
+  const minPx = cellRowH > 0 ? cellRowH * rowSpan : 0;
+  const style: WidgetGridItemStyle = {
     gridColumn,
     gridRow: gridRowStart != null ? `${gridRowStart} / span ${rowSpan}` : `span ${rowSpan}`,
+    alignSelf: 'start',
+    height: 'auto',
   };
+  if (minPx > 0) {
+    style.minHeight = minPx;
+    style['--widget-min-h'] = `${minPx}px`;
+  }
+  return style;
 }
 
 // ─── 그리드 배치 검증 ─────────────────────────────────────────────────────────

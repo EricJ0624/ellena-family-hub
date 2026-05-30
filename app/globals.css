@@ -400,6 +400,17 @@ select {
     height: auto;
   }
 
+  /* portrait 다열: 같은 행에서 높이 다름 — 옆 위젯 높이에 stretch 되지 않음 (칠판 셀 제외) */
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) {
+    align-self: start;
+    height: auto;
+  }
+
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome {
+    height: auto;
+    min-height: var(--widget-min-h, auto);
+  }
+
   /* 다열 그리드: 위젯 칸 밖으로 버튼·헤더가 삐져나지 않도록 */
   .dashboard-widget-grid:not([data-columns='1']) > * {
     max-width: 100%;
