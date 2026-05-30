@@ -5980,7 +5980,7 @@ export default function FamilyHub() {
                   // tasks: overflow-hidden 제거 — 셀 높이가 내용(칠판)에 맞게 잡히도록
                   className={
                     cfg.widget_key === 'tasks'
-                      ? 'min-w-0 max-w-full isolate'
+                      ? 'min-w-0 max-w-full isolate overflow-visible'
                       : 'min-w-0 max-w-full isolate overflow-hidden'
                   }
                   data-widget-size={cfg.size}

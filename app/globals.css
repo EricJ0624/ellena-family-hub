@@ -394,6 +394,12 @@ select {
     justify-self: stretch;
   }
 
+  /* Family Tasks: landscape stretch 예외 — 짧은 행에 눌려 칠판이 clip 되는 것 방지 */
+  .dashboard-widget-grid[data-layout='landscape'] > *:has(.chalkboard-frame) {
+    align-self: start;
+    height: auto;
+  }
+
   /* 다열 그리드: 위젯 칸 밖으로 버튼·헤더가 삐져나지 않도록 */
   .dashboard-widget-grid:not([data-columns='1']) > * {
     max-width: 100%;
@@ -1891,8 +1897,8 @@ select {
   }
 
   /*
-   * Family Tasks — 그리드 배치만 (칠판·임무 스타일은 .chalkboard-* 유지):
-   * stretch면 행이 짧아져 겹침 → start + height:auto 로 내용 높이에 맞춤.
+   * Family Tasks — 그리드·크롬만 (칠판·임무 .chalkboard-* 유지):
+   * chrome overflow:hidden·container-type:size 가 칠판을 눌러 자름 → 아래 보정.
    */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
@@ -1900,20 +1906,25 @@ select {
     height: auto;
     width: 100%;
     max-width: 100%;
+    overflow: visible;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
     display: block;
+    container-type: inline-size;
     height: auto;
     min-height: var(--tasks-min-h, auto);
     width: 100%;
     min-width: 0;
+    overflow: visible;
   }
 
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
+    container-type: inline-size;
     height: auto;
     min-height: var(--tasks-min-h, auto);
+    overflow: visible;
     border-radius: 1rem;
   }
 
