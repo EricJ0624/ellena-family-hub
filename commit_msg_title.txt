@@ -1,8 +1,0 @@
-fix: 언어별 타이틀 최솟값 재교정 (폰트별 실제 문자 폭 반영)
-
-Pretendard Hangul(0.85em), Pretendard JP 풀-width 카타카나(1.0em),
-Noto Sans CJK(1.0em) 실제 폰트 폭 인수를 적용해 iPhone 14 기준 재산출.
-
-- ko: admin 29→33px, user 40→44px  (Pretendard 0.85em, 7.82×F)
-- ja: admin 27 유지, user 37→36px  (풀-width 카타카나, 9.48×F)
-- zh-CN/TW: admin 31→32px, user 42→43px  (CJK 1.0em, 8.0×F)
