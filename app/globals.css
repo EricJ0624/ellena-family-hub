@@ -799,7 +799,6 @@ select {
   width: 100%;
   flex: 1 1 auto;
   align-self: stretch;
-  height: auto;
   min-height: var(--tasks-min-h, 0px);
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
@@ -807,7 +806,7 @@ select {
   background-repeat: no-repeat;
   background-position: top center;
   box-shadow: none;
-  border-radius: 4px;
+  border-radius: 1rem;
   overflow: clip;
   box-sizing: border-box;
   padding: 0;
@@ -1887,12 +1886,11 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: 셀·chrome 높이 = max(rowSpan 최소, 임무 내용) · 칠판은 chrome 100% fill */
+  /* Family Tasks: rowSpan 최소 높이 flex 체인 → 칠판이 chrome·셀을 꽉 채움 (임무 많으면 셀만 성장) */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
     display: flex;
     flex-direction: column;
-    height: auto;
     min-height: var(--tasks-min-h, auto);
     overflow: hidden;
     width: 100%;
@@ -1903,24 +1901,28 @@ select {
     align-self: start;
   }
 
+  .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    align-self: stretch;
-    width: 100%;
-    min-height: var(--tasks-min-h, 0px);
-    height: auto;
+    border-radius: 1rem;
   }
 
   .widget-chrome:has(.chalkboard-frame) > .chalkboard-frame {
     flex: 1 1 auto;
     align-self: stretch;
     width: 100%;
-    min-height: 100%;
     min-width: 0;
+    min-height: 100%;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
