@@ -5915,7 +5915,9 @@ export default function FamilyHub() {
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
                     gridRow: `span ${rowSpan}`,
-                  }}
+                    // 칠판 위젯 세로 성장을 위한 최소 높이 전달 (min-height: % 는 height: auto 부모에서 0으로 해석되므로 절대값 사용)
+                    '--row-min-h': `${rowSpan * getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount)}px`,
+                  } as React.CSSProperties}
                 >
                   <WidgetChrome
                     widgetKey={cfg.widget_key}

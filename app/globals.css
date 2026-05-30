@@ -795,8 +795,9 @@ select {
   flex-direction: column;
   min-width: 0;
   width: 100%;
+  /* height: auto + min-height: CSS 변수(절대값) → % 방식은 부모 height:auto 시 0으로 해석되므로 사용 불가 */
   height: auto;
-  min-height: 100%;
+  min-height: var(--row-min-h, 0px);
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -1845,14 +1846,15 @@ select {
   /* 칠판 위젯: 작업 추가 시 세로로 성장 */
   .widget-chrome:has(.chalkboard-frame) {
     height: auto;
-    min-height: 100%;
+    min-height: var(--row-min-h, 0px);
     overflow: visible;
     background: transparent;
   }
 
-  /* 칠판을 담은 grid 셀: 세로 성장 허용 */
+  /* 칠판을 담은 grid 셀: 세로 성장 허용, align-self:start로 콘텐츠 높이 기준 */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     overflow: visible;
+    align-self: start;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
