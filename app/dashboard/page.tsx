@@ -5919,7 +5919,10 @@ export default function FamilyHub() {
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
                     gridRow: `span ${rowSpan}`,
                     ...(tasksGridMinHeight != null
-                      ? ({ '--chalkboard-min-h': `${tasksGridMinHeight}px` } as React.CSSProperties)
+                      ? ({
+                          '--chalkboard-min-h': `${tasksGridMinHeight}px`,
+                          minHeight: `${tasksGridMinHeight}px`,
+                        } as React.CSSProperties)
                       : {}),
                   }}
                 >

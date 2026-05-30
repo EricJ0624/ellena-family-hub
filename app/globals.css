@@ -787,17 +787,16 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: --chalkboard-min-h(그리드 셀 px)로 최소 높이 보장, 넘치면 height:auto 성장 */
+/* Frame + board: --chalkboard-min-h(px) = 위젯 셀 크기 → cqmin 비율 스케일 기준, 넘치면 height:auto 성장 */
 .chalkboard-frame {
   container-type: size;
   position: relative;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  height: auto;
   min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
+  height: auto;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -843,9 +842,9 @@ select {
   font-weight: 400;
   color: rgba(255, 255, 255, 0.97);
   margin: 0;
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: static;
+  flex: 1 1 auto;
+  min-width: 0;
   z-index: 1;
   line-height: 1.02;
   letter-spacing: 0.04em;
@@ -881,11 +880,13 @@ select {
 }
 
 .chalkboard-top-bar {
-  position: relative;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 3cqmin;
   flex-shrink: 0;
-  height: auto;
-  /* title·+ADD가 absolute → min-height로 버튼 영역까지 반드시 확보 (겹침 방지) */
-  min-height: max(40cqmin, calc(24cqh - 10cqw + 16cqmin));
   margin-bottom: 4cqmin;
   z-index: 2;
   min-width: 0;
@@ -900,9 +901,8 @@ select {
 
 /* Icons remain on PNG; + ADD box is drawn in CSS (box-less background) */
 .chalkboard-top-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: static;
+  flex: 0 0 auto;
   width: 36%;
   max-width: 10.75rem;
   min-width: 7rem;
@@ -910,8 +910,8 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* PNG 이모지(집·태양·하트) 바로 아래 — 프레임 높이(cqh) 기준, container inset(10% width) 보정 */
-  padding-top: max(calc(24cqh - 10cqw), 3cqmin);
+  /* PNG 우상단 이모지(집·태양·하트) 아래 — cqmin으로 위젯 크기에 비례 */
+  padding-top: 23cqmin;
   gap: 3.5cqmin;
 }
 
@@ -1847,12 +1847,13 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* 칠판: --chalkboard-min-h(px)로 그리드 셀 최소 높이 보장 — min-height:100%는 부모 auto 시 0으로 붕괴 */
+  /* 칠판: --chalkboard-min-h(px)로 셀 크기 보장 + 콘텐츠 성장 허용 */
   .widget-chrome:has(.chalkboard-frame) {
     display: flex;
     flex-direction: column;
-    height: auto;
+    width: 100%;
     min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
+    height: auto;
     overflow: visible;
     background: transparent;
   }
