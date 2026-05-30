@@ -18,16 +18,12 @@ function TasksPreview() {
     { text: '주말 청소', done: false, assignee: null },
   ];
   return (
-    <div className="chalkboard-frame w-full min-w-0">
-      <div className="chalkboard-cap-top">
-        <section className="chalkboard-container chalkboard-container--top">
-          <div className="chalkboard-top-bar">
-            <h3 className="chalkboard-title">Family Tasks</h3>
-          </div>
-        </section>
-      </div>
-      <div className="chalkboard-extend-body">
-        <div className="chalkboard-task-area">
+    <div className="chalkboard-frame flex h-full min-h-0 w-full flex-1 flex-col">
+      <section className="chalkboard-container h-full min-h-0 flex-1 flex-col">
+        <div className="chalkboard-top-bar">
+          <h3 className="chalkboard-title">Family Tasks</h3>
+        </div>
+        <div className="section-body">
           <div className="todo-list">
             {items.map((item, i) => (
               <div key={i} className="todo-item">
@@ -48,8 +44,7 @@ function TasksPreview() {
             ))}
           </div>
         </div>
-      </div>
-      <div className="chalkboard-cap-bottom" aria-hidden="true" />
+      </section>
     </div>
   );
 }

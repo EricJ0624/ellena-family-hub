@@ -286,64 +286,59 @@ export function FamilyTasksSection({
         </div>
       , document.body)}
 
-      <div className="chalkboard-frame w-full min-w-0">
-        <div className="chalkboard-cap-top">
-          <section className="chalkboard-container chalkboard-container--top">
-            <div className="chalkboard-top-bar">
-              <h3 className="chalkboard-title">{t.todo_section_title}</h3>
-              <div className="chalkboard-top-actions">
-                <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
-                  {t.todo_add_btn}
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
-        <div className="chalkboard-extend-body">
-          <div
-            className={`chalkboard-task-area ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
-            ref={chatDropRef}
-            onDragOver={onChatDragOver}
-            onDragLeave={onChatDragLeave}
-            onDrop={onChatDrop}
-          >
-            {visibleTasks.length > 0 ? (
-              <div className="todo-list">
-                {visibleTasks.map((task) => (
-                  <div key={task.id} className="todo-item">
-                    <div onClick={() => handleToggleTask(task.id)} className="todo-content">
-                      <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
-                        {task.done && (
-                          <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M5 13l4 4L19 7"></path>
-                          </svg>
-                        )}
-                      </div>
-                      <div className="todo-text-wrapper">
-                        <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
-                        {task.assignee && (
-                          <span className="todo-assignee">
-                            {task.assignee === '누구나' ? t.anyone : task.assignee}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {(task.created_by === userId || !task.created_by) && (
-                      <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
-                        <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="chalkboard-empty-state">{t.todo_empty_state}</p>
-            )}
+      <div className="chalkboard-frame flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
+      <section className="chalkboard-container">
+        <div className="chalkboard-top-bar">
+          <h3 className="chalkboard-title">{t.todo_section_title}</h3>
+          <div className="chalkboard-top-actions">
+            <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
+              {t.todo_add_btn}
+            </button>
           </div>
         </div>
-        <div className="chalkboard-cap-bottom" aria-hidden="true" />
+        <div
+          className={`chalkboard-task-area ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
+          ref={chatDropRef}
+          onDragOver={onChatDragOver}
+          onDragLeave={onChatDragLeave}
+          onDrop={onChatDrop}
+        >
+          {visibleTasks.length > 0 ? (
+            <div className="todo-list">
+              {visibleTasks.map((task) => (
+                <div key={task.id} className="todo-item">
+                  <div onClick={() => handleToggleTask(task.id)} className="todo-content">
+                    <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
+                      {task.done && (
+                        <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="todo-text-wrapper">
+                      <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
+                      {task.assignee && (
+                        <span className="todo-assignee">
+                          {task.assignee === '누구나' ? t.anyone : task.assignee}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {(task.created_by === userId || !task.created_by) && (
+                    <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
+                      <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="chalkboard-empty-state">{t.todo_empty_state}</p>
+          )}
+        </div>
+      </section>
       </div>
     </>
   );

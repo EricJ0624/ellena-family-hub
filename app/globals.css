@@ -90,11 +90,6 @@
   --chalkboard-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M0 11h22M11 0v22' stroke='%23ffffff' stroke-opacity='0.055' stroke-width='0.5'/%3E%3Cpath d='M11 9.8v2.4M9.8 11h2.4' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='0.55' stroke-linecap='round'/%3E%3C/svg%3E");
   --chalkboard-bg-image: url('/family-tasks/chalkboard-bg.png');
   /* Match public/family-tasks/chalkboard-bg.png (1236×864) */
-  --chalkboard-design-w: 1236;
-  --chalkboard-design-h: 864;
-  /* PNG slice heights (px in source art) — top: header+icons; bottom: ledge+chalk */
-  --chalkboard-cap-top-design-h: 449;
-  --chalkboard-cap-bottom-design-h: 104;
   --chalkboard-aspect: 1236 / 864;
   --chalkboard-inset-top: 10%;
   --chalkboard-inset-right: 7%;
@@ -792,22 +787,24 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame: 너비(cqw)로 전체 스케일 · 임무 증가 시 extend-body만 세로 성장 */
+/* Frame: 위젯 크기(100%)에 맞춤 + cqmin 비례 스케일 — 내용물 min/max clamp 없음 */
 .chalkboard-frame {
-  --cb-cap-top-h: calc(100cqw * var(--chalkboard-cap-top-design-h) / var(--chalkboard-design-w));
-  --cb-cap-bottom-h: calc(100cqw * var(--chalkboard-cap-bottom-design-h) / var(--chalkboard-design-w));
-  --cb-h: var(--cb-cap-top-h);
-  container-type: inline-size;
+  --cb-h: calc(100cqw * 864 / 1236);
+  container-type: size;
   container-name: chalkboard;
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   min-width: 0;
   width: 100%;
-  height: auto;
-  min-height: var(--tasks-min-h, 0px);
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: var(--tasks-min-h, 100%);
   background-color: #3d2a14;
+  background-image: var(--chalkboard-bg-image);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: top center;
   box-shadow: none;
   border-radius: 4px;
   overflow: clip;
@@ -816,81 +813,20 @@ select {
   isolation: isolate;
 }
 
-/* PNG 상단 캡 — 위젯 너비에 비례, 세로 스트레치 없음 */
-.chalkboard-cap-top {
-  position: relative;
-  flex: 0 0 auto;
-  width: 100%;
-  aspect-ratio: var(--chalkboard-design-w) / var(--chalkboard-cap-top-design-h);
-  background-color: #3d2a14;
-  background-image: var(--chalkboard-bg-image);
-  background-size: 100% auto;
-  background-repeat: no-repeat;
-  background-position: top center;
-  overflow: hidden;
-}
-
-.chalkboard-container--top {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-width: 0;
-  width: 100%;
-  background: transparent;
-  border: none;
-  padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) 0 var(--chalkboard-inset-left);
-  box-shadow: none;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.chalkboard-container--top .chalkboard-top-bar,
-.chalkboard-container--top .chalkboard-top-bar * {
-  pointer-events: auto;
-}
-
-/* 임무 리스트 구간 — CSS 칠판, 임무 수만큼만 아래로 연장 */
-.chalkboard-extend-body {
-  flex: 1 1 auto;
-  min-height: max(
-    0px,
-    calc(var(--tasks-min-h, 0px) - var(--cb-cap-top-h) - var(--cb-cap-bottom-h))
-  );
-  margin-left: var(--chalkboard-inset-left);
-  margin-right: var(--chalkboard-inset-right);
-  background-color: var(--chalkboard-bg);
-  background-image:
-    var(--chalkboard-grid),
-    radial-gradient(ellipse 45% 35% at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 70%),
-    linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
-  background-size: 22px 22px, 100% 100%, 100% 100%;
-}
-
-/* PNG 하단 받침·분필 캡 — 고정 비율 높이 */
-.chalkboard-cap-bottom {
-  flex: 0 0 auto;
-  width: 100%;
-  height: var(--cb-cap-bottom-h);
-  background-color: #3d2a14;
-  background-image: var(--chalkboard-bg-image);
-  background-size: 100% auto;
-  background-repeat: no-repeat;
-  background-position: bottom center;
-}
-
 .chalkboard-container {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   background: transparent;
   border: none;
+  padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
+    var(--chalkboard-inset-left);
   box-shadow: none;
   overflow: hidden;
 }
@@ -907,7 +843,7 @@ select {
 
 .chalkboard-title {
   font-family: var(--chalk-font-title);
-  font-size: 10cqw;
+  font-size: 10cqmin;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.97);
   margin: 0;
@@ -954,7 +890,7 @@ select {
   height: auto;
   /* absolute 자식(title·+ADD) — PNG 이모지·버튼과 겹치지 않게 (8b32daa 기준, cqw/--cb-h) */
   min-height: calc(var(--cb-h) * 0.4);
-  margin-bottom: 0;
+  margin-bottom: 3cqmin;
   z-index: 1;
   min-width: 0;
   pointer-events: none;
@@ -977,19 +913,20 @@ select {
   flex-direction: column;
   align-items: stretch;
   /* PNG(1236×864) 일러스트 바닥 ≈33% 높이, inset-top → 이모지 바로 아래 +ADD */
-  padding-top: max(calc(var(--cb-h) * 0.34 - 10cqw), 0px);
-  gap: 2cqw;
+  padding-top: max(calc(var(--cb-h) * 0.34 - 10cqmin), 0px);
+  gap: 2cqmin;
 }
 
 .chalkboard-top-actions::before {
   content: none;
 }
 
-/* 임무 리스트 — 콘텐츠 높이만큼 성장, 스크롤 없음 (스케일은 cqw만) */
+/* top-bar 아래 — 위젯 높이 안에서 남은 영역 채움, 넘치면 스크롤 */
 .chalkboard-task-area {
   position: relative;
   z-index: 1;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -997,17 +934,19 @@ select {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  overflow: visible;
-  padding: 1.5cqw 0 3cqw;
+  overflow-x: clip;
+  overflow-y: auto;
+  padding-top: 1.5cqmin;
+  padding-bottom: 3cqmin;
 }
 
 .chalkboard-task-area:has(.chalkboard-empty-state) {
   flex: 1 1 auto;
-  min-height: 100%;
+  min-height: 0;
   align-items: center;
   justify-content: center;
-  padding-top: 3cqw;
-  padding-bottom: 8cqw;
+  padding-top: 3cqmin;
+  padding-bottom: 8cqmin;
 }
 
 .chalkboard-task-area .todo-list {
@@ -1016,7 +955,7 @@ select {
   align-items: stretch;
   justify-content: flex-start;
   flex: none;
-  gap: 2cqw;
+  gap: 2cqmin;
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -1042,15 +981,15 @@ select {
 .chalkboard-btn-add {
   position: relative;
   margin: 0;
-  padding: 2.5cqw 5cqw;
-  min-height: 14cqw;
+  padding: 2.5cqmin 5cqmin;
+  min-height: 14cqmin;
   width: 100%;
   background: transparent;
   color: rgba(255, 255, 255, 0.97);
-  border: 0.16cqw solid rgba(255, 255, 255, 0.88);
+  border: 0.16cqmin solid rgba(255, 255, 255, 0.88);
   border-radius: var(--chalk-sketch-radius);
   font-family: var(--chalk-font-title);
-  font-size: 5.5cqw;
+  font-size: 5.5cqmin;
   font-weight: 400;
   cursor: pointer;
   transition:
@@ -1087,7 +1026,7 @@ select {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 2cqw;
+  gap: 2cqmin;
   width: 100%;
   max-width: 100%;
   position: relative;
@@ -1099,8 +1038,8 @@ select {
   flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 2cqw;
-  padding: 1.5cqw 0;
+  gap: 2cqmin;
+  padding: 1.5cqmin 0;
   position: relative;
   min-width: 0;
   max-width: 100%;
@@ -1110,10 +1049,10 @@ select {
 .todo-content {
   display: flex;
   align-items: center;
-  gap: 4cqw;
+  gap: 4cqmin;
   flex: 1;
   min-width: 0;
-  max-width: calc(100% - 12cqw);
+  max-width: calc(100% - 12cqmin);
   cursor: pointer;
 }
 
@@ -1123,10 +1062,10 @@ select {
 }
 
 .todo-checkbox {
-  width: 9cqw;
-  height: 9cqw;
+  width: 9cqmin;
+  height: 9cqmin;
   border-radius: 255px 6px 225px 6px / 6px 225px 6px 255px;
-  border: 0.16cqw solid rgba(255, 255, 255, 0.9);
+  border: 0.16cqmin solid rgba(255, 255, 255, 0.9);
   background: transparent;
   display: flex;
   align-items: center;
@@ -1148,8 +1087,8 @@ select {
 }
 
 .todo-checkmark {
-  width: 6cqw;
-  height: 6cqw;
+  width: 6cqmin;
+  height: 6cqmin;
   color: #ffffff;
   stroke-width: 3;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
@@ -1159,14 +1098,14 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 3cqw;
+  gap: 3cqmin;
   flex: 1;
   min-width: 0;
   max-width: 100%;
 }
 
 .todo-text {
-  font-size: 7cqw;
+  font-size: 7cqmin;
   font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.03em;
@@ -1182,23 +1121,23 @@ select {
 }
 
 .todo-assignee {
-  font-size: 5cqw;
+  font-size: 5cqmin;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   white-space: normal;
   overflow-wrap: anywhere;
   max-width: 100%;
-  padding: 1cqw 3cqw;
+  padding: 1cqmin 3cqmin;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 255px 8px 225px 8px / 8px 225px 8px 255px;
-  border: 0.08cqw solid rgba(255, 255, 255, 0.25);
+  border: 0.08cqmin solid rgba(255, 255, 255, 0.25);
 }
 
 .chalkboard-btn-delete {
-  padding: 2cqw;
+  padding: 2cqmin;
   color: #ffffff;
   background: transparent;
-  border: 0.16cqw solid #ffffff;
+  border: 0.16cqmin solid #ffffff;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1206,9 +1145,9 @@ select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 11cqw;
-  height: 11cqw;
-  box-shadow: 0 0.16cqw 0.32cqw rgba(0, 0, 0, 0.2);
+  width: 11cqmin;
+  height: 11cqmin;
+  box-shadow: 0 0.16cqmin 0.32cqmin rgba(0, 0, 0, 0.2);
 }
 
 .chalkboard-btn-delete:hover {
@@ -1221,18 +1160,18 @@ select {
 }
 
 .chalkboard-icon-delete {
-  width: 5.25cqw;
-  height: 5.25cqw;
+  width: 5.25cqmin;
+  height: 5.25cqmin;
   stroke-width: 3;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .chalkboard-empty-state {
-  padding: 6cqw 0;
+  padding: 6cqmin 0;
   color: rgba(255, 255, 255, 0.92);
   font-family: var(--chalk-font-body);
   font-weight: 400;
-  font-size: 7.5cqw;
+  font-size: 7.5cqmin;
   font-style: italic;
   text-align: center;
   position: relative;
@@ -1939,20 +1878,19 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: 최소 높이(rowSpan) + 임무 증가 시 셀·행 auto 성장 */
+  /* Family Tasks: 그리드 셀(rowSpan×cellH) = 칠판 크기, 내용은 cqmin 비례 */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    align-self: start;
+    align-self: stretch;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     width: 100%;
     max-width: 100%;
     min-height: var(--tasks-min-h, auto);
-    height: auto;
   }
 
   .dashboard-widget-grid[data-layout='landscape'] > *:has(.chalkboard-frame) {
-    align-self: start;
+    align-self: stretch;
   }
 
   .widget-chrome:has(.chalkboard-frame) {
@@ -1960,14 +1898,15 @@ select {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 0 0 auto;
-    height: auto;
+    flex: 1 1 auto;
+    height: 100%;
     min-height: var(--tasks-min-h, 0px);
     width: 100%;
   }
 
   .widget-chrome:has(.chalkboard-frame) > .chalkboard-frame {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
