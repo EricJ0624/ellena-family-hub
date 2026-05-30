@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame: 위젯(셀·chrome)과 동일 크기 fill + cqw 비율 스케일(내용 min/max clamp 없음) */
+/* Frame: 높이 = max(rowSpan 최소, 임무 내용). PNG는 frame 박스에 100% 100% — flex:1/100% 고정 금지 */
 .chalkboard-frame {
   --cb-h: calc(100cqw * 864 / 1236);
   container-type: inline-size;
@@ -795,11 +795,12 @@ select {
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 0 0 auto;
+  align-self: stretch;
   min-width: 0;
   width: 100%;
-  flex: 1 1 auto;
-  align-self: stretch;
   min-height: var(--tasks-min-h, 0px);
+  height: auto;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -807,8 +808,7 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 1rem;
-  /* clip이면 임무가 rowSpan 고정 높이 밖으로 나갈 때 하단이 프레임에 잘림 → 위젯 성장과 함께 visible */
-  overflow: visible;
+  overflow: hidden;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
@@ -816,12 +816,9 @@ select {
 
 .chalkboard-container {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  min-height: 0;
   width: 100%;
-  height: auto;
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -830,7 +827,12 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
+}
+
+.chalkboard-frame:has(.chalkboard-empty-state) .chalkboard-container {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -1888,24 +1890,21 @@ select {
     background: var(--glass-medium-bg);
   }
 
-  /* Family Tasks: span 행 전체를 stretch — start면 셀만 크고 칠판은 내용 높이로 줄어 보라색 여백 발생 */
+  /* Family Tasks: 셀·chrome·frame 모두 내용 높이 — frame에만 rowSpan 바닥(min-height) */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-    min-height: var(--tasks-min-h, auto);
+    align-self: start;
+    display: block;
+    min-height: 0;
     height: auto;
-    overflow: visible;
+    overflow: hidden;
     width: 100%;
     max-width: 100%;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome {
-    flex: 1 1 auto;
-    align-self: stretch;
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
+    display: block;
+    height: auto;
+    min-height: 0;
     width: 100%;
     min-width: 0;
   }
@@ -1913,18 +1912,14 @@ select {
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     height: auto;
-    min-height: 100%;
-    overflow: visible;
+    min-height: 0;
+    overflow: hidden;
     border-radius: 1rem;
   }
 
   .widget-chrome:has(.chalkboard-frame) > .chalkboard-frame {
-    flex: 1 1 auto;
-    align-self: stretch;
     width: 100%;
     min-width: 0;
-    min-height: max(var(--tasks-min-h, 0px), 100%);
-    height: auto;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */

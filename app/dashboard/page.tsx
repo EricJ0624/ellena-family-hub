@@ -5968,7 +5968,7 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'overflow-visible' : 'overflow-hidden'}`}
+                  className="min-w-0 max-w-full isolate overflow-hidden"
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
