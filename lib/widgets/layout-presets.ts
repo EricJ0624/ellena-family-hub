@@ -14,6 +14,7 @@
 import {
   WIDGET_LAYOUT_PRESETS,
   WIDGET_DEFAULT_SIZE,
+  WIDGET_DEFAULT_ORDER,
   WIDGET_SIZE_PRESETS,
   type DashboardWidgetKey,
   type WidgetConfigDraft,
@@ -195,16 +196,21 @@ export function applyPresetToWidget(
 }
 
 /**
- * 전체 위젯을 기본 size로 복구하고 portrait/landscape 양쪽 위치를 재패킹한 drafts 반환.
+ * 전체 위젯을 기본 size와 순서로 복구하고 portrait/landscape 양쪽 위치를 재패킹한 drafts 반환.
  * Phase D: portrait와 landscape를 독립으로 패킹해 layoutPortraitXY/layoutLandscapeXY 설정.
  * 비활성 위젯은 size만 복구하고 layout 좌표는 null 유지.
+ * display_order도 WIDGET_DEFAULT_ORDER 기준으로 초기화.
  */
 export function resetAllLayouts(drafts: readonly WidgetConfigDraft[]): WidgetConfigDraft[] {
   const resetted = drafts.map((d) =>
     d.is_enabled
-      ? applyPresetToWidget(d)
+      ? {
+          ...applyPresetToWidget(d),
+          display_order: WIDGET_DEFAULT_ORDER[d.widget_key] ?? d.display_order,
+        }
       : {
           ...d,
+          display_order: WIDGET_DEFAULT_ORDER[d.widget_key] ?? d.display_order,
           layoutX: null, layoutY: null,
           layoutPortraitX: null, layoutPortraitY: null,
           layoutLandscapeX: null, layoutLandscapeY: null,

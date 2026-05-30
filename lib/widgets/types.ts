@@ -169,8 +169,13 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'calendar', is_enabled: true, display_order: 20, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'chat',     is_enabled: true, display_order: 30, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'location', is_enabled: true, display_order: 40, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'album',    is_enabled: true, display_order: 50, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'travel',   is_enabled: true, display_order: 60, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'piggy',    is_enabled: true, display_order: 70, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'piggy',    is_enabled: true, display_order: 40, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: 1, rowSpan: 1, minW: null, minH: null, priority: 0, ..._layoutM },
 ];
+
+/** 위젯별 기본 display_order — resetAllLayouts에서 순서 초기화 시 사용 */
+export const WIDGET_DEFAULT_ORDER: Record<DashboardWidgetKey, number> = Object.fromEntries(
+  DEFAULT_WIDGET_CONFIGS.map((c) => [c.widget_key, c.display_order]),
+) as Record<DashboardWidgetKey, number>;
