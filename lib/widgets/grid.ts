@@ -221,7 +221,7 @@ export function estimateTasksGridRowSpan(layoutRowSpan: number, taskCount: numbe
   return Math.min(24, Math.max(base, needed));
 }
 
-/** 칠판 실측 높이(px) → 그리드 rowSpan (layout 바닥 이상) */
+/** 칠판 실측 높이(px) → 그리드 rowSpan (layout 바닥 이상, 여유 행 없음) */
 export function rowSpanFromChalkboardHeight(
   heightPx: number,
   cellRowH: number,
@@ -229,7 +229,7 @@ export function rowSpanFromChalkboardHeight(
 ): number {
   const base = clampGridSpan(layoutRowSpan, 24);
   if (cellRowH <= 0 || !Number.isFinite(heightPx) || heightPx <= 0) return base;
-  const rows = Math.ceil(heightPx / cellRowH);
+  const rows = Math.ceil((heightPx + 1) / cellRowH);
   return Math.min(24, Math.max(base, rows));
 }
 

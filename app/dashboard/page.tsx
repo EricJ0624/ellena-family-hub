@@ -5354,7 +5354,6 @@ export default function FamilyHub() {
     tasksGridCellRef,
     tasksLayoutRowSpan,
     dashboardCellRowH,
-    state.todos.length,
     tasksWidgetCfg != null && expandedWidget !== 'tasks' && recentlyClosedWidget !== 'tasks',
   );
 
@@ -6004,7 +6003,6 @@ export default function FamilyHub() {
                     ...(cfg.widget_key === 'tasks'
                       ? {
                           height: 'auto',
-                          minHeight: dashboardCellRowH * tasksGridRowSpan,
                           ['--tasks-min-h' as string]: `${dashboardCellRowH * rowSpan}px`,
                         }
                       : {}),
