@@ -73,6 +73,7 @@ import {
   PORTRAIT_COLS,
   LANDSCAPE_COLS,
 } from '@/lib/widgets/grid';
+import { useTasksCellMinHeight } from '@/app/dashboard/useTasksCellMinHeight';
 import {
   readStoredPreviewOrientation,
   togglePreviewOrientation,
@@ -5340,6 +5341,21 @@ export default function FamilyHub() {
     [widgetConfigs],
   );
 
+  const tasksGridCellRef = useRef<HTMLDivElement>(null);
+  const tasksLayoutMinPx = useMemo(() => {
+    const cfg = orderedWidgets.find((c) => c.widget_key === 'tasks');
+    if (!cfg) return dashboardCellRowH * 6;
+    const { rowSpan } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
+    return dashboardCellRowH * rowSpan;
+  }, [orderedWidgets, dashboardColumnCount, dashboardIsLandscapeGrid, dashboardCellRowH]);
+  const tasksCellMinHeightPx = useTasksCellMinHeight(
+    tasksGridCellRef,
+    tasksLayoutMinPx,
+    orderedWidgets.some((c) => c.widget_key === 'tasks')
+      && expandedWidget !== 'tasks'
+      && recentlyClosedWidget !== 'tasks',
+  );
+
   // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
@@ -5976,6 +5992,7 @@ export default function FamilyHub() {
               return (
                 <div
                   key={cfg.widget_key}
+                  ref={cfg.widget_key === 'tasks' ? tasksGridCellRef : undefined}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
                   className="min-w-0 max-w-full isolate overflow-hidden"
                   data-widget-size={cfg.size}
@@ -5983,13 +6000,14 @@ export default function FamilyHub() {
                     gridColumn: gridColumnStart
                       ? `${gridColumnStart} / span ${colSpan}`
                       : `span ${colSpan}`,
-                    /* tasks: 1행 auto-grow — gap-5만 아래 위젯과 간격. 칠판/임무 UI는 --tasks-min-h 쪽 유지 */
+                    /* tasks: 1트랙 + 셀 min-height 실측 — stretch로 행이 짧아지며 겹치는 것 방지 */
                     gridRow: cfg.widget_key === 'tasks' ? 'auto' : `span ${rowSpan}`,
                     ...(cfg.widget_key === 'tasks'
                       ? {
-                          height: 'auto',
-                          minHeight: dashboardCellRowH * rowSpan,
-                          ['--tasks-min-h' as string]: `${dashboardCellRowH * rowSpan}px`,
+                          alignSelf: 'start',
+                          height: 'fit-content',
+                          minHeight: tasksCellMinHeightPx,
+                          ['--tasks-min-h' as string]: `${tasksLayoutMinPx}px`,
                         }
                       : {}),
                   }}
