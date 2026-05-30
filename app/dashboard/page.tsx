@@ -5891,7 +5891,6 @@ export default function FamilyHub() {
               const { colSpan, rowSpan, gridColumnStart, gridRowStart } = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const isExpanded = expandedWidget === cfg.widget_key;
               const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
-              const isTasksWidget = cfg.widget_key === 'tasks';
 
               // Phase E: S 사이즈 여부 — 실제 layout 너비가 portrait 6열(50%) 이하이면 S로 판단.
               // landscape: 12열(24열 기준 50%) 이하. 미설정(null)이면 size 프리셋으로 폴백.
@@ -5903,14 +5902,11 @@ export default function FamilyHub() {
                 ? effectiveW <= sMaxUnits
                 : cfg.size === 'S';
 
-              const rowHeight = getSquareCellRowHeight(dashboardContentWidth, dashboardColumnCount);
-              const tasksGridMinHeight = isTasksWidget ? rowSpan * rowHeight : undefined;
-
               return (
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  className={`min-w-0 max-w-full isolate ${isTasksWidget ? 'flex flex-col overflow-visible' : 'overflow-hidden'}`}
+                  className={`min-w-0 max-w-full isolate ${cfg.widget_key === 'tasks' ? 'overflow-visible' : 'overflow-hidden'}`}
                   data-widget-size={cfg.size}
                   style={{
                     gridColumn: gridColumnStart
@@ -5918,12 +5914,6 @@ export default function FamilyHub() {
                       : `span ${colSpan}`,
                     // 수직 배치는 CSS Grid auto-flow에 위임 — 열별 독립 채움으로 에디터 미리보기와 동일
                     gridRow: `span ${rowSpan}`,
-                    ...(tasksGridMinHeight != null
-                      ? ({
-                          '--chalkboard-min-h': `${tasksGridMinHeight}px`,
-                          minHeight: `${tasksGridMinHeight}px`,
-                        } as React.CSSProperties)
-                      : {}),
                   }}
                 >
                   <WidgetChrome

@@ -787,7 +787,7 @@ select {
   letter-spacing: 0.04em;
 }
 
-/* Frame + board: --chalkboard-min-h(px) = 그리드 셀 최소 높이; 콘텐츠 많으면 auto 성장 */
+/* Frame: WidgetChrome(height 100%)과 동일 체인 — 8281420 패턴 + 임무 많을 때 행 성장은 grid minmax(auto) */
 .chalkboard-frame {
   container-type: size;
   position: relative;
@@ -795,9 +795,8 @@ select {
   flex-direction: column;
   min-width: 0;
   width: 100%;
-  min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
-  height: auto;
-  flex: 1 1 auto;
+  height: fit-content;
+  min-height: 100%;
   background-color: #3d2a14;
   background-image: var(--chalkboard-bg-image);
   background-size: 100% 100%;
@@ -805,8 +804,7 @@ select {
   background-position: top center;
   box-shadow: none;
   border-radius: 4px;
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: clip;
   box-sizing: border-box;
   padding: 0;
   isolation: isolate;
@@ -816,9 +814,9 @@ select {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   width: 100%;
-  min-height: 100%;
-  height: auto;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -826,7 +824,7 @@ select {
   padding: var(--chalkboard-inset-top) var(--chalkboard-inset-right) var(--chalkboard-inset-bottom)
     var(--chalkboard-inset-left);
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Family Illustration Container - Match Chalkboard Background */
@@ -930,13 +928,9 @@ select {
   overflow-y: visible;
 }
 
-/* Step 2: 임무 목록 — 자연 높이로 프레임·칠판 PNG 함께 성장 (8b32daa) */
 .chalkboard-container .section-body:has(.todo-list) {
-  flex: none;
-  height: auto;
-  min-height: 0;
-  overflow-y: visible;
-  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: min-content;
 }
 
 .chalkboard-container .section-body:has(.chalkboard-empty-state) {
@@ -1848,29 +1842,18 @@ select {
     height: 100%;
     overflow: hidden;
     border-radius: 1rem; /* rounded-2xl */
-    /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass 배경이 보이도록 */
+    /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass background가 보이도록 */
     background: var(--glass-medium-bg);
   }
 
-  /* 칠판 — 항상 셀 최소 높이 채움, 임무 많으면 auto 성장 */
+  /* Family Tasks: glass 제거 + 임무 많을 때 chrome 밖으로 클립되지 않게 */
   .widget-chrome:has(.chalkboard-frame) {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
-    height: auto;
-    overflow: visible;
     background: transparent;
+    overflow: visible;
   }
 
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
-    display: flex;
-    flex-direction: column;
-    align-self: start;
     overflow: visible;
-    min-height: var(--chalkboard-min-h, max(12.5rem, calc(100cqw * 864 / 1236)));
-    height: auto;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
