@@ -2056,6 +2056,97 @@ select {
     overflow: hidden;
   }
 
+  /*
+   * Family Games: 위젯 내부 스크롤 없음. layout 박스 + cqmin 비율 스케일.
+   */
+  .widget-chrome[data-widget-key='games'] > .widget-scale-root {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .widget-chrome[data-widget-key='games'] .content-section.games-widget-section {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .widget-chrome[data-widget-key='games'] .section-header {
+    flex: 0 0 auto;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-section-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-widget-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    gap: 2cqmin;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-tab-bar {
+    flex: 0 0 auto;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-tab-panel {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    gap: 2cqmin;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-setup-columns {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: 1fr 1fr;
+    gap: 2cqmin;
+    min-height: 0;
+    align-content: start;
+  }
+
+  @container widget (max-width: 240px) {
+    .widget-chrome[data-widget-key='games'] .games-setup-columns {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-field-list {
+    gap: 1.5cqmin;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-setup-actions {
+    flex: 0 0 auto;
+  }
+
+  .dashboard-widget-grid .editor-widget-preview-inner .games-widget-section {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid .editor-widget-preview-inner .games-section-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .dashboard-widget-grid .editor-widget-preview-inner .location-widget-section {
     display: flex;
     height: 100%;

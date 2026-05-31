@@ -360,13 +360,13 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   if (isSetup) {
     return (
-      <div className="grid" style={{ gap: '2.5cqmin' }}>
-        <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
-          <div>
+      <div className="games-tab-panel games-tab-setup">
+        <div className="games-setup-columns">
+          <div className="min-h-0 min-w-0">
             <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
               {t.ladder_participants}
             </div>
-            <div className="grid" style={{ gap: '1.5cqmin' }}>
+            <div className="games-field-list grid">
               {participantIds.map((value, index) => (
                 <MemberSelect
                   key={`p-${index}`}
@@ -381,11 +381,11 @@ export function LadderGameTab(props: LadderGameTabProps) {
               ))}
             </div>
           </div>
-          <div>
+          <div className="min-h-0 min-w-0">
             <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
               {t.ladder_destinations}
             </div>
-            <div className="grid" style={{ gap: '1.5cqmin' }}>
+            <div className="games-field-list grid">
               {destinations.map((value, index) => (
                 <input
                   key={`d-${index}`}
@@ -400,7 +400,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
+        <div className="games-setup-actions flex flex-shrink-0 flex-wrap" style={{ gap: '1.5cqmin' }}>
           <button
             type="button"
             onClick={participantsReady ? launchLadderGame : addPair}
@@ -428,7 +428,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
         </div>
 
         {!participantsReady && (
-          <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+          <p className="flex-shrink-0 text-[#64748b]" style={{ fontSize: '4cqmin' }}>
             {t.ladder_min_players}
           </p>
         )}

@@ -158,8 +158,8 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
 
   if (isSetup) {
     return (
-      <div className="grid" style={{ gap: '2.5cqmin' }}>
-        <div>
+      <div className="games-tab-panel games-tab-setup">
+        <div className="min-h-0 min-w-0 flex-shrink-0">
           <div
             className="mb-2 flex flex-wrap items-center justify-between gap-2 font-semibold text-[#334155]"
             style={{ fontSize: '4.5cqmin' }}
@@ -199,8 +199,8 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         </div>
 
         {selectedIds.length >= 2 && slotsPerMemberOptions.length > 0 && (
-          <div className="grid sm:grid-cols-2" style={{ gap: '2cqmin' }}>
-            <div>
+          <div className="games-setup-columns flex-shrink-0">
+            <div className="min-h-0 min-w-0">
               <label
                 className="mb-2 block font-semibold text-[#334155]"
                 style={{ fontSize: '4.5cqmin' }}
@@ -228,7 +228,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
                 })}
               </select>
             </div>
-            <div className="flex items-end">
+            <div className="flex min-h-0 min-w-0 items-end">
               <p className="font-medium text-indigo-700" style={{ fontSize: '4.5cqmin' }}>
                 {formatText(t.roulette_total_slots, {
                   total: String(slotsPerMember * selectedIds.length),
@@ -240,7 +240,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         )}
 
         {selectedIds.length < 2 && (
-          <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+          <p className="flex-shrink-0 text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
             {selectedIds.length === 0 ? t.roulette_select_participants : t.roulette_min_participants}
           </p>
         )}
@@ -254,7 +254,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
                 slotsPerMember,
               })
             }
-            className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
+            className="games-setup-actions w-full flex-shrink-0 rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
             style={{ fontSize: '4.5cqmin' }}
           >
             {props.launchLabel}

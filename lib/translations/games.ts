@@ -56,7 +56,7 @@ export type GamesTranslations = {
 
 const games: Record<LangCode, GamesTranslations> = {
   ko: {
-    section_title: '결정 게임',
+    section_title: '가족 게임',
     select_group: '그룹을 선택해 주세요.',
     tab_ladder: '사다리',
     tab_rps: '가위바위보',
@@ -109,7 +109,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '닫기',
   },
   en: {
-    section_title: 'Decision Games',
+    section_title: 'Family Games',
     select_group: 'Please select a group.',
     tab_ladder: 'Ladder',
     tab_rps: 'Rock Paper Scissors',
@@ -162,7 +162,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: 'Close',
   },
   ja: {
-    section_title: '決定ゲーム',
+    section_title: 'ファミリーゲーム',
     select_group: 'グループを選択してください。',
     tab_ladder: 'はしご',
     tab_rps: 'じゃんけん',
@@ -215,7 +215,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '閉じる',
   },
   'zh-CN': {
-    section_title: '决定游戏',
+    section_title: '家庭游戏',
     select_group: '请选择群组。',
     tab_ladder: '梯子',
     tab_rps: '石头剪刀布',
@@ -268,7 +268,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '关闭',
   },
   'zh-TW': {
-    section_title: '決定遊戲',
+    section_title: '家庭遊戲',
     select_group: '請選擇群組。',
     tab_ladder: '梯子',
     tab_rps: '猜拳',

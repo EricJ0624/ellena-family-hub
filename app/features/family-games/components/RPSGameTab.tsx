@@ -174,9 +174,9 @@ export function RPSGameTab(props: RPSGameTabProps) {
 
   if (isSetup) {
     return (
-      <div className="grid" style={{ gap: '2.5cqmin' }}>
-        <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
-          <div className="glass-panel-soft rounded-xl" style={{ padding: '2.5cqmin' }}>
+      <div className="games-tab-panel games-tab-setup">
+        <div className="games-setup-columns">
+          <div className="glass-panel-soft min-h-0 min-w-0 rounded-xl" style={{ padding: '2.5cqmin' }}>
             <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
               {t.rps_player1}
             </div>
@@ -190,7 +190,7 @@ export function RPSGameTab(props: RPSGameTabProps) {
               excludeUserIds={[p2UserId]}
             />
           </div>
-          <div className="glass-panel-soft rounded-xl" style={{ padding: '2.5cqmin' }}>
+          <div className="glass-panel-soft min-h-0 min-w-0 rounded-xl" style={{ padding: '2.5cqmin' }}>
             <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
               {t.rps_player2}
             </div>
@@ -207,20 +207,20 @@ export function RPSGameTab(props: RPSGameTabProps) {
         </div>
 
         {p1UserId && p2UserId && p1UserId === p2UserId && (
-          <p className="text-center text-[#b91c1c]" style={{ fontSize: '4cqmin' }}>
+          <p className="flex-shrink-0 text-center text-[#b91c1c]" style={{ fontSize: '4cqmin' }}>
             {t.duplicate_member}
           </p>
         )}
 
         {!playersReady ? (
-          <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+          <p className="flex-shrink-0 text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
             {t.rps_select_members}
           </p>
         ) : (
           <button
             type="button"
             onClick={() => props.onLaunch({ p1UserId, p2UserId })}
-            className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
+            className="games-setup-actions w-full flex-shrink-0 rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
             style={{ fontSize: '4.5cqmin' }}
           >
             {props.launchLabel}

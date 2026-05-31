@@ -299,15 +299,15 @@ function PiggyPreview() {
   );
 }
 
-// ── Games (결정 게임) ───────────────────────────────────────────
+// ── Games (Family Games) ───────────────────────────────────────────
 function GamesPreview() {
   const tabs = ['사다리', '가위바위보', '룰렛'];
   return (
-    <section className="content-section h-full">
+    <section className="content-section games-widget-section h-full">
       <div className="section-header">
-        <h3 className="section-title">결정 게임</h3>
+        <h3 className="section-title">Family Games</h3>
       </div>
-      <div className="section-body">
+      <div className="section-body games-section-body">
         <div className="mb-2 flex flex-wrap gap-1 rounded-lg bg-slate-900/5 p-1">
           {tabs.map((tab, i) => (
             <span

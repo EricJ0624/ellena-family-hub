@@ -100,19 +100,19 @@ export function FamilyGamesSection({
 
   return (
     <>
-      <section className="content-section">
+      <section className="content-section games-widget-section">
         <div className="section-header">
           <h3 className="section-title">{t.section_title}</h3>
         </div>
-        <div className="section-body">
+        <div className="section-body games-section-body">
           {!currentGroupId ? (
             <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">
               {t.select_group}
             </div>
           ) : (
-            <div className="grid" style={{ gap: '2.5cqmin' }}>
+            <div className="games-widget-content">
               <div
-                className="flex flex-wrap rounded-xl bg-slate-900/5 p-1"
+                className="games-tab-bar flex flex-shrink-0 flex-wrap rounded-xl bg-slate-900/5 p-1"
                 role="tablist"
                 style={{ gap: '1cqmin' }}
               >
