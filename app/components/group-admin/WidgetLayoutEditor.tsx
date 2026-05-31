@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -32,10 +32,13 @@ import type { DashboardWidgetKey, WidgetConfigDraft } from '@/lib/widgets/types'
 import {
   buildWidgetGridItemStyle,
   detectGridOverlaps,
+  getSquareCellRowHeight,
   resolveWidgetGridPlacement,
   PORTRAIT_COLS,
   LANDSCAPE_COLS,
 } from '@/lib/widgets/grid';
+import type { AppPreviewOrientation } from '@/lib/widgets/preview-orientation';
+import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   BASE_COLS,
   toActualColSpan,
@@ -83,13 +86,6 @@ const WIDGET_CARD_META: Record<DashboardWidgetKey, WidgetCardMeta> = {
 type PreviewMode = 0 | 1 | 2;
 /** 레거시 colSpan → layoutW 폴백 시 시각 열 수 (라벨 "2 cols"/"4 cols"와 동일) */
 const PREVIEW_MODE_VISUAL_COLS: Record<PreviewMode, number> = { 0: 2, 1: 4, 2: 4 };
-/** 배치·CSS 그리드 열 수 — 대시보드와 동일 */
-const PREVIEW_MODE_PLACEMENT_COLS: Record<PreviewMode, number> = {
-  0: PORTRAIT_COLS,
-  1: LANDSCAPE_COLS,
-  2: LANDSCAPE_COLS,
-};
-
 type EditorOrientation = 'portrait' | 'landscape';
 
 /**
@@ -224,7 +220,7 @@ function SortableCard({
         ref={editMode ? setActivatorNodeRef : undefined}
         {...(editMode ? { ...listeners, ...attributes } : {})}
         className={[
-          'flex shrink-0 items-center gap-2 px-3 py-2 select-none touch-none',
+          'relative z-[25] flex shrink-0 items-center gap-2 px-3 py-2 select-none touch-none',
           meta.bg, meta.fg,
           editMode ? 'cursor-grab active:cursor-grabbing' : '',
         ].join(' ')}
@@ -260,14 +256,23 @@ function SortableCard({
         )}
       </div>
 
-      {/* 위젯 미리보기 — widget 컨테이너 쿼리 컨텍스트(대시보드 chrome과 동일) */}
-      <div className="editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
-        {PreviewContent()}
+      {/* 미리보기 + 편집 히트 레이어(클릭이 아래 위젯으로 통과하지 않음) */}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
+          {PreviewContent()}
+        </div>
+        {editMode && (
+          <div
+            className="absolute inset-0 z-[15] pointer-events-auto touch-none"
+            aria-hidden
+            onPointerDown={(e) => e.stopPropagation()}
+          />
+        )}
       </div>
 
-      {/* 편집 모드 컨트롤 오버레이 — 하단 고정 (리사이즈 핸들 위, z-20) */}
+      {/* 편집 모드 컨트롤 — 리사이즈 핸들 위 (z-20) */}
       {editMode && (
-        <div className="absolute bottom-5 inset-x-5 z-20 flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 shadow-md border border-slate-200/80 backdrop-blur-sm">
+        <div className="absolute bottom-10 inset-x-5 z-20 flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 shadow-md border border-slate-200/80 backdrop-blur-sm pointer-events-auto">
           <input
             type="checkbox"
             checked={cfg.is_enabled}
@@ -304,10 +309,10 @@ function SortableCard({
         </div>
       )}
 
-      {/* 높이 리사이즈 핸들 — 아래쪽 (20px 터치 영역, z-10) */}
+      {/* 높이 리사이즈 핸들 — 아래쪽 (40px 터치 영역) */}
       {editMode && (
         <div
-          className="absolute bottom-0 left-0 z-30 h-5 w-full cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute bottom-0 left-0 z-30 h-10 w-full cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center pointer-events-auto"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
@@ -359,42 +364,38 @@ export function WidgetLayoutEditor({
   onDragStateChange,
 }: WidgetLayoutEditorProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>(0);
-  const placementGridCols = PREVIEW_MODE_PLACEMENT_COLS[previewMode];
   const visualCols = PREVIEW_MODE_VISUAL_COLS[previewMode];
+  const previewOrientation: AppPreviewOrientation =
+    previewMode === 0 ? 'portrait' : 'landscape';
   // Phase D: orientation — portrait(0) / landscape(1,2)
   const orientation: EditorOrientation = previewMode === 0 ? 'portrait' : 'landscape';
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Phase C: 그리드 컨테이너 실측 너비 (정사각형 셀 rowHeight 계산용)
-  const [gridContainerWidth, setGridContainerWidth] = useState(0);
-  useLayoutEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      setGridContainerWidth(entry.contentRect.width);
-    });
-    ro.observe(el);
-    setGridContainerWidth(el.getBoundingClientRect().width);
-    return () => ro.disconnect();
-  }, []);
+  /** 대시보드와 동일: 실측 너비·열 수·셀 높이 */
+  const {
+    columnCount: gridColumnCount,
+    contentWidth: gridContentWidth,
+    isLandscapeGrid,
+  } = useDashboardGridLayout(gridRef, previewOrientation, true, drafts);
+  const placementCellRowH = getSquareCellRowHeight(gridContentWidth, gridColumnCount);
 
   // Refs to avoid stale closures in pointer event handlers
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
   // liveResizeRef: beginResize 내부에서 직접 관리 (state와 별도)
   const liveResizeRef = useRef<LiveResize | null>(null);
-  const placementGridColsRef = useRef(placementGridCols);
-  placementGridColsRef.current = placementGridCols;
+  const gridColumnCountRef = useRef(gridColumnCount);
+  gridColumnCountRef.current = gridColumnCount;
   const visualColsRef = useRef(visualCols);
   visualColsRef.current = visualCols;
   const previewModeRef = useRef(previewMode);
   previewModeRef.current = previewMode;
   const orientationRef = useRef(orientation);
   orientationRef.current = orientation;
-  const gridContainerWidthRef = useRef(gridContainerWidth);
-  gridContainerWidthRef.current = gridContainerWidth;
+  const gridContentWidthRef = useRef(gridContentWidth);
+  gridContentWidthRef.current = gridContentWidth;
   const onDraftsChangeRef = useRef(onDraftsChange);
   onDraftsChangeRef.current = onDraftsChange;
   // 컴포넌트 언마운트 시 남은 document 리스너 정리용
@@ -412,14 +413,14 @@ export function WidgetLayoutEditor({
   );
   const sortedIds = useMemo(() => sortedEnabled.map((d) => d.widget_key), [sortedEnabled]);
 
-  const placementIsLandscape = orientation === 'landscape';
+  const placementIsLandscape = isLandscapeGrid;
 
   // 개발 모드: 대시보드와 동일한 겹침 감지 (읽기·편집 비드래그 시 buildWidgetGridItemStyle 기준)
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
     const overlaps = detectGridOverlaps(
       sortedEnabled,
-      placementGridCols,
+      gridColumnCount,
       placementIsLandscape,
     );
     if (overlaps.length > 0) {
@@ -428,7 +429,7 @@ export function WidgetLayoutEditor({
         overlaps,
       );
     }
-  }, [sortedEnabled, placementGridCols, placementIsLandscape]);
+  }, [sortedEnabled, gridColumnCount, placementIsLandscape]);
 
   const sensors = useSensors(
     // PointerSensor: activationConstraint 없음 → pointermove 첫 이벤트에 즉시 드래그 시작
@@ -482,7 +483,7 @@ export function WidgetLayoutEditor({
     const onMove = (e: PointerEvent) => {
       const rs = liveResizeRef.current;
       if (!rs) return;
-      const containerWidth = gridContainerWidthRef.current || (gridRef.current?.getBoundingClientRect().width ?? 0);
+      const containerWidth = gridContentWidthRef.current || (gridRef.current?.getBoundingClientRect().width ?? 0);
       const baseCols = PREVIEW_MODE_BASE_COLS[previewModeRef.current];
 
       if (rs.axis === 'h' && containerWidth > 0) {
@@ -516,7 +517,7 @@ export function WidgetLayoutEditor({
       if (!rs) return;
 
       const allDrafts = draftsRef.current;
-      const placementCols = placementGridColsRef.current;
+      const placementCols = gridColumnCountRef.current;
       const orient = orientationRef.current;
       const baseCols = PREVIEW_MODE_BASE_COLS[previewModeRef.current];
       const maxRows = baseCols === PORTRAIT_COLS ? 24 : 12;
@@ -651,17 +652,15 @@ export function WidgetLayoutEditor({
           <div
             ref={gridRef}
             className="dashboard-widget-grid grid min-w-0 gap-3"
-            data-columns={placementGridCols}
+            data-columns={gridColumnCount}
             data-layout={orientation === 'landscape' ? 'landscape' : 'portrait'}
             style={{
-              gridTemplateColumns: `repeat(${placementGridCols}, minmax(0, 1fr))`,
+              gridTemplateColumns: `repeat(${gridColumnCount}, minmax(0, 1fr))`,
               gridAutoFlow: 'row',
               gridAutoRows:
-                gridContainerWidth > 0 && PREVIEW_MODE_BASE_COLS[previewMode] > 0
-                  ? `minmax(${gridContainerWidth / PREVIEW_MODE_BASE_COLS[previewMode]}px, auto)`
-                  : previewMode === 0
-                    ? 'minmax(32px, auto)'
-                    : 'minmax(16px, auto)',
+                placementCellRowH > 0
+                  ? `minmax(${placementCellRowH}px, auto)`
+                  : 'minmax(32px, auto)',
             }}
           >
             {sortedEnabled.map((cfg) => {
@@ -670,16 +669,13 @@ export function WidgetLayoutEditor({
               // SortableCard 내부는 항상 layoutW/H를 사용하므로 변경 없이 독립 편집 가능
               const effCfg = { ...cfg, ...getOrientationLayout(cfg, orientation) };
               const baseCols = PREVIEW_MODE_BASE_COLS[previewMode];
-              const placementCellRowH =
-                gridContainerWidth > 0 && baseCols > 0 ? gridContainerWidth / baseCols : 0;
-              const useSpanOnly =
-                editMode && (isDragActive || liveResize !== null);
+              const useSpanOnly = editMode && isDragActive;
               return (
                 <SortableCard
                   key={cfg.widget_key}
                   cfg={effCfg}
                   label={widgetLabels[cfg.widget_key]}
-                  placementColumnCount={placementGridCols}
+                  placementColumnCount={gridColumnCount}
                   isLandscape={orientation === 'landscape'}
                   editMode={editMode}
                   useSpanOnly={useSpanOnly}
