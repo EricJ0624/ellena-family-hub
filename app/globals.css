@@ -1989,6 +1989,96 @@ select {
     overflow-y: auto;
   }
 
+  /*
+   * Family Location: 위젯 내부 스크롤 없음. layout 박스 안에서 지도 4:3 + cqmin 스케일.
+   */
+  .widget-chrome[data-widget-key='location'] > .widget-scale-root {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .widget-chrome[data-widget-key='location'] .content-section.location-widget-section {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .widget-chrome[data-widget-key='location'] .section-header {
+    flex: 0 0 auto;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-section-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-map-slot {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    touch-action: none;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-map-canvas,
+  .widget-chrome[data-widget-key='location'] .location-map-surface {
+    align-self: center;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-map-surface {
+    flex: 0 1 auto;
+    height: auto;
+    max-height: min(100%, calc(100cqw * 3 / 4));
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-map-canvas {
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: min(100%, calc(100cqw * 3 / 4));
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-requests-panel {
+    flex: 0 1 auto;
+    max-height: 36%;
+    margin-top: 3cqmin;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid .editor-widget-preview-inner .location-widget-section {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid .editor-widget-preview-inner .location-section-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid .editor-widget-preview-inner .location-map-slot {
+    flex: 1 1 auto;
+    min-height: 3.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
   .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)) > .widget-chrome {
     display: flex;
     flex-direction: column;

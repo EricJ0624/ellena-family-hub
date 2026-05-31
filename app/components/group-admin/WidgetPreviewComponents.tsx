@@ -159,8 +159,8 @@ function LocationPreview() {
     { emoji: '👧', name: '딸', location: '학교' },
   ];
   return (
-    <section className="content-section h-full">
-      <div className="section-header">
+    <section className="content-section location-widget-section h-full min-h-0">
+      <div className="section-header shrink-0">
         <h3 className="section-title flex items-center gap-2">
           <span>📍</span>
           Family Location
@@ -169,8 +169,9 @@ function LocationPreview() {
           📍 어디있어?
         </div>
       </div>
-      <div className="section-body">
-        <div className="mb-3 flex min-h-[120px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="section-body location-section-body min-h-0">
+        <div className="location-map-slot mb-3 flex min-h-0 flex-1 flex-col">
+        <div className="location-map-surface flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="mb-2 grid grid-cols-3 gap-2 w-full">
             {[...Array(9)].map((_, i) => (
               <div key={i} className={`h-8 rounded ${i % 3 === 0 ? 'bg-green-100' : i % 3 === 1 ? 'bg-slate-100' : 'bg-blue-50'}`} />
@@ -178,7 +179,8 @@ function LocationPreview() {
           </div>
           <span className="text-xs text-slate-400">🗺️ 지도 영역</span>
         </div>
-        <div className="grid gap-1.5">
+        </div>
+        <div className="location-requests-panel grid shrink-0 gap-1.5 overflow-hidden">
           {members.map((m, i) => (
             <div key={i} className="glass-panel-soft flex items-center gap-2 rounded-lg px-3 py-2">
               <span className="text-base">{m.emoji}</span>

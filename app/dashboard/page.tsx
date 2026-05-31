@@ -1909,7 +1909,8 @@ export default function FamilyHub() {
               zoom: state.location.latitude && state.location.longitude ? 15 : 12,
               mapTypeControl: true,
               streetViewControl: true,
-              fullscreenControl: true
+              fullscreenControl: true,
+              gestureHandling: 'greedy',
             };
             
             // Map ID가 환경 변수로 설정되어 있으면 사용 (선택사항)

@@ -4,7 +4,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { DashboardLocationRequestRow } from '../types';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
 
@@ -102,8 +102,19 @@ export function FamilyLocationSection({
   const lat = myLocation.latitude ?? 0;
   const lng = myLocation.longitude ?? 0;
 
+  useEffect(() => {
+    if (!isLocationSharing || !hasGoogleMapsApiKey || mapError) return;
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+    const ro = new ResizeObserver(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+    ro.observe(mapEl);
+    return () => ro.disconnect();
+  }, [isLocationSharing, hasGoogleMapsApiKey, mapError]);
+
   return (
-    <section className="content-section">
+    <section className="content-section location-widget-section">
       <div className="section-header">
         <h3 className="section-title">{t.section_title_location}</h3>
         <div className="flex flex-wrap" style={{ gap: '2cqmin' }}>
@@ -118,19 +129,20 @@ export function FamilyLocationSection({
           </button>
         </div>
       </div>
-      <div className="section-body">
+      <div className="section-body location-section-body">
         {myLocation.address && (lat !== 0 || lng !== 0) && (
-          <div style={{ marginBottom: '4cqmin' }}>
+          <div className="location-address-row shrink-0">
             <p className="location-text" style={{ marginBottom: '3cqmin', fontSize: '5cqmin' }}>
               {t.location_ui_address_prefix} {extractLocationAddress(myLocation.address)}
             </p>
           </div>
         )}
 
+        <div className="location-map-slot">
         {!isLocationSharing ? (
           <div
-            className="flex w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
-            style={{ marginTop: '3cqmin', aspectRatio: '4/3', padding: '5cqmin' }}
+            className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
+            style={{ padding: '5cqmin' }}
           >
             <p className="font-semibold text-slate-600" style={{ marginBottom: '2cqmin', fontSize: '6cqmin' }}>
               {t.location_ui_map_title}
@@ -142,8 +154,8 @@ export function FamilyLocationSection({
         ) : hasGoogleMapsApiKey ? (
           mapError ? (
             <div
-              className="flex w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-800"
-              style={{ marginTop: '3cqmin', aspectRatio: '4/3', padding: '5cqmin' }}
+              className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-800"
+              style={{ padding: '5cqmin' }}
             >
               <div className="text-center" style={{ maxWidth: '80cqmin' }}>
                 <p className="font-semibold text-red-600" style={{ marginBottom: '3cqmin', fontSize: '7cqmin' }}>
@@ -188,15 +200,13 @@ export function FamilyLocationSection({
           ) : (
             <div
               id="map"
-              className="w-full rounded-xl border border-slate-200"
-              style={{ marginTop: '3cqmin', aspectRatio: '4/3' }}
+              className="location-map-canvas w-full rounded-xl border border-slate-200"
             />
           )
-        ) : null}
-        {isLocationSharing && !hasGoogleMapsApiKey ? (
+        ) : (
           <div
-            className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-            style={{ marginTop: '3cqmin', aspectRatio: '4/3', padding: '5cqmin' }}
+            className="location-map-surface flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
+            style={{ padding: '5cqmin' }}
           >
             <div className="text-center" style={{ maxWidth: '80cqmin' }}>
               <p className="font-semibold text-slate-800" style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}>
@@ -267,10 +277,11 @@ export function FamilyLocationSection({
               )}
             </div>
           </div>
-        ) : null}
+        )}
+        </div>
 
         {locationRequests.length > 0 && (
-          <div style={{ marginTop: '5cqmin' }}>
+          <div className="location-requests-panel shrink-0">
             <h4 className="font-semibold" style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}>{t.location_ui_requests_heading}</h4>
             <div className="flex flex-col" style={{ gap: '2cqmin' }}>
               {locationRequests
