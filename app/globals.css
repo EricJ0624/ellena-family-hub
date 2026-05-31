@@ -407,30 +407,26 @@ select {
     overflow: visible;
   }
 
-  /*
-   * portrait + height:auto: container-type:size 이면 블록 높이 0 → cqmin≈0 으로
-   * 달력·채팅 등 본문이 사라짐. inline-size 로 너비 기준 스케일만 사용 (칠판과 동일).
-   */
+  /* portrait: 크롬은 flex 껍데기, CQ는 .widget-scale-root(확정 높이) */
   .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome {
     display: flex;
     flex-direction: column;
-    container-type: inline-size;
     height: auto;
     min-height: var(--widget-min-h, auto);
     overflow: visible;
   }
 
-  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome > .content-section {
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome > .widget-scale-root > .content-section {
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
   }
 
-  /* 편집기 미리보기: 목업도 widget 컨테이너 쿼리(cqmin) 적용 */
+  /* 편집기 미리보기: 그리드 셀 변수 → .widget-scale-root 에 CQ(size) */
   .dashboard-widget-grid .editor-widget-preview-inner {
-    container-type: inline-size;
-    container-name: widget;
+    display: flex;
     flex: 1 1 auto;
+    flex-direction: column;
     min-height: 0;
     min-width: 0;
     width: 100%;
@@ -1919,17 +1915,42 @@ select {
    ─────────────────────────────────────────────────────────────────────────── */
 @layer components {
   .widget-chrome {
-    container-type: size;
-    container-name: widget;
     min-width: 0;
     width: 100%;
-    /* height: 100% — align-self:stretch 시 행 트랙 전체를 채움.
-       content-section이 크롬보다 짧아도 background로 어두운 앱 배경이 노출되지 않음. */
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
     border-radius: 1rem; /* rounded-2xl */
-    /* 위젯 내용물이 크롬보다 짧을 때 어두운 앱 배경 대신 glass background가 보이도록 */
     background: var(--glass-medium-bg);
+  }
+
+  /*
+   * CQ size 컨테이너: layout_h×cellRowH 로 높이 확정 → cqmin≈0 회귀 방지.
+   * 너비는 그리드 열 span 에 비례, 높이는 --widget-scale-box-h.
+   */
+  .widget-scale-root {
+    container-type: size;
+    container-name: widget;
+    width: 100%;
+    min-width: 0;
+    min-height: var(--widget-min-h, 0px);
+    height: var(--widget-scale-box-h, var(--widget-min-h, auto));
+    flex: 1 1 auto;
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)) > .widget-chrome {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: var(--widget-min-h, auto);
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)) > .widget-chrome > .widget-scale-root {
+    flex: 1 1 auto;
+    min-height: var(--widget-min-h, 0px);
+    height: var(--widget-scale-box-h, 100%);
   }
 
   /*
@@ -1991,8 +2012,7 @@ select {
   }
 
   /* ── 위젯 컨텍스트 내 공통 section 클래스 비율 스케일링 ──────────────────
-     widget-chrome(container-type: size)가 컨테이너이므로 cqmin 참조 가능.
-     모달·설정 페이지 등 widget 밖에서는 기존 vw/rem 값이 유지됨. */
+     .widget-scale-root(container-type: size) 기준 cqmin. 칠판·모달 밖은 vw/rem 유지. */
   @container widget (min-width: 0px) {
     .content-section {
       padding: 4cqmin;

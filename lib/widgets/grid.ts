@@ -325,6 +325,17 @@ export function resolveWidgetGridPlacement(
   return { colSpan, rowSpan, gridColumnStart, gridRowStart };
 }
 
+/** M 사이즈 layout_h — 스케일 기준 (types.WIDGET_LAYOUT_PRESETS.M.h 와 동기) */
+export const WIDGET_SCALE_REF_H = 8;
+
+/** layout_w/h → CQ 스케일 박스 (--widget-scale-box-h) 계산용 */
+export interface WidgetGridScaleContext {
+  baseCols: number;
+  columnCount: number;
+  layoutW: number | null;
+  layoutH: number | null;
+}
+
 /** 대시보드·편집 읽기 전용 그리드 셀 인라인 스타일 (배치만 — 위젯 내용/로직 무관) */
 export type WidgetGridItemStyle = {
   gridColumn: string;
@@ -334,7 +345,29 @@ export type WidgetGridItemStyle = {
   minHeight?: number;
   ['--tasks-min-h']?: string;
   ['--widget-min-h']?: string;
+  ['--widget-scale-box-h']?: string;
+  ['--widget-scale']?: string;
+  ['--widget-scale-w']?: string;
+  ['--widget-scale-h']?: string;
 };
+
+function clampWidgetScaleFactor(n: number): number {
+  return Math.min(1.5, Math.max(0.35, n));
+}
+
+/** layout_w/h → 0.35~1.5 스케일 (M=12×8 기준 1) */
+export function resolveWidgetScaleFactors(
+  placement: WidgetGridPlacement,
+  scale: WidgetGridScaleContext,
+): { scaleW: number; scaleH: number; scale: number } {
+  const lw =
+    scale.layoutW ??
+    (placement.colSpan * scale.baseCols) / Math.max(1, scale.columnCount);
+  const lh = scale.layoutH ?? placement.rowSpan;
+  const scaleW = clampWidgetScaleFactor(lw / scale.baseCols);
+  const scaleH = clampWidgetScaleFactor(lh / WIDGET_SCALE_REF_H);
+  return { scaleW, scaleH, scale: Math.min(scaleW, scaleH) };
+}
 
 /**
  * layout_y(0-based) + layout_h → CSS grid 행 슬롯(1-based).
@@ -358,6 +391,7 @@ export function buildWidgetGridItemStyle(
   widgetKey: DashboardWidgetKey,
   placement: WidgetGridPlacement,
   cellRowH: number,
+  scaleContext?: WidgetGridScaleContext,
 ): WidgetGridItemStyle {
   const { colSpan, rowSpan, gridColumnStart, gridRowStart } = placement;
   const gridColumn = gridColumnStart
@@ -384,8 +418,17 @@ export function buildWidgetGridItemStyle(
       style['--tasks-min-h'] = `${minPx}px`;
     } else {
       style['--widget-min-h'] = `${minPx}px`;
+      style['--widget-scale-box-h'] = `${minPx}px`;
     }
   }
+
+  if (scaleContext && widgetKey !== 'tasks') {
+    const { scaleW, scaleH, scale } = resolveWidgetScaleFactors(placement, scaleContext);
+    style['--widget-scale-w'] = String(scaleW);
+    style['--widget-scale-h'] = String(scaleH);
+    style['--widget-scale'] = String(scale);
+  }
+
   return style;
 }
 

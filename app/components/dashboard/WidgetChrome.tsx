@@ -5,7 +5,8 @@ import type { DashboardWidgetKey } from '@/lib/widgets/types';
 /**
  * WidgetChrome — 위젯 컨테이너 래퍼 (Phase 4·5·E)
  *
- * Phase 4: container-type: inline-size + container-name: widget 컨텍스트 제공
+ * Phase 4: 비-tasks — `.widget-scale-root`(container-type:size)에서 cqmin 스케일.
+ * tasks(칠판)는 자식을 직접 렌더(칠판 CSS 유지).
  * Phase E: 돋보기 버튼 제거 → S 사이즈 위젯 전체를 터치하면 magnify 자동 실행.
  *          onExpand가 제공될 때(= 호출자가 S 사이즈로 판단)만 투명 오버레이 활성화.
  *          M 이상에서는 onExpand=undefined로 전달해 오버레이를 렌더하지 않는다.
@@ -43,6 +44,8 @@ export function WidgetChrome({
   expandLabel = '확대 보기',
   children,
 }: WidgetChromeProps) {
+  const useScaleRoot = widgetKey !== 'tasks';
+
   return (
     <div
       // isolate: 내부 stacking context를 외부와 격리해 backdrop-filter·z-index 효과가
@@ -54,7 +57,11 @@ export function WidgetChrome({
       data-col-span={colSpan}
       data-row-span={rowSpan}
     >
-      {children}
+      {useScaleRoot ? (
+        <div className="widget-scale-root">{children}</div>
+      ) : (
+        children
+      )}
 
       {/* Phase E: S 사이즈 위젯 — 버튼 없이 위젯 전체가 터치 확대 영역
           onExpand가 있을 때만 렌더 (호출자가 S 사이즈 여부를 결정).

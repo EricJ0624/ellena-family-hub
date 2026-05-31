@@ -5992,7 +5992,19 @@ export default function FamilyHub() {
                       : 'min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible'
                   }
                   data-widget-size={cfg.size}
-                  style={buildWidgetGridItemStyle(cfg.widget_key, placement, dashboardCellRowH)}
+                  style={buildWidgetGridItemStyle(
+                    cfg.widget_key,
+                    placement,
+                    dashboardCellRowH,
+                    {
+                      baseCols: dashboardIsLandscapeGrid ? LANDSCAPE_COLS : PORTRAIT_COLS,
+                      columnCount: dashboardColumnCount,
+                      layoutW: effectiveW,
+                      layoutH: dashboardIsLandscapeGrid
+                        ? (cfg.layoutLandscapeH ?? cfg.layoutH)
+                        : (cfg.layoutPortraitH ?? cfg.layoutH),
+                    },
+                  )}
                 >
                   <WidgetChrome
                     widgetKey={cfg.widget_key}

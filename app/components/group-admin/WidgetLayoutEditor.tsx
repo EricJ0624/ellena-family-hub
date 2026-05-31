@@ -189,6 +189,7 @@ function SortableCard({
     isLandscape,
   );
   const { colSpan, rowSpan } = placement;
+  const scaleBaseCols = isLandscape ? LANDSCAPE_COLS : PORTRAIT_COLS;
   const meta = WIDGET_CARD_META[cfg.widget_key];
   const Icon = meta.icon;
   const PreviewContent = WIDGET_PREVIEW_MAP[cfg.widget_key];
@@ -211,7 +212,12 @@ function SortableCard({
       style={{
         transform: isDragging ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? undefined : transition,
-        ...buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH),
+        ...buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
+          baseCols: scaleBaseCols,
+          columnCount: placementColumnCount,
+          layoutW: displayCfg.layoutW ?? null,
+          layoutH: displayCfg.layoutH ?? null,
+        }),
       }}
     >
       {editMode && (
@@ -267,7 +273,13 @@ function SortableCard({
       {/* 미리보기 + 편집 히트 레이어(클릭이 아래 위젯으로 통과하지 않음) */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
-          {PreviewContent()}
+          {cfg.widget_key === 'tasks' ? (
+            PreviewContent()
+          ) : (
+            <div className="widget-scale-root min-h-0 min-w-0 w-full flex-1">
+              {PreviewContent()}
+            </div>
+          )}
         </div>
       </div>
 
