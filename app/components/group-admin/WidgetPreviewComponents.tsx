@@ -303,7 +303,7 @@ function PiggyPreview() {
 function GamesPreview() {
   const tabs = ['사다리', '가위바위보', '룰렛'];
   return (
-    <section className="content-section games-widget-section h-full">
+    <section className="content-section games-widget-section">
       <div className="section-header">
         <h3 className="section-title">Family Games</h3>
       </div>

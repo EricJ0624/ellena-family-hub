@@ -193,14 +193,14 @@ export function FamilyGamesSection({
   const renderTabBody = () => {
     if (lobbyOnOtherTab) {
       return (
-        <p className="text-[#64748b]" style={{ fontSize: '4.5cqmin' }}>
+        <p className="text-[#64748b]" style={{ fontSize: '4.5cqw' }}>
           {t.games_lobby_wrong_tab}
         </p>
       );
     }
     if (gameOnOtherTab) {
       return (
-        <p className="text-[#64748b]" style={{ fontSize: '4.5cqmin' }}>
+        <p className="text-[#64748b]" style={{ fontSize: '4.5cqw' }}>
           {t.games_lobby_wrong_game}
         </p>
       );
@@ -239,7 +239,7 @@ export function FamilyGamesSection({
         </div>
         <div className="section-body games-section-body">
           {!currentGroupId ? (
-            <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">
+            <div style={{ fontSize: '5cqw' }} className="text-[#64748b]">
               {t.select_group}
             </div>
           ) : (
@@ -247,17 +247,17 @@ export function FamilyGamesSection({
               {hasActiveSession && !isLobby && !modalOpen && (
                 <div
                   className="mb-2 flex flex-col rounded-xl bg-indigo-50 px-3 py-2"
-                  style={{ gap: '1.5cqmin' }}
+                  style={{ gap: '1.5cqw' }}
                 >
-                  <span className="font-medium text-indigo-800" style={{ fontSize: '4cqmin' }}>
+                  <span className="font-medium text-indigo-800" style={{ fontSize: '4cqw' }}>
                     {t.games_session_active}
                   </span>
-                  <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
+                  <div className="flex flex-wrap" style={{ gap: '1cqw' }}>
                     <button
                       type="button"
                       onClick={openModal}
                       className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white"
-                      style={{ fontSize: '4cqmin' }}
+                      style={{ fontSize: '4cqw' }}
                     >
                       {t.games_join}
                     </button>
@@ -267,14 +267,14 @@ export function FamilyGamesSection({
                         onClick={handleCancelFromBanner}
                         disabled={actionLoading}
                         className="rounded-lg bg-slate-200 px-3 py-1.5 font-semibold text-slate-700 disabled:opacity-50"
-                        style={{ fontSize: '4cqmin' }}
+                        style={{ fontSize: '4cqw' }}
                       >
                         {t.games_cancel}
                       </button>
                     )}
                   </div>
                   {!isHost && isParticipant && (
-                    <span className="text-indigo-700/80" style={{ fontSize: '3.5cqmin' }}>
+                    <span className="text-indigo-700/80" style={{ fontSize: '3.5cqw' }}>
                       {t.games_waiting_host}
                     </span>
                   )}
@@ -282,7 +282,7 @@ export function FamilyGamesSection({
               )}
 
               {sessionError && (
-                <p className="text-red-600" style={{ fontSize: '3.5cqmin' }}>
+                <p className="text-red-600" style={{ fontSize: '3.5cqw' }}>
                   {sessionError}
                 </p>
               )}
@@ -290,7 +290,7 @@ export function FamilyGamesSection({
               <div
                 className="games-tab-bar flex flex-shrink-0 flex-wrap rounded-xl bg-slate-900/5 p-1"
                 role="tablist"
-                style={{ gap: '1cqmin' }}
+                style={{ gap: '1cqw' }}
               >
                 {TABS.map((tab) => (
                   <button
@@ -304,7 +304,7 @@ export function FamilyGamesSection({
                         ? 'bg-white text-indigo-700 shadow-sm'
                         : 'text-slate-600 hover:bg-white/60'
                     }`}
-                    style={{ fontSize: '4cqmin' }}
+                    style={{ fontSize: '4cqw' }}
                   >
                     {tabLabel(tab)}
                   </button>

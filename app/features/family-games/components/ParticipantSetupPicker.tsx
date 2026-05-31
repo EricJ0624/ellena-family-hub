@@ -47,7 +47,7 @@ export function ParticipantSetupPicker({
   const canRemove = slotIds.length > minSlots;
 
   return (
-    <div className="games-setup-scroll grid" style={{ gap: '1.5cqmin' }}>
+    <div className="games-lobby-body grid" style={{ gap: '1.5cqw' }}>
       <div className="games-field-list grid">
         {slotIds.map((value, index) => (
           <MemberSelect
@@ -62,13 +62,13 @@ export function ParticipantSetupPicker({
           />
         ))}
       </div>
-      <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
+      <div className="flex flex-wrap" style={{ gap: '1cqw' }}>
         <button
           type="button"
           onClick={addSlot}
           disabled={!canAdd}
           className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
-          style={{ fontSize: '4cqmin' }}
+          style={{ fontSize: '4cqw' }}
         >
           {addLabel}
         </button>
@@ -77,7 +77,7 @@ export function ParticipantSetupPicker({
             type="button"
             onClick={removeLastSlot}
             className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700"
-            style={{ fontSize: '4cqmin' }}
+            style={{ fontSize: '4cqw' }}
           >
             {removeLabel}
           </button>

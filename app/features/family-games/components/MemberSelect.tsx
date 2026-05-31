@@ -48,7 +48,7 @@ export function MemberSelect({
       disabled={disabled || members.length === 0}
       onChange={(e) => onChange(e.target.value)}
       className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60"
-      style={{ fontSize: '4.5cqmin' }}
+      style={{ fontSize: '4.5cqw' }}
     >
       <option value="">{placeholder}</option>
       {members.map((m) => {

@@ -344,6 +344,7 @@ export type WidgetGridItemStyle = {
   height?: 'auto';
   minHeight?: number;
   ['--tasks-min-h']?: string;
+  ['--games-min-h']?: string;
   ['--widget-min-h']?: string;
   ['--widget-scale-box-h']?: string;
   ['--widget-scale']?: string;
@@ -385,7 +386,7 @@ export function layoutYHToCssGridRowStart(
 /**
  * resolveWidgetGridPlacement → CSS gridColumn/gridRow.
  * 공통: layout y/h → CSS 행 슬롯(span 1) + minHeight(layout_h×cellRowH).
- * gap-3는 위젯 사이만; tasks는 height:auto·--tasks-min-h로 임무 증가 시 행 성장.
+ * gap-3는 위젯 사이만; tasks/games는 height:auto·--*-min-h로 내용 증가 시 행 성장.
  */
 export function buildWidgetGridItemStyle(
   widgetKey: DashboardWidgetKey,
@@ -416,6 +417,9 @@ export function buildWidgetGridItemStyle(
     style.minHeight = minPx;
     if (widgetKey === 'tasks') {
       style['--tasks-min-h'] = `${minPx}px`;
+    } else if (widgetKey === 'games') {
+      style['--widget-min-h'] = `${minPx}px`;
+      style['--games-min-h'] = `${minPx}px`;
     } else {
       style['--widget-min-h'] = `${minPx}px`;
       style['--widget-scale-box-h'] = `${minPx}px`;

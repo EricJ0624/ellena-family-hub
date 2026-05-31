@@ -2057,21 +2057,26 @@ select {
   }
 
   /*
-   * Family Games: 위젯 내부 스크롤 없음. layout 박스 + cqmin 비율 스케일.
+   * Family Games: min-height = layout 프레임; 초과 시 height:auto 세로 성장.
+   * container-type:inline-size → cqw 비례 스케일, 세로 확장 시 글자 크기 불변.
    */
   .widget-chrome[data-widget-key='games'] > .widget-scale-root {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    container-type: inline-size;
+    container-name: widget;
+    min-height: var(--games-min-h, var(--widget-min-h, auto));
+    height: auto;
+    overflow: visible;
   }
 
   .widget-chrome[data-widget-key='games'] .content-section.games-widget-section {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
+    min-height: var(--games-min-h, var(--widget-min-h, 0px));
+    height: auto;
+    overflow: visible;
   }
 
   .widget-chrome[data-widget-key='games'] .section-header {
@@ -2083,7 +2088,7 @@ select {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .widget-chrome[data-widget-key='games'] .games-widget-content {
@@ -2091,8 +2096,8 @@ select {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
-    gap: 2cqmin;
+    overflow: visible;
+    gap: 2cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-tab-bar {
@@ -2104,15 +2109,15 @@ select {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
-    gap: 2cqmin;
+    overflow: visible;
+    gap: 2cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-setup-columns {
     display: grid;
     flex: 1 1 auto;
     grid-template-columns: 1fr 1fr;
-    gap: 2cqmin;
+    gap: 2cqw;
     min-height: 0;
     align-content: start;
   }
@@ -2124,14 +2129,14 @@ select {
   }
 
   .widget-chrome[data-widget-key='games'] .games-field-list {
-    gap: 1.5cqmin;
+    gap: 1.5cqw;
   }
 
-  .widget-chrome[data-widget-key='games'] .games-tab-setup .games-setup-scroll,
-  .widget-chrome[data-widget-key='games'] .games-tab-lobby .games-setup-scroll {
+  .widget-chrome[data-widget-key='games'] .games-lobby-body {
+    display: grid;
     flex: 1 1 auto;
     min-height: 0;
-    overflow-y: auto;
+    gap: 2cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-tab-panel.games-tab-lobby {
@@ -2139,20 +2144,56 @@ select {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
-    gap: 2cqmin;
+    overflow: visible;
+    gap: 2cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-setup-actions {
     flex: 0 0 auto;
   }
 
+  .dashboard-widget-grid > *:has(.games-widget-section) {
+    align-self: start;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid > *:has(.games-widget-section) > .widget-chrome {
+    height: auto;
+    min-height: var(--games-min-h, var(--widget-min-h, auto));
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape']
+    > *:has(.games-widget-section)
+    > .widget-chrome[data-widget-key='games'] {
+    align-self: start;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape']
+    > *:has(.games-widget-section)
+    > .widget-chrome[data-widget-key='games']
+    > .widget-scale-root {
+    flex: 0 1 auto;
+    height: auto;
+    min-height: var(--games-min-h, var(--widget-min-h, 0px));
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid[data-layout-editor] > .editor-widget-card[data-widget-key='games'] {
+    min-height: var(--games-min-h, var(--widget-min-h, 0px));
+    height: auto;
+    overflow: visible;
+  }
+
   .dashboard-widget-grid .editor-widget-preview-inner .games-widget-section {
     display: flex;
-    height: 100%;
-    min-height: 0;
+    height: auto;
+    min-height: var(--games-min-h, var(--widget-min-h, 0px));
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-widget-grid .editor-widget-preview-inner .games-section-body {
@@ -2160,7 +2201,7 @@ select {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-widget-grid .editor-widget-preview-inner .location-widget-section {
