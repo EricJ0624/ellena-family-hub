@@ -258,9 +258,18 @@ async function handleLadderAction(
   const now = NOW();
 
   if (action.type === 'update_ladder_config') {
-    if (!isHost || session.status !== 'config') throw new Error('FORBIDDEN');
+    if (!isHost) throw new Error('FORBIDDEN');
+    const isConfig = session.status === 'config';
+    const isDraw = session.status === 'active' && session.phase === 'draw';
+    const isLaneChange = Boolean(action.addLane || action.removeLane);
+
+    if (isLaneChange && !isDraw) throw new Error('FORBIDDEN');
+    if (action.destinations && !isConfig) throw new Error('FORBIDDEN');
+    if (action.participantIds && !isConfig && !isDraw) throw new Error('FORBIDDEN');
+
     let participantIds = [...config.participantIds];
     let destinations = [...config.destinations];
+    let userRungs = config.userRungs ?? [];
 
     if (action.participantIds) {
       participantIds = action.participantIds;
@@ -276,16 +285,35 @@ async function handleLadderAction(
     }
     if (action.removeLane) {
       if (participantIds.length <= LADDER_MIN_LANES) throw new Error('MIN_LANES');
+      const removedId = participantIds[participantIds.length - 1];
       participantIds = participantIds.slice(0, -1);
       destinations = destinations.slice(0, -1);
+      const maxLeftLane = participantIds.length - 2;
+      userRungs = userRungs.filter(
+        (r) => r.leftLane <= maxLeftLane && r.drawnBy !== removedId,
+      );
     }
 
-    const newConfig: LadderSessionConfig = { ...config, participantIds, destinations };
+    const newConfig: LadderSessionConfig = { ...config, participantIds, destinations, userRungs };
     await updateSession(supabase, session.id, {
       config: newConfig,
       updated_at: now,
     });
     await syncLadderParticipants(supabase, session.id, participantIds, now);
+
+    if (action.removeLane && isDraw) {
+      const drawnIds = new Set(userRungs.map((r) => r.drawnBy).filter(Boolean));
+      for (const p of participants) {
+        if (!participantIds.includes(p.user_id)) continue;
+        if (p.ready && !drawnIds.has(p.user_id)) {
+          await supabase
+            .from('family_game_participants')
+            .update({ ready: false, payload: {}, updated_at: now })
+            .eq('session_id', session.id)
+            .eq('user_id', p.user_id);
+        }
+      }
+    }
     return;
   }
 

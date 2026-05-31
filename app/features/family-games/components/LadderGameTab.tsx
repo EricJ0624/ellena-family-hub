@@ -173,6 +173,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   const updateParticipant = (index: number, value: string) => {
     if (mode !== 'multiplayer' || !props.isHost) return;
+    if (mpPhase !== 'config' && mpPhase !== 'draw') return;
     const next = participantIds.map((p, i) => (i === index ? value : p));
     setParticipantIds(next);
     props.onAction({ type: 'update_ladder_config', participantIds: next }).catch(console.error);
@@ -191,17 +192,67 @@ export function LadderGameTab(props: LadderGameTabProps) {
   };
 
   const addPair = () => {
-    if (laneCount >= LADDER_MAX_LANES) return;
-    if (mode === 'multiplayer' && props.isHost) {
-      props.onAction({ type: 'update_ladder_config', addLane: true }).catch(console.error);
-    }
+    if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return;
+    if (laneCount >= LADDER_MAX_LANES || laneCount >= members.length) return;
+    props.onAction({ type: 'update_ladder_config', addLane: true }).catch(console.error);
   };
 
   const removePair = () => {
+    if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return;
     if (laneCount <= LADDER_MIN_LANES) return;
-    if (mode === 'multiplayer' && props.isHost) {
-      props.onAction({ type: 'update_ladder_config', removeLane: true }).catch(console.error);
-    }
+    props.onAction({ type: 'update_ladder_config', removeLane: true }).catch(console.error);
+  };
+
+  const renderLaneControls = () => {
+    if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return null;
+    const mp = props;
+    const hasEmptySlot = participantIds.some((id) => !id.trim());
+    return (
+      <div className="grid" style={{ gap: '1.5cqmin' }}>
+        {hasEmptySlot && (
+          <div className="games-field-list grid">
+            {participantIds.map((value, index) =>
+              value.trim() ? null : (
+                <MemberSelect
+                  key={`draw-p-${index}`}
+                  members={members}
+                  value={value}
+                  onChange={(next) => updateParticipant(index, next)}
+                  placeholder={t.ladder_participant_ph}
+                  currentUserId={userId}
+                  youLabel={t.ladder_you}
+                  excludeUserIds={participantIds.filter((id, i) => i !== index && id.trim())}
+                />
+              ),
+            )}
+          </div>
+        )}
+        <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
+          <button
+            type="button"
+            onClick={addPair}
+            disabled={
+              laneCount >= LADDER_MAX_LANES ||
+              laneCount >= members.length ||
+              mp.actionLoading
+            }
+            className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
+            style={{ fontSize: '4cqmin' }}
+          >
+            {t.ladder_add_pair}
+          </button>
+          <button
+            type="button"
+            onClick={removePair}
+            disabled={laneCount <= LADDER_MIN_LANES || mp.actionLoading}
+            className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:opacity-50"
+            style={{ fontSize: '4cqmin' }}
+          >
+            {t.ladder_remove_pair}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const launchLadderGame = () => {
@@ -277,29 +328,6 @@ export function LadderGameTab(props: LadderGameTabProps) {
           </div>
         </div>
       </div>
-
-      {mp.isHost && (
-        <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
-          <button
-            type="button"
-            onClick={addPair}
-            disabled={laneCount >= LADDER_MAX_LANES || laneCount >= members.length || mp.actionLoading}
-            className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
-            style={{ fontSize: '4cqmin' }}
-          >
-            {t.ladder_add_pair}
-          </button>
-          <button
-            type="button"
-            onClick={removePair}
-            disabled={laneCount <= LADDER_MIN_LANES || mp.actionLoading}
-            className="rounded-lg bg-slate-200 px-3 py-2 font-semibold text-slate-700 disabled:opacity-50"
-            style={{ fontSize: '4cqmin' }}
-          >
-            {t.ladder_remove_pair}
-          </button>
-        </div>
-      )}
 
       {!participantsReady && (
         <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
@@ -560,6 +588,8 @@ export function LadderGameTab(props: LadderGameTabProps) {
           );
         })}
       </div>
+
+      {renderLaneControls()}
 
       {renderLadderSvg(userRungs, {
         interactive: participantIds.includes(userId),
