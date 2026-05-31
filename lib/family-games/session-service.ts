@@ -26,6 +26,17 @@ import {
   type LadderRung,
   type RPSChoice,
 } from '@/app/features/family-games/types';
+import {
+  canAddLobbySlot,
+  canRemoveLobbySlot,
+  createInitialLobbyConfig,
+  getLobbyMaxSlotsCap,
+  getSessionMaxSlots,
+  isLobbyPhase,
+  lobbyCanStart,
+  LOBBY_MIN_SLOTS,
+} from '@/lib/family-games/lobby-helpers';
+import type { LobbyJoinBody } from '@/lib/family-games/session-types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const NOW = () => new Date().toISOString();
@@ -210,6 +221,235 @@ export async function joinGameSession(
   throw new Error('NOT_A_PARTICIPANT');
 }
 
+async function getGroupMemberCount(
+  supabase: SupabaseClient,
+  groupId: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('memberships')
+    .select('*', { count: 'exact', head: true })
+    .eq('group_id', groupId);
+
+  if (error) throw error;
+  return Math.max(count ?? LOBBY_MIN_SLOTS, LOBBY_MIN_SLOTS);
+}
+
+export async function lobbyJoinGameSession(
+  supabase: SupabaseClient,
+  userId: string,
+  body: LobbyJoinBody,
+): Promise<FamilyGameSessionBundle> {
+  const { groupId, gameType } = body;
+  await cancelStaleSessionsForGroup(supabase, groupId);
+
+  const memberCount = await getGroupMemberCount(supabase, groupId);
+  const slotsCap = getLobbyMaxSlotsCap(gameType, memberCount);
+
+  const { data: existingSession } = await supabase
+    .from('family_game_sessions')
+    .select('*')
+    .eq('group_id', groupId)
+    .in('status', ['config', 'active', 'revealing'])
+    .maybeSingle();
+
+  const now = NOW();
+
+  if (existingSession) {
+    const session = existingSession as FamilyGameSessionRow;
+    if (session.game_type !== gameType) {
+      throw new Error('WRONG_GAME_TYPE');
+    }
+    if (!isLobbyPhase(session)) {
+      throw new Error('LOBBY_CLOSED');
+    }
+
+    const participants = await fetchParticipants(supabase, session.id);
+    const existing = participants.find((p) => p.user_id === userId);
+    if (existing) {
+      return { session, participants };
+    }
+
+    const maxSlots = getSessionMaxSlots(session);
+    if (participants.length >= maxSlots) {
+      throw new Error('LOBBY_FULL');
+    }
+
+    const slotIndex = participants.length;
+    const { error: insertError } = await supabase.from('family_game_participants').insert({
+      session_id: session.id,
+      user_id: userId,
+      slot_index: slotIndex,
+      ready: false,
+      payload: {},
+      created_at: now,
+      updated_at: now,
+    });
+    if (insertError) throw insertError;
+
+    return (await fetchSessionBundle(supabase, session.id))!;
+  }
+
+  const config = createInitialLobbyConfig(gameType);
+  const { data: session, error: sessionError } = await supabase
+    .from('family_game_sessions')
+    .insert({
+      group_id: groupId,
+      game_type: gameType,
+      status: 'config',
+      host_user_id: userId,
+      phase: 'lobby',
+      config,
+      created_at: now,
+      updated_at: now,
+      expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+    })
+    .select('*')
+    .single();
+
+  if (sessionError || !session) {
+    throw sessionError ?? new Error('Failed to create session');
+  }
+
+  const { error: participantError } = await supabase.from('family_game_participants').insert({
+    session_id: session.id,
+    user_id: userId,
+    slot_index: 0,
+    ready: false,
+    payload: {},
+    created_at: now,
+    updated_at: now,
+  });
+  if (participantError) throw participantError;
+
+  return (await fetchSessionBundle(supabase, session.id))!;
+}
+
+async function handleLobbyAction(
+  supabase: SupabaseClient,
+  session: FamilyGameSessionRow,
+  participants: FamilyGameParticipantRow[],
+  userId: string,
+  isHost: boolean,
+  action: GameSessionAction,
+): Promise<void> {
+  if (!isLobbyPhase(session)) throw new Error('FORBIDDEN');
+  const now = NOW();
+  const memberCount = await getGroupMemberCount(supabase, session.group_id);
+  const slotsCap = getLobbyMaxSlotsCap(session.game_type, memberCount);
+
+  if (action.type === 'leave_lobby') {
+    const participant = participants.find((p) => p.user_id === userId);
+    if (!participant) return;
+
+    await supabase
+      .from('family_game_participants')
+      .delete()
+      .eq('session_id', session.id)
+      .eq('user_id', userId);
+
+    const remaining = await fetchParticipants(supabase, session.id);
+    if (remaining.length === 0) {
+      await updateSession(supabase, session.id, { status: 'cancelled', updated_at: now });
+      return;
+    }
+
+    if (session.host_user_id === userId) {
+      const newHost = [...remaining].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      )[0];
+      await updateSession(supabase, session.id, {
+        host_user_id: newHost.user_id,
+        updated_at: now,
+      });
+    }
+    return;
+  }
+
+  if (action.type === 'update_lobby_slots') {
+    if (!isHost) throw new Error('HOST_ONLY');
+    const maxSlots = getSessionMaxSlots(session);
+    const participantCount = participants.length;
+
+    if (action.addSlot) {
+      if (!canAddLobbySlot(maxSlots, slotsCap, session.game_type)) {
+        throw new Error('MAX_SLOTS');
+      }
+      await updateSession(supabase, session.id, {
+        config: { ...session.config, maxSlots: maxSlots + 1 },
+        updated_at: now,
+      });
+      return;
+    }
+
+    if (action.removeSlot) {
+      if (!canRemoveLobbySlot(maxSlots, participantCount, session.game_type)) {
+        throw new Error('MIN_SLOTS');
+      }
+      await updateSession(supabase, session.id, {
+        config: { ...session.config, maxSlots: maxSlots - 1 },
+        updated_at: now,
+      });
+    }
+    return;
+  }
+
+  if (action.type === 'host_start_lobby') {
+    if (!isHost) throw new Error('HOST_ONLY');
+    const maxSlots = getSessionMaxSlots(session);
+    const ordered = [...participants].sort((a, b) => a.slot_index - b.slot_index);
+    const participantIds = ordered.map((p) => p.user_id);
+
+    if (!lobbyCanStart(participantIds.length, maxSlots)) {
+      throw new Error('LOBBY_NOT_FULL');
+    }
+
+    if (session.game_type === 'ladder') {
+      const destinations = participantIds.map((_, i) => `Result ${i + 1}`);
+      await updateSession(supabase, session.id, {
+        phase: 'config',
+        config: {
+          ...asLadderConfig(session.config),
+          participantIds,
+          destinations,
+          maxSlots,
+        },
+        updated_at: now,
+      });
+      await syncLadderParticipants(supabase, session.id, participantIds, now);
+      return;
+    }
+
+    if (session.game_type === 'rps') {
+      await updateSession(supabase, session.id, {
+        status: 'active',
+        phase: 'select',
+        config: {
+          ...asRPSConfig(session.config),
+          p1UserId: participantIds[0],
+          p2UserId: participantIds[1],
+          maxSlots,
+        },
+        updated_at: now,
+      });
+      await syncLadderParticipants(supabase, session.id, participantIds, now);
+      return;
+    }
+
+    await updateSession(supabase, session.id, {
+      status: 'active',
+      phase: 'spin',
+      config: {
+        ...asRouletteConfig(session.config),
+        selectedIds: participantIds,
+        slotsPerMember: 1,
+        maxSlots,
+      },
+      updated_at: now,
+    });
+    await syncRouletteParticipants(supabase, session.id, participantIds, now);
+  }
+}
+
 export async function performGameSessionAction(
   supabase: SupabaseClient,
   sessionId: string,
@@ -227,6 +467,17 @@ export async function performGameSessionAction(
     if (!isHost) throw new Error('HOST_ONLY');
     await updateSession(supabase, sessionId, { status: 'cancelled', updated_at: now });
     return (await fetchSessionBundle(supabase, sessionId))!;
+  }
+
+  if (
+    action.type === 'leave_lobby' ||
+    action.type === 'update_lobby_slots' ||
+    action.type === 'host_start_lobby'
+  ) {
+    await handleLobbyAction(supabase, session, bundle.participants, userId, isHost, action);
+    const updated = await fetchSessionBundle(supabase, sessionId);
+    if (!updated) throw new Error('SESSION_NOT_FOUND');
+    return updated;
   }
 
   switch (session.game_type) {

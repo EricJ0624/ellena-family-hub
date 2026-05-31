@@ -47,7 +47,7 @@ export function ParticipantSetupPicker({
   const canRemove = slotIds.length > minSlots;
 
   return (
-    <div className="grid" style={{ gap: '1.5cqmin' }}>
+    <div className="games-setup-scroll grid" style={{ gap: '1.5cqmin' }}>
       <div className="games-field-list grid">
         {slotIds.map((value, index) => (
           <MemberSelect

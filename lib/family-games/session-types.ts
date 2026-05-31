@@ -35,6 +35,7 @@ export type FamilyGameParticipantPayload = {
 export type LadderSessionConfig = {
   participantIds: string[];
   destinations: string[];
+  maxSlots?: number;
   userRungs?: LadderRung[];
   finalRungs?: LadderRung[];
   revealStartedAt?: string;
@@ -43,6 +44,7 @@ export type LadderSessionConfig = {
 export type RPSSessionConfig = {
   p1UserId: string;
   p2UserId: string;
+  maxSlots?: number;
   p1Choice?: RPSChoice;
   p2Choice?: RPSChoice;
   outcome?: 'p1' | 'p2' | 'draw';
@@ -52,6 +54,7 @@ export type RPSSessionConfig = {
 export type RouletteSessionConfig = {
   selectedIds: string[];
   slotsPerMember: number;
+  maxSlots?: number;
   rotation?: number;
   winnerLabel?: string;
   winnerUserId?: string;
@@ -82,7 +85,15 @@ export type GameSessionAction =
   | { type: 'toggle_roulette_ready' }
   | { type: 'host_update_roulette_config'; selectedIds?: string[]; slotsPerMember?: number }
   | { type: 'host_spin_roulette' }
+  | { type: 'leave_lobby' }
+  | { type: 'update_lobby_slots'; addSlot?: boolean; removeSlot?: boolean }
+  | { type: 'host_start_lobby' }
   | { type: 'cancel' };
+
+export type LobbyJoinBody = {
+  groupId: string;
+  gameType: FamilyGameType;
+};
 
 export type CreateGameSessionBody = {
   groupId: string;

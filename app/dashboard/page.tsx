@@ -5730,6 +5730,13 @@ export default function FamilyHub() {
               roulette_waiting_ready: gt('roulette_waiting_ready'),
               games_add_member: gt('games_add_member'),
               games_remove_member: gt('games_remove_member'),
+              games_leave: gt('games_leave'),
+              games_lobby_status_joined: gt('games_lobby_status_joined'),
+              games_lobby_status_not_joined: gt('games_lobby_status_not_joined'),
+              games_lobby_slots: gt('games_lobby_slots'),
+              games_lobby_you_host: gt('games_lobby_you_host'),
+              games_lobby_wrong_tab: gt('games_lobby_wrong_tab'),
+              games_lobby_wrong_game: gt('games_lobby_wrong_game'),
             }}
           />
         );

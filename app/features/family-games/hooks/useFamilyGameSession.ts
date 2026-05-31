@@ -1,16 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { isLobbyPhase } from '@/lib/family-games/lobby-helpers';
 import type {
-  CreateGameSessionBody,
   FamilyGameSessionBundle,
+  FamilyGameType,
   GameSessionAction,
 } from '@/lib/family-games/session-types';
 import { isActiveGameStatus } from '@/lib/family-games/session-types';
 import {
-  createGameSessionApi,
   fetchActiveGameSession,
   fetchGameSession,
+  lobbyJoinGameSessionApi,
   performGameActionApi,
 } from './useGameSessionApi';
 import { useFamilyGameRealtime } from './useFamilyGameRealtime';
@@ -54,24 +55,46 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
     onSessionChange: refresh,
   });
 
-  const createSession = useCallback(
-    async (body: CreateGameSessionBody) => {
+  const lobbyJoin = useCallback(
+    async (gameType: FamilyGameType) => {
+      if (!groupId) throw new Error('No group');
       setActionLoading(true);
       setError(null);
       try {
-        const created = await createGameSessionApi(body);
-        setBundle(created);
-        return created;
+        const joined = await lobbyJoinGameSessionApi({ groupId, gameType });
+        setBundle(joined);
+        return joined;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to create session';
+        const message = err instanceof Error ? err.message : 'Failed to join lobby';
         setError(message);
         throw err;
       } finally {
         setActionLoading(false);
       }
     },
-    [],
+    [groupId],
   );
+
+  const leaveLobby = useCallback(async () => {
+    if (!bundle?.session.id) return;
+    setActionLoading(true);
+    setError(null);
+    try {
+      const updated = await performGameActionApi(bundle.session.id, { type: 'leave_lobby' });
+      if (updated.session.status === 'cancelled') {
+        setBundle(null);
+        await refresh();
+      } else {
+        setBundle(updated);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Leave failed';
+      setError(message);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  }, [bundle?.session.id, refresh]);
 
   const performAction = useCallback(
     async (action: GameSessionAction) => {
@@ -133,19 +156,23 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
   const myParticipant =
     bundle?.participants.find((p) => p.user_id === userId) ?? null;
 
+  const isLobby = Boolean(bundle && isLobbyPhase(bundle.session));
+
   return {
     bundle,
     loading,
     actionLoading,
     error,
     refresh,
-    createSession,
+    lobbyJoin,
+    leaveLobby,
     performAction,
     cancelSession,
     loadSession,
     isHost,
     isParticipant,
     hasActiveSession,
+    isLobby,
     myParticipant,
   };
 }

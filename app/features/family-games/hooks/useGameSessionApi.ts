@@ -5,6 +5,7 @@ import type {
   CreateGameSessionBody,
   FamilyGameSessionBundle,
   GameSessionAction,
+  LobbyJoinBody,
 } from '@/lib/family-games/session-types';
 
 async function getAccessToken(): Promise<string | null> {
@@ -53,6 +54,16 @@ export async function joinGameSessionApi(sessionId: string): Promise<void> {
   const response = await authFetch(`/api/games/sessions/${sessionId}/join`, { method: 'POST' });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Failed to join session');
+}
+
+export async function lobbyJoinGameSessionApi(body: LobbyJoinBody): Promise<FamilyGameSessionBundle> {
+  const response = await authFetch('/api/games/sessions/lobby/join', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Failed to join lobby');
+  return result.data;
 }
 
 export async function performGameActionApi(

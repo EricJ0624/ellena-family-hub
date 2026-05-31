@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
+import { isLobbyPhase } from '@/lib/family-games/lobby-helpers';
 import { formatGamesText } from '@/lib/translations/games';
 import type { GameTab } from '../types';
 import { useFamilyGameSession } from '../hooks/useFamilyGameSession';
+import { GameLobbyPanel } from './GameLobbyPanel';
 import { GamePlayModal } from './GamePlayModal';
 import { LadderGameTab } from './LadderGameTab';
 import { RPSGameTab } from './RPSGameTab';
@@ -24,6 +26,7 @@ export interface FamilyGamesSectionProps {
     games_modal_close: string;
     games_session_active: string;
     games_join: string;
+    games_leave: string;
     games_cancel: string;
     ladder_participants: string;
     ladder_destinations: string;
@@ -75,6 +78,12 @@ export interface FamilyGamesSectionProps {
     games_waiting_host: string;
     games_add_member: string;
     games_remove_member: string;
+    games_lobby_status_joined: string;
+    games_lobby_status_not_joined: string;
+    games_lobby_slots: string;
+    games_lobby_you_host: string;
+    games_lobby_wrong_tab: string;
+    games_lobby_wrong_game: string;
   };
 }
 
@@ -91,12 +100,15 @@ export function FamilyGamesSection({
 
   const {
     bundle,
-    createSession,
     performAction,
     cancelSession,
+    lobbyJoin,
+    leaveLobby,
     actionLoading,
     isHost,
+    isParticipant,
     hasActiveSession,
+    isLobby,
     error: sessionError,
   } = useFamilyGameSession({ groupId: currentGroupId, userId });
 
@@ -104,6 +116,22 @@ export function FamilyGamesSection({
     (template: string, vars: Record<string, string>) => formatGamesText(template, vars),
     [],
   );
+
+  const sessionGameType = bundle?.session.game_type ?? null;
+  const lobbyOnOtherTab = Boolean(isLobby && sessionGameType && sessionGameType !== activeTab);
+  const gameOnOtherTab = Boolean(
+    hasActiveSession && !isLobby && sessionGameType && sessionGameType !== activeTab,
+  );
+  const showLobbyPanel =
+    !lobbyOnOtherTab &&
+    !gameOnOtherTab &&
+    (!hasActiveSession || (isLobby && sessionGameType === activeTab));
+
+  useEffect(() => {
+    if (bundle && !isLobbyPhase(bundle.session) && isParticipant) {
+      setModalOpen(true);
+    }
+  }, [bundle?.session.phase, bundle?.session.status, bundle?.session.id, isParticipant]);
 
   const tabLabel = (tab: GameTab) => {
     if (tab === 'ladder') return t.tab_ladder;
@@ -132,22 +160,75 @@ export function FamilyGamesSection({
     await cancelSession();
   };
 
-  const startLadder = async (config: { participantIds: string[]; destinations: string[] }) => {
-    if (!currentGroupId) return;
-    await createSession({ groupId: currentGroupId, gameType: 'ladder', config });
-    openModal();
+  const handleLobbyJoin = async () => {
+    await lobbyJoin(activeTab);
+  };
+  const handleAddSlot = async () => {
+    await performAction({ type: 'update_lobby_slots', addSlot: true });
+  };
+  const handleRemoveSlot = async () => {
+    await performAction({ type: 'update_lobby_slots', removeSlot: true });
+  };
+  const handleStartLobby = async () => {
+    await performAction({ type: 'host_start_lobby' });
   };
 
-  const startRPS = async (config: { p1UserId: string; p2UserId: string }) => {
-    if (!currentGroupId) return;
-    await createSession({ groupId: currentGroupId, gameType: 'rps', config });
-    openModal();
+  const lobbyTranslations = {
+    ladder_participants: t.ladder_participants,
+    ladder_you: t.ladder_you,
+    games_join: t.games_join,
+    games_leave: t.games_leave,
+    games_launch: t.games_launch,
+    games_waiting_host: t.games_waiting_host,
+    games_add_member: t.games_add_member,
+    games_remove_member: t.games_remove_member,
+    games_lobby_status_joined: t.games_lobby_status_joined,
+    games_lobby_status_not_joined: t.games_lobby_status_not_joined,
+    games_lobby_slots: t.games_lobby_slots,
+    games_lobby_you_host: t.games_lobby_you_host,
+    games_cancel: t.games_cancel,
+    no_members: t.no_members,
   };
 
-  const startRoulette = async (config: { selectedIds: string[]; slotsPerMember: number }) => {
-    if (!currentGroupId) return;
-    await createSession({ groupId: currentGroupId, gameType: 'roulette', config });
-    openModal();
+  const renderTabBody = () => {
+    if (lobbyOnOtherTab) {
+      return (
+        <p className="text-[#64748b]" style={{ fontSize: '4.5cqmin' }}>
+          {t.games_lobby_wrong_tab}
+        </p>
+      );
+    }
+    if (gameOnOtherTab) {
+      return (
+        <p className="text-[#64748b]" style={{ fontSize: '4.5cqmin' }}>
+          {t.games_lobby_wrong_game}
+        </p>
+      );
+    }
+    if (showLobbyPanel) {
+      const lobbyBundle =
+        isLobby && sessionGameType === activeTab ? bundle : null;
+      return (
+        <GameLobbyPanel
+          gameType={activeTab}
+          userId={userId}
+          members={members}
+          bundle={lobbyBundle}
+          isHost={Boolean(lobbyBundle && isHost)}
+          isParticipant={Boolean(lobbyBundle && isParticipant)}
+          actionLoading={actionLoading}
+          onJoin={handleLobbyJoin}
+          onLeave={leaveLobby}
+          onAddSlot={handleAddSlot}
+          onRemoveSlot={handleRemoveSlot}
+          onStart={handleStartLobby}
+          onCancel={isHost ? handleCancelSession : undefined}
+          translations={lobbyTranslations}
+          formatText={formatText}
+        />
+      );
+    }
+    return null;
   };
 
   return (
@@ -163,7 +244,7 @@ export function FamilyGamesSection({
             </div>
           ) : (
             <div className="games-widget-content">
-              {hasActiveSession && !modalOpen && (
+              {hasActiveSession && !isLobby && !modalOpen && (
                 <div
                   className="mb-2 flex flex-col rounded-xl bg-indigo-50 px-3 py-2"
                   style={{ gap: '1.5cqmin' }}
@@ -192,7 +273,7 @@ export function FamilyGamesSection({
                       </button>
                     )}
                   </div>
-                  {!isHost && (
+                  {!isHost && isParticipant && (
                     <span className="text-indigo-700/80" style={{ fontSize: '3.5cqmin' }}>
                       {t.games_waiting_host}
                     </span>
@@ -230,54 +311,19 @@ export function FamilyGamesSection({
                 ))}
               </div>
 
-              {activeTab === 'ladder' && (
-                <LadderGameTab
-                  mode="setup"
-                  userId={userId}
-                  members={members}
-                  translations={t}
-                  formatText={formatText}
-                  launchLabel={t.games_launch}
-                  onLaunch={startLadder}
-                  disabled={hasActiveSession}
-                />
-              )}
-              {activeTab === 'rps' && (
-                <RPSGameTab
-                  mode="setup"
-                  userId={userId}
-                  members={members}
-                  translations={t}
-                  formatText={formatText}
-                  launchLabel={t.games_launch}
-                  onLaunch={startRPS}
-                  disabled={hasActiveSession}
-                />
-              )}
-              {activeTab === 'roulette' && (
-                <RouletteGameTab
-                  mode="setup"
-                  userId={userId}
-                  members={members}
-                  translations={t}
-                  formatText={formatText}
-                  launchLabel={t.games_launch}
-                  onLaunch={startRoulette}
-                  disabled={hasActiveSession}
-                />
-              )}
+              {renderTabBody()}
             </div>
           )}
         </div>
       </section>
 
       <GamePlayModal
-        open={modalOpen && bundle !== null}
+        open={modalOpen && bundle !== null && !isLobby}
         title={modalTitle}
         closeLabel={t.games_modal_close}
         onClose={closePlayModal}
       >
-        {bundle?.session.game_type === 'ladder' && (
+        {bundle?.session.game_type === 'ladder' && !isLobby && (
           <LadderGameTab
             mode="multiplayer"
             userId={userId}
@@ -292,7 +338,7 @@ export function FamilyGamesSection({
             cancelLabel={t.games_cancel}
           />
         )}
-        {bundle?.session.game_type === 'rps' && (
+        {bundle?.session.game_type === 'rps' && !isLobby && (
           <RPSGameTab
             mode="multiplayer"
             userId={userId}
@@ -307,7 +353,7 @@ export function FamilyGamesSection({
             cancelLabel={t.games_cancel}
           />
         )}
-        {bundle?.session.game_type === 'roulette' && (
+        {bundle?.session.game_type === 'roulette' && !isLobby && (
           <RouletteGameTab
             mode="multiplayer"
             userId={userId}

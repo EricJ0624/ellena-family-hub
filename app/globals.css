@@ -2127,6 +2127,22 @@ select {
     gap: 1.5cqmin;
   }
 
+  .widget-chrome[data-widget-key='games'] .games-tab-setup .games-setup-scroll,
+  .widget-chrome[data-widget-key='games'] .games-tab-lobby .games-setup-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-tab-panel.games-tab-lobby {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    gap: 2cqmin;
+  }
+
   .widget-chrome[data-widget-key='games'] .games-setup-actions {
     flex: 0 0 auto;
   }

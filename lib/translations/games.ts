@@ -62,6 +62,13 @@ export type GamesTranslations = {
   roulette_waiting_ready: string;
   games_add_member: string;
   games_remove_member: string;
+  games_leave: string;
+  games_lobby_status_joined: string;
+  games_lobby_status_not_joined: string;
+  games_lobby_slots: string;
+  games_lobby_you_host: string;
+  games_lobby_wrong_tab: string;
+  games_lobby_wrong_game: string;
 };
 
 const games: Record<LangCode, GamesTranslations> = {
@@ -127,6 +134,13 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_waiting_ready: '{done}/{total}명 준비 완료',
     games_add_member: '멤버 추가',
     games_remove_member: '멤버 삭제',
+    games_leave: '참여 취소',
+    games_lobby_status_joined: '참여 중',
+    games_lobby_status_not_joined: '미참여',
+    games_lobby_slots: '{joined}/{max}명',
+    games_lobby_you_host: '호스트',
+    games_lobby_wrong_tab: '다른 게임 탭에서 로비가 열려 있습니다.',
+    games_lobby_wrong_game: '다른 게임이 진행 중입니다. 해당 탭 또는 배너에서 참가해 주세요.',
   },
   en: {
     section_title: 'Family Games',
@@ -190,6 +204,13 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_waiting_ready: '{done}/{total} ready',
     games_add_member: 'Add member',
     games_remove_member: 'Remove member',
+    games_leave: 'Leave',
+    games_lobby_status_joined: 'Joined',
+    games_lobby_status_not_joined: 'Not joined',
+    games_lobby_slots: '{joined}/{max} players',
+    games_lobby_you_host: 'Host',
+    games_lobby_wrong_tab: 'A lobby is open on another game tab.',
+    games_lobby_wrong_game: 'Another game is in progress. Join from that tab or the banner.',
   },
   ja: {
     section_title: 'ファミリーゲーム',
@@ -253,6 +274,13 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_waiting_ready: '{done}/{total}人準備完了',
     games_add_member: 'メンバー追加',
     games_remove_member: 'メンバー削除',
+    games_leave: '参加取消',
+    games_lobby_status_joined: '参加中',
+    games_lobby_status_not_joined: '未参加',
+    games_lobby_slots: '{joined}/{max}人',
+    games_lobby_you_host: 'ホスト',
+    games_lobby_wrong_tab: '別のゲームタブでロビーが開いています。',
+    games_lobby_wrong_game: '別のゲームが進行中です。該当タブまたはバナーから参加してください。',
   },
   'zh-CN': {
     section_title: '家庭游戏',
@@ -316,6 +344,13 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_waiting_ready: '{done}/{total} 人已就绪',
     games_add_member: '添加成员',
     games_remove_member: '移除成员',
+    games_leave: '取消参与',
+    games_lobby_status_joined: '已参与',
+    games_lobby_status_not_joined: '未参与',
+    games_lobby_slots: '{joined}/{max} 人',
+    games_lobby_you_host: '主持人',
+    games_lobby_wrong_tab: '其他游戏标签页已打开等候室。',
+    games_lobby_wrong_game: '其他游戏进行中。请从对应标签或横幅加入。',
   },
   'zh-TW': {
     section_title: '家庭遊戲',
@@ -379,6 +414,13 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_waiting_ready: '{done}/{total} 人已就緒',
     games_add_member: '新增成員',
     games_remove_member: '移除成員',
+    games_leave: '取消參與',
+    games_lobby_status_joined: '已參與',
+    games_lobby_status_not_joined: '未參與',
+    games_lobby_slots: '{joined}/{max} 人',
+    games_lobby_you_host: '主持人',
+    games_lobby_wrong_tab: '其他遊戲分頁已開啟等候室。',
+    games_lobby_wrong_game: '其他遊戲進行中。請從對應分頁或橫幅加入。',
   },
 };
 
