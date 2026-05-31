@@ -52,6 +52,14 @@ export type GamesTranslations = {
   roulette_result: string;
   games_launch: string;
   games_modal_close: string;
+  games_session_active: string;
+  games_join: string;
+  games_cancel: string;
+  games_waiting_host: string;
+  rps_waiting_opponent: string;
+  rps_you_submitted: string;
+  roulette_confirm_join: string;
+  roulette_waiting_ready: string;
 };
 
 const games: Record<LangCode, GamesTranslations> = {
@@ -107,6 +115,14 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_result: '당첨: {name}',
     games_launch: '시작',
     games_modal_close: '닫기',
+    games_session_active: '진행 중인 게임이 있습니다',
+    games_join: '참가하기',
+    games_cancel: '게임 취소',
+    games_waiting_host: '호스트가 시작할 때까지 기다려 주세요.',
+    rps_waiting_opponent: '상대방 선택 대기 중…',
+    rps_you_submitted: '선택 완료',
+    roulette_confirm_join: '참가 확인',
+    roulette_waiting_ready: '{done}/{total}명 준비 완료',
   },
   en: {
     section_title: 'Family Games',
@@ -160,6 +176,14 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_result: 'Winner: {name}',
     games_launch: 'Start',
     games_modal_close: 'Close',
+    games_session_active: 'A game is in progress',
+    games_join: 'Join',
+    games_cancel: 'Cancel game',
+    games_waiting_host: 'Waiting for the host to start…',
+    rps_waiting_opponent: 'Waiting for opponent…',
+    rps_you_submitted: 'Choice submitted',
+    roulette_confirm_join: 'Confirm participation',
+    roulette_waiting_ready: '{done}/{total} ready',
   },
   ja: {
     section_title: 'ファミリーゲーム',
@@ -213,6 +237,14 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_result: '当選: {name}',
     games_launch: '開始',
     games_modal_close: '閉じる',
+    games_session_active: '進行中のゲームがあります',
+    games_join: '参加',
+    games_cancel: 'ゲーム取消',
+    games_waiting_host: 'ホストの開始を待っています…',
+    rps_waiting_opponent: '相手の選択を待っています…',
+    rps_you_submitted: '選択済み',
+    roulette_confirm_join: '参加確認',
+    roulette_waiting_ready: '{done}/{total}人準備完了',
   },
   'zh-CN': {
     section_title: '家庭游戏',
@@ -266,6 +298,14 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_result: '中奖: {name}',
     games_launch: '开始',
     games_modal_close: '关闭',
+    games_session_active: '有进行中的游戏',
+    games_join: '加入',
+    games_cancel: '取消游戏',
+    games_waiting_host: '等待主持人开始…',
+    rps_waiting_opponent: '等待对手选择…',
+    rps_you_submitted: '已选择',
+    roulette_confirm_join: '确认参与',
+    roulette_waiting_ready: '{done}/{total} 人已就绪',
   },
   'zh-TW': {
     section_title: '家庭遊戲',
@@ -319,6 +359,14 @@ const games: Record<LangCode, GamesTranslations> = {
     roulette_result: '中獎: {name}',
     games_launch: '開始',
     games_modal_close: '關閉',
+    games_session_active: '有進行中的遊戲',
+    games_join: '加入',
+    games_cancel: '取消遊戲',
+    games_waiting_host: '等待主持人開始…',
+    rps_waiting_opponent: '等待對手選擇…',
+    rps_you_submitted: '已選擇',
+    roulette_confirm_join: '確認參與',
+    roulette_waiting_ready: '{done}/{total} 人已就緒',
   },
 };
 

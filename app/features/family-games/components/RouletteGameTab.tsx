@@ -2,13 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
+import { asRouletteConfig } from '@/lib/family-games/session-types';
+import type { FamilyGameSessionBundle, GameSessionAction } from '@/lib/family-games/session-types';
 import {
   buildRouletteSegments,
   getRouletteSlotsPerMemberOptions,
-  pickRouletteIndex,
   type RouletteLaunchConfig,
 } from '../types';
-import { getMemberNickname } from './MemberSelect';
+import { getMemberNickname, MemberSelect } from './MemberSelect';
 
 type RouletteTranslations = {
   roulette_participants: string;
@@ -21,8 +22,14 @@ type RouletteTranslations = {
   roulette_spinning: string;
   roulette_reset: string;
   roulette_result: string;
+  roulette_confirm_join: string;
+  roulette_waiting_ready: string;
+  rps_you_submitted: string;
   no_members: string;
+  select_member: string;
   ladder_you: string;
+  games_waiting_host: string;
+  games_cancel: string;
 };
 
 type RouletteGameTabBaseProps = {
@@ -35,69 +42,53 @@ type RouletteGameTabBaseProps = {
 type RouletteGameTabSetupProps = RouletteGameTabBaseProps & {
   mode: 'setup';
   launchLabel: string;
-  onLaunch: (config: RouletteLaunchConfig) => void;
-  launchConfig?: never;
+  onLaunch: (config: RouletteLaunchConfig) => void | Promise<void>;
+  disabled?: boolean;
 };
 
-type RouletteGameTabPlayProps = RouletteGameTabBaseProps & {
-  mode: 'play';
-  launchConfig: RouletteLaunchConfig;
-  launchLabel?: never;
-  onLaunch?: never;
+type RouletteGameTabMultiplayerProps = RouletteGameTabBaseProps & {
+  mode: 'multiplayer';
+  sessionBundle: FamilyGameSessionBundle;
+  isHost: boolean;
+  onAction: (action: GameSessionAction) => Promise<unknown>;
+  actionLoading?: boolean;
+  onCancel?: () => void;
+  cancelLabel?: string;
 };
 
-export type RouletteGameTabProps = RouletteGameTabSetupProps | RouletteGameTabPlayProps;
+export type RouletteGameTabProps = RouletteGameTabSetupProps | RouletteGameTabMultiplayerProps;
 
 const MEMBER_COLORS = [
-  '#6366f1',
-  '#ec4899',
-  '#14b8a6',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ef4444',
-  '#22c55e',
-  '#0ea5e9',
-  '#f97316',
-  '#06b6d4',
-  '#a855f7',
-  '#84cc16',
-  '#e11d48',
-  '#0d9488',
-  '#7c3aed',
+  '#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6',
+  '#ef4444', '#22c55e', '#0ea5e9', '#f97316', '#06b6d4',
+  '#a855f7', '#84cc16', '#e11d48', '#0d9488', '#7c3aed',
 ];
 
 export function RouletteGameTab(props: RouletteGameTabProps) {
   const { userId, members, translations: t, formatText, mode } = props;
   const isSetup = mode === 'setup';
+  const isMultiplayer = mode === 'multiplayer';
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(
-    isSetup ? [] : [...props.launchConfig.selectedIds],
-  );
-  const [slotsPerMember, setSlotsPerMember] = useState(
-    isSetup ? 1 : props.launchConfig.slotsPerMember,
-  );
+  const mpConfig = isMultiplayer ? asRouletteConfig(props.sessionBundle.session.config) : null;
+  const mpSession = isMultiplayer ? props.sessionBundle.session : null;
+  const mpParticipants = isMultiplayer ? props.sessionBundle.participants : [];
+  const myParticipant = mpParticipants.find((p) => p.user_id === userId) ?? null;
+
+  const [member1Id, setMember1Id] = useState('');
+  const [member2Id, setMember2Id] = useState('');
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
+
+  const selectedIds = mpConfig?.selectedIds ?? [];
+  const slotsPerMember = mpConfig?.slotsPerMember ?? 1;
+  const isConfigPhase = mpSession?.status === 'config';
+  const canSpin = mpSession?.status === 'active' || mpSession?.status === 'completed';
 
   const slotsPerMemberOptions = useMemo(
     () => getRouletteSlotsPerMemberOptions(selectedIds.length),
     [selectedIds.length],
   );
-
-  useEffect(() => {
-    if (isSetup) return;
-    setRotation(0);
-    setWinner(null);
-    setSpinning(false);
-  }, [isSetup, props.launchConfig]);
-
-  useEffect(() => {
-    if (isSetup && slotsPerMemberOptions.length === 0) return;
-    if (!slotsPerMemberOptions.includes(slotsPerMember)) {
-      setSlotsPerMember(slotsPerMemberOptions[0] ?? 1);
-    }
-  }, [isSetup, slotsPerMemberOptions, slotsPerMember]);
 
   const getLabel = (memberUserId: string) =>
     getMemberNickname(members, memberUserId, userId, t.ladder_you);
@@ -108,45 +99,53 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   }, [selectedIds, slotsPerMember, members, userId, t.ladder_you]);
 
   const totalSlots = wheelSegments.length;
-  const sliceAngle = totalSlots > 0 ? 360 / totalSlots : 360;
-  const canSpin = selectedIds.length >= 2 && totalSlots >= 2;
 
-  const toggleParticipant = (memberUserId: string) => {
-    if (!isSetup || spinning) return;
-    setSelectedIds((prev) =>
-      prev.includes(memberUserId)
-        ? prev.filter((id) => id !== memberUserId)
-        : [...prev, memberUserId],
-    );
+  useEffect(() => {
+    if (!mpConfig?.spinStartedAt || mpConfig.rotation === undefined) return;
+    setSpinning(true);
+    setWinner(null);
+    setRotation(mpConfig.rotation);
+    const timeout = window.setTimeout(() => {
+      const winnerName = mpConfig.winnerUserId
+        ? getMemberNickname(members, mpConfig.winnerUserId, userId, t.ladder_you)
+        : mpConfig.winnerLabel ?? null;
+      setWinner(winnerName);
+      setSpinning(false);
+    }, 3200);
+    return () => window.clearTimeout(timeout);
+  }, [mpConfig?.spinStartedAt, mpConfig?.rotation, mpConfig?.winnerUserId, members, userId, t.ladder_you]);
+
+  const toggleReady = () => {
+    if (!isMultiplayer || !myParticipant) return;
+    props.onAction({ type: 'toggle_roulette_ready' }).catch(console.error);
   };
 
-  const selectAllMembers = () => {
-    if (!isSetup || spinning) return;
-    setSelectedIds(members.map((m) => m.userId));
+  const updateSlotsPerMember = (value: number) => {
+    if (!isMultiplayer || !props.isHost) return;
+    props
+      .onAction({ type: 'host_update_roulette_config', slotsPerMember: value })
+      .catch(console.error);
+  };
+
+  const toggleParticipant = (memberUserId: string) => {
+    if (!isMultiplayer || !props.isHost || spinning) return;
+    const next = selectedIds.includes(memberUserId)
+      ? selectedIds.filter((id) => id !== memberUserId)
+      : [...selectedIds, memberUserId];
+    if (next.length < 2) return;
+    props.onAction({ type: 'host_update_roulette_config', selectedIds: next }).catch(console.error);
   };
 
   const spin = () => {
-    if (isSetup || !canSpin || spinning) return;
-    setWinner(null);
-    setSpinning(true);
-    const extraTurns = 5 + Math.floor(Math.random() * 4);
-    const randomOffset = Math.random() * 360;
-    const nextRotation = rotation + extraTurns * 360 + randomOffset;
-    setRotation(nextRotation);
-    window.setTimeout(() => {
-      const index = pickRouletteIndex(totalSlots, nextRotation);
-      setWinner(wheelSegments[index]?.label ?? null);
-      setSpinning(false);
-    }, 3200);
+    if (!isMultiplayer || !props.isHost || spinning) return;
+    props.onAction({ type: 'host_spin_roulette' }).catch(console.error);
   };
 
-  const resetPlay = () => {
-    setRotation(0);
-    setWinner(null);
-    setSpinning(false);
-  };
+  const mainPlayersReady = Boolean(
+    member1Id && member2Id && member1Id !== member2Id && members.length >= 2,
+  );
 
-  const setupReady = selectedIds.length >= 2 && slotsPerMemberOptions.length > 0;
+  const readyCount = mpParticipants.filter((p) => p.ready && selectedIds.includes(p.user_id)).length;
 
   if (members.length === 0) {
     return (
@@ -159,119 +158,147 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   if (isSetup) {
     return (
       <div className="games-tab-panel games-tab-setup">
-        <div className="min-h-0 min-w-0 flex-shrink-0">
-          <div
-            className="mb-2 flex flex-wrap items-center justify-between gap-2 font-semibold text-[#334155]"
-            style={{ fontSize: '4.5cqmin' }}
-          >
-            <span>{t.roulette_participants}</span>
-            <button
-              type="button"
-              onClick={selectAllMembers}
-              disabled={selectedIds.length === members.length}
-              className="rounded-lg bg-violet-100 px-2.5 py-1 font-semibold text-violet-800 disabled:opacity-50"
-              style={{ fontSize: '3.5cqmin' }}
-            >
-              ALL
-            </button>
-          </div>
-          <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
-            {members.map((m) => {
-              const selected = selectedIds.includes(m.userId);
-              const name = getLabel(m.userId);
-              return (
-                <button
-                  key={m.userId}
-                  type="button"
-                  onClick={() => toggleParticipant(m.userId)}
-                  className={`rounded-full px-2.5 py-1.5 font-medium transition-colors ${
-                    selected
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                  style={{ fontSize: '3.5cqmin' }}
-                >
-                  {name}
-                </button>
-              );
-            })}
-          </div>
+        <div className="games-field-list grid">
+          <MemberSelect
+            members={members}
+            value={member1Id}
+            onChange={setMember1Id}
+            placeholder={t.select_member}
+            currentUserId={userId}
+            youLabel={t.ladder_you}
+            excludeUserIds={[member2Id]}
+          />
+          <MemberSelect
+            members={members}
+            value={member2Id}
+            onChange={setMember2Id}
+            placeholder={t.select_member}
+            currentUserId={userId}
+            youLabel={t.ladder_you}
+            excludeUserIds={[member1Id]}
+          />
         </div>
-
-        {selectedIds.length >= 2 && slotsPerMemberOptions.length > 0 && (
-          <div className="games-setup-columns flex-shrink-0">
-            <div className="min-h-0 min-w-0">
-              <label
-                className="mb-2 block font-semibold text-[#334155]"
-                style={{ fontSize: '4.5cqmin' }}
-                htmlFor="roulette-slots-per-member"
-              >
-                {t.roulette_slots_per_member}
-              </label>
-              <select
-                id="roulette-slots-per-member"
-                value={slotsPerMember}
-                onChange={(e) => setSlotsPerMember(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400"
-                style={{ fontSize: '4.5cqmin' }}
-              >
-                {slotsPerMemberOptions.map((each) => {
-                  const total = each * selectedIds.length;
-                  return (
-                    <option key={each} value={each}>
-                      {formatText(t.roulette_slots_per_member_option, {
-                        each: String(each),
-                        total: String(total),
-                      })}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="flex min-h-0 min-w-0 items-end">
-              <p className="font-medium text-indigo-700" style={{ fontSize: '4.5cqmin' }}>
-                {formatText(t.roulette_total_slots, {
-                  total: String(slotsPerMember * selectedIds.length),
-                  count: String(selectedIds.length),
-                })}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {selectedIds.length < 2 && (
-          <p className="flex-shrink-0 text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-            {selectedIds.length === 0 ? t.roulette_select_participants : t.roulette_min_participants}
-          </p>
-        )}
-
-        {setupReady && (
-          <button
-            type="button"
-            onClick={() =>
-              props.onLaunch({
-                selectedIds: [...selectedIds],
-                slotsPerMember,
-              })
-            }
-            className="games-setup-actions w-full flex-shrink-0 rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
-            style={{ fontSize: '4.5cqmin' }}
-          >
-            {props.launchLabel}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() =>
+            props.onLaunch({
+              selectedIds: [member1Id, member2Id],
+              slotsPerMember: 1,
+            })
+          }
+          disabled={!mainPlayersReady || props.disabled}
+          className="games-setup-actions w-full flex-shrink-0 rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white disabled:opacity-50"
+          style={{ fontSize: '4.5cqmin' }}
+        >
+          {props.launchLabel}
+        </button>
       </div>
     );
   }
 
   return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
-      <p className="text-center font-medium text-indigo-700" style={{ fontSize: '4.5cqmin' }}>
-        {formatText(t.roulette_total_slots, {
-          total: String(totalSlots),
-          count: String(selectedIds.length),
-        })}
-      </p>
+      {isConfigPhase && (
+        <>
+          <div>
+            <div
+              className="mb-2 font-semibold text-[#334155]"
+              style={{ fontSize: '4.5cqmin' }}
+            >
+              {t.roulette_participants}
+            </div>
+            <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
+              {members.map((m) => {
+                const selected = selectedIds.includes(m.userId);
+                return (
+                  <button
+                    key={m.userId}
+                    type="button"
+                    disabled={!props.isHost || spinning}
+                    onClick={() => toggleParticipant(m.userId)}
+                    className={`rounded-full px-2.5 py-1.5 font-medium transition-colors disabled:opacity-60 ${
+                      selected
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                    style={{ fontSize: '3.5cqmin' }}
+                  >
+                    {getLabel(m.userId)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {props.isHost && selectedIds.length >= 2 && slotsPerMemberOptions.length > 0 && (
+            <div className="grid sm:grid-cols-2" style={{ gap: '2cqmin' }}>
+              <div>
+                <label
+                  className="mb-2 block font-semibold text-[#334155]"
+                  style={{ fontSize: '4.5cqmin' }}
+                  htmlFor="roulette-slots-per-member"
+                >
+                  {t.roulette_slots_per_member}
+                </label>
+                <select
+                  id="roulette-slots-per-member"
+                  value={slotsPerMember}
+                  disabled={spinning || props.actionLoading}
+                  onChange={(e) => updateSlotsPerMember(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60"
+                  style={{ fontSize: '4.5cqmin' }}
+                >
+                  {slotsPerMemberOptions.map((each) => (
+                    <option key={each} value={each}>
+                      {formatText(t.roulette_slots_per_member_option, {
+                        each: String(each),
+                        total: String(each * selectedIds.length),
+                      })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <p className="font-medium text-indigo-700" style={{ fontSize: '4.5cqmin' }}>
+                  {formatText(t.roulette_total_slots, {
+                    total: String(slotsPerMember * selectedIds.length),
+                    count: String(selectedIds.length),
+                  })}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {myParticipant && selectedIds.includes(userId) && (
+            <button
+              type="button"
+              onClick={toggleReady}
+              disabled={props.actionLoading}
+              className={`rounded-lg px-4 py-2 font-semibold ${
+                myParticipant.ready
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-indigo-600 text-white'
+              }`}
+              style={{ fontSize: '4.5cqmin' }}
+            >
+              {myParticipant.ready ? t.rps_you_submitted : t.roulette_confirm_join}
+            </button>
+          )}
+
+          <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+            {formatText(t.roulette_waiting_ready, {
+              done: String(readyCount),
+              total: String(selectedIds.length),
+            })}
+          </p>
+
+          {!props.isHost && (
+            <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+              {t.games_waiting_host}
+            </p>
+          )}
+        </>
+      )}
 
       <div
         className="relative mx-auto flex items-center justify-center"
@@ -297,6 +324,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
           <svg viewBox="0 0 100 100" className="h-full w-full">
             {wheelSegments.length > 0 ? (
               wheelSegments.map((segment, index) => {
+                const sliceAngle = 360 / totalSlots;
                 const start = index * sliceAngle;
                 const end = start + sliceAngle;
                 const largeArc = sliceAngle > 180 ? 1 : 0;
@@ -347,25 +375,30 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         </p>
       )}
 
-      <div className="flex flex-wrap justify-center" style={{ gap: '1.5cqmin' }}>
+      {canSpin && props.isHost && (
+        <div className="flex flex-wrap justify-center" style={{ gap: '1.5cqmin' }}>
+          <button
+            type="button"
+            onClick={spin}
+            disabled={totalSlots < 2 || spinning || props.actionLoading}
+            className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
+            style={{ fontSize: '4.5cqmin' }}
+          >
+            {spinning ? t.roulette_spinning : t.roulette_spin}
+          </button>
+        </div>
+      )}
+
+      {props.onCancel && isConfigPhase && (
         <button
           type="button"
-          onClick={spin}
-          disabled={!canSpin || spinning}
-          className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
-          style={{ fontSize: '4.5cqmin' }}
-        >
-          {spinning ? t.roulette_spinning : t.roulette_spin}
-        </button>
-        <button
-          type="button"
-          onClick={resetPlay}
+          onClick={props.onCancel}
           className="rounded-lg bg-slate-200 px-4 py-2 font-semibold text-slate-700"
           style={{ fontSize: '4.5cqmin' }}
         >
-          {t.roulette_reset}
+          {props.cancelLabel ?? t.games_cancel}
         </button>
-      </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
+import { asRPSConfig } from '@/lib/family-games/session-types';
+import type { FamilyGameSessionBundle, GameSessionAction } from '@/lib/family-games/session-types';
 import { resolveRPS, type RPSChoice, type RPSLaunchConfig } from '../types';
 import { getMemberNickname, MemberSelect } from './MemberSelect';
 
@@ -19,10 +21,13 @@ type RPSTranslations = {
   rps_animating: string;
   rps_result_win: string;
   rps_result_draw: string;
+  rps_waiting_opponent: string;
+  rps_you_submitted: string;
   select_member: string;
   no_members: string;
   duplicate_member: string;
   ladder_you: string;
+  games_cancel: string;
 };
 
 type RPSGameTabBaseProps = {
@@ -35,18 +40,21 @@ type RPSGameTabBaseProps = {
 type RPSGameTabSetupProps = RPSGameTabBaseProps & {
   mode: 'setup';
   launchLabel: string;
-  onLaunch: (config: RPSLaunchConfig) => void;
-  launchConfig?: never;
+  onLaunch: (config: RPSLaunchConfig) => void | Promise<void>;
+  disabled?: boolean;
 };
 
-type RPSGameTabPlayProps = RPSGameTabBaseProps & {
-  mode: 'play';
-  launchConfig: RPSLaunchConfig;
-  launchLabel?: never;
-  onLaunch?: never;
+type RPSGameTabMultiplayerProps = RPSGameTabBaseProps & {
+  mode: 'multiplayer';
+  sessionBundle: FamilyGameSessionBundle;
+  isHost: boolean;
+  onAction: (action: GameSessionAction) => Promise<unknown>;
+  actionLoading?: boolean;
+  onCancel?: () => void;
+  cancelLabel?: string;
 };
 
-export type RPSGameTabProps = RPSGameTabSetupProps | RPSGameTabPlayProps;
+export type RPSGameTabProps = RPSGameTabSetupProps | RPSGameTabMultiplayerProps;
 
 const CHOICES: RPSChoice[] = ['rock', 'paper', 'scissors'];
 
@@ -59,31 +67,46 @@ const CHOICE_EMOJI: Record<RPSChoice, string> = {
 export function RPSGameTab(props: RPSGameTabProps) {
   const { userId, members, translations: t, formatText, mode } = props;
   const isSetup = mode === 'setup';
+  const isMultiplayer = mode === 'multiplayer';
 
-  const [p1UserId, setP1UserId] = useState(isSetup ? '' : props.launchConfig.p1UserId);
-  const [p2UserId, setP2UserId] = useState(isSetup ? '' : props.launchConfig.p2UserId);
-  const [p1Choice, setP1Choice] = useState<RPSChoice | null>(null);
-  const [p2Choice, setP2Choice] = useState<RPSChoice | null>(null);
+  const mpConfig = isMultiplayer ? asRPSConfig(props.sessionBundle.session.config) : null;
+  const mpSession = isMultiplayer ? props.sessionBundle.session : null;
+  const mpParticipants = isMultiplayer ? props.sessionBundle.participants : [];
+
+  const [p1UserId, setP1UserId] = useState('');
+  const [p2UserId, setP2UserId] = useState('');
   const [animating, setAnimating] = useState(false);
   const [displayP1, setDisplayP1] = useState<RPSChoice>('rock');
   const [displayP2, setDisplayP2] = useState<RPSChoice>('rock');
   const [revealed, setRevealed] = useState(false);
   const [resultText, setResultText] = useState<string | null>(null);
+  const [localSubmitted, setLocalSubmitted] = useState(false);
+
+  const activeP1 = mpConfig?.p1UserId ?? p1UserId;
+  const activeP2 = mpConfig?.p2UserId ?? p2UserId;
+  const isPlayer = userId === activeP1 || userId === activeP2;
+  const myReady = mpParticipants.find((p) => p.user_id === userId)?.ready ?? false;
 
   const p1Name = useMemo(
-    () => getMemberNickname(members, p1UserId, userId, t.ladder_you),
-    [members, p1UserId, userId, t.ladder_you],
+    () => getMemberNickname(members, activeP1, userId, t.ladder_you),
+    [members, activeP1, userId, t.ladder_you],
   );
   const p2Name = useMemo(
-    () => getMemberNickname(members, p2UserId, userId, t.ladder_you),
-    [members, p2UserId, userId, t.ladder_you],
+    () => getMemberNickname(members, activeP2, userId, t.ladder_you),
+    [members, activeP2, userId, t.ladder_you],
   );
 
-  const playersReady = Boolean(p1UserId && p2UserId && p1UserId !== p2UserId);
-  const choicesReady = Boolean(p1Choice && p2Choice);
+  const playersReady = Boolean(activeP1 && activeP2 && activeP1 !== activeP2);
+  const p1Choice = mpConfig?.p1Choice ?? null;
+  const p2Choice = mpConfig?.p2Choice ?? null;
+  const isRevealPhase =
+    mpSession?.status === 'revealing' || mpSession?.status === 'completed';
 
   useEffect(() => {
-    if (isSetup || !animating || !p1Choice || !p2Choice) return undefined;
+    if (!isMultiplayer || !isRevealPhase || !p1Choice || !p2Choice) return;
+    setAnimating(true);
+    setRevealed(false);
+    setResultText(null);
     let tick = 0;
     const interval = window.setInterval(() => {
       const random = CHOICES[Math.floor(Math.random() * CHOICES.length)];
@@ -112,23 +135,12 @@ export function RPSGameTab(props: RPSGameTabProps) {
       window.clearInterval(interval);
       window.clearTimeout(timeout);
     };
-  }, [animating, p1Choice, p2Choice, t, formatText, p1Name, p2Name, isSetup]);
+  }, [isMultiplayer, isRevealPhase, p1Choice, p2Choice, mpConfig?.revealStartedAt, t, formatText, p1Name, p2Name]);
 
-  const reveal = () => {
-    if (isSetup || !playersReady || !choicesReady || animating) return;
-    setRevealed(false);
-    setResultText(null);
-    setAnimating(true);
-  };
-
-  const resetPlay = () => {
-    setP1Choice(null);
-    setP2Choice(null);
-    setAnimating(false);
-    setRevealed(false);
-    setResultText(null);
-    setDisplayP1('rock');
-    setDisplayP2('rock');
+  const submitChoice = async (choice: RPSChoice) => {
+    if (!isMultiplayer || !isPlayer || myReady || localSubmitted) return;
+    setLocalSubmitted(true);
+    await props.onAction({ type: 'submit_rps', choice });
   };
 
   const choiceLabel = (choice: RPSChoice) => {
@@ -137,24 +149,15 @@ export function RPSGameTab(props: RPSGameTabProps) {
     return t.rps_scissors;
   };
 
-  const renderChoiceButtons = (
-    player: 'p1' | 'p2',
-    selected: RPSChoice | null,
-    onSelect: (c: RPSChoice) => void,
-    disabled: boolean,
-  ) => (
+  const renderChoiceButtons = (disabled: boolean) => (
     <div className="grid grid-cols-3" style={{ gap: '1.5cqmin' }}>
       {CHOICES.map((choice) => (
         <button
-          key={`${player}-${choice}`}
+          key={choice}
           type="button"
-          disabled={disabled || animating || revealed}
-          onClick={() => onSelect(choice)}
-          className={`rounded-xl border-2 px-2 py-3 font-semibold transition-colors disabled:opacity-60 ${
-            selected === choice
-              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-              : 'border-slate-200 bg-white/80 text-slate-700 hover:border-indigo-300'
-          }`}
+          disabled={disabled || animating || revealed || (isMultiplayer && props.actionLoading)}
+          onClick={() => submitChoice(choice)}
+          className="rounded-xl border-2 border-slate-200 bg-white/80 px-2 py-3 font-semibold text-slate-700 transition-colors hover:border-indigo-300 disabled:opacity-60"
           style={{ fontSize: '4cqmin' }}
         >
           <div style={{ fontSize: '8cqmin', lineHeight: 1 }}>{CHOICE_EMOJI[choice]}</div>
@@ -175,57 +178,35 @@ export function RPSGameTab(props: RPSGameTabProps) {
   if (isSetup) {
     return (
       <div className="games-tab-panel games-tab-setup">
-        <div className="games-setup-columns">
-          <div className="glass-panel-soft min-h-0 min-w-0 rounded-xl" style={{ padding: '2.5cqmin' }}>
-            <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
-              {t.rps_player1}
-            </div>
-            <MemberSelect
-              members={members}
-              value={p1UserId}
-              onChange={setP1UserId}
-              placeholder={t.select_member}
-              currentUserId={userId}
-              youLabel={t.ladder_you}
-              excludeUserIds={[p2UserId]}
-            />
-          </div>
-          <div className="glass-panel-soft min-h-0 min-w-0 rounded-xl" style={{ padding: '2.5cqmin' }}>
-            <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
-              {t.rps_player2}
-            </div>
-            <MemberSelect
-              members={members}
-              value={p2UserId}
-              onChange={setP2UserId}
-              placeholder={t.select_member}
-              currentUserId={userId}
-              youLabel={t.ladder_you}
-              excludeUserIds={[p1UserId]}
-            />
-          </div>
+        <div className="games-field-list grid">
+          <MemberSelect
+            members={members}
+            value={p1UserId}
+            onChange={setP1UserId}
+            placeholder={t.select_member}
+            currentUserId={userId}
+            youLabel={t.ladder_you}
+            excludeUserIds={[p2UserId]}
+          />
+          <MemberSelect
+            members={members}
+            value={p2UserId}
+            onChange={setP2UserId}
+            placeholder={t.select_member}
+            currentUserId={userId}
+            youLabel={t.ladder_you}
+            excludeUserIds={[p1UserId]}
+          />
         </div>
-
-        {p1UserId && p2UserId && p1UserId === p2UserId && (
-          <p className="flex-shrink-0 text-center text-[#b91c1c]" style={{ fontSize: '4cqmin' }}>
-            {t.duplicate_member}
-          </p>
-        )}
-
-        {!playersReady ? (
-          <p className="flex-shrink-0 text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-            {t.rps_select_members}
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={() => props.onLaunch({ p1UserId, p2UserId })}
-            className="games-setup-actions w-full flex-shrink-0 rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white"
-            style={{ fontSize: '4.5cqmin' }}
-          >
-            {props.launchLabel}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => props.onLaunch({ p1UserId, p2UserId })}
+          disabled={!playersReady || props.disabled}
+          className="games-setup-actions w-full flex-shrink-0 rounded-lg bg-emerald-600 px-3 py-2.5 font-semibold text-white disabled:opacity-50"
+          style={{ fontSize: '4.5cqmin' }}
+        >
+          {props.launchLabel}
+        </button>
       </div>
     );
   }
@@ -237,26 +218,51 @@ export function RPSGameTab(props: RPSGameTabProps) {
           <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
             {p1Name || t.rps_player1}
           </div>
-          {renderChoiceButtons('p1', p1Choice, setP1Choice, false)}
+          {userId === activeP1 && !isRevealPhase ? (
+            renderChoiceButtons(myReady || localSubmitted)
+          ) : (
+            <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+              {mpParticipants.find((p) => p.user_id === activeP1)?.ready
+                ? t.rps_you_submitted
+                : t.rps_waiting_opponent}
+            </p>
+          )}
         </div>
         <div className="glass-panel-soft rounded-xl" style={{ padding: '2.5cqmin' }}>
           <div className="mb-2 font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
             {p2Name || t.rps_player2}
           </div>
-          {renderChoiceButtons('p2', p2Choice, setP2Choice, false)}
+          {userId === activeP2 && !isRevealPhase ? (
+            renderChoiceButtons(myReady || localSubmitted)
+          ) : (
+            <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+              {mpParticipants.find((p) => p.user_id === activeP2)?.ready
+                ? t.rps_you_submitted
+                : t.rps_waiting_opponent}
+            </p>
+          )}
         </div>
       </div>
 
       {(animating || revealed) && (
-        <div className="flex items-center justify-center rounded-xl bg-slate-900/5" style={{ gap: '4cqmin', padding: '3cqmin' }}>
+        <div
+          className="flex items-center justify-center rounded-xl bg-slate-900/5"
+          style={{ gap: '4cqmin', padding: '3cqmin' }}
+        >
           <div className="text-center">
             <div style={{ fontSize: '12cqmin' }}>{CHOICE_EMOJI[displayP1]}</div>
-            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>{p1Name}</div>
+            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>
+              {p1Name}
+            </div>
           </div>
-          <div className="font-bold text-[#94a3b8]" style={{ fontSize: '6cqmin' }}>VS</div>
+          <div className="font-bold text-[#94a3b8]" style={{ fontSize: '6cqmin' }}>
+            VS
+          </div>
           <div className="text-center">
             <div style={{ fontSize: '12cqmin' }}>{CHOICE_EMOJI[displayP2]}</div>
-            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>{p2Name}</div>
+            <div className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>
+              {p2Name}
+            </div>
           </div>
         </div>
       )}
@@ -273,30 +279,21 @@ export function RPSGameTab(props: RPSGameTabProps) {
         </p>
       )}
 
-      <div className="flex flex-wrap justify-center" style={{ gap: '1.5cqmin' }}>
+      {!isPlayer && !isRevealPhase && (
+        <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
+          {t.rps_pick_both}
+        </p>
+      )}
+
+      {props.onCancel && (
         <button
           type="button"
-          onClick={reveal}
-          disabled={!choicesReady || animating}
-          className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
-          style={{ fontSize: '4.5cqmin' }}
-        >
-          {t.rps_reveal}
-        </button>
-        <button
-          type="button"
-          onClick={resetPlay}
+          onClick={props.onCancel}
           className="rounded-lg bg-slate-200 px-4 py-2 font-semibold text-slate-700"
           style={{ fontSize: '4.5cqmin' }}
         >
-          {t.rps_reset}
+          {props.cancelLabel ?? t.games_cancel}
         </button>
-      </div>
-
-      {!choicesReady && (
-        <p className="text-center text-[#64748b]" style={{ fontSize: '4cqmin' }}>
-          {t.rps_pick_choices}
-        </p>
       )}
     </div>
   );

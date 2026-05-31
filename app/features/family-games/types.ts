@@ -26,7 +26,7 @@ export type LadderRung = {
   drawnBy?: string;
 };
 
-export type LadderPhase = 'setup' | 'draw' | 'result';
+export type LadderPhase = 'setup' | 'config' | 'draw' | 'result';
 
 export const LADDER_ROW_COUNT = 14;
 export const LADDER_MIN_LANES = 2;

@@ -3,7 +3,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { formatGamesText } from '@/lib/translations/games';
-import type { GamePlaySession, GameTab } from '../types';
+import type { GameTab } from '../types';
+import { useFamilyGameSession } from '../hooks/useFamilyGameSession';
 import { GamePlayModal } from './GamePlayModal';
 import { LadderGameTab } from './LadderGameTab';
 import { RPSGameTab } from './RPSGameTab';
@@ -21,6 +22,9 @@ export interface FamilyGamesSectionProps {
     tab_roulette: string;
     games_launch: string;
     games_modal_close: string;
+    games_session_active: string;
+    games_join: string;
+    games_cancel: string;
     ladder_participants: string;
     ladder_destinations: string;
     ladder_participant_ph: string;
@@ -52,6 +56,8 @@ export interface FamilyGamesSectionProps {
     rps_animating: string;
     rps_result_win: string;
     rps_result_draw: string;
+    rps_waiting_opponent: string;
+    rps_you_submitted: string;
     duplicate_member: string;
     roulette_slots: string;
     roulette_participants: string;
@@ -64,6 +70,9 @@ export interface FamilyGamesSectionProps {
     roulette_spinning: string;
     roulette_reset: string;
     roulette_result: string;
+    roulette_confirm_join: string;
+    roulette_waiting_ready: string;
+    games_waiting_host: string;
   };
 }
 
@@ -76,7 +85,16 @@ export function FamilyGamesSection({
   translations: t,
 }: FamilyGamesSectionProps) {
   const [activeTab, setActiveTab] = useState<GameTab>('ladder');
-  const [playSession, setPlaySession] = useState<GamePlaySession | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const {
+    bundle,
+    createSession,
+    performAction,
+    actionLoading,
+    isHost,
+    hasActiveSession,
+  } = useFamilyGameSession({ groupId: currentGroupId, userId });
 
   const formatText = useCallback(
     (template: string, vars: Record<string, string>) => formatGamesText(template, vars),
@@ -90,13 +108,38 @@ export function FamilyGamesSection({
   };
 
   const modalTitle = useMemo(() => {
-    if (!playSession) return '';
-    if (playSession.game === 'ladder') return t.tab_ladder;
-    if (playSession.game === 'rps') return t.tab_rps;
+    if (!bundle) return '';
+    if (bundle.session.game_type === 'ladder') return t.tab_ladder;
+    if (bundle.session.game_type === 'rps') return t.tab_rps;
     return t.tab_roulette;
-  }, [playSession, t.tab_ladder, t.tab_rps, t.tab_roulette]);
+  }, [bundle, t.tab_ladder, t.tab_rps, t.tab_roulette]);
 
-  const closePlayModal = () => setPlaySession(null);
+  const openModal = () => setModalOpen(true);
+  const closePlayModal = () => setModalOpen(false);
+
+  const handleCancelSession = async () => {
+    if (!isHost || !bundle) return;
+    await performAction({ type: 'cancel' });
+    closePlayModal();
+  };
+
+  const startLadder = async (config: { participantIds: string[]; destinations: string[] }) => {
+    if (!currentGroupId) return;
+    await createSession({ groupId: currentGroupId, gameType: 'ladder', config });
+    openModal();
+  };
+
+  const startRPS = async (config: { p1UserId: string; p2UserId: string }) => {
+    if (!currentGroupId) return;
+    await createSession({ groupId: currentGroupId, gameType: 'rps', config });
+    openModal();
+  };
+
+  const startRoulette = async (config: { selectedIds: string[]; slotsPerMember: number }) => {
+    if (!currentGroupId) return;
+    await createSession({ groupId: currentGroupId, gameType: 'roulette', config });
+    openModal();
+  };
 
   return (
     <>
@@ -111,6 +154,25 @@ export function FamilyGamesSection({
             </div>
           ) : (
             <div className="games-widget-content">
+              {hasActiveSession && !modalOpen && (
+                <div
+                  className="mb-2 flex flex-wrap items-center justify-between rounded-xl bg-indigo-50 px-3 py-2"
+                  style={{ gap: '1.5cqmin' }}
+                >
+                  <span className="font-medium text-indigo-800" style={{ fontSize: '4cqmin' }}>
+                    {t.games_session_active}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={openModal}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white"
+                    style={{ fontSize: '4cqmin' }}
+                  >
+                    {t.games_join}
+                  </button>
+                </div>
+              )}
+
               <div
                 className="games-tab-bar flex flex-shrink-0 flex-wrap rounded-xl bg-slate-900/5 p-1"
                 role="tablist"
@@ -123,7 +185,8 @@ export function FamilyGamesSection({
                     role="tab"
                     aria-selected={activeTab === tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`rounded-lg px-3 py-2 font-semibold transition-colors ${
+                    disabled={hasActiveSession}
+                    className={`rounded-lg px-3 py-2 font-semibold transition-colors disabled:opacity-50 ${
                       activeTab === tab
                         ? 'bg-white text-indigo-700 shadow-sm'
                         : 'text-slate-600 hover:bg-white/60'
@@ -143,7 +206,8 @@ export function FamilyGamesSection({
                   translations={t}
                   formatText={formatText}
                   launchLabel={t.games_launch}
-                  onLaunch={(config) => setPlaySession({ game: 'ladder', config })}
+                  onLaunch={startLadder}
+                  disabled={hasActiveSession}
                 />
               )}
               {activeTab === 'rps' && (
@@ -154,7 +218,8 @@ export function FamilyGamesSection({
                   translations={t}
                   formatText={formatText}
                   launchLabel={t.games_launch}
-                  onLaunch={(config) => setPlaySession({ game: 'rps', config })}
+                  onLaunch={startRPS}
+                  disabled={hasActiveSession}
                 />
               )}
               {activeTab === 'roulette' && (
@@ -165,7 +230,8 @@ export function FamilyGamesSection({
                   translations={t}
                   formatText={formatText}
                   launchLabel={t.games_launch}
-                  onLaunch={(config) => setPlaySession({ game: 'roulette', config })}
+                  onLaunch={startRoulette}
+                  disabled={hasActiveSession}
                 />
               )}
             </div>
@@ -174,39 +240,54 @@ export function FamilyGamesSection({
       </section>
 
       <GamePlayModal
-        open={playSession !== null}
+        open={modalOpen && bundle !== null}
         title={modalTitle}
         closeLabel={t.games_modal_close}
         onClose={closePlayModal}
       >
-        {playSession?.game === 'ladder' && (
+        {bundle?.session.game_type === 'ladder' && (
           <LadderGameTab
-            mode="play"
+            mode="multiplayer"
             userId={userId}
             members={members}
             translations={t}
             formatText={formatText}
-            launchConfig={playSession.config}
+            sessionBundle={bundle}
+            isHost={isHost}
+            onAction={performAction}
+            actionLoading={actionLoading}
+            onCancel={isHost ? handleCancelSession : undefined}
+            cancelLabel={t.games_cancel}
           />
         )}
-        {playSession?.game === 'rps' && (
+        {bundle?.session.game_type === 'rps' && (
           <RPSGameTab
-            mode="play"
+            mode="multiplayer"
             userId={userId}
             members={members}
             translations={t}
             formatText={formatText}
-            launchConfig={playSession.config}
+            sessionBundle={bundle}
+            isHost={isHost}
+            onAction={performAction}
+            actionLoading={actionLoading}
+            onCancel={isHost ? handleCancelSession : undefined}
+            cancelLabel={t.games_cancel}
           />
         )}
-        {playSession?.game === 'roulette' && (
+        {bundle?.session.game_type === 'roulette' && (
           <RouletteGameTab
-            mode="play"
+            mode="multiplayer"
             userId={userId}
             members={members}
             translations={t}
             formatText={formatText}
-            launchConfig={playSession.config}
+            sessionBundle={bundle}
+            isHost={isHost}
+            onAction={performAction}
+            actionLoading={actionLoading}
+            onCancel={isHost ? handleCancelSession : undefined}
+            cancelLabel={t.games_cancel}
           />
         )}
       </GamePlayModal>
