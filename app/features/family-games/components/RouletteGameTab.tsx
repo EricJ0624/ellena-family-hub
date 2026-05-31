@@ -9,7 +9,8 @@ import {
   getRouletteSlotsPerMemberOptions,
   type RouletteLaunchConfig,
 } from '../types';
-import { getMemberNickname, MemberSelect } from './MemberSelect';
+import { getMemberNickname } from './MemberSelect';
+import { areParticipantSlotsReady, ParticipantSetupPicker } from './ParticipantSetupPicker';
 
 type RouletteTranslations = {
   roulette_participants: string;
@@ -30,6 +31,8 @@ type RouletteTranslations = {
   ladder_you: string;
   games_waiting_host: string;
   games_cancel: string;
+  games_add_member: string;
+  games_remove_member: string;
 };
 
 type RouletteGameTabBaseProps = {
@@ -74,8 +77,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   const mpParticipants = isMultiplayer ? props.sessionBundle.participants : [];
   const myParticipant = mpParticipants.find((p) => p.user_id === userId) ?? null;
 
-  const [member1Id, setMember1Id] = useState('');
-  const [member2Id, setMember2Id] = useState('');
+  const [setupSelectedIds, setSetupSelectedIds] = useState<string[]>(['', '']);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
@@ -127,23 +129,12 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
       .catch(console.error);
   };
 
-  const toggleParticipant = (memberUserId: string) => {
-    if (!isMultiplayer || !props.isHost || spinning) return;
-    const next = selectedIds.includes(memberUserId)
-      ? selectedIds.filter((id) => id !== memberUserId)
-      : [...selectedIds, memberUserId];
-    if (next.length < 2) return;
-    props.onAction({ type: 'host_update_roulette_config', selectedIds: next }).catch(console.error);
-  };
-
   const spin = () => {
     if (!isMultiplayer || !props.isHost || spinning) return;
     props.onAction({ type: 'host_spin_roulette' }).catch(console.error);
   };
 
-  const mainPlayersReady = Boolean(
-    member1Id && member2Id && member1Id !== member2Id && members.length >= 2,
-  );
+  const mainPlayersReady = areParticipantSlotsReady(setupSelectedIds) && members.length >= 2;
 
   const readyCount = mpParticipants.filter((p) => p.ready && selectedIds.includes(p.user_id)).length;
 
@@ -158,31 +149,22 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   if (isSetup) {
     return (
       <div className="games-tab-panel games-tab-setup">
-        <div className="games-field-list grid">
-          <MemberSelect
-            members={members}
-            value={member1Id}
-            onChange={setMember1Id}
-            placeholder={t.select_member}
-            currentUserId={userId}
-            youLabel={t.ladder_you}
-            excludeUserIds={[member2Id]}
-          />
-          <MemberSelect
-            members={members}
-            value={member2Id}
-            onChange={setMember2Id}
-            placeholder={t.select_member}
-            currentUserId={userId}
-            youLabel={t.ladder_you}
-            excludeUserIds={[member1Id]}
-          />
-        </div>
+        <ParticipantSetupPicker
+          members={members}
+          userId={userId}
+          slotIds={setupSelectedIds}
+          onSlotIdsChange={setSetupSelectedIds}
+          maxSlots={members.length}
+          selectPlaceholder={t.select_member}
+          youLabel={t.ladder_you}
+          addLabel={t.games_add_member}
+          removeLabel={t.games_remove_member}
+        />
         <button
           type="button"
           onClick={() =>
             props.onLaunch({
-              selectedIds: [member1Id, member2Id],
+              selectedIds: [...setupSelectedIds],
               slotsPerMember: 1,
             })
           }
@@ -208,25 +190,15 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
               {t.roulette_participants}
             </div>
             <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
-              {members.map((m) => {
-                const selected = selectedIds.includes(m.userId);
-                return (
-                  <button
-                    key={m.userId}
-                    type="button"
-                    disabled={!props.isHost || spinning}
-                    onClick={() => toggleParticipant(m.userId)}
-                    className={`rounded-full px-2.5 py-1.5 font-medium transition-colors disabled:opacity-60 ${
-                      selected
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                    style={{ fontSize: '3.5cqmin' }}
-                  >
-                    {getLabel(m.userId)}
-                  </button>
-                );
-              })}
+              {selectedIds.map((memberUserId) => (
+                <span
+                  key={memberUserId}
+                  className="rounded-full bg-indigo-600 px-2.5 py-1.5 font-medium text-white"
+                  style={{ fontSize: '3.5cqmin' }}
+                >
+                  {getLabel(memberUserId)}
+                </span>
+              ))}
             </div>
           </div>
 

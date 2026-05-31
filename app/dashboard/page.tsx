@@ -5728,6 +5728,8 @@ export default function FamilyHub() {
               rps_you_submitted: gt('rps_you_submitted'),
               roulette_confirm_join: gt('roulette_confirm_join'),
               roulette_waiting_ready: gt('roulette_waiting_ready'),
+              games_add_member: gt('games_add_member'),
+              games_remove_member: gt('games_remove_member'),
             }}
           />
         );

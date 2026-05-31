@@ -60,6 +60,8 @@ export type GamesTranslations = {
   rps_you_submitted: string;
   roulette_confirm_join: string;
   roulette_waiting_ready: string;
+  games_add_member: string;
+  games_remove_member: string;
 };
 
 const games: Record<LangCode, GamesTranslations> = {
@@ -123,6 +125,8 @@ const games: Record<LangCode, GamesTranslations> = {
     rps_you_submitted: '선택 완료',
     roulette_confirm_join: '참가 확인',
     roulette_waiting_ready: '{done}/{total}명 준비 완료',
+    games_add_member: '멤버 추가',
+    games_remove_member: '멤버 삭제',
   },
   en: {
     section_title: 'Family Games',
@@ -184,6 +188,8 @@ const games: Record<LangCode, GamesTranslations> = {
     rps_you_submitted: 'Choice submitted',
     roulette_confirm_join: 'Confirm participation',
     roulette_waiting_ready: '{done}/{total} ready',
+    games_add_member: 'Add member',
+    games_remove_member: 'Remove member',
   },
   ja: {
     section_title: 'ファミリーゲーム',
@@ -245,6 +251,8 @@ const games: Record<LangCode, GamesTranslations> = {
     rps_you_submitted: '選択済み',
     roulette_confirm_join: '参加確認',
     roulette_waiting_ready: '{done}/{total}人準備完了',
+    games_add_member: 'メンバー追加',
+    games_remove_member: 'メンバー削除',
   },
   'zh-CN': {
     section_title: '家庭游戏',
@@ -306,6 +314,8 @@ const games: Record<LangCode, GamesTranslations> = {
     rps_you_submitted: '已选择',
     roulette_confirm_join: '确认参与',
     roulette_waiting_ready: '{done}/{total} 人已就绪',
+    games_add_member: '添加成员',
+    games_remove_member: '移除成员',
   },
   'zh-TW': {
     section_title: '家庭遊戲',
@@ -367,6 +377,8 @@ const games: Record<LangCode, GamesTranslations> = {
     rps_you_submitted: '已選擇',
     roulette_confirm_join: '確認參與',
     roulette_waiting_ready: '{done}/{total} 人已就緒',
+    games_add_member: '新增成員',
+    games_remove_member: '移除成員',
   },
 };
 

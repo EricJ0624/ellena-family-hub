@@ -16,6 +16,7 @@ import {
   type LadderRung,
 } from '../types';
 import { getMemberNickname, MemberSelect } from './MemberSelect';
+import { areParticipantSlotsReady, ParticipantSetupPicker } from './ParticipantSetupPicker';
 
 type LadderTranslations = {
   ladder_participants: string;
@@ -38,6 +39,8 @@ type LadderTranslations = {
   ladder_path_result: string;
   games_waiting_host: string;
   games_cancel: string;
+  games_add_member: string;
+  games_remove_member: string;
 };
 
 type LadderGameTabBaseProps = {
@@ -225,8 +228,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const bottomLabelMaxLen = laneCount > 5 ? 6 : 10;
 
   const updateParticipant = (index: number, value: string) => {
-    if (mode !== 'multiplayer' || !props.isHost) return;
-    if (mpPhase !== 'config' && mpPhase !== 'draw') return;
+    if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return;
     const next = participantIds.map((p, i) => (i === index ? value : p));
     setParticipantIds(next);
     props.onAction({ type: 'update_ladder_config', participantIds: next }).catch(console.error);
@@ -343,18 +345,14 @@ export function LadderGameTab(props: LadderGameTabProps) {
             {t.ladder_participants}
           </div>
           <div className="games-field-list grid">
-            {participantIds.map((value, index) => (
-              <MemberSelect
-                key={`p-${index}`}
-                members={members}
-                value={value}
-                onChange={(next) => updateParticipant(index, next)}
-                placeholder={t.ladder_participant_ph}
-                currentUserId={userId}
-                youLabel={t.ladder_you}
-                excludeUserIds={participantIds.filter((_, i) => i !== index)}
-                disabled={!mp.isHost}
-              />
+            {participantLabels.map((label, index) => (
+              <div
+                key={`p-${participantIds[index]}-${index}`}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 font-medium text-[#1e293b]"
+                style={{ fontSize: '4.5cqmin' }}
+              >
+                {label}
+              </div>
             ))}
           </div>
         </div>
@@ -573,24 +571,21 @@ export function LadderGameTab(props: LadderGameTabProps) {
   }
 
   if (isSetup) {
+    const setupMaxSlots = Math.min(members.length, LADDER_MAX_LANES);
     return (
       <div className="games-tab-panel games-tab-setup">
-        <div className="games-field-list grid">
-          {participantIds.slice(0, LADDER_MIN_LANES).map((value, index) => (
-            <MemberSelect
-              key={`p-${index}`}
-              members={members}
-              value={value}
-              onChange={(next) =>
-                setParticipantIds((prev) => prev.map((p, i) => (i === index ? next : p)))
-              }
-              placeholder={t.select_member}
-              currentUserId={userId}
-              youLabel={t.ladder_you}
-              excludeUserIds={participantIds.filter((_, i) => i !== index)}
-            />
-          ))}
-        </div>
+        <ParticipantSetupPicker
+          members={members}
+          userId={userId}
+          slotIds={participantIds}
+          onSlotIdsChange={setParticipantIds}
+          minSlots={LADDER_MIN_LANES}
+          maxSlots={setupMaxSlots}
+          selectPlaceholder={t.select_member}
+          youLabel={t.ladder_you}
+          addLabel={t.games_add_member}
+          removeLabel={t.games_remove_member}
+        />
         <button
           type="button"
           onClick={launchLadderGame}

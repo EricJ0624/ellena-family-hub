@@ -73,6 +73,8 @@ export interface FamilyGamesSectionProps {
     roulette_confirm_join: string;
     roulette_waiting_ready: string;
     games_waiting_host: string;
+    games_add_member: string;
+    games_remove_member: string;
   };
 }
 
