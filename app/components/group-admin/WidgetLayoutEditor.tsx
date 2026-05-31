@@ -37,7 +37,12 @@ import {
   PORTRAIT_COLS,
   LANDSCAPE_COLS,
 } from '@/lib/widgets/grid';
-import type { AppPreviewOrientation } from '@/lib/widgets/preview-orientation';
+import {
+  type AppPreviewOrientation,
+  readStoredPreviewOrientation,
+  writeStoredPreviewOrientation,
+} from '@/lib/widgets/preview-orientation';
+import { DashboardPreviewFrame } from '@/lib/widgets/dashboard-preview-frame';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   BASE_COLS,
@@ -214,6 +219,14 @@ function SortableCard({
           : buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH)),
       }}
     >
+      {editMode && (
+        <div
+          className="absolute inset-0 z-[15] pointer-events-auto touch-none"
+          aria-hidden
+          onPointerDown={(e) => e.stopPropagation()}
+        />
+      )}
+
       {/* 색상 아이콘 배너 — 드래그 핸들 겸용
            setActivatorNodeRef: @dnd-kit이 이 요소를 정식 드래그 핸들로 인식하도록 등록 */}
       <div
@@ -261,13 +274,6 @@ function SortableCard({
         <div className="editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
           {PreviewContent()}
         </div>
-        {editMode && (
-          <div
-            className="absolute inset-0 z-[15] pointer-events-auto touch-none"
-            aria-hidden
-            onPointerDown={(e) => e.stopPropagation()}
-          />
-        )}
       </div>
 
       {/* 편집 모드 컨트롤 — 리사이즈 핸들 위 (z-20) */}
@@ -363,7 +369,10 @@ export function WidgetLayoutEditor({
   onRestoreAll,
   onDragStateChange,
 }: WidgetLayoutEditorProps) {
-  const [previewMode, setPreviewMode] = useState<PreviewMode>(0);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>(() => {
+    if (typeof window === 'undefined') return 0;
+    return readStoredPreviewOrientation() === 'landscape' ? 1 : 0;
+  });
   const visualCols = PREVIEW_MODE_VISUAL_COLS[previewMode];
   const previewOrientation: AppPreviewOrientation =
     previewMode === 0 ? 'portrait' : 'landscape';
@@ -592,7 +601,11 @@ export function WidgetLayoutEditor({
           <button
             key={mode}
             type="button"
-            onClick={() => setPreviewMode(mode)}
+            onClick={() => {
+              setPreviewMode(mode);
+              if (mode === 0) writeStoredPreviewOrientation('portrait');
+              else if (mode === 1) writeStoredPreviewOrientation('landscape');
+            }}
             className={[
               'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
               previewMode === mode
@@ -649,20 +662,22 @@ export function WidgetLayoutEditor({
           items={sortedIds}
           strategy={rectSortingStrategy}
         >
-          <div
-            ref={gridRef}
-            className="dashboard-widget-grid grid min-w-0 gap-3"
-            data-columns={gridColumnCount}
-            data-layout={orientation === 'landscape' ? 'landscape' : 'portrait'}
-            style={{
-              gridTemplateColumns: `repeat(${gridColumnCount}, minmax(0, 1fr))`,
-              gridAutoFlow: 'row',
-              gridAutoRows:
-                placementCellRowH > 0
-                  ? `minmax(${placementCellRowH}px, auto)`
-                  : 'minmax(32px, auto)',
-            }}
-          >
+          <DashboardPreviewFrame previewOrientation={previewOrientation}>
+            {/* 대시보드와 동일: sections-container 실측 너비 → cellRowH */}
+            <div ref={gridRef} className="sections-container min-w-0 w-full">
+              <div
+                className="dashboard-widget-grid grid min-w-0 gap-3"
+                data-columns={gridColumnCount}
+                data-layout={placementIsLandscape ? 'landscape' : 'portrait'}
+                style={{
+                  gridTemplateColumns: `repeat(${gridColumnCount}, minmax(0, 1fr))`,
+                  gridAutoFlow: 'row',
+                  gridAutoRows:
+                    placementCellRowH > 0
+                      ? `minmax(${placementCellRowH}px, auto)`
+                      : 'minmax(32px, auto)',
+                }}
+              >
             {sortedEnabled.map((cfg) => {
               const { liveW, liveH } = getLiveOverride(cfg.widget_key);
               // Phase D: orientation별 유효 layout 값을 layoutW/H/X/Y에 주입
@@ -676,7 +691,7 @@ export function WidgetLayoutEditor({
                   cfg={effCfg}
                   label={widgetLabels[cfg.widget_key]}
                   placementColumnCount={gridColumnCount}
-                  isLandscape={orientation === 'landscape'}
+                  isLandscape={placementIsLandscape}
                   editMode={editMode}
                   useSpanOnly={useSpanOnly}
                   saving={saving}
@@ -711,7 +726,9 @@ export function WidgetLayoutEditor({
                 />
               );
             })}
-          </div>
+              </div>
+            </div>
+          </DashboardPreviewFrame>
         </SortableContext>
       </DndContext>
 

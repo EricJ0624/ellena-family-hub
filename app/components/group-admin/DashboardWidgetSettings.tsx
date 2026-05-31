@@ -26,6 +26,7 @@ import {
   resetAllLayouts,
 } from '@/lib/widgets/layout-presets';
 import { WidgetLayoutEditor } from './WidgetLayoutEditor';
+import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 
 interface DashboardWidgetSettingsProps {
   groupId: string | null;
@@ -174,6 +175,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       setEditMode(false);
       setIsEditorOpen(false);
       setShowAdvancedLayout(false);
+      dispatchWidgetConfigsUpdated();
     } catch (e: unknown) {
       const msg =
         e instanceof Error
@@ -323,9 +325,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
 
             {/* 현재 레이아웃 미리보기 (모달 닫혔을 때만, 읽기 전용) */}
             {!isEditorOpen && (
-              <div className="max-w-2xl">
-                <WidgetLayoutEditor {...editorProps} editMode={false} />
-              </div>
+              <WidgetLayoutEditor {...editorProps} editMode={false} />
             )}
           </>
         )}

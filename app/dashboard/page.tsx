@@ -79,6 +79,7 @@ import {
   togglePreviewOrientation,
   type AppPreviewOrientation,
 } from '@/lib/widgets/preview-orientation';
+import { WIDGET_CONFIGS_UPDATED_EVENT } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
 
@@ -5277,7 +5278,11 @@ export default function FamilyHub() {
     };
 
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    document.addEventListener(WIDGET_CONFIGS_UPDATED_EVENT, reloadWidgetConfigs);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      document.removeEventListener(WIDGET_CONFIGS_UPDATED_EVENT, reloadWidgetConfigs);
+    };
   }, [currentGroupId, groupIsOwner]);
 
   const [previewOrientation, setPreviewOrientation] = useState<AppPreviewOrientation>('portrait');
