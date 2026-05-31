@@ -3,12 +3,15 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -121,11 +124,26 @@ function getOrientationLayout(
 
 interface LiveResize {
   key: DashboardWidgetKey;
-  axis: 'h' | 'v';
-  startPx: number;
-  startValue: number;
+  axis: 'h' | 'v' | 'hv';
+  startPxX: number;
+  startPxY: number;
+  startValueW: number;
+  startValueH: number;
   currentW: number;
   currentH: number;
+}
+
+function DragHandleIcon() {
+  return (
+    <svg className="h-4 w-4 opacity-90" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+      <circle cx="3.5" cy="2.5" r="1.2" />
+      <circle cx="3.5" cy="6" r="1.2" />
+      <circle cx="3.5" cy="9.5" r="1.2" />
+      <circle cx="8.5" cy="2.5" r="1.2" />
+      <circle cx="8.5" cy="6" r="1.2" />
+      <circle cx="8.5" cy="9.5" r="1.2" />
+    </svg>
+  );
 }
 
 // ─── SortableCard ─────────────────────────────────────────────────────────────
@@ -146,8 +164,11 @@ interface SortableCardProps {
   onRestoreOne: () => void;
   onResizeHStart: (e: React.PointerEvent) => void;
   onResizeVStart: (e: React.PointerEvent) => void;
+  onResizeCornerStart: (e: React.PointerEvent) => void;
   /** 12/24열 기준 셀 높이 */
   placementCellRowH: number;
+  /** DragOverlay용: 그리드 슬롯은 반투명만 */
+  isDragOverlay?: boolean;
 }
 
 function SortableCard({
@@ -164,7 +185,9 @@ function SortableCard({
   onRestoreOne,
   onResizeHStart,
   onResizeVStart,
+  onResizeCornerStart,
   placementCellRowH,
+  isDragOverlay = false,
 }: SortableCardProps) {
   const displayCfg = useMemo(() => {
     const layoutW = liveW ?? cfg.layoutW;
@@ -196,47 +219,47 @@ function SortableCard({
 
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: cfg.widget_key,
-    disabled: !editMode,
+    disabled: !editMode || isDragOverlay,
+  });
+
+  const isTasks = cfg.widget_key === 'tasks';
+  const gridItemStyle = buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
+    baseCols: scaleBaseCols,
+    columnCount: placementColumnCount,
+    layoutW: displayCfg.layoutW ?? null,
+    layoutH: displayCfg.layoutH ?? null,
   });
 
   return (
     <div
-      ref={setNodeRef}
+      ref={isDragOverlay ? undefined : setNodeRef}
+      data-widget-key={cfg.widget_key}
       className={[
-        'relative min-w-0 max-w-full flex flex-col',
-        isDragging
-          ? 'z-10 overflow-hidden rounded-xl border border-blue-400 opacity-70 shadow-xl'
-          : 'overflow-x-clip overflow-y-visible rounded-xl border border-slate-200 shadow-sm',
+        'editor-widget-card relative min-w-0 max-w-full flex flex-col',
+        isDragOverlay
+          ? 'w-[min(100%,var(--overlay-card-w,100%))] overflow-hidden rounded-xl border-2 border-blue-500 shadow-2xl'
+          : isDragging
+            ? 'overflow-hidden rounded-xl border border-dashed border-blue-300 bg-slate-100/80 opacity-40'
+            : isTasks
+              ? 'overflow-hidden rounded-xl border border-slate-200 shadow-sm'
+              : 'overflow-x-clip overflow-y-visible rounded-xl border border-slate-200 shadow-sm',
         !cfg.is_enabled ? 'opacity-40' : '',
       ].join(' ')}
-      style={{
-        transform: isDragging ? undefined : CSS.Transform.toString(transform),
-        transition: isDragging ? undefined : transition,
-        ...buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
-          baseCols: scaleBaseCols,
-          columnCount: placementColumnCount,
-          layoutW: displayCfg.layoutW ?? null,
-          layoutH: displayCfg.layoutH ?? null,
-        }),
-      }}
+      style={
+        isDragOverlay
+          ? gridItemStyle
+          : {
+              ...gridItemStyle,
+              transform: CSS.Transform.toString(transform),
+              transition,
+            }
+      }
     >
-      {editMode && (
-        <div
-          className="absolute inset-0 z-[15] pointer-events-auto touch-none"
-          aria-hidden
-          onPointerDown={(e) => e.stopPropagation()}
-        />
-      )}
-
-      {/* 색상 아이콘 배너 — 드래그 핸들 겸용
-           setActivatorNodeRef: @dnd-kit이 이 요소를 정식 드래그 핸들로 인식하도록 등록 */}
+      {/* 배너 — DnD는 우측 전용 핸들(z-40)만 */}
       <div
-        ref={editMode ? setActivatorNodeRef : undefined}
-        {...(editMode ? { ...listeners, ...attributes } : {})}
         className={[
-          'relative z-[25] flex shrink-0 items-center gap-2 px-3 py-2 select-none touch-none',
+          'relative z-[25] flex shrink-0 items-center gap-2 py-2 pl-3 pr-1 select-none',
           meta.bg, meta.fg,
-          editMode ? 'cursor-grab active:cursor-grabbing' : '',
         ].join(' ')}
       >
         {Icon ? (
@@ -253,28 +276,40 @@ function SortableCard({
           {colSpan}×{rowSpan}
         </span>
 
-        {editMode && (
-          <svg
-            className="h-3.5 w-3.5 shrink-0 opacity-60"
-            viewBox="0 0 12 12"
-            fill="currentColor"
-            aria-hidden="true"
+        {editMode && !isDragOverlay && (
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...listeners}
+            {...attributes}
+            className="relative z-40 flex h-11 w-11 shrink-0 touch-none items-center justify-center rounded-lg bg-black/15 active:bg-black/30 [touch-action:none]"
+            aria-label="Reorder widget"
+            onClick={(e) => e.stopPropagation()}
           >
-            <circle cx="3.5" cy="2.5" r="1.2" />
-            <circle cx="3.5" cy="6" r="1.2" />
-            <circle cx="3.5" cy="9.5" r="1.2" />
-            <circle cx="8.5" cy="2.5" r="1.2" />
-            <circle cx="8.5" cy="6" r="1.2" />
-            <circle cx="8.5" cy="9.5" r="1.2" />
-          </svg>
+            <DragHandleIcon />
+          </button>
         )}
       </div>
 
-      {/* 미리보기 + 편집 히트 레이어(클릭이 아래 위젯으로 통과하지 않음) */}
+      {/* 미리보기 — 히트 레이어는 본문만(배너·핸들과 분리) */}
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
-          {cfg.widget_key === 'tasks' ? (
-            PreviewContent()
+        {editMode && !isDragOverlay && (
+          <div
+            className="absolute inset-0 z-[15] pointer-events-auto touch-none [touch-action:none]"
+            aria-hidden
+            onPointerDown={(e) => e.stopPropagation()}
+          />
+        )}
+        <div
+          className={[
+            'editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col',
+            isTasks ? 'min-h-0 overflow-hidden' : 'overflow-visible',
+          ].join(' ')}
+        >
+          {isTasks ? (
+            <div className="editor-tasks-preview-root min-h-0 min-w-0 w-full flex-1">
+              {PreviewContent()}
+            </div>
           ) : (
             <div className="widget-scale-root min-h-0 min-w-0 w-full flex-1">
               {PreviewContent()}
@@ -284,7 +319,7 @@ function SortableCard({
       </div>
 
       {/* 편집 모드 컨트롤 — 리사이즈 핸들 위 (z-20) */}
-      {editMode && (
+      {editMode && !isDragOverlay && (
         <div className="absolute bottom-10 inset-x-5 z-20 flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 shadow-md border border-slate-200/80 backdrop-blur-sm pointer-events-auto">
           <input
             type="checkbox"
@@ -308,10 +343,10 @@ function SortableCard({
         </div>
       )}
 
-      {/* 너비 리사이즈 핸들 — 오른쪽 (1열 모드에서는 가로 리사이즈 의미 없어 숨김) */}
-      {editMode && (
+      {/* 가로 리사이즈 — 우측 중앙(우상단 DnD·우하단 코너와 겹치지 않음) */}
+      {editMode && !isDragOverlay && (
         <div
-          className="absolute right-0 top-0 z-30 h-full w-5 cursor-ew-resize touch-none rounded-r-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center"
+          className="absolute right-0 top-11 bottom-11 z-30 w-5 cursor-ew-resize touch-none rounded-r bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center [touch-action:none]"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
@@ -322,10 +357,10 @@ function SortableCard({
         </div>
       )}
 
-      {/* 높이 리사이즈 핸들 — 아래쪽 (40px 터치 영역) */}
-      {editMode && (
+      {/* 세로 리사이즈 — 하단(우하단 코너 제외) */}
+      {editMode && !isDragOverlay && (
         <div
-          className="absolute bottom-0 left-0 z-30 h-10 w-full cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center pointer-events-auto"
+          className="absolute bottom-0 left-0 right-11 z-30 h-10 cursor-ns-resize touch-none rounded-b-xl bg-blue-400/20 hover:bg-blue-500/40 active:bg-blue-600/50 transition-colors flex items-center justify-center pointer-events-auto [touch-action:none]"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             e.stopPropagation();
@@ -333,6 +368,20 @@ function SortableCard({
           }}
         >
           <div className="h-0.5 w-8 rounded-full bg-blue-400/60" />
+        </div>
+      )}
+
+      {/* 우하단 — 가로·세로 동시 리사이즈 */}
+      {editMode && !isDragOverlay && (
+        <div
+          className="absolute bottom-0 right-0 z-40 h-11 w-11 cursor-nwse-resize touch-none rounded-br-xl rounded-tl-lg bg-blue-500/25 hover:bg-blue-500/45 active:bg-blue-600/55 transition-colors flex items-center justify-center [touch-action:none]"
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            e.stopPropagation();
+            onResizeCornerStart(e);
+          }}
+        >
+          <div className="h-2.5 w-2.5 rounded-sm border-r-2 border-b-2 border-blue-600/80" />
         </div>
       )}
     </div>
@@ -387,6 +436,7 @@ export function WidgetLayoutEditor({
   const orientation: EditorOrientation = previewMode === 0 ? 'portrait' : 'landscape';
   const [liveResize, setLiveResize] = useState<LiveResize | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [activeDragKey, setActiveDragKey] = useState<DashboardWidgetKey | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   /** 대시보드와 동일: 실측 너비·열 수·셀 높이 */
@@ -466,9 +516,8 @@ export function WidgetLayoutEditor({
   }, [sortedEnabled, gridColumnCount, placementIsLandscape, orientation]);
 
   const sensors = useSensors(
-    // PointerSensor: activationConstraint 없음 → pointermove 첫 이벤트에 즉시 드래그 시작
-    // 배너가 전용 드래그 핸들이므로 즉시 반응이 가장 신뢰성 높음 (@dnd-kit 공식 예제 방식)
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -524,21 +573,21 @@ export function WidgetLayoutEditor({
       const containerWidth = gridContentWidthRef.current || (gridRef.current?.getBoundingClientRect().width ?? 0);
       const baseCols = PREVIEW_MODE_BASE_COLS[previewModeRef.current];
 
-      if (rs.axis === 'h' && containerWidth > 0) {
-        // Phase D fix: orientation별 baseCols 사용 (portrait=12, landscape=24)
+      let next = rs;
+      if ((rs.axis === 'h' || rs.axis === 'hv') && containerWidth > 0) {
         const colUnitPx = containerWidth / baseCols;
-        const rawW = rs.startValue + (e.clientX - rs.startPx) / colUnitPx;
+        const rawW = rs.startValueW + (e.clientX - rs.startPxX) / colUnitPx;
         const newW = Math.min(baseCols, Math.max(0.5, rawW));
-        const next = { ...rs, currentW: newW };
-        liveResizeRef.current = next;
-        setLiveResize(next);
-      } else if (rs.axis === 'v' && containerWidth > 0) {
-        // 정사각형 셀 높이 (containerWidth / baseCols), 소수점 단위
+        next = { ...next, currentW: newW };
+      }
+      if ((rs.axis === 'v' || rs.axis === 'hv') && containerWidth > 0) {
         const rowPx = containerWidth / baseCols;
         const maxRows = baseCols === PORTRAIT_COLS ? 24 : 12;
-        const rawH = rs.startValue + (e.clientY - rs.startPx) / rowPx;
+        const rawH = rs.startValueH + (e.clientY - rs.startPxY) / rowPx;
         const newH = Math.min(maxRows, Math.max(0.5, rawH));
-        const next = { ...rs, currentH: newH };
+        next = { ...next, currentH: newH };
+      }
+      if (next !== rs) {
         liveResizeRef.current = next;
         setLiveResize(next);
       }
@@ -564,12 +613,14 @@ export function WidgetLayoutEditor({
         if (d.widget_key !== rs.key) return d;
         // Phase D: orientation별 현재 유효값을 startValue로 사용
         const effLayout = getOrientationLayout(d, orient);
-        const newW = rs.axis === 'h'
-          ? rs.currentW
-          : (effLayout.layoutW ?? (d.colSpan * baseCols) / visualColsRef.current);
-        const newH = rs.axis === 'v'
-          ? rs.currentH
-          : (effLayout.layoutH ?? d.rowSpan);
+        const newW =
+          rs.axis === 'v'
+            ? (effLayout.layoutW ?? (d.colSpan * baseCols) / visualColsRef.current)
+            : rs.currentW;
+        const newH =
+          rs.axis === 'h'
+            ? (effLayout.layoutH ?? d.rowSpan)
+            : rs.currentH;
 
         if (orient === 'portrait') {
           return {
@@ -616,8 +667,8 @@ export function WidgetLayoutEditor({
     (key: DashboardWidgetKey) => {
       if (!liveResize || liveResize.key !== key) return { liveW: null, liveH: null };
       return {
-        liveW: liveResize.axis === 'h' ? liveResize.currentW : null,
-        liveH: liveResize.axis === 'v' ? liveResize.currentH : null,
+        liveW: liveResize.axis === 'v' ? null : liveResize.currentW,
+        liveH: liveResize.axis === 'h' ? null : liveResize.currentH,
       };
     },
     [liveResize],
@@ -674,19 +725,20 @@ export function WidgetLayoutEditor({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={() => {
+        onDragStart={(e: DragStartEvent) => {
+          setActiveDragKey(e.active.id as DashboardWidgetKey);
           setIsDragActive(true);
           onDragStateChange?.(true);
         }}
         onDragEnd={(e) => {
-          // try-finally: handleDragEnd 에러 시에도 isDragging 해제 보장
-          // isDragging stuck 시 모달 body가 touch-none이 되어 복구 버튼 등 모든 클릭이 차단됨
           try { handleDragEnd(e); } finally {
+            setActiveDragKey(null);
             setIsDragActive(false);
             onDragStateChange?.(false);
           }
         }}
         onDragCancel={() => {
+          setActiveDragKey(null);
           setIsDragActive(false);
           onDragStateChange?.(false);
         }}
@@ -701,6 +753,7 @@ export function WidgetLayoutEditor({
             <div ref={gridRef} className="sections-container min-w-0 w-full">
               <div
                 className="dashboard-widget-grid grid min-w-0 gap-3"
+                data-layout-editor=""
                 data-columns={gridColumnCount}
                 data-layout={placementIsLandscape ? 'landscape' : 'portrait'}
                 style={{
@@ -735,23 +788,43 @@ export function WidgetLayoutEditor({
                   onRestoreOne={() => onRestoreOne(cfg.widget_key)}
                   onResizeHStart={(e) => {
                     const startW = effCfg.layoutW ?? (cfg.colSpan * baseCols) / visualCols;
+                    const startH = effCfg.layoutH ?? cfg.rowSpan;
                     beginResize({
                       key: cfg.widget_key,
                       axis: 'h',
-                      startPx: e.clientX,
-                      startValue: startW,
+                      startPxX: e.clientX,
+                      startPxY: e.clientY,
+                      startValueW: startW,
+                      startValueH: startH,
                       currentW: startW,
-                      currentH: effCfg.layoutH ?? cfg.rowSpan,
+                      currentH: startH,
                     });
                   }}
                   onResizeVStart={(e) => {
                     const startH = effCfg.layoutH ?? cfg.rowSpan;
+                    const startW = effCfg.layoutW ?? (cfg.colSpan * baseCols) / visualCols;
                     beginResize({
                       key: cfg.widget_key,
                       axis: 'v',
-                      startPx: e.clientY,
-                      startValue: startH,
-                      currentW: effCfg.layoutW ?? (cfg.colSpan * baseCols) / visualCols,
+                      startPxX: e.clientX,
+                      startPxY: e.clientY,
+                      startValueW: startW,
+                      startValueH: startH,
+                      currentW: startW,
+                      currentH: startH,
+                    });
+                  }}
+                  onResizeCornerStart={(e) => {
+                    const startH = effCfg.layoutH ?? cfg.rowSpan;
+                    const startW = effCfg.layoutW ?? (cfg.colSpan * baseCols) / visualCols;
+                    beginResize({
+                      key: cfg.widget_key,
+                      axis: 'hv',
+                      startPxX: e.clientX,
+                      startPxY: e.clientY,
+                      startValueW: startW,
+                      startValueH: startH,
+                      currentW: startW,
                       currentH: startH,
                     });
                   }}
@@ -762,6 +835,55 @@ export function WidgetLayoutEditor({
             </div>
           </DashboardPreviewFrame>
         </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeDragKey && editMode ? (() => {
+            const cfg = sortedEnabled.find((d) => d.widget_key === activeDragKey);
+            if (!cfg) return null;
+            const effCfg = { ...cfg, ...getOrientationLayout(cfg, orientation) };
+            const { liveW, liveH } = getLiveOverride(activeDragKey);
+            const overlayCfg = {
+              ...effCfg,
+              ...(liveW != null ? { layoutW: liveW } : {}),
+              ...(liveH != null ? { layoutH: liveH } : {}),
+            };
+            const overlayPlacement = resolveWidgetGridPlacement(
+              overlayCfg,
+              gridColumnCount,
+              orientation === 'landscape',
+            );
+            const gridGapPx = 12;
+            const trackPx =
+              gridContentWidth > 0
+                ? (gridContentWidth - (gridColumnCount - 1) * gridGapPx) / gridColumnCount
+                : 0;
+            const overlayW =
+              trackPx > 0
+                ? `${trackPx * overlayPlacement.colSpan + gridGapPx * (overlayPlacement.colSpan - 1)}px`
+                : 'min(100%, 280px)';
+            return (
+              <div style={{ ['--overlay-card-w' as string]: overlayW }}>
+                <SortableCard
+                  cfg={effCfg}
+                  label={widgetLabels[activeDragKey]}
+                  placementColumnCount={gridColumnCount}
+                  isLandscape={orientation === 'landscape'}
+                  editMode={editMode}
+                  saving={saving}
+                  liveW={liveW}
+                  liveH={liveH}
+                  placementCellRowH={placementCellRowH}
+                  restoreLabel={t.widgets_restore_defaults}
+                  onToggle={() => onToggle(activeDragKey)}
+                  onRestoreOne={() => onRestoreOne(activeDragKey)}
+                  onResizeHStart={() => {}}
+                  onResizeVStart={() => {}}
+                  onResizeCornerStart={() => {}}
+                  isDragOverlay
+                />
+              </div>
+            );
+          })() : null}
+        </DragOverlay>
       </DndContext>
 
       {/* Disabled widgets */}
