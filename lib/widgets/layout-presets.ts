@@ -337,8 +337,43 @@ export function resolveOrientationLayoutOverlaps(
   });
 }
 
-/** detectGridOverlaps 기준 충돌 없을 때까지 resolve → 필요 시 packOrientationLayouts(x,y만) */
-function ensureOrientationNoGridOverlaps(
+/**
+ * layout_x/y/w/h(12·24열 좌표) 기준 겹침 쌍 — 편집 미리보기·저장 전 검증용.
+ * detectGridOverlaps(CSS 행 슬롯)와 별도: minHeight·span 1 배치와 좌표 불일치를 잡는다.
+ */
+export function detectLayoutCoordinateOverlaps(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): Array<[string, string]> {
+  const sorted = [...widgets]
+    .filter((w) => w.is_enabled)
+    .sort((a, b) =>
+      a.display_order !== b.display_order
+        ? a.display_order - b.display_order
+        : b.priority - a.priority,
+    );
+
+  const rects: LayoutRect[] = sorted.map((w) => ({
+    key: w.widget_key,
+    x: effectiveLayoutX(w, orientation) ?? 0,
+    y: effectiveLayoutY(w, orientation),
+    w: effectiveLayoutW(w, orientation),
+    h: effectiveLayoutH(w, orientation),
+  }));
+
+  const overlaps: Array<[string, string]> = [];
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      if (layoutRectsOverlap(rects[i], rects[j])) {
+        overlaps.push([rects[i].key, rects[j].key]);
+      }
+    }
+  }
+  return overlaps;
+}
+
+/** detectGridOverlaps·layout 좌표 겹침 없을 때까지 resolve → 필요 시 packOrientationLayouts(x,y만) */
+export function ensureOrientationNoGridOverlaps(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
 ): WidgetConfigDraft[] {
@@ -348,7 +383,9 @@ function ensureOrientationNoGridOverlaps(
   let result = resolveOrientationLayoutOverlaps(widgets, orientation);
   result = compactOrientationLayoutY(result, orientation);
 
-  if (detectGridOverlaps(result, columnCount, isLandscape).length === 0) {
+  const hasCssOverlap = detectGridOverlaps(result, columnCount, isLandscape).length > 0;
+  const hasCoordOverlap = detectLayoutCoordinateOverlaps(result, orientation).length > 0;
+  if (!hasCssOverlap && !hasCoordOverlap) {
     return result;
   }
 
@@ -360,6 +397,16 @@ function ensureOrientationNoGridOverlaps(
     return applyOrientationXY(d, orientation, coords.x, coords.y);
   });
   return compactOrientationLayoutY(result, orientation);
+}
+
+/** portrait·landscape layout 좌표 겹침 해소 (편집기 미리보기·탭 전환용) */
+export function ensureDraftsBothOrientationsNoOverlap(
+  widgets: readonly WidgetConfigDraft[],
+): WidgetConfigDraft[] {
+  let result = ensureOrientationNoGridOverlaps(widgets, 'portrait');
+  result = ensureOrientationNoGridOverlaps(result, 'landscape');
+  result = ensureOrientationNoGridOverlaps(result, 'portrait');
+  return result;
 }
 
 /**
@@ -528,15 +575,13 @@ export function applyDisplayOrderPacking(
   return compactOrientationLayoutY(placed, orientation);
 }
 
-/** 편집기 드래그·리사이즈 후: clamp → Y압축 → colSpan/rowSpan 동기화 */
+/** 편집기 드래그·리사이즈 후: 겹침 해소 → colSpan/rowSpan 동기화 (저장 전 미리보기와 동일 파이프) */
 export function finalizeDraftsLayoutForOrientation(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
 ): WidgetConfigDraft[] {
-  const baseCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
-  const clamped = clampWidgetLayoutExtents(widgets, orientation);
-  const compacted = compactOrientationLayoutY(clamped, orientation);
-  return compacted.map((d) => {
+  const resolved = ensureOrientationNoGridOverlaps(widgets, orientation);
+  return resolved.map((d) => {
     if (!d.is_enabled) return d;
     const w = effectiveLayoutW(d, orientation);
     const h = effectiveLayoutH(d, orientation);

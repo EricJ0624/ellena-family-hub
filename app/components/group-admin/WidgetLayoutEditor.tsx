@@ -49,6 +49,8 @@ import {
   toActualColSpan,
   applyStackBelowDraft,
   applyDisplayOrderPacking,
+  detectLayoutCoordinateOverlaps,
+  ensureDraftsBothOrientationsNoOverlap,
   finalizeDraftsLayoutForOrientation,
   layoutSameColumn,
 } from '@/lib/widgets/layout-presets';
@@ -136,7 +138,6 @@ interface SortableCardProps {
   isLandscape: boolean;
   editMode: boolean;
   /** 드래그·리사이즈 중 dnd-kit/포인터와 충돌 방지용 span-only */
-  useSpanOnly: boolean;
   saving: boolean;
   liveW: number | null;
   liveH: number | null;
@@ -155,7 +156,6 @@ function SortableCard({
   placementColumnCount,
   isLandscape,
   editMode,
-  useSpanOnly,
   saving,
   liveW,
   liveH,
@@ -209,14 +209,9 @@ function SortableCard({
         !cfg.is_enabled ? 'opacity-40' : '',
       ].join(' ')}
       style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        ...(editMode && useSpanOnly
-          ? {
-              gridColumn: `span ${colSpan}`,
-              gridRow: `span ${Math.max(1, rowSpan)}`,
-            }
-          : buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH)),
+        transform: isDragging ? undefined : CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+        ...buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH),
       }}
     >
       {editMode && (
@@ -415,6 +410,16 @@ export function WidgetLayoutEditor({
       [...drafts].filter((d) => d.is_enabled).sort((a, b) => a.display_order - b.display_order),
     [drafts],
   );
+
+  /** 저장 전 미리보기: 세로·가로 layout 좌표 겹침 해소 (드래그·리사이즈 중 제외) */
+  useEffect(() => {
+    if (isDragActive || liveResize) return;
+    const needsFix =
+      detectLayoutCoordinateOverlaps(drafts, 'portrait').length > 0 ||
+      detectLayoutCoordinateOverlaps(drafts, 'landscape').length > 0;
+    if (!needsFix) return;
+    onDraftsChangeRef.current(ensureDraftsBothOrientationsNoOverlap(drafts));
+  }, [drafts, isDragActive, liveResize]);
   const sortedDisabled = useMemo(
     () =>
       [...drafts].filter((d) => !d.is_enabled).sort((a, b) => a.display_order - b.display_order),
@@ -427,18 +432,26 @@ export function WidgetLayoutEditor({
   // 개발 모드: 대시보드와 동일한 겹침 감지 (읽기·편집 비드래그 시 buildWidgetGridItemStyle 기준)
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
-    const overlaps = detectGridOverlaps(
+    const cssOverlaps = detectGridOverlaps(
       sortedEnabled,
       gridColumnCount,
       placementIsLandscape,
     );
-    if (overlaps.length > 0) {
-      console.warn(
-        '[WidgetLayoutEditor] 겹침 감지 — 저장 시 packDraftsOrientationCoordinates로 정규화됩니다:',
-        overlaps,
-      );
+    const coordPortrait = detectLayoutCoordinateOverlaps(sortedEnabled, 'portrait');
+    const coordLandscape = detectLayoutCoordinateOverlaps(sortedEnabled, 'landscape');
+    if (
+      cssOverlaps.length > 0 ||
+      coordPortrait.length > 0 ||
+      coordLandscape.length > 0
+    ) {
+      console.warn('[WidgetLayoutEditor] 겹침 감지', {
+        tab: orientation,
+        cssGrid: cssOverlaps,
+        layoutCoordsPortrait: coordPortrait,
+        layoutCoordsLandscape: coordLandscape,
+      });
     }
-  }, [sortedEnabled, gridColumnCount, placementIsLandscape]);
+  }, [sortedEnabled, gridColumnCount, placementIsLandscape, orientation]);
 
   const sensors = useSensors(
     // PointerSensor: activationConstraint 없음 → pointermove 첫 이벤트에 즉시 드래그 시작
@@ -478,7 +491,11 @@ export function WidgetLayoutEditor({
       } else {
         result = applyDisplayOrderPacking(updated, orient);
       }
-      onDraftsChange(finalizeDraftsLayoutForOrientation(result, orient));
+      onDraftsChange(
+        ensureDraftsBothOrientationsNoOverlap(
+          finalizeDraftsLayoutForOrientation(result, orient),
+        ),
+      );
     },
     [sortedEnabled, drafts, onDraftsChange],
   );
@@ -563,7 +580,9 @@ export function WidgetLayoutEditor({
       });
 
       onDraftsChangeRef.current(
-        finalizeDraftsLayoutForOrientation(updated, orient),
+        ensureDraftsBothOrientationsNoOverlap(
+          finalizeDraftsLayoutForOrientation(updated, orient),
+        ),
       );
     };
 
@@ -602,6 +621,9 @@ export function WidgetLayoutEditor({
             key={mode}
             type="button"
             onClick={() => {
+              if (mode !== previewMode) {
+                onDraftsChangeRef.current(ensureDraftsBothOrientationsNoOverlap(draftsRef.current));
+              }
               setPreviewMode(mode);
               if (mode === 0) writeStoredPreviewOrientation('portrait');
               else if (mode === 1) writeStoredPreviewOrientation('landscape');
@@ -684,16 +706,14 @@ export function WidgetLayoutEditor({
               // SortableCard 내부는 항상 layoutW/H를 사용하므로 변경 없이 독립 편집 가능
               const effCfg = { ...cfg, ...getOrientationLayout(cfg, orientation) };
               const baseCols = PREVIEW_MODE_BASE_COLS[previewMode];
-              const useSpanOnly = editMode && isDragActive;
               return (
                 <SortableCard
                   key={cfg.widget_key}
                   cfg={effCfg}
                   label={widgetLabels[cfg.widget_key]}
                   placementColumnCount={gridColumnCount}
-                  isLandscape={placementIsLandscape}
+                  isLandscape={orientation === 'landscape'}
                   editMode={editMode}
-                  useSpanOnly={useSpanOnly}
                   saving={saving}
                   liveW={liveW}
                   liveH={liveH}

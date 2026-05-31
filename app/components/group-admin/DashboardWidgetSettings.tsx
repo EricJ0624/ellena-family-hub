@@ -200,6 +200,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   };
 
   const handleOpenEditor = () => {
+    setDrafts((prev) => packDraftsOrientationCoordinates(prev));
     setEditMode(true);
     setIsEditorOpen(true);
   };
