@@ -34,6 +34,8 @@ export async function fetchActiveSessionForGroup(
   supabase: SupabaseClient,
   groupId: string,
 ): Promise<FamilyGameSessionBundle | null> {
+  await cancelStaleSessionsForGroup(supabase, groupId);
+
   const { data: session, error } = await supabase
     .from('family_game_sessions')
     .select('*')

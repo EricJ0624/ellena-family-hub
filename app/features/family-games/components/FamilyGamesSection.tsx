@@ -91,9 +91,11 @@ export function FamilyGamesSection({
     bundle,
     createSession,
     performAction,
+    cancelSession,
     actionLoading,
     isHost,
     hasActiveSession,
+    error: sessionError,
   } = useFamilyGameSession({ groupId: currentGroupId, userId });
 
   const formatText = useCallback(
@@ -119,8 +121,13 @@ export function FamilyGamesSection({
 
   const handleCancelSession = async () => {
     if (!isHost || !bundle) return;
-    await performAction({ type: 'cancel' });
+    await cancelSession();
     closePlayModal();
+  };
+
+  const handleCancelFromBanner = async () => {
+    if (!isHost) return;
+    await cancelSession();
   };
 
   const startLadder = async (config: { participantIds: string[]; destinations: string[] }) => {
@@ -156,21 +163,45 @@ export function FamilyGamesSection({
             <div className="games-widget-content">
               {hasActiveSession && !modalOpen && (
                 <div
-                  className="mb-2 flex flex-wrap items-center justify-between rounded-xl bg-indigo-50 px-3 py-2"
+                  className="mb-2 flex flex-col rounded-xl bg-indigo-50 px-3 py-2"
                   style={{ gap: '1.5cqmin' }}
                 >
                   <span className="font-medium text-indigo-800" style={{ fontSize: '4cqmin' }}>
                     {t.games_session_active}
                   </span>
-                  <button
-                    type="button"
-                    onClick={openModal}
-                    className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white"
-                    style={{ fontSize: '4cqmin' }}
-                  >
-                    {t.games_join}
-                  </button>
+                  <div className="flex flex-wrap" style={{ gap: '1cqmin' }}>
+                    <button
+                      type="button"
+                      onClick={openModal}
+                      className="rounded-lg bg-indigo-600 px-3 py-1.5 font-semibold text-white"
+                      style={{ fontSize: '4cqmin' }}
+                    >
+                      {t.games_join}
+                    </button>
+                    {isHost && (
+                      <button
+                        type="button"
+                        onClick={handleCancelFromBanner}
+                        disabled={actionLoading}
+                        className="rounded-lg bg-slate-200 px-3 py-1.5 font-semibold text-slate-700 disabled:opacity-50"
+                        style={{ fontSize: '4cqmin' }}
+                      >
+                        {t.games_cancel}
+                      </button>
+                    )}
+                  </div>
+                  {!isHost && (
+                    <span className="text-indigo-700/80" style={{ fontSize: '3.5cqmin' }}>
+                      {t.games_waiting_host}
+                    </span>
+                  )}
                 </div>
+              )}
+
+              {sessionError && (
+                <p className="text-red-600" style={{ fontSize: '3.5cqmin' }}>
+                  {sessionError}
+                </p>
               )}
 
               <div
@@ -185,8 +216,7 @@ export function FamilyGamesSection({
                     role="tab"
                     aria-selected={activeTab === tab}
                     onClick={() => setActiveTab(tab)}
-                    disabled={hasActiveSession}
-                    className={`rounded-lg px-3 py-2 font-semibold transition-colors disabled:opacity-50 ${
+                    className={`rounded-lg px-3 py-2 font-semibold transition-colors ${
                       activeTab === tab
                         ? 'bg-white text-indigo-700 shadow-sm'
                         : 'text-slate-600 hover:bg-white/60'

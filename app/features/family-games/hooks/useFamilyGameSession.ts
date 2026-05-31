@@ -104,6 +104,25 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
     }
   }, []);
 
+  const cancelSession = useCallback(async () => {
+    if (!bundle?.session.id) return;
+    setActionLoading(true);
+    setError(null);
+    try {
+      const updated = await performGameActionApi(bundle.session.id, { type: 'cancel' });
+      setBundle(updated.session.status === 'cancelled' ? null : updated);
+      if (updated.session.status === 'cancelled') {
+        await refresh();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Cancel failed';
+      setError(message);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  }, [bundle?.session.id, refresh]);
+
   const isHost = bundle?.session.host_user_id === userId;
   const isParticipant = Boolean(
     bundle?.participants.some((p) => p.user_id === userId),
@@ -122,6 +141,7 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
     refresh,
     createSession,
     performAction,
+    cancelSession,
     loadSession,
     isHost,
     isParticipant,
