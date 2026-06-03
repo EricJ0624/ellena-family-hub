@@ -7,7 +7,7 @@ import type {
   FamilyGameType,
   GameSessionAction,
 } from '@/lib/family-games/session-types';
-import { isActiveGameStatus } from '@/lib/family-games/session-types';
+import { isActiveGameStatus, isTerminalGameSession } from '@/lib/family-games/session-types';
 import {
   fetchActiveGameSession,
   fetchGameSession,
@@ -36,7 +36,11 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
       setLoading(true);
       setError(null);
       const data = await fetchActiveGameSession(groupId);
-      setBundle(data);
+      setBundle((prev) => {
+        if (data) return data;
+        if (prev && isTerminalGameSession(prev.session)) return prev;
+        return null;
+      });
     } catch (err) {
       console.error('Failed to refresh game session:', err);
       setError(err instanceof Error ? err.message : 'Failed to load session');
@@ -136,10 +140,9 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
     setError(null);
     try {
       const updated = await performGameActionApi(bundle.session.id, { type: 'cancel' });
-      setBundle(updated.session.status === 'cancelled' ? null : updated);
-      if (updated.session.status === 'cancelled') {
-        await refresh();
-      }
+      setBundle(null);
+      await refresh();
+      return updated;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Cancel failed';
       setError(message);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { asRouletteConfig } from '@/lib/family-games/session-types';
 import type { FamilyGameSessionBundle, GameSessionAction } from '@/lib/family-games/session-types';
@@ -86,7 +86,6 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
-  const spinCompleteSentRef = useRef(false);
 
   const selectedIds = mpConfig?.selectedIds ?? [];
   const totalSlots = mpConfig ? resolveRouletteTotalSlots(mpConfig) : setupTotalSlots;
@@ -110,10 +109,6 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   const segmentCount = wheelSegments.length;
 
   useEffect(() => {
-    spinCompleteSentRef.current = false;
-  }, [mpConfig?.spinStartedAt]);
-
-  useEffect(() => {
     if (!mpConfig?.spinStartedAt || mpConfig.rotation === undefined) return;
     if (mpSession?.status === 'completed') {
       const winnerName = mpConfig.winnerUserId
@@ -133,16 +128,6 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         : mpConfig.winnerLabel ?? null;
       setWinner(winnerName);
       setSpinning(false);
-      if (
-        isMultiplayer &&
-        props.isHost &&
-        mpSession?.status === 'active' &&
-        mpSession?.phase === 'result' &&
-        !spinCompleteSentRef.current
-      ) {
-        spinCompleteSentRef.current = true;
-        props.onAction({ type: 'host_complete_roulette' }).catch(console.error);
-      }
     }, SPIN_ANIMATION_MS);
     return () => window.clearTimeout(timeout);
   }, [
@@ -446,7 +431,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         </div>
       )}
 
-      {props.onCancel && isSetupPhase && (
+      {props.onCancel && (isSetupPhase || isSpinPhase || isResultPhase) && (
         <button
           type="button"
           onClick={props.onCancel}

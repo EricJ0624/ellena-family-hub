@@ -103,10 +103,19 @@ export type CreateGameSessionBody = {
   config: LadderSessionConfig | RPSSessionConfig | RouletteSessionConfig;
 };
 
-export const ACTIVE_GAME_STATUSES: FamilyGameStatus[] = ['config', 'active', 'revealing', 'completed'];
+export const ACTIVE_GAME_STATUSES: FamilyGameStatus[] = ['config', 'active', 'revealing'];
 
 export function isActiveGameStatus(status: FamilyGameStatus): boolean {
   return ACTIVE_GAME_STATUSES.includes(status);
+}
+
+/** 플레이 종료(결과 표시) — fetch 대상은 아니나 클라이언트에서 잠시 유지 가능 */
+export function isTerminalGameSession(
+  session: Pick<FamilyGameSessionRow, 'status' | 'phase'>,
+): boolean {
+  if (session.status === 'completed') return true;
+  if (session.status === 'active' && session.phase === 'result') return true;
+  return false;
 }
 
 export function asLadderConfig(config: FamilyGameSessionConfig): LadderSessionConfig {

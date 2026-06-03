@@ -53,7 +53,7 @@ export async function fetchActiveSessionForGroup(
     .from('family_game_sessions')
     .select('*')
     .eq('group_id', groupId)
-    .in('status', ['config', 'active', 'revealing', 'completed'])
+    .in('status', ['config', 'active', 'revealing'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -106,6 +106,18 @@ export async function cancelStaleSessionsForGroup(
     .eq('group_id', groupId)
     .in('status', ['config', 'active', 'revealing'])
     .lt('expires_at', NOW());
+}
+
+/** 완료된 세션을 archived(cancelled) 처리 — 조회 시 예전 결과가 재등장하는 것 방지 */
+export async function archiveCompletedSessionsForGroup(
+  supabase: SupabaseClient,
+  groupId: string,
+): Promise<void> {
+  await supabase
+    .from('family_game_sessions')
+    .update({ status: 'cancelled', updated_at: NOW() })
+    .eq('group_id', groupId)
+    .eq('status', 'completed');
 }
 
 export async function createGameSession(
@@ -293,6 +305,7 @@ export async function lobbyJoinGameSession(
   }
 
   const config = createInitialLobbyConfig(gameType);
+  await archiveCompletedSessionsForGroup(supabase, groupId);
   const { data: session, error: sessionError } = await supabase
     .from('family_game_sessions')
     .insert({
@@ -470,6 +483,7 @@ export async function performGameSessionAction(
   if (action.type === 'cancel') {
     if (!isHost) throw new Error('HOST_ONLY');
     await updateSession(supabase, sessionId, { status: 'cancelled', updated_at: now });
+    await archiveCompletedSessionsForGroup(supabase, session.group_id);
     return (await fetchSessionBundle(supabase, sessionId))!;
   }
 

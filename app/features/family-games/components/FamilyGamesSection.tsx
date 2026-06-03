@@ -128,10 +128,14 @@ export function FamilyGamesSection({
     ((isLobby && sessionGameType === activeTab) || !bundle);
 
   useEffect(() => {
-    if (bundle && !isLobbyPhase(bundle.session) && isParticipant) {
+    if (!bundle) {
+      setModalOpen(false);
+      return;
+    }
+    if (!isLobbyPhase(bundle.session) && isParticipant) {
       setModalOpen(true);
     }
-  }, [bundle?.session.phase, bundle?.session.status, bundle?.session.id, isParticipant]);
+  }, [bundle?.session.phase, bundle?.session.status, bundle?.session.id, isParticipant, bundle]);
 
   const tabLabel = (tab: GameTab) => {
     if (tab === 'ladder') return t.tab_ladder;
@@ -151,8 +155,8 @@ export function FamilyGamesSection({
 
   const handleCancelSession = async () => {
     if (!isHost || !bundle) return;
-    await cancelSession();
     closePlayModal();
+    await cancelSession();
   };
 
   const handleCancelFromBanner = async () => {
