@@ -47,18 +47,14 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
       }
 
       const prev = bundleRef.current;
-      if (!prev || !isTerminalGameSession(prev.session)) {
+      if (!prev?.session.id) {
         setBundle(null);
         return;
       }
 
       try {
         const latest = await fetchGameSession(prev.session.id);
-        if (
-          !latest ||
-          latest.session.status === 'completed' ||
-          latest.session.status === 'cancelled'
-        ) {
+        if (!latest || latest.session.status === 'cancelled') {
           setBundle(null);
         } else {
           setBundle(latest);

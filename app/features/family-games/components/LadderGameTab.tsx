@@ -145,6 +145,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const configParticipantIdsKey = mpConfig?.participantIds.join('|') ?? '';
   const destinationsRef = useRef(destinations);
   const hostDestinationsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ladderRevealAnimRef = useRef<{ key: string; done: boolean }>({ key: '', done: false });
   const userRungs = mpConfig?.userRungs ?? [];
   const finalRungs = mpConfig?.finalRungs ?? [];
   const mpPhase =
@@ -201,14 +202,31 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   useEffect(() => {
     if (!isMultiplayer || mpPhase !== 'result' || finalRungs.length === 0) return;
-    if (mpSession?.status === 'completed') {
+
+    const animKey = `${mpSession?.id ?? ''}:${mpConfig?.revealStartedAt ?? ''}`;
+
+    const showFinalState = () => {
       setVerticalRevealDone(true);
       setVerticalDrawActive(true);
       setDisplayRungs(finalRungs);
       setShowPaths(true);
       setIsRevealing(false);
+    };
+
+    if (mpSession?.status === 'completed') {
+      ladderRevealAnimRef.current = { key: animKey, done: true };
+      showFinalState();
       return;
     }
+
+    if (ladderRevealAnimRef.current.key === animKey) {
+      if (ladderRevealAnimRef.current.done) {
+        showFinalState();
+      }
+      return;
+    }
+
+    ladderRevealAnimRef.current = { key: animKey, done: false };
 
     const userDrawn = userRungs;
     const autoRungs = finalRungs.filter((r) => !r.drawnBy);
@@ -223,7 +241,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
       window.requestAnimationFrame(() => setVerticalDrawActive(true));
     });
     const verticalDuration =
-      VERTICAL_STROKE_MS + Math.max(0, participantIds.length - 1) * 40;
+      VERTICAL_STROKE_MS + Math.max(0, getLadderVisualLaneCount(participantIds.length) - 1) * 40;
 
     const verticalTimer = window.setTimeout(() => {
       setVerticalRevealDone(true);
@@ -233,7 +251,10 @@ export function LadderGameTab(props: LadderGameTabProps) {
         if (index >= autoRungs.length) {
           window.clearInterval(rungTimer!);
           setIsRevealing(false);
-          window.setTimeout(() => setShowPaths(true), 200);
+          window.setTimeout(() => {
+            setShowPaths(true);
+            ladderRevealAnimRef.current = { key: animKey, done: true };
+          }, 200);
           if (props.mode === 'multiplayer' && props.isHost && mpSession?.status === 'revealing') {
             props.onAction({ type: 'host_complete_ladder' }).catch(console.error);
           }
@@ -253,11 +274,11 @@ export function LadderGameTab(props: LadderGameTabProps) {
   }, [
     isMultiplayer,
     mpPhase,
+    mpSession?.id,
     mpSession?.status,
-    finalRungs,
-    userRungs,
-    participantIds.length,
     mpConfig?.revealStartedAt,
+    finalRungs.length,
+    participantIds.length,
   ]);
 
   const laneCount = getLadderVisualLaneCount(participantIds.length);
