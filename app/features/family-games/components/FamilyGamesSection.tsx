@@ -26,6 +26,7 @@ export interface FamilyGamesSectionProps {
     games_modal_close: string;
     games_session_active: string;
     games_join: string;
+    games_create_game: string;
     games_leave: string;
     games_cancel: string;
     ladder_participants: string;
@@ -184,6 +185,7 @@ export function FamilyGamesSection({
     ladder_participants: t.ladder_participants,
     ladder_you: t.ladder_you,
     games_join: t.games_join,
+    games_create_game: t.games_create_game,
     games_leave: t.games_leave,
     games_launch: t.games_launch,
     games_waiting_host: t.games_waiting_host,

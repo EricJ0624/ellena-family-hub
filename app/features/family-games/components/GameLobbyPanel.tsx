@@ -17,6 +17,7 @@ export type GameLobbyTranslations = {
   ladder_participants: string;
   ladder_you: string;
   games_join: string;
+  games_create_game: string;
   games_leave: string;
   games_launch: string;
   games_waiting_host: string;
@@ -114,7 +115,7 @@ export function GameLobbyPanel({
               className="rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
               style={{ fontSize: '4cqw' }}
             >
-              {t.games_join}
+              {bundle ? t.games_join : t.games_create_game}
             </button>
           ) : (
             <button

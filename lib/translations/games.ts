@@ -54,6 +54,7 @@ export type GamesTranslations = {
   games_modal_close: string;
   games_session_active: string;
   games_join: string;
+  games_create_game: string;
   games_cancel: string;
   games_waiting_host: string;
   rps_waiting_opponent: string;
@@ -126,6 +127,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '닫기',
     games_session_active: '진행 중인 게임이 있습니다',
     games_join: '참가하기',
+    games_create_game: '게임 초대',
     games_cancel: '게임 취소',
     games_waiting_host: '호스트가 시작할 때까지 기다려 주세요.',
     rps_waiting_opponent: '상대방 선택 대기 중…',
@@ -196,6 +198,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: 'Close',
     games_session_active: 'A game is in progress',
     games_join: 'Join',
+    games_create_game: 'Create game',
     games_cancel: 'Cancel game',
     games_waiting_host: 'Waiting for the host to start…',
     rps_waiting_opponent: 'Waiting for opponent…',
@@ -266,6 +269,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '閉じる',
     games_session_active: '進行中のゲームがあります',
     games_join: '参加',
+    games_create_game: 'ゲーム招待',
     games_cancel: 'ゲーム取消',
     games_waiting_host: 'ホストの開始を待っています…',
     rps_waiting_opponent: '相手の選択を待っています…',
@@ -336,6 +340,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '关闭',
     games_session_active: '有进行中的游戏',
     games_join: '加入',
+    games_create_game: '创建游戏',
     games_cancel: '取消游戏',
     games_waiting_host: '等待主持人开始…',
     rps_waiting_opponent: '等待对手选择…',
@@ -406,6 +411,7 @@ const games: Record<LangCode, GamesTranslations> = {
     games_modal_close: '關閉',
     games_session_active: '有進行中的遊戲',
     games_join: '加入',
+    games_create_game: '建立遊戲',
     games_cancel: '取消遊戲',
     games_waiting_host: '等待主持人開始…',
     rps_waiting_opponent: '等待對手選擇…',

@@ -5791,6 +5791,7 @@ export default function FamilyHub() {
               games_modal_close: gt('games_modal_close'),
               games_session_active: gt('games_session_active'),
               games_join: gt('games_join'),
+              games_create_game: gt('games_create_game'),
               games_cancel: gt('games_cancel'),
               games_waiting_host: gt('games_waiting_host'),
               rps_waiting_opponent: gt('rps_waiting_opponent'),
