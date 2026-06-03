@@ -1006,24 +1006,24 @@ select {
   pointer-events: auto;
 }
 
-/* Icons on background PNG; + ADD drawn in CSS */
+/* Icons on background PNG; + ADD sits below house/sun/heart (CSS) */
 .chalkboard-top-actions {
   position: absolute;
   top: 0;
   right: 0;
-  width: 36%;
+  width: 34%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  /* PNG(1024×716) 일러스트 바닥 ≈34% 높이 → 이모지 바로 아래 +ADD */
-  padding-top: max(calc(var(--cb-h) * 0.34 - 10cqw), 0px);
-  gap: 2cqw;
+  align-items: flex-end;
+  /* PNG(1024×716) icon row ends ≈36–38% of board height */
+  padding-top: max(calc(var(--cb-h) * 0.37 - 6cqw), 0px);
+  gap: 1.5cqw;
 }
 
 @container chalkboard (max-width: 280px) {
   .chalkboard-top-actions {
-    padding-top: max(calc(var(--cb-h) * 0.3 - 8cqw), 0px);
+    padding-top: max(calc(var(--cb-h) * 0.34 - 5cqw), 0px);
   }
   .chalkboard-top-bar {
     min-height: calc(var(--cb-h) * 0.36);
@@ -1093,15 +1093,16 @@ select {
 .chalkboard-btn-add {
   position: relative;
   margin: 0;
-  padding: 2.5cqw 5cqw;
-  min-height: 14cqw;
-  width: 100%;
+  padding: 1.5cqw 3.25cqw;
+  min-height: 10cqw;
+  width: auto;
+  max-width: 100%;
   background: transparent;
   color: rgba(255, 255, 255, 0.97);
-  border: 0.16cqw solid rgba(255, 255, 255, 0.88);
+  border: 0.14cqw solid rgba(255, 255, 255, 0.88);
   border-radius: var(--chalk-sketch-radius);
   font-family: var(--chalk-font-title);
-  font-size: 5.5cqw;
+  font-size: 4.25cqw;
   font-weight: 400;
   cursor: pointer;
   transition:
@@ -1109,12 +1110,12 @@ select {
     text-shadow 0.2s ease,
     background 0.2s ease,
     border-color 0.2s ease;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: stretch;
+  align-self: flex-end;
   box-shadow:
     0 0 1px rgba(255, 255, 255, 0.45),
     inset 0 0 10px rgba(255, 255, 255, 0.03);
