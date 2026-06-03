@@ -19,6 +19,7 @@ import { getMemberNickname, MemberSelect } from './MemberSelect';
 import { areParticipantSlotsReady, ParticipantSetupPicker } from './ParticipantSetupPicker';
 import {
   allStartLanesAssigned,
+  collectStartLanesFromParticipants,
   getLadderLaneLetter,
   getLadderVisualLaneCount,
   getOccupantAtLane,
@@ -92,6 +93,7 @@ const SVG_TOP = 18;
 const SVG_BOTTOM = 96;
 const VERTICAL_STROKE_MS = 650;
 const HORIZONTAL_RUNG_MS = 35;
+const HOST_DESTINATIONS_SAVE_DEBOUNCE_MS = 400;
 const LEGACY_RESULT_DESTINATION_RE = /^Result \d+$/;
 
 /** Server/legacy placeholder labels → empty so the input placeholder shows instead */
@@ -118,6 +120,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const { userId, members, translations: t, formatText, mode } = props;
   const isSetup = mode === 'setup';
   const isMultiplayer = mode === 'multiplayer';
+  const mpIsHost = isMultiplayer ? props.isHost : false;
 
   const mpConfig = isMultiplayer ? asLadderConfig(props.sessionBundle.session.config) : null;
   const mpSession = isMultiplayer ? props.sessionBundle.session : null;
@@ -141,6 +144,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const configDestinationsKey = mpConfig?.destinations.join('|') ?? '';
   const configParticipantIdsKey = mpConfig?.participantIds.join('|') ?? '';
   const destinationsRef = useRef(destinations);
+  const hostDestinationsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userRungs = mpConfig?.userRungs ?? [];
   const finalRungs = mpConfig?.finalRungs ?? [];
   const mpPhase =
@@ -167,13 +171,16 @@ export function LadderGameTab(props: LadderGameTabProps) {
   useEffect(() => {
     if (!mpConfig) return;
     if (mpPhase === 'config') {
+      const next = normalizeDestinationsDisplay(
+        normalizeLadderDestinationsLength(mpConfig.destinations, mpConfig.participantIds.length),
+        t.ladder_destination_ph,
+      );
       setDestinations((prev) => {
-        const targetLen = getLadderVisualLaneCount(mpConfig.participantIds.length);
-        if (prev.length === targetLen) return prev;
-        return normalizeDestinationsDisplay(
-          normalizeLadderDestinationsLength(mpConfig.destinations, mpConfig.participantIds.length),
-          t.ladder_destination_ph,
-        );
+        if (isMultiplayer && mpIsHost) {
+          if (prev.length !== next.length) return next;
+          return prev;
+        }
+        return prev.join('|') === next.join('|') ? prev : next;
       });
       return;
     }
@@ -181,7 +188,16 @@ export function LadderGameTab(props: LadderGameTabProps) {
       const next = mpConfig.destinations;
       return prev.join('|') === next.join('|') ? prev : next;
     });
-  }, [configDestinationsKey, mpConfig, mpPhase, t.ladder_destination_ph]);
+  }, [configDestinationsKey, mpConfig, mpPhase, t.ladder_destination_ph, isMultiplayer, mpIsHost]);
+
+  useEffect(
+    () => () => {
+      if (hostDestinationsTimerRef.current) {
+        clearTimeout(hostDestinationsTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isMultiplayer || mpPhase !== 'result' || finalRungs.length === 0) return;
@@ -246,7 +262,15 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   const laneCount = getLadderVisualLaneCount(participantIds.length);
   const isTripleLane = isLadderTripleLaneMode(participantIds.length);
-  const startLanes = mpConfig?.startLanes ?? {};
+  const startLanes = useMemo(
+    () =>
+      collectStartLanesFromParticipants(
+        mpParticipants,
+        participantIds,
+        mpConfig?.startLanes,
+      ),
+    [mpParticipants, participantIds, mpConfig?.startLanes],
+  );
   const lanesReady = allStartLanesAssigned(participantIds, startLanes);
 
   const participantsReady = useMemo(() => {
@@ -315,16 +339,24 @@ export function LadderGameTab(props: LadderGameTabProps) {
   };
 
   const updateDestination = (index: number, value: string) => {
+    if (mode === 'multiplayer' && !props.isHost) return;
     setDestinations((prev) => prev.map((d, i) => (i === index ? value : d)));
-  };
-
-  const handleDestinationBlur = (index: number) => {
-    if (mode !== 'multiplayer' || props.isHost || mpPhase !== 'config') return;
-    if (myParticipant?.slot_index !== index) return;
-    const value = destinationsRef.current[index]?.trim() ?? '';
-    props
-      .onAction({ type: 'submit_ladder_setup_destination', destination: value })
-      .catch(console.error);
+    if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'config') return;
+    if (hostDestinationsTimerRef.current) {
+      clearTimeout(hostDestinationsTimerRef.current);
+    }
+    hostDestinationsTimerRef.current = setTimeout(() => {
+      props
+        .onAction({
+          type: 'update_ladder_config',
+          destinations: normalizeLadderDestinationsLength(
+            destinationsRef.current.map((d) => d.trim()),
+            participantIds.length,
+          ),
+        })
+        .catch(console.error);
+      hostDestinationsTimerRef.current = null;
+    }, HOST_DESTINATIONS_SAVE_DEBOUNCE_MS);
   };
 
   const addPair = () => {
@@ -401,6 +433,10 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   const beginDrawPhase = () => {
     if (mode !== 'multiplayer' || !props.isHost) return;
+    if (hostDestinationsTimerRef.current) {
+      clearTimeout(hostDestinationsTimerRef.current);
+      hostDestinationsTimerRef.current = null;
+    }
     props
       .onAction({
         type: 'host_begin_draw',
@@ -433,6 +469,51 @@ export function LadderGameTab(props: LadderGameTabProps) {
     const mp = props;
     return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
+      {isTripleLane && (
+        <div className="grid" style={{ gap: '1.5cqmin' }}>
+          <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
+            {t.ladder_pick_lane}
+          </div>
+          <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
+            {Array.from({ length: laneCount }, (_, lane) => {
+              const occupantId = getOccupantAtLane(lane, participantIds, startLanes);
+              const isMine = occupantId === userId;
+              const isTakenByOther = Boolean(occupantId && occupantId !== userId);
+              const canPick = participantIds.includes(userId);
+              const occupantLabel = occupantId
+                ? getMemberNickname(members, occupantId, userId, t.ladder_you)
+                : t.ladder_lane_empty;
+              return (
+                <button
+                  key={`lane-${lane}`}
+                  type="button"
+                  onClick={() => selectStartLane(lane)}
+                  disabled={!canPick || mp.actionLoading || isTakenByOther}
+                  className={`min-w-[22cqmin] rounded-xl border px-3 py-2 text-left transition-colors ${
+                    isMine
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                      : occupantId
+                        ? 'border-slate-200 bg-slate-50 text-slate-600'
+                        : 'border-dashed border-slate-300 bg-white text-slate-700 hover:border-indigo-300'
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                  style={{ fontSize: '4cqmin' }}
+                >
+                  <span className="block font-bold">{getLadderLaneLetter(lane)}</span>
+                  <span className="block text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>
+                    {occupantLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {!lanesReady && (
+            <p className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>
+              {t.ladder_lanes_not_ready}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2" style={{ gap: '2.5cqmin' }}>
         <div>
           <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin', marginBottom: '1.5cqmin' }}>
@@ -455,70 +536,21 @@ export function LadderGameTab(props: LadderGameTabProps) {
             {t.ladder_destinations}
           </div>
           <div className="games-field-list grid">
-            {destinations.map((value, index) => {
-              const canEdit =
-                mp.isHost || (!isTripleLane && myParticipant?.slot_index === index);
-              return (
+            {destinations.map((value, index) => (
                 <input
                   key={`d-${index}`}
                   value={value}
                   onChange={(e) => updateDestination(index, e.target.value)}
-                  onBlur={() => handleDestinationBlur(index)}
                   placeholder={t.ladder_destination_ph}
-                  disabled={!canEdit}
-                  className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60"
+                  disabled={!mp.isHost}
+                  readOnly={!mp.isHost}
+                  className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60 read-only:cursor-default read-only:bg-slate-50/80"
                   style={{ fontSize: '4.5cqmin' }}
                 />
-              );
-            })}
+              ))}
           </div>
         </div>
       </div>
-
-      {isTripleLane && (
-        <div className="grid" style={{ gap: '1.5cqmin' }}>
-          <div className="font-semibold text-[#334155]" style={{ fontSize: '4.5cqmin' }}>
-            {t.ladder_pick_lane}
-          </div>
-          <div className="flex flex-wrap" style={{ gap: '1.5cqmin' }}>
-            {Array.from({ length: laneCount }, (_, lane) => {
-              const occupantId = getOccupantAtLane(lane, participantIds, startLanes);
-              const isMine = occupantId === userId;
-              const isTaken = Boolean(occupantId && !isMine);
-              const canPick = participantIds.includes(userId);
-              const occupantLabel = occupantId
-                ? getMemberNickname(members, occupantId, userId, t.ladder_you)
-                : t.ladder_lane_empty;
-              return (
-                <button
-                  key={`lane-${lane}`}
-                  type="button"
-                  onClick={() => selectStartLane(lane)}
-                  disabled={!canPick || mp.actionLoading || (isTaken && !isMine)}
-                  className={`min-w-[22cqmin] rounded-xl border px-3 py-2 text-left transition-colors ${
-                    isMine
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                      : occupantId
-                        ? 'border-slate-200 bg-slate-50 text-slate-600'
-                        : 'border-dashed border-slate-300 bg-white text-slate-700 hover:border-indigo-300'
-                  } disabled:opacity-50`}
-                  style={{ fontSize: '4cqmin' }}
-                >
-                  <span className="block font-bold">{getLadderLaneLetter(lane)}</span>
-                  <span className="block text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>
-                    {occupantLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {!lanesReady && (
-            <p className="text-[#64748b]" style={{ fontSize: '3.5cqmin' }}>
-              {t.ladder_lanes_not_ready}
-            </p>
-          )}
-        </div>
-      )}
 
       {!participantsReady && (
         <p className="text-[#64748b]" style={{ fontSize: '4cqmin' }}>

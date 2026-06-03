@@ -62,3 +62,17 @@ export function normalizeLadderDestinationsLength(
   while (next.length < target) next.push('');
   return next.slice(0, target);
 }
+
+export function collectStartLanesFromParticipants(
+  participants: Array<{ user_id: string; payload: unknown }>,
+  participantIds: string[],
+  configStartLanes?: Record<string, number>,
+): Record<string, number> {
+  const map: Record<string, number> = { ...(configStartLanes ?? {}) };
+  for (const pid of participantIds) {
+    const row = participants.find((p) => p.user_id === pid);
+    const lane = (row?.payload as { startLane?: number } | undefined)?.startLane;
+    if (typeof lane === 'number') map[pid] = lane;
+  }
+  return map;
+}

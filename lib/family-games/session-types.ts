@@ -30,6 +30,8 @@ export type FamilyGameParticipantRow = {
 export type FamilyGameParticipantPayload = {
   ladderRung?: { leftLane: number; row: number };
   destination?: string;
+  setupDestination?: string;
+  startLane?: number;
 };
 
 export type LadderSessionConfig = {
@@ -77,7 +79,7 @@ export type FamilyGameSessionBundle = {
 };
 
 export type GameSessionAction =
-  | { type: 'update_ladder_config'; participantIds?: string[]; addLane?: boolean; removeLane?: boolean }
+  | { type: 'update_ladder_config'; participantIds?: string[]; destinations?: string[]; addLane?: boolean; removeLane?: boolean }
   | { type: 'submit_ladder_setup_destination'; destination: string }
   | { type: 'select_ladder_start_lane'; laneIndex: number }
   | { type: 'host_begin_draw'; destinations: string[] }

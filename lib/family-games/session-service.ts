@@ -40,6 +40,7 @@ import {
 } from '@/lib/family-games/lobby-helpers';
 import {
   allStartLanesAssigned,
+  collectStartLanesFromParticipants,
   getLadderVisualLaneCount,
   isLadderTripleLaneMode,
   normalizeLadderDestinationsLength,
@@ -543,6 +544,7 @@ async function handleLadderAction(
     const isLaneChange = Boolean(action.addLane || action.removeLane);
 
     if (isLaneChange && !isDraw) throw new Error('FORBIDDEN');
+    if (action.destinations && !isConfig) throw new Error('FORBIDDEN');
     if (action.participantIds && !isConfig && !isDraw) throw new Error('FORBIDDEN');
 
     let participantIds = [...config.participantIds];
@@ -553,6 +555,12 @@ async function handleLadderAction(
       participantIds = action.participantIds;
       destinations = normalizeLadderDestinationsLength(
         participantIds.map((_, i) => destinations[i] ?? ''),
+        participantIds.length,
+      );
+    }
+    if (action.destinations) {
+      destinations = normalizeLadderDestinationsLength(
+        action.destinations,
         participantIds.length,
       );
     }
@@ -617,17 +625,22 @@ async function handleLadderAction(
     if (!config.participantIds.includes(userId)) throw new Error('NOT_A_PARTICIPANT');
     const laneCount = getLadderVisualLaneCount(config.participantIds.length);
     if (action.laneIndex < 0 || action.laneIndex >= laneCount) throw new Error('INVALID_LANE');
-    const startLanes = { ...(config.startLanes ?? {}) };
-    for (const [uid, lane] of Object.entries(startLanes)) {
-      if (lane === action.laneIndex && uid !== userId) {
-        delete startLanes[uid];
-      }
+    const participant = participants.find((p) => p.user_id === userId);
+    if (!participant) throw new Error('NOT_A_PARTICIPANT');
+    for (const p of participants) {
+      if (p.user_id === userId) continue;
+      const otherLane = (p.payload as { startLane?: number })?.startLane;
+      if (otherLane === action.laneIndex) throw new Error('LANE_TAKEN');
     }
-    startLanes[userId] = action.laneIndex;
-    await updateSession(supabase, session.id, {
-      config: { ...config, startLanes },
-      updated_at: now,
-    });
+    const currentPayload = (participant.payload as Record<string, unknown>) ?? {};
+    await supabase
+      .from('family_game_participants')
+      .update({
+        payload: { ...currentPayload, startLane: action.laneIndex },
+        updated_at: now,
+      })
+      .eq('session_id', session.id)
+      .eq('user_id', userId);
     return;
   }
 
@@ -639,7 +652,12 @@ async function handleLadderAction(
       config.participantIds.every((id) => id.trim()) &&
       new Set(config.participantIds).size === config.participantIds.length;
     if (!idsOk || config.participantIds.length < LADDER_MIN_LANES) throw new Error('INVALID_CONFIG');
-    if (!allStartLanesAssigned(config.participantIds, config.startLanes)) {
+    const startLanes = collectStartLanesFromParticipants(
+      participants,
+      config.participantIds,
+      config.startLanes,
+    );
+    if (!allStartLanesAssigned(config.participantIds, startLanes)) {
       throw new Error('LANES_NOT_READY');
     }
     const visualLaneCount = getLadderVisualLaneCount(config.participantIds.length);
@@ -666,7 +684,7 @@ async function handleLadderAction(
     await updateSession(supabase, session.id, {
       status: 'active',
       phase: 'draw',
-      config: { ...config, destinations, userRungs: [] },
+      config: { ...config, startLanes, destinations, userRungs: [] },
       updated_at: now,
     });
     await supabase
