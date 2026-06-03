@@ -642,9 +642,15 @@ export function WidgetLayoutEditor({
         };
       });
 
+      // 가로 리사이즈는 W/H만 바뀌고 layout_x는 그대로라 한 열에 쌓임 → display_order 패킹으로 x/y 갱신
+      const laidOut =
+        rs.axis === 'h' || rs.axis === 'hv'
+          ? applyDisplayOrderPacking(updated, orient)
+          : updated;
+
       onDraftsChangeRef.current(
         ensureDraftsBothOrientationsNoOverlap(
-          finalizeDraftsLayoutForOrientation(updated, orient),
+          finalizeDraftsLayoutForOrientation(laidOut, orient),
         ),
       );
     };
