@@ -9,20 +9,8 @@ import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 
-const CHALKBOARD_BTN_ADD_PNG = '/family-tasks/chalkboard-btn-add.png';
-/** Bump ?v= when replacing public/family-tasks/chalkboard-empty-en.png (cache bust for preview) */
-const CHALKBOARD_EMPTY_EN_PNG = '/family-tasks/chalkboard-empty-en.png?v=2';
-
 function usesBakedChalkboardTitle(sectionTitle: string): boolean {
   return sectionTitle.trim().toLowerCase() === 'family tasks';
-}
-
-function usesChalkboardAddBtnPng(addBtn: string): boolean {
-  return addBtn.trim().toLowerCase() === '+ add';
-}
-
-function usesChalkboardEmptyEnPng(emptyState: string): boolean {
-  return emptyState.trim().toLowerCase().startsWith('all tasks done');
 }
 
 interface FamilyTasksSectionProps {
@@ -260,8 +248,6 @@ export function FamilyTasksSection({
 
   const visibleTasks = dedupeFamilyTasks(tasks || []);
   const hideHtmlTitle = usesBakedChalkboardTitle(t.todo_section_title);
-  const showAddBtnPng = usesChalkboardAddBtnPng(t.todo_add_btn);
-  const showEmptyEnPng = usesChalkboardEmptyEnPng(t.todo_empty_state);
 
   return (
     <>
@@ -322,23 +308,8 @@ export function FamilyTasksSection({
             {t.todo_section_title}
           </h3>
           <div className="chalkboard-top-actions">
-            <button
-              type="button"
-              onClick={openTodoModal}
-              className={
-                showAddBtnPng ? 'chalkboard-btn-add chalkboard-btn-add--image' : 'chalkboard-btn-add'
-              }
-            >
-              {showAddBtnPng ? (
-                <img
-                  src={CHALKBOARD_BTN_ADD_PNG}
-                  alt={t.todo_add_btn}
-                  className="chalkboard-btn-add-img"
-                  decoding="async"
-                />
-              ) : (
-                t.todo_add_btn
-              )}
+            <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
+              {t.todo_add_btn}
             </button>
           </div>
         </div>
@@ -379,15 +350,6 @@ export function FamilyTasksSection({
                   )}
                 </div>
               ))}
-            </div>
-          ) : showEmptyEnPng ? (
-            <div className="chalkboard-empty-state chalkboard-empty-state--image">
-              <img
-                src={CHALKBOARD_EMPTY_EN_PNG}
-                alt={t.todo_empty_state}
-                className="chalkboard-empty-state-img"
-                decoding="async"
-              />
             </div>
           ) : (
             <p className="chalkboard-empty-state">{t.todo_empty_state}</p>

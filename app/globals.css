@@ -962,7 +962,7 @@ select {
 }
 
 .chalkboard-title:not(.chalkboard-title--sr-only),
-.chalkboard-btn-add:not(.chalkboard-btn-add--image) {
+.chalkboard-btn-add {
   text-shadow: var(--chalk-shadow-ui);
 }
 
@@ -1006,7 +1006,7 @@ select {
   pointer-events: auto;
 }
 
-/* Icons on background PNG; + ADD overlays via PNG or text fallback */
+/* Icons on background PNG; + ADD drawn in CSS */
 .chalkboard-top-actions {
   position: absolute;
   top: 0;
@@ -1120,36 +1120,13 @@ select {
     inset 0 0 10px rgba(255, 255, 255, 0.03);
 }
 
-.chalkboard-btn-add--image {
-  padding: 0;
-  min-height: 0;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  letter-spacing: 0;
-}
-
-.chalkboard-btn-add-img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 14cqw;
-  object-fit: contain;
-  object-position: center;
-  pointer-events: none;
-}
-
-.chalkboard-btn-add:not(.chalkboard-btn-add--image):hover {
+.chalkboard-btn-add:hover {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.95);
   text-shadow:
     0 0 2px rgba(255, 255, 255, 0.75),
     0 0 4px rgba(255, 255, 255, 0.45),
     var(--chalk-shadow-ui);
-}
-
-.chalkboard-btn-add--image:hover {
-  opacity: 0.92;
 }
 
 .chalkboard-btn-add:active {
@@ -1315,24 +1292,6 @@ select {
   line-height: 1.2;
   letter-spacing: 0.02em;
   text-shadow: var(--chalk-shadow-ui);
-}
-
-.chalkboard-empty-state--image {
-  padding: 4cqw 0;
-  font-style: normal;
-  text-shadow: none;
-  line-height: 0;
-}
-
-.chalkboard-empty-state-img {
-  display: block;
-  margin: 0 auto;
-  width: auto;
-  max-width: min(92%, 28rem);
-  height: auto;
-  max-height: 12cqw;
-  object-fit: contain;
-  object-position: center;
 }
 
 /* Chalkboard Modal Styles */
