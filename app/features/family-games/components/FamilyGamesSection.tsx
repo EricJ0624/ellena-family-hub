@@ -120,16 +120,18 @@ export function FamilyGamesSection({
   );
 
   const sessionGameType = bundle?.session.game_type ?? null;
-  const lobbyOnOtherTab = Boolean(isLobby && sessionGameType && sessionGameType !== activeTab);
-  const gameOnOtherTab = Boolean(
-    hasActiveSession && !isLobby && sessionGameType && sessionGameType !== activeTab,
+  const hasLiveSession = Boolean(
+    bundle && sessionGameType && !isTerminalGameSession(bundle.session),
   );
   const showLobbyPanel =
-    !lobbyOnOtherTab &&
-    !gameOnOtherTab &&
-    ((isLobby && sessionGameType === activeTab) ||
-      !bundle ||
-      (bundle && isTerminalGameSession(bundle.session)));
+    isLobby ||
+    !bundle ||
+    (bundle && isTerminalGameSession(bundle.session));
+
+  useEffect(() => {
+    if (!hasLiveSession || !sessionGameType || sessionGameType === activeTab) return;
+    setActiveTab(sessionGameType);
+  }, [hasLiveSession, sessionGameType, activeTab, bundle?.session.id]);
 
   useEffect(() => {
     if (!bundle) {
@@ -169,7 +171,7 @@ export function FamilyGamesSection({
   };
 
   const handleLobbyJoin = async () => {
-    await lobbyJoin(activeTab);
+    await lobbyJoin(isLobby && sessionGameType ? sessionGameType : activeTab);
   };
   const handleAddSlot = async () => {
     await performAction({ type: 'update_lobby_slots', addSlot: true });
@@ -179,7 +181,7 @@ export function FamilyGamesSection({
   };
   const handleStartLobby = async () => {
     const updated = await performAction({ type: 'host_start_lobby' });
-    if (updated && updated.session.game_type === activeTab) {
+    if (updated) {
       setModalOpen(true);
     }
   };
@@ -203,26 +205,13 @@ export function FamilyGamesSection({
   };
 
   const renderTabBody = () => {
-    if (lobbyOnOtherTab) {
-      return (
-        <p className="text-[#64748b]" style={{ fontSize: '4.5cqw' }}>
-          {t.games_lobby_wrong_tab}
-        </p>
-      );
-    }
-    if (gameOnOtherTab) {
-      return (
-        <p className="text-[#64748b]" style={{ fontSize: '4.5cqw' }}>
-          {t.games_lobby_wrong_game}
-        </p>
-      );
-    }
     if (showLobbyPanel) {
-      const lobbyBundle =
-        isLobby && sessionGameType === activeTab ? bundle : null;
+      const lobbyBundle = isLobby ? bundle : null;
+      const lobbyGameType =
+        isLobby && sessionGameType ? sessionGameType : activeTab;
       return (
         <GameLobbyPanel
-          gameType={activeTab}
+          gameType={lobbyGameType}
           userId={userId}
           members={members}
           bundle={lobbyBundle}
@@ -315,6 +304,10 @@ export function FamilyGamesSection({
                       activeTab === tab
                         ? 'bg-white text-indigo-700 shadow-sm'
                         : 'text-slate-600 hover:bg-white/60'
+                    } ${
+                      hasLiveSession && sessionGameType === tab && activeTab !== tab
+                        ? 'ring-2 ring-indigo-300 ring-offset-1'
+                        : ''
                     }`}
                     style={{ fontSize: '4cqw' }}
                   >
