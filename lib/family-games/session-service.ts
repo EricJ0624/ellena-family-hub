@@ -406,7 +406,7 @@ async function handleLobbyAction(
     if (session.game_type === 'ladder') {
       const destinations = participantIds.map((_, i) => `Result ${i + 1}`);
       await updateSession(supabase, session.id, {
-        phase: 'config',
+        phase: 'setup',
         config: {
           ...asLadderConfig(session.config),
           participantIds,
@@ -512,7 +512,7 @@ async function handleLadderAction(
 
   if (action.type === 'update_ladder_config') {
     if (!isHost) throw new Error('FORBIDDEN');
-    const isConfig = session.status === 'config';
+    const isConfig = session.status === 'config' && session.phase !== 'lobby';
     const isDraw = session.status === 'active' && session.phase === 'draw';
     const isLaneChange = Boolean(action.addLane || action.removeLane);
 
@@ -571,7 +571,7 @@ async function handleLadderAction(
   }
 
   if (action.type === 'update_own_destination') {
-    if (session.status !== 'config') throw new Error('FORBIDDEN');
+    if (session.status !== 'config' || session.phase === 'lobby') throw new Error('FORBIDDEN');
     const slotIndex = participants.find((p) => p.user_id === userId)?.slot_index;
     if (slotIndex === undefined) throw new Error('NOT_A_PARTICIPANT');
     const destinations = [...config.destinations];
@@ -592,7 +592,9 @@ async function handleLadderAction(
   }
 
   if (action.type === 'host_begin_draw') {
-    if (!isHost || session.status !== 'config') throw new Error('FORBIDDEN');
+    if (!isHost || session.status !== 'config' || session.phase === 'lobby') {
+      throw new Error('FORBIDDEN');
+    }
     const idsOk =
       config.participantIds.every((id) => id.trim()) &&
       new Set(config.participantIds).size === config.participantIds.length;

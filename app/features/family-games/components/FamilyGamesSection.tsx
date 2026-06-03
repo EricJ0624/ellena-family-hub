@@ -125,7 +125,7 @@ export function FamilyGamesSection({
   const showLobbyPanel =
     !lobbyOnOtherTab &&
     !gameOnOtherTab &&
-    (!hasActiveSession || (isLobby && sessionGameType === activeTab));
+    ((isLobby && sessionGameType === activeTab) || !bundle);
 
   useEffect(() => {
     if (bundle && !isLobbyPhase(bundle.session) && isParticipant) {
@@ -170,7 +170,10 @@ export function FamilyGamesSection({
     await performAction({ type: 'update_lobby_slots', removeSlot: true });
   };
   const handleStartLobby = async () => {
-    await performAction({ type: 'host_start_lobby' });
+    const updated = await performAction({ type: 'host_start_lobby' });
+    if (updated && updated.session.game_type === activeTab) {
+      setModalOpen(true);
+    }
   };
 
   const lobbyTranslations = {

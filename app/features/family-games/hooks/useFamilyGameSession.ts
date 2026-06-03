@@ -108,12 +108,15 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Action failed';
         setError(message);
+        if (message === 'FORBIDDEN' || message === 'HOST_ONLY') {
+          await refresh();
+        }
         throw err;
       } finally {
         setActionLoading(false);
       }
     },
-    [bundle?.session.id],
+    [bundle?.session.id, refresh],
   );
 
   const loadSession = useCallback(async (sessionId: string) => {

@@ -14,6 +14,17 @@ export function isLobbyPhase(session: Pick<FamilyGameSessionRow, 'status' | 'pha
   return session.status === 'config' && session.phase === 'lobby';
 }
 
+/** 사다리: 로비 이후 목적지·설정 단계 (status=config, phase≠lobby) */
+export function isLadderSetupPhase(
+  session: Pick<FamilyGameSessionRow, 'status' | 'phase' | 'game_type'>,
+): boolean {
+  return (
+    session.game_type === 'ladder' &&
+    session.status === 'config' &&
+    session.phase !== 'lobby'
+  );
+}
+
 export function getSessionMaxSlots(session: FamilyGameSessionRow): number {
   const maxSlots = (session.config as LobbyConfigFields)?.maxSlots;
   if (typeof maxSlots === 'number' && maxSlots >= LOBBY_MIN_SLOTS) return maxSlots;

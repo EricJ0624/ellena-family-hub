@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { asLadderConfig } from '@/lib/family-games/session-types';
 import type { FamilyGameSessionBundle, GameSessionAction } from '@/lib/family-games/session-types';
@@ -103,21 +103,31 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const [verticalRevealDone, setVerticalRevealDone] = useState(true);
   const [verticalDrawActive, setVerticalDrawActive] = useState(true);
 
+  const configDestinationsKey = mpConfig?.destinations.join('|') ?? '';
+  const configParticipantIdsKey = mpConfig?.participantIds.join('|') ?? '';
+  const destinationsEditTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!mpConfig) return;
-    setParticipantIds(mpConfig.participantIds);
-    setDestinations(mpConfig.destinations);
-  }, [mpConfig?.participantIds.join('|'), mpConfig?.destinations.join('|')]);
+    setParticipantIds((prev) => {
+      const next = mpConfig.participantIds;
+      return prev.join('|') === next.join('|') ? prev : next;
+    });
+    setDestinations((prev) => {
+      const next = mpConfig.destinations;
+      return prev.join('|') === next.join('|') ? prev : next;
+    });
+  }, [configParticipantIdsKey, configDestinationsKey, mpConfig]);
 
   const userRungs = mpConfig?.userRungs ?? [];
   const finalRungs = mpConfig?.finalRungs ?? [];
   const mpPhase =
-    mpSession?.status === 'config'
-      ? 'config'
-      : mpSession?.status === 'active'
-        ? 'draw'
-        : mpSession?.status === 'revealing' || mpSession?.status === 'completed'
-          ? 'result'
+    mpSession?.status === 'active' && mpSession?.phase === 'draw'
+      ? 'draw'
+      : mpSession?.status === 'revealing' || mpSession?.status === 'completed'
+        ? 'result'
+        : mpSession?.status === 'config' && mpSession?.phase !== 'lobby'
+          ? 'config'
           : 'config';
 
   useEffect(() => {
@@ -235,16 +245,34 @@ export function LadderGameTab(props: LadderGameTabProps) {
   };
 
   const updateDestination = (index: number, value: string) => {
-    setDestinations((prev) => prev.map((d, i) => (i === index ? value : d)));
-    if (mode === 'multiplayer') {
-      if (props.isHost) {
-        const next = destinations.map((d, i) => (i === index ? value : d));
-        props.onAction({ type: 'update_ladder_config', destinations: next }).catch(console.error);
-      } else if (myParticipant?.slot_index === index) {
-        props.onAction({ type: 'update_own_destination', destination: value }).catch(console.error);
+    setDestinations((prev) => {
+      const next = prev.map((d, i) => (i === index ? value : d));
+      if (mode === 'multiplayer') {
+        if (props.isHost) {
+          if (destinationsEditTimerRef.current) {
+            clearTimeout(destinationsEditTimerRef.current);
+          }
+          destinationsEditTimerRef.current = setTimeout(() => {
+            props
+              .onAction({ type: 'update_ladder_config', destinations: next })
+              .catch(console.error);
+          }, 280);
+        } else if (myParticipant?.slot_index === index) {
+          props.onAction({ type: 'update_own_destination', destination: value }).catch(console.error);
+        }
       }
-    }
+      return next;
+    });
   };
+
+  useEffect(
+    () => () => {
+      if (destinationsEditTimerRef.current) {
+        clearTimeout(destinationsEditTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const addPair = () => {
     if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return;
