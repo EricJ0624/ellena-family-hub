@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { asRouletteConfig } from '@/lib/family-games/session-types';
 import type { FamilyGameSessionBundle, GameSessionAction } from '@/lib/family-games/session-types';
 import {
   buildRouletteSegments,
-  getRouletteSlotsPerMemberOptions,
+  getRouletteTotalSlotOptions,
+  resolveRouletteTotalSlots,
   type RouletteLaunchConfig,
 } from '../types';
 import { getMemberNickname } from './MemberSelect';
@@ -14,6 +15,7 @@ import { areParticipantSlotsReady, ParticipantSetupPicker } from './ParticipantS
 
 type RouletteTranslations = {
   roulette_participants: string;
+  roulette_slots: string;
   roulette_slots_per_member: string;
   roulette_slots_per_member_option: string;
   roulette_total_slots: string;
@@ -67,6 +69,8 @@ const MEMBER_COLORS = [
   '#a855f7', '#84cc16', '#e11d48', '#0d9488', '#7c3aed',
 ];
 
+const SPIN_ANIMATION_MS = 3200;
+
 export function RouletteGameTab(props: RouletteGameTabProps) {
   const { userId, members, translations: t, formatText, mode } = props;
   const isSetup = mode === 'setup';
@@ -78,32 +82,48 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
   const myParticipant = mpParticipants.find((p) => p.user_id === userId) ?? null;
 
   const [setupSelectedIds, setSetupSelectedIds] = useState<string[]>(['', '']);
+  const [setupTotalSlots, setSetupTotalSlots] = useState(2);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
+  const spinCompleteSentRef = useRef(false);
 
   const selectedIds = mpConfig?.selectedIds ?? [];
-  const slotsPerMember = mpConfig?.slotsPerMember ?? 1;
-  const isConfigPhase = mpSession?.status === 'config';
-  const canSpin = mpSession?.status === 'active' || mpSession?.status === 'completed';
+  const totalSlots = mpConfig ? resolveRouletteTotalSlots(mpConfig) : setupTotalSlots;
+  const isSetupPhase =
+    mpSession?.status === 'config' && mpSession?.phase !== 'lobby';
+  const isSpinPhase = mpSession?.status === 'active' && mpSession?.phase === 'spin';
+  const isResultPhase =
+    (mpSession?.status === 'active' && mpSession?.phase === 'result') ||
+    mpSession?.status === 'completed';
 
-  const slotsPerMemberOptions = useMemo(
-    () => getRouletteSlotsPerMemberOptions(selectedIds.length),
-    [selectedIds.length],
-  );
+  const totalSlotOptions = useMemo(() => getRouletteTotalSlotOptions(), []);
 
   const getLabel = (memberUserId: string) =>
     getMemberNickname(members, memberUserId, userId, t.ladder_you);
 
   const wheelSegments = useMemo(() => {
     if (selectedIds.length < 2) return [];
-    return buildRouletteSegments(selectedIds, slotsPerMember, getLabel);
-  }, [selectedIds, slotsPerMember, members, userId, t.ladder_you]);
+    return buildRouletteSegments(selectedIds, totalSlots, getLabel);
+  }, [selectedIds, totalSlots, members, userId, t.ladder_you]);
 
-  const totalSlots = wheelSegments.length;
+  const segmentCount = wheelSegments.length;
+
+  useEffect(() => {
+    spinCompleteSentRef.current = false;
+  }, [mpConfig?.spinStartedAt]);
 
   useEffect(() => {
     if (!mpConfig?.spinStartedAt || mpConfig.rotation === undefined) return;
+    if (mpSession?.status === 'completed') {
+      const winnerName = mpConfig.winnerUserId
+        ? getMemberNickname(members, mpConfig.winnerUserId, userId, t.ladder_you)
+        : mpConfig.winnerLabel ?? null;
+      setWinner(winnerName);
+      setRotation(mpConfig.rotation);
+      setSpinning(false);
+      return;
+    }
     setSpinning(true);
     setWinner(null);
     setRotation(mpConfig.rotation);
@@ -113,19 +133,57 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         : mpConfig.winnerLabel ?? null;
       setWinner(winnerName);
       setSpinning(false);
-    }, 3200);
+      if (
+        isMultiplayer &&
+        props.isHost &&
+        mpSession?.status === 'active' &&
+        mpSession?.phase === 'result' &&
+        !spinCompleteSentRef.current
+      ) {
+        spinCompleteSentRef.current = true;
+        props.onAction({ type: 'host_complete_roulette' }).catch(console.error);
+      }
+    }, SPIN_ANIMATION_MS);
     return () => window.clearTimeout(timeout);
-  }, [mpConfig?.spinStartedAt, mpConfig?.rotation, mpConfig?.winnerUserId, members, userId, t.ladder_you]);
+  }, [
+    mpConfig?.spinStartedAt,
+    mpConfig?.rotation,
+    mpConfig?.winnerUserId,
+    mpConfig?.winnerLabel,
+    members,
+    userId,
+    t.ladder_you,
+    isMultiplayer,
+    mpSession?.status,
+    mpSession?.phase,
+  ]);
+
+  useEffect(() => {
+    if (!isResultPhase || spinning || winner) return;
+    if (mpConfig?.winnerUserId) {
+      setWinner(getMemberNickname(members, mpConfig.winnerUserId, userId, t.ladder_you));
+      setRotation(mpConfig.rotation ?? 0);
+    }
+  }, [
+    isResultPhase,
+    spinning,
+    winner,
+    mpConfig?.winnerUserId,
+    mpConfig?.rotation,
+    members,
+    userId,
+    t.ladder_you,
+  ]);
 
   const toggleReady = () => {
     if (!isMultiplayer || !myParticipant) return;
     props.onAction({ type: 'toggle_roulette_ready' }).catch(console.error);
   };
 
-  const updateSlotsPerMember = (value: number) => {
+  const updateTotalSlots = (value: number) => {
     if (!isMultiplayer || !props.isHost) return;
     props
-      .onAction({ type: 'host_update_roulette_config', slotsPerMember: value })
+      .onAction({ type: 'host_update_roulette_config', totalSlots: value })
       .catch(console.error);
   };
 
@@ -160,12 +218,37 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
           addLabel={t.games_add_member}
           removeLabel={t.games_remove_member}
         />
+        <div className="grid" style={{ gap: '1.5cqmin' }}>
+          <label
+            className="font-semibold text-[#334155]"
+            style={{ fontSize: '4.5cqmin' }}
+            htmlFor="roulette-setup-total-slots"
+          >
+            {t.roulette_slots}
+          </label>
+          <select
+            id="roulette-setup-total-slots"
+            value={setupTotalSlots}
+            onChange={(e) => setSetupTotalSlots(Number(e.target.value))}
+            className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400"
+            style={{ fontSize: '4.5cqmin' }}
+          >
+            {totalSlotOptions.map((each) => (
+              <option key={each} value={each}>
+                {formatText(t.roulette_total_slots, {
+                  total: String(each),
+                  count: String(setupSelectedIds.filter(Boolean).length || 0),
+                })}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="button"
           onClick={() =>
             props.onLaunch({
               selectedIds: [...setupSelectedIds],
-              slotsPerMember: 1,
+              totalSlots: setupTotalSlots,
             })
           }
           disabled={!mainPlayersReady || props.disabled}
@@ -180,7 +263,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
 
   return (
     <div className="grid" style={{ gap: '2.5cqmin' }}>
-      {isConfigPhase && (
+      {isSetupPhase && (
         <>
           <div>
             <div
@@ -202,29 +285,29 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
             </div>
           </div>
 
-          {props.isHost && selectedIds.length >= 2 && slotsPerMemberOptions.length > 0 && (
+          {props.isHost && selectedIds.length >= 2 && (
             <div className="grid sm:grid-cols-2" style={{ gap: '2cqmin' }}>
               <div>
                 <label
                   className="mb-2 block font-semibold text-[#334155]"
                   style={{ fontSize: '4.5cqmin' }}
-                  htmlFor="roulette-slots-per-member"
+                  htmlFor="roulette-total-slots"
                 >
-                  {t.roulette_slots_per_member}
+                  {t.roulette_slots}
                 </label>
                 <select
-                  id="roulette-slots-per-member"
-                  value={slotsPerMember}
+                  id="roulette-total-slots"
+                  value={totalSlots}
                   disabled={spinning || props.actionLoading}
-                  onChange={(e) => updateSlotsPerMember(Number(e.target.value))}
+                  onChange={(e) => updateTotalSlots(Number(e.target.value))}
                   className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60"
                   style={{ fontSize: '4.5cqmin' }}
                 >
-                  {slotsPerMemberOptions.map((each) => (
+                  {totalSlotOptions.map((each) => (
                     <option key={each} value={each}>
-                      {formatText(t.roulette_slots_per_member_option, {
-                        each: String(each),
-                        total: String(each * selectedIds.length),
+                      {formatText(t.roulette_total_slots, {
+                        total: String(each),
+                        count: String(selectedIds.length),
                       })}
                     </option>
                   ))}
@@ -233,7 +316,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
               <div className="flex items-end">
                 <p className="font-medium text-indigo-700" style={{ fontSize: '4.5cqmin' }}>
                   {formatText(t.roulette_total_slots, {
-                    total: String(slotsPerMember * selectedIds.length),
+                    total: String(totalSlots),
                     count: String(selectedIds.length),
                   })}
                 </p>
@@ -272,74 +355,76 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         </>
       )}
 
-      <div
-        className="relative mx-auto flex items-center justify-center"
-        style={{ width: 'min(100%, 55cqmin)', aspectRatio: '1' }}
-      >
+      {(isSpinPhase || isResultPhase) && (
         <div
-          className="absolute top-0 z-10 -translate-y-1/2"
-          style={{
-            width: 0,
-            height: 0,
-            borderLeft: '1.2cqmin solid transparent',
-            borderRight: '1.2cqmin solid transparent',
-            borderTop: '2.5cqmin solid #ef4444',
-          }}
-        />
-        <div
-          className="relative h-full w-full rounded-full border-4 border-white/80 shadow-lg"
-          style={{
-            transform: `rotate(${rotation}deg)`,
-            transition: spinning ? 'transform 3.2s cubic-bezier(0.15, 0.85, 0.2, 1)' : 'none',
-          }}
+          className="relative mx-auto flex items-center justify-center"
+          style={{ width: 'min(100%, 55cqmin)', aspectRatio: '1' }}
         >
-          <svg viewBox="0 0 100 100" className="h-full w-full">
-            {wheelSegments.length > 0 ? (
-              wheelSegments.map((segment, index) => {
-                const sliceAngle = 360 / totalSlots;
-                const start = index * sliceAngle;
-                const end = start + sliceAngle;
-                const largeArc = sliceAngle > 180 ? 1 : 0;
-                const startRad = ((start - 90) * Math.PI) / 180;
-                const endRad = ((end - 90) * Math.PI) / 180;
-                const x1 = 50 + 50 * Math.cos(startRad);
-                const y1 = 50 + 50 * Math.sin(startRad);
-                const x2 = 50 + 50 * Math.cos(endRad);
-                const y2 = 50 + 50 * Math.sin(endRad);
-                const midAngle = start + sliceAngle / 2;
-                const midRad = ((midAngle - 90) * Math.PI) / 180;
-                const tx = 50 + 32 * Math.cos(midRad);
-                const ty = 50 + 32 * Math.sin(midRad);
-                const color = MEMBER_COLORS[segment.memberIndex % MEMBER_COLORS.length];
-                const fontSize = totalSlots > 10 ? 3.5 : 5;
-                return (
-                  <g key={`slice-${segment.userId}-${index}`}>
-                    <path
-                      d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                      fill={color}
-                      stroke="#fff"
-                      strokeWidth={0.5}
-                    />
-                    <text
-                      x={tx}
-                      y={ty}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill="#fff"
-                      style={{ fontSize, fontWeight: 700 }}
-                      transform={`rotate(${midAngle}, ${tx}, ${ty})`}
-                    >
-                      {segment.label.slice(0, totalSlots > 12 ? 4 : 8)}
-                    </text>
-                  </g>
-                );
-              })
-            ) : (
-              <circle cx="50" cy="50" r="48" fill="#e2e8f0" />
-            )}
-          </svg>
+          <div
+            className="absolute top-0 z-10 -translate-y-1/2"
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '1.2cqmin solid transparent',
+              borderRight: '1.2cqmin solid transparent',
+              borderTop: '2.5cqmin solid #ef4444',
+            }}
+          />
+          <div
+            className="relative h-full w-full rounded-full border-4 border-white/80 shadow-lg"
+            style={{
+              transform: `rotate(${rotation}deg)`,
+              transition: spinning ? `transform ${SPIN_ANIMATION_MS}ms cubic-bezier(0.15, 0.85, 0.2, 1)` : 'none',
+            }}
+          >
+            <svg viewBox="0 0 100 100" className="h-full w-full">
+              {wheelSegments.length > 0 ? (
+                wheelSegments.map((segment, index) => {
+                  const sliceAngle = 360 / segmentCount;
+                  const start = index * sliceAngle;
+                  const end = start + sliceAngle;
+                  const largeArc = sliceAngle > 180 ? 1 : 0;
+                  const startRad = ((start - 90) * Math.PI) / 180;
+                  const endRad = ((end - 90) * Math.PI) / 180;
+                  const x1 = 50 + 50 * Math.cos(startRad);
+                  const y1 = 50 + 50 * Math.sin(startRad);
+                  const x2 = 50 + 50 * Math.cos(endRad);
+                  const y2 = 50 + 50 * Math.sin(endRad);
+                  const midAngle = start + sliceAngle / 2;
+                  const midRad = ((midAngle - 90) * Math.PI) / 180;
+                  const tx = 50 + 32 * Math.cos(midRad);
+                  const ty = 50 + 32 * Math.sin(midRad);
+                  const color = MEMBER_COLORS[segment.memberIndex % MEMBER_COLORS.length];
+                  const fontSize = segmentCount > 10 ? 3.5 : 5;
+                  return (
+                    <g key={`slice-${segment.userId}-${index}`}>
+                      <path
+                        d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                        fill={color}
+                        stroke="#fff"
+                        strokeWidth={0.5}
+                      />
+                      <text
+                        x={tx}
+                        y={ty}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#fff"
+                        style={{ fontSize, fontWeight: 700 }}
+                        transform={`rotate(${midAngle}, ${tx}, ${ty})`}
+                      >
+                        {segment.label.slice(0, segmentCount > 12 ? 4 : 8)}
+                      </text>
+                    </g>
+                  );
+                })
+              ) : (
+                <circle cx="50" cy="50" r="48" fill="#e2e8f0" />
+              )}
+            </svg>
+          </div>
         </div>
-      </div>
+      )}
 
       {winner && (
         <p className="text-center font-bold text-emerald-700" style={{ fontSize: '5cqmin' }}>
@@ -347,12 +432,12 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         </p>
       )}
 
-      {canSpin && props.isHost && (
+      {isSpinPhase && props.isHost && (
         <div className="flex flex-wrap justify-center" style={{ gap: '1.5cqmin' }}>
           <button
             type="button"
             onClick={spin}
-            disabled={totalSlots < 2 || spinning || props.actionLoading}
+            disabled={segmentCount < 2 || spinning || props.actionLoading}
             className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
             style={{ fontSize: '4.5cqmin' }}
           >
@@ -361,7 +446,7 @@ export function RouletteGameTab(props: RouletteGameTabProps) {
         </div>
       )}
 
-      {props.onCancel && isConfigPhase && (
+      {props.onCancel && isSetupPhase && (
         <button
           type="button"
           onClick={props.onCancel}

@@ -47,7 +47,7 @@ export function createInitialLobbyConfig(gameType: FamilyGameType): Record<strin
   if (gameType === 'rps') {
     return { ...base, p1UserId: '', p2UserId: '' };
   }
-  return { ...base, selectedIds: [], slotsPerMember: 1 };
+  return { ...base, selectedIds: [], slotsPerMember: 1, totalSlots: 2 };
 }
 
 export function lobbyCanStart(participantCount: number, maxSlots: number): boolean {

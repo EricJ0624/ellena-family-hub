@@ -12,7 +12,9 @@ export type RPSLaunchConfig = {
 
 export type RouletteLaunchConfig = {
   selectedIds: string[];
-  slotsPerMember: number;
+  /** @deprecated use totalSlots */
+  slotsPerMember?: number;
+  totalSlots?: number;
 };
 
 export type GamePlaySession =
@@ -180,11 +182,29 @@ export function pickRouletteIndex(slotCount: number, rotationDeg: number): numbe
 /** 룰렛판 최대 칸 수 */
 export const ROULETTE_MAX_SLOTS = 15;
 
-/** 참가 인원 기준 멤버당 선택 가능한 칸 수 (1~floor(15/n)) */
+/** 선택 가능한 총 칸 수 (2~15, 참가 인원과 무관) */
+export function getRouletteTotalSlotOptions(): number[] {
+  return Array.from({ length: ROULETTE_MAX_SLOTS - 1 }, (_, i) => i + 2);
+}
+
+/** @deprecated 멤버당 칸 — totalSlots 사용 */
 export function getRouletteSlotsPerMemberOptions(participantCount: number): number[] {
   if (participantCount <= 0) return [];
   const maxPerMember = Math.floor(ROULETTE_MAX_SLOTS / participantCount);
   return Array.from({ length: maxPerMember }, (_, i) => i + 1);
+}
+
+export function resolveRouletteTotalSlots(
+  config: { selectedIds: string[]; totalSlots?: number; slotsPerMember?: number },
+): number {
+  if (typeof config.totalSlots === 'number' && config.totalSlots >= 2) {
+    return Math.min(config.totalSlots, ROULETTE_MAX_SLOTS);
+  }
+  const perMember = config.slotsPerMember ?? 1;
+  return Math.min(
+    ROULETTE_MAX_SLOTS,
+    Math.max(2, config.selectedIds.length * perMember),
+  );
 }
 
 export type RouletteSegment = {
@@ -193,20 +213,21 @@ export type RouletteSegment = {
   memberIndex: number;
 };
 
-/** 멤버당 동일 칸 수로 룰렛 세그먼트 생성 (라운드로빈 배치) */
+/** 총 칸 수를 참가자에게 라운드로빈 배치 */
 export function buildRouletteSegments(
   participantIds: string[],
-  slotsPerMember: number,
+  totalSlots: number,
   getLabel: (userId: string) => string,
 ): RouletteSegment[] {
+  if (participantIds.length === 0 || totalSlots < 2) return [];
   const segments: RouletteSegment[] = [];
-  for (let round = 0; round < slotsPerMember; round += 1) {
-    participantIds.forEach((id, memberIndex) => {
-      segments.push({
-        userId: id,
-        label: getLabel(id),
-        memberIndex,
-      });
+  for (let i = 0; i < totalSlots; i += 1) {
+    const memberIndex = i % participantIds.length;
+    const id = participantIds[memberIndex];
+    segments.push({
+      userId: id,
+      label: getLabel(id),
+      memberIndex,
     });
   }
   return segments;

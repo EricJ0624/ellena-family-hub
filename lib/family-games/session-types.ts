@@ -54,6 +54,7 @@ export type RPSSessionConfig = {
 export type RouletteSessionConfig = {
   selectedIds: string[];
   slotsPerMember: number;
+  totalSlots?: number;
   maxSlots?: number;
   rotation?: number;
   winnerLabel?: string;
@@ -83,8 +84,9 @@ export type GameSessionAction =
   | { type: 'submit_rps'; choice: RPSChoice }
   | { type: 'host_reveal_rps' }
   | { type: 'toggle_roulette_ready' }
-  | { type: 'host_update_roulette_config'; selectedIds?: string[]; slotsPerMember?: number }
+  | { type: 'host_update_roulette_config'; selectedIds?: string[]; slotsPerMember?: number; totalSlots?: number }
   | { type: 'host_spin_roulette' }
+  | { type: 'host_complete_roulette' }
   | { type: 'leave_lobby' }
   | { type: 'update_lobby_slots'; addSlot?: boolean; removeSlot?: boolean }
   | { type: 'host_start_lobby' }
@@ -101,7 +103,7 @@ export type CreateGameSessionBody = {
   config: LadderSessionConfig | RPSSessionConfig | RouletteSessionConfig;
 };
 
-export const ACTIVE_GAME_STATUSES: FamilyGameStatus[] = ['config', 'active', 'revealing'];
+export const ACTIVE_GAME_STATUSES: FamilyGameStatus[] = ['config', 'active', 'revealing', 'completed'];
 
 export function isActiveGameStatus(status: FamilyGameStatus): boolean {
   return ACTIVE_GAME_STATUSES.includes(status);
@@ -132,12 +134,22 @@ export function asRPSConfig(config: FamilyGameSessionConfig): RPSSessionConfig {
 
 export function asRouletteConfig(config: FamilyGameSessionConfig): RouletteSessionConfig {
   const c = config as RouletteSessionConfig;
+  const selectedIds = Array.isArray(c.selectedIds) ? c.selectedIds : [];
+  const slotsPerMember = typeof c.slotsPerMember === 'number' ? c.slotsPerMember : 1;
+  const legacyTotal = selectedIds.length * slotsPerMember;
+  const totalSlots =
+    typeof c.totalSlots === 'number' && c.totalSlots >= 2
+      ? c.totalSlots
+      : Math.max(2, legacyTotal);
   return {
-    selectedIds: Array.isArray(c.selectedIds) ? c.selectedIds : [],
-    slotsPerMember: typeof c.slotsPerMember === 'number' ? c.slotsPerMember : 1,
+    selectedIds,
+    slotsPerMember,
+    totalSlots,
+    maxSlots: c.maxSlots,
     rotation: c.rotation,
     winnerLabel: c.winnerLabel,
     winnerUserId: c.winnerUserId,
+    winnerIndex: c.winnerIndex,
     spinStartedAt: c.spinStartedAt,
   };
 }

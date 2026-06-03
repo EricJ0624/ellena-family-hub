@@ -22,6 +22,8 @@ import {
   LADDER_MIN_LANES,
   buildRouletteSegments,
   pickRouletteIndex,
+  resolveRouletteTotalSlots,
+  ROULETTE_MAX_SLOTS,
   resolveRPS,
   type LadderRung,
   type RPSChoice,
@@ -51,7 +53,7 @@ export async function fetchActiveSessionForGroup(
     .from('family_game_sessions')
     .select('*')
     .eq('group_id', groupId)
-    .in('status', ['config', 'active', 'revealing'])
+    .in('status', ['config', 'active', 'revealing', 'completed'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -203,7 +205,8 @@ function validateCreateConfig(
   } else {
     const c = config as RouletteSessionConfig;
     if (c.selectedIds.length < 2) throw new Error('ROULETTE_MIN_PARTICIPANTS');
-    if (c.slotsPerMember < 1) throw new Error('ROULETTE_INVALID_SLOTS');
+    const totalSlots = c.totalSlots ?? c.selectedIds.length * (c.slotsPerMember ?? 1);
+    if (totalSlots < 2 || totalSlots > ROULETTE_MAX_SLOTS) throw new Error('ROULETTE_INVALID_SLOTS');
   }
 }
 
@@ -436,12 +439,13 @@ async function handleLobbyAction(
     }
 
     await updateSession(supabase, session.id, {
-      status: 'active',
-      phase: 'spin',
+      status: 'config',
+      phase: 'setup',
       config: {
         ...asRouletteConfig(session.config),
         selectedIds: participantIds,
         slotsPerMember: 1,
+        totalSlots: Math.max(2, participantIds.length),
         maxSlots,
       },
       updated_at: now,
@@ -776,12 +780,16 @@ async function handleRouletteAction(
   const now = NOW();
 
   if (action.type === 'host_update_roulette_config') {
-    if (!isHost || session.status !== 'config') throw new Error('FORBIDDEN');
+    if (!isHost || session.status !== 'config' || session.phase === 'lobby') {
+      throw new Error('FORBIDDEN');
+    }
     const selectedIds = action.selectedIds ?? config.selectedIds;
-    const slotsPerMember = action.slotsPerMember ?? config.slotsPerMember;
+    const totalSlots = action.totalSlots ?? config.totalSlots ?? Math.max(2, selectedIds.length);
     if (selectedIds.length < 2) throw new Error('ROULETTE_MIN_PARTICIPANTS');
+    if (totalSlots < 2 || totalSlots > ROULETTE_MAX_SLOTS) throw new Error('ROULETTE_INVALID_SLOTS');
+    const slotsPerMember = Math.max(1, Math.ceil(totalSlots / selectedIds.length));
     await updateSession(supabase, session.id, {
-      config: { ...config, selectedIds, slotsPerMember },
+      config: { ...config, selectedIds, totalSlots, slotsPerMember },
       updated_at: now,
     });
     await syncRouletteParticipants(supabase, session.id, selectedIds, now);
@@ -789,7 +797,7 @@ async function handleRouletteAction(
   }
 
   if (action.type === 'toggle_roulette_ready') {
-    if (session.status !== 'config') throw new Error('FORBIDDEN');
+    if (session.status !== 'config' || session.phase === 'lobby') throw new Error('FORBIDDEN');
     const participant = participants.find((p) => p.user_id === userId);
     if (!participant) throw new Error('NOT_A_PARTICIPANT');
     await supabase
@@ -815,28 +823,43 @@ async function handleRouletteAction(
   }
 
   if (action.type === 'host_spin_roulette') {
-    if (!isHost || (session.status !== 'active' && session.status !== 'config')) throw new Error('FORBIDDEN');
+    if (!isHost || session.status !== 'active' || session.phase !== 'spin') {
+      throw new Error('FORBIDDEN');
+    }
     const selectedIds = config.selectedIds;
-    const segments = buildRouletteSegments(selectedIds, config.slotsPerMember, (id) => id);
-    const totalSlots = segments.length;
-    if (totalSlots < 2) throw new Error('INVALID_WHEEL');
+    const totalSlots = resolveRouletteTotalSlots(config);
+    const segments = buildRouletteSegments(selectedIds, totalSlots, (id) => id);
+    const segmentCount = segments.length;
+    if (segmentCount < 2) throw new Error('INVALID_WHEEL');
 
     const extraTurns = 5 + Math.floor(Math.random() * 4);
     const randomOffset = Math.random() * 360;
     const rotation = extraTurns * 360 + randomOffset;
-    const index = pickRouletteIndex(totalSlots, rotation);
+    const index = pickRouletteIndex(segmentCount, rotation);
     const winnerSegment = segments[index];
 
     await updateSession(supabase, session.id, {
-      status: 'completed',
+      status: 'active',
       phase: 'result',
       config: {
         ...config,
+        totalSlots,
         rotation,
         winnerUserId: winnerSegment?.userId ?? '',
         winnerIndex: index,
         spinStartedAt: now,
       },
+      updated_at: now,
+    });
+    return;
+  }
+
+  if (action.type === 'host_complete_roulette') {
+    if (!isHost || session.status !== 'active' || session.phase !== 'result') {
+      throw new Error('FORBIDDEN');
+    }
+    await updateSession(supabase, session.id, {
+      status: 'completed',
       updated_at: now,
     });
   }
