@@ -5,10 +5,7 @@ export type TravelDiaryTranslations = {
   section_title: string;
   select_group: string;
   loading: string;
-  empty_no_widget: string;
   empty_pick_trip: string;
-  enable_widget_btn: string;
-  enable_widget_failed: string;
   open_diary: string;
   start_trip_diary: string;
   start_trip_failed: string;
@@ -34,10 +31,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     section_title: '여행 다이어리',
     select_group: '그룹을 선택해 주세요.',
     loading: '불러오는 중…',
-    empty_no_widget: '여행 다이어리를 사용하려면 아래에서 켜 주세요.',
     empty_pick_trip: '다이어리를 쓸 여행을 선택하세요.',
-    enable_widget_btn: '여행 다이어리 사용하기',
-    enable_widget_failed: '위젯을 켜지 못했습니다.',
     open_diary: '다이어리 열기',
     start_trip_diary: '이 여행 다이어리 시작',
     start_trip_failed: '다이어리 시작에 실패했습니다.',
@@ -61,10 +55,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     section_title: 'Trip diary',
     select_group: 'Select a group first.',
     loading: 'Loading…',
-    empty_no_widget: 'Turn on the trip diary widget below to get started.',
     empty_pick_trip: 'Choose a trip for your diary.',
-    enable_widget_btn: 'Use trip diary',
-    enable_widget_failed: 'Could not enable the widget.',
     open_diary: 'Open diary',
     start_trip_diary: 'Start diary for this trip',
     start_trip_failed: 'Failed to start diary.',
@@ -88,10 +79,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     section_title: '旅行ダイアリー',
     select_group: 'グループを選択してください。',
     loading: '読み込み中…',
-    empty_no_widget: '下のボタンで旅行ダイアリーを有効にしてください。',
     empty_pick_trip: 'ダイアリーを書く旅行を選んでください。',
-    enable_widget_btn: '旅行ダイアリーを使う',
-    enable_widget_failed: 'ウィジェットを有効にできませんでした。',
     open_diary: 'ダイアリーを開く',
     start_trip_diary: 'この旅行のダイアリーを開始',
     start_trip_failed: '開始に失敗しました。',
@@ -115,10 +103,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     section_title: '旅行日记',
     select_group: '请先选择群组。',
     loading: '加载中…',
-    empty_no_widget: '请在下方开启旅行日记小组件。',
     empty_pick_trip: '选择要写日记的旅行。',
-    enable_widget_btn: '使用旅行日记',
-    enable_widget_failed: '无法开启小组件。',
     open_diary: '打开日记',
     start_trip_diary: '开始此旅行的日记',
     start_trip_failed: '无法开始日记。',
@@ -142,10 +127,7 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     section_title: '旅行日記',
     select_group: '請先選擇群組。',
     loading: '載入中…',
-    empty_no_widget: '請在下方開啟旅行日記小工具。',
     empty_pick_trip: '選擇要寫日記的旅行。',
-    enable_widget_btn: '使用旅行日記',
-    enable_widget_failed: '無法開啟小工具。',
     open_diary: '開啟日記',
     start_trip_diary: '開始此旅行的日記',
     start_trip_failed: '無法開始日記。',

@@ -58,14 +58,10 @@ import { TravelPlannerSection } from '@/app/features/travel-planner/components/T
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
 import { TravelDiaryDashboardSection } from '@/app/features/travel-diary/components/TravelDiaryDashboardSection';
-import { DiaryEnableWidgetCTA } from '@/app/features/travel-diary/components/DiaryEnableWidgetCTA';
 import { DiaryCompletionInviteModal } from '@/app/features/travel-diary/components/DiaryCompletionInviteModal';
 import { useDiaryInvite } from '@/app/features/travel-diary/hooks/useDiaryInvite';
 import { getTravelDiaryTranslation, getDiaryModalText } from '@/lib/translations/travel-diary';
-import {
-  isTravelDiaryWidgetEnabled,
-  shouldShowTravelDiaryDashboardWidget,
-} from '@/lib/widgets/travel-diary-widget';
+import { shouldShowTravelDiaryDashboardWidget } from '@/lib/widgets/travel-diary-widget';
 import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
 import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '@/app/features/piggy-bank/types';
 import { usePiggyDisplay } from '@/app/features/piggy-bank/hooks/usePiggyDisplay';
@@ -410,10 +406,6 @@ export default function FamilyHub() {
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigDraft[]>([]);
-  const travelDiaryWidgetEnabled = useMemo(
-    () => isTravelDiaryWidgetEnabled(widgetConfigs),
-    [widgetConfigs],
-  );
 
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
@@ -6049,12 +6041,6 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
-          <DiaryEnableWidgetCTA
-            currentGroupId={currentGroupId}
-            visible={!travelDiaryWidgetEnabled && Boolean(currentGroupId)}
-            label={tdy('enable_widget_btn')}
-            failedLabel={tdy('enable_widget_failed')}
-          />
           <DiaryCompletionInviteModal
             open={showDiaryInviteModal}
             trip={diaryInviteTrip}
