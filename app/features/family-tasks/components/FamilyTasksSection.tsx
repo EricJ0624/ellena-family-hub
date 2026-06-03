@@ -10,7 +10,8 @@ import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 
 const CHALKBOARD_BTN_ADD_PNG = '/family-tasks/chalkboard-btn-add.png';
-const CHALKBOARD_EMPTY_EN_PNG = '/family-tasks/chalkboard-empty-en.png';
+/** Bump ?v= when replacing public/family-tasks/chalkboard-empty-en.png (cache bust for preview) */
+const CHALKBOARD_EMPTY_EN_PNG = '/family-tasks/chalkboard-empty-en.png?v=2';
 
 function usesBakedChalkboardTitle(sectionTitle: string): boolean {
   return sectionTitle.trim().toLowerCase() === 'family tasks';
