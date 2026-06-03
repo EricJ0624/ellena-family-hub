@@ -28,6 +28,9 @@ export type GamesTranslations = {
   ladder_reset: string;
   ladder_result_title: string;
   ladder_path_result: string;
+  ladder_pick_lane: string;
+  ladder_lane_empty: string;
+  ladder_lanes_not_ready: string;
   rps_player1: string;
   rps_player2: string;
   rps_rock: string;
@@ -101,6 +104,9 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_reset: '다시 하기',
     ladder_result_title: '결과',
     ladder_path_result: '{from} → {to}',
+    ladder_pick_lane: '출발 줄 선택',
+    ladder_lane_empty: '빈칸',
+    ladder_lanes_not_ready: '모든 참가자가 출발 줄을 선택해야 합니다.',
     rps_player1: '플레이어 1',
     rps_player2: '플레이어 2',
     rps_rock: '바위',
@@ -172,6 +178,9 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_reset: 'Reset',
     ladder_result_title: 'Results',
     ladder_path_result: '{from} → {to}',
+    ladder_pick_lane: 'Choose starting line',
+    ladder_lane_empty: 'Empty',
+    ladder_lanes_not_ready: 'All players must choose a starting line.',
     rps_player1: 'Player 1',
     rps_player2: 'Player 2',
     rps_rock: 'Rock',
@@ -243,6 +252,9 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_reset: 'リセット',
     ladder_result_title: '結果',
     ladder_path_result: '{from} → {to}',
+    ladder_pick_lane: '出発列を選択',
+    ladder_lane_empty: '空き',
+    ladder_lanes_not_ready: '全員が出発列を選ぶ必要があります。',
     rps_player1: 'プレイヤー1',
     rps_player2: 'プレイヤー2',
     rps_rock: 'グー',
@@ -314,6 +326,9 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_reset: '重新开始',
     ladder_result_title: '结果',
     ladder_path_result: '{from} → {to}',
+    ladder_pick_lane: '选择起始列',
+    ladder_lane_empty: '空',
+    ladder_lanes_not_ready: '所有参与者必须选择起始列。',
     rps_player1: '玩家1',
     rps_player2: '玩家2',
     rps_rock: '石头',
@@ -385,6 +400,9 @@ const games: Record<LangCode, GamesTranslations> = {
     ladder_reset: '重新開始',
     ladder_result_title: '結果',
     ladder_path_result: '{from} → {to}',
+    ladder_pick_lane: '選擇起始列',
+    ladder_lane_empty: '空',
+    ladder_lanes_not_ready: '所有參與者必須選擇起始列。',
     rps_player1: '玩家1',
     rps_player2: '玩家2',
     rps_rock: '石頭',

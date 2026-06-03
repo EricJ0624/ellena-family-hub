@@ -35,6 +35,8 @@ export type FamilyGameParticipantPayload = {
 export type LadderSessionConfig = {
   participantIds: string[];
   destinations: string[];
+  /** 2명 모드: userId → 출발 세로줄 인덱스(0=A, 1=B, 2=C) */
+  startLanes?: Record<string, number>;
   maxSlots?: number;
   userRungs?: LadderRung[];
   finalRungs?: LadderRung[];
@@ -77,6 +79,7 @@ export type FamilyGameSessionBundle = {
 export type GameSessionAction =
   | { type: 'update_ladder_config'; participantIds?: string[]; addLane?: boolean; removeLane?: boolean }
   | { type: 'submit_ladder_setup_destination'; destination: string }
+  | { type: 'select_ladder_start_lane'; laneIndex: number }
   | { type: 'host_begin_draw'; destinations: string[] }
   | { type: 'draw_rung'; leftLane: number; row: number }
   | { type: 'host_start_ladder' }
@@ -123,6 +126,10 @@ export function asLadderConfig(config: FamilyGameSessionConfig): LadderSessionCo
   return {
     participantIds: Array.isArray(c.participantIds) ? c.participantIds : [],
     destinations: Array.isArray(c.destinations) ? c.destinations : [],
+    startLanes:
+      c.startLanes && typeof c.startLanes === 'object'
+        ? (c.startLanes as Record<string, number>)
+        : undefined,
     userRungs: c.userRungs,
     finalRungs: c.finalRungs,
     revealStartedAt: c.revealStartedAt,

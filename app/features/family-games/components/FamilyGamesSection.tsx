@@ -48,6 +48,9 @@ export interface FamilyGamesSectionProps {
     ladder_reset: string;
     ladder_result_title: string;
     ladder_path_result: string;
+    ladder_pick_lane: string;
+    ladder_lane_empty: string;
+    ladder_lanes_not_ready: string;
     rps_player1: string;
     rps_player2: string;
     rps_rock: string;

@@ -38,6 +38,12 @@ import {
   lobbyCanStart,
   LOBBY_MIN_SLOTS,
 } from '@/lib/family-games/lobby-helpers';
+import {
+  allStartLanesAssigned,
+  getLadderVisualLaneCount,
+  isLadderTripleLaneMode,
+  normalizeLadderDestinationsLength,
+} from '@/lib/family-games/ladder-helpers';
 import type { LobbyJoinBody } from '@/lib/family-games/session-types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -420,13 +426,15 @@ async function handleLobbyAction(
     }
 
     if (session.game_type === 'ladder') {
-      const destinations = participantIds.map(() => '');
+      const visualLaneCount = getLadderVisualLaneCount(participantIds.length);
+      const destinations = Array.from({ length: visualLaneCount }, () => '');
       await updateSession(supabase, session.id, {
         phase: 'setup',
         config: {
           ...asLadderConfig(session.config),
           participantIds,
           destinations,
+          startLanes: isLadderTripleLaneMode(participantIds.length) ? {} : undefined,
           maxSlots,
         },
         updated_at: now,
@@ -543,7 +551,10 @@ async function handleLadderAction(
 
     if (action.participantIds) {
       participantIds = action.participantIds;
-      destinations = participantIds.map((_, i) => destinations[i] ?? '');
+      destinations = normalizeLadderDestinationsLength(
+        participantIds.map((_, i) => destinations[i] ?? ''),
+        participantIds.length,
+      );
     }
     if (action.addLane) {
       if (participantIds.length >= LADDER_MAX_LANES) throw new Error('MAX_LANES');
@@ -586,6 +597,7 @@ async function handleLadderAction(
 
   if (action.type === 'submit_ladder_setup_destination') {
     if (session.status !== 'config' || session.phase === 'lobby') throw new Error('FORBIDDEN');
+    if (isLadderTripleLaneMode(config.participantIds.length)) throw new Error('FORBIDDEN');
     const participant = participants.find((p) => p.user_id === userId);
     if (!participant) throw new Error('NOT_A_PARTICIPANT');
     await supabase
@@ -599,6 +611,26 @@ async function handleLadderAction(
     return;
   }
 
+  if (action.type === 'select_ladder_start_lane') {
+    if (session.status !== 'config' || session.phase === 'lobby') throw new Error('FORBIDDEN');
+    if (!isLadderTripleLaneMode(config.participantIds.length)) throw new Error('FORBIDDEN');
+    if (!config.participantIds.includes(userId)) throw new Error('NOT_A_PARTICIPANT');
+    const laneCount = getLadderVisualLaneCount(config.participantIds.length);
+    if (action.laneIndex < 0 || action.laneIndex >= laneCount) throw new Error('INVALID_LANE');
+    const startLanes = { ...(config.startLanes ?? {}) };
+    for (const [uid, lane] of Object.entries(startLanes)) {
+      if (lane === action.laneIndex && uid !== userId) {
+        delete startLanes[uid];
+      }
+    }
+    startLanes[userId] = action.laneIndex;
+    await updateSession(supabase, session.id, {
+      config: { ...config, startLanes },
+      updated_at: now,
+    });
+    return;
+  }
+
   if (action.type === 'host_begin_draw') {
     if (!isHost || session.status !== 'config' || session.phase === 'lobby') {
       throw new Error('FORBIDDEN');
@@ -607,8 +639,21 @@ async function handleLadderAction(
       config.participantIds.every((id) => id.trim()) &&
       new Set(config.participantIds).size === config.participantIds.length;
     if (!idsOk || config.participantIds.length < LADDER_MIN_LANES) throw new Error('INVALID_CONFIG');
-    const hostDestinations = action.destinations ?? config.destinations;
-    const destinations = config.participantIds.map((pid, i) => {
+    if (!allStartLanesAssigned(config.participantIds, config.startLanes)) {
+      throw new Error('LANES_NOT_READY');
+    }
+    const visualLaneCount = getLadderVisualLaneCount(config.participantIds.length);
+    const hostDestinations = normalizeLadderDestinationsLength(
+      action.destinations ?? config.destinations,
+      config.participantIds.length,
+    );
+    const destinations = Array.from({ length: visualLaneCount }, (_, i) => {
+      if (isLadderTripleLaneMode(config.participantIds.length)) {
+        const hostValue = hostDestinations[i]?.trim();
+        if (hostValue) return hostValue;
+        return `Result ${i + 1}`;
+      }
+      const pid = config.participantIds[i];
       const participant = participants.find((p) => p.user_id === pid);
       const setupDestination = (
         participant?.payload as { setupDestination?: string } | undefined
@@ -638,7 +683,7 @@ async function handleLadderAction(
     if (participant.ready) throw new Error('ALREADY_DRAWN');
 
     const { leftLane, row } = action;
-    const laneCount = config.participantIds.length;
+    const laneCount = getLadderVisualLaneCount(config.participantIds.length);
     if (leftLane < 0 || leftLane >= laneCount - 1 || row < 0 || row >= LADDER_ROW_COUNT) {
       throw new Error('INVALID_RUNG');
     }
@@ -668,7 +713,7 @@ async function handleLadderAction(
 
   if (action.type === 'host_start_ladder') {
     if (!isHost || session.status !== 'active' || session.phase !== 'draw') throw new Error('FORBIDDEN');
-    const laneCount = config.participantIds.length;
+    const laneCount = getLadderVisualLaneCount(config.participantIds.length);
     const userRungs = config.userRungs ?? [];
     const finalRungs = generateDenseLadderRungsSeeded(
       laneCount,
