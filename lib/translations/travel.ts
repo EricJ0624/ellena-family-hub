@@ -164,6 +164,18 @@ export type TravelTranslations = {
   label_end_day_date: string;
   label_checkin_time: string;
   label_checkout_time: string;
+  status_planning: string;
+  status_active: string;
+  status_completed: string;
+  diary_start_button: string;
+  diary_started_label: string;
+  diary_available_hint: string;
+  diary_enable_failed: string;
+  diary_completed_invite_hint: string;
+  diary_modal_title: string;
+  diary_modal_body: string;
+  diary_modal_yes: string;
+  diary_modal_later: string;
 };
 
 const travel: Record<LangCode, TravelTranslations> = {
@@ -330,6 +342,18 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_end_day_date: '종료일 (포함, 선택)',
     label_checkin_time: '체크인 시간',
     label_checkout_time: '체크아웃 시간',
+    status_planning: '계획 중',
+    status_active: '여행 중',
+    status_completed: '여행 완료',
+    diary_start_button: '다이어리 작성 시작',
+    diary_started_label: '다이어리 작성 중',
+    diary_available_hint: '이제 여행 다이어리를 작성할 수 있습니다.',
+    diary_enable_failed: '다이어리 시작 설정에 실패했습니다.',
+    diary_completed_invite_hint: '종료된 여행입니다. 여행 다이어리를 시작해 보세요.',
+    diary_modal_title: '여행 다이어리',
+    diary_modal_body: '여행이 끝났어요. 여행 다이어리를 작성하시겠습니까?',
+    diary_modal_yes: '작성하기',
+    diary_modal_later: '나중에',
   },
   en: {
     auth_required: 'Authentication required.',
@@ -494,6 +518,18 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_end_day_date: 'End date (inclusive, optional)',
     label_checkin_time: 'Check-in time',
     label_checkout_time: 'Check-out time',
+    status_planning: 'Planning',
+    status_active: 'On trip',
+    status_completed: 'Completed',
+    diary_start_button: 'Start trip diary',
+    diary_started_label: 'Diary enabled',
+    diary_available_hint: 'You can start writing your trip diary.',
+    diary_enable_failed: 'Failed to enable diary.',
+    diary_completed_invite_hint: 'This trip has ended. You can start your travel diary.',
+    diary_modal_title: 'Trip diary',
+    diary_modal_body: 'Your trip is over. Would you like to write a travel diary?',
+    diary_modal_yes: 'Yes, start',
+    diary_modal_later: 'Later',
   },
   ja: {
     auth_required: '認証が必要です。',
@@ -658,6 +694,18 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_end_day_date: '終了日（含む・任意）',
     label_checkin_time: 'チェックイン時刻',
     label_checkout_time: 'チェックアウト時刻',
+    status_planning: '計画中',
+    status_active: '旅行中',
+    status_completed: '旅行完了',
+    diary_start_button: '旅行ダイアリー開始',
+    diary_started_label: 'ダイアリー作成中',
+    diary_available_hint: '旅行ダイアリーを書き始められます。',
+    diary_enable_failed: 'ダイアリーの開始に失敗しました。',
+    diary_completed_invite_hint: '終了した旅行です。旅行ダイアリーを始められます。',
+    diary_modal_title: '旅行ダイアリー',
+    diary_modal_body: '旅行が終わりました。旅行ダイアリーを書きますか？',
+    diary_modal_yes: '書く',
+    diary_modal_later: 'あとで',
   },
   'zh-CN': {
     auth_required: '需要登录。',
@@ -821,6 +869,18 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_end_day_date: '结束日期（含，可选）',
     label_checkin_time: '入住时间',
     label_checkout_time: '退房时间',
+    status_planning: '计划中',
+    status_active: '旅行中',
+    status_completed: '已完成',
+    diary_start_button: '开始写旅行日记',
+    diary_started_label: '日记已开启',
+    diary_available_hint: '现在可以撰写旅行日记了。',
+    diary_enable_failed: '无法开启日记。',
+    diary_completed_invite_hint: '旅行已结束。可以开始撰写旅行日记。',
+    diary_modal_title: '旅行日记',
+    diary_modal_body: '旅行结束了。要撰写旅行日记吗？',
+    diary_modal_yes: '撰写',
+    diary_modal_later: '稍后',
   },
   'zh-TW': {
     auth_required: '需要登入。',
@@ -984,6 +1044,18 @@ const travel: Record<LangCode, TravelTranslations> = {
     label_end_day_date: '結束日期（含，選填）',
     label_checkin_time: '入住時間',
     label_checkout_time: '退房時間',
+    status_planning: '計畫中',
+    status_active: '旅行中',
+    status_completed: '已完成',
+    diary_start_button: '開始撰寫旅行日記',
+    diary_started_label: '日記已開啟',
+    diary_available_hint: '現在可以撰寫旅行日記了。',
+    diary_enable_failed: '無法開啟日記。',
+    diary_completed_invite_hint: '旅行已結束。可以開始撰寫旅行日記。',
+    diary_modal_title: '旅行日記',
+    diary_modal_body: '旅行結束了。要撰寫旅行日記嗎？',
+    diary_modal_yes: '撰寫',
+    diary_modal_later: '稍後',
   },
 };
 

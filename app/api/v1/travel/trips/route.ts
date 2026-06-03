@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
+import { enrichTripsWithAutoStatus } from '@/lib/modules/travel-planner/trip-enrich';
+import { computeAutoTripStatus } from '@/lib/modules/travel-planner/trip-status';
 
 /** GET: 해당 그룹의 여행 목록 (tenant = groupId) */
 export async function GET(request: NextRequest) {
@@ -31,7 +33,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '여행 목록 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: data ?? [] });
+    const enriched = await enrichTripsWithAutoStatus(supabase, (data ?? []) as Parameters<typeof enrichTripsWithAutoStatus>[1]);
+    return NextResponse.json({ success: true, data: enriched });
   } catch (e: any) {
     console.error('GET /api/v1/travel/trips:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });
@@ -76,6 +79,8 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseServerClient();
+    const initialStatus = computeAutoTripStatus(start_date, end_date);
+
     const { data, error } = await supabase
       .from('travel_trips')
       .insert({
@@ -86,6 +91,9 @@ export async function POST(request: NextRequest) {
         end_date,
         created_by: user.id,
         currency: tripCurrency,
+        status: initialStatus,
+        status_source: 'auto',
+        diary_enabled: false,
       })
       .select()
       .single();

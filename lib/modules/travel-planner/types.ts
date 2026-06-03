@@ -3,6 +3,10 @@
  * 기존 DB 타입 수정 없이 전용 모듈에서만 사용.
  */
 
+export type TravelTripStatus = 'planning' | 'active' | 'completed';
+export type TravelTripStatusSource = 'auto' | 'manual';
+export type DiaryInviteStatus = 'none' | 'pending' | 'accepted' | 'dismissed';
+
 export interface TravelTrip {
   id: string;
   group_id: string;
@@ -10,6 +14,14 @@ export interface TravelTrip {
   destination: string | null;
   start_date: string;
   end_date: string;
+  /** planning | active | completed */
+  status?: TravelTripStatus;
+  /** auto: date-driven; manual: user override */
+  status_source?: TravelTripStatusSource;
+  /** User opted in to diary while still planning */
+  diary_enabled?: boolean;
+  /** Post-completion diary modal: none | pending | accepted | dismissed */
+  diary_invite_status?: DiaryInviteStatus;
   /** 여행 기준 통화 (ISO 4217). 경비·예산 표시에 사용 */
   currency?: string;
   /** 여행 총 예산 (기준 통화). 잔액 = budget + 추가합계 - 지출합계 */
@@ -17,6 +29,31 @@ export interface TravelTrip {
   created_by: string;
   created_at: string;
   updated_at: string;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export type TravelPlaceSourceKind =
+  | 'attraction'
+  | 'dining'
+  | 'accommodation'
+  | 'transport'
+  | 'itinerary';
+
+export interface TravelPlaceFeedback {
+  id: string;
+  group_id: string;
+  trip_id: string;
+  source_kind: TravelPlaceSourceKind;
+  source_id: string;
+  rating: number | null;
+  is_revisit: boolean | null;
+  feedback_note: string | null;
+  travel_expense_id: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
   updated_by?: string | null;
   deleted_at?: string | null;
   deleted_by?: string | null;
@@ -66,6 +103,9 @@ export interface TravelExpense {
   paid_by: string | null;
   memo: string | null;
   expense_date: string;
+  source_kind?: TravelPlaceSourceKind | null;
+  source_id?: string | null;
+  diary_origin?: boolean;
   created_at: string;
   updated_at: string;
   created_by?: string | null;

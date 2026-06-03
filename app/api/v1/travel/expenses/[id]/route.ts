@@ -61,6 +61,21 @@ export async function PATCH(
     if (body.memo !== undefined) updatePayload.memo = body.memo ? String(body.memo).trim() : null;
     if (body.expense_date !== undefined) updatePayload.expense_date = body.expense_date;
 
+    const sourceKinds = new Set(['attraction', 'dining', 'accommodation', 'transport', 'itinerary']);
+    if (body.source_kind !== undefined) {
+      const sk = body.source_kind == null ? null : String(body.source_kind).trim();
+      if (sk !== null && !sourceKinds.has(sk)) {
+        return NextResponse.json({ error: '유효하지 않은 source_kind입니다.' }, { status: 400 });
+      }
+      updatePayload.source_kind = sk;
+    }
+    if (body.source_id !== undefined) {
+      updatePayload.source_id = body.source_id || null;
+    }
+    if (body.diary_origin !== undefined) {
+      updatePayload.diary_origin = Boolean(body.diary_origin);
+    }
+
     const { data, error } = await supabase
       .from('travel_expenses')
       .update(updatePayload)

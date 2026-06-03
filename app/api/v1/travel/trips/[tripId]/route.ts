@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, requireGroupAdmin } from '@/lib/api-guards';
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
+import {
+  diaryInviteStatusOnCompletedTransition,
+  isValidDiaryInviteStatus,
+} from '@/lib/modules/travel-planner/diary-invite';
+import { enrichTripWithAutoStatus } from '@/lib/modules/travel-planner/trip-enrich';
+import { computeAutoTripStatus, normalizeTripStatus } from '@/lib/modules/travel-planner/trip-status';
 
 /** GET: 단일 여행 조회 (tenant 일치 검증) */
 export async function GET(
@@ -35,7 +41,8 @@ export async function GET(
       return NextResponse.json({ error: '여행을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data });
+    const enriched = await enrichTripWithAutoStatus(supabase, data as Parameters<typeof enrichTripWithAutoStatus>[1]);
+    return NextResponse.json({ success: true, data: enriched });
   } catch (e: any) {
     console.error('GET /api/v1/travel/trips/[tripId]:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });
@@ -63,6 +70,19 @@ export async function PATCH(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+
+    const { data: existingTrip, error: fetchErr } = await supabase
+      .from('travel_trips')
+      .select('start_date, end_date, status, status_source, diary_invite_status, diary_enabled')
+      .eq('id', tripId)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchErr || !existingTrip) {
+      return NextResponse.json({ error: '여행을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
@@ -72,6 +92,54 @@ export async function PATCH(
     if (body.start_date !== undefined) updatePayload.start_date = body.start_date;
     if (body.end_date !== undefined) updatePayload.end_date = body.end_date;
     if (body.budget !== undefined) updatePayload.budget = body.budget == null ? null : Number(body.budget);
+
+    if (body.diary_enabled !== undefined) {
+      updatePayload.diary_enabled = Boolean(body.diary_enabled);
+      if (Boolean(body.diary_enabled)) {
+        updatePayload.diary_invite_status = 'accepted';
+      }
+    }
+
+    if (body.diary_invite_status !== undefined) {
+      if (!isValidDiaryInviteStatus(body.diary_invite_status)) {
+        return NextResponse.json({ error: '유효하지 않은 diary_invite_status입니다.' }, { status: 400 });
+      }
+      updatePayload.diary_invite_status = body.diary_invite_status;
+    }
+
+    const validStatuses = new Set(['planning', 'active', 'completed']);
+    if (body.status !== undefined) {
+      const s = String(body.status).trim();
+      if (!validStatuses.has(s)) {
+        return NextResponse.json({ error: '유효하지 않은 status입니다.' }, { status: 400 });
+      }
+      updatePayload.status = s;
+      updatePayload.status_source = 'manual';
+    }
+    if (body.status_source === 'auto') {
+      updatePayload.status_source = 'auto';
+    }
+
+    const mergedStart = (updatePayload.start_date ?? existingTrip.start_date) as string;
+    const mergedEnd = (updatePayload.end_date ?? existingTrip.end_date) as string;
+    const willBeAuto =
+      (updatePayload.status_source ?? existingTrip.status_source) === 'auto' && body.status === undefined;
+    if (willBeAuto) {
+      updatePayload.status = computeAutoTripStatus(mergedStart, mergedEnd);
+    }
+
+    const oldStatus = normalizeTripStatus(existingTrip.status ?? undefined);
+    const newStatus = normalizeTripStatus(
+      (updatePayload.status ?? existingTrip.status) as string | undefined,
+    );
+    if (newStatus === 'completed' && oldStatus !== 'completed') {
+      const invite = diaryInviteStatusOnCompletedTransition(
+        existingTrip.diary_invite_status as string | null | undefined,
+      );
+      if (invite && updatePayload.diary_invite_status === undefined) {
+        updatePayload.diary_invite_status = invite;
+      }
+    }
 
     let newTripCurrency: string | null = null;
     if (body.currency !== undefined) {
@@ -96,8 +164,16 @@ export async function PATCH(
     if (error) {
       console.error('travel_trips PATCH:', error);
       return NextResponse.json(
-        { error: '여행 수정에 실패했습니다. travel_trips.currency 컬럼이 있는지 확인하세요.' },
+        { error: '여행 수정에 실패했습니다. travel_trips 스키마를 확인하세요.' },
         { status: 500 }
+      );
+    }
+
+    let result = data;
+    if (data) {
+      result = await enrichTripWithAutoStatus(
+        supabase,
+        data as Parameters<typeof enrichTripWithAutoStatus>[1],
       );
     }
 
@@ -114,7 +190,7 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: result });
   } catch (e: any) {
     console.error('PATCH /api/v1/travel/trips/[tripId]:', e);
     return NextResponse.json({ error: e.message ?? '서버 오류' }, { status: 500 });

@@ -8,6 +8,11 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
 import {
+  canUserOptInDiaryForTrip,
+  showDiaryCompletedInviteHint,
+} from '@/lib/modules/travel-planner/diary-eligibility';
+import { normalizeTripStatus, type TravelTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import {
   buildExpandedPlannerItinerary,
   enumerateTripDays,
   partitionRowsByTripRange,
@@ -1235,6 +1240,15 @@ export function TravelPlannerContent() {
       .subscribe();
     channels.push(chTransports);
 
+    const chPlaceFeedback = supabase
+      .channel(`travel_place_feedback:${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'travel_place_feedback', filter: `group_id=eq.${groupId}` }, () => {
+        const tripId = selectedTripIdRef.current;
+        if (tripId) fetchExpenses(tripId);
+      })
+      .subscribe();
+    channels.push(chPlaceFeedback);
+
     channelsRef.current = channels;
 
     return () => {
@@ -1329,6 +1343,38 @@ export function TravelPlannerContent() {
       alert(e instanceof Error ? e.message : tt('update_failed'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const tripStatusLabel = useCallback(
+    (status: TravelTripStatus | string | null | undefined) => {
+      const s = normalizeTripStatus(status ?? undefined);
+      if (s === 'active') return tt('status_active');
+      if (s === 'completed') return tt('status_completed');
+      return tt('status_planning');
+    },
+    [tt],
+  );
+
+  const handleEnableDiary = async () => {
+    if (!currentGroupId || !selectedTrip || selectedTrip.diary_enabled) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          diary_enabled: true,
+          diary_invite_status: 'accepted',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || tt('diary_enable_failed'));
+      if (json.data) setSelectedTrip(json.data);
+      await fetchTrips();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : tt('diary_enable_failed'));
     }
   };
 
@@ -2554,6 +2600,34 @@ export function TravelPlannerContent() {
                     <Calendar className="mr-1 inline h-[14px] w-[14px]" />
                     {selectedTrip.start_date} ~ {selectedTrip.end_date}
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={[
+                        'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                        normalizeTripStatus(selectedTrip.status) === 'active'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : normalizeTripStatus(selectedTrip.status) === 'completed'
+                            ? 'bg-slate-200 text-slate-700'
+                            : 'bg-sky-100 text-sky-800',
+                      ].join(' ')}
+                    >
+                      {tripStatusLabel(selectedTrip.status)}
+                    </span>
+                    {selectedTrip.diary_enabled ? (
+                      <span className="text-[11px] font-medium text-violet-700">{tt('diary_started_label')}</span>
+                    ) : canUserOptInDiaryForTrip(selectedTrip) ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleEnableDiary()}
+                        className="cursor-pointer rounded-lg border-0 bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-800 hover:bg-violet-200"
+                      >
+                        {tt('diary_start_button')}
+                      </button>
+                    ) : null}
+                  </div>
+                  {showDiaryCompletedInviteHint(selectedTrip) && (
+                    <p className="m-0 mt-1.5 text-[12px] text-violet-700">{tt('diary_completed_invite_hint')}</p>
+                  )}
                   <p className="m-0 mt-1 text-xs text-slate-500">
                     {tt('label_trip_currency')}: <strong className="text-slate-700">{tripCurrencyCode}</strong>
                   </p>
