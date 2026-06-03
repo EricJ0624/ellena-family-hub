@@ -89,8 +89,8 @@
     1px 1px 0 rgba(0, 0, 0, 0.18);
   --chalkboard-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M0 11h22M11 0v22' stroke='%23ffffff' stroke-opacity='0.055' stroke-width='0.5'/%3E%3Cpath d='M11 9.8v2.4M9.8 11h2.4' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='0.55' stroke-linecap='round'/%3E%3C/svg%3E");
   --chalkboard-bg-image: url('/family-tasks/chalkboard-bg.png');
-  /* Match public/family-tasks/chalkboard-bg.png (1236×864) */
-  --chalkboard-aspect: 1236 / 864;
+  /* Match public/family-tasks/chalkboard-bg.png (1024×716) */
+  --chalkboard-aspect: 1024 / 716;
   --chalkboard-inset-top: 10%;
   --chalkboard-inset-right: 7%;
   --chalkboard-inset-bottom: 7.5%;
@@ -877,7 +877,7 @@ select {
 
 /* Frame: 높이 = max(rowSpan 최소, 임무 내용). PNG는 frame 박스에 100% 100% — flex:1/100% 고정 금지 */
 .chalkboard-frame {
-  --cb-h: calc(100cqw * 864 / 1236);
+  --cb-h: calc(100cqw * 716 / 1024);
   container-type: inline-size;
   container-name: chalkboard;
   position: relative;
@@ -949,8 +949,20 @@ select {
   max-width: 58%;
 }
 
-.chalkboard-title,
-.chalkboard-btn-add {
+.chalkboard-title--sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.chalkboard-title:not(.chalkboard-title--sr-only),
+.chalkboard-btn-add:not(.chalkboard-btn-add--image) {
   text-shadow: var(--chalk-shadow-ui);
 }
 
@@ -994,7 +1006,7 @@ select {
   pointer-events: auto;
 }
 
-/* Icons remain on PNG; + ADD box is drawn in CSS (box-less background) */
+/* Icons on background PNG; + ADD overlays via PNG or text fallback */
 .chalkboard-top-actions {
   position: absolute;
   top: 0;
@@ -1004,7 +1016,7 @@ select {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* PNG(1236×864) 일러스트 바닥 ≈33% 높이, inset-top → 이모지 바로 아래 +ADD */
+  /* PNG(1024×716) 일러스트 바닥 ≈34% 높이 → 이모지 바로 아래 +ADD */
   padding-top: max(calc(var(--cb-h) * 0.34 - 10cqw), 0px);
   gap: 2cqw;
 }
@@ -1108,13 +1120,36 @@ select {
     inset 0 0 10px rgba(255, 255, 255, 0.03);
 }
 
-.chalkboard-btn-add:hover {
+.chalkboard-btn-add--image {
+  padding: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  letter-spacing: 0;
+}
+
+.chalkboard-btn-add-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 14cqw;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}
+
+.chalkboard-btn-add:not(.chalkboard-btn-add--image):hover {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.95);
   text-shadow:
     0 0 2px rgba(255, 255, 255, 0.75),
     0 0 4px rgba(255, 255, 255, 0.45),
     var(--chalk-shadow-ui);
+}
+
+.chalkboard-btn-add--image:hover {
+  opacity: 0.92;
 }
 
 .chalkboard-btn-add:active {
@@ -1280,6 +1315,24 @@ select {
   line-height: 1.2;
   letter-spacing: 0.02em;
   text-shadow: var(--chalk-shadow-ui);
+}
+
+.chalkboard-empty-state--image {
+  padding: 4cqw 0;
+  font-style: normal;
+  text-shadow: none;
+  line-height: 0;
+}
+
+.chalkboard-empty-state-img {
+  display: block;
+  margin: 0 auto;
+  width: auto;
+  max-width: min(92%, 28rem);
+  height: auto;
+  max-height: 12cqw;
+  object-fit: contain;
+  object-position: center;
 }
 
 /* Chalkboard Modal Styles */
