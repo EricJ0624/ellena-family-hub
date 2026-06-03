@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FamilyTaskMemberOption } from '@/app/features/family-tasks/types';
 import { isLobbyPhase } from '@/lib/family-games/lobby-helpers';
+import { isTerminalGameSession } from '@/lib/family-games/session-types';
 import { formatGamesText } from '@/lib/translations/games';
 import type { GameTab } from '../types';
 import { useFamilyGameSession } from '../hooks/useFamilyGameSession';
@@ -126,7 +127,9 @@ export function FamilyGamesSection({
   const showLobbyPanel =
     !lobbyOnOtherTab &&
     !gameOnOtherTab &&
-    ((isLobby && sessionGameType === activeTab) || !bundle);
+    ((isLobby && sessionGameType === activeTab) ||
+      !bundle ||
+      (bundle && isTerminalGameSession(bundle.session)));
 
   useEffect(() => {
     if (!bundle) {

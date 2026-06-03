@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isLobbyPhase } from '@/lib/family-games/lobby-helpers';
 import type {
   FamilyGameSessionBundle,
@@ -23,9 +23,14 @@ interface UseFamilyGameSessionProps {
 
 export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionProps) {
   const [bundle, setBundle] = useState<FamilyGameSessionBundle | null>(null);
+  const bundleRef = useRef<FamilyGameSessionBundle | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    bundleRef.current = bundle;
+  }, [bundle]);
 
   const refresh = useCallback(async () => {
     if (!groupId) {
@@ -36,11 +41,31 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
       setLoading(true);
       setError(null);
       const data = await fetchActiveGameSession(groupId);
-      setBundle((prev) => {
-        if (data) return data;
-        if (prev && isTerminalGameSession(prev.session)) return prev;
-        return null;
-      });
+      if (data) {
+        setBundle(data);
+        return;
+      }
+
+      const prev = bundleRef.current;
+      if (!prev || !isTerminalGameSession(prev.session)) {
+        setBundle(null);
+        return;
+      }
+
+      try {
+        const latest = await fetchGameSession(prev.session.id);
+        if (
+          !latest ||
+          latest.session.status === 'completed' ||
+          latest.session.status === 'cancelled'
+        ) {
+          setBundle(null);
+        } else {
+          setBundle(latest);
+        }
+      } catch {
+        setBundle(null);
+      }
     } catch (err) {
       console.error('Failed to refresh game session:', err);
       setError(err instanceof Error ? err.message : 'Failed to load session');
@@ -157,7 +182,9 @@ export function useFamilyGameSession({ groupId, userId }: UseFamilyGameSessionPr
     bundle?.participants.some((p) => p.user_id === userId),
   );
   const hasActiveSession = Boolean(
-    bundle && isActiveGameStatus(bundle.session.status),
+    bundle &&
+      isActiveGameStatus(bundle.session.status) &&
+      !isTerminalGameSession(bundle.session),
   );
   const myParticipant =
     bundle?.participants.find((p) => p.user_id === userId) ?? null;
