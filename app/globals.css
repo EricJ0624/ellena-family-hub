@@ -1006,7 +1006,7 @@ select {
   pointer-events: auto;
 }
 
-/* Icons on background PNG; + ADD sits below house/sun/heart (CSS) */
+/* Icons on background PNG; + ADD centered below house/sun/heart (CSS) */
 .chalkboard-top-actions {
   position: absolute;
   top: 0;
@@ -1015,15 +1015,15 @@ select {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  /* PNG(1024×716) icon row ends ≈36–38% of board height */
-  padding-top: max(calc(var(--cb-h) * 0.37 - 6cqw), 0px);
+  align-items: center;
+  /* PNG(1024×716) icon row — button just under icons */
+  padding-top: max(calc(var(--cb-h) * 0.32 - 4cqw), 0px);
   gap: 1.5cqw;
 }
 
 @container chalkboard (max-width: 280px) {
   .chalkboard-top-actions {
-    padding-top: max(calc(var(--cb-h) * 0.34 - 5cqw), 0px);
+    padding-top: max(calc(var(--cb-h) * 0.30 - 3cqw), 0px);
   }
   .chalkboard-top-bar {
     min-height: calc(var(--cb-h) * 0.36);
@@ -1115,7 +1115,7 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: flex-end;
+  align-self: center;
   box-shadow:
     0 0 1px rgba(255, 255, 255, 0.45),
     inset 0 0 10px rgba(255, 255, 255, 0.03);
