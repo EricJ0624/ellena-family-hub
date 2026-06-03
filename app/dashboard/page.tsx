@@ -57,6 +57,15 @@ import { FamilyAlbumSection } from '@/app/features/family-album/components/Famil
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
 import { useTravelTrips } from '@/app/features/travel-planner/hooks/useTravelTrips';
+import { TravelDiaryDashboardSection } from '@/app/features/travel-diary/components/TravelDiaryDashboardSection';
+import { DiaryEnableWidgetCTA } from '@/app/features/travel-diary/components/DiaryEnableWidgetCTA';
+import { DiaryCompletionInviteModal } from '@/app/features/travel-diary/components/DiaryCompletionInviteModal';
+import { useDiaryInvite } from '@/app/features/travel-diary/hooks/useDiaryInvite';
+import { getTravelDiaryTranslation, getDiaryModalText } from '@/lib/translations/travel-diary';
+import {
+  isTravelDiaryWidgetEnabled,
+  shouldShowTravelDiaryDashboardWidget,
+} from '@/lib/widgets/travel-diary-widget';
 import { PiggyBankSection } from '@/app/features/piggy-bank/components/PiggyBankSection';
 import type { AccountRequest, PiggyMemberOrAccount, PiggySummary } from '@/app/features/piggy-bank/types';
 import { usePiggyDisplay } from '@/app/features/piggy-bank/hooks/usePiggyDisplay';
@@ -254,6 +263,8 @@ export default function FamilyHub() {
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
   const tt = (key: keyof TravelTranslations) => getTravelTranslation(lang, key);
   const gt = (key: keyof GamesTranslations) => getGamesTranslation(lang, key);
+  const tdy = (key: Parameters<typeof getTravelDiaryTranslation>[1]) => getTravelDiaryTranslation(lang, key);
+  const diaryModalText = useMemo(() => getDiaryModalText(lang), [lang]);
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
   const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
   const bodyFont = useMemo(() => getFontStyle(lang, 'body'), [lang]);
@@ -269,6 +280,7 @@ export default function FamilyHub() {
       travel: tt('title'),
       piggy: dt('piggy_section_admin_title'),
       games: gt('section_title'),
+      travel_diary: tdy('section_title'),
     }),
     [lang],
   );
@@ -315,11 +327,49 @@ export default function FamilyHub() {
   const [piggySummaryError, setPiggySummaryError] = useState<string | null>(null);
   const loadPiggySummaryRef = useRef<() => Promise<void>>(async () => {});
   const piggyAccountRequestsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { trips: travelTrips, loading: travelTripsLoading } = useTravelTrips({
+  const { trips: travelTrips, loading: travelTripsLoading, reload: reloadTravelTrips } = useTravelTrips({
     currentGroupId,
     isAuthenticated,
     errorMessage: dt('piggy_travel_fetch_failed'),
   });
+  const {
+    pendingTrip: diaryInviteTrip,
+    acting: diaryInviteActing,
+    acceptInvite: acceptDiaryInvite,
+    dismissInvite: dismissDiaryInvite,
+    showModal: showDiaryInviteModal,
+  } = useDiaryInvite(travelTrips, currentGroupId);
+  const handleAcceptDiaryInvite = useCallback(async () => {
+    await acceptDiaryInvite();
+    await reloadTravelTrips();
+  }, [acceptDiaryInvite, reloadTravelTrips]);
+  const handleStartTripDiary = useCallback(
+    async (tripId: string) => {
+      if (!currentGroupId) return;
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`/api/v1/travel/trips/${tripId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: currentGroupId,
+          diary_enabled: true,
+          diary_invite_status: 'accepted',
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || tdy('start_trip_failed'));
+        return;
+      }
+      await reloadTravelTrips();
+    },
+    [currentGroupId, reloadTravelTrips, tdy],
+  );
   const { piggyLabel, formatAmount: formatDashboardPiggy } = usePiggyDisplay({
     piggySummary,
     fallbackGroupCurrency: currentGroup?.piggy_currency,
@@ -360,7 +410,11 @@ export default function FamilyHub() {
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigDraft[]>([]);
-  
+  const travelDiaryWidgetEnabled = useMemo(
+    () => isTravelDiaryWidgetEnabled(widgetConfigs),
+    [widgetConfigs],
+  );
+
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
     id: string;
@@ -5339,12 +5393,17 @@ export default function FamilyHub() {
   const orderedWidgets = useMemo(
     () =>
       [...widgetConfigs]
-        .filter((cfg) => cfg.is_enabled)
+        .filter((cfg) => {
+          if (cfg.widget_key === 'travel_diary') {
+            return shouldShowTravelDiaryDashboardWidget(widgetConfigs, travelTrips);
+          }
+          return cfg.is_enabled;
+        })
         .sort((a, b) => {
           if (a.display_order !== b.display_order) return a.display_order - b.display_order;
           return b.priority - a.priority;
         }),
-    [widgetConfigs],
+    [widgetConfigs, travelTrips],
   );
 
   // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)
@@ -5542,6 +5601,24 @@ export default function FamilyHub() {
               select_group: tt('dashboard_select_group'),
               trips_loading: tt('dashboard_trips_loading'),
               empty_state: tt('dashboard_card_empty'),
+            }}
+          />
+        );
+      case 'travel_diary':
+        return (
+          <TravelDiaryDashboardSection
+            trips={travelTrips}
+            loading={travelTripsLoading}
+            currentGroupId={currentGroupId}
+            onOpenTrip={(tripId) => router.push(`/travel/diary?tripId=${tripId}`)}
+            onStartTrip={handleStartTripDiary}
+            translations={{
+              section_title: tdy('section_title'),
+              select_group: tdy('select_group'),
+              loading: tdy('loading'),
+              empty_pick_trip: tdy('empty_pick_trip'),
+              open_diary: tdy('open_diary'),
+              start_trip_diary: tdy('start_trip_diary'),
             }}
           />
         );
@@ -5972,6 +6049,26 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
+          <DiaryEnableWidgetCTA
+            currentGroupId={currentGroupId}
+            visible={!travelDiaryWidgetEnabled && Boolean(currentGroupId)}
+            label={tdy('enable_widget_btn')}
+            failedLabel={tdy('enable_widget_failed')}
+          />
+          <DiaryCompletionInviteModal
+            open={showDiaryInviteModal}
+            trip={diaryInviteTrip}
+            title={diaryModalText.title}
+            body={diaryModalText.body}
+            yesLabel={diaryModalText.yes}
+            laterLabel={diaryModalText.later}
+            acting={diaryInviteActing}
+            onAccept={() => void handleAcceptDiaryInvite()}
+            onDismiss={async () => {
+              await dismissDiaryInvite();
+              await reloadTravelTrips();
+            }}
+          />
           {/* 위젯 간 간격: CSS gap-3만 — layout Y에 gap 행 단위 없음 */}
           <div
             className="dashboard-widget-grid grid min-w-0 gap-3"

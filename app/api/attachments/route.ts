@@ -9,6 +9,7 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'piggy_bank_tx',
   'travel_trip',
   'travel_expense',
+  'travel_diary_entry',
 ]);
 
 /* v4 전용이 아닌 일반 UUID(버전·variant 혼용 DB 대비) */

@@ -7,6 +7,7 @@ import { getCommonTranslation } from '@/lib/translations/common';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import { getGamesTranslation } from '@/lib/translations/games';
+import { getTravelDiaryTranslation } from '@/lib/translations/travel-diary';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import type { CommonTranslations } from '@/lib/translations/common';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
@@ -41,6 +42,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
   const tt = (key: keyof TravelTranslations) => getTravelTranslation(lang, key);
   const gt = (key: keyof GamesTranslations) => getGamesTranslation(lang, key);
+  const tdy = (key: Parameters<typeof getTravelDiaryTranslation>[1]) => getTravelDiaryTranslation(lang, key);
   const gat = (key: keyof GroupAdminTranslations) => getGroupAdminTranslation(lang, key);
 
   const [configs, setConfigs] = useState<WidgetConfigDraft[]>([]);
@@ -63,6 +65,7 @@ export function DashboardWidgetSettings({ groupId, isOwner }: DashboardWidgetSet
       travel: tt('title'),
       piggy: dt('piggy_section_admin_title'),
       games: gt('section_title'),
+      travel_diary: tdy('section_title'),
     }),
     [lang]
   );

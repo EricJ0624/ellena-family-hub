@@ -351,6 +351,24 @@ function GamesPreview() {
   );
 }
 
+// ── Travel diary ───────────────────────────────────────────────────
+function TravelDiaryPreview() {
+  return (
+    <section className="content-section">
+      <div className="section-header">
+        <h3 className="section-title">Trip diary</h3>
+      </div>
+      <div className="section-body">
+        <div className="glass-panel-soft rounded-xl p-3">
+          <div className="text-sm font-bold text-slate-800">제주 가족 여행</div>
+          <div className="mt-0.5 text-xs text-slate-500">2025-07-01 ~ 2025-07-05</div>
+          <p className="mt-2 text-xs text-slate-600">한 줄 평 · 무드 · 사진</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── 통합 레코드 ──────────────────────────────────────────────────
 export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNode> = {
   tasks:    () => <TasksPreview />,
@@ -360,5 +378,6 @@ export const WIDGET_PREVIEW_MAP: Record<DashboardWidgetKey, () => React.ReactNod
   album:    () => <AlbumPreview />,
   travel:   () => <TravelPreview />,
   piggy:    () => <PiggyPreview />,
-  games:    () => <GamesPreview />,
+  games:        () => <GamesPreview />,
+  travel_diary: () => <TravelDiaryPreview />,
 };

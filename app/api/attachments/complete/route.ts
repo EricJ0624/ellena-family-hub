@@ -9,6 +9,7 @@ const ALLOWED_ENTITY_TYPES = new Set([
   'piggy_bank_tx',
   'travel_trip',
   'travel_expense',
+  'travel_diary_entry',
 ]);
 
 const ALLOWED_FEATURE_TYPES = new Set(['chat', 'piggy', 'travel']);

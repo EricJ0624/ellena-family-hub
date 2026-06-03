@@ -34,7 +34,7 @@ export function shouldOfferDiaryCompletionPrompt(trip: DiaryEligibleTrip): boole
   if (trip.diary_enabled === true) return false;
   if (normalizeTripStatus(trip.status ?? undefined) !== 'completed') return false;
   const invite = normalizeDiaryInviteStatus(trip.diary_invite_status);
-  return invite === 'pending' || invite === 'none';
+  return invite === 'pending';
 }
 
 /** Completed trip, not opted in — planner hint (not shown for active/planning). */

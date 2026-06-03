@@ -5,7 +5,8 @@ export type FeatureEntityType =
   | 'piggy_wallet_tx'
   | 'piggy_bank_tx'
   | 'travel_trip'
-  | 'travel_expense';
+  | 'travel_expense'
+  | 'travel_diary_entry';
 
 export type UploadedAttachment = {
   id: string;
