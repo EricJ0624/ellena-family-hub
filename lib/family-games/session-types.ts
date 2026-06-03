@@ -75,9 +75,9 @@ export type FamilyGameSessionBundle = {
 };
 
 export type GameSessionAction =
-  | { type: 'update_ladder_config'; participantIds?: string[]; destinations?: string[]; addLane?: boolean; removeLane?: boolean }
-  | { type: 'update_own_destination'; destination: string }
-  | { type: 'host_begin_draw' }
+  | { type: 'update_ladder_config'; participantIds?: string[]; addLane?: boolean; removeLane?: boolean }
+  | { type: 'submit_ladder_setup_destination'; destination: string }
+  | { type: 'host_begin_draw'; destinations: string[] }
   | { type: 'draw_rung'; leftLane: number; row: number }
   | { type: 'host_start_ladder' }
   | { type: 'host_complete_ladder' }

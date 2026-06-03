@@ -80,6 +80,27 @@ const SVG_TOP = 18;
 const SVG_BOTTOM = 96;
 const VERTICAL_STROKE_MS = 650;
 const HORIZONTAL_RUNG_MS = 35;
+const LEGACY_RESULT_DESTINATION_RE = /^Result \d+$/;
+
+/** Server/legacy placeholder labels → empty so the input placeholder shows instead */
+function normalizeDestinationDisplay(
+  value: string,
+  index: number,
+  placeholder: string,
+): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (LEGACY_RESULT_DESTINATION_RE.test(trimmed)) return '';
+  if (trimmed === `${placeholder} ${index + 1}`) return '';
+  return value;
+}
+
+function normalizeDestinationsDisplay(
+  values: string[],
+  placeholder: string,
+): string[] {
+  return values.map((value, index) => normalizeDestinationDisplay(value, index, placeholder));
+}
 
 export function LadderGameTab(props: LadderGameTabProps) {
   const { userId, members, translations: t, formatText, mode } = props;
@@ -94,8 +115,10 @@ export function LadderGameTab(props: LadderGameTabProps) {
   const [participantIds, setParticipantIds] = useState<string[]>(
     mpConfig?.participantIds ?? ['', ''],
   );
-  const [destinations, setDestinations] = useState<string[]>(
-    mpConfig?.destinations ?? ['', ''],
+  const [destinations, setDestinations] = useState<string[]>(() =>
+    mpConfig?.destinations
+      ? normalizeDestinationsDisplay(mpConfig.destinations, t.ladder_destination_ph)
+      : ['', ''],
   );
   const [displayRungs, setDisplayRungs] = useState<LadderRung[]>([]);
   const [isRevealing, setIsRevealing] = useState(false);
@@ -105,20 +128,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   const configDestinationsKey = mpConfig?.destinations.join('|') ?? '';
   const configParticipantIdsKey = mpConfig?.participantIds.join('|') ?? '';
-  const destinationsEditTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!mpConfig) return;
-    setParticipantIds((prev) => {
-      const next = mpConfig.participantIds;
-      return prev.join('|') === next.join('|') ? prev : next;
-    });
-    setDestinations((prev) => {
-      const next = mpConfig.destinations;
-      return prev.join('|') === next.join('|') ? prev : next;
-    });
-  }, [configParticipantIdsKey, configDestinationsKey, mpConfig]);
-
+  const destinationsRef = useRef(destinations);
   const userRungs = mpConfig?.userRungs ?? [];
   const finalRungs = mpConfig?.finalRungs ?? [];
   const mpPhase =
@@ -129,6 +139,33 @@ export function LadderGameTab(props: LadderGameTabProps) {
         : mpSession?.status === 'config' && mpSession?.phase !== 'lobby'
           ? 'config'
           : 'config';
+
+  useEffect(() => {
+    destinationsRef.current = destinations;
+  }, [destinations]);
+
+  useEffect(() => {
+    if (!mpConfig) return;
+    setParticipantIds((prev) => {
+      const next = mpConfig.participantIds;
+      return prev.join('|') === next.join('|') ? prev : next;
+    });
+  }, [configParticipantIdsKey, mpConfig]);
+
+  useEffect(() => {
+    if (!mpConfig) return;
+    if (mpPhase === 'config') {
+      setDestinations((prev) => {
+        if (prev.length === mpConfig.destinations.length) return prev;
+        return normalizeDestinationsDisplay(mpConfig.destinations, t.ladder_destination_ph);
+      });
+      return;
+    }
+    setDestinations((prev) => {
+      const next = mpConfig.destinations;
+      return prev.join('|') === next.join('|') ? prev : next;
+    });
+  }, [configDestinationsKey, mpConfig, mpPhase, t.ladder_destination_ph]);
 
   useEffect(() => {
     if (!isMultiplayer || mpPhase !== 'result' || finalRungs.length === 0) return;
@@ -245,34 +282,17 @@ export function LadderGameTab(props: LadderGameTabProps) {
   };
 
   const updateDestination = (index: number, value: string) => {
-    setDestinations((prev) => {
-      const next = prev.map((d, i) => (i === index ? value : d));
-      if (mode === 'multiplayer') {
-        if (props.isHost) {
-          if (destinationsEditTimerRef.current) {
-            clearTimeout(destinationsEditTimerRef.current);
-          }
-          destinationsEditTimerRef.current = setTimeout(() => {
-            props
-              .onAction({ type: 'update_ladder_config', destinations: next })
-              .catch(console.error);
-          }, 280);
-        } else if (myParticipant?.slot_index === index) {
-          props.onAction({ type: 'update_own_destination', destination: value }).catch(console.error);
-        }
-      }
-      return next;
-    });
+    setDestinations((prev) => prev.map((d, i) => (i === index ? value : d)));
   };
 
-  useEffect(
-    () => () => {
-      if (destinationsEditTimerRef.current) {
-        clearTimeout(destinationsEditTimerRef.current);
-      }
-    },
-    [],
-  );
+  const handleDestinationBlur = (index: number) => {
+    if (mode !== 'multiplayer' || props.isHost || mpPhase !== 'config') return;
+    if (myParticipant?.slot_index !== index) return;
+    const value = destinationsRef.current[index]?.trim() ?? '';
+    props
+      .onAction({ type: 'submit_ladder_setup_destination', destination: value })
+      .catch(console.error);
+  };
 
   const addPair = () => {
     if (mode !== 'multiplayer' || !props.isHost || mpPhase !== 'draw') return;
@@ -348,7 +368,12 @@ export function LadderGameTab(props: LadderGameTabProps) {
 
   const beginDrawPhase = () => {
     if (mode !== 'multiplayer' || !props.isHost) return;
-    props.onAction({ type: 'host_begin_draw' }).catch(console.error);
+    props
+      .onAction({
+        type: 'host_begin_draw',
+        destinations: destinationsRef.current.map((d) => d.trim()),
+      })
+      .catch(console.error);
   };
 
   const handleRungClick = (leftLane: number, row: number) => {
@@ -397,6 +422,7 @@ export function LadderGameTab(props: LadderGameTabProps) {
                   key={`d-${index}`}
                   value={value}
                   onChange={(e) => updateDestination(index, e.target.value)}
+                  onBlur={() => handleDestinationBlur(index)}
                   placeholder={t.ladder_destination_ph}
                   disabled={!canEdit}
                   className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-[#1e293b] outline-none focus:border-indigo-400 disabled:opacity-60"

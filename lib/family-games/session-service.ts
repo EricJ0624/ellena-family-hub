@@ -420,7 +420,7 @@ async function handleLobbyAction(
     }
 
     if (session.game_type === 'ladder') {
-      const destinations = participantIds.map((_, i) => `Result ${i + 1}`);
+      const destinations = participantIds.map(() => '');
       await updateSession(supabase, session.id, {
         phase: 'setup',
         config: {
@@ -535,7 +535,6 @@ async function handleLadderAction(
     const isLaneChange = Boolean(action.addLane || action.removeLane);
 
     if (isLaneChange && !isDraw) throw new Error('FORBIDDEN');
-    if (action.destinations && !isConfig) throw new Error('FORBIDDEN');
     if (action.participantIds && !isConfig && !isDraw) throw new Error('FORBIDDEN');
 
     let participantIds = [...config.participantIds];
@@ -544,15 +543,12 @@ async function handleLadderAction(
 
     if (action.participantIds) {
       participantIds = action.participantIds;
-      destinations = participantIds.map((_, i) => destinations[i] ?? `Result ${i + 1}`);
-    }
-    if (action.destinations) {
-      destinations = action.destinations;
+      destinations = participantIds.map((_, i) => destinations[i] ?? '');
     }
     if (action.addLane) {
       if (participantIds.length >= LADDER_MAX_LANES) throw new Error('MAX_LANES');
       participantIds.push('');
-      destinations.push(`Result ${participantIds.length}`);
+      destinations.push('');
     }
     if (action.removeLane) {
       if (participantIds.length <= LADDER_MIN_LANES) throw new Error('MIN_LANES');
@@ -588,20 +584,14 @@ async function handleLadderAction(
     return;
   }
 
-  if (action.type === 'update_own_destination') {
+  if (action.type === 'submit_ladder_setup_destination') {
     if (session.status !== 'config' || session.phase === 'lobby') throw new Error('FORBIDDEN');
-    const slotIndex = participants.find((p) => p.user_id === userId)?.slot_index;
-    if (slotIndex === undefined) throw new Error('NOT_A_PARTICIPANT');
-    const destinations = [...config.destinations];
-    destinations[slotIndex] = action.destination.trim();
-    await updateSession(supabase, session.id, {
-      config: { ...config, destinations },
-      updated_at: now,
-    });
+    const participant = participants.find((p) => p.user_id === userId);
+    if (!participant) throw new Error('NOT_A_PARTICIPANT');
     await supabase
       .from('family_game_participants')
       .update({
-        payload: { destination: action.destination.trim() },
+        payload: { setupDestination: action.destination.trim() },
         updated_at: now,
       })
       .eq('session_id', session.id)
@@ -617,9 +607,17 @@ async function handleLadderAction(
       config.participantIds.every((id) => id.trim()) &&
       new Set(config.participantIds).size === config.participantIds.length;
     if (!idsOk || config.participantIds.length < LADDER_MIN_LANES) throw new Error('INVALID_CONFIG');
-    const destinations = config.destinations.map((d, i) =>
-      d.trim() ? d.trim() : `Result ${i + 1}`,
-    );
+    const hostDestinations = action.destinations ?? config.destinations;
+    const destinations = config.participantIds.map((pid, i) => {
+      const participant = participants.find((p) => p.user_id === pid);
+      const setupDestination = (
+        participant?.payload as { setupDestination?: string } | undefined
+      )?.setupDestination?.trim();
+      if (setupDestination) return setupDestination;
+      const hostValue = hostDestinations[i]?.trim();
+      if (hostValue) return hostValue;
+      return `Result ${i + 1}`;
+    });
     await updateSession(supabase, session.id, {
       status: 'active',
       phase: 'draw',
