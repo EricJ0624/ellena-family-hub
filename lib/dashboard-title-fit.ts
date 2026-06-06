@@ -14,6 +14,13 @@ export function measureTextWidthPx(
   return ctx.measureText(text).width;
 }
 
+/** 커스텀 가족 이름 타이틀 — app_title clamp 최솟값(33~40px)과 별도 */
+export const CUSTOM_TITLE_FONT_MIN_PX = 14;
+export const CUSTOM_TITLE_FONT_MAX_PX = {
+  admin: 36,
+  user: 48,
+} as const;
+
 export function fitFontSizeToWidth(
   text: string,
   maxWidthPx: number,
@@ -23,9 +30,6 @@ export function fitFontSizeToWidth(
   fontWeight: string | number,
 ): number {
   if (!text || maxWidthPx <= 0) return maxPx;
-  if (measureTextWidthPx(text, minPx, fontFamily, fontWeight) <= maxWidthPx) {
-    return minPx;
-  }
   for (let size = maxPx; size >= minPx; size -= 1) {
     if (measureTextWidthPx(text, size, fontFamily, fontWeight) <= maxWidthPx) {
       return size;
@@ -34,7 +38,7 @@ export function fitFontSizeToWidth(
   return minPx;
 }
 
-/** 관리자(⚙️ 버튼 있음) vs 일반 사용자 대시보드 타이틀 가용 폭 */
+/** 관리자(⚙️ 버튼 있음) vs 일반 사용자 대시보드 타이틀 가용 폭 (fallback) */
 export const DASHBOARD_TITLE_MAX_WIDTH = {
   admin: 262,
   user: 350,

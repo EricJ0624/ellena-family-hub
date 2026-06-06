@@ -10,7 +10,7 @@ import {
   FRAME_CONFIGS,
   BAROQUE_FRAME_INSET_CLASS,
   BaroqueMatCaptionOverlay,
-  formatBaroqueMatCaption,
+  formatBaroqueMatName,
   type FrameStyle,
 } from './PhotoFrames';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -203,10 +203,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     frameStyle === 'no_frame';
   const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
 
-  const baroqueMatCaption = useMemo(() => {
+  const baroqueMatDisplayName = useMemo(() => {
     if (frameStyle !== 'baroque') return null;
-    const caption = formatBaroqueMatCaption(groupCaptionName ?? '');
-    return caption || null;
+    const name = formatBaroqueMatName(groupCaptionName ?? '');
+    return name || null;
   }, [frameStyle, groupCaptionName]);
   
   useEffect(() => {
@@ -301,8 +301,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
           </div>
         </div>
 
-        {baroqueMatCaption ? (
-          <BaroqueMatCaptionOverlay caption={baroqueMatCaption} />
+        {baroqueMatDisplayName ? (
+          <BaroqueMatCaptionOverlay displayName={groupCaptionName ?? ''} />
         ) : null}
 
         {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}

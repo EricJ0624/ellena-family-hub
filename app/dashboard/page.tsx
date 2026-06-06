@@ -3,7 +3,7 @@
 // 동적 렌더링 강제 (GroupProvider 의존성 때문에)
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -28,7 +28,7 @@ import {
   getGroupDisplayNameRaw,
   shouldUseDefaultDashboardTitleStyle,
 } from '@/lib/group-display-name';
-import { DASHBOARD_TITLE_MAX_WIDTH, fitFontSizeToWidth } from '@/lib/dashboard-title-fit';
+import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, CUSTOM_TITLE_FONT_MAX_PX } from '@/lib/dashboard-title-fit';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
@@ -1412,31 +1412,56 @@ export default function FamilyHub() {
   const titleRole = isAdminTitleContext ? 'admin' : 'user';
   const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
   const titleVw = isAdminTitleContext ? 7 : 9;
-  const customTitleFontSize = useMemo(() => {
-    if (isDefaultDashboardTitle) return null;
-    const maxWidth = isAdminTitleContext
-      ? DASHBOARD_TITLE_MAX_WIDTH.admin
-      : DASHBOARD_TITLE_MAX_WIDTH.user;
-    const maxPx = customFontSizeCap ?? (isAdminTitleContext ? 42 : 68);
-    return fitFontSizeToWidth(
+  const titleRowRef = useRef<HTMLDivElement>(null);
+  const [customTitleFontSize, setCustomTitleFontSize] = useState<number | null>(null);
+
+  const measureCustomTitleFontSize = useCallback(() => {
+    if (isDefaultDashboardTitle || !titleRowRef.current) {
+      setCustomTitleFontSize(null);
+      return;
+    }
+    const row = titleRowRef.current;
+    const adminBtn = row.querySelector('button');
+    const gap = 12;
+    const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + gap : 0;
+    const maxWidth = Math.max(120, row.clientWidth - btnWidth - 4);
+    const maxPx = customFontSizeCap ?? CUSTOM_TITLE_FONT_MAX_PX[titleRole];
+    const fontFamily = effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily;
+    const fontWeight = effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight;
+    const fitted = fitFontSizeToWidth(
       dashboardTitleText,
       maxWidth,
-      titleFontMin,
+      CUSTOM_TITLE_FONT_MIN_PX,
       maxPx,
-      effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily,
-      effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight,
+      fontFamily,
+      fontWeight,
     );
+    setCustomTitleFontSize(fitted);
   }, [
     isDefaultDashboardTitle,
     dashboardTitleText,
-    isAdminTitleContext,
     customFontSizeCap,
-    titleFontMin,
+    titleRole,
     effectiveTitleStyle?.fontFamily,
     effectiveTitleStyle?.fontWeight,
     titleFont.fontFamily,
     titleFont.fontWeight,
   ]);
+
+  useLayoutEffect(() => {
+    measureCustomTitleFontSize();
+    const row = titleRowRef.current;
+    if (!row) return;
+    const ro = new ResizeObserver(() => measureCustomTitleFontSize());
+    ro.observe(row);
+    const onFonts = () => measureCustomTitleFontSize();
+    document.fonts?.addEventListener?.('loadingdone', onFonts);
+    void document.fonts?.ready?.then(onFonts);
+    return () => {
+      ro.disconnect();
+      document.fonts?.removeEventListener?.('loadingdone', onFonts);
+    };
+  }, [measureCustomTitleFontSize]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;
@@ -5401,9 +5426,9 @@ export default function FamilyHub() {
     overflowY: 'visible',
     textOverflow: 'clip',
     fontSize: titleFontSizeValue,
-    fontWeight: titleFont.fontWeight,
+    fontWeight: effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight,
     letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
-    fontFamily: titleFont.fontFamily,
+    fontFamily: effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily,
     ...(isDefaultDashboardTitle
       ? {
           background: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
@@ -5972,6 +5997,7 @@ export default function FamilyHub() {
 
         {/* 타이틀 + 관리자 버튼 한 줄 (공지사항 아래, 타이틀 왼쪽 / 관리자 오른쪽) */}
         <div
+          ref={titleRowRef}
           className="box-border flex min-h-12 w-full min-w-0 max-w-full items-center gap-3 px-1"
         >
           <h1

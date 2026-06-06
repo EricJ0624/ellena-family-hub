@@ -35,16 +35,37 @@ export const BAROQUE_GOLD_LANDSCAPE_SRC =
 /** baroque-gold-landscape.png viewBox (크롭 후) */
 const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
 
-export function formatBaroqueMatCaption(displayName: string): string {
+export function formatBaroqueMatName(displayName: string): string {
   const name = displayName.trim();
   if (!name) return '';
-  const year = new Date().getFullYear();
-  const upper = name.toUpperCase();
-  if (/\bFAMILY\b/.test(upper)) {
-    return `${upper} - GATHERING, ${year}`;
+  let upper = name.toUpperCase();
+  if (upper.endsWith(' FAMILY')) {
+    upper = upper.slice(0, -7).trimEnd();
   }
-  return `${upper} FAMILY - GATHERING, ${year}`;
+  return upper;
 }
+
+/** @deprecated PNG에 FAMILY·GATHERING이 박혀 있으면 formatBaroqueMatName 사용 */
+export function formatBaroqueMatCaption(displayName: string): string {
+  const name = formatBaroqueMatName(displayName);
+  if (!name) return '';
+  const year = new Date().getFullYear();
+  if (/\bFAMILY\b/i.test(displayName)) {
+    return `${name} - GATHERING, ${year}`;
+  }
+  return `${name} FAMILY - GATHERING, ${year}`;
+}
+
+/** viewBox(970) 기준 매트 이름 fontSize — 길이에 따라 축소 */
+function baroqueMatNameFontSize(nameLength: number): number {
+  if (nameLength > 24) return 24;
+  if (nameLength > 18) return 28;
+  if (nameLength > 14) return 32;
+  return 36;
+}
+
+const BAROQUE_MAT_NAME = { x: 118, y: 702 } as const;
+const BAROQUE_MAT_YEAR = { x: 748, y: 702 } as const;
 
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
@@ -121,8 +142,13 @@ const BaroqueFrame: React.FC<{ color: string; uid: string }> = () => (
   />
 );
 
-/** 바로크 매트 캡션 — PNG viewBox와 동일 좌표, 사진 레이어 위에 올림 */
-export function BaroqueMatCaptionOverlay({ caption }: { caption: string }) {
+/** 바로크 매트 캡션 — PNG viewBox와 동일 좌표, 이름·연도만 오버레이 (FAMILY-GATHERING는 PNG) */
+export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string }) {
+  const name = formatBaroqueMatName(displayName);
+  if (!name) return null;
+  const year = String(new Date().getFullYear());
+  const nameFontSize = baroqueMatNameFontSize(name.length);
+
   return (
     <svg
       viewBox={`0 0 ${BAROQUE_FRAME_VIEWBOX.width} ${BAROQUE_FRAME_VIEWBOX.height}`}
@@ -131,14 +157,28 @@ export function BaroqueMatCaptionOverlay({ caption }: { caption: string }) {
       aria-hidden
     >
       <text
-        x="124"
-        y="700"
-        fill="#3d3832"
-        fontSize="14"
+        x={BAROQUE_MAT_NAME.x}
+        y={BAROQUE_MAT_NAME.y}
+        fill="#2c2824"
+        fontSize={nameFontSize}
         fontFamily="Arial, Helvetica, sans-serif"
-        letterSpacing="1.4"
+        fontWeight="600"
+        letterSpacing="1.2"
+        textAnchor="start"
       >
-        {caption}
+        {name}
+      </text>
+      <text
+        x={BAROQUE_MAT_YEAR.x}
+        y={BAROQUE_MAT_YEAR.y}
+        fill="#2c2824"
+        fontSize={nameFontSize}
+        fontFamily="Arial, Helvetica, sans-serif"
+        fontWeight="600"
+        letterSpacing="1.2"
+        textAnchor="start"
+      >
+        {year}
       </text>
     </svg>
   );
