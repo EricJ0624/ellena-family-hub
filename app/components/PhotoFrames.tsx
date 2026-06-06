@@ -4,6 +4,7 @@ import React from 'react';
 import {
   BAROQUE_MAT_LAYOUT,
   baroqueMatFontSizeForName,
+  baroqueMatFontSizeForYear,
 } from '@/lib/baroque-mat-layout';
 
 // 프레임 스타일 타입 정의
@@ -151,7 +152,8 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
   if (!name) return null;
   const year = String(new Date().getFullYear());
   const { baselineY, nameX, yearX, typography } = BAROQUE_MAT_LAYOUT;
-  const fontSize = baroqueMatFontSizeForName(name.length);
+  const nameFontSize = baroqueMatFontSizeForName(name.length);
+  const yearFontSize = baroqueMatFontSizeForYear();
 
   return (
     <svg
@@ -164,7 +166,7 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
         x={nameX}
         y={baselineY}
         fill={typography.fill}
-        fontSize={fontSize}
+        fontSize={nameFontSize}
         fontFamily={typography.fontFamily}
         fontWeight={typography.fontWeight}
         letterSpacing={typography.letterSpacing}
@@ -177,7 +179,7 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
         x={yearX}
         y={baselineY}
         fill={typography.fill}
-        fontSize={fontSize}
+        fontSize={yearFontSize}
         fontFamily={typography.fontFamily}
         fontWeight={typography.fontWeight}
         letterSpacing={typography.letterSpacing}

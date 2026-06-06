@@ -9,29 +9,35 @@ export const BAROQUE_MAT_LAYOUT = {
   viewBox: { width: 970, height: 803 },
   /** 매트 캡션 baseline (y 클수록 아래) */
   baselineY: 652,
-  /** 이름 시작 (BIG TUMMY 등) — PNG FAMILY 왼쪽 */
-  nameX: 148,
+  /** 이름 시작 — PNG "FAMILY" 바로 왼쪽 (오른쪽으로 갈수록 x 증가) */
+  nameX: 272,
   /**
    * 연도 시작 x — PNG "GATHERING," 쉼표 바로 다음 글자
-   * (The Collection 스크립트와 겹치면 이 값을 줄이세요)
    */
   yearX: 576,
+  /** PNG 매트 "FAMILY - GATHERING," 와 동일 크기 — 이름·연도 공통 */
   fontSize: {
-    short: 20,
-    medium: 19,
-    long: 18,
+    mat: 18,
+    /** 이름이 매우 길 때만 1px 축소 */
+    longName: 17,
   },
+  /** PNG 매트 sans (Futura 계열) — Montserrat는 layout.tsx에서 이미 로드됨 */
   typography: {
-    fill: '#9a948c',
-    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-    fontWeight: 300,
-    letterSpacing: 2,
+    fill: '#a8a39c',
+    fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
+    fontWeight: 500,
+    letterSpacing: 1.8,
   },
 } as const;
 
+/** 이름·연도 동일 fontSize — PNG baked 텍스트와 맞춤 */
 export function baroqueMatFontSizeForName(nameLength: number): number {
   const { fontSize } = BAROQUE_MAT_LAYOUT;
-  if (nameLength > 18) return fontSize.long;
-  if (nameLength > 12) return fontSize.medium;
-  return fontSize.short;
+  if (nameLength > 20) return fontSize.longName;
+  return fontSize.mat;
+}
+
+/** 연도는 항상 mat 기본 크기 */
+export function baroqueMatFontSizeForYear(): number {
+  return BAROQUE_MAT_LAYOUT.fontSize.mat;
 }
