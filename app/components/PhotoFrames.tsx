@@ -35,10 +35,15 @@ export const BAROQUE_GOLD_LANDSCAPE_SRC =
 /** baroque-gold-landscape.png viewBox (크롭 후) */
 const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
 
-export function formatBaroqueMatCaption(groupName: string): string {
-  const name = groupName.trim();
+export function formatBaroqueMatCaption(displayName: string): string {
+  const name = displayName.trim();
   if (!name) return '';
-  return `${name.toUpperCase()} FAMILY - GATHERING, ${new Date().getFullYear()}`;
+  const year = new Date().getFullYear();
+  const upper = name.toUpperCase();
+  if (/\bFAMILY\b/.test(upper)) {
+    return `${upper} - GATHERING, ${year}`;
+  }
+  return `${upper} FAMILY - GATHERING, ${year}`;
 }
 
 // 프레임 설정 목록

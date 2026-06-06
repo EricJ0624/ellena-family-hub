@@ -32,6 +32,7 @@ export interface Database {
           preferred_language: string | null
           piggy_currency: string
           ui_theme: 'default' | 'stable_glass' | 'highend_glass'
+          display_name_pending: boolean
         }
         Insert: {
           id?: string
@@ -48,6 +49,7 @@ export interface Database {
           preferred_language?: string | null
           piggy_currency?: string
           ui_theme?: 'default' | 'stable_glass' | 'highend_glass'
+          display_name_pending?: boolean
         }
         Update: {
           id?: string
@@ -64,6 +66,7 @@ export interface Database {
           preferred_language?: string | null
           piggy_currency?: string
           ui_theme?: 'default' | 'stable_glass' | 'highend_glass'
+          display_name_pending?: boolean
         }
         Relationships: [
           {

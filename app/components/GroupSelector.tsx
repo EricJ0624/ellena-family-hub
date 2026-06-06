@@ -8,6 +8,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import type { LangCode } from '@/lib/language-fonts';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
@@ -24,7 +25,7 @@ const GroupSelector: React.FC = () => {
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
   const { lang, setLanguage } = useLanguage();
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
-  const ct = (key: 'loading' | 'close' | 'cancel' | 'save' | 'skip') => getCommonTranslation(lang, key);
+  const ct = (key: 'loading' | 'close' | 'cancel' | 'save' | 'skip' | 'app_title') => getCommonTranslation(lang, key);
   const [isOpen, setIsOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -47,8 +48,8 @@ const GroupSelector: React.FC = () => {
   };
 
   // 그룹 생성
-  const handleCreateGroup = async () => {
-    if (!groupName.trim()) {
+  const handleCreateGroup = async (decideLater = false) => {
+    if (!decideLater && !groupName.trim()) {
       setError(ot('error_group_name_required'));
       return;
     }
@@ -77,9 +78,10 @@ const GroupSelector: React.FC = () => {
 
       // 그룹 생성 (RPC 함수 사용)
       const { data: groupId, error: createError } = await supabase.rpc('create_group', {
-        group_name: groupName.trim(),
+        group_name: decideLater ? '' : groupName.trim(),
         invite_code_param: inviteCodeData,
         owner_id_param: user.id,
+        display_name_pending_param: decideLater,
       });
 
       if (createError) throw createError;
@@ -343,7 +345,7 @@ const GroupSelector: React.FC = () => {
                         {ct('cancel')}
                       </button>
                       <button
-                        onClick={handleCreateGroup}
+                        onClick={() => handleCreateGroup()}
                         disabled={creating || !groupName.trim()}
                         className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
@@ -357,6 +359,14 @@ const GroupSelector: React.FC = () => {
                         )}
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateGroup(true)}
+                      disabled={creating}
+                      className="w-full pt-1 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {ot('decide_later_btn')}
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -609,7 +619,7 @@ const GroupSelector: React.FC = () => {
       >
         <Users className="w-4 h-4 text-gray-500" />
         <span className="flex-1 text-left font-medium text-gray-900">
-          {currentGroup?.name || ot('select_group')}
+          {getGroupSelectorLabel(currentGroup, ct('app_title')) || ot('select_group')}
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -644,7 +654,7 @@ const GroupSelector: React.FC = () => {
                   role="option"
                   aria-selected={currentGroupId === group.id}
                 >
-                  <div className="font-medium">{group.name}</div>
+                  <div className="font-medium">{getGroupSelectorLabel(group, ct('app_title'))}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-gray-500 font-mono">
                       {group.invite_code}
@@ -803,7 +813,7 @@ const GroupSelector: React.FC = () => {
                         {ct('cancel')}
                       </button>
                       <button
-                        onClick={handleCreateGroup}
+                        onClick={() => handleCreateGroup()}
                         disabled={creating || !groupName.trim()}
                         className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
@@ -817,6 +827,14 @@ const GroupSelector: React.FC = () => {
                         )}
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateGroup(true)}
+                      disabled={creating}
+                      className="w-full pt-1 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {ot('decide_later_btn')}
+                    </button>
                   </div>
                 </div>
               </motion.div>

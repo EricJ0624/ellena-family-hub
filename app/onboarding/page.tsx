@@ -13,6 +13,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { normalizeGroupIdFromRpc, isValidUUID } from '@/lib/validation';
 import {
   clearSessionStoredInviteCode,
@@ -60,6 +61,7 @@ interface UserGroup {
   invite_code: string;
   is_owner: boolean;
   role: 'ADMIN' | 'MEMBER';
+  display_name_pending?: boolean;
 }
 
 export default function OnboardingPage() {
@@ -77,13 +79,14 @@ export default function OnboardingPage() {
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
     getMemberManagementTranslation(lang, key);
-  const ct = (key: 'save' | 'close' | 'cancel' | 'skip') => getCommonTranslation(lang, key);
+  const ct = (key: 'save' | 'close' | 'cancel' | 'skip' | 'app_title') => getCommonTranslation(lang, key);
 
   const setAppLanguage = (code: LangCode) => {
     void setLanguage(code, { updateCurrentGroup: false });
   };
   const [creating, setCreating] = useState(false);
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
+  const [createdWithPendingName, setCreatedWithPendingName] = useState(false);
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
   const [inviteCodeConfirmed, setInviteCodeConfirmed] = useState(false);
   
@@ -166,13 +169,13 @@ export default function OnboardingPage() {
         // 사용자의 모든 그룹 조회
         const { data: memberships } = await supabase
           .from('memberships')
-          .select('group_id, role, groups(id, name, invite_code, owner_id)')
+          .select('group_id, role, groups(id, name, invite_code, owner_id, display_name_pending)')
           .eq('user_id', user.id);
 
         // 그룹 소유자 확인
         const { data: ownedGroups } = await supabase
           .from('groups')
-          .select('id, name, invite_code, owner_id')
+          .select('id, name, invite_code, owner_id, display_name_pending')
           .eq('owner_id', user.id);
 
         // 모든 그룹 합치기 (중복 제거)
@@ -190,6 +193,7 @@ export default function OnboardingPage() {
                 invite_code: group.invite_code,
                 is_owner: true,
                 role: 'ADMIN',
+                display_name_pending: group.display_name_pending ?? false,
               });
             }
           });
@@ -207,6 +211,7 @@ export default function OnboardingPage() {
                 invite_code: group.invite_code,
                 is_owner: group.owner_id === user.id,
                 role: membership.role,
+                display_name_pending: group.display_name_pending ?? false,
               });
             }
           });
@@ -309,8 +314,8 @@ export default function OnboardingPage() {
   }, [router]);
 
   // 그룹 생성
-  const handleCreateGroup = async () => {
-    if (!groupName.trim()) {
+  const handleCreateGroup = async (decideLater = false) => {
+    if (!decideLater && !groupName.trim()) {
       setError(ot('error_group_name_required'));
       return;
     }
@@ -318,6 +323,7 @@ export default function OnboardingPage() {
     setCreating(true);
     setError(null);
     setSuccess(null);
+    setCreatedWithPendingName(decideLater);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -355,9 +361,10 @@ export default function OnboardingPage() {
 
       // 그룹 생성 (RPC 함수 사용)
       const { data: groupId, error: createError } = await supabase.rpc('create_group', {
-        group_name: groupName.trim(),
+        group_name: decideLater ? '' : groupName.trim(),
         invite_code_param: inviteCode,
         owner_id_param: user.id,
+        display_name_pending_param: decideLater,
       });
 
       if (createError) throw createError;
@@ -777,7 +784,9 @@ export default function OnboardingPage() {
                   <div className="text-center">
                     <div className="mb-4 text-[64px]">🎉</div>
                     <h3 className="m-0 mb-4 text-xl font-bold text-slate-900">
-                      {ot('group_created_heading').replace(/\{name\}/g, groupName)}
+                      {createdWithPendingName
+                        ? ot('group_created_heading_pending')
+                        : ot('group_created_heading').replace(/\{name\}/g, groupName)}
                     </h3>
                     
                     {/* 초대 코드 표시 */}
@@ -900,7 +909,7 @@ export default function OnboardingPage() {
 
                     {/* 생성 버튼 */}
                     <button
-                      onClick={handleCreateGroup}
+                      onClick={() => handleCreateGroup()}
                       disabled={creating || !groupName.trim()}
                       className={`flex w-full items-center justify-center gap-2 rounded-xl border-none px-6 py-3.5 text-base font-semibold text-white transition-all duration-300 ease-in-out ${
                         creating || !groupName.trim()
@@ -919,6 +928,14 @@ export default function OnboardingPage() {
                           <ArrowRight className="h-[18px] w-[18px]" />
                         </>
                       )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateGroup(true)}
+                      disabled={creating}
+                      className="mt-3 w-full text-sm text-slate-500 transition-colors hover:text-slate-700 disabled:opacity-50"
+                    >
+                      {ot('decide_later_btn')}
                     </button>
                   </>
                 )}
@@ -1227,7 +1244,7 @@ export default function OnboardingPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="mb-1 text-base font-semibold text-slate-800">
-                          {group.name}
+                          {getGroupSelectorLabel(group, ct('app_title'))}
                         </div>
                         <div className="text-xs text-slate-500">
                           <span>{group.is_owner ? ot('role_owner') : group.role === 'ADMIN' ? ot('role_admin') : ot('role_member')}</span>

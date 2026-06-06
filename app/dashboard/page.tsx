@@ -21,7 +21,14 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle } from '@/lib/language-fonts';
-import { getCommonTranslation, isDefaultAppTitleText, type CommonTranslations } from '@/lib/translations/common';
+import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
+import {
+  getDashboardTitleText,
+  getFrameCaptionName,
+  getGroupDisplayNameRaw,
+  shouldUseDefaultDashboardTitleStyle,
+} from '@/lib/group-display-name';
+import { DASHBOARD_TITLE_MAX_WIDTH, fitFontSizeToWidth } from '@/lib/dashboard-title-fit';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
@@ -231,7 +238,7 @@ export default function FamilyHub() {
   let setCurrentGroupId: ((groupId: string | null) => void) | null = null;
   let refreshGroups: (() => Promise<void>) | null = null;
   let refreshMemberships: (() => Promise<void>) | null = null;
-  let currentGroup: { family_name?: string | null; title_style?: unknown; piggy_currency?: string } | null = null;
+  let currentGroup: import('@/types/db').Group | null = null;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
@@ -1365,18 +1372,14 @@ export default function FamilyHub() {
     }
   }, [state.titleStyle, state.familyName]);
 
-  // 그룹에 저장된 title_style이 있으면 우선 사용, 없으면 state/기본값
+  // 그룹에 저장된 title_style(스타일만) — 표시 문구는 groups.name SSOT
   const effectiveTitleStyle = useMemo((): Partial<TitleStyle> => {
     const raw = currentGroup?.title_style;
+    const displayContent = getGroupDisplayNameRaw(currentGroup) ?? state.familyName ?? ct('app_title');
     if (raw && typeof raw === 'object' && 'color' in (raw as object)) {
       const o = raw as Record<string, unknown>;
-      const content = (typeof o.content === 'string' ? o.content : null)
-        ?? currentGroup?.family_name?.trim()
-        ?? state.familyName
-        ?? titleStyle?.content
-        ?? ct('app_title');
       return {
-        content,
+        content: displayContent,
         color: typeof o.color === 'string' ? o.color : '#9333ea',
         fontSize: typeof o.fontSize === 'number' ? o.fontSize : 48,
         fontWeight: typeof o.fontWeight === 'string' ? o.fontWeight : '700',
@@ -1387,15 +1390,13 @@ export default function FamilyHub() {
     return {
       ...INITIAL_STATE.titleStyle,
       ...titleStyle,
-      content: currentGroup?.family_name?.trim() || state.familyName || titleStyle?.content || ct('app_title'),
+      content: displayContent,
     };
-  }, [currentGroup?.title_style, currentGroup?.family_name, state.familyName, titleStyle, ct]);
+  }, [currentGroup, state.familyName, titleStyle, ct]);
 
-  const rawDashboardTitle =
-    effectiveTitleStyle?.content || currentGroup?.family_name?.trim() || state.familyName || ct('app_title');
-  // 그룹에 저장된 기본 타이틀이 다른 언어(예: 영문)로만 저장된 경우에도 현재 UI 언어로 표시
-  const dashboardTitleText = isDefaultAppTitleText(rawDashboardTitle) ? ct('app_title') : rawDashboardTitle;
-  const isDefaultDashboardTitle = isDefaultAppTitleText(rawDashboardTitle);
+  const dashboardTitleText = getDashboardTitleText(currentGroup, ct('app_title'));
+  const isDefaultDashboardTitle = shouldUseDefaultDashboardTitleStyle(currentGroup);
+  const frameCaptionName = getFrameCaptionName(currentGroup);
   // 가용 폭: main-content 패딩(16px×2) + 행 px-1(4px×2) + 버튼(76px) + gap(12px)
   //   → iPhone 14(390px) 관리자 262px / 일반 사용자 350px 기준
   // 언어별 타이틀 폭 인수 (폰트: en=Inter, ko=Pretendard, ja=Pretendard JP, zh=Noto Sans SC/TC)
@@ -1411,6 +1412,31 @@ export default function FamilyHub() {
   const titleRole = isAdminTitleContext ? 'admin' : 'user';
   const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
   const titleVw = isAdminTitleContext ? 7 : 9;
+  const customTitleFontSize = useMemo(() => {
+    if (isDefaultDashboardTitle) return null;
+    const maxWidth = isAdminTitleContext
+      ? DASHBOARD_TITLE_MAX_WIDTH.admin
+      : DASHBOARD_TITLE_MAX_WIDTH.user;
+    const maxPx = customFontSizeCap ?? (isAdminTitleContext ? 42 : 68);
+    return fitFontSizeToWidth(
+      dashboardTitleText,
+      maxWidth,
+      titleFontMin,
+      maxPx,
+      effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily,
+      effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight,
+    );
+  }, [
+    isDefaultDashboardTitle,
+    dashboardTitleText,
+    isAdminTitleContext,
+    customFontSizeCap,
+    titleFontMin,
+    effectiveTitleStyle?.fontFamily,
+    effectiveTitleStyle?.fontWeight,
+    titleFont.fontFamily,
+    titleFont.fontWeight,
+  ]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;
@@ -5356,9 +5382,15 @@ export default function FamilyHub() {
   // web-preview portrait: 430px 프레임에서 vw가 PC 뷰포트 기준으로 계산되므로
   // clamp min(44px) < 실제 적정값(~42px) → clamp 자체를 우회하고 고정 42px 사용.
   // 계산 근거: h1 가용 폭 ≈ 262px, "A: B" 제목 전체 ~5.8em → 262/6.2≈42px이 안전 최댓값.
-  const titleFontSizeValue = (dashboardShell === 'web-preview' && previewOrientation === 'portrait')
-    ? `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`
-    : `clamp(${titleFontMin}px, ${titleVw}vw, ${customFontSizeCap ?? 68}px)`;
+  const titleFontSizeValue = (() => {
+    if (!isDefaultDashboardTitle && customTitleFontSize != null) {
+      return `${customTitleFontSize}px`;
+    }
+    if (dashboardShell === 'web-preview' && previewOrientation === 'portrait') {
+      return `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`;
+    }
+    return `clamp(${titleFontMin}px, ${titleVw}vw, ${customFontSizeCap ?? 68}px)`;
+  })();
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
     flex: '1 1 0%',
@@ -5945,7 +5977,11 @@ export default function FamilyHub() {
           <h1
             style={dashboardTitleStyle}
           >
-            <AppTitleContent title={dashboardTitleText} />
+            {isDefaultDashboardTitle ? (
+              <AppTitleContent title={dashboardTitleText} />
+            ) : (
+              dashboardTitleText
+            )}
           </h1>
           {isGroupLoading ? (
             <div
@@ -5968,7 +6004,8 @@ export default function FamilyHub() {
         {/* Header (사진 액자 항상 표시, 타이틀/배경 제거) */}
         <header className="app-header">
           <TitlePage 
-            title={currentGroup?.family_name?.trim() || state.familyName || ct('app_title')}
+            title={dashboardTitleText}
+            frameCaptionName={frameCaptionName}
             photos={stableAlbum}
             titleStyle={effectiveTitleStyle}
             onTitleStyleChange={(style) => {

@@ -6,6 +6,7 @@ export type GroupSettingsTranslations = {
   group_settings_title: string;
   group_name: string;
   group_name_placeholder: string;
+  family_name_hint: string;
   dashboard_title_label: string;
   dashboard_title_placeholder: string;
   dashboard_title_hint: string;
@@ -45,8 +46,9 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     select_group_first: '그룹을 선택해주세요.',
     admin_only: '그룹 설정은 관리자만 변경할 수 있습니다.',
     group_settings_title: '그룹 설정',
-    group_name: '그룹 이름',
-    group_name_placeholder: '그룹 이름을 입력하세요',
+    group_name: '가족 이름',
+    group_name_placeholder: '예: Big Tummy Family',
+    family_name_hint: '대시보드와 액자에 표시됩니다. 글자 크기는 화면에 맞게 자동 조정됩니다.',
     dashboard_title_label: '대시보드 타이틀',
     dashboard_title_placeholder: '예: Hearth (허쓰): 패밀리 헤이븐',
     dashboard_title_hint: '대시보드 상단에 표시되는 문구입니다. 글자 크기는 화면에 맞게 자동 조정됩니다.',
@@ -84,8 +86,9 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     select_group_first: 'Please select a group.',
     admin_only: 'Only group admins can change group settings.',
     group_settings_title: 'Group settings',
-    group_name: 'Group name',
-    group_name_placeholder: 'Enter group name',
+    group_name: 'Family name',
+    group_name_placeholder: 'e.g. Big Tummy Family',
+    family_name_hint: 'Shown on the dashboard and photo frame. Font size adjusts automatically.',
     dashboard_title_label: 'Dashboard title',
     dashboard_title_placeholder: 'e.g. Hearth: Family Haven',
     dashboard_title_hint: 'This text is shown at the top of the dashboard. Font size adjusts automatically.',
@@ -123,8 +126,9 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     select_group_first: 'グループを選択してください。',
     admin_only: 'グループ設定は管理者のみ変更できます。',
     group_settings_title: 'グループ設定',
-    group_name: 'グループ名',
-    group_name_placeholder: 'グループ名を入力',
+    group_name: 'ファミリー名',
+    group_name_placeholder: '例: Big Tummy Family',
+    family_name_hint: 'ダッシュボードとフォトフレームに表示されます。文字サイズは自動調整されます。',
     dashboard_title_label: 'ダッシュボードタイトル',
     dashboard_title_placeholder: '例: Hearth (ハース): ファミリーヘイブン',
     dashboard_title_hint: 'ダッシュボード上部に表示されます。文字サイズは自動調整されます。',
@@ -162,8 +166,9 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     select_group_first: '请先选择群组。',
     admin_only: '仅群组管理员可修改群组设置。',
     group_settings_title: '群组设置',
-    group_name: '群组名称',
-    group_name_placeholder: '请输入群组名称',
+    group_name: '家庭名称',
+    group_name_placeholder: '例如：Big Tummy Family',
+    family_name_hint: '显示在仪表盘与相框上。字号将自动调整。',
     dashboard_title_label: '仪表盘标题',
     dashboard_title_placeholder: '例如：Hearth (赫斯): 法米利·黑文',
     dashboard_title_hint: '显示在仪表盘顶部。字号将自动调整。',
@@ -201,8 +206,9 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     select_group_first: '請先選擇群組。',
     admin_only: '僅群組管理員可修改群組設定。',
     group_settings_title: '群組設定',
-    group_name: '群組名稱',
-    group_name_placeholder: '請輸入群組名稱',
+    group_name: '家庭名稱',
+    group_name_placeholder: '例如：Big Tummy Family',
+    family_name_hint: '顯示在儀表板與相框上。字型大小會自動調整。',
     dashboard_title_label: '儀表板標題',
     dashboard_title_placeholder: '例如：Hearth (赫斯): 法米利·黑文',
     dashboard_title_hint: '顯示在儀表板頂部。字型大小會自動調整。',

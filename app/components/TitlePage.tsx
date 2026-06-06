@@ -751,6 +751,8 @@ interface TitlePageProps {
   onTitleStyleChange?: (style: TitleStyle) => void;
   /** false면 타이틀 클릭 시 디자인 에디터 미표시 (읽기 전용) */
   editable?: boolean;
+  /** 액자 매트 캡션 (대시보드 타이틀과 별도 — pending 시 Hearth) */
+  frameCaptionName?: string;
   /** false면 타이틀 텍스트 미표시 (대시보드에서 한 줄 타이틀을 별도 사용할 때) */
   showTitle?: boolean;
   /** true면 배경 그라데이션/패턴 제거 (투명) */
@@ -772,6 +774,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
   noBackground = false,
   onFrameClick,
   frameStyleStorageScope,
+  frameCaptionName,
 }) => {
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
@@ -900,7 +903,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
           frameStyle={frameStyle}
           onFrameChange={handleFrameChange}
           onFrameClick={onFrameClick}
-          groupCaptionName={title || ct('app_title')}
+          groupCaptionName={frameCaptionName ?? title ?? 'Hearth'}
         />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}

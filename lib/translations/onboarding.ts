@@ -68,6 +68,10 @@ export type OnboardingTranslations = {
   default_user_fallback: string;
   /** 초대코드 입력 화면의 "다시 입력" 버튼 */
   re_enter: string;
+  /** 그룹 이름 없이 생성 — 나중에 정하기 */
+  decide_later_btn: string;
+  /** 그룹 생성 완료 (이름 미정) */
+  group_created_heading_pending: string;
 };
 
 const onboarding: Record<LangCode, OnboardingTranslations> = {
@@ -134,6 +138,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     default_group_name: '{name}의 가족',
     default_user_fallback: '사용자',
     re_enter: '다시 입력',
+    decide_later_btn: '나중에 정하기',
+    group_created_heading_pending: '그룹이 생성되었습니다! 가족 이름은 그룹 설정에서 언제든 정할 수 있어요.',
   },
   en: {
     loading: 'Loading...',
@@ -198,6 +204,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     default_group_name: "{name}'s Family",
     default_user_fallback: 'User',
     re_enter: 'Re-enter',
+    decide_later_btn: 'Decide later',
+    group_created_heading_pending: 'Your group is ready! You can set your family name anytime in group settings.',
   },
   ja: {
     loading: '読み込み中...',
@@ -262,6 +270,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     default_group_name: '{name}のファミリー',
     default_user_fallback: 'ユーザー',
     re_enter: '再入力',
+    decide_later_btn: '後で決める',
+    group_created_heading_pending: 'グループが作成されました！ファミリー名はグループ設定でいつでも設定できます。',
   },
   'zh-CN': {
     loading: '加载中...',
@@ -326,6 +336,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     default_group_name: '{name}的家庭',
     default_user_fallback: '用户',
     re_enter: '重新输入',
+    decide_later_btn: '稍后决定',
+    group_created_heading_pending: '群组已创建！您可随时在群组设置中填写家庭名称。',
   },
   'zh-TW': {
     loading: '載入中...',
@@ -390,6 +402,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     default_group_name: '{name}的家庭',
     default_user_fallback: '使用者',
     re_enter: '重新輸入',
+    decide_later_btn: '稍後決定',
+    group_created_heading_pending: '群組已建立！您可隨時在群組設定中填寫家庭名稱。',
   },
 };
 

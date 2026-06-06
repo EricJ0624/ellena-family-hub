@@ -15,6 +15,11 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getGroupSettingsTranslation, type GroupSettingsTranslations } from '@/lib/translations/groupSettings';
 import { getCommonTranslation } from '@/lib/translations/common';
+import {
+  getGroupDisplayNameRaw,
+  getGroupSelectorLabel,
+  isGroupDisplayNamePending,
+} from '@/lib/group-display-name';
 import type { TitleStyle } from '@/app/components/TitlePage';
 import type { LangCode } from '@/lib/language-fonts';
 
@@ -59,10 +64,16 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
   const { currentGroupId, currentGroup, userRole, isOwner, refreshGroups } = useGroup();
   const { lang } = useLanguage();
   const gst = (key: keyof GroupSettingsTranslations) => getGroupSettingsTranslation(lang, key);
+  const ctApp = (key: 'close' | 'app_title') => getCommonTranslation(lang, key);
   const ct = (key: 'close') => getCommonTranslation(lang, key);
-  const [groupName, setGroupName] = useState(currentGroup?.name || '');
+  const [groupName, setGroupName] = useState(() =>
+    isGroupDisplayNamePending(currentGroup) ? '' : (getGroupDisplayNameRaw(currentGroup) ?? ''),
+  );
   const [titleStyle, setTitleStyle] = useState<TitleStyle>(() =>
-    parseTitleStyle(currentGroup?.title_style, currentGroup?.family_name ?? 'Hearth: Family Haven')
+    parseTitleStyle(
+      currentGroup?.title_style,
+      getGroupDisplayNameRaw(currentGroup) ?? ctApp('app_title'),
+    ),
   );
   const [preferredLanguage, setPreferredLanguage] = useState<LangCode>(() => {
     const v = (currentGroup as { preferred_language?: string } | null)?.preferred_language;
@@ -118,14 +129,18 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
   useEffect(() => {
     setTitleStyle(parseTitleStyle(
       currentGroup?.title_style,
-      currentGroup?.family_name ?? 'Hearth: Family Haven'
+      getGroupDisplayNameRaw(currentGroup) ?? ctApp('app_title'),
     ));
-  }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style]);
+  }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style, currentGroup?.name, currentGroup?.display_name_pending]);
 
   // currentGroup 변경 시 groupName, inviteCode, preferredLanguage 동기화
   useEffect(() => {
     if (currentGroup) {
-      setGroupName(currentGroup.name || '');
+      setGroupName(
+        isGroupDisplayNamePending(currentGroup)
+          ? ''
+          : (getGroupDisplayNameRaw(currentGroup) ?? ''),
+      );
       setInviteCode(currentGroup.invite_code || '');
       const v = (currentGroup as { preferred_language?: string }).preferred_language;
       if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') setPreferredLanguage(v);
@@ -157,13 +172,22 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
         updated_at: new Date().toISOString(),
       };
 
-      if (groupName.trim() !== currentGroup?.name) {
-        updates.name = groupName.trim();
-      }
+      const trimmedName = groupName.trim();
+      const currentDisplayName = getGroupDisplayNameRaw(currentGroup);
 
-      // 문구·스타일 통합: title_style.content를 family_name과 동기화
-      updates.family_name = titleStyle.content?.trim() || null;
-      updates.title_style = titleStyle;
+      if (trimmedName) {
+        if (trimmedName !== currentDisplayName || isGroupDisplayNamePending(currentGroup)) {
+          updates.name = trimmedName;
+          updates.display_name_pending = false;
+          updates.family_name = trimmedName;
+        }
+        updates.title_style = { ...titleStyle, content: trimmedName };
+      } else {
+        updates.title_style = {
+          ...titleStyle,
+          content: currentDisplayName ?? titleStyle.content ?? '',
+        };
+      }
       updates.preferred_language = preferredLanguage;
       updates.ui_theme = uiTheme;
 
@@ -294,7 +318,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{gst('group_settings_title')}</h2>
             <p className="text-sm text-gray-500">
-              {currentGroup?.name || gst('group_settings_title')}
+              {getGroupSelectorLabel(currentGroup, ctApp('app_title'))}
             </p>
           </div>
         </div>
@@ -329,25 +353,8 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                     className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                     disabled={saving}
                   />
-                </td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <th
-                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
-                >
-                  {gst('dashboard_title_label')}
-                </th>
-                <td className="p-3">
-                  <input
-                    type="text"
-                    value={titleStyle.content ?? ''}
-                    onChange={(e) => setTitleStyle((prev) => ({ ...prev, content: e.target.value }))}
-                    disabled={saving}
-                    placeholder={gst('dashboard_title_placeholder')}
-                    className="w-full max-w-80 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
-                  />
                   <p className="mt-1.5 text-xs text-slate-500">
-                    {gst('dashboard_title_hint')}
+                    {gst('family_name_hint')}
                   </p>
                 </td>
               </tr>
