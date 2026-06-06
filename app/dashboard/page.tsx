@@ -1464,6 +1464,7 @@ export default function FamilyHub() {
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
     if (!frameIsPortrait && isDefaultDashboardTitle) return null;
+    if (frameIsPortrait && isDefaultDashboardTitle) return null;
     const maxWidth = getTitleFitMaxWidth();
     const fontFamily = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1503,6 +1504,10 @@ export default function FamilyHub() {
 
   const measureCustomTitleFontSize = useCallback(() => {
     if (!frameIsPortrait && isDefaultDashboardTitle) {
+      setCustomTitleFontSize(null);
+      return;
+    }
+    if (frameIsPortrait && isDefaultDashboardTitle) {
       setCustomTitleFontSize(null);
       return;
     }
@@ -5532,6 +5537,9 @@ export default function FamilyHub() {
   // 계산 근거: h1 가용 폭 ≈ 262px, "A: B" 제목 전체 ~5.8em → 262/6.2≈42px이 안전 최댓값.
   const titleFontSizeValue = (() => {
     if (frameIsPortrait) {
+      if (isDefaultDashboardTitle) {
+        return `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`;
+      }
       const px = customTitleFontSize ?? estimatedCustomTitleFontSize ?? CUSTOM_TITLE_FONT_MIN_PX;
       return `${px}px`;
     }

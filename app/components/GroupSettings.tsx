@@ -16,6 +16,7 @@ import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getGroupSettingsTranslation, type GroupSettingsTranslations } from '@/lib/translations/groupSettings';
 import { getCommonTranslation } from '@/lib/translations/common';
 import {
+  DISPLAY_NAME_PENDING_SENTINEL,
   getGroupDisplayNameRaw,
   getGroupSelectorLabel,
   isGroupDisplayNamePending,
@@ -182,10 +183,15 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           updates.family_name = trimmedName;
         }
         updates.title_style = { ...titleStyle, content: trimmedName };
+      } else if (!isGroupDisplayNamePending(currentGroup)) {
+        updates.name = DISPLAY_NAME_PENDING_SENTINEL;
+        updates.display_name_pending = true;
+        updates.family_name = null;
+        updates.title_style = { ...titleStyle, content: ctApp('app_title') };
       } else {
         updates.title_style = {
           ...titleStyle,
-          content: currentDisplayName ?? titleStyle.content ?? '',
+          content: ctApp('app_title'),
         };
       }
       updates.preferred_language = preferredLanguage;
@@ -581,7 +587,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !groupName.trim()}
+            disabled={saving}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? (
