@@ -32,6 +32,10 @@ export const BAROQUE_FRAME_INSET_CLASS =
 export const BAROQUE_GOLD_LANDSCAPE_SRC =
   '/photo-frames/baroque-gold-landscape.png';
 
+/** 바로크 매트 하단 캡션 (PNG 970×803 기준, @container 부모 필요) */
+export const BAROQUE_MAT_CAPTION_CLASS =
+  'pointer-events-none absolute bottom-[12%] left-[13%] z-[25] w-[58%] truncate font-sans text-[max(9px,2.85cqw)] font-normal uppercase leading-none tracking-[0.12em] text-[#3d3832]';
+
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
   {
