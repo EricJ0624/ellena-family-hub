@@ -29,6 +29,7 @@ import {
   shouldUseDefaultDashboardTitleStyle,
 } from '@/lib/group-display-name';
 import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, customTitleMaxFontSize, DASHBOARD_TITLE_MAX_WIDTH } from '@/lib/dashboard-title-fit';
+import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
@@ -1416,9 +1417,15 @@ export default function FamilyHub() {
   const titleH1Ref = useRef<HTMLHeadingElement>(null);
   const [customTitleFontSize, setCustomTitleFontSize] = useState<number | null>(null);
 
-  const customTitleFontFamily = effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily;
-  const customTitleFontWeight = effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight;
-  const customTitleLetterSpacing = effectiveTitleStyle?.letterSpacing ?? -0.5;
+  const customTitleFontFamily = isDefaultDashboardTitle
+    ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
+    : BAROQUE_MAT_DASHBOARD_TITLE.fontFamily;
+  const customTitleFontWeight = isDefaultDashboardTitle
+    ? (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight)
+    : BAROQUE_MAT_DASHBOARD_TITLE.fontWeight;
+  const customTitleLetterSpacing = isDefaultDashboardTitle
+    ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
+    : BAROQUE_MAT_DASHBOARD_TITLE.letterSpacingPx;
   const customTitleMaxPx = customTitleMaxFontSize(
     dashboardTitleText,
     titleRole,
@@ -5484,9 +5491,15 @@ export default function FamilyHub() {
     overflowY: 'visible',
     textOverflow: 'clip',
     fontSize: titleFontSizeValue,
-    fontWeight: effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight,
-    letterSpacing: `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`,
-    fontFamily: effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily,
+    fontWeight: isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight)
+      : BAROQUE_MAT_DASHBOARD_TITLE.fontWeight,
+    letterSpacing: isDefaultDashboardTitle
+      ? `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`
+      : `${BAROQUE_MAT_DASHBOARD_TITLE.letterSpacingPx}px`,
+    fontFamily: isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
+      : BAROQUE_MAT_DASHBOARD_TITLE.fontFamily,
     ...(isDefaultDashboardTitle
       ? {
           background: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',

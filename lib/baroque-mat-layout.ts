@@ -3,30 +3,21 @@
  * 스크린샷으로 맞출 때는 이 파일만 수정하면 됩니다.
  *
  * PNG에 baked: "FAMILY - GATHERING," (가운데) + "The Collection" (스크립트, 오른쪽)
- * 코드 overlay: PNG sans 구간을 패치로 가리고 전체 캡션을 SVG 한 줄로 렌더
+ * 코드 overlay: [이름] + [연도] — 연도는 GATHERING, 쉼표 직후
  */
 export const BAROQUE_MAT_LAYOUT = {
   viewBox: { width: 970, height: 803 },
   /** 매트 캡션 baseline (y 클수록 아래) */
   baselineY: 652,
-  /** 전체 캡션 한 줄 가운데 정렬 anchor x */
-  captionCenterX: 485,
-  /** 이름(BIG TUMMY)과 FAMILY 사이 추가 공백 — 늘리면 간격 증가 */
-  nameFamilyGap: '   ',
-  /** PNG baked "FAMILY - GATHERING," 가리는 매트 패치 (texture 근사색) */
-  bakedTextPatch: {
-    x: 300,
-    y: 633,
-    width: 440,
-    height: 28,
-    fill: '#ebe7df',
-  },
+  /** 이름 시작 — PNG "FAMILY" 왼쪽 (오른쪽으로 갈수록 x 증가) */
+  nameX: 230,
+  /** 연도 시작 x — PNG "GATHERING," 쉼표 바로 다음 글자 */
+  yearX: 576,
   fontSize: {
     mat: 17,
-    /** 이름이 매우 길 때만 1px 축소 */
     longName: 16,
   },
-  /** 전체 sans 캡션 공통 — Montserrat는 layout.tsx에서 이미 로드됨 */
+  /** PNG 매트 sans (Futura 계열) — Montserrat는 layout.tsx에서 이미 로드됨 */
   typography: {
     fill: '#a8a39c',
     fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -35,19 +26,19 @@ export const BAROQUE_MAT_LAYOUT = {
   },
 } as const;
 
+/** 대시보드 커스텀 타이틀 — 액자 매트 sans 와 동일 fontFamily */
+export const BAROQUE_MAT_DASHBOARD_TITLE = {
+  fontFamily: BAROQUE_MAT_LAYOUT.typography.fontFamily,
+  fontWeight: '400' as const,
+  letterSpacingPx: 1,
+} as const;
+
 export function baroqueMatFontSizeForName(nameLength: number): number {
   const { fontSize } = BAROQUE_MAT_LAYOUT;
   if (nameLength > 20) return fontSize.longName;
   return fontSize.mat;
 }
 
-/** @deprecated 한 줄 렌더 — 이름 fontSize와 동일 */
 export function baroqueMatFontSizeForYear(): number {
   return BAROQUE_MAT_LAYOUT.fontSize.mat;
-}
-
-/** `[이름]   FAMILY - GATHERING, [연도]` — 단일 SVG text용 */
-export function buildBaroqueMatCaptionLine(name: string, year: number | string): string {
-  const { nameFamilyGap } = BAROQUE_MAT_LAYOUT;
-  return `${name}${nameFamilyGap}FAMILY - GATHERING, ${year}`;
 }
