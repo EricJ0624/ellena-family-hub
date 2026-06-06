@@ -75,6 +75,8 @@ interface DailyPhotoFrameProps {
   onFrameClick?: () => void;
   /** 바로크 액자 매트 캡션용 그룹명 (family_name) */
   groupCaptionName?: string;
+  /** 사진 세로/가로 — 대시보드 타이틀 정렬 연동 */
+  onPhotoOrientationChange?: (isPortrait: boolean) => void;
 }
 
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
@@ -84,6 +86,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   onFrameChange,
   onFrameClick,
   groupCaptionName,
+  onPhotoOrientationChange,
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
@@ -185,6 +188,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   }, []);
 
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
+  useEffect(() => {
+    if (imageAspectRatio === null) {
+      onPhotoOrientationChange?.(false);
+      return;
+    }
+    onPhotoOrientationChange?.(imageAspectRatio < 1);
+  }, [imageAspectRatio, onPhotoOrientationChange]);
+
   const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
     baroque: BAROQUE_FRAME_INSET_CLASS,
@@ -761,6 +772,8 @@ interface TitlePageProps {
   onFrameClick?: () => void;
   /** 설정 시 localStorage에 프레임 선택 저장·복원 (예: 그룹 ID) */
   frameStyleStorageScope?: string | null;
+  /** 액자 사진 세로 여부 — 대시보드 타이틀 정렬 */
+  onPhotoOrientationChange?: (isPortrait: boolean) => void;
 }
 
 const TitlePage: React.FC<TitlePageProps> = ({
@@ -775,6 +788,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
   onFrameClick,
   frameStyleStorageScope,
   frameCaptionName,
+  onPhotoOrientationChange,
 }) => {
   const { lang } = useLanguage();
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
@@ -904,6 +918,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
           onFrameChange={handleFrameChange}
           onFrameClick={onFrameClick}
           groupCaptionName={frameCaptionName ?? title ?? 'Hearth'}
+          onPhotoOrientationChange={onPhotoOrientationChange}
         />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}
