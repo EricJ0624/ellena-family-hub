@@ -28,7 +28,7 @@ import {
   getGroupDisplayNameRaw,
   shouldUseDefaultDashboardTitleStyle,
 } from '@/lib/group-display-name';
-import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, CUSTOM_TITLE_FONT_MAX_PX, DASHBOARD_TITLE_MAX_WIDTH } from '@/lib/dashboard-title-fit';
+import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, customTitleMaxFontSize, DASHBOARD_TITLE_MAX_WIDTH } from '@/lib/dashboard-title-fit';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
@@ -1419,9 +1419,10 @@ export default function FamilyHub() {
   const customTitleFontFamily = effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily;
   const customTitleFontWeight = effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight;
   const customTitleLetterSpacing = effectiveTitleStyle?.letterSpacing ?? -0.5;
-  const customTitleMaxPx = Math.min(
-    customFontSizeCap ?? CUSTOM_TITLE_FONT_MAX_PX[titleRole],
-    CUSTOM_TITLE_FONT_MAX_PX[titleRole],
+  const customTitleMaxPx = customTitleMaxFontSize(
+    dashboardTitleText,
+    titleRole,
+    customFontSizeCap,
   );
 
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
@@ -1497,6 +1498,27 @@ export default function FamilyHub() {
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
   }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle]);
+
+  /** DOM 실측 — scrollWidth 초과 시 1px씩 축소 (canvas 추정 보정) */
+  useLayoutEffect(() => {
+    if (isDefaultDashboardTitle) return;
+    const el = titleH1Ref.current;
+    if (!el) return;
+    const computed = parseFloat(getComputedStyle(el).fontSize);
+    if (
+      Number.isFinite(computed)
+      && el.scrollWidth > el.clientWidth + 1
+      && computed > CUSTOM_TITLE_FONT_MIN_PX
+    ) {
+      setCustomTitleFontSize(Math.max(CUSTOM_TITLE_FONT_MIN_PX, Math.floor(computed) - 1));
+    }
+  }, [
+    isDefaultDashboardTitle,
+    customTitleFontSize,
+    estimatedCustomTitleFontSize,
+    dashboardTitleText,
+    customTitleFontFamily,
+  ]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;

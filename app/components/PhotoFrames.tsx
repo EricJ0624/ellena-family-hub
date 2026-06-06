@@ -35,10 +35,17 @@ export const BAROQUE_GOLD_LANDSCAPE_SRC =
 /** baroque-gold-landscape.png viewBox (크롭 후) */
 const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
 
+/**
+ * PNG에 "FAMILY - GATHERING," 가 박혀 있으므로 이름 끝의 " Family" 접미사 제거.
+ * "Happy Family" → "HAPPY", "Big Tummy Family" → "BIG TUMMY"
+ */
 export function formatBaroqueMatName(displayName: string): string {
-  const name = displayName.trim();
-  if (!name) return '';
-  return name.toUpperCase();
+  let base = displayName.trim();
+  if (!base) return '';
+  while (/\s+family\s*$/i.test(base)) {
+    base = base.replace(/\s+family\s*$/i, '').trim();
+  }
+  return (base || displayName.trim()).toUpperCase();
 }
 
 /** @deprecated PNG에 FAMILY·GATHERING이 박혀 있으면 formatBaroqueMatName 사용 */
@@ -54,16 +61,20 @@ export function formatBaroqueMatCaption(displayName: string): string {
 
 /** viewBox(970) 기준 매트 fontSize — PNG FAMILY-GATHERING 줄과 맞춤 */
 function baroqueMatFontSize(nameLength: number): number {
-  if (nameLength > 22) return 20;
-  if (nameLength > 16) return 22;
-  return 24;
+  if (nameLength > 18) return 18;
+  if (nameLength > 12) return 20;
+  return 22;
 }
 
-/** PNG 매트 캡션 줄 (FAMILY - GATHERING, 와 같은 높이) */
-const BAROQUE_MAT_BASELINE_Y = 681;
-const BAROQUE_MAT_NAME_X = 96;
-/** 연도 — 매트 오른쪽, textAnchor end로 프레임 밖 잘림 방지 */
-const BAROQUE_MAT_YEAR_X = 862;
+/**
+ * PNG 매트 캡션 슬롯 (viewBox 970×803)
+ * [이름] FAMILY - GATHERING, [연도]  ← FAMILY·GATHERING는 PNG
+ */
+const BAROQUE_MAT_BASELINE_Y = 656;
+/** LEE 자리 — FAMILY 텍스트 바로 왼쪽 */
+const BAROQUE_MAT_NAME_X = 168;
+/** GATHERING, 뒤 연도 */
+const BAROQUE_MAT_YEAR_X = 598;
 
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
@@ -151,30 +162,32 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
     <svg
       viewBox={`0 0 ${BAROQUE_FRAME_VIEWBOX.width} ${BAROQUE_FRAME_VIEWBOX.height}`}
       preserveAspectRatio="none"
-      className="pointer-events-none absolute inset-0 z-[30] h-full w-full"
+      className="pointer-events-none absolute inset-0 z-[30] h-full w-full overflow-visible"
       aria-hidden
     >
       <text
         x={BAROQUE_MAT_NAME_X}
         y={BAROQUE_MAT_BASELINE_Y}
-        fill="#3a3530"
+        fill="#5c5650"
         fontSize={matFontSize}
         fontFamily="Arial, Helvetica, sans-serif"
         fontWeight="500"
-        letterSpacing="1"
+        letterSpacing="0.8"
         textAnchor="start"
+        dominantBaseline="auto"
       >
         {name}
       </text>
       <text
         x={BAROQUE_MAT_YEAR_X}
         y={BAROQUE_MAT_BASELINE_Y}
-        fill="#3a3530"
+        fill="#5c5650"
         fontSize={matFontSize}
         fontFamily="Arial, Helvetica, sans-serif"
         fontWeight="500"
-        letterSpacing="1"
-        textAnchor="end"
+        letterSpacing="0.8"
+        textAnchor="start"
+        dominantBaseline="auto"
       >
         {year}
       </text>
