@@ -37,6 +37,13 @@ export const BAROQUE_FRAME_INSET_CLASS =
 export const BAROQUE_GOLD_LANDSCAPE_SRC =
   '/photo-frames/baroque-gold-landscape.png';
 
+/** modern-wood-landscape.png (1640×856) 사진 구역 inset */
+export const MODERN_FRAME_INSET_CLASS =
+  'left-[21.5%] right-[21.5%] top-[26.8%] bottom-[33.6%]';
+
+export const MODERN_WOOD_LANDSCAPE_SRC =
+  '/photo-frames/modern-wood-landscape.png';
+
 /** baroque-gold-landscape.png viewBox (크롭 후) */
 const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
 
@@ -94,8 +101,8 @@ export const FRAME_CONFIGS: FrameConfig[] = [
   {
     id: 'modern',
     name: '모던',
-    description: '깔끔하고 현대적인 프레임',
-    color: '#4a4a4a',
+    description: '우드 매트의 모던 프레임',
+    color: '#8b6914',
   },
   {
     id: 'soft_glass',
@@ -281,23 +288,15 @@ const VintageFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
   );
 };
 
-// 모던 스타일 프레임 SVG
-const ModernFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <defs>
-        <linearGradient id={`modernGradient-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={color} />
-          <stop offset="100%" stopColor="#2a2a2a" />
-        </linearGradient>
-      </defs>
-
-      <rect x="0" y="0" width="400" height="300" fill={`url(#modernGradient-${uid})`} />
-      <rect x="12" y="12" width="376" height="276" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-      <rect x="18" y="18" width="364" height="264" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
-    </svg>
-  );
-};
+// 모던 스타일 프레임 (PNG 오버레이)
+const ModernFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={MODERN_WOOD_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 소프트 글래스 스타일 프레임 SVG
 const SoftGlassFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {

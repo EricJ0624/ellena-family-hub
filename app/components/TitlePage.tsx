@@ -9,6 +9,7 @@ import {
   PhotoFrameSVG,
   FRAME_CONFIGS,
   BAROQUE_FRAME_INSET_CLASS,
+  MODERN_FRAME_INSET_CLASS,
   BaroqueMatCaptionOverlay,
   formatBaroqueMatName,
   type FrameStyle,
@@ -206,7 +207,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     baroque: BAROQUE_FRAME_INSET_CLASS,
     ornate: 'inset-[20px]',
     vintage: 'inset-[20px]',
-    modern: 'inset-[20px]',
+    modern: MODERN_FRAME_INSET_CLASS,
     soft_glass: 'inset-[14px]',
     polaroid_modern: 'left-[14px] right-[14px] top-[14px] bottom-[38px]',
     editorial: 'inset-[10px]',
@@ -214,9 +215,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     no_frame: 'inset-0',
   };
   const useCoverImage =
+    frameStyle === 'modern' ||
     frameStyle === 'polaroid_modern' ||
     frameStyle === 'editorial' ||
     frameStyle === 'no_frame';
+  const photoInnerBgClass =
+    frameStyle === 'modern' ? 'bg-white' : 'bg-[#1a1a1a]';
   const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
 
   const baroqueMatDisplayName = useMemo(() => {
@@ -264,7 +268,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         >
           {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
           <div
-            className="relative h-full w-full overflow-hidden rounded-[2px] bg-[#1a1a1a]"
+            className={cn('relative h-full w-full overflow-hidden rounded-[2px]', photoInnerBgClass)}
           >
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
