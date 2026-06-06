@@ -25,7 +25,7 @@ export interface FrameConfig {
 const frameSvgOverlayClass =
   'pointer-events-none absolute inset-0 h-full w-full';
 
-/** baroque-gold-landscape.png (970×803, 외곽 여백 제거) 안쪽 사진 구역 inset */
+/** baroque-gold-landscape.png (970×803, 외곽·안쪽 흰 영역 투명) 사진 구역 inset */
 export const BAROQUE_FRAME_INSET_CLASS =
   'left-[19.3%] right-[19.4%] top-[23.4%] bottom-[22.5%]';
 
