@@ -30,7 +30,11 @@ import {
 } from '@/lib/group-display-name';
 import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, customTitleMaxFontSize, DASHBOARD_TITLE_MAX_WIDTH } from '@/lib/dashboard-title-fit';
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
-import { getDashboardPortraitTitleFitWidth } from '@/lib/dashboard-frame-layout';
+import {
+  DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
+  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
+  getDashboardPortraitTitleFitMaxWidth,
+} from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
@@ -1422,21 +1426,19 @@ export default function FamilyHub() {
 
   const getTitleFitMaxWidth = useCallback(() => {
     if (frameIsPortrait) {
+      const row = titleRowRef.current;
       const h1 = titleH1Ref.current;
+      const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
+      const adminBtn = row?.querySelector('button');
+      const adminWidth = adminBtn
+        ? adminBtn.getBoundingClientRect().width + 8
+        : DASHBOARD_TITLE_ADMIN_RESERVE_PX;
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
+      const maxW = getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth);
       if (h1?.clientWidth) {
-        return Math.max(120, h1.clientWidth - 2);
+        return Math.max(120, Math.min(maxW, h1.clientWidth));
       }
-      const container = titleContainerRef.current;
-      if (container?.clientWidth) {
-        // 3열 grid: [1fr | title | 1fr] — 가운데 열 기준
-        const gridWidth = container.clientWidth;
-        const sideCol = gridWidth / 3;
-        return Math.max(120, gridWidth - sideCol * 2 - 8);
-      }
-      if (typeof window !== 'undefined') {
-        return getDashboardPortraitTitleFitWidth(window.innerWidth);
-      }
-      return getDashboardPortraitTitleFitWidth(430);
+      return maxW;
     }
     const row = titleRowRef.current;
     if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
@@ -1462,29 +1464,46 @@ export default function FamilyHub() {
 
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
-    if (isDefaultDashboardTitle) return null;
+    if (!frameIsPortrait && isDefaultDashboardTitle) return null;
     const maxWidth = getTitleFitMaxWidth();
+    const fontFamily = isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
+      : customTitleFontFamily;
+    const fontWeight = isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight)
+      : customTitleFontWeight;
+    const letterSpacing = isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
+      : customTitleLetterSpacing;
+    const maxPx = isDefaultDashboardTitle
+      ? Math.min(customFontSizeCap ?? 68, titleFontMin + 8)
+      : customTitleMaxPx;
     return fitFontSizeToWidth(
       dashboardTitleText,
       maxWidth,
       CUSTOM_TITLE_FONT_MIN_PX,
-      customTitleMaxPx,
-      customTitleFontFamily,
-      customTitleFontWeight,
-      customTitleLetterSpacing,
+      maxPx,
+      fontFamily,
+      fontWeight,
+      letterSpacing,
     );
   }, [
+    frameIsPortrait,
     isDefaultDashboardTitle,
     dashboardTitleText,
     customTitleMaxPx,
     customTitleFontFamily,
     customTitleFontWeight,
     customTitleLetterSpacing,
+    effectiveTitleStyle,
+    titleFont,
+    titleFontMin,
+    customFontSizeCap,
     getTitleFitMaxWidth,
   ]);
 
   const measureCustomTitleFontSize = useCallback(() => {
-    if (isDefaultDashboardTitle) {
+    if (!frameIsPortrait && isDefaultDashboardTitle) {
       setCustomTitleFontSize(null);
       return;
     }
@@ -1492,23 +1511,40 @@ export default function FamilyHub() {
     if (!el) return;
 
     const maxWidth = getTitleFitMaxWidth();
+    const fontFamily = isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
+      : customTitleFontFamily;
+    const fontWeight = isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight)
+      : customTitleFontWeight;
+    const letterSpacing = isDefaultDashboardTitle
+      ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
+      : customTitleLetterSpacing;
+    const maxPx = isDefaultDashboardTitle
+      ? Math.min(customFontSizeCap ?? 68, titleFontMin + 8)
+      : customTitleMaxPx;
     const fitted = fitFontSizeToWidth(
       dashboardTitleText,
       maxWidth,
       CUSTOM_TITLE_FONT_MIN_PX,
-      customTitleMaxPx,
-      customTitleFontFamily,
-      customTitleFontWeight,
-      customTitleLetterSpacing,
+      maxPx,
+      fontFamily,
+      fontWeight,
+      letterSpacing,
     );
     setCustomTitleFontSize(fitted);
   }, [
+    frameIsPortrait,
     isDefaultDashboardTitle,
     dashboardTitleText,
     customTitleMaxPx,
     customTitleFontFamily,
     customTitleFontWeight,
     customTitleLetterSpacing,
+    effectiveTitleStyle,
+    titleFont,
+    titleFontMin,
+    customFontSizeCap,
     getTitleFitMaxWidth,
   ]);
 
@@ -1531,7 +1567,7 @@ export default function FamilyHub() {
 
   /** DOM 실측 — scrollWidth 초과 시 1px씩 축소 (canvas 추정 보정) */
   useLayoutEffect(() => {
-    if (isDefaultDashboardTitle) return;
+    if (!frameIsPortrait && isDefaultDashboardTitle) return;
     const el = titleH1Ref.current;
     if (!el) return;
     const computed = parseFloat(getComputedStyle(el).fontSize);
@@ -1543,6 +1579,7 @@ export default function FamilyHub() {
       setCustomTitleFontSize(Math.max(CUSTOM_TITLE_FONT_MIN_PX, Math.floor(computed) - 1));
     }
   }, [
+    frameIsPortrait,
     isDefaultDashboardTitle,
     customTitleFontSize,
     estimatedCustomTitleFontSize,
@@ -5495,6 +5532,10 @@ export default function FamilyHub() {
   // clamp min(44px) < 실제 적정값(~42px) → clamp 자체를 우회하고 고정 42px 사용.
   // 계산 근거: h1 가용 폭 ≈ 262px, "A: B" 제목 전체 ~5.8em → 262/6.2≈42px이 안전 최댓값.
   const titleFontSizeValue = (() => {
+    if (frameIsPortrait) {
+      const px = customTitleFontSize ?? estimatedCustomTitleFontSize ?? CUSTOM_TITLE_FONT_MIN_PX;
+      return `${px}px`;
+    }
     if (!isDefaultDashboardTitle) {
       const px = customTitleFontSize ?? estimatedCustomTitleFontSize ?? CUSTOM_TITLE_FONT_MIN_PX;
       return `${px}px`;
@@ -5508,8 +5549,11 @@ export default function FamilyHub() {
     margin: 0,
     flex: frameIsPortrait ? undefined : '1 1 0%',
     minWidth: 0,
-    maxWidth: '100%',
+    maxWidth: frameIsPortrait
+      ? `min(${DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portraitMd}px, calc(100% - ${DASHBOARD_TITLE_ADMIN_RESERVE_PX}px))`
+      : '100%',
     width: frameIsPortrait ? '100%' : undefined,
+    justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
     whiteSpace: 'nowrap' as const,
     overflowX: 'hidden',
@@ -6091,7 +6135,7 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 — 세로 사진: 3열 grid로 Admin·타이틀 겹침 방지 */}
+        {/* 타이틀 + 관리자 — 세로 사진: 화면 가운데 정렬 + Admin 오버레이 */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
@@ -6099,13 +6143,12 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="grid w-full grid-cols-[1fr_minmax(0,320px)_1fr] items-center gap-x-2 md:grid-cols-[1fr_minmax(0,340px)_1fr]"
+              className="grid w-full grid-cols-1 grid-rows-1 place-items-center"
             >
-              <div className="min-w-0" aria-hidden />
               <h1
                 ref={titleH1Ref}
                 style={dashboardTitleStyle}
-                className="min-w-0"
+                className="z-0 col-start-1 row-start-1 min-w-0"
               >
                 {isDefaultDashboardTitle ? (
                   <AppTitleContent title={dashboardTitleText} />
@@ -6113,13 +6156,13 @@ export default function FamilyHub() {
                   dashboardTitleText
                 )}
               </h1>
-              <div className="flex min-w-0 justify-end">
+              <div className="pointer-events-none col-start-1 row-start-1 flex w-full justify-end self-center">
                 {isGroupLoading ? (
-                  <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
+                  <div className="pointer-events-none h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (
                   <button
                     onClick={() => router.push(adminPagePath)}
-                    className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                    className={`pointer-events-auto inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
                       isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
                     }`}
                     aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}

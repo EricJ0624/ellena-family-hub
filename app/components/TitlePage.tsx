@@ -169,12 +169,17 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     if (!selectedPhoto) {
       setImageAspectRatio(null);
       setImageLoadError(false);
+      onPhotoOrientationChange?.(false);
       return;
     }
     const cacheKey = String(selectedPhoto.id);
     const cachedRatio = imageAspectRatioCacheRef.current[cacheKey];
-    setImageAspectRatio(typeof cachedRatio === 'number' ? cachedRatio : null);
-  }, [selectedPhoto]);
+    const ratio = typeof cachedRatio === 'number' ? cachedRatio : null;
+    setImageAspectRatio(ratio);
+    if (ratio !== null) {
+      onPhotoOrientationChange?.(ratio < 1);
+    }
+  }, [selectedPhoto, onPhotoOrientationChange]);
 
   // 블러 배경용 저해상도 URL (S3/CloudFront 직링크는 그대로 사용)
   const getBlurLayerSrc = useCallback((url: string) => {

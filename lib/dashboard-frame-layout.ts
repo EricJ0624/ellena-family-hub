@@ -11,7 +11,20 @@ export function getDashboardPortraitFrameMaxWidthPx(viewportWidth: number): numb
     : DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait;
 }
 
-/** 세로 액자일 때 타이틀 fit 기준 가용 폭 */
+/** Admin 버튼 예약 폭 (fit·레이아웃 공통) */
+export const DASHBOARD_TITLE_ADMIN_RESERVE_PX = 92;
+
+export function getDashboardPortraitTitleFitMaxWidth(
+  rowWidth: number,
+  adminWidth: number,
+  viewportWidth: number,
+): number {
+  const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
+  const withoutAdmin = rowWidth - adminWidth - 12;
+  return Math.max(120, Math.min(frameCap, withoutAdmin));
+}
+
+/** @deprecated — getDashboardPortraitTitleFitMaxWidth 사용 */
 export function getDashboardPortraitTitleFitWidth(viewportWidth: number, paddingPx = 8): number {
   return Math.max(120, getDashboardPortraitFrameMaxWidthPx(viewportWidth) - paddingPx);
 }
