@@ -32,7 +32,6 @@ import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, customTitleMaxFontSize, D
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
   DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
-  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
@@ -1432,7 +1431,7 @@ export default function FamilyHub() {
       const adminBtn = row?.querySelector('button');
       const adminWidth = adminBtn
         ? adminBtn.getBoundingClientRect().width + 8
-        : DASHBOARD_TITLE_ADMIN_RESERVE_PX;
+        : 0;
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
       const maxW = getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth);
       if (h1?.clientWidth) {
@@ -5550,9 +5549,9 @@ export default function FamilyHub() {
     flex: frameIsPortrait ? undefined : '1 1 0%',
     minWidth: 0,
     maxWidth: frameIsPortrait
-      ? `min(${DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portraitMd}px, calc(100% - ${DASHBOARD_TITLE_ADMIN_RESERVE_PX}px))`
+      ? `${DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portraitMd}px`
       : '100%',
-    width: frameIsPortrait ? '100%' : undefined,
+    width: frameIsPortrait ? 'auto' : undefined,
     justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
     whiteSpace: 'nowrap' as const,
@@ -6135,7 +6134,7 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 — 세로 사진: 화면 가운데 정렬 + Admin 오버레이 */}
+        {/* 타이틀 + 관리자 — 세로: [1fr|타이틀|1fr+Admin] 액자와 동일 축 */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
@@ -6143,12 +6142,13 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="grid w-full grid-cols-1 grid-rows-1 place-items-center"
+              className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1"
             >
+              <div className="min-w-0" aria-hidden />
               <h1
                 ref={titleH1Ref}
                 style={dashboardTitleStyle}
-                className="z-0 col-start-1 row-start-1 min-w-0"
+                className="min-w-0 max-w-[320px] justify-self-center md:max-w-[340px]"
               >
                 {isDefaultDashboardTitle ? (
                   <AppTitleContent title={dashboardTitleText} />
@@ -6156,13 +6156,13 @@ export default function FamilyHub() {
                   dashboardTitleText
                 )}
               </h1>
-              <div className="pointer-events-none col-start-1 row-start-1 flex w-full justify-end self-center">
+              <div className="flex min-w-0 justify-end">
                 {isGroupLoading ? (
-                  <div className="pointer-events-none h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
+                  <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (
                   <button
                     onClick={() => router.push(adminPagePath)}
-                    className={`pointer-events-auto inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                    className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
                       isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
                     }`}
                     aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}

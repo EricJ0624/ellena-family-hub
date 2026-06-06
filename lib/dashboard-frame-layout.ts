@@ -20,8 +20,10 @@ export function getDashboardPortraitTitleFitMaxWidth(
   viewportWidth: number,
 ): number {
   const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
+  // 화면 가운데 정렬 시 텍스트 양쪽 + Admin 열 여유
+  const centeredCap = rowWidth - adminWidth * 2 - 16;
   const withoutAdmin = rowWidth - adminWidth - 12;
-  return Math.max(120, Math.min(frameCap, withoutAdmin));
+  return Math.max(120, Math.min(frameCap, centeredCap, withoutAdmin));
 }
 
 /** @deprecated — getDashboardPortraitTitleFitMaxWidth 사용 */
