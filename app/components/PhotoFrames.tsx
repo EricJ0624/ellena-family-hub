@@ -4,7 +4,7 @@ import React from 'react';
 import {
   BAROQUE_MAT_LAYOUT,
   baroqueMatFontSizeForName,
-  baroqueMatFontSizeForYear,
+  buildBaroqueMatCaptionLine,
 } from '@/lib/baroque-mat-layout';
 
 // 프레임 스타일 타입 정의
@@ -146,14 +146,14 @@ const BaroqueFrame: React.FC<{ color: string; uid: string }> = () => (
   />
 );
 
-/** 바로크 매트 캡션 — PNG viewBox와 동일 좌표, 이름·연도만 오버레이 (FAMILY-GATHERING는 PNG) */
+/** 바로크 매트 캡션 — PNG baked sans를 패치로 가리고 전체 줄을 SVG 한 font로 렌더 */
 export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string }) {
   const name = formatBaroqueMatName(displayName);
   if (!name) return null;
-  const year = String(new Date().getFullYear());
-  const { baselineY, nameX, yearX, typography } = BAROQUE_MAT_LAYOUT;
-  const nameFontSize = baroqueMatFontSizeForName(name.length);
-  const yearFontSize = baroqueMatFontSizeForYear();
+  const year = new Date().getFullYear();
+  const caption = buildBaroqueMatCaptionLine(name, year);
+  const { baselineY, captionCenterX, bakedTextPatch, typography } = BAROQUE_MAT_LAYOUT;
+  const fontSize = baroqueMatFontSizeForName(name.length);
 
   return (
     <svg
@@ -162,31 +162,25 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
       className="pointer-events-none absolute inset-0 z-[30] h-full w-full overflow-visible"
       aria-hidden
     >
+      <rect
+        x={bakedTextPatch.x}
+        y={bakedTextPatch.y}
+        width={bakedTextPatch.width}
+        height={bakedTextPatch.height}
+        fill={bakedTextPatch.fill}
+      />
       <text
-        x={nameX}
+        x={captionCenterX}
         y={baselineY}
         fill={typography.fill}
-        fontSize={nameFontSize}
+        fontSize={fontSize}
         fontFamily={typography.fontFamily}
         fontWeight={typography.fontWeight}
         letterSpacing={typography.letterSpacing}
-        textAnchor="start"
+        textAnchor="middle"
         dominantBaseline="alphabetic"
       >
-        {name}
-      </text>
-      <text
-        x={yearX}
-        y={baselineY}
-        fill={typography.fill}
-        fontSize={yearFontSize}
-        fontFamily={typography.fontFamily}
-        fontWeight={typography.fontWeight}
-        letterSpacing={typography.letterSpacing}
-        textAnchor="start"
-        dominantBaseline="alphabetic"
-      >
-        {` ${year}`}
+        {caption}
       </text>
     </svg>
   );
