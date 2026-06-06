@@ -215,12 +215,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     no_frame: 'inset-0',
   };
   const useCoverImage =
-    frameStyle === 'modern' ||
     frameStyle === 'polaroid_modern' ||
     frameStyle === 'editorial' ||
     frameStyle === 'no_frame';
-  const photoInnerBgClass =
-    frameStyle === 'modern' ? 'bg-white' : 'bg-[#1a1a1a]';
+  const photoInnerBgClass = 'bg-[#1a1a1a]';
   const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
 
   const baroqueMatDisplayName = useMemo(() => {
@@ -251,15 +249,15 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
         className={cn('relative w-full overflow-visible', frameAspectClass, onFrameClick && 'cursor-pointer')}
       >
-        {/* SVG 프레임 (배경) */}
-        <div className="absolute left-0 top-0 h-full w-full">
+        {/* PNG 프레임 오버레이 — 투명 개구부, 사진 위에 프레임(z-15) */}
+        <div className="absolute left-0 top-0 z-[15] h-full w-full">
           <PhotoFrameSVG frameStyle={frameStyle} />
         </div>
 
-        {/* 내부 사진 영역 (매트 제거 → 사진이 액자에 꽉 차게) */}
+        {/* 내부 사진 영역 */}
         <div
           className={cn(
-            'absolute overflow-hidden',
+            'absolute z-[10] overflow-hidden',
             frameStyle === 'no_frame'
               ? 'rounded-[2rem] border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium'
               : 'rounded',

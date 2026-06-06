@@ -37,9 +37,9 @@ export const BAROQUE_FRAME_INSET_CLASS =
 export const BAROQUE_GOLD_LANDSCAPE_SRC =
   '/photo-frames/baroque-gold-landscape.png';
 
-/** modern-wood-landscape.png (1640×856) 사진 구역 inset */
+/** modern-wood-landscape.png (1640×856, 외곽·개구부 흰 영역 투명) 사진 구역 inset */
 export const MODERN_FRAME_INSET_CLASS =
-  'left-[21.5%] right-[21.5%] top-[26.8%] bottom-[33.6%]';
+  'left-[31.7%] right-[31.8%] top-[23.5%] bottom-[23.8%]';
 
 export const MODERN_WOOD_LANDSCAPE_SRC =
   '/photo-frames/modern-wood-landscape.png';
