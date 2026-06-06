@@ -71,6 +71,8 @@ interface DailyPhotoFrameProps {
   frameStyle?: FrameStyle;
   onFrameChange?: (style: FrameStyle) => void;
   onFrameClick?: () => void;
+  /** 바로크 액자 매트 캡션용 그룹명 (family_name) */
+  groupCaptionName?: string;
 }
 
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
@@ -79,6 +81,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   frameStyle = 'no_frame',
   onFrameChange,
   onFrameClick,
+  groupCaptionName,
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
@@ -197,6 +200,13 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     frameStyle === 'editorial' ||
     frameStyle === 'no_frame';
   const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
+
+  const baroqueMatCaption = useMemo(() => {
+    if (!mounted || frameStyle !== 'baroque') return null;
+    const name = groupCaptionName?.trim();
+    if (!name) return null;
+    return `${name} FAMILY - GATHERING, ${new Date().getFullYear()}`;
+  }, [mounted, frameStyle, groupCaptionName]);
   
   useEffect(() => {
     if (onShuffle) onShuffle();
@@ -289,6 +299,15 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             </AnimatePresence>
           </div>
         </div>
+
+        {baroqueMatCaption ? (
+          <p
+            className="pointer-events-none absolute bottom-[7.2%] left-[21%] z-20 max-w-[56%] truncate font-sans text-[clamp(0.36rem,1.45vw,0.62rem)] font-normal uppercase tracking-[0.13em] text-neutral-600"
+            aria-hidden
+          >
+            {baroqueMatCaption}
+          </p>
+        ) : null}
         
         {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}
         <div
@@ -885,6 +904,7 @@ const TitlePage: React.FC<TitlePageProps> = ({
           frameStyle={frameStyle}
           onFrameChange={handleFrameChange}
           onFrameClick={onFrameClick}
+          groupCaptionName={title || ct('app_title')}
         />
 
         {/* 타이틀 텍스트 (showTitle이 true일 때만) */}
