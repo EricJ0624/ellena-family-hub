@@ -13,16 +13,18 @@ export const BAROQUE_MAT_LAYOUT = {
   nameX: 230,
   /** 연도 시작 x — PNG "GATHERING," 쉼표 바로 다음 글자 */
   yearX: 576,
+  /** PNG baked "FAMILY - GATHERING," 와 동일 — viewBox 기준 px */
   fontSize: {
-    mat: 17,
-    longName: 16,
+    mat: 18,
+    longName: 17,
   },
-  /** PNG 매트 sans (Futura 계열) — Montserrat는 layout.tsx에서 이미 로드됨 */
+  /** PNG 매트 sans — 색·크기는 baked 텍스트에 맞춤 (fontFamily는 근사) */
   typography: {
-    fill: '#a8a39c',
+    /** PNG baked sans 샘플 톤 (연한 #a8a39c 보다 진함) */
+    fill: '#969088',
     fontFamily: 'Montserrat, "Helvetica Neue", Helvetica, Arial, sans-serif',
     fontWeight: 400,
-    letterSpacing: 1.6,
+    letterSpacing: 1.75,
   },
 } as const;
 
