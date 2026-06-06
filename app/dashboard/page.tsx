@@ -1422,9 +1422,16 @@ export default function FamilyHub() {
 
   const getTitleFitMaxWidth = useCallback(() => {
     if (frameIsPortrait) {
+      const h1 = titleH1Ref.current;
+      if (h1?.clientWidth) {
+        return Math.max(120, h1.clientWidth - 2);
+      }
       const container = titleContainerRef.current;
       if (container?.clientWidth) {
-        return Math.max(120, container.clientWidth - 4);
+        // 3열 grid: [1fr | title | 1fr] — 가운데 열 기준
+        const gridWidth = container.clientWidth;
+        const sideCol = gridWidth / 3;
+        return Math.max(120, gridWidth - sideCol * 2 - 8);
       }
       if (typeof window !== 'undefined') {
         return getDashboardPortraitTitleFitWidth(window.innerWidth);
@@ -6084,34 +6091,62 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 버튼 — 세로 사진 시 액자 폭과 동일하게 가운데 정렬 */}
+        {/* 타이틀 + 관리자 — 세로 사진: 3열 grid로 Admin·타이틀 겹침 방지 */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
         >
-          <div
-            ref={titleContainerRef}
-            className={
-              frameIsPortrait
-                ? 'mx-auto flex w-full min-w-0 max-w-[320px] items-center justify-center md:max-w-[340px]'
-                : 'flex w-full min-w-0 items-center gap-3'
-            }
-          >
-            <h1
-              ref={titleH1Ref}
-              style={dashboardTitleStyle}
+          {frameIsPortrait ? (
+            <div
+              ref={titleContainerRef}
+              className="grid w-full grid-cols-[1fr_minmax(0,320px)_1fr] items-center gap-x-2 md:grid-cols-[1fr_minmax(0,340px)_1fr]"
             >
-              {isDefaultDashboardTitle ? (
-                <AppTitleContent title={dashboardTitleText} />
-              ) : (
-                dashboardTitleText
-              )}
-            </h1>
-            {!frameIsPortrait && (
-              isGroupLoading ? (
-                <div
-                  className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200"
-                />
+              <div className="min-w-0" aria-hidden />
+              <h1
+                ref={titleH1Ref}
+                style={dashboardTitleStyle}
+                className="min-w-0"
+              >
+                {isDefaultDashboardTitle ? (
+                  <AppTitleContent title={dashboardTitleText} />
+                ) : (
+                  dashboardTitleText
+                )}
+              </h1>
+              <div className="flex min-w-0 justify-end">
+                {isGroupLoading ? (
+                  <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
+                ) : showAdminButton ? (
+                  <button
+                    onClick={() => router.push(adminPagePath)}
+                    className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                      isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
+                    }`}
+                    aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
+                  >
+                    <span className="text-sm">⚙️</span>
+                    {ct('admin')}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={titleContainerRef}
+              className="flex w-full min-w-0 items-center gap-3"
+            >
+              <h1
+                ref={titleH1Ref}
+                style={dashboardTitleStyle}
+              >
+                {isDefaultDashboardTitle ? (
+                  <AppTitleContent title={dashboardTitleText} />
+                ) : (
+                  dashboardTitleText
+                )}
+              </h1>
+              {isGroupLoading ? (
+                <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
               ) : showAdminButton ? (
                 <button
                   onClick={() => router.push(adminPagePath)}
@@ -6123,26 +6158,8 @@ export default function FamilyHub() {
                   <span className="text-sm">⚙️</span>
                   {ct('admin')}
                 </button>
-              ) : null
-            )}
-          </div>
-          {frameIsPortrait && (
-            isGroupLoading ? (
-              <div
-                className="absolute right-1 top-1/2 h-7 w-20 shrink-0 -translate-y-1/2 animate-pulse rounded-lg bg-slate-200"
-              />
-            ) : showAdminButton ? (
-              <button
-                onClick={() => router.push(adminPagePath)}
-                className={`absolute right-1 top-1/2 inline-flex shrink-0 -translate-y-1/2 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
-                  isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
-                }`}
-                aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
-              >
-                <span className="text-sm">⚙️</span>
-                {ct('admin')}
-              </button>
-            ) : null
+              ) : null}
+            </div>
           )}
         </div>
 
