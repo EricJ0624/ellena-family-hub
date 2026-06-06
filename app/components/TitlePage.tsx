@@ -5,7 +5,12 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
 import Image from 'next/image';
-import { PhotoFrameSVG, FRAME_CONFIGS, type FrameStyle } from './PhotoFrames';
+import {
+  PhotoFrameSVG,
+  FRAME_CONFIGS,
+  BAROQUE_FRAME_INSET_CLASS,
+  type FrameStyle,
+} from './PhotoFrames';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTitlePageTranslation } from '@/lib/translations/titlePage';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -177,7 +182,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
   const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
-    baroque: 'inset-[20px]',
+    baroque: BAROQUE_FRAME_INSET_CLASS,
     ornate: 'inset-[20px]',
     vintage: 'inset-[20px]',
     modern: 'inset-[20px]',

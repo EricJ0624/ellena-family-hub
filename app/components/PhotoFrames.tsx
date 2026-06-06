@@ -25,13 +25,20 @@ export interface FrameConfig {
 const frameSvgOverlayClass =
   'pointer-events-none absolute inset-0 h-full w-full';
 
+/** baroque-gold-landscape.png (970×803, 외곽 여백 제거) 안쪽 사진 구역 inset */
+export const BAROQUE_FRAME_INSET_CLASS =
+  'left-[19.3%] right-[19.4%] top-[23.4%] bottom-[22.5%]';
+
+export const BAROQUE_GOLD_LANDSCAPE_SRC =
+  '/photo-frames/baroque-gold-landscape.png';
+
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
   {
     id: 'baroque',
     name: '바로크',
     description: '화려하고 장식적인 클래식 프레임',
-    color: '#5d2a1f',
+    color: '#b8860b',
   },
   {
     id: 'ornate',
@@ -90,127 +97,15 @@ interface PhotoFrameSVGProps {
   height?: number;
 }
 
-// 바로크 스타일 프레임 SVG
-const BaroqueFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <defs>
-        {/* 나무 질감 그라데이션 */}
-        <linearGradient id={`baroqueWood-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={color} stopOpacity="1" />
-          <stop offset="25%" stopColor="#4e342e" stopOpacity="1" />
-          <stop offset="50%" stopColor={color} stopOpacity="1" />
-          <stop offset="75%" stopColor="#5d4037" stopOpacity="1" />
-          <stop offset="100%" stopColor={color} stopOpacity="1" />
-        </linearGradient>
-        
-        {/* 하이라이트 그라데이션 */}
-        <linearGradient id={`baroqueHighlight-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
-        </linearGradient>
-
-        {/* 장식 패턴 */}
-        <pattern id={`baroquePattern-${uid}`} x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-          <rect width="20" height="20" fill="rgba(0,0,0,0.05)" />
-          <line x1="0" y1="10" x2="20" y2="10" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
-        </pattern>
-      </defs>
-
-      {/* 외곽 프레임 */}
-      <rect
-        x="0"
-        y="0"
-        width="400"
-        height="300"
-        fill={`url(#baroqueWood-${uid})`}
-        stroke="rgba(0,0,0,0.5)"
-        strokeWidth="2"
-      />
-      
-      {/* 나무 결 패턴 */}
-      <rect x="0" y="0" width="400" height="300" fill={`url(#baroquePattern-${uid})`} />
-
-      {/* 내부 테두리 (입체감) */}
-      <rect
-        x="15"
-        y="15"
-        width="370"
-        height="270"
-        fill="none"
-        stroke="rgba(0,0,0,0.6)"
-        strokeWidth="3"
-      />
-      
-      {/* 하이라이트 */}
-      <rect
-        x="0"
-        y="0"
-        width="400"
-        height="300"
-        fill={`url(#baroqueHighlight-${uid})`}
-        opacity="0.3"
-      />
-
-      {/* 모서리 장식 - 왼쪽 위 */}
-      <g transform="translate(20, 20)">
-        <path
-          d="M 0,0 Q 10,-5 20,0 Q 15,10 20,20 Q 10,15 0,20 Q 5,10 0,0 Z"
-          fill="rgba(139,69,19,0.8)"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1"
-        />
-        <circle cx="10" cy="10" r="3" fill="rgba(255,215,0,0.3)" />
-      </g>
-
-      {/* 모서리 장식 - 오른쪽 위 */}
-      <g transform="translate(360, 20)">
-        <path
-          d="M 0,0 Q 10,-5 20,0 Q 15,10 20,20 Q 10,15 0,20 Q 5,10 0,0 Z"
-          fill="rgba(139,69,19,0.8)"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1"
-        />
-        <circle cx="10" cy="10" r="3" fill="rgba(255,215,0,0.3)" />
-      </g>
-
-      {/* 모서리 장식 - 왼쪽 아래 */}
-      <g transform="translate(20, 260)">
-        <path
-          d="M 0,0 Q 10,-5 20,0 Q 15,10 20,20 Q 10,15 0,20 Q 5,10 0,0 Z"
-          fill="rgba(139,69,19,0.8)"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1"
-        />
-        <circle cx="10" cy="10" r="3" fill="rgba(255,215,0,0.3)" />
-      </g>
-
-      {/* 모서리 장식 - 오른쪽 아래 */}
-      <g transform="translate(360, 260)">
-        <path
-          d="M 0,0 Q 10,-5 20,0 Q 15,10 20,20 Q 10,15 0,20 Q 5,10 0,0 Z"
-          fill="rgba(139,69,19,0.8)"
-          stroke="rgba(0,0,0,0.5)"
-          strokeWidth="1"
-        />
-        <circle cx="10" cy="10" r="3" fill="rgba(255,215,0,0.3)" />
-      </g>
-
-      {/* 상단 중앙 장식 */}
-      <g transform="translate(190, 10)">
-        <ellipse cx="10" cy="5" rx="15" ry="8" fill="rgba(139,69,19,0.8)" stroke="rgba(0,0,0,0.5)" strokeWidth="1" />
-        <path d="M 5,3 Q 10,0 15,3" stroke="rgba(255,215,0,0.4)" strokeWidth="1" fill="none" />
-      </g>
-
-      {/* 하단 중앙 장식 */}
-      <g transform="translate(190, 285)">
-        <ellipse cx="10" cy="5" rx="15" ry="8" fill="rgba(139,69,19,0.8)" stroke="rgba(0,0,0,0.5)" strokeWidth="1" />
-        <path d="M 5,7 Q 10,10 15,7" stroke="rgba(255,215,0,0.4)" strokeWidth="1" fill="none" />
-      </g>
-    </svg>
-  );
-};
+// 바로크 스타일 프레임 (PNG 오버레이)
+const BaroqueFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={BAROQUE_GOLD_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 오네이트 스타일 프레임 SVG
 const OrnateFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
