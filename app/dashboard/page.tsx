@@ -28,10 +28,19 @@ import {
   getGroupDisplayNameRaw,
   shouldUseDefaultDashboardTitleStyle,
 } from '@/lib/group-display-name';
-import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, customTitleMaxFontSize, DASHBOARD_TITLE_MAX_WIDTH } from '@/lib/dashboard-title-fit';
+import {
+  fitFontSizeToWidth,
+  fitAppTitleFontSizeToWidth,
+  CUSTOM_TITLE_FONT_MIN_PX,
+  DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
+  DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
+  customTitleMaxFontSize,
+  DASHBOARD_TITLE_MAX_WIDTH,
+} from '@/lib/dashboard-title-fit';
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
   DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
+  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
@@ -1422,22 +1431,20 @@ export default function FamilyHub() {
   const titleH1Ref = useRef<HTMLHeadingElement>(null);
   const [customTitleFontSize, setCustomTitleFontSize] = useState<number | null>(null);
   const [frameIsPortrait, setFrameIsPortrait] = useState(false);
+  const [portraitTitleMaxWidthPx, setPortraitTitleMaxWidthPx] = useState<number>(
+    DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait,
+  );
 
   const getTitleFitMaxWidth = useCallback(() => {
     if (frameIsPortrait) {
       const row = titleRowRef.current;
-      const h1 = titleH1Ref.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
       const adminBtn = row?.querySelector('button');
       const adminWidth = adminBtn
         ? adminBtn.getBoundingClientRect().width + 8
-        : 0;
+        : DASHBOARD_TITLE_ADMIN_RESERVE_PX;
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      const maxW = getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth);
-      if (h1?.clientWidth) {
-        return Math.max(120, Math.min(maxW, h1.clientWidth));
-      }
-      return maxW;
+      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth);
     }
     const row = titleRowRef.current;
     if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
@@ -1464,7 +1471,6 @@ export default function FamilyHub() {
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
     if (!frameIsPortrait && isDefaultDashboardTitle) return null;
-    if (frameIsPortrait && isDefaultDashboardTitle) return null;
     const maxWidth = getTitleFitMaxWidth();
     const fontFamily = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1475,6 +1481,17 @@ export default function FamilyHub() {
     const letterSpacing = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
       : customTitleLetterSpacing;
+    if (frameIsPortrait && isDefaultDashboardTitle) {
+      return fitAppTitleFontSizeToWidth(
+        dashboardTitleText,
+        maxWidth,
+        DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
+        Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT),
+        fontFamily,
+        fontWeight,
+        letterSpacing,
+      );
+    }
     const maxPx = isDefaultDashboardTitle
       ? Math.min(customFontSizeCap ?? 68, titleFontMin + 8)
       : customTitleMaxPx;
@@ -1505,16 +1522,15 @@ export default function FamilyHub() {
   const measureCustomTitleFontSize = useCallback(() => {
     if (!frameIsPortrait && isDefaultDashboardTitle) {
       setCustomTitleFontSize(null);
+      setPortraitTitleMaxWidthPx(DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait);
       return;
     }
-    if (frameIsPortrait && isDefaultDashboardTitle) {
-      setCustomTitleFontSize(null);
-      return;
-    }
-    const el = titleH1Ref.current;
-    if (!el) return;
 
     const maxWidth = getTitleFitMaxWidth();
+    if (frameIsPortrait) {
+      setPortraitTitleMaxWidthPx(maxWidth);
+    }
+
     const fontFamily = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
       : customTitleFontFamily;
@@ -1524,6 +1540,24 @@ export default function FamilyHub() {
     const letterSpacing = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
       : customTitleLetterSpacing;
+
+    if (frameIsPortrait && isDefaultDashboardTitle) {
+      const fitted = fitAppTitleFontSizeToWidth(
+        dashboardTitleText,
+        maxWidth,
+        DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
+        Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT),
+        fontFamily,
+        fontWeight,
+        letterSpacing,
+      );
+      setCustomTitleFontSize(fitted);
+      return;
+    }
+
+    const el = titleH1Ref.current;
+    if (!el) return;
+
     const maxPx = isDefaultDashboardTitle
       ? Math.min(customFontSizeCap ?? 68, titleFontMin + 8)
       : customTitleMaxPx;
@@ -1575,12 +1609,15 @@ export default function FamilyHub() {
     const el = titleH1Ref.current;
     if (!el) return;
     const computed = parseFloat(getComputedStyle(el).fontSize);
+    const minPx = frameIsPortrait && isDefaultDashboardTitle
+      ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT
+      : CUSTOM_TITLE_FONT_MIN_PX;
     if (
       Number.isFinite(computed)
       && el.scrollWidth > el.clientWidth + 1
-      && computed > CUSTOM_TITLE_FONT_MIN_PX
+      && computed > minPx
     ) {
-      setCustomTitleFontSize(Math.max(CUSTOM_TITLE_FONT_MIN_PX, Math.floor(computed) - 1));
+      setCustomTitleFontSize(Math.max(minPx, Math.floor(computed) - 1));
     }
   }, [
     frameIsPortrait,
@@ -5538,7 +5575,10 @@ export default function FamilyHub() {
   const titleFontSizeValue = (() => {
     if (frameIsPortrait) {
       if (isDefaultDashboardTitle) {
-        return `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`;
+        const px = customTitleFontSize
+          ?? estimatedCustomTitleFontSize
+          ?? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT);
+        return `${px}px`;
       }
       const px = customTitleFontSize ?? estimatedCustomTitleFontSize ?? CUSTOM_TITLE_FONT_MIN_PX;
       return `${px}px`;
@@ -5557,9 +5597,9 @@ export default function FamilyHub() {
     flex: frameIsPortrait ? undefined : '1 1 0%',
     minWidth: 0,
     maxWidth: frameIsPortrait
-      ? `${DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portraitMd}px`
+      ? `${portraitTitleMaxWidthPx}px`
       : '100%',
-    width: frameIsPortrait ? 'auto' : undefined,
+    width: frameIsPortrait ? 'max-content' : undefined,
     justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
     whiteSpace: 'nowrap' as const,
@@ -6150,13 +6190,13 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1"
+              className="flex w-full items-center gap-x-1"
             >
-              <div className="min-w-0" aria-hidden />
+              <div className="min-w-0 flex-1" aria-hidden />
               <h1
                 ref={titleH1Ref}
                 style={dashboardTitleStyle}
-                className="min-w-0 max-w-[320px] justify-self-center md:max-w-[340px]"
+                className="w-max shrink-0 text-center"
               >
                 {isDefaultDashboardTitle ? (
                   <AppTitleContent title={dashboardTitleText} />
@@ -6164,7 +6204,7 @@ export default function FamilyHub() {
                   dashboardTitleText
                 )}
               </h1>
-              <div className="flex min-w-0 justify-end">
+              <div className="flex min-w-0 flex-1 justify-end">
                 {isGroupLoading ? (
                   <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (

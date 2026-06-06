@@ -1,5 +1,8 @@
 /** canvas measureText로 가용 폭에 맞는 font-size(px) 계산 */
 
+export const DEFAULT_APP_TITLE_MAX_PX_PORTRAIT = 42;
+export const DEFAULT_APP_TITLE_MIN_PX_PORTRAIT = 28;
+
 export function measureTextWidthPx(
   text: string,
   fontSizePx: number,
@@ -68,6 +71,67 @@ export function fitFontSizeToWidth(
   for (let size = maxPx; size >= minPx; size -= 1) {
     if (
       measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx) <= maxWidthPx
+    ) {
+      return size;
+    }
+  }
+  return minPx;
+}
+
+/** AppTitleContent — main 1em, 괄호 0.65em, 부제 0.333em */
+export function measureAppTitleWidthPx(
+  title: string,
+  baseFontSizePx: number,
+  fontFamily: string,
+  fontWeight: string | number,
+  letterSpacingPx = 0,
+): number {
+  if (!title) return 0;
+  const colon = title.indexOf(': ');
+  if (colon < 0) {
+    return measureTextWidthPx(title, baseFontSizePx, fontFamily, fontWeight, letterSpacingPx);
+  }
+
+  const mainStr = title.slice(0, colon + 2);
+  const sub = title.slice(colon + 2);
+  const parenMatch = mainStr.match(/^(.*?)(\s*\([^)]+\))(.*)$/);
+  const mainWidth = parenMatch
+    ? measureTextWidthPx(parenMatch[1], baseFontSizePx, fontFamily, fontWeight, letterSpacingPx)
+      + measureTextWidthPx(
+        parenMatch[2],
+        baseFontSizePx * 0.65,
+        fontFamily,
+        fontWeight,
+        letterSpacingPx,
+      )
+      + measureTextWidthPx(parenMatch[3], baseFontSizePx, fontFamily, fontWeight, letterSpacingPx)
+    : measureTextWidthPx(mainStr, baseFontSizePx, fontFamily, fontWeight, letterSpacingPx);
+
+  return (
+    mainWidth
+    + measureTextWidthPx(
+      sub,
+      baseFontSizePx * 0.333,
+      fontFamily,
+      fontWeight,
+      letterSpacingPx,
+    )
+  );
+}
+
+export function fitAppTitleFontSizeToWidth(
+  title: string,
+  maxWidthPx: number,
+  minPx: number,
+  maxPx: number,
+  fontFamily: string,
+  fontWeight: string | number,
+  letterSpacingPx = 0,
+): number {
+  if (!title || maxWidthPx <= 0) return maxPx;
+  for (let size = maxPx; size >= minPx; size -= 1) {
+    if (
+      measureAppTitleWidthPx(title, size, fontFamily, fontWeight, letterSpacingPx) <= maxWidthPx
     ) {
       return size;
     }

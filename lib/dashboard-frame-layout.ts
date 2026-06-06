@@ -20,9 +20,9 @@ export function getDashboardPortraitTitleFitMaxWidth(
   viewportWidth: number,
 ): number {
   const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
-  // 3열 grid — 타이틀은 가운데 열(액자 폭), Admin은 오른쪽 1fr
-  const withoutAdmin = rowWidth - adminWidth - 12;
-  return Math.max(120, Math.min(frameCap, withoutAdmin));
+  // flex [1fr | title | 1fr+Admin] — 타이틀 중앙 정렬 시 양쪽 1fr이 같아야 하므로 Admin 폭을 양쪽에서 예약
+  const symmetricCap = rowWidth - adminWidth * 2 - 16;
+  return Math.max(120, Math.min(frameCap, symmetricCap));
 }
 
 /** @deprecated — getDashboardPortraitTitleFitMaxWidth 사용 */
