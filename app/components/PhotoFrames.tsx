@@ -32,9 +32,14 @@ export const BAROQUE_FRAME_INSET_CLASS =
 export const BAROQUE_GOLD_LANDSCAPE_SRC =
   '/photo-frames/baroque-gold-landscape.png';
 
-/** 바로크 매트 하단 캡션 (PNG 970×803 기준, @container 부모 필요) */
-export const BAROQUE_MAT_CAPTION_CLASS =
-  'pointer-events-none absolute bottom-[12%] left-[13%] z-[25] w-[58%] truncate font-sans text-[max(9px,2.85cqw)] font-normal uppercase leading-none tracking-[0.12em] text-[#3d3832]';
+/** baroque-gold-landscape.png viewBox (크롭 후) */
+const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
+
+export function formatBaroqueMatCaption(groupName: string): string {
+  const name = groupName.trim();
+  if (!name) return '';
+  return `${name.toUpperCase()} FAMILY - GATHERING, ${new Date().getFullYear()}`;
+}
 
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
@@ -110,6 +115,29 @@ const BaroqueFrame: React.FC<{ color: string; uid: string }> = () => (
     className={`${frameSvgOverlayClass} object-fill`}
   />
 );
+
+/** 바로크 매트 캡션 — PNG viewBox와 동일 좌표, 사진 레이어 위에 올림 */
+export function BaroqueMatCaptionOverlay({ caption }: { caption: string }) {
+  return (
+    <svg
+      viewBox={`0 0 ${BAROQUE_FRAME_VIEWBOX.width} ${BAROQUE_FRAME_VIEWBOX.height}`}
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 z-[30] h-full w-full"
+      aria-hidden
+    >
+      <text
+        x="124"
+        y="700"
+        fill="#3d3832"
+        fontSize="14"
+        fontFamily="Arial, Helvetica, sans-serif"
+        letterSpacing="1.4"
+      >
+        {caption}
+      </text>
+    </svg>
+  );
+}
 
 // 오네이트 스타일 프레임 SVG
 const OrnateFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {

@@ -9,7 +9,8 @@ import {
   PhotoFrameSVG,
   FRAME_CONFIGS,
   BAROQUE_FRAME_INSET_CLASS,
-  BAROQUE_MAT_CAPTION_CLASS,
+  BaroqueMatCaptionOverlay,
+  formatBaroqueMatCaption,
   type FrameStyle,
 } from './PhotoFrames';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -204,9 +205,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const baroqueMatCaption = useMemo(() => {
     if (frameStyle !== 'baroque') return null;
-    const name = groupCaptionName?.trim();
-    if (!name) return null;
-    return `${name} FAMILY - GATHERING, ${new Date().getFullYear()}`;
+    const caption = formatBaroqueMatCaption(groupCaptionName ?? '');
+    return caption || null;
   }, [frameStyle, groupCaptionName]);
   
   useEffect(() => {
@@ -229,7 +229,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         tabIndex={onFrameClick ? 0 : undefined}
         onClick={onFrameClick}
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
-        className={cn('@container relative w-full overflow-visible', frameAspectClass, onFrameClick && 'cursor-pointer')}
+        className={cn('relative w-full overflow-visible', frameAspectClass, onFrameClick && 'cursor-pointer')}
       >
         {/* SVG 프레임 (배경) */}
         <div className="absolute left-0 top-0 h-full w-full">
@@ -302,11 +302,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         </div>
 
         {baroqueMatCaption ? (
-          <p className={BAROQUE_MAT_CAPTION_CLASS} aria-hidden>
-            {baroqueMatCaption}
-          </p>
+          <BaroqueMatCaptionOverlay caption={baroqueMatCaption} />
         ) : null}
-        
+
         {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}
         <div
           className="absolute bottom-2.5 right-2.5 z-40 flex gap-2"
