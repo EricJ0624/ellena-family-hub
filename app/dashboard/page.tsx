@@ -28,7 +28,7 @@ import {
   getGroupDisplayNameRaw,
   shouldUseDefaultDashboardTitleStyle,
 } from '@/lib/group-display-name';
-import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, CUSTOM_TITLE_FONT_MAX_PX } from '@/lib/dashboard-title-fit';
+import { fitFontSizeToWidth, CUSTOM_TITLE_FONT_MIN_PX, CUSTOM_TITLE_FONT_MAX_PX, DASHBOARD_TITLE_MAX_WIDTH } from '@/lib/dashboard-title-fit';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
@@ -1413,39 +1413,74 @@ export default function FamilyHub() {
   const titleFontMin = (TITLE_FONT_MIN[titleRole] as Record<string, number>)[lang] ?? TITLE_FONT_MIN[titleRole].en;
   const titleVw = isAdminTitleContext ? 7 : 9;
   const titleRowRef = useRef<HTMLDivElement>(null);
+  const titleH1Ref = useRef<HTMLHeadingElement>(null);
   const [customTitleFontSize, setCustomTitleFontSize] = useState<number | null>(null);
 
+  const customTitleFontFamily = effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily;
+  const customTitleFontWeight = effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight;
+  const customTitleLetterSpacing = effectiveTitleStyle?.letterSpacing ?? -0.5;
+  const customTitleMaxPx = Math.min(
+    customFontSizeCap ?? CUSTOM_TITLE_FONT_MAX_PX[titleRole],
+    CUSTOM_TITLE_FONT_MAX_PX[titleRole],
+  );
+
+  /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
+  const estimatedCustomTitleFontSize = useMemo(() => {
+    if (isDefaultDashboardTitle) return null;
+    const rowWidth = titleRowRef.current?.clientWidth;
+    const adminBtn = titleRowRef.current?.querySelector('button');
+    const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
+    const maxWidth = rowWidth
+      ? Math.max(120, rowWidth - btnWidth - 4)
+      : DASHBOARD_TITLE_MAX_WIDTH[titleRole];
+    return fitFontSizeToWidth(
+      dashboardTitleText,
+      maxWidth,
+      CUSTOM_TITLE_FONT_MIN_PX,
+      customTitleMaxPx,
+      customTitleFontFamily,
+      customTitleFontWeight,
+      customTitleLetterSpacing,
+    );
+  }, [
+    isDefaultDashboardTitle,
+    dashboardTitleText,
+    titleRole,
+    customTitleMaxPx,
+    customTitleFontFamily,
+    customTitleFontWeight,
+    customTitleLetterSpacing,
+  ]);
+
   const measureCustomTitleFontSize = useCallback(() => {
-    if (isDefaultDashboardTitle || !titleRowRef.current) {
+    if (isDefaultDashboardTitle) {
       setCustomTitleFontSize(null);
       return;
     }
     const row = titleRowRef.current;
+    const el = titleH1Ref.current;
+    if (!row || !el) return;
+
     const adminBtn = row.querySelector('button');
-    const gap = 12;
-    const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + gap : 0;
+    const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
     const maxWidth = Math.max(120, row.clientWidth - btnWidth - 4);
-    const maxPx = customFontSizeCap ?? CUSTOM_TITLE_FONT_MAX_PX[titleRole];
-    const fontFamily = effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily;
-    const fontWeight = effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight;
     const fitted = fitFontSizeToWidth(
       dashboardTitleText,
       maxWidth,
       CUSTOM_TITLE_FONT_MIN_PX,
-      maxPx,
-      fontFamily,
-      fontWeight,
+      customTitleMaxPx,
+      customTitleFontFamily,
+      customTitleFontWeight,
+      customTitleLetterSpacing,
     );
     setCustomTitleFontSize(fitted);
   }, [
     isDefaultDashboardTitle,
     dashboardTitleText,
-    customFontSizeCap,
-    titleRole,
-    effectiveTitleStyle?.fontFamily,
-    effectiveTitleStyle?.fontWeight,
-    titleFont.fontFamily,
-    titleFont.fontWeight,
+    customTitleMaxPx,
+    customTitleFontFamily,
+    customTitleFontWeight,
+    customTitleLetterSpacing,
   ]);
 
   useLayoutEffect(() => {
@@ -1461,7 +1496,7 @@ export default function FamilyHub() {
       ro.disconnect();
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
-  }, [measureCustomTitleFontSize]);
+  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
   } as React.CSSProperties;
@@ -5408,8 +5443,9 @@ export default function FamilyHub() {
   // clamp min(44px) < 실제 적정값(~42px) → clamp 자체를 우회하고 고정 42px 사용.
   // 계산 근거: h1 가용 폭 ≈ 262px, "A: B" 제목 전체 ~5.8em → 262/6.2≈42px이 안전 최댓값.
   const titleFontSizeValue = (() => {
-    if (!isDefaultDashboardTitle && customTitleFontSize != null) {
-      return `${customTitleFontSize}px`;
+    if (!isDefaultDashboardTitle) {
+      const px = customTitleFontSize ?? estimatedCustomTitleFontSize ?? CUSTOM_TITLE_FONT_MIN_PX;
+      return `${px}px`;
     }
     if (dashboardShell === 'web-preview' && previewOrientation === 'portrait') {
       return `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`;
@@ -6001,6 +6037,7 @@ export default function FamilyHub() {
           className="box-border flex min-h-12 w-full min-w-0 max-w-full items-center gap-3 px-1"
         >
           <h1
+            ref={titleH1Ref}
             style={dashboardTitleStyle}
           >
             {isDefaultDashboardTitle ? (

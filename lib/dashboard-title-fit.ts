@@ -5,8 +5,29 @@ export function measureTextWidthPx(
   fontSizePx: number,
   fontFamily: string,
   fontWeight: string | number,
+  letterSpacingPx = 0,
 ): number {
   if (typeof document === 'undefined' || !text) return 0;
+
+  if (letterSpacingPx !== 0) {
+    const probe = document.createElement('span');
+    probe.textContent = text;
+    probe.style.cssText = [
+      'position:absolute',
+      'visibility:hidden',
+      'white-space:nowrap',
+      'pointer-events:none',
+      `font-size:${fontSizePx}px`,
+      `font-family:${fontFamily}`,
+      `font-weight:${fontWeight}`,
+      `letter-spacing:${letterSpacingPx}px`,
+    ].join(';');
+    document.body.appendChild(probe);
+    const w = probe.offsetWidth;
+    document.body.removeChild(probe);
+    return w;
+  }
+
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return 0;
@@ -28,14 +49,32 @@ export function fitFontSizeToWidth(
   maxPx: number,
   fontFamily: string,
   fontWeight: string | number,
+  letterSpacingPx = 0,
 ): number {
   if (!text || maxWidthPx <= 0) return maxPx;
   for (let size = maxPx; size >= minPx; size -= 1) {
-    if (measureTextWidthPx(text, size, fontFamily, fontWeight) <= maxWidthPx) {
+    if (
+      measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx) <= maxWidthPx
+    ) {
       return size;
     }
   }
   return minPx;
+}
+
+/** h1 실제 scrollWidth 기준 — React 렌더 후 1회 보정용 */
+export function shrinkFontSizeToElement(
+  el: HTMLElement,
+  maxPx: number,
+  minPx: number,
+): number {
+  let size = maxPx;
+  el.style.fontSize = `${size}px`;
+  while (el.scrollWidth > el.clientWidth + 1 && size > minPx) {
+    size -= 1;
+    el.style.fontSize = `${size}px`;
+  }
+  return size;
 }
 
 /** 관리자(⚙️ 버튼 있음) vs 일반 사용자 대시보드 타이틀 가용 폭 (fallback) */
