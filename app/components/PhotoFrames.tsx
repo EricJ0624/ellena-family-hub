@@ -1,6 +1,10 @@
 'use client';
 
 import React from 'react';
+import {
+  BAROQUE_MAT_LAYOUT,
+  baroqueMatFontSizeForName,
+} from '@/lib/baroque-mat-layout';
 
 // 프레임 스타일 타입 정의
 export type FrameStyle =
@@ -59,30 +63,12 @@ export function formatBaroqueMatCaption(displayName: string): string {
   return `${name} FAMILY - GATHERING, ${year}`;
 }
 
-/** viewBox(970) 기준 매트 fontSize — PNG FAMILY-GATHERING 줄과 맞춤 */
-function baroqueMatNameFontSize(nameLength: number): number {
-  if (nameLength > 18) return 19;
-  if (nameLength > 12) return 21;
-  return 23;
-}
-
-/** PNG 매트 sans — FAMILY - GATHERING, 와 동일 톤 */
-const BAROQUE_MAT_TEXT_PROPS = {
-  fill: '#8b8580',
-  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-  fontWeight: 400,
-  letterSpacing: 1.5,
-} as const;
+/** viewBox fontSize — @/lib/baroque-mat-layout.ts 참고 */
 
 /**
- * PNG 매트 캡션 슬롯 (viewBox 970×803)
- * [이름] FAMILY - GATHERING,[연도]  ← FAMILY·GATHERING, 는 PNG
+ * PNG 매트 캡션 — 좌표는 lib/baroque-mat-layout.ts
+ * [이름] FAMILY - GATHERING,[연도] The Collection…
  */
-const BAROQUE_MAT_BASELINE_Y = 654;
-/** LEE 자리 — PNG FAMILY 바로 왼쪽 */
-const BAROQUE_MAT_NAME_X = 160;
-/** PNG "GATHERING," 쉼표 직후 (x ≈ baked comma end) */
-const BAROQUE_MAT_YEAR_X = 608;
 
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
@@ -164,8 +150,8 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
   const name = formatBaroqueMatName(displayName);
   if (!name) return null;
   const year = String(new Date().getFullYear());
-  const nameFontSize = baroqueMatNameFontSize(name.length);
-  const yearFontSize = nameFontSize;
+  const { baselineY, nameX, yearX, typography } = BAROQUE_MAT_LAYOUT;
+  const fontSize = baroqueMatFontSizeForName(name.length);
 
   return (
     <svg
@@ -175,30 +161,30 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
       aria-hidden
     >
       <text
-        x={BAROQUE_MAT_NAME_X}
-        y={BAROQUE_MAT_BASELINE_Y}
-        fill={BAROQUE_MAT_TEXT_PROPS.fill}
-        fontSize={nameFontSize}
-        fontFamily={BAROQUE_MAT_TEXT_PROPS.fontFamily}
-        fontWeight={BAROQUE_MAT_TEXT_PROPS.fontWeight}
-        letterSpacing={BAROQUE_MAT_TEXT_PROPS.letterSpacing}
+        x={nameX}
+        y={baselineY}
+        fill={typography.fill}
+        fontSize={fontSize}
+        fontFamily={typography.fontFamily}
+        fontWeight={typography.fontWeight}
+        letterSpacing={typography.letterSpacing}
         textAnchor="start"
         dominantBaseline="alphabetic"
       >
         {name}
       </text>
       <text
-        x={BAROQUE_MAT_YEAR_X}
-        y={BAROQUE_MAT_BASELINE_Y}
-        fill={BAROQUE_MAT_TEXT_PROPS.fill}
-        fontSize={yearFontSize}
-        fontFamily={BAROQUE_MAT_TEXT_PROPS.fontFamily}
-        fontWeight={BAROQUE_MAT_TEXT_PROPS.fontWeight}
-        letterSpacing={BAROQUE_MAT_TEXT_PROPS.letterSpacing}
+        x={yearX}
+        y={baselineY}
+        fill={typography.fill}
+        fontSize={fontSize}
+        fontFamily={typography.fontFamily}
+        fontWeight={typography.fontWeight}
+        letterSpacing={typography.letterSpacing}
         textAnchor="start"
         dominantBaseline="alphabetic"
       >
-        {year}
+        {` ${year}`}
       </text>
     </svg>
   );
