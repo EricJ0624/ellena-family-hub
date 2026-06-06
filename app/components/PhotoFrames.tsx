@@ -60,21 +60,29 @@ export function formatBaroqueMatCaption(displayName: string): string {
 }
 
 /** viewBox(970) 기준 매트 fontSize — PNG FAMILY-GATHERING 줄과 맞춤 */
-function baroqueMatFontSize(nameLength: number): number {
-  if (nameLength > 18) return 18;
-  if (nameLength > 12) return 20;
-  return 22;
+function baroqueMatNameFontSize(nameLength: number): number {
+  if (nameLength > 18) return 19;
+  if (nameLength > 12) return 21;
+  return 23;
 }
+
+/** PNG 매트 sans — FAMILY - GATHERING, 와 동일 톤 */
+const BAROQUE_MAT_TEXT_PROPS = {
+  fill: '#8b8580',
+  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontWeight: 400,
+  letterSpacing: 1.5,
+} as const;
 
 /**
  * PNG 매트 캡션 슬롯 (viewBox 970×803)
- * [이름] FAMILY - GATHERING, [연도]  ← FAMILY·GATHERING는 PNG
+ * [이름] FAMILY - GATHERING,[연도]  ← FAMILY·GATHERING, 는 PNG
  */
-const BAROQUE_MAT_BASELINE_Y = 656;
-/** LEE 자리 — FAMILY 텍스트 바로 왼쪽 */
-const BAROQUE_MAT_NAME_X = 168;
-/** GATHERING, 뒤 연도 */
-const BAROQUE_MAT_YEAR_X = 598;
+const BAROQUE_MAT_BASELINE_Y = 654;
+/** LEE 자리 — PNG FAMILY 바로 왼쪽 */
+const BAROQUE_MAT_NAME_X = 160;
+/** PNG "GATHERING," 쉼표 직후 (x ≈ baked comma end) */
+const BAROQUE_MAT_YEAR_X = 608;
 
 // 프레임 설정 목록
 export const FRAME_CONFIGS: FrameConfig[] = [
@@ -156,7 +164,8 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
   const name = formatBaroqueMatName(displayName);
   if (!name) return null;
   const year = String(new Date().getFullYear());
-  const matFontSize = baroqueMatFontSize(name.length);
+  const nameFontSize = baroqueMatNameFontSize(name.length);
+  const yearFontSize = nameFontSize;
 
   return (
     <svg
@@ -168,26 +177,26 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
       <text
         x={BAROQUE_MAT_NAME_X}
         y={BAROQUE_MAT_BASELINE_Y}
-        fill="#5c5650"
-        fontSize={matFontSize}
-        fontFamily="Arial, Helvetica, sans-serif"
-        fontWeight="500"
-        letterSpacing="0.8"
+        fill={BAROQUE_MAT_TEXT_PROPS.fill}
+        fontSize={nameFontSize}
+        fontFamily={BAROQUE_MAT_TEXT_PROPS.fontFamily}
+        fontWeight={BAROQUE_MAT_TEXT_PROPS.fontWeight}
+        letterSpacing={BAROQUE_MAT_TEXT_PROPS.letterSpacing}
         textAnchor="start"
-        dominantBaseline="auto"
+        dominantBaseline="alphabetic"
       >
         {name}
       </text>
       <text
         x={BAROQUE_MAT_YEAR_X}
         y={BAROQUE_MAT_BASELINE_Y}
-        fill="#5c5650"
-        fontSize={matFontSize}
-        fontFamily="Arial, Helvetica, sans-serif"
-        fontWeight="500"
-        letterSpacing="0.8"
+        fill={BAROQUE_MAT_TEXT_PROPS.fill}
+        fontSize={yearFontSize}
+        fontFamily={BAROQUE_MAT_TEXT_PROPS.fontFamily}
+        fontWeight={BAROQUE_MAT_TEXT_PROPS.fontWeight}
+        letterSpacing={BAROQUE_MAT_TEXT_PROPS.letterSpacing}
         textAnchor="start"
-        dominantBaseline="auto"
+        dominantBaseline="alphabetic"
       >
         {year}
       </text>

@@ -38,8 +38,8 @@ export function measureTextWidthPx(
 /** 커스텀 가족 이름 타이틀 — app_title clamp 최솟값(33~40px)과 별도 */
 export const CUSTOM_TITLE_FONT_MIN_PX = 14;
 export const CUSTOM_TITLE_FONT_MAX_PX = {
-  admin: 28,
-  user: 38,
+  admin: 34,
+  user: 44,
 } as const;
 
 /** 긴 가족 이름은 상한을 더 낮춤 */
@@ -50,8 +50,8 @@ export function customTitleMaxFontSize(
 ): number {
   const baseCap = Math.min(styleCap ?? CUSTOM_TITLE_FONT_MAX_PX[role], CUSTOM_TITLE_FONT_MAX_PX[role]);
   const len = text.trim().length;
-  if (len > 20) return Math.min(baseCap, role === 'admin' ? 22 : 28);
-  if (len > 14) return Math.min(baseCap, role === 'admin' ? 25 : 32);
+  if (len > 20) return Math.min(baseCap, role === 'admin' ? 26 : 32);
+  if (len > 14) return Math.min(baseCap, role === 'admin' ? 30 : 36);
   return baseCap;
 }
 
