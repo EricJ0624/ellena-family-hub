@@ -71,6 +71,13 @@ export const SOFT_GLASS_FRAME_INSET_CLASS =
 export const SOFT_GLASS_FRAME_OVERLAY_CLASS =
   `${frameSvgOverlayClass} object-fill`;
 
+/**
+ * soft_glass 사진 blur — img에 직접 filter (wrapper blur/transform 조합 금지)
+ * 모서리 둥글림은 PNG 개구부 알fa가 담당, CSS clip radius 사용 안 함
+ */
+export const SOFT_GLASS_PHOTO_IMAGE_CLASS =
+  'scale-[1.06] blur-[12px] brightness-[0.92]';
+
 export const SOFT_GLASS_LANDSCAPE_SRC =
   '/photo-frames/soft-glass-landscape.png';
 

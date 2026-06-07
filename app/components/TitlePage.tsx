@@ -13,6 +13,7 @@ import {
   POLAROID_FRAME_INSET_CLASS,
   VINTAGE_FRAME_INSET_CLASS,
   SOFT_GLASS_FRAME_INSET_CLASS,
+  SOFT_GLASS_PHOTO_IMAGE_CLASS,
   BaroqueMatCaptionOverlay,
   PolaroidMatCaptionOverlay,
   formatBaroqueMatName,
@@ -272,8 +273,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             frameInsetClass[frameStyle],
           )}
         >
-          {/* soft_glass: PNG 개구부 알파가 둥근 모서리 마스크 / blur 사진 */}
-          <div className={cn('relative h-full w-full overflow-hidden rounded-[2px]', photoInnerBgClass)}>
+          {/* soft_glass: PNG 개구부 알fa = 둥근 모서리 / 사진 = CSS filter blur */}
+          <div
+            className={cn(
+              'relative h-full w-full overflow-hidden',
+              !isSoftGlassFrame && 'rounded-[2px]',
+              photoInnerBgClass,
+            )}
+          >
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
                 <motion.div
@@ -282,32 +289,29 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="absolute inset-0"
+                  className="absolute inset-0 overflow-hidden"
                 >
-                  <div className="absolute inset-0 isolate overflow-hidden">
-                    <Image
-                      src={selectedPhoto.data}
-                      alt={tp('photo_alt_today_memory')}
-                      fill
-                      className={cn(
-                        useCoverImage ? 'object-cover' : 'object-contain',
-                        isSoftGlassFrame &&
-                          'scale-[1.08] blur-lg brightness-105 saturate-110 [transform:translateZ(0)]',
-                        !isSoftGlassFrame &&
-                          'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
-                      )}
-                      unoptimized={true}
-                      onLoad={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        if (!target?.naturalWidth || !target?.naturalHeight || !selectedPhoto) return;
-                        const ratio = target.naturalWidth / target.naturalHeight;
-                        const cacheKey = String(selectedPhoto.id);
-                        imageAspectRatioCacheRef.current[cacheKey] = ratio;
-                        setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
-                      }}
-                      onError={() => setImageLoadError(true)}
-                    />
-                  </div>
+                  <Image
+                    src={selectedPhoto.data}
+                    alt={tp('photo_alt_today_memory')}
+                    fill
+                    className={cn(
+                      useCoverImage ? 'object-cover' : 'object-contain',
+                      isSoftGlassFrame && SOFT_GLASS_PHOTO_IMAGE_CLASS,
+                      !isSoftGlassFrame &&
+                        'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
+                    )}
+                    unoptimized={true}
+                    onLoad={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target?.naturalWidth || !target?.naturalHeight || !selectedPhoto) return;
+                      const ratio = target.naturalWidth / target.naturalHeight;
+                      const cacheKey = String(selectedPhoto.id);
+                      imageAspectRatioCacheRef.current[cacheKey] = ratio;
+                      setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
+                    }}
+                    onError={() => setImageLoadError(true)}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
