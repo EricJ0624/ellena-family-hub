@@ -156,7 +156,9 @@ if (inset) {
 await sharp(data, { raw: { width: w, height: h, channels: c } })
   .extract({ left: minX, top: minY, width: cw, height: ch })
   .png()
-  .toFile(`${path}.tmp`);
+  .toBuffer()
+  .then((buf) => sharp(buf).png().toFile(`${path}.tmp`));
 
 fs.renameSync(`${path}.tmp`, path);
 console.log('saved', path);
+console.log('Tip: node scripts/feather-frame-alpha.mjs', path, '1.2');

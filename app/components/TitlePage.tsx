@@ -13,7 +13,6 @@ import {
   POLAROID_FRAME_INSET_CLASS,
   VINTAGE_FRAME_INSET_CLASS,
   SOFT_GLASS_FRAME_INSET_CLASS,
-  SOFT_GLASS_PHOTO_ROUNDED_CLASS,
   BaroqueMatCaptionOverlay,
   PolaroidMatCaptionOverlay,
   formatBaroqueMatName,
@@ -188,12 +187,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     }
   }, [selectedPhoto, onPhotoOrientationChange]);
 
-  // 블러 배경용 저해상도 URL (S3/CloudFront 직링크는 그대로 사용)
-  const getBlurLayerSrc = useCallback((url: string) => {
-    if (!url || !isStablePhotoUrl(url)) return url;
-    return url;
-  }, []);
-
   // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
     setManualSeed(Date.now());
@@ -275,20 +268,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             'absolute z-[10] overflow-hidden',
             frameStyle === 'no_frame'
               ? 'rounded-[2rem] border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium'
-              : isSoftGlassFrame
-                ? SOFT_GLASS_PHOTO_ROUNDED_CLASS
-                : 'rounded',
+              : 'rounded',
             frameInsetClass[frameStyle],
           )}
         >
-          {/* 가족 사진 영역: soft_glass는 blur + 둥근 clip / 가로=cover / 세로=contain */}
-          <div
-            className={cn(
-              'relative h-full w-full overflow-hidden',
-              isSoftGlassFrame ? SOFT_GLASS_PHOTO_ROUNDED_CLASS : 'rounded-[2px]',
-              photoInnerBgClass,
-            )}
-          >
+          {/* soft_glass: PNG 개구부 알파가 둥근 모서리 마스크 / blur 사진 */}
+          <div className={cn('relative h-full w-full overflow-hidden rounded-[2px]', photoInnerBgClass)}>
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
                 <motion.div
@@ -299,39 +284,33 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="absolute inset-0"
                 >
-                  {isSoftGlassFrame && (
+                  <div
+                    className={cn(
+                      'relative h-full w-full transform-gpu',
+                      isSoftGlassFrame && 'scale-[1.12] blur-xl brightness-105 saturate-110',
+                    )}
+                  >
                     <Image
-                      src={getBlurLayerSrc(selectedPhoto.data)}
-                      alt=""
+                      src={selectedPhoto.data}
+                      alt={tp('photo_alt_today_memory')}
                       fill
-                      aria-hidden
                       className={cn(
                         useCoverImage ? 'object-cover' : 'object-contain',
-                        'scale-[1.08] blur-lg brightness-105',
+                        !isSoftGlassFrame &&
+                          'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
                       )}
                       unoptimized={true}
+                      onLoad={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target?.naturalWidth || !target?.naturalHeight || !selectedPhoto) return;
+                        const ratio = target.naturalWidth / target.naturalHeight;
+                        const cacheKey = String(selectedPhoto.id);
+                        imageAspectRatioCacheRef.current[cacheKey] = ratio;
+                        setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
+                      }}
+                      onError={() => setImageLoadError(true)}
                     />
-                  )}
-                  <Image
-                    src={selectedPhoto.data}
-                    alt={tp('photo_alt_today_memory')}
-                    fill
-                    className={cn(
-                      useCoverImage ? 'object-cover' : 'object-contain',
-                      isSoftGlassFrame && 'blur-[2px] opacity-95',
-                      'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
-                    )}
-                    unoptimized={true}
-                    onLoad={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      if (!target?.naturalWidth || !target?.naturalHeight || !selectedPhoto) return;
-                      const ratio = target.naturalWidth / target.naturalHeight;
-                      const cacheKey = String(selectedPhoto.id);
-                      imageAspectRatioCacheRef.current[cacheKey] = ratio;
-                      setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
-                    }}
-                    onError={() => setImageLoadError(true)}
-                  />
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div

@@ -67,8 +67,9 @@ export const POLAROID_PAPER_LANDSCAPE_SRC =
 export const SOFT_GLASS_FRAME_INSET_CLASS =
   'left-[6.6%] right-[7.1%] top-[9.2%] bottom-[9.4%]';
 
-/** soft-glass PNG 개구부 둥근 모서리 — 사진 clip과 동기화 */
-export const SOFT_GLASS_PHOTO_ROUNDED_CLASS = 'rounded-[12%]';
+/** soft-glass PNG 개구부 — PNG 알파가 마스크, CSS clip 불필요 */
+export const SOFT_GLASS_FRAME_OVERLAY_CLASS =
+  'pointer-events-none absolute inset-0 h-full w-full object-cover object-center transform-gpu [backface-visibility:hidden] [image-rendering:auto] drop-shadow-[0_0_0.75px_rgba(71,85,105,0.28)]';
 
 export const SOFT_GLASS_LANDSCAPE_SRC =
   '/photo-frames/soft-glass-landscape.png';
@@ -373,7 +374,7 @@ const SoftGlassFrame: React.FC<{ color: string; uid: string }> = () => (
   <img
     src={SOFT_GLASS_LANDSCAPE_SRC}
     alt=""
-    className={`${frameSvgOverlayClass} object-fill`}
+    className={SOFT_GLASS_FRAME_OVERLAY_CLASS}
   />
 );
 
