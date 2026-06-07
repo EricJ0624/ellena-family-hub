@@ -63,6 +63,16 @@ export const POLAROID_FRAME_INSET_CLASS =
 export const POLAROID_PAPER_LANDSCAPE_SRC =
   '/photo-frames/polaroid-paper-landscape.png';
 
+/** soft-glass-landscape.png (prepare-soft-glass-frame.mjs) 사진 구역 inset */
+export const SOFT_GLASS_FRAME_INSET_CLASS =
+  'left-[6.6%] right-[7.1%] top-[9.2%] bottom-[9.4%]';
+
+/** soft-glass PNG 개구부 둥근 모서리 — 사진 clip과 동기화 */
+export const SOFT_GLASS_PHOTO_ROUNDED_CLASS = 'rounded-[12%]';
+
+export const SOFT_GLASS_LANDSCAPE_SRC =
+  '/photo-frames/soft-glass-landscape.png';
+
 /** baroque-gold-landscape.png viewBox (크롭 후) */
 const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
 
@@ -357,28 +367,15 @@ const ModernFrame: React.FC<{ color: string; uid: string }> = () => (
   />
 );
 
-// 소프트 글래스 스타일 프레임 SVG
-const SoftGlassFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <defs>
-        <linearGradient id={`softGlassFill-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.62)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
-        </linearGradient>
-        <linearGradient id={`softGlassHighlight-${uid}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.78)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-        </linearGradient>
-      </defs>
-
-      <rect x="0" y="0" width="400" height="300" rx="24" fill={`url(#softGlassFill-${uid})`} />
-      <rect x="3" y="3" width="394" height="294" rx="21" fill="none" stroke="rgba(255,255,255,0.86)" strokeWidth="1.8" />
-      <rect x="8" y="8" width="384" height="284" rx="17" fill="none" stroke={color} strokeOpacity="0.5" strokeWidth="1.2" />
-      <rect x="0" y="0" width="400" height="100" rx="24" fill={`url(#softGlassHighlight-${uid})`} />
-    </svg>
-  );
-};
+// 소프트 글래스 스타일 프레임 (PNG 오버레이)
+const SoftGlassFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={SOFT_GLASS_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 폴라로이드 모던 스타일 프레임 (PNG 오버레이)
 const PolaroidModernFrame: React.FC<{ color: string; uid: string }> = () => (

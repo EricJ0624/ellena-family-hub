@@ -12,6 +12,8 @@ import {
   MODERN_FRAME_INSET_CLASS,
   POLAROID_FRAME_INSET_CLASS,
   VINTAGE_FRAME_INSET_CLASS,
+  SOFT_GLASS_FRAME_INSET_CLASS,
+  SOFT_GLASS_PHOTO_ROUNDED_CLASS,
   BaroqueMatCaptionOverlay,
   PolaroidMatCaptionOverlay,
   formatBaroqueMatName,
@@ -212,7 +214,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     ornate: 'inset-[20px]',
     vintage: VINTAGE_FRAME_INSET_CLASS,
     modern: MODERN_FRAME_INSET_CLASS,
-    soft_glass: 'inset-[14px]',
+    soft_glass: SOFT_GLASS_FRAME_INSET_CLASS,
     polaroid_modern: POLAROID_FRAME_INSET_CLASS,
     editorial: 'inset-[10px]',
     gradient_rim: 'inset-[12px]',
@@ -220,9 +222,11 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   };
   const useCoverImage =
     frameStyle === 'vintage' ||
+    frameStyle === 'soft_glass' ||
     frameStyle === 'polaroid_modern' ||
     frameStyle === 'editorial' ||
     frameStyle === 'no_frame';
+  const isSoftGlassFrame = frameStyle === 'soft_glass';
   const photoInnerBgClass = 'bg-[#1a1a1a]';
   const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
 
@@ -271,13 +275,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             'absolute z-[10] overflow-hidden',
             frameStyle === 'no_frame'
               ? 'rounded-[2rem] border border-glass-medium bg-glass-medium shadow-glass-medium backdrop-blur-glass-medium'
-              : 'rounded',
+              : isSoftGlassFrame
+                ? SOFT_GLASS_PHOTO_ROUNDED_CLASS
+                : 'rounded',
             frameInsetClass[frameStyle],
           )}
         >
-          {/* 가족 사진 영역: 3중 레이어 (Dynamic Gaussian Blur) + 가로=cover / 세로=contain */}
+          {/* 가족 사진 영역: soft_glass는 blur + 둥근 clip / 가로=cover / 세로=contain */}
           <div
-            className={cn('relative h-full w-full overflow-hidden rounded-[2px]', photoInnerBgClass)}
+            className={cn(
+              'relative h-full w-full overflow-hidden',
+              isSoftGlassFrame ? SOFT_GLASS_PHOTO_ROUNDED_CLASS : 'rounded-[2px]',
+              photoInnerBgClass,
+            )}
           >
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
@@ -289,13 +299,26 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="absolute inset-0"
                 >
-                  {/* 안정성 우선: 원본 레이어만 사용해 밝기 변동/깜빡임 최소화 */}
+                  {isSoftGlassFrame && (
+                    <Image
+                      src={getBlurLayerSrc(selectedPhoto.data)}
+                      alt=""
+                      fill
+                      aria-hidden
+                      className={cn(
+                        useCoverImage ? 'object-cover' : 'object-contain',
+                        'scale-[1.08] blur-lg brightness-105',
+                      )}
+                      unoptimized={true}
+                    />
+                  )}
                   <Image
                     src={selectedPhoto.data}
                     alt={tp('photo_alt_today_memory')}
                     fill
                     className={cn(
                       useCoverImage ? 'object-cover' : 'object-contain',
+                      isSoftGlassFrame && 'blur-[2px] opacity-95',
                       'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
                     )}
                     unoptimized={true}
