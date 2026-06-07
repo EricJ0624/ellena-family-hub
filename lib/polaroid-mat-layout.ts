@@ -5,8 +5,8 @@
  * scripts/crop-polaroid-bg.mjs 크롭 후 width/height·inset 갱신
  */
 export const POLAROID_MAT_LAYOUT = {
-  viewBox: { width: 1165, height: 895 },
-  baselineY: 860,
+  viewBox: { width: 1161, height: 894 },
+  baselineY: 859,
   /** Lee → 그룹 표시 이름 (우측 정렬) */
   nameX: 1045,
   /** 연도 — 이름 왼쪽 */
