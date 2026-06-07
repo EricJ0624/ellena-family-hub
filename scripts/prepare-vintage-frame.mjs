@@ -1,15 +1,14 @@
 /**
- * vintage-frame-landscape.png — 프레임·그림자 유지, 바깥 배경만 제거
- * - 가장자리 색상 flood (tolerance 48, 보수적)
- * - 불투명 검정 개구부만 투명 (이미 투명이면 스킵)
- * - 프레임 bbox 크롭
+ * vintage-frame-landscape.png — 흰 배경 export 전처리
+ * - 가장자리 연결 흰색 → 투명 (바깥 배경)
+ * - 가운데 흰 개구부 → 투명 (프레임 wood에 둘러싸인 영역)
+ * - 프레임·장식은 유지, opaque bbox 크롭
  * 실행: node scripts/prepare-vintage-frame.mjs
  */
 import sharp from 'sharp';
 import fs from 'fs';
 
 const path = 'public/photo-frames/vintage-frame-landscape.png';
-const TOLERANCE = 38;
 
 const { data, info } = await sharp(path).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const w = info.width;
@@ -21,29 +20,8 @@ const px = (x, y) => {
   return [data[i], data[i + 1], data[i + 2], data[i + 3]];
 };
 
-const colorDist = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
-
-const bgMask = new Uint8Array(w * h);
-const queue = [];
-
-for (let x = 0; x < w; x++) {
-  for (const y of [0, h - 1]) {
-    const p = px(x, y);
-    if (p[3] > 128 && !bgMask[y * w + x]) {
-      bgMask[y * w + x] = 1;
-      queue.push([x, y, p]);
-    }
-  }
-}
-for (let y = 0; y < h; y++) {
-  for (const x of [0, w - 1]) {
-    const p = px(x, y);
-    if (p[3] > 128 && !bgMask[y * w + x]) {
-      bgMask[y * w + x] = 1;
-      queue.push([x, y, p]);
-    }
-  }
-}
+/** export 흰 배경·개구부 (순수 흰에 가까운 픽셀) */
+const isWhite = (p) => p[3] > 128 && p[0] > 232 && p[1] > 232 && p[2] > 232;
 
 const dirs = [
   [1, 0],
@@ -51,28 +29,49 @@ const dirs = [
   [0, 1],
   [0, -1],
 ];
-while (queue.length) {
-  const [x, y, ref] = queue.pop();
-  for (const [dx, dy] of dirs) {
-    const nx = x + dx;
-    const ny = y + dy;
-    if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-    const idx = ny * w + nx;
-    if (bgMask[idx]) continue;
-    const p = px(nx, ny);
-    if (p[3] < 128) continue;
-    if (colorDist(p, ref) < TOLERANCE) {
-      bgMask[idx] = 1;
-      queue.push([nx, ny, ref]);
+
+function floodWhite(seeds) {
+  const mask = new Uint8Array(w * h);
+  const queue = [];
+  for (const [sx, sy] of seeds) {
+    const p = px(sx, sy);
+    const idx = sy * w + sx;
+    if (!isWhite(p) || mask[idx]) continue;
+    mask[idx] = 1;
+    queue.push([sx, sy]);
+  }
+  while (queue.length) {
+    const [x, y] = queue.pop();
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const idx = ny * w + nx;
+      if (mask[idx]) continue;
+      if (!isWhite(px(nx, ny))) continue;
+      mask[idx] = 1;
+      queue.push([nx, ny]);
     }
   }
+  return mask;
 }
 
+/** 1) 바깥 흰 배경 */
+const exteriorSeeds = [];
+for (let x = 0; x < w; x++) {
+  exteriorSeeds.push([x, 0], [x, h - 1]);
+}
+for (let y = 0; y < h; y++) {
+  exteriorSeeds.push([0, y], [w - 1, y]);
+}
+const exterior = floodWhite(exteriorSeeds);
+
+/** 2) 안쪽 흰 개구부 — 중앙 시드 */
+const opening = floodWhite([[Math.floor(w / 2), Math.floor(h / 2)]]);
+
 for (let i = 0; i < w * h; i++) {
-  if (bgMask[i]) data[i * 4 + 3] = 0;
-  const o = i * 4;
-  if (data[o + 3] > 128 && data[o] < 20 && data[o + 1] < 20 && data[o + 2] < 20) {
-    data[o + 3] = 0;
+  if (exterior[i] || (opening[i] && !exterior[i])) {
+    data[i * 4 + 3] = 0;
   }
 }
 
@@ -92,13 +91,12 @@ for (let y = 0; y < h; y++) {
 }
 
 if (maxX < minX || maxY < minY) {
-  throw new Error('No visible frame content after background removal');
+  throw new Error('No visible frame content after white removal');
 }
 
 const cw = maxX - minX + 1;
 const ch = maxY - minY + 1;
 
-/** 사진 구역 inset — 개구부 중앙 행 inner wood 경계 */
 function measureInset() {
   const xm = minX + Math.floor(cw / 2);
   let top = -1;
@@ -130,7 +128,7 @@ function measureInset() {
 
 const inset = measureInset();
 
-console.log(JSON.stringify({ crop: { minX, minY, cw, ch }, inset, tolerance: TOLERANCE }, null, 2));
+console.log(JSON.stringify({ crop: { minX, minY, cw, ch }, inset }, null, 2));
 if (inset) {
   console.log(
     `VINTAGE_FRAME_INSET_CLASS = 'left-[${inset.left}%] right-[${inset.right}%] top-[${inset.top}%] bottom-[${inset.bottom}%]';`,
