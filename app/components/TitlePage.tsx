@@ -284,18 +284,15 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="absolute inset-0"
                 >
-                  <div
-                    className={cn(
-                      'relative h-full w-full transform-gpu',
-                      isSoftGlassFrame && 'scale-[1.12] blur-xl brightness-105 saturate-110',
-                    )}
-                  >
+                  <div className="absolute inset-0 isolate overflow-hidden">
                     <Image
                       src={selectedPhoto.data}
                       alt={tp('photo_alt_today_memory')}
                       fill
                       className={cn(
                         useCoverImage ? 'object-cover' : 'object-contain',
+                        isSoftGlassFrame &&
+                          'scale-[1.08] blur-lg brightness-105 saturate-110 [transform:translateZ(0)]',
                         !isSoftGlassFrame &&
                           'shadow-[0_4px_24px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.05)]',
                       )}
