@@ -222,7 +222,14 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     frameStyle === 'no_frame';
   const isSoftGlassFrame = frameStyle === 'soft_glass';
   const photoInnerBgClass = 'bg-[#1a1a1a]';
-  const frameWidthClass = isPortraitPhoto ? 'max-w-[320px] md:max-w-[340px]' : 'max-w-[380px]';
+  const frameWidthClass =
+    frameStyle === 'polaroid_modern'
+      ? isPortraitPhoto
+        ? 'max-w-[360px] md:max-w-[380px]'
+        : 'max-w-[min(92vw,420px)]'
+      : isPortraitPhoto
+        ? 'max-w-[320px] md:max-w-[340px]'
+        : 'max-w-[380px]';
 
   const baroqueMatDisplayName = useMemo(() => {
     if (frameStyle !== 'baroque') return null;
