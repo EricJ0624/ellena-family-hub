@@ -49,7 +49,7 @@ export const MODERN_FRAME_INSET_CLASS =
 export const MODERN_WOOD_LANDSCAPE_SRC =
   '/photo-frames/modern-wood-landscape.png';
 
-/** polaroid-paper-landscape.png (크롭·투명 후) 사진 구역 inset — scripts/prepare-polaroid-frame.mjs */
+/** polaroid-paper-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-polaroid-bg.mjs */
 export const POLAROID_FRAME_INSET_CLASS =
   'left-[10.4%] right-[9.4%] top-[10.7%] bottom-[16.7%]';
 

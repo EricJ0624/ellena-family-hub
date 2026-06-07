@@ -2,10 +2,10 @@
  * polaroid-paper-landscape.png 하단 캡션 좌표 (viewBox = PNG px).
  * PNG baked: "Family Portrait," (가운데)
  * 코드 overlay: [연도] + [이름] — Lee 자리(우측 스크립트)
- * prepare-polaroid-frame.mjs 크롭 후 width/height·inset 갱신
+ * scripts/crop-polaroid-bg.mjs 크롭 후 width/height·inset 갱신
  */
 export const POLAROID_MAT_LAYOUT = {
-  viewBox: { width: 1168, height: 896 },
+  viewBox: { width: 1165, height: 895 },
   baselineY: 860,
   /** Lee → 그룹 표시 이름 (우측 정렬) */
   nameX: 1045,
