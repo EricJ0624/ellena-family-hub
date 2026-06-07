@@ -219,6 +219,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     no_frame: 'inset-0',
   };
   const useCoverImage =
+    frameStyle === 'vintage' ||
     frameStyle === 'polaroid_modern' ||
     frameStyle === 'editorial' ||
     frameStyle === 'no_frame';

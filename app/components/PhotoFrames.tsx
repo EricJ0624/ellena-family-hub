@@ -49,9 +49,9 @@ export const MODERN_FRAME_INSET_CLASS =
 export const MODERN_WOOD_LANDSCAPE_SRC =
   '/photo-frames/modern-wood-landscape.png';
 
-/** vintage-frame-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-frame-bg.mjs */
+/** vintage-frame-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/prepare-vintage-frame.mjs / 원본 실측 */
 export const VINTAGE_FRAME_INSET_CLASS =
-  'left-[11.3%] right-[15.7%] top-[16.8%] bottom-[16.0%]';
+  'left-[16%] right-[15.9%] top-[18%] bottom-[17.1%]';
 
 export const VINTAGE_FRAME_LANDSCAPE_SRC =
   '/photo-frames/vintage-frame-landscape.png';
