@@ -6,6 +6,11 @@ import {
   baroqueMatFontSizeForName,
   baroqueMatFontSizeForYear,
 } from '@/lib/baroque-mat-layout';
+import {
+  POLAROID_MAT_LAYOUT,
+  polaroidMatFontSizeForName,
+  polaroidMatFontSizeForYear,
+} from '@/lib/polaroid-mat-layout';
 
 // 프레임 스타일 타입 정의
 export type FrameStyle =
@@ -44,8 +49,18 @@ export const MODERN_FRAME_INSET_CLASS =
 export const MODERN_WOOD_LANDSCAPE_SRC =
   '/photo-frames/modern-wood-landscape.png';
 
+/** polaroid-paper-landscape.png (크롭·투명 후) 사진 구역 inset — scripts/prepare-polaroid-frame.mjs */
+export const POLAROID_FRAME_INSET_CLASS =
+  'left-[10.4%] right-[9.4%] top-[10.7%] bottom-[16.7%]';
+
+export const POLAROID_PAPER_LANDSCAPE_SRC =
+  '/photo-frames/polaroid-paper-landscape.png';
+
 /** baroque-gold-landscape.png viewBox (크롭 후) */
 const BAROQUE_FRAME_VIEWBOX = { width: 970, height: 803 } as const;
+
+/** polaroid-paper-landscape.png viewBox — lib/polaroid-mat-layout.ts 와 동기화 */
+const POLAROID_FRAME_VIEWBOX = POLAROID_MAT_LAYOUT.viewBox;
 
 /**
  * PNG에 "FAMILY - GATHERING," 가 박혀 있으므로 이름 끝의 " Family" 접미사 제거.
@@ -58,6 +73,16 @@ export function formatBaroqueMatName(displayName: string): string {
     base = base.replace(/\s+family\s*$/i, '').trim();
   }
   return (base || displayName.trim()).toUpperCase();
+}
+
+/** 폴라로이드 하단 Lee 자리 — 스크립트용, Family 접미사만 제거 */
+export function formatPolaroidMatName(displayName: string): string {
+  let base = displayName.trim();
+  if (!base) return '';
+  while (/\s+family\s*$/i.test(base)) {
+    base = base.replace(/\s+family\s*$/i, '').trim();
+  }
+  return base || displayName.trim();
 }
 
 /** @deprecated PNG에 FAMILY·GATHERING이 박혀 있으면 formatBaroqueMatName 사용 */
@@ -113,8 +138,8 @@ export const FRAME_CONFIGS: FrameConfig[] = [
   {
     id: 'polaroid_modern',
     name: '폴라로이드 모던',
-    description: '하단 여백이 강조된 미니멀 폴라로이드',
-    color: '#f8fafc',
+    description: '빈티지 폴라로이드 페이퍼 프레임',
+    color: '#8a8272',
   },
   {
     id: 'editorial',
@@ -194,6 +219,52 @@ export function BaroqueMatCaptionOverlay({ displayName }: { displayName: string 
         dominantBaseline="alphabetic"
       >
         {` ${year}`}
+      </text>
+    </svg>
+  );
+}
+
+/** 폴라로이드 하단 캡션 — PNG viewBox 좌표, 이름(Lee)·연도만 오버레이 */
+export function PolaroidMatCaptionOverlay({ displayName }: { displayName: string }) {
+  const name = formatPolaroidMatName(displayName);
+  if (!name) return null;
+  const year = String(new Date().getFullYear());
+  const { baselineY, nameX, yearX, typography } = POLAROID_MAT_LAYOUT;
+  const nameFontSize = polaroidMatFontSizeForName(name.length);
+  const yearFontSize = polaroidMatFontSizeForYear();
+
+  return (
+    <svg
+      viewBox={`0 0 ${POLAROID_FRAME_VIEWBOX.width} ${POLAROID_FRAME_VIEWBOX.height}`}
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 z-[30] h-full w-full overflow-visible"
+      aria-hidden
+    >
+      <text
+        x={yearX}
+        y={baselineY}
+        fill={typography.fill}
+        fontSize={yearFontSize}
+        fontFamily={typography.fontFamily}
+        fontWeight={typography.fontWeight}
+        letterSpacing={typography.letterSpacing}
+        textAnchor="end"
+        dominantBaseline="alphabetic"
+      >
+        {year}
+      </text>
+      <text
+        x={nameX}
+        y={baselineY}
+        fill={typography.fill}
+        fontSize={nameFontSize}
+        fontFamily={typography.fontFamily}
+        fontWeight={typography.fontWeight}
+        letterSpacing={typography.letterSpacing}
+        textAnchor="end"
+        dominantBaseline="alphabetic"
+      >
+        {` ${name}`}
       </text>
     </svg>
   );
@@ -321,18 +392,15 @@ const SoftGlassFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }
   );
 };
 
-// 폴라로이드 모던 스타일 프레임 SVG
-const PolaroidModernFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <rect x="0" y="0" width="400" height="300" rx="16" fill="#f8fafc" />
-      <rect x="4" y="4" width="392" height="292" rx="14" fill="none" stroke="rgba(15,23,42,0.14)" strokeWidth="1.8" />
-      <rect x="10" y="10" width="380" height="248" rx="9" fill="none" stroke="rgba(15,23,42,0.24)" strokeWidth="1.2" />
-      <rect x="20" y="268" width="360" height="18" rx="6" fill="rgba(255,255,255,0.95)" />
-      <rect x="150" y="272" width="100" height="4" rx="2" fill={color} fillOpacity="0.35" />
-    </svg>
-  );
-};
+// 폴라로이드 모던 스타일 프레임 (PNG 오버레이)
+const PolaroidModernFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={POLAROID_PAPER_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 에디토리얼 스타일 프레임 SVG
 const EditorialFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {

@@ -10,8 +10,11 @@ import {
   FRAME_CONFIGS,
   BAROQUE_FRAME_INSET_CLASS,
   MODERN_FRAME_INSET_CLASS,
+  POLAROID_FRAME_INSET_CLASS,
   BaroqueMatCaptionOverlay,
+  PolaroidMatCaptionOverlay,
   formatBaroqueMatName,
+  formatPolaroidMatName,
   type FrameStyle,
 } from './PhotoFrames';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -209,7 +212,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     vintage: 'inset-[20px]',
     modern: MODERN_FRAME_INSET_CLASS,
     soft_glass: 'inset-[14px]',
-    polaroid_modern: 'left-[14px] right-[14px] top-[14px] bottom-[38px]',
+    polaroid_modern: POLAROID_FRAME_INSET_CLASS,
     editorial: 'inset-[10px]',
     gradient_rim: 'inset-[12px]',
     no_frame: 'inset-0',
@@ -224,6 +227,12 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const baroqueMatDisplayName = useMemo(() => {
     if (frameStyle !== 'baroque') return null;
     const name = formatBaroqueMatName(groupCaptionName ?? '');
+    return name || null;
+  }, [frameStyle, groupCaptionName]);
+
+  const polaroidMatDisplayName = useMemo(() => {
+    if (frameStyle !== 'polaroid_modern') return null;
+    const name = formatPolaroidMatName(groupCaptionName ?? '');
     return name || null;
   }, [frameStyle, groupCaptionName]);
   
@@ -321,6 +330,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
         {baroqueMatDisplayName ? (
           <BaroqueMatCaptionOverlay displayName={groupCaptionName ?? ''} />
+        ) : null}
+
+        {polaroidMatDisplayName ? (
+          <PolaroidMatCaptionOverlay displayName={groupCaptionName ?? ''} />
         ) : null}
 
         {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}
