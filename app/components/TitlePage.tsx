@@ -11,6 +11,7 @@ import {
   BAROQUE_FRAME_INSET_CLASS,
   MODERN_FRAME_INSET_CLASS,
   POLAROID_FRAME_INSET_CLASS,
+  VINTAGE_FRAME_INSET_CLASS,
   BaroqueMatCaptionOverlay,
   PolaroidMatCaptionOverlay,
   formatBaroqueMatName,
@@ -209,7 +210,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const frameInsetClass: Record<FrameStyle, string> = {
     baroque: BAROQUE_FRAME_INSET_CLASS,
     ornate: 'inset-[20px]',
-    vintage: 'inset-[20px]',
+    vintage: VINTAGE_FRAME_INSET_CLASS,
     modern: MODERN_FRAME_INSET_CLASS,
     soft_glass: 'inset-[14px]',
     polaroid_modern: POLAROID_FRAME_INSET_CLASS,

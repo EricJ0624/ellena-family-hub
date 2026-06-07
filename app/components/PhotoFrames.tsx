@@ -49,6 +49,13 @@ export const MODERN_FRAME_INSET_CLASS =
 export const MODERN_WOOD_LANDSCAPE_SRC =
   '/photo-frames/modern-wood-landscape.png';
 
+/** vintage-frame-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-frame-bg.mjs */
+export const VINTAGE_FRAME_INSET_CLASS =
+  'left-[11.3%] right-[15.7%] top-[16.8%] bottom-[16.0%]';
+
+export const VINTAGE_FRAME_LANDSCAPE_SRC =
+  '/photo-frames/vintage-frame-landscape.png';
+
 /** polaroid-paper-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-polaroid-bg.mjs */
 export const POLAROID_FRAME_INSET_CLASS =
   'left-[10.4%] right-[9.4%] top-[10.7%] bottom-[16.7%]';
@@ -330,34 +337,15 @@ const OrnateFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) =
   );
 };
 
-// 빈티지 스타일 프레임 SVG
-const VintageFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <defs>
-        <linearGradient id="vintageWood" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={color} />
-          <stop offset="50%" stopColor="#8b6f47" />
-          <stop offset="100%" stopColor={color} />
-        </linearGradient>
-      </defs>
-
-      <rect x="0" y="0" width="400" height="300" fill="url(#vintageWood)" />
-      <rect x="10" y="10" width="380" height="280" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="2" />
-      <rect x="15" y="15" width="370" height="270" fill="none" stroke="rgba(139,69,19,0.6)" strokeWidth="1" />
-
-      {/* 빈티지 모서리 */}
-      {[
-        { x: 20, y: 20 },
-        { x: 370, y: 20 },
-        { x: 20, y: 270 },
-        { x: 370, y: 270 },
-      ].map((corner, i) => (
-        <circle key={i} cx={corner.x} cy={corner.y} r="4" fill="rgba(139,69,19,0.8)" stroke="rgba(0,0,0,0.5)" strokeWidth="1" />
-      ))}
-    </svg>
-  );
-};
+// 빈티지 스타일 프레임 (PNG 오버레이)
+const VintageFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={VINTAGE_FRAME_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 모던 스타일 프레임 (PNG 오버레이)
 const ModernFrame: React.FC<{ color: string; uid: string }> = () => (
