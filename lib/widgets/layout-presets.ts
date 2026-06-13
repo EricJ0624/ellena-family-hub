@@ -25,6 +25,11 @@ import { detectGridOverlaps, PORTRAIT_COLS, LANDSCAPE_COLS } from './grid';
 export const BASE_COLS = 12;    // portrait 레이아웃 저장 단위 (PORTRAIT_COLS 와 동일)
 export const LANDSCAPE_BASE_COLS = 24; // landscape 레이아웃 저장 단위 (LANDSCAPE_COLS 와 동일)
 
+/** layout w/h 스냅 — 0.5 그리드 단위 (12열 6+6 등 경계 배치 안정화) */
+export function snapLayoutCoord(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
 /** DB CHECK(col_span 1~4, row_span 1~6)용 — layout_w/h(12열)에서 역산 */
 export function layoutWHToLegacySpans(
   layoutW: number,
@@ -243,8 +248,8 @@ function applyOrientationWH(
   };
 }
 
-/** x+w가 열 수를 넘지 않도록 layout 좌표 보정 (저장·로드 정규화) */
-function clampWidgetLayoutExtents(
+/** x+w가 열 수를 넘지 않도록 layout 좌표 보정 (저장·로드·편집기 리사이즈) */
+export function clampWidgetLayoutExtents(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
 ): WidgetConfigDraft[] {
@@ -253,7 +258,9 @@ function clampWidgetLayoutExtents(
     if (!d.is_enabled) return d;
     let w = effectiveLayoutW(d, orientation);
     let x = effectiveLayoutX(d, orientation) ?? 0;
-    const h = effectiveLayoutH(d, orientation);
+    let h = effectiveLayoutH(d, orientation);
+    w = snapLayoutCoord(w);
+    h = snapLayoutCoord(h);
     if (w > maxCols) w = maxCols;
     if (x < 0) x = 0;
     if (x + w > maxCols) x = Math.max(0, maxCols - w);
@@ -321,7 +328,7 @@ export function resolveOrientationLayoutOverlaps(
         break;
       }
       const pushX = Math.max(...conflicts.map((c) => c.x + c.w));
-      if (pushX + ww <= maxCols) {
+      if (pushX + ww <= maxCols + 1e-9) {
         x = pushX;
         continue;
       }
@@ -458,13 +465,16 @@ export function compactOrientationLayoutY(
   for (const list of byColumn.values()) {
     list.sort((a, b) => {
       const dy = effectiveLayoutY(a, orientation) - effectiveLayoutY(b, orientation);
-      if (dy !== 0) return dy;
+      if (Math.abs(dy) > 1e-9) return dy;
       return a.display_order - b.display_order;
     });
     let cy = 0;
     for (const w of list) {
-      yByKey.set(w.widget_key, cy);
-      cy += effectiveLayoutH(w, orientation);
+      const intendedY = effectiveLayoutY(w, orientation);
+      // 같은 열·의도한 행(y) 유지 — 아래 위젯만 y≥cy 로 밀어 올림 방지
+      const nextY = intendedY >= cy - 1e-9 ? intendedY : cy;
+      yByKey.set(w.widget_key, nextY);
+      cy = nextY + effectiveLayoutH(w, orientation);
     }
   }
 
@@ -503,6 +513,57 @@ export function layoutSameColumn(
   const bx = effectiveLayoutX(b, orientation);
   if (ax == null || bx == null) return false;
   return Math.round(ax) === Math.round(bx);
+}
+
+export type DropPlacementMode = 'below' | 'beside';
+
+/** 드롭 포인터·앵커 카드 rect → 옆(beside) / 아래(below) */
+export function inferDropPlacementMode(
+  pointer: { x: number; y: number } | null,
+  overRect: { left: number; top: number; width: number; height: number } | null,
+  sameColumn: boolean,
+): DropPlacementMode {
+  if (!pointer || !overRect) {
+    return sameColumn ? 'below' : 'beside';
+  }
+  const relX = pointer.x - overRect.left;
+  const relY = pointer.y - overRect.top;
+  if (relY > overRect.height / 2) return 'below';
+  if (relX > overRect.width / 2) return 'beside';
+  return 'below';
+}
+
+/**
+ * anchor 오른쪽에 draft 배치 (x = anchor.x + anchor.w, y = anchor.y).
+ * 너비 초과 시 anchor 왼쪽, 그래도 안 되면 x만 clamp.
+ */
+export function applyStackBesideDraft(
+  draft: WidgetConfigDraft,
+  anchor: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft {
+  const maxCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const ax = effectiveLayoutX(anchor, orientation) ?? 0;
+  const ay = effectiveLayoutY(anchor, orientation);
+  const aw = effectiveLayoutW(anchor, orientation);
+  const dw = effectiveLayoutW(draft, orientation);
+  let nextX = ax + aw;
+  if (nextX + dw > maxCols + 1e-9) {
+    nextX = ax - dw;
+  }
+  nextX = Math.max(0, Math.min(nextX, maxCols - dw));
+  return applyOrientationXY(draft, orientation, nextX, ay);
+}
+
+export function applyDropPlacementDraft(
+  draft: WidgetConfigDraft,
+  anchor: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+  mode: DropPlacementMode,
+): WidgetConfigDraft {
+  return mode === 'beside'
+    ? applyStackBesideDraft(draft, anchor, orientation)
+    : applyStackBelowDraft(draft, anchor, orientation);
 }
 
 /**
@@ -606,6 +667,9 @@ export function finalizeDraftsLayoutForOrientation(
   orientation: 'portrait' | 'landscape',
 ): WidgetConfigDraft[] {
   const resolved = ensureOrientationNoGridOverlaps(widgets, orientation);
+  if (orientation !== 'portrait') {
+    return resolved;
+  }
   return resolved.map((d) => {
     if (!d.is_enabled) return d;
     const w = effectiveLayoutW(d, orientation);

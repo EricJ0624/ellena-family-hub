@@ -51,13 +51,16 @@ import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   BASE_COLS,
   toActualColSpan,
+  applyDropPlacementDraft,
   applyStackBelowDraft,
-  applyDisplayOrderPacking,
+  clampWidgetLayoutExtents,
   detectLayoutCoordinateOverlaps,
   draftsOrientationLayoutsEqual,
   ensureDraftsBothOrientationsNoOverlap,
   finalizeDraftsLayoutForOrientation,
+  inferDropPlacementMode,
   layoutSameColumn,
+  snapLayoutCoord,
 } from '@/lib/widgets/layout-presets';
 
 /** previewMode 별 내부 CSS 그리드 기준 열 수 (BASE_COLS 단위) */
@@ -544,7 +547,7 @@ export function WidgetLayoutEditor({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      const { active, over } = event;
+      const { active, over, delta, activatorEvent } = event;
       if (!over || active.id === over.id) return;
 
       const oldIndex = sortedEnabled.findIndex((d) => d.widget_key === active.id);
@@ -566,13 +569,24 @@ export function WidgetLayoutEditor({
         return;
       }
 
-      let result = updated;
-      if (layoutSameColumn(activeDraft, overDraft, orient)) {
-        const stacked = applyStackBelowDraft(activeDraft, overDraft, orient);
-        result = updated.map((d) => (d.widget_key === active.id ? stacked : d));
-      } else {
-        result = applyDisplayOrderPacking(updated, orient);
+      const sameCol = layoutSameColumn(activeDraft, overDraft, orient);
+      let pointer: { x: number; y: number } | null = null;
+      if (activatorEvent && 'clientX' in activatorEvent) {
+        const pe = activatorEvent as PointerEvent;
+        pointer = { x: pe.clientX + delta.x, y: pe.clientY + delta.y };
       }
+      const overEl = document.querySelector(`[data-widget-key="${String(over.id)}"]`);
+      const overRect = overEl?.getBoundingClientRect() ?? null;
+      const dropMode = inferDropPlacementMode(
+        pointer,
+        overRect
+          ? { left: overRect.left, top: overRect.top, width: overRect.width, height: overRect.height }
+          : null,
+        sameCol,
+      );
+
+      const placed = applyDropPlacementDraft(activeDraft, overDraft, orient, dropMode);
+      const result = updated.map((d) => (d.widget_key === active.id ? placed : d));
       onDraftsChange(finalizeDraftsLayoutForOrientation(result, orient));
     },
     [sortedEnabled, drafts, onDraftsChange],
@@ -594,14 +608,14 @@ export function WidgetLayoutEditor({
       if ((rs.axis === 'h' || rs.axis === 'hv') && containerWidth > 0) {
         const colUnitPx = containerWidth / baseCols;
         const rawW = rs.startValueW + (e.clientX - rs.startPxX) / colUnitPx;
-        const newW = Math.min(baseCols, Math.max(0.5, rawW));
+        const newW = snapLayoutCoord(Math.min(baseCols, Math.max(0.5, rawW)));
         next = { ...next, currentW: newW };
       }
       if ((rs.axis === 'v' || rs.axis === 'hv') && containerWidth > 0) {
         const rowPx = containerWidth / baseCols;
         const maxRows = baseCols === PORTRAIT_COLS ? 24 : 12;
         const rawH = rs.startValueH + (e.clientY - rs.startPxY) / rowPx;
-        const newH = Math.min(maxRows, Math.max(0.5, rawH));
+        const newH = snapLayoutCoord(Math.min(maxRows, Math.max(0.5, rawH)));
         next = { ...next, currentH: newH };
       }
       if (next !== rs) {
@@ -630,14 +644,16 @@ export function WidgetLayoutEditor({
         if (d.widget_key !== rs.key) return d;
         // Phase D: orientation별 현재 유효값을 startValue로 사용
         const effLayout = getOrientationLayout(d, orient);
-        const newW =
+        const newW = snapLayoutCoord(
           rs.axis === 'v'
             ? (effLayout.layoutW ?? (d.colSpan * baseCols) / visualColsRef.current)
-            : rs.currentW;
-        const newH =
+            : rs.currentW,
+        );
+        const newH = snapLayoutCoord(
           rs.axis === 'h'
             ? (effLayout.layoutH ?? d.rowSpan)
-            : rs.currentH;
+            : rs.currentH,
+        );
 
         if (orient === 'portrait') {
           return {
@@ -659,11 +675,8 @@ export function WidgetLayoutEditor({
         };
       });
 
-      // 가로 리사이즈는 W/H만 바뀌고 layout_x는 그대로라 한 열에 쌓임 → display_order 패킹으로 x/y 갱신
-      const laidOut =
-        rs.axis === 'h' || rs.axis === 'hv'
-          ? applyDisplayOrderPacking(updated, orient)
-          : updated;
+      // x/y 유지 — 너비·높이만 clamp 후 겹침 해소 (display_order 전체 재패킹 금지)
+      const laidOut = clampWidgetLayoutExtents(updated, orient);
 
       onDraftsChangeRef.current(finalizeDraftsLayoutForOrientation(laidOut, orient));
     };
