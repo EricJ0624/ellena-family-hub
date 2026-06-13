@@ -661,6 +661,65 @@ export function applyDisplayOrderPacking(
   return compactOrientationLayoutY(placed, orientation);
 }
 
+/** 포인터 위치 → layout x/y (그리드 컨테이너 기준, 0.5 스냅) */
+export function layoutCoordsFromGridPointer(
+  pointer: { x: number; y: number },
+  gridRect: { left: number; top: number; width: number },
+  baseCols: number,
+): { x: number; y: number } {
+  const unitPx = gridRect.width / baseCols;
+  if (unitPx <= 0) return { x: 0, y: 0 };
+  return {
+    x: snapLayoutCoord((pointer.x - gridRect.left) / unitPx),
+    y: snapLayoutCoord((pointer.y - gridRect.top) / unitPx),
+  };
+}
+
+/** 드래그 드롭·그리드 스냅 배치 — x/y를 범위 내로 clamp 후 orientation 필드 갱신 */
+export function placeDraftAtOrientationCoords(
+  draft: WidgetConfigDraft,
+  orientation: 'portrait' | 'landscape',
+  x: number,
+  y: number,
+): WidgetConfigDraft {
+  const maxCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const w = effectiveLayoutW(draft, orientation);
+  const clampedX = snapLayoutCoord(Math.max(0, Math.min(x, maxCols - w)));
+  const clampedY = snapLayoutCoord(Math.max(0, y));
+  return applyOrientationXY(draft, orientation, clampedX, clampedY);
+}
+
+function syncPortraitLegacySpans(
+  widgets: readonly WidgetConfigDraft[],
+): WidgetConfigDraft[] {
+  return widgets.map((d) => {
+    if (!d.is_enabled) return d;
+    const w = effectiveLayoutW(d, 'portrait');
+    const h = effectiveLayoutH(d, 'portrait');
+    const legacy = layoutWHToLegacySpans(w, h);
+    return {
+      ...d,
+      colSpan: legacy.colSpan,
+      rowSpan: legacy.rowSpan,
+    };
+  });
+}
+
+/**
+ * 편집기 드래그·리사이즈 후: 겹침만 resolve+compact (전체 repack 없음 — 드롭 위치 유지).
+ */
+export function finalizeEditorDraftsLayoutForOrientation(
+  widgets: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  let result = resolveOrientationLayoutOverlaps(widgets, orientation);
+  result = compactOrientationLayoutY(result, orientation);
+  if (orientation === 'portrait') {
+    return syncPortraitLegacySpans(result);
+  }
+  return result;
+}
+
 /** 편집기 드래그·리사이즈 후: 겹침 해소 → colSpan/rowSpan 동기화 (저장 전 미리보기와 동일 파이프) */
 export function finalizeDraftsLayoutForOrientation(
   widgets: readonly WidgetConfigDraft[],
@@ -670,17 +729,7 @@ export function finalizeDraftsLayoutForOrientation(
   if (orientation !== 'portrait') {
     return resolved;
   }
-  return resolved.map((d) => {
-    if (!d.is_enabled) return d;
-    const w = effectiveLayoutW(d, orientation);
-    const h = effectiveLayoutH(d, orientation);
-    const legacy = layoutWHToLegacySpans(w, h);
-    return {
-      ...d,
-      colSpan: legacy.colSpan,
-      rowSpan: legacy.rowSpan,
-    };
-  });
+  return syncPortraitLegacySpans(resolved);
 }
 
 /**

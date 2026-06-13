@@ -57,7 +57,9 @@ import {
   detectLayoutCoordinateOverlaps,
   draftsOrientationLayoutsEqual,
   ensureDraftsBothOrientationsNoOverlap,
-  finalizeDraftsLayoutForOrientation,
+  finalizeEditorDraftsLayoutForOrientation,
+  layoutCoordsFromGridPointer,
+  placeDraftAtOrientationCoords,
   inferDropPlacementMode,
   layoutSameColumn,
   snapLayoutCoord,
@@ -229,6 +231,8 @@ function SortableCard({
   });
 
   const isTasks = cfg.widget_key === 'tasks';
+  const isGames = cfg.widget_key === 'games';
+  const clipPreview = isTasks || isGames;
   const gridItemStyle = buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
     baseCols: scaleBaseCols,
     columnCount: placementColumnCount,
@@ -246,7 +250,7 @@ function SortableCard({
           ? 'w-[min(100%,var(--overlay-card-w,100%))] overflow-hidden rounded-xl border-2 border-blue-500 shadow-2xl'
           : isDragging
             ? 'overflow-hidden rounded-xl border border-dashed border-blue-300 bg-slate-100/80 opacity-40'
-            : isTasks
+            : clipPreview
               ? 'overflow-hidden rounded-xl border border-slate-200 shadow-sm'
               : 'overflow-x-clip overflow-y-visible rounded-xl border border-slate-200 shadow-sm',
         !cfg.is_enabled ? 'opacity-40' : '',
@@ -309,7 +313,7 @@ function SortableCard({
         <div
           className={[
             'editor-widget-preview-inner pointer-events-none flex min-h-0 min-w-0 flex-1 flex-col',
-            isTasks ? 'min-h-0 overflow-hidden' : 'overflow-visible',
+            clipPreview ? 'min-h-0 overflow-hidden' : 'overflow-visible',
           ].join(' ')}
         >
           {isTasks ? (
@@ -488,7 +492,7 @@ export function WidgetLayoutEditor({
     const overlaps = detectLayoutCoordinateOverlaps(drafts, orient);
     if (overlaps.length === 0) return;
 
-    const fixed = finalizeDraftsLayoutForOrientation(drafts, orient);
+    const fixed = finalizeEditorDraftsLayoutForOrientation(drafts, orient);
     if (draftsOrientationLayoutsEqual(drafts, fixed, orient)) {
       const sig = `${orient}:${overlaps.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`)).sort().join(',')}`;
       if (!overlapFixWarnedRef.current.has(sig)) {
@@ -575,19 +579,30 @@ export function WidgetLayoutEditor({
         const pe = activatorEvent as PointerEvent;
         pointer = { x: pe.clientX + delta.x, y: pe.clientY + delta.y };
       }
-      const overEl = document.querySelector(`[data-widget-key="${String(over.id)}"]`);
-      const overRect = overEl?.getBoundingClientRect() ?? null;
-      const dropMode = inferDropPlacementMode(
-        pointer,
-        overRect
-          ? { left: overRect.left, top: overRect.top, width: overRect.width, height: overRect.height }
-          : null,
-        sameCol,
-      );
 
-      const placed = applyDropPlacementDraft(activeDraft, overDraft, orient, dropMode);
+      const baseCols = orient === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+      const gridEl = gridRef.current;
+      const gridRect = gridEl?.getBoundingClientRect();
+
+      let placed = activeDraft;
+      if (pointer && gridRect && gridRect.width > 0) {
+        const { x, y } = layoutCoordsFromGridPointer(pointer, gridRect, baseCols);
+        placed = placeDraftAtOrientationCoords(activeDraft, orient, x, y);
+      } else {
+        const overEl = document.querySelector(`[data-widget-key="${String(over.id)}"]`);
+        const overRect = overEl?.getBoundingClientRect() ?? null;
+        const dropMode = inferDropPlacementMode(
+          pointer,
+          overRect
+            ? { left: overRect.left, top: overRect.top, width: overRect.width, height: overRect.height }
+            : null,
+          sameCol,
+        );
+        placed = applyDropPlacementDraft(activeDraft, overDraft, orient, dropMode);
+      }
+
       const result = updated.map((d) => (d.widget_key === active.id ? placed : d));
-      onDraftsChange(finalizeDraftsLayoutForOrientation(result, orient));
+      onDraftsChange(finalizeEditorDraftsLayoutForOrientation(result, orient));
     },
     [sortedEnabled, drafts, onDraftsChange],
   );
@@ -678,7 +693,7 @@ export function WidgetLayoutEditor({
       // x/y 유지 — 너비·높이만 clamp 후 겹침 해소 (display_order 전체 재패킹 금지)
       const laidOut = clampWidgetLayoutExtents(updated, orient);
 
-      onDraftsChangeRef.current(finalizeDraftsLayoutForOrientation(laidOut, orient));
+      onDraftsChangeRef.current(finalizeEditorDraftsLayoutForOrientation(laidOut, orient));
     };
 
     // 즉시 등록 — 터치/마우스 첫 이벤트를 절대 놓치지 않음

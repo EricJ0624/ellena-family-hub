@@ -420,6 +420,7 @@ export function buildWidgetGridItemStyle(
     } else if (widgetKey === 'games') {
       style['--widget-min-h'] = `${minPx}px`;
       style['--games-min-h'] = `${minPx}px`;
+      style['--widget-scale-box-h'] = `${minPx}px`;
     } else {
       style['--widget-min-h'] = `${minPx}px`;
       style['--widget-scale-box-h'] = `${minPx}px`;
