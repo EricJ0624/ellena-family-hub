@@ -328,6 +328,9 @@ export function resolveWidgetGridPlacement(
 /** M 사이즈 layout_h — 스케일 기준 (types.WIDGET_LAYOUT_PRESETS.M.h 와 동기) */
 export const WIDGET_SCALE_REF_H = 8;
 
+/** 편집기 카드 배너(헤더+DnD) 높이 — globals.css --editor-banner-h 와 동기 */
+export const EDITOR_BANNER_PX = 44;
+
 /** layout_w/h → CQ 스케일 박스 (--widget-scale-box-h) 계산용 */
 export interface WidgetGridScaleContext {
   baseCols: number;
@@ -351,6 +354,7 @@ export type WidgetGridItemStyle = {
   ['--games-min-h']?: string;
   ['--widget-min-h']?: string;
   ['--editor-widget-cell-h']?: string;
+  ['--editor-preview-h']?: string;
   ['--widget-scale-box-h']?: string;
   ['--widget-scale']?: string;
   ['--widget-scale-w']?: string;
@@ -419,6 +423,8 @@ export function buildWidgetGridItemStyle(
     height: 'auto',
   };
   const inEditor = scaleContext?.layoutEditor === true;
+  const previewPx =
+    minPx > 0 && inEditor ? Math.max(0, minPx - EDITOR_BANNER_PX) : minPx;
   if (minPx > 0) {
     style.minHeight = minPx;
     style['--editor-widget-cell-h'] = `${minPx}px`;
@@ -426,19 +432,17 @@ export function buildWidgetGridItemStyle(
       style.height = minPx;
       style.maxHeight = minPx;
       style.overflow = 'hidden';
+      style['--editor-preview-h'] = `${previewPx}px`;
     }
     if (widgetKey === 'tasks') {
       style['--tasks-min-h'] = `${minPx}px`;
     } else if (widgetKey === 'games') {
-      if (!inEditor) {
-        style['--widget-min-h'] = `${minPx}px`;
-        style['--games-min-h'] = `${minPx}px`;
-      }
+      style['--widget-min-h'] = `${minPx}px`;
+      style['--games-min-h'] = `${minPx}px`;
+      style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;
     } else {
       style['--widget-min-h'] = `${minPx}px`;
-      if (!inEditor) {
-        style['--widget-scale-box-h'] = `${minPx}px`;
-      }
+      style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;
     }
   }
 

@@ -328,7 +328,7 @@ function GamesPreview() {
               </div>
             ))}
           </div>
-          <div className="relative mx-auto h-20 w-full max-w-[140px]">
+          <div className="relative mx-auto games-ladder-preview w-full max-w-[140px]">
             <svg viewBox="0 0 100 60" className="h-full w-full">
               {[20, 40, 60, 80].map((x) => (
                 <line key={`v-${x}`} x1={x} y1={8} x2={x} y2={52} stroke="#94a3b8" strokeWidth={1} />
