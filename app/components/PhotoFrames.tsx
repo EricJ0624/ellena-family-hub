@@ -63,9 +63,17 @@ export const POLAROID_FRAME_INSET_CLASS =
 export const POLAROID_PAPER_LANDSCAPE_SRC =
   '/photo-frames/polaroid-paper-landscape.png';
 
-/** PNG export 캔버스색 — 그림자·반투명 테두리 전체를 덮어 다크 배경(보라) 혼색·하얀 그림자 방지 */
+/** prepare-polaroid-backplate-mask.mjs — PNG 실루엣 하드 마스크 (찢어진 코너 제외) */
+export const POLAROID_BACKPLATE_MASK_SRC =
+  '/photo-frames/polaroid-paper-landscape-backplate-mask.png';
+
+/**
+ * PNG export 캔버스색 + 실루엣 마스크
+ * - 그림자·반투명 테두리 아래: 불투명 회색(보라 혼색·하얀 그림자 방지)
+ * - 투명 코너: 마스크 제외(사각 백플레이트가 액자 밖으로 커 보이지 않음)
+ */
 export const POLAROID_PAPER_BACKPLATE_CLASS =
-  'absolute inset-0 z-0 bg-[#e5e5e3]';
+  'pointer-events-none absolute inset-0 z-0 bg-[#e5e5e3] [-webkit-mask-image:url(/photo-frames/polaroid-paper-landscape-backplate-mask.png)] [-webkit-mask-size:100%_100%] [-webkit-mask-repeat:no-repeat] [mask-image:url(/photo-frames/polaroid-paper-landscape-backplate-mask.png)] [mask-size:100%_100%] [mask-repeat:no-repeat]';
 
 /** soft-glass-landscape.png (prepare-soft-glass-frame.mjs) 사진 구역 inset */
 export const SOFT_GLASS_FRAME_INSET_CLASS =
