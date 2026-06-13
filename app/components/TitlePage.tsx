@@ -256,7 +256,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       transition={{ duration: 0.6, delay: 0.2 }}
       className={cn('relative z-30 mb-6 mx-auto w-full', frameWidthClass)}
     >
-      {/* 액자 주변 밀도 보강 (폴라로이드는 종이 백플레이트만 사용) */}
+      {/* 액자 주변 밀도 보강 (폴라로이드는 PNG 캔버스 백플레이트만 사용) */}
       {!isPolaroidFrame && (
         <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
       )}
