@@ -372,6 +372,31 @@ export function detectLayoutCoordinateOverlaps(
   return overlaps;
 }
 
+/** 편집기 자동 보정 루프 방지 — orientation별 layout 좌표·(portrait) span 동등 비교 */
+export function draftsOrientationLayoutsEqual(
+  a: readonly WidgetConfigDraft[],
+  b: readonly WidgetConfigDraft[],
+  orientation: 'portrait' | 'landscape',
+): boolean {
+  if (a.length !== b.length) return false;
+  for (const da of a) {
+    const db = b.find((x) => x.widget_key === da.widget_key);
+    if (!db) return false;
+    if (da.is_enabled !== db.is_enabled) return false;
+    if (!da.is_enabled) continue;
+    const ax = effectiveLayoutX(da, orientation) ?? -1;
+    const bx = effectiveLayoutX(db, orientation) ?? -1;
+    if (ax !== bx) return false;
+    if (effectiveLayoutY(da, orientation) !== effectiveLayoutY(db, orientation)) return false;
+    if (effectiveLayoutW(da, orientation) !== effectiveLayoutW(db, orientation)) return false;
+    if (effectiveLayoutH(da, orientation) !== effectiveLayoutH(db, orientation)) return false;
+    if (orientation === 'portrait' && (da.colSpan !== db.colSpan || da.rowSpan !== db.rowSpan)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** detectGridOverlaps·layout 좌표 겹침 없을 때까지 resolve → 필요 시 packOrientationLayouts(x,y만) */
 export function ensureOrientationNoGridOverlaps(
   widgets: readonly WidgetConfigDraft[],

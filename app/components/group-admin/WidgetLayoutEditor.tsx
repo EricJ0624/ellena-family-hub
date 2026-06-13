@@ -54,6 +54,7 @@ import {
   applyStackBelowDraft,
   applyDisplayOrderPacking,
   detectLayoutCoordinateOverlaps,
+  draftsOrientationLayoutsEqual,
   ensureDraftsBothOrientationsNoOverlap,
   finalizeDraftsLayoutForOrientation,
   layoutSameColumn,
@@ -468,6 +469,8 @@ export function WidgetLayoutEditor({
   onDraftsChangeRef.current = onDraftsChange;
   // 컴포넌트 언마운트 시 남은 document 리스너 정리용
   const resizeCleanupRef = useRef<(() => void) | null>(null);
+  /** 겹침 자동 해소 실패 시 동일 조합 1회만 경고 (Maximum update depth 방지) */
+  const overlapFixWarnedRef = useRef<Set<string>>(new Set());
 
   const sortedEnabled = useMemo(
     () =>
@@ -475,15 +478,31 @@ export function WidgetLayoutEditor({
     [drafts],
   );
 
-  /** 저장 전 미리보기: 세로·가로 layout 좌표 겹침 해소 (드래그·리사이즈 중 제외) */
+  /** 미리보기: 현재 탭 orientation만 1회 겹침 해소 (양쪽 동시 보정 → 무한 루프 방지) */
   useEffect(() => {
     if (isDragActive || liveResize) return;
-    const needsFix =
-      detectLayoutCoordinateOverlaps(drafts, 'portrait').length > 0 ||
-      detectLayoutCoordinateOverlaps(drafts, 'landscape').length > 0;
-    if (!needsFix) return;
-    onDraftsChangeRef.current(ensureDraftsBothOrientationsNoOverlap(drafts));
-  }, [drafts, isDragActive, liveResize]);
+    const orient = orientation;
+    const overlaps = detectLayoutCoordinateOverlaps(drafts, orient);
+    if (overlaps.length === 0) return;
+
+    const fixed = finalizeDraftsLayoutForOrientation(drafts, orient);
+    if (draftsOrientationLayoutsEqual(drafts, fixed, orient)) {
+      const sig = `${orient}:${overlaps.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`)).sort().join(',')}`;
+      if (!overlapFixWarnedRef.current.has(sig)) {
+        overlapFixWarnedRef.current.add(sig);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[WidgetLayoutEditor] layout 좌표 겹침 — 자동 해소 불가(1회 경고)', {
+            orientation: orient,
+            overlaps,
+          });
+        }
+      }
+      return;
+    }
+
+    overlapFixWarnedRef.current.clear();
+    onDraftsChangeRef.current(fixed);
+  }, [drafts, isDragActive, liveResize, orientation]);
   const sortedDisabled = useMemo(
     () =>
       [...drafts].filter((d) => !d.is_enabled).sort((a, b) => a.display_order - b.display_order),
@@ -554,11 +573,7 @@ export function WidgetLayoutEditor({
       } else {
         result = applyDisplayOrderPacking(updated, orient);
       }
-      onDraftsChange(
-        ensureDraftsBothOrientationsNoOverlap(
-          finalizeDraftsLayoutForOrientation(result, orient),
-        ),
-      );
+      onDraftsChange(finalizeDraftsLayoutForOrientation(result, orient));
     },
     [sortedEnabled, drafts, onDraftsChange],
   );
@@ -650,11 +665,7 @@ export function WidgetLayoutEditor({
           ? applyDisplayOrderPacking(updated, orient)
           : updated;
 
-      onDraftsChangeRef.current(
-        ensureDraftsBothOrientationsNoOverlap(
-          finalizeDraftsLayoutForOrientation(laidOut, orient),
-        ),
-      );
+      onDraftsChangeRef.current(finalizeDraftsLayoutForOrientation(laidOut, orient));
     };
 
     // 즉시 등록 — 터치/마우스 첫 이벤트를 절대 놓치지 않음
