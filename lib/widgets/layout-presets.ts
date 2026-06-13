@@ -856,18 +856,19 @@ function syncPortraitLegacySpans(
 }
 
 /**
- * 편집기 드래그·리사이즈 후: 겹침만 resolve+compact (전체 repack 없음 — 드롭 위치 유지).
+ * 편집기 드래그·리사이즈 후: 저장(packDrafts)과 동일한 겹침 해소 — 미리보기 WYSIWYG.
  */
 export function finalizeEditorDraftsLayoutForOrientation(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
 ): WidgetConfigDraft[] {
-  let result = resolveOrientationLayoutOverlaps(widgets, orientation);
-  result = compactOrientationLayoutY(result, orientation);
+  const clamped = clampWidgetLayoutExtents(widgets, orientation);
+  const compacted = compactOrientationLayoutY(clamped, orientation);
+  const resolved = ensureOrientationNoGridOverlaps(compacted, orientation);
   if (orientation === 'portrait') {
-    return syncPortraitLegacySpans(result);
+    return syncPortraitLegacySpans(resolved);
   }
-  return result;
+  return resolved;
 }
 
 /** 편집기 드래그·리사이즈 후: 겹침 해소 → colSpan/rowSpan 동기화 (저장 전 미리보기와 동일 파이프) */

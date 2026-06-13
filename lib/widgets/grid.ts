@@ -334,6 +334,8 @@ export interface WidgetGridScaleContext {
   columnCount: number;
   layoutW: number | null;
   layoutH: number | null;
+  /** true: 편집기 미리보기 — 셀 높이 고정·Games min-h 상속 차단 */
+  layoutEditor?: boolean;
 }
 
 /** 대시보드·편집 읽기 전용 그리드 셀 인라인 스타일 (배치만 — 위젯 내용/로직 무관) */
@@ -341,8 +343,10 @@ export type WidgetGridItemStyle = {
   gridColumn: string;
   gridRow: string;
   alignSelf?: 'start';
-  height?: 'auto';
+  height?: 'auto' | number;
+  maxHeight?: number;
   minHeight?: number;
+  overflow?: 'hidden';
   ['--tasks-min-h']?: string;
   ['--games-min-h']?: string;
   ['--widget-min-h']?: string;
@@ -414,17 +418,27 @@ export function buildWidgetGridItemStyle(
     alignSelf: 'start',
     height: 'auto',
   };
+  const inEditor = scaleContext?.layoutEditor === true;
   if (minPx > 0) {
     style.minHeight = minPx;
     style['--editor-widget-cell-h'] = `${minPx}px`;
+    if (inEditor) {
+      style.height = minPx;
+      style.maxHeight = minPx;
+      style.overflow = 'hidden';
+    }
     if (widgetKey === 'tasks') {
       style['--tasks-min-h'] = `${minPx}px`;
     } else if (widgetKey === 'games') {
-      style['--widget-min-h'] = `${minPx}px`;
-      style['--games-min-h'] = `${minPx}px`;
+      if (!inEditor) {
+        style['--widget-min-h'] = `${minPx}px`;
+        style['--games-min-h'] = `${minPx}px`;
+      }
     } else {
       style['--widget-min-h'] = `${minPx}px`;
-      style['--widget-scale-box-h'] = `${minPx}px`;
+      if (!inEditor) {
+        style['--widget-scale-box-h'] = `${minPx}px`;
+      }
     }
   }
 

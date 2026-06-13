@@ -230,12 +230,14 @@ function SortableCard({
   });
 
   const isTasks = cfg.widget_key === 'tasks';
+  const isGames = cfg.widget_key === 'games';
   const clipPreview = !isDragOverlay;
   const gridItemStyle = buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
     baseCols: scaleBaseCols,
     columnCount: placementColumnCount,
     layoutW: displayCfg.layoutW ?? null,
     layoutH: displayCfg.layoutH ?? null,
+    layoutEditor: true,
   });
 
   return (
@@ -316,6 +318,10 @@ function SortableCard({
         >
           {isTasks ? (
             <div className="editor-tasks-preview-root min-h-0 min-w-0 w-full flex-1">
+              {PreviewContent()}
+            </div>
+          ) : isGames ? (
+            <div className="editor-games-preview-root min-h-0 min-w-0 w-full flex-1">
               {PreviewContent()}
             </div>
           ) : (

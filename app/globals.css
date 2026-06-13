@@ -438,6 +438,8 @@ select {
    */
   .dashboard-widget-grid[data-layout-editor] > .editor-widget-card {
     box-sizing: border-box;
+    --editor-banner-h: 2.75rem;
+    --editor-preview-h: calc(var(--editor-widget-cell-h, 0px) - var(--editor-banner-h));
     height: var(--editor-widget-cell-h, var(--tasks-min-h, var(--widget-min-h, auto)));
     max-height: var(--editor-widget-cell-h, var(--tasks-min-h, var(--widget-min-h, none)));
     min-height: var(--editor-widget-cell-h, var(--tasks-min-h, var(--widget-min-h, 0px)));
@@ -457,10 +459,36 @@ select {
   }
 
   .dashboard-widget-grid[data-layout-editor] .editor-widget-card .widget-scale-root,
-  .dashboard-widget-grid[data-layout-editor] .editor-widget-card .editor-tasks-preview-root {
+  .dashboard-widget-grid[data-layout-editor] .editor-widget-card .editor-tasks-preview-root,
+  .dashboard-widget-grid[data-layout-editor] .editor-widget-card .editor-games-preview-root {
     flex: 1 1 auto;
     min-height: 0;
+    height: var(--editor-preview-h, 100%);
+    max-height: var(--editor-preview-h, 100%);
+    overflow: hidden;
+    container-type: size;
+    container-name: widget;
+  }
+
+  .dashboard-widget-grid[data-layout-editor] .editor-widget-card[data-widget-key='games'] .editor-games-preview-root {
+    display: flex;
+    flex-direction: column;
+    font-size: calc(10px * var(--widget-scale, 1));
+  }
+
+  .dashboard-widget-grid[data-layout-editor] .editor-widget-card[data-widget-key='games'] .editor-games-preview-root .games-widget-section {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .dashboard-widget-grid[data-layout-editor] .editor-widget-card[data-widget-key='games'] .editor-games-preview-root .games-section-body,
+  .dashboard-widget-grid[data-layout-editor] .editor-widget-card[data-widget-key='games'] .editor-games-preview-root .glass-panel-soft {
+    min-height: 0;
     max-height: 100%;
     overflow: hidden;
   }
