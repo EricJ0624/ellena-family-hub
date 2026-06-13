@@ -63,6 +63,9 @@ export const POLAROID_FRAME_INSET_CLASS =
 export const POLAROID_PAPER_LANDSCAPE_SRC =
   '/photo-frames/polaroid-paper-landscape.png';
 
+/** 다크 배경에서 PNG 반투명 테두리가 보라색으로 물드는 것 방지 — 불투명 종이색 백플레이트 */
+export const POLAROID_PAPER_BACKPLATE_CLASS = 'absolute inset-0 z-0 bg-[#f8f5f0]';
+
 /** soft-glass-landscape.png (prepare-soft-glass-frame.mjs) 사진 구역 inset */
 export const SOFT_GLASS_FRAME_INSET_CLASS =
   'left-[6.6%] right-[7.1%] top-[9.2%] bottom-[9.4%]';

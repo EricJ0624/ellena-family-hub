@@ -11,6 +11,7 @@ import {
   BAROQUE_FRAME_INSET_CLASS,
   MODERN_FRAME_INSET_CLASS,
   POLAROID_FRAME_INSET_CLASS,
+  POLAROID_PAPER_BACKPLATE_CLASS,
   VINTAGE_FRAME_INSET_CLASS,
   SOFT_GLASS_FRAME_INSET_CLASS,
   SOFT_GLASS_PHOTO_IMAGE_CLASS,
@@ -221,6 +222,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     frameStyle === 'editorial' ||
     frameStyle === 'no_frame';
   const isSoftGlassFrame = frameStyle === 'soft_glass';
+  const isPolaroidFrame = frameStyle === 'polaroid_modern';
   const photoInnerBgClass = 'bg-[#1a1a1a]';
   const frameWidthClass =
     frameStyle === 'polaroid_modern'
@@ -254,8 +256,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       transition={{ duration: 0.6, delay: 0.2 }}
       className={cn('relative z-30 mb-6 mx-auto w-full', frameWidthClass)}
     >
-      {/* 액자 주변 밀도 보강: noBackground 대시보드에서도 빈 느낌 완화 */}
-      <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
+      {/* 액자 주변 밀도 보강 (폴라로이드는 종이 백플레이트만 사용) */}
+      {!isPolaroidFrame && (
+        <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
+      )}
 
       {/* SVG 프레임 컨테이너 (클릭 시 가족 추억 페이지로 이동) */}
       <div
@@ -263,8 +267,15 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         tabIndex={onFrameClick ? 0 : undefined}
         onClick={onFrameClick}
         onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
-        className={cn('relative w-full overflow-visible', frameAspectClass, onFrameClick && 'cursor-pointer')}
+        className={cn(
+          'relative isolate w-full overflow-visible',
+          frameAspectClass,
+          onFrameClick && 'cursor-pointer',
+        )}
       >
+        {isPolaroidFrame && (
+          <div className={POLAROID_PAPER_BACKPLATE_CLASS} aria-hidden />
+        )}
         {/* PNG 프레임 오버레이 — 투명 개구부, 사진 위에 프레임(z-15) */}
         <div className="absolute left-0 top-0 z-[15] h-full w-full">
           <PhotoFrameSVG frameStyle={frameStyle} />
