@@ -346,6 +346,7 @@ export type WidgetGridItemStyle = {
   ['--tasks-min-h']?: string;
   ['--games-min-h']?: string;
   ['--widget-min-h']?: string;
+  ['--editor-widget-cell-h']?: string;
   ['--widget-scale-box-h']?: string;
   ['--widget-scale']?: string;
   ['--widget-scale-w']?: string;
@@ -415,12 +416,12 @@ export function buildWidgetGridItemStyle(
   };
   if (minPx > 0) {
     style.minHeight = minPx;
+    style['--editor-widget-cell-h'] = `${minPx}px`;
     if (widgetKey === 'tasks') {
       style['--tasks-min-h'] = `${minPx}px`;
     } else if (widgetKey === 'games') {
       style['--widget-min-h'] = `${minPx}px`;
       style['--games-min-h'] = `${minPx}px`;
-      style['--widget-scale-box-h'] = `${minPx}px`;
     } else {
       style['--widget-min-h'] = `${minPx}px`;
       style['--widget-scale-box-h'] = `${minPx}px`;

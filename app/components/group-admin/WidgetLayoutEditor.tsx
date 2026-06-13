@@ -58,8 +58,7 @@ import {
   draftsOrientationLayoutsEqual,
   ensureDraftsBothOrientationsNoOverlap,
   finalizeEditorDraftsLayoutForOrientation,
-  layoutCoordsFromGridPointer,
-  placeDraftAtOrientationCoords,
+  placeEditorDropFromPointer,
   inferDropPlacementMode,
   layoutSameColumn,
   snapLayoutCoord,
@@ -231,8 +230,7 @@ function SortableCard({
   });
 
   const isTasks = cfg.widget_key === 'tasks';
-  const isGames = cfg.widget_key === 'games';
-  const clipPreview = isTasks || isGames;
+  const clipPreview = !isDragOverlay;
   const gridItemStyle = buildWidgetGridItemStyle(cfg.widget_key, placement, placementCellRowH, {
     baseCols: scaleBaseCols,
     columnCount: placementColumnCount,
@@ -302,7 +300,7 @@ function SortableCard({
       </div>
 
       {/* 미리보기 — 히트 레이어는 본문만(배너·핸들과 분리) */}
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="editor-widget-preview-slot relative flex min-h-0 min-w-0 flex-1 flex-col">
         {editMode && !isDragOverlay && (
           <div
             className="absolute inset-0 z-[15] pointer-events-auto touch-none [touch-action:none]"
@@ -584,10 +582,16 @@ export function WidgetLayoutEditor({
       const gridEl = gridRef.current;
       const gridRect = gridEl?.getBoundingClientRect();
 
-      let placed = activeDraft;
+      let result = updated;
       if (pointer && gridRect && gridRect.width > 0) {
-        const { x, y } = layoutCoordsFromGridPointer(pointer, gridRect, baseCols);
-        placed = placeDraftAtOrientationCoords(activeDraft, orient, x, y);
+        result = placeEditorDropFromPointer(
+          updated,
+          active.id as DashboardWidgetKey,
+          pointer,
+          gridRect,
+          baseCols,
+          orient,
+        );
       } else {
         const overEl = document.querySelector(`[data-widget-key="${String(over.id)}"]`);
         const overRect = overEl?.getBoundingClientRect() ?? null;
@@ -598,10 +602,10 @@ export function WidgetLayoutEditor({
             : null,
           sameCol,
         );
-        placed = applyDropPlacementDraft(activeDraft, overDraft, orient, dropMode);
+        const placed = applyDropPlacementDraft(activeDraft, overDraft, orient, dropMode);
+        result = updated.map((d) => (d.widget_key === active.id ? placed : d));
       }
 
-      const result = updated.map((d) => (d.widget_key === active.id ? placed : d));
       onDraftsChange(finalizeEditorDraftsLayoutForOrientation(result, orient));
     },
     [sortedEnabled, drafts, onDraftsChange],

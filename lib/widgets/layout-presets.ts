@@ -312,12 +312,16 @@ export function resolveOrientationLayoutOverlaps(
   const placed: LayoutRect[] = [];
   const xyByKey = new Map<DashboardWidgetKey, { x: number; y: number }>();
 
+  const maxRows = orientation === 'landscape' ? 12 : 24;
+
   for (const w of sorted) {
     const anchorX = effectiveLayoutX(w, orientation) ?? 0;
-    let x = anchorX;
-    let y = effectiveLayoutY(w, orientation);
+    const anchorY = effectiveLayoutY(w, orientation);
     const ww = effectiveLayoutW(w, orientation);
     const wh = effectiveLayoutH(w, orientation);
+    const snappedAnchorX = snapLayoutXForWidgetWidth(anchorX, ww, maxCols);
+    let x = snappedAnchorX;
+    let y = snapLayoutYForWidgetHeight(anchorY, wh, maxRows);
 
     for (let attempt = 0; attempt < 64; attempt++) {
       const rect: LayoutRect = { key: w.widget_key, x, y, w: ww, h: wh };
@@ -327,13 +331,13 @@ export function resolveOrientationLayoutOverlaps(
         xyByKey.set(w.widget_key, { x, y });
         break;
       }
-      const pushX = Math.max(...conflicts.map((c) => c.x + c.w));
+      const pushX = snapLayoutCoord(Math.max(...conflicts.map((c) => c.x + c.w)));
       if (pushX + ww <= maxCols + 1e-9) {
-        x = pushX;
+        x = snapLayoutXForWidgetWidth(pushX, ww, maxCols);
         continue;
       }
-      y = Math.max(y, ...conflicts.map((c) => c.y + c.h));
-      x = anchorX;
+      y = snapLayoutCoord(Math.max(y, ...conflicts.map((c) => c.y + c.h)));
+      x = snappedAnchorX;
     }
   }
 
@@ -551,7 +555,11 @@ export function applyStackBesideDraft(
   if (nextX + dw > maxCols + 1e-9) {
     nextX = ax - dw;
   }
-  nextX = Math.max(0, Math.min(nextX, maxCols - dw));
+  nextX = snapLayoutXForWidgetWidth(
+    Math.max(0, Math.min(nextX, maxCols - dw)),
+    dw,
+    maxCols,
+  );
   return applyOrientationXY(draft, orientation, nextX, ay);
 }
 
@@ -675,6 +683,146 @@ export function layoutCoordsFromGridPointer(
   };
 }
 
+/** w가 maxCols를 균등 분할할 때 0,w,2w… 슬롯, 아니면 0.5칸 단위 후보 */
+export function layoutColumnSlots(w: number, maxCols: number): number[] {
+  const slots: number[] = [];
+  if (w <= 0 || maxCols <= 0) return [0];
+  if (Math.abs(maxCols % w) < 1e-9 || w >= maxCols - 1e-9) {
+    for (let x = 0; x + w <= maxCols + 1e-9; x = snapLayoutCoord(x + w)) {
+      slots.push(snapLayoutCoord(x));
+    }
+    return slots.length ? slots : [0];
+  }
+  for (let x = 0; x + w <= maxCols + 1e-9; x = snapLayoutCoord(x + 0.5)) {
+    slots.push(snapLayoutCoord(x));
+  }
+  return slots.length ? slots : [0];
+}
+
+function layoutRowSlots(h: number, maxRows: number): number[] {
+  const slots: number[] = [];
+  if (h <= 0 || maxRows <= 0) return [0];
+  if (Math.abs(maxRows % h) < 1e-9 || h >= maxRows - 1e-9) {
+    for (let y = 0; y + h <= maxRows + 1e-9; y = snapLayoutCoord(y + h)) {
+      slots.push(snapLayoutCoord(y));
+    }
+    return slots.length ? slots : [0];
+  }
+  for (let y = 0; y + h <= maxRows + 1e-9; y = snapLayoutCoord(y + 0.5)) {
+    slots.push(snapLayoutCoord(y));
+  }
+  return slots.length ? slots : [0];
+}
+
+function nearestLayoutSlot(value: number, slots: readonly number[]): number {
+  let best = slots[0] ?? 0;
+  let bestDist = Math.abs(value - best);
+  for (const s of slots) {
+    const d = Math.abs(value - s);
+    if (d < bestDist) {
+      best = s;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+/** 위젯 너비에 맞는 열 슬롯(6+6 → x=0|6 등)으로 x 스냅 */
+export function snapLayoutXForWidgetWidth(
+  rawX: number,
+  w: number,
+  maxCols: number,
+): number {
+  const clamped = snapLayoutCoord(Math.max(0, Math.min(rawX, maxCols - w)));
+  return nearestLayoutSlot(clamped, layoutColumnSlots(w, maxCols));
+}
+
+/** 위젯 높이에 맞는 행 슬롯으로 y 스냅 */
+export function snapLayoutYForWidgetHeight(
+  rawY: number,
+  h: number,
+  maxRows: number,
+): number {
+  const clamped = snapLayoutCoord(Math.max(0, Math.min(rawY, maxRows - h)));
+  return nearestLayoutSlot(clamped, layoutRowSlots(h, maxRows));
+}
+
+function draftOverlapsOthers(
+  widgets: readonly WidgetConfigDraft[],
+  key: DashboardWidgetKey,
+  orientation: 'portrait' | 'landscape',
+): boolean {
+  const target = widgets.find((w) => w.widget_key === key && w.is_enabled);
+  if (!target) return false;
+  const tx = effectiveLayoutX(target, orientation) ?? 0;
+  const ty = effectiveLayoutY(target, orientation);
+  const tw = effectiveLayoutW(target, orientation);
+  const th = effectiveLayoutH(target, orientation);
+  const rect: LayoutRect = { key, x: tx, y: ty, w: tw, h: th };
+  for (const w of widgets) {
+    if (!w.is_enabled || w.widget_key === key) continue;
+    const other: LayoutRect = {
+      key: w.widget_key,
+      x: effectiveLayoutX(w, orientation) ?? 0,
+      y: effectiveLayoutY(w, orientation),
+      w: effectiveLayoutW(w, orientation),
+      h: effectiveLayoutH(w, orientation),
+    };
+    if (layoutRectsOverlap(rect, other)) return true;
+  }
+  return false;
+}
+
+/**
+ * 편집기 드롭: 포인터 근처 → 열·행 슬롯 스냅, 겹치면 가까운 빈 슬롯 탐색.
+ */
+export function placeEditorDropFromPointer(
+  widgets: readonly WidgetConfigDraft[],
+  movedKey: DashboardWidgetKey,
+  pointer: { x: number; y: number },
+  gridRect: { left: number; top: number; width: number },
+  baseCols: number,
+  orientation: 'portrait' | 'landscape',
+): WidgetConfigDraft[] {
+  const moved = widgets.find((w) => w.widget_key === movedKey);
+  if (!moved) return [...widgets];
+
+  const maxCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const maxRows = orientation === 'landscape' ? 12 : 24;
+  const w = effectiveLayoutW(moved, orientation);
+  const h = effectiveLayoutH(moved, orientation);
+  const raw = layoutCoordsFromGridPointer(pointer, gridRect, baseCols);
+  const primaryX = snapLayoutXForWidgetWidth(raw.x, w, maxCols);
+  const primaryY = snapLayoutYForWidgetHeight(raw.y, h, maxRows);
+
+  const candidates: Array<{ x: number; y: number; dist: number }> = [];
+  for (const y of layoutRowSlots(h, maxRows)) {
+    for (const x of layoutColumnSlots(w, maxCols)) {
+      candidates.push({
+        x,
+        y,
+        dist: Math.abs(x - primaryX) + Math.abs(y - primaryY),
+      });
+    }
+  }
+  candidates.sort((a, b) => a.dist - b.dist);
+
+  for (const { x, y } of candidates) {
+    const trial = widgets.map((d) =>
+      d.widget_key === movedKey ? applyOrientationXY(d, orientation, x, y) : d,
+    );
+    if (!draftOverlapsOthers(trial, movedKey, orientation)) {
+      return trial;
+    }
+  }
+
+  return widgets.map((d) =>
+    d.widget_key === movedKey
+      ? applyOrientationXY(d, orientation, primaryX, primaryY)
+      : d,
+  );
+}
+
 /** 드래그 드롭·그리드 스냅 배치 — x/y를 범위 내로 clamp 후 orientation 필드 갱신 */
 export function placeDraftAtOrientationCoords(
   draft: WidgetConfigDraft,
@@ -683,9 +831,11 @@ export function placeDraftAtOrientationCoords(
   y: number,
 ): WidgetConfigDraft {
   const maxCols = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const maxRows = orientation === 'landscape' ? 12 : 24;
   const w = effectiveLayoutW(draft, orientation);
-  const clampedX = snapLayoutCoord(Math.max(0, Math.min(x, maxCols - w)));
-  const clampedY = snapLayoutCoord(Math.max(0, y));
+  const h = effectiveLayoutH(draft, orientation);
+  const clampedX = snapLayoutXForWidgetWidth(x, w, maxCols);
+  const clampedY = snapLayoutYForWidgetHeight(y, h, maxRows);
   return applyOrientationXY(draft, orientation, clampedX, clampedY);
 }
 
