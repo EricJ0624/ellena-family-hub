@@ -475,8 +475,10 @@ export function compactOrientationLayoutY(
     let cy = 0;
     for (const w of list) {
       const intendedY = effectiveLayoutY(w, orientation);
-      // 같은 열·의도한 행(y) 유지 — 아래 위젯만 y≥cy 로 밀어 올림 방지
-      const nextY = intendedY >= cy - 1e-9 ? intendedY : cy;
+      // intendedY > cy: h 변경(8→6) 등으로 남은 빈 y(0·8·16) → cy로 당김
+      // intendedY < cy: 겹침 → cy로 밀어 올림. intendedY ≈ cy: 그대로 유지
+      const nextY =
+        intendedY > cy + 1e-9 ? cy : Math.max(cy, intendedY);
       yByKey.set(w.widget_key, nextY);
       cy = nextY + effectiveLayoutH(w, orientation);
     }
