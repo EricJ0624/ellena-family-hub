@@ -795,21 +795,36 @@ export function placeEditorDropFromPointer(
   const primaryX = snapLayoutXForWidgetWidth(raw.x, w, maxCols);
   const primaryY = snapLayoutYForWidgetHeight(raw.y, h, maxRows);
 
-  const candidates: Array<{ x: number; y: number; dist: number }> = [];
+  const candidates: Array<{ x: number; y: number; dist: number; sameRow: number }> = [];
   for (const y of layoutRowSlots(h, maxRows)) {
     for (const x of layoutColumnSlots(w, maxCols)) {
       candidates.push({
         x,
         y,
         dist: Math.abs(x - primaryX) + Math.abs(y - primaryY),
+        sameRow: Math.abs(y - primaryY) < 1e-9 ? 0 : 1,
       });
     }
   }
-  candidates.sort((a, b) => a.dist - b.dist);
+  candidates.sort((a, b) =>
+    a.sameRow !== b.sameRow ? a.sameRow - b.sameRow : a.dist - b.dist,
+  );
 
   for (const { x, y } of candidates) {
     const trial = widgets.map((d) =>
       d.widget_key === movedKey ? applyOrientationXY(d, orientation, x, y) : d,
+    );
+    if (!draftOverlapsOthers(trial, movedKey, orientation)) {
+      return trial;
+    }
+  }
+
+  // 같은 행 빈 열 슬롯 (0→w→2w…) — 포인터 스냅 실패 시 3열 등 가로 배치
+  for (const x of layoutColumnSlots(w, maxCols)) {
+    const trial = widgets.map((d) =>
+      d.widget_key === movedKey
+        ? applyOrientationXY(d, orientation, x, primaryY)
+        : d,
     );
     if (!draftOverlapsOthers(trial, movedKey, orientation)) {
       return trial;
@@ -856,19 +871,24 @@ function syncPortraitLegacySpans(
 }
 
 /**
- * 편집기 드래그·리사이즈 후: 저장(packDrafts)과 동일한 겹침 해소 — 미리보기 WYSIWYG.
+ * 편집기 드래그·리사이즈 후: resolve+compact — layout 좌표 겹침이 남을 때만 full repack (드롭 위치 보존).
  */
 export function finalizeEditorDraftsLayoutForOrientation(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
 ): WidgetConfigDraft[] {
   const clamped = clampWidgetLayoutExtents(widgets, orientation);
-  const compacted = compactOrientationLayoutY(clamped, orientation);
-  const resolved = ensureOrientationNoGridOverlaps(compacted, orientation);
-  if (orientation === 'portrait') {
-    return syncPortraitLegacySpans(resolved);
+  let result = resolveOrientationLayoutOverlaps(clamped, orientation);
+  result = compactOrientationLayoutY(result, orientation);
+
+  if (detectLayoutCoordinateOverlaps(result, orientation).length > 0) {
+    result = ensureOrientationNoGridOverlaps(result, orientation);
   }
-  return resolved;
+
+  if (orientation === 'portrait') {
+    return syncPortraitLegacySpans(result);
+  }
+  return result;
 }
 
 /** 편집기 드래그·리사이즈 후: 겹침 해소 → colSpan/rowSpan 동기화 (저장 전 미리보기와 동일 파이프) */
