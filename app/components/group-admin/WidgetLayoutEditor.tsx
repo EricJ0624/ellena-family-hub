@@ -239,6 +239,8 @@ function SortableCard({
     layoutEditor: true,
   });
 
+  const isNarrowCard = colSpan <= 1;
+
   return (
     <div
       ref={isDragOverlay ? undefined : setNodeRef}
@@ -264,10 +266,11 @@ function SortableCard({
             }
       }
     >
-      {/* 배너 — DnD는 우측 전용 핸들(z-40)만 */}
+      {/* 배너 — DnD 핸들은 카드 우상단 absolute(좁은 3열 등에서 flex 밀림·clip 방지) */}
       <div
         className={[
-          'relative z-[25] flex shrink-0 items-center gap-2 py-2 pl-3 pr-1 select-none',
+          'relative z-[25] flex shrink-0 items-center gap-1 select-none',
+          isNarrowCard ? 'py-1.5 pl-2 pr-8' : 'gap-2 py-2 pl-3 pr-1',
           meta.bg, meta.fg,
         ].join(' ')}
       >
@@ -281,24 +284,29 @@ function SortableCard({
           {label}
         </span>
 
-        <span className="shrink-0 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">
-          {colSpan}×{rowSpan}
-        </span>
-
-        {editMode && !isDragOverlay && (
-          <button
-            type="button"
-            ref={setActivatorNodeRef}
-            {...listeners}
-            {...attributes}
-            className="relative z-40 flex h-11 w-11 shrink-0 touch-none items-center justify-center rounded-lg bg-black/15 active:bg-black/30 [touch-action:none]"
-            aria-label="Reorder widget"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DragHandleIcon />
-          </button>
+        {!isNarrowCard && (
+          <span className="shrink-0 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">
+            {colSpan}×{rowSpan}
+          </span>
         )}
       </div>
+
+      {editMode && !isDragOverlay && (
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...listeners}
+          {...attributes}
+          className={[
+            'absolute right-0 top-0 z-50 flex touch-none items-center justify-center rounded-tr-xl bg-black/25 shadow-sm active:bg-black/40 [touch-action:none]',
+            isNarrowCard ? 'h-8 w-8' : 'h-10 w-10',
+          ].join(' ')}
+          aria-label="Reorder widget"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DragHandleIcon />
+        </button>
+      )}
 
       {/* 미리보기 — 히트 레이어는 본문만(배너·핸들과 분리) */}
       <div className="editor-widget-preview-slot relative flex min-h-0 min-w-0 flex-1 flex-col">

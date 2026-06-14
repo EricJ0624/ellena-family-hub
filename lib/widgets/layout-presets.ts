@@ -270,6 +270,56 @@ export function clampWidgetLayoutExtents(
   });
 }
 
+/**
+ * landscape layout_* 가 portrait와 동일 12열 스케일(w/x)이면 24열(w/x×2)로 승격.
+ * 편집기 4열 CSS에서 x=0·4·8 + w=4 → 동일 grid column 겹침 방지.
+ */
+export function normalizeLandscapeLayoutFromPortrait(
+  draft: WidgetConfigDraft,
+): WidgetConfigDraft {
+  if (!draft.is_enabled) return draft;
+
+  const pw = draft.layoutPortraitW ?? draft.layoutW;
+  const px = draft.layoutPortraitX ?? draft.layoutX ?? 0;
+  const ph = draft.layoutPortraitH ?? draft.layoutH;
+  const py = draft.layoutPortraitY ?? draft.layoutY ?? 0;
+  if (pw == null) return draft;
+
+  const lw = draft.layoutLandscapeW ?? draft.layoutW;
+  const lx = draft.layoutLandscapeX ?? draft.layoutX ?? 0;
+  if (lw == null) return draft;
+
+  const targetW = snapLayoutCoord(pw * 2);
+  const targetX = snapLayoutCoord(px * 2);
+
+  let nextW = lw;
+  let nextX = lx;
+  if (Math.abs(lw - pw) < 1e-9 && lw <= BASE_COLS) {
+    nextW = targetW;
+    nextX = targetX;
+  } else if (
+    Math.abs(lw - targetW) < 1e-9 &&
+    Math.abs(lx - px) < 1e-9 &&
+    px <= BASE_COLS
+  ) {
+    nextX = targetX;
+  } else {
+    return draft;
+  }
+
+  if (Math.abs(nextW - lw) < 1e-9 && Math.abs(nextX - lx) < 1e-9) {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    layoutLandscapeW: nextW,
+    layoutLandscapeX: nextX,
+    layoutLandscapeH: ph ?? draft.layoutLandscapeH ?? draft.layoutH,
+    layoutLandscapeY: py ?? draft.layoutLandscapeY ?? draft.layoutY ?? 0,
+  };
+}
+
 function applyOrientationXY(
   d: WidgetConfigDraft,
   orientation: 'portrait' | 'landscape',
@@ -412,14 +462,21 @@ export function draftsOrientationLayoutsEqual(
 export function ensureOrientationNoGridOverlaps(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
+  /** 편집 미리보기 실제 열 수 — CSS 겹침 검사용 (미지정 시 12/24) */
+  renderColumnCount?: number,
 ): WidgetConfigDraft[] {
   const columnCount = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const cssColumnCount = renderColumnCount ?? columnCount;
   const isLandscape = orientation === 'landscape';
 
-  let result = resolveOrientationLayoutOverlaps(widgets, orientation);
+  const normalized = isLandscape
+    ? widgets.map(normalizeLandscapeLayoutFromPortrait)
+    : widgets;
+
+  let result = resolveOrientationLayoutOverlaps(normalized, orientation);
   result = compactOrientationLayoutY(result, orientation);
 
-  const hasCssOverlap = detectGridOverlaps(result, columnCount, isLandscape).length > 0;
+  const hasCssOverlap = detectGridOverlaps(result, cssColumnCount, isLandscape).length > 0;
   const hasCoordOverlap = detectLayoutCoordinateOverlaps(result, orientation).length > 0;
   if (!hasCssOverlap && !hasCoordOverlap) {
     return result;
@@ -886,7 +943,12 @@ export function finalizeEditorDraftsLayoutForOrientation(
   const cssColumnCount = renderColumnCount ?? columnCount;
   const isLandscape = orientation === 'landscape';
 
-  const clamped = clampWidgetLayoutExtents(widgets, orientation);
+  const normalized =
+    orientation === 'landscape'
+      ? widgets.map(normalizeLandscapeLayoutFromPortrait)
+      : widgets;
+
+  const clamped = clampWidgetLayoutExtents(normalized, orientation);
   let result = resolveOrientationLayoutOverlaps(clamped, orientation);
   result = compactOrientationLayoutY(result, orientation);
 
@@ -899,7 +961,7 @@ export function finalizeEditorDraftsLayoutForOrientation(
   const hasCoordOverlap = detectLayoutCoordinateOverlaps(result, orientation).length > 0;
   const hasCssOverlap = detectGridOverlaps(result, cssColumnCount, isLandscape).length > 0;
   if (hasCoordOverlap || hasCssOverlap) {
-    result = ensureOrientationNoGridOverlaps(result, orientation);
+    result = ensureOrientationNoGridOverlaps(result, orientation, cssColumnCount);
   }
 
   if (orientation === 'portrait') {
