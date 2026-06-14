@@ -813,8 +813,8 @@ export function WidgetLayoutEditor({
                   gridAutoFlow: 'row',
                   gridAutoRows:
                     placementCellRowH > 0
-                      ? `minmax(${placementCellRowH}px, ${placementCellRowH}px)`
-                      : 'minmax(32px, 32px)',
+                      ? `minmax(${placementCellRowH}px, auto)`
+                      : 'minmax(32px, auto)',
                 }}
               >
             {sortedEnabled.map((cfg) => {
