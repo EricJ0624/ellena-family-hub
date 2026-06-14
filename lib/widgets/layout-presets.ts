@@ -474,13 +474,14 @@ export function compactOrientationLayoutY(
     });
     let cy = 0;
     for (const w of list) {
+      const h = effectiveLayoutH(w, orientation);
       const intendedY = effectiveLayoutY(w, orientation);
-      // intendedY > cy: h 변경(8→6) 등으로 남은 빈 y(0·8·16) → cy로 당김
-      // intendedY < cy: 겹침 → cy로 밀어 올림. intendedY ≈ cy: 그대로 유지
-      const nextY =
-        intendedY > cy + 1e-9 ? cy : Math.max(cy, intendedY);
+      // h stride 불일치 잔존 y(예: cy=6인데 intended=8)만 당김 — 정렬된 다음 행(y≥cy+h)은 유지
+      const staleSubRowGap =
+        intendedY > cy + 1e-9 && intendedY < cy + h - 1e-9;
+      const nextY = staleSubRowGap ? cy : Math.max(cy, intendedY);
       yByKey.set(w.widget_key, nextY);
-      cy = nextY + effectiveLayoutH(w, orientation);
+      cy = nextY + h;
     }
   }
 
@@ -878,12 +879,26 @@ function syncPortraitLegacySpans(
 export function finalizeEditorDraftsLayoutForOrientation(
   widgets: readonly WidgetConfigDraft[],
   orientation: 'portrait' | 'landscape',
+  /** 편집 미리보기 실제 열 수(예: 3). 미지정 시 12/24 기준 */
+  renderColumnCount?: number,
 ): WidgetConfigDraft[] {
+  const columnCount = orientation === 'landscape' ? LANDSCAPE_COLS : PORTRAIT_COLS;
+  const cssColumnCount = renderColumnCount ?? columnCount;
+  const isLandscape = orientation === 'landscape';
+
   const clamped = clampWidgetLayoutExtents(widgets, orientation);
   let result = resolveOrientationLayoutOverlaps(clamped, orientation);
   result = compactOrientationLayoutY(result, orientation);
 
+  // compact y 당김이 가로 span 겹침을 만들 수 있음 — resolve 후 재압축
   if (detectLayoutCoordinateOverlaps(result, orientation).length > 0) {
+    result = resolveOrientationLayoutOverlaps(result, orientation);
+    result = compactOrientationLayoutY(result, orientation);
+  }
+
+  const hasCoordOverlap = detectLayoutCoordinateOverlaps(result, orientation).length > 0;
+  const hasCssOverlap = detectGridOverlaps(result, cssColumnCount, isLandscape).length > 0;
+  if (hasCoordOverlap || hasCssOverlap) {
     result = ensureOrientationNoGridOverlaps(result, orientation);
   }
 

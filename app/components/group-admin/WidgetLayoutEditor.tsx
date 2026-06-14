@@ -488,18 +488,27 @@ export function WidgetLayoutEditor({
   useEffect(() => {
     if (isDragActive || liveResize) return;
     const orient = orientation;
-    const overlaps = detectLayoutCoordinateOverlaps(drafts, orient);
-    if (overlaps.length === 0) return;
+    const coordOverlaps = detectLayoutCoordinateOverlaps(drafts, orient);
+    const cssOverlaps = detectGridOverlaps(
+      drafts.filter((d) => d.is_enabled),
+      gridColumnCount,
+      isLandscapeGrid,
+    );
+    if (coordOverlaps.length === 0 && cssOverlaps.length === 0) return;
 
-    const fixed = finalizeEditorDraftsLayoutForOrientation(drafts, orient);
+    const fixed = finalizeEditorDraftsLayoutForOrientation(drafts, orient, gridColumnCount);
     if (draftsOrientationLayoutsEqual(drafts, fixed, orient)) {
-      const sig = `${orient}:${overlaps.map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`)).sort().join(',')}`;
+      const sig = `${orient}:${[...coordOverlaps, ...cssOverlaps]
+        .map(([a, b]) => (a < b ? `${a}|${b}` : `${b}|${a}`))
+        .sort()
+        .join(',')}`;
       if (!overlapFixWarnedRef.current.has(sig)) {
         overlapFixWarnedRef.current.add(sig);
         if (process.env.NODE_ENV === 'development') {
-          console.warn('[WidgetLayoutEditor] layout 좌표 겹침 — 자동 해소 불가(1회 경고)', {
+          console.warn('[WidgetLayoutEditor] layout/CSS 겹침 — 자동 해소 불가(1회 경고)', {
             orientation: orient,
-            overlaps,
+            coordOverlaps,
+            cssOverlaps,
           });
         }
       }
@@ -508,7 +517,7 @@ export function WidgetLayoutEditor({
 
     overlapFixWarnedRef.current.clear();
     onDraftsChangeRef.current(fixed);
-  }, [drafts, isDragActive, liveResize, orientation]);
+  }, [drafts, isDragActive, liveResize, orientation, gridColumnCount, isLandscapeGrid]);
   const sortedDisabled = useMemo(
     () =>
       [...drafts].filter((d) => !d.is_enabled).sort((a, b) => a.display_order - b.display_order),
@@ -607,7 +616,7 @@ export function WidgetLayoutEditor({
         result = updated.map((d) => (d.widget_key === active.id ? placed : d));
       }
 
-      onDraftsChange(finalizeEditorDraftsLayoutForOrientation(result, orient));
+      onDraftsChange(finalizeEditorDraftsLayoutForOrientation(result, orient, gridColumnCountRef.current));
     },
     [sortedEnabled, drafts, onDraftsChange],
   );
@@ -698,7 +707,7 @@ export function WidgetLayoutEditor({
       // x/y 유지 — 너비·높이만 clamp 후 겹침 해소 (display_order 전체 재패킹 금지)
       const laidOut = clampWidgetLayoutExtents(updated, orient);
 
-      onDraftsChangeRef.current(finalizeEditorDraftsLayoutForOrientation(laidOut, orient));
+      onDraftsChangeRef.current(finalizeEditorDraftsLayoutForOrientation(laidOut, orient, gridColumnCountRef.current));
     };
 
     // 즉시 등록 — 터치/마우스 첫 이벤트를 절대 놓치지 않음
