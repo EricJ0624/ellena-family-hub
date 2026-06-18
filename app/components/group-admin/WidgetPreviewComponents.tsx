@@ -6,7 +6,7 @@
  * 데이터/기능 없이 정적 마크업만 사용.
  */
 
-import { Paperclip } from 'lucide-react';
+import { Camera, Paperclip } from 'lucide-react';
 import React from 'react';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
 
@@ -150,6 +150,7 @@ function ChatPreview() {
           />
           <div className="chat-attach-wrap">
             <button type="button" tabIndex={-1} className="chat-attach-btn" aria-hidden>
+              <Camera className="chat-attach-icon" aria-hidden />
               <Paperclip className="chat-attach-icon" aria-hidden />
             </button>
           </div>

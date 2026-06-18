@@ -316,6 +316,7 @@ export function FamilyChatSection({
               aria-expanded={attachMenuOpen}
               aria-haspopup="menu"
             >
+              <Camera className="chat-attach-icon" aria-hidden />
               <Paperclip className="chat-attach-icon" aria-hidden />
             </button>
             {attachMenuOpen && (
