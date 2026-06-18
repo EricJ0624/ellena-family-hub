@@ -5817,6 +5817,7 @@ export default function FamilyHub() {
               chat_loading_older: dt('chat_loading_older'),
               chat_album_btn: dt('chat_album_btn'),
               chat_camera_btn: dt('chat_camera_btn'),
+              chat_attach_btn_aria: dt('chat_attach_btn_aria'),
               chat_remove_attachment_aria: dt('chat_remove_attachment_aria'),
               me: ct('me'),
               user: ct('user'),

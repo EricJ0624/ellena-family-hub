@@ -4,7 +4,8 @@
 
 'use client';
 
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import { Camera, ImageIcon, Paperclip } from 'lucide-react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { ChatUiMessage } from '../types';
@@ -41,6 +42,7 @@ interface FamilyChatSectionProps {
     chat_loading_older: string;
     chat_album_btn: string;
     chat_camera_btn: string;
+    chat_attach_btn_aria: string;
     chat_remove_attachment_aria: string;
     me: string;
     user: string;
@@ -79,7 +81,37 @@ export function FamilyChatSection({
   const chatHeaderRowRef = useRef<HTMLDivElement>(null);
   const chatTitleBoxRef = useRef<HTMLDivElement>(null);
   const chatTitleRef = useRef<HTMLHeadingElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
   const [sectionTitleFontPx, setSectionTitleFontPx] = useState<number | null>(null);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!attachMenuOpen) return;
+    const closeOnOutside = (e: PointerEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setAttachMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAttachMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [attachMenuOpen]);
+
+  const openAlbumPicker = () => {
+    setAttachMenuOpen(false);
+    chatFileInputRef.current?.click();
+  };
+
+  const openCameraPicker = () => {
+    setAttachMenuOpen(false);
+    chatCameraInputRef.current?.click();
+  };
 
   useLayoutEffect(() => {
     const row = chatHeaderRowRef.current;
@@ -275,6 +307,40 @@ export function FamilyChatSection({
             className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
             placeholder={t.chat_placeholder}
           />
+          <div ref={attachMenuRef} className="chat-attach-wrap">
+            <button
+              type="button"
+              onClick={() => setAttachMenuOpen((open) => !open)}
+              className="chat-attach-btn"
+              aria-label={t.chat_attach_btn_aria}
+              aria-expanded={attachMenuOpen}
+              aria-haspopup="menu"
+            >
+              <Paperclip className="chat-attach-icon" aria-hidden />
+            </button>
+            {attachMenuOpen && (
+              <div role="menu" className="chat-attach-menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="chat-attach-menu-item"
+                  onClick={openAlbumPicker}
+                >
+                  <ImageIcon className="chat-attach-menu-icon" aria-hidden />
+                  <span>{t.chat_album_btn}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="chat-attach-menu-item"
+                  onClick={openCameraPicker}
+                >
+                  <Camera className="chat-attach-menu-icon" aria-hidden />
+                  <span>{t.chat_camera_btn}</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleSendClick}
@@ -282,22 +348,6 @@ export function FamilyChatSection({
             className={`btn-send ${isSendingText ? 'opacity-70' : 'opacity-100'}`}
           >
             {t.chat_send}
-          </button>
-          <button
-            type="button"
-            onClick={() => chatFileInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
-            style={{ padding: '2cqmin 2.5cqmin', fontSize: '4cqmin' }}
-          >
-            {t.chat_album_btn}
-          </button>
-          <button
-            type="button"
-            onClick={() => chatCameraInputRef.current?.click()}
-            className="cursor-pointer rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-100 to-violet-100 font-semibold text-indigo-800 transition-colors hover:from-indigo-200 hover:to-violet-200 hover:text-indigo-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
-            style={{ padding: '2cqmin 2.5cqmin', fontSize: '4cqmin' }}
-          >
-            {t.chat_camera_btn}
           </button>
           <input
             ref={chatFileInputRef}

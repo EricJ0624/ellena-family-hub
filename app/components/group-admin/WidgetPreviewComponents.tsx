@@ -6,6 +6,7 @@
  * 데이터/기능 없이 정적 마크업만 사용.
  */
 
+import { Paperclip } from 'lucide-react';
 import React from 'react';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
 
@@ -138,13 +139,23 @@ function ChatPreview() {
             </div>
           ))}
         </div>
-        <div className="chat-input-wrapper gap-1.5">
-          <div className="flex-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-400">
-            메시지 입력...
+        <div className="chat-input-wrapper" style={{ gap: '1.5cqmin' }}>
+          <input
+            type="text"
+            readOnly
+            tabIndex={-1}
+            className="chat-input min-w-0 flex-1"
+            placeholder="메시지 입력..."
+            aria-hidden
+          />
+          <div className="chat-attach-wrap">
+            <button type="button" tabIndex={-1} className="chat-attach-btn" aria-hidden>
+              <Paperclip className="chat-attach-icon" aria-hidden />
+            </button>
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500 text-sm text-white">
-            ↑
-          </div>
+          <button type="button" tabIndex={-1} className="btn-send" aria-hidden>
+            전송
+          </button>
         </div>
       </div>
     </section>

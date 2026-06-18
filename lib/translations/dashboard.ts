@@ -88,6 +88,7 @@ export type DashboardTranslations = {
   chat_loading_older: string;
   chat_album_btn: string;
   chat_camera_btn: string;
+  chat_attach_btn_aria: string;
   chat_remove_attachment_aria: string;
   /** 그룹 미선택 등으로 채팅 전송 불가 */
   chat_send_no_group: string;
@@ -365,6 +366,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_loading_older: '불러오는 중…',
     chat_album_btn: '앨범',
     chat_camera_btn: '카메라',
+    chat_attach_btn_aria: '사진 첨부',
     chat_remove_attachment_aria: '첨부 삭제',
     chat_send_no_group: '가족 그룹이 아직 선택되지 않았습니다. 잠시 후 다시 시도해 주세요.',
     chat_send_no_access:
@@ -626,6 +628,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_loading_older: 'Loading…',
     chat_album_btn: 'Gallery',
     chat_camera_btn: 'Camera',
+    chat_attach_btn_aria: 'Attach photo',
     chat_remove_attachment_aria: 'Remove attachment',
     chat_send_no_group: 'No family group selected yet. Please try again in a moment.',
     chat_send_no_access:
@@ -887,6 +890,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_loading_older: '読み込み中…',
     chat_album_btn: 'アルバム',
     chat_camera_btn: 'カメラ',
+    chat_attach_btn_aria: '写真を添付',
     chat_remove_attachment_aria: '添付を削除',
     chat_send_no_group: 'ファミリーグループがまだ選択されていません。しばらくしてから再度お試しください。',
     chat_send_no_access:
@@ -1148,6 +1152,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_loading_older: '加载中…',
     chat_album_btn: '相册',
     chat_camera_btn: '相机',
+    chat_attach_btn_aria: '添加照片',
     chat_remove_attachment_aria: '删除附件',
     chat_send_no_group: '尚未选择家庭群组。请稍后再试。',
     chat_send_no_access: '您没有权限在此群组发送消息。请在上方的家庭群组中选择您已加入的群组，或刷新页面后重试。',
@@ -1406,6 +1411,7 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     chat_loading_older: '載入中…',
     chat_album_btn: '相簿',
     chat_camera_btn: '相機',
+    chat_attach_btn_aria: '新增照片',
     chat_remove_attachment_aria: '移除附件',
     chat_send_no_group: '尚未選擇家庭群組。請稍後再試。',
     chat_send_no_access: '您沒有權限在此群組傳送訊息。請在上方選擇您已加入的家庭群組，或重新整理頁面後再試。',
