@@ -1396,9 +1396,9 @@ select {
   container-type: size;
   container-name: chalk-modal;
   overflow: visible;
-  /* PNG labels left ~22.3%; inputs + buttons share one content width */
-  --chalkboard-newtask-form-left: 22.5%;
-  --chalkboard-newtask-form-right: 16%;
+  /* PNG(467×558) 빈 칠판 — 좌우 대칭 inset 으로 HTML 폼을 프레임 중앙에 */
+  --chalkboard-newtask-form-left: 19.25%;
+  --chalkboard-newtask-form-right: 19.25%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
@@ -1518,12 +1518,10 @@ select {
   padding-top: 0;
 }
 
-.chalkboard-modal-container .chalkboard-btn-secondary {
-  flex: 1 1 0;
-}
-
+.chalkboard-modal-container .chalkboard-btn-secondary,
 .chalkboard-modal-container .chalkboard-btn-primary {
-  flex: 1.65 1 0;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 @container chalk-modal (min-width: 0px) {
