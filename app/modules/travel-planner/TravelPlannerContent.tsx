@@ -47,6 +47,7 @@ import {
   type UploadJob,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import { intlLocaleForLang } from '@/lib/language-fonts';
 
 type WindowWithGoogleMaps = Window & {
   google?: { maps: typeof google.maps };
@@ -60,21 +61,6 @@ function getGoogleMapsNs(): typeof google.maps | undefined {
 const API_BASE = '/api/v1/travel';
 
 const TRIP_CURRENCY_OPTIONS = [...getTopCurrencyCodes()];
-
-const LOCALE_FOR_MONEY: Record<string, string> = {
-  ko: 'ko-KR',
-  en: 'en-US',
-  ja: 'ja-JP',
-  'zh-CN': 'zh-CN',
-  'zh-TW': 'zh-TW',
-};
-const LOCALE_FOR_TRIP_DATES: Record<string, string> = {
-  ko: 'ko-KR',
-  en: 'en-US',
-  ja: 'ja-JP',
-  'zh-CN': 'zh-CN',
-  'zh-TW': 'zh-TW',
-};
 
 export function TravelPlannerContent() {
   const router = useRouter();
@@ -518,7 +504,7 @@ export function TravelPlannerContent() {
     () => (selectedTrip?.currency || 'KRW').trim().toUpperCase() || 'KRW',
     [selectedTrip?.currency],
   );
-  const localeForMoney = LOCALE_FOR_MONEY[lang] || 'en-US';
+  const localeForMoney = intlLocaleForLang(lang);
   const fmtTripMoney = useCallback(
     (n: number) => formatMoneyAmount(n, tripCurrencyCode, localeForMoney),
     [tripCurrencyCode, localeForMoney],
@@ -537,7 +523,7 @@ export function TravelPlannerContent() {
     [tripCurrencyCode, tt],
   );
 
-  const localeForTripDates = LOCALE_FOR_TRIP_DATES[lang] ?? 'en-US';
+  const localeForTripDates = intlLocaleForLang(lang);
   const formatTripDateLong = useCallback(
     (ymd: string) => {
       const [y, m0, d0] = ymd.split('-').map(Number);
@@ -2480,7 +2466,7 @@ export function TravelPlannerContent() {
   const downloadItineraryPdf = useCallback(() => {
     if (!selectedTrip) return;
     const cur = (selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW';
-    const loc = LOCALE_FOR_MONEY[lang] || 'en-US';
+    const loc = intlLocaleForLang(lang);
     const expenseSummaryLines = [
       `${tt('total_budget')}: ${formatMoneyAmount(totalBudget, cur, loc)}`,
       `${uiText.pdfSpentTotal}: ${formatMoneyAmount(expenseSum, cur, loc)}`,

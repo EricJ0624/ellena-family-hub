@@ -16,6 +16,7 @@ import {
 } from '@/lib/feature-attachments-client';
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
+import { intlLocaleForLang } from '@/lib/language-fonts';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,8 +63,6 @@ type Transaction = {
 };
 
 type PiggyAttachment = UploadedAttachment;
-
-const LOCALE_MAP: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
 
 const PIGGY_CURRENCY_OPTIONS = [...getTopCurrencyCodes()];
 
@@ -167,7 +166,7 @@ export default function PiggyBankPage() {
     )
       .trim()
       .toUpperCase() || 'KRW';
-    return formatMoneyAmount(value, cur, LOCALE_MAP[lang] || 'en-US');
+    return formatMoneyAmount(value, cur, intlLocaleForLang(lang));
   };
 
   const getAuthHeader = async () => {
@@ -552,7 +551,7 @@ export default function PiggyBankPage() {
             >
               {PIGGY_CURRENCY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
-                  {formatCurrencyOptionLabel(c, LOCALE_MAP[lang] || 'en-US')}
+                  {formatCurrencyOptionLabel(c, intlLocaleForLang(lang))}
                 </option>
               ))}
             </select>

@@ -1418,8 +1418,8 @@ export default function FamilyHub() {
   //   → 가용 폭 ÷ 인수 = 최솟값 (iPhone 14 기준)
   // 커스텀 폰트 크기는 clamp의 상한(max)으로 사용 — 원래 fit 알고리즘의 상한 역할과 동일
   const TITLE_FONT_MIN = {
-    admin: { en: 40, ko: 33, ja: 27, 'zh-CN': 32, 'zh-TW': 32 },
-    user:  { en: 54, ko: 44, ja: 36, 'zh-CN': 43, 'zh-TW': 43 },
+    admin: { en: 40, ko: 33, ja: 27, 'zh-CN': 32, 'zh-TW': 32, es: 40, fr: 40, de: 40, it: 40 },
+    user:  { en: 54, ko: 44, ja: 36, 'zh-CN': 43, 'zh-TW': 43, es: 54, fr: 54, de: 54, it: 54 },
   } as const;
   const isAdminTitleContext = isSystemAdmin || ((groupUserRole === 'ADMIN' || groupIsOwner) && currentGroupId !== null);
   const customFontSizeCap = typeof effectiveTitleStyle?.fontSize === 'number' ? effectiveTitleStyle.fontSize : null;

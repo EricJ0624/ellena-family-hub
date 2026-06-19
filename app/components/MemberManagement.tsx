@@ -13,8 +13,7 @@ import {
 import { getCommonTranslation } from '@/lib/translations/common';
 import type { MembershipRole, FamilyRole } from '@/types/db';
 import GroupSettings from './GroupSettings';
-
-const DATE_LOCALE: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW' };
+import { intlLocaleForLang } from '@/lib/language-fonts';
 
 interface MemberInfo {
   user_id: string;
@@ -527,7 +526,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
                       )}
                     </td>
                     <td className="p-3 text-sm text-slate-500">
-                      {new Date(member.joined_at).toLocaleDateString(DATE_LOCALE[lang] || 'en-US')}
+                      {new Date(member.joined_at).toLocaleDateString(intlLocaleForLang(lang))}
                     </td>
                     <td className="p-3 text-right">
                       {(canRemove || canChangeRole) && (

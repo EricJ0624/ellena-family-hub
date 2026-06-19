@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import type { LangCode } from '@/lib/language-fonts';
+import { intlLocaleForLang } from '@/lib/language-fonts';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
 import {
@@ -15,17 +15,6 @@ import {
   type MemberSupportTicketRow,
 } from '@/lib/member-support';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
-
-function dateLocaleForLang(lang: LangCode): string {
-  const map: Record<LangCode, string> = {
-    ko: 'ko-KR',
-    en: 'en-US',
-    ja: 'ja-JP',
-    'zh-CN': 'zh-CN',
-    'zh-TW': 'zh-TW',
-  };
-  return map[lang];
-}
 
 export default function MemberSupportPage() {
   const router = useRouter();
@@ -352,7 +341,7 @@ export default function MemberSupportPage() {
                         </span>
                       </div>
                       <div className="mb-2 text-xs text-slate-400">
-                        {new Date(t.created_at).toLocaleString(dateLocaleForLang(lang))}
+                        {new Date(t.created_at).toLocaleString(intlLocaleForLang(lang))}
                       </div>
                       <div
                         className={`whitespace-pre-wrap text-[13px] text-slate-600 ${hasFirstAnswer ? 'mb-3' : 'mb-0'}`}
@@ -370,7 +359,7 @@ export default function MemberSupportPage() {
                           {t.answered_at && (
                             <div className="mt-2 text-[11px] text-emerald-600">
                               {dt('member_support_answered_at_prefix')}{' '}
-                              {new Date(t.answered_at).toLocaleString(dateLocaleForLang(lang))}
+                              {new Date(t.answered_at).toLocaleString(intlLocaleForLang(lang))}
                             </div>
                           )}
                         </div>
@@ -391,7 +380,7 @@ export default function MemberSupportPage() {
                           </strong>
                           {entry.body}
                           <div className="mt-2 text-[11px] opacity-85">
-                            {new Date(entry.created_at).toLocaleString(dateLocaleForLang(lang))}
+                            {new Date(entry.created_at).toLocaleString(intlLocaleForLang(lang))}
                           </div>
                         </div>
                       ))}
