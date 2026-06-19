@@ -1402,31 +1402,37 @@ select {
 
 .chalkboard-modal-container {
   position: absolute;
-  inset: 33% 11.5% 14% 11.5%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  inset: 0;
   z-index: 1;
 }
 
 .chalkboard-modal-form {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 10%;
-  min-height: 0;
-  margin-top: 2%;
+  position: absolute;
+  inset: 0;
 }
 
 .chalkboard-modal-field {
-  flex: 0 0 auto;
+  position: absolute;
+  left: 13%;
+  right: 15%;
   min-width: 0;
+}
+
+/* PNG labels: "What to do?" ~31%, input sits just below */
+.chalkboard-modal-field--what {
+  top: 37%;
+}
+
+/* PNG labels: "Who will do it?" ~56%, input sits just below */
+.chalkboard-modal-field--who {
+  top: 59.5%;
 }
 
 .chalkboard-modal-container .chalkboard-form-input {
   width: 100%;
   box-sizing: border-box;
+  min-height: 2.25rem;
+  color-scheme: dark;
 }
 
 .chalkboard-modal-container select.chalkboard-form-input {
@@ -1439,22 +1445,32 @@ select {
   background-size: 0.65rem auto;
 }
 
+.chalkboard-modal-container select.chalkboard-form-input option {
+  background-color: var(--chalkboard-bg);
+  color: #ffffff;
+}
+
 .chalkboard-modal-container select.chalkboard-form-input:focus {
   background-color: rgba(255, 255, 255, 0.15);
 }
 
 .chalkboard-modal-actions {
+  position: absolute;
+  left: 13%;
+  right: 15%;
+  bottom: 15%;
   display: flex;
   flex-shrink: 0;
   gap: var(--spacing-md);
-  margin-top: auto;
-  padding-top: 6%;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 @container chalk-modal (min-width: 0px) {
   .chalkboard-modal-container .chalkboard-form-input {
-    padding: 2.6cqi 3.2cqi;
-    font-size: 4.2cqi;
+    min-height: 9.5cqi;
+    padding: 2.4cqi 3.2cqi;
+    font-size: 4cqi;
   }
 
   .chalkboard-modal-container select.chalkboard-form-input {
@@ -1469,8 +1485,8 @@ select {
 
   .chalkboard-modal-container .chalkboard-btn-secondary,
   .chalkboard-modal-container .chalkboard-btn-primary {
-    padding: 2.4cqi 0;
-    font-size: 4cqi;
+    padding: 2.6cqi 0;
+    font-size: 3.8cqi;
   }
 }
 
