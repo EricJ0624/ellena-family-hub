@@ -1107,7 +1107,7 @@ export default function PiggyBankPage() {
                   allowanceSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-blue-600'
                 }`}
               >
-                {allowanceSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('allowance_grant_btn')}
+                {allowanceSubmitting ? pt('submitting') : pt('allowance_grant_btn')}
               </button>
             </div>
           </div>
@@ -1156,7 +1156,7 @@ export default function PiggyBankPage() {
                   depositSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-red-500'
                 }`}
               >
-                {depositSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('parent_deposit_btn')}
+                {depositSubmitting ? pt('submitting') : pt('parent_deposit_btn')}
               </button>
             </div>
           </div>
@@ -1263,7 +1263,7 @@ export default function PiggyBankPage() {
                   spendSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-sky-500'
                 }`}
               >
-                {spendSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('spend_btn')}
+                {spendSubmitting ? pt('submitting') : pt('spend_btn')}
               </button>
             </div>
           </div>
@@ -1304,7 +1304,7 @@ export default function PiggyBankPage() {
                   saveSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-orange-500'
                 }`}
               >
-                {saveSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('save_btn')}
+                {saveSubmitting ? pt('submitting') : pt('save_btn')}
               </button>
             </div>
           </div>
@@ -1357,7 +1357,7 @@ export default function PiggyBankPage() {
                   openRequestSubmitting ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-violet-600'
                 }`}
               >
-                {openRequestSubmitting ? (lang === 'ko' ? '처리 중…' : 'Processing…') : pt('open_request_btn')}
+                {openRequestSubmitting ? pt('submitting') : pt('open_request_btn')}
               </button>
             </div>
 

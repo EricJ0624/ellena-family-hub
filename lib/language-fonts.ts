@@ -3,7 +3,30 @@
  */
 export type LangCode = 'ko' | 'en' | 'ja' | 'zh-CN' | 'zh-TW';
 
-export const LANG_CODES: LangCode[] = ['ko', 'en', 'ja', 'zh-CN', 'zh-TW'];
+export type LangOption = { code: LangCode; label: string };
+
+/** 언어 선택 UI·검증·i18n 루프의 단일 소스 */
+export const LANG_OPTIONS: readonly LangOption[] = [
+  { code: 'ko', label: '한국어' },
+  { code: 'en', label: 'English' },
+  { code: 'ja', label: '日本語' },
+  { code: 'zh-CN', label: '简体中文' },
+  { code: 'zh-TW', label: '繁體中文' },
+];
+
+export const LANG_CODES: LangCode[] = LANG_OPTIONS.map((o) => o.code);
+
+export const LANG_LABELS: Record<LangCode, string> = Object.fromEntries(
+  LANG_OPTIONS.map(({ code, label }) => [code, label]),
+) as Record<LangCode, string>;
+
+export function isValidLang(v: unknown): v is LangCode {
+  return typeof v === 'string' && (LANG_CODES as readonly string[]).includes(v);
+}
+
+export function getLangLabel(lang: LangCode): string {
+  return LANG_LABELS[lang] ?? lang;
+}
 
 /**
  * 언어별 타이틀/본문 폰트 (CDN 로드된 폰트명)

@@ -22,7 +22,7 @@ import {
   isGroupDisplayNamePending,
 } from '@/lib/group-display-name';
 import type { TitleStyle } from '@/app/components/TitlePage';
-import type { LangCode } from '@/lib/language-fonts';
+import { LANG_OPTIONS, isValidLang, type LangCode } from '@/lib/language-fonts';
 
 type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
 
@@ -78,7 +78,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
   );
   const [preferredLanguage, setPreferredLanguage] = useState<LangCode>(() => {
     const v = (currentGroup as { preferred_language?: string } | null)?.preferred_language;
-    if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') return v;
+    if (isValidLang(v)) return v;
     return 'ko';
   });
   const [uiTheme, setUiTheme] = useState<UiTheme>(() =>
@@ -144,7 +144,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       );
       setInviteCode(currentGroup.invite_code || '');
       const v = (currentGroup as { preferred_language?: string }).preferred_language;
-      if (v === 'ko' || v === 'en' || v === 'ja' || v === 'zh-CN' || v === 'zh-TW') setPreferredLanguage(v);
+      if (isValidLang(v)) setPreferredLanguage(v);
       setUiTheme(parseUiTheme((currentGroup as { ui_theme?: unknown }).ui_theme));
     }
   }, [currentGroup]);
@@ -377,11 +377,9 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                     disabled={saving}
                     className="min-w-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                   >
-                    <option value="ko">한국어</option>
-                    <option value="en">English</option>
-                    <option value="ja">日本語</option>
-                    <option value="zh-CN">简体中文</option>
-                    <option value="zh-TW">繁體中文</option>
+                    {LANG_OPTIONS.map(({ code, label }) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
                   </select>
                   <p className="mt-1.5 text-xs text-slate-500">
                     {gst('language_hint')}

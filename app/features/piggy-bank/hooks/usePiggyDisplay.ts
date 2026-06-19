@@ -2,12 +2,13 @@
 
 import { useMemo } from 'react';
 import { formatMoneyAmount } from '@/lib/format-currency';
+import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import type { PiggySummary } from '../types';
 
 interface UsePiggyDisplayProps {
   piggySummary: PiggySummary | null;
   fallbackGroupCurrency?: string | null;
-  lang: string;
+  lang: LangCode;
 }
 
 export function usePiggyDisplay({ piggySummary, fallbackGroupCurrency, lang }: UsePiggyDisplayProps) {
@@ -17,10 +18,7 @@ export function usePiggyDisplay({ piggySummary, fallbackGroupCurrency, lang }: U
     return base || rawName;
   }, [piggySummary?.name]);
 
-  const piggyMoneyLocale = useMemo(
-    () => (lang === 'ko' ? 'ko-KR' : lang === 'ja' ? 'ja-JP' : lang === 'zh-CN' ? 'zh-CN' : lang === 'zh-TW' ? 'zh-TW' : 'en-US'),
-    [lang]
-  );
+  const piggyMoneyLocale = useMemo(() => intlLocaleForLang(lang), [lang]);
 
   const formatAmount = (amount: number, currencyCode?: string | null) => {
     const cur = (currencyCode || piggySummary?.currency || fallbackGroupCurrency || 'KRW').trim().toUpperCase() || 'KRW';

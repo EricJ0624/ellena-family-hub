@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { type LangCode } from '@/lib/language-fonts';
+import { type LangCode, isValidLang } from '@/lib/language-fonts';
 
 const STORAGE_KEY = 'app_preferred_language';
 
@@ -22,17 +22,12 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 function getStoredLang(): LangCode | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === 'ko' || raw === 'en' || raw === 'ja' || raw === 'zh-CN' || raw === 'zh-TW') return raw;
+  if (isValidLang(raw)) return raw;
   return null;
 }
 
 function setStoredLang(lang: LangCode) {
   if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, lang);
-}
-
-const VALID_LANGS: LangCode[] = ['ko', 'en', 'ja', 'zh-CN', 'zh-TW'];
-function isValidLang(v: unknown): v is LangCode {
-  return typeof v === 'string' && VALID_LANGS.includes(v as LangCode);
 }
 
 interface LanguageProviderProps {

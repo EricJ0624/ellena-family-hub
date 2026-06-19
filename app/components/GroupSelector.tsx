@@ -10,16 +10,8 @@ import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/tra
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
-import type { LangCode } from '@/lib/language-fonts';
+import { LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
-
-const DISPLAY_LANG_OPTIONS: { code: LangCode; label: string }[] = [
-  { code: 'ko', label: '한국어' },
-  { code: 'en', label: 'English' },
-  { code: 'ja', label: '日本語' },
-  { code: 'zh-CN', label: '简体中文' },
-  { code: 'zh-TW', label: '繁體中文' },
-];
 
 const GroupSelector: React.FC = () => {
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
@@ -295,7 +287,7 @@ const GroupSelector: React.FC = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         disabled={creating}
                       >
-                        {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                        {LANG_OPTIONS.map(({ code, label }) => (
                           <option key={code} value={code}>{label}</option>
                         ))}
                       </select>
@@ -423,7 +415,7 @@ const GroupSelector: React.FC = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         disabled={joining}
                       >
-                        {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                        {LANG_OPTIONS.map(({ code, label }) => (
                           <option key={code} value={code}>{label}</option>
                         ))}
                       </select>
@@ -779,7 +771,7 @@ const GroupSelector: React.FC = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         disabled={creating}
                       >
-                        {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                        {LANG_OPTIONS.map(({ code, label }) => (
                           <option key={code} value={code}>{label}</option>
                         ))}
                       </select>
@@ -891,7 +883,7 @@ const GroupSelector: React.FC = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         disabled={joining}
                       >
-                        {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                        {LANG_OPTIONS.map(({ code, label }) => (
                           <option key={code} value={code}>{label}</option>
                         ))}
                       </select>

@@ -10,6 +10,7 @@ import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
+import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import imageCompression from 'browser-image-compression';
 import {
   getDisplayImageData,
@@ -25,6 +26,14 @@ const COMPRESSION_OPTIONS = {
   maxWidthOrHeight: 2560,
   initialQuality: 0.9,
 };
+
+function formatMemorySectionDate(date: Date, lang: LangCode): string {
+  return new Intl.DateTimeFormat(intlLocaleForLang(lang), {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+}
 
 /** 프록시 URL에서 s3 key 추출 (진단 링크용). 없으면 null */
 function getDiagnoseKeyFromData(data: string): string | null {
@@ -221,6 +230,7 @@ export default function MemoriesPage() {
 
   type Photo = import('@/app/contexts/AlbumContext').Photo;
   const groupedByDate = React.useMemo(() => {
+    const noDateLabel = getDashboardTranslation(lang, 'memories_no_date');
     const groups = new Map<string, Photo[]>();
     const noDateKey = '__no_date__';
     for (const p of album) {
@@ -232,21 +242,18 @@ export default function MemoriesPage() {
           const d = new Date(t);
           if (isNaN(d.getTime())) {
             key = noDateKey;
-            label = lang === 'ko' ? '날짜 없음' : 'No date';
+            label = noDateLabel;
           } else {
             key = t.slice(0, 10);
-            const y = d.getFullYear();
-            const m = d.getMonth() + 1;
-            const day = d.getDate();
-            label = lang === 'ko' ? `${y}년 ${m}월 ${day}일` : `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            label = formatMemorySectionDate(d, lang);
           }
         } catch {
           key = noDateKey;
-          label = lang === 'ko' ? '날짜 없음' : 'No date';
+          label = noDateLabel;
         }
       } else {
         key = noDateKey;
-        label = lang === 'ko' ? '날짜 없음' : 'No date';
+        label = noDateLabel;
       }
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(p);
@@ -257,16 +264,13 @@ export default function MemoriesPage() {
     const sections: { dateKey: string; label: string; photos: Photo[] }[] = [];
     for (const k of sortedKeys) {
       const d = new Date(k);
-      const y = d.getFullYear();
-      const m = d.getMonth() + 1;
-      const day = d.getDate();
-      const label = lang === 'ko' ? `${y}년 ${m}월 ${day}일` : `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const label = formatMemorySectionDate(d, lang);
       sections.push({ dateKey: k, label, photos: groups.get(k)! });
     }
     if (noDatePhotos.length) {
       sections.push({
         dateKey: noDateKey,
-        label: lang === 'ko' ? '날짜 없음' : 'No date',
+        label: noDateLabel,
         photos: noDatePhotos,
       });
     }
@@ -542,7 +546,7 @@ export default function MemoriesPage() {
         </h1>
         <div className="flex flex-col gap-[calc(6px*var(--hs))]">
           <span className="text-[calc(12px*var(--hs))] text-white/90">
-            {lang === 'ko' ? '업로드:' : 'Upload:'}
+            {dt('memories_upload_label')}
           </span>
           <div className="grid grid-cols-2 gap-[calc(8px*var(--hs))]">
             <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] text-[calc(13px*var(--hs))]">
@@ -553,7 +557,7 @@ export default function MemoriesPage() {
                 onChange={() => setUploadMode('normal')}
                 className="h-[14px] w-[14px]"
               />
-              {lang === 'ko' ? '일반(압축)' : 'Normal'}
+              {dt('memories_mode_compressed')}
             </label>
             <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] text-[calc(13px*var(--hs))]">
               <input
@@ -563,7 +567,7 @@ export default function MemoriesPage() {
                 onChange={() => setUploadMode('original')}
                 className="h-[14px] w-[14px]"
               />
-              {lang === 'ko' ? '원본' : 'Original'}
+              {dt('memories_mode_original')}
             </label>
           </div>
         </div>
@@ -602,14 +606,14 @@ export default function MemoriesPage() {
                 onClick={() => setViewMode('latest')}
                 className={`cursor-pointer rounded-[calc(8px*var(--hs))] px-[calc(14px*var(--hs))] py-[calc(8px*var(--hs))] text-[calc(14px*var(--hs))] font-semibold ${viewMode === 'latest' ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700' : 'border border-slate-200 bg-white text-slate-500'}`}
               >
-                {lang === 'ko' ? '최신순' : 'Latest'}
+                {dt('memories_sort_latest')}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('byDate')}
                 className={`cursor-pointer rounded-[calc(8px*var(--hs))] px-[calc(14px*var(--hs))] py-[calc(8px*var(--hs))] text-[calc(14px*var(--hs))] font-semibold ${viewMode === 'byDate' ? 'border-2 border-indigo-500 bg-indigo-50 text-indigo-700' : 'border border-slate-200 bg-white text-slate-500'}`}
               >
-                {lang === 'ko' ? '촬영일별 보기' : 'By date taken'}
+                {dt('memories_sort_by_date')}
               </button>
             </div>
             {viewMode === 'latest' ? (
@@ -657,14 +661,14 @@ export default function MemoriesPage() {
                       <div
                         className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 p-3 text-center text-xs text-white"
                       >
-                        <span>이미지 로드 실패</span>
+                        <span>{dt('memories_image_load_failed')}</span>
                         <a
                           href={`/api/photo/diagnose?key=${encodeURIComponent(getDiagnoseKeyFromData(p.data)!)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-300 underline"
                         >
-                          진단하기
+                          {dt('memories_diagnose_link')}
                         </a>
                       </div>
                     )}
@@ -672,7 +676,7 @@ export default function MemoriesPage() {
                       <div
                         className="absolute inset-0 flex items-center justify-center bg-black/50 font-semibold text-white"
                       >
-                        업로드 중...
+                        {dt('memories_uploading')}
                       </div>
                     )}
                   </div>
@@ -685,7 +689,7 @@ export default function MemoriesPage() {
                 {groupedByDate.map((section) => (
                   <section key={section.dateKey}>
                     <h2 className="mb-3 mt-0 text-base font-bold text-slate-700">
-                      {section.label} ({section.photos.length}{lang === 'ko' ? '장' : ''})
+                      {section.label} ({section.photos.length}{dt('memories_photo_count_suffix')})
                     </h2>
                     <div
                       className={`grid min-w-0 gap-2 [grid-template-columns:repeat(${gridColumns},minmax(0,1fr))]`}
@@ -734,14 +738,14 @@ export default function MemoriesPage() {
                                   <div
                                     className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 p-3 text-center text-xs text-white"
                                   >
-                                    <span>이미지 로드 실패</span>
+                                    <span>{dt('memories_image_load_failed')}</span>
                                     <a
                                       href={`/api/photo/diagnose?key=${encodeURIComponent(getDiagnoseKeyFromData(p.data)!)}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-blue-300 underline"
                                     >
-                                      진단하기
+                                      {dt('memories_diagnose_link')}
                                     </a>
                                   </div>
                                 )}
@@ -804,7 +808,7 @@ export default function MemoriesPage() {
             </button>
             {displayListForLightbox[selectedIndex].supabaseId && (() => {
               const photo = displayListForLightbox[selectedIndex];
-              const modeLabel = photo.upload_mode === 'original' ? dt('photo_download_original') : dt('photo_download_normal');
+              const modeLabel = photo.upload_mode === 'original' ? dt('memories_mode_original') : dt('memories_mode_compressed');
               const downloadLabel = `${dt('photo_download')} (${modeLabel})`;
               return (
               <button

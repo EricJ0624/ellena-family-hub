@@ -16,6 +16,7 @@ export type PiggyTranslations = {
   delete_failed: string;
   child_label: string;
   loading: string;
+  submitting: string;
   group_label: string;
   piggy_per_child: string;
   select_child_title: string;
@@ -112,6 +113,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     delete_failed: '삭제에 실패했습니다.',
     child_label: '아이',
     loading: '불러오는 중...',
+    submitting: '처리 중…',
     group_label: '그룹',
     piggy_per_child: '아이별 저금통',
     select_child_title: '아이 선택',
@@ -206,6 +208,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     delete_failed: 'Failed to delete.',
     child_label: 'Child',
     loading: 'Loading...',
+    submitting: 'Processing…',
     group_label: 'Group',
     piggy_per_child: 'Piggy bank by child',
     select_child_title: 'Select child',
@@ -300,6 +303,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     delete_failed: '削除に失敗しました。',
     child_label: 'お子様',
     loading: '読み込み中...',
+    submitting: '処理中…',
     group_label: 'グループ',
     piggy_per_child: 'お子様別貯金箱',
     select_child_title: 'お子様を選択',
@@ -394,6 +398,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     delete_failed: '删除失败。',
     child_label: '孩子',
     loading: '加载中...',
+    submitting: '处理中…',
     group_label: '群组',
     piggy_per_child: '按孩子查看存钱罐',
     select_child_title: '选择孩子',
@@ -488,6 +493,7 @@ const piggy: Record<LangCode, PiggyTranslations> = {
     delete_failed: '刪除失敗。',
     child_label: '孩子',
     loading: '載入中...',
+    submitting: '處理中…',
     group_label: '群組',
     piggy_per_child: '依孩子查看存錢筒',
     select_child_title: '選擇孩子',

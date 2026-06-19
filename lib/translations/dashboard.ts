@@ -234,6 +234,17 @@ export type DashboardTranslations = {
   photo_download_original: string;
   photo_download_auth_required: string;
   photo_download_failed: string;
+  // Memories page
+  memories_upload_label: string;
+  memories_mode_compressed: string;
+  memories_mode_original: string;
+  memories_sort_latest: string;
+  memories_sort_by_date: string;
+  memories_no_date: string;
+  memories_photo_count_suffix: string;
+  memories_uploading: string;
+  memories_image_load_failed: string;
+  memories_diagnose_link: string;
   // Calendar weekdays (Sun–Sat) and nav
   calendar_weekday_0: string;
   calendar_weekday_1: string;
@@ -501,6 +512,16 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     photo_download_original: '원본사진',
     photo_download_auth_required: '다운로드하려면 로그인이 필요합니다.',
     photo_download_failed: '다운로드 중 오류가 발생했습니다.',
+    memories_upload_label: '업로드:',
+    memories_mode_compressed: '압축',
+    memories_mode_original: '원본',
+    memories_sort_latest: '최신순',
+    memories_sort_by_date: '촬영일별 보기',
+    memories_no_date: '날짜 없음',
+    memories_photo_count_suffix: '장',
+    memories_uploading: '업로드 중...',
+    memories_image_load_failed: '이미지 로드 실패',
+    memories_diagnose_link: '진단하기',
     calendar_weekday_0: '일',
     calendar_weekday_1: '월',
     calendar_weekday_2: '화',
@@ -763,6 +784,16 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     photo_download_original: 'Original',
     photo_download_auth_required: 'Please log in to download.',
     photo_download_failed: 'Download failed.',
+    memories_upload_label: 'Upload:',
+    memories_mode_compressed: 'Compressed',
+    memories_mode_original: 'Original',
+    memories_sort_latest: 'Latest',
+    memories_sort_by_date: 'By date taken',
+    memories_no_date: 'No date',
+    memories_photo_count_suffix: '',
+    memories_uploading: 'Uploading...',
+    memories_image_load_failed: 'Image failed to load',
+    memories_diagnose_link: 'Diagnose',
     calendar_weekday_0: 'Sun',
     calendar_weekday_1: 'Mon',
     calendar_weekday_2: 'Tue',
@@ -1025,6 +1056,16 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     photo_download_original: 'オリジナル',
     photo_download_auth_required: 'ダウンロードにはログインが必要です。',
     photo_download_failed: 'ダウンロードに失敗しました。',
+    memories_upload_label: 'アップロード:',
+    memories_mode_compressed: '圧縮',
+    memories_mode_original: 'オリジナル',
+    memories_sort_latest: '新しい順',
+    memories_sort_by_date: '撮影日別',
+    memories_no_date: '日付なし',
+    memories_photo_count_suffix: '枚',
+    memories_uploading: 'アップロード中...',
+    memories_image_load_failed: '画像の読み込みに失敗しました',
+    memories_diagnose_link: '診断',
     calendar_weekday_0: '日',
     calendar_weekday_1: '月',
     calendar_weekday_2: '火',
@@ -1285,6 +1326,16 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     photo_download_original: '原图',
     photo_download_auth_required: '请登录后再下载。',
     photo_download_failed: '下载失败。',
+    memories_upload_label: '上传:',
+    memories_mode_compressed: '压缩',
+    memories_mode_original: '原图',
+    memories_sort_latest: '最新',
+    memories_sort_by_date: '按拍摄日期',
+    memories_no_date: '无日期',
+    memories_photo_count_suffix: '张',
+    memories_uploading: '上传中...',
+    memories_image_load_failed: '图片加载失败',
+    memories_diagnose_link: '诊断',
     calendar_weekday_0: '日',
     calendar_weekday_1: '一',
     calendar_weekday_2: '二',
@@ -1544,6 +1595,16 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     photo_download_original: '原圖',
     photo_download_auth_required: '請先登入才能下載。',
     photo_download_failed: '下載失敗。',
+    memories_upload_label: '上傳:',
+    memories_mode_compressed: '壓縮',
+    memories_mode_original: '原圖',
+    memories_sort_latest: '最新',
+    memories_sort_by_date: '依拍攝日期',
+    memories_no_date: '無日期',
+    memories_photo_count_suffix: '張',
+    memories_uploading: '上傳中...',
+    memories_image_load_failed: '圖片載入失敗',
+    memories_diagnose_link: '診斷',
     calendar_weekday_0: '日',
     calendar_weekday_1: '一',
     calendar_weekday_2: '二',

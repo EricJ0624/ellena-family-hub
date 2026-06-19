@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback, isTransientAuthNetworkError } from '@/lib/auth-session-resilience';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
-import type { LangCode } from '@/lib/language-fonts';
+import { LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
@@ -24,14 +24,6 @@ import {
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
-
-const DISPLAY_LANG_OPTIONS: { code: LangCode; label: string }[] = [
-  { code: 'ko', label: '한국어' },
-  { code: 'en', label: 'English' },
-  { code: 'ja', label: '日本語' },
-  { code: 'zh-CN', label: '简体中文' },
-  { code: 'zh-TW', label: '繁體中文' },
-];
 
 /** PostgREST/GoTrue 에러 객체에서 사용자에게 보일 문자열 추출 */
 function supabaseClientErrorText(err: unknown): string {
@@ -696,7 +688,7 @@ export default function OnboardingPage() {
                     onChange={(e) => setAppLanguage(e.target.value as LangCode)}
                     className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                   >
-                    {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                    {LANG_OPTIONS.map(({ code, label }) => (
                       <option key={code} value={code}>{label}</option>
                     ))}
                   </select>
@@ -869,7 +861,7 @@ export default function OnboardingPage() {
                         onChange={(e) => setAppLanguage(e.target.value as LangCode)}
                         className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                       >
-                        {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                        {LANG_OPTIONS.map(({ code, label }) => (
                           <option key={code} value={code}>{label}</option>
                         ))}
                       </select>
@@ -977,7 +969,7 @@ export default function OnboardingPage() {
                       onChange={(e) => setAppLanguage(e.target.value as LangCode)}
                       className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                     >
-                      {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                      {LANG_OPTIONS.map(({ code, label }) => (
                         <option key={code} value={code}>{label}</option>
                       ))}
                     </select>
@@ -1223,7 +1215,7 @@ export default function OnboardingPage() {
                     onChange={(e) => setAppLanguage(e.target.value as LangCode)}
                     className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
                   >
-                    {DISPLAY_LANG_OPTIONS.map(({ code, label }) => (
+                    {LANG_OPTIONS.map(({ code, label }) => (
                       <option key={code} value={code}>{label}</option>
                     ))}
                   </select>

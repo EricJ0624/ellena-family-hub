@@ -38,7 +38,7 @@ import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
-import type { LangCode } from '@/lib/language-fonts';
+import { LANG_CODES, LANG_LABELS, type LangCode } from '@/lib/language-fonts';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
@@ -115,8 +115,6 @@ interface GroupStats {
   recentPhotos: number;
 }
 
-const ANNOUNCEMENT_LANGS: LangCode[] = ['ko', 'en', 'ja', 'zh-CN', 'zh-TW'];
-const ANNOUNCEMENT_LANG_LABELS: Record<LangCode, string> = { ko: '한국어', en: 'English', ja: '日本語', 'zh-CN': '简体中文', 'zh-TW': '繁體中文' };
 
 interface AnnouncementInfo {
   id: string;
@@ -231,8 +229,8 @@ export default function AdminPage() {
   const [accessRequests, setAccessRequests] = useState<DashboardAccessRequestInfo[]>([]);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementInfo | null | undefined>(undefined);
   const [editingTicket, setEditingTicket] = useState<SupportTicketInfo | null>(null);
-  const [announcementTitleI18n, setAnnouncementTitleI18n] = useState<Record<string, string>>(() => Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
-  const [announcementContentI18n, setAnnouncementContentI18n] = useState<Record<string, string>>(() => Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+  const [announcementTitleI18n, setAnnouncementTitleI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+  const [announcementContentI18n, setAnnouncementContentI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
   const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
   const [announcementLangTab, setAnnouncementLangTab] = useState<LangCode>('ko');
   const [ticketAnswer, setTicketAnswer] = useState('');
@@ -1961,8 +1959,8 @@ export default function AdminPage() {
                   <button
                     onClick={() => {
                       setEditingAnnouncement(null);
-                      setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
-                      setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                      setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+                      setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
                       setAnnouncementTarget('ADMIN_ONLY');
                       setAnnouncementLangTab('ko');
                     }}
@@ -2017,8 +2015,8 @@ export default function AdminPage() {
                               setEditingAnnouncement(announcement);
                               const ti = announcement.title_i18n && typeof announcement.title_i18n === 'object' ? announcement.title_i18n : { ko: announcement.title };
                               const ci = announcement.content_i18n && typeof announcement.content_i18n === 'object' ? announcement.content_i18n : { ko: announcement.content };
-                              setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, (ti[l] ?? '')])));
-                              setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, (ci[l] ?? '')])));
+                              setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, (ti[l] ?? '')])));
+                              setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, (ci[l] ?? '')])));
                               setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
                               setAnnouncementLangTab('ko');
                             }}
@@ -2135,8 +2133,8 @@ export default function AdminPage() {
                   className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => {
                     setEditingAnnouncement(undefined);
-                    setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
-                    setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                    setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+                    setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
                     setAnnouncementTarget('ADMIN_ONLY');
                   }}
                   >
@@ -2148,7 +2146,7 @@ export default function AdminPage() {
                         {editingAnnouncement ? at('edit_announcement_modal_title') : at('new_announcement_modal_title')}
                       </h3>
                       <div className="mb-4 flex gap-1 border-b border-slate-200">
-                        {ANNOUNCEMENT_LANGS.map((l) => (
+                        {LANG_CODES.map((l) => (
                           <button
                             key={l}
                             type="button"
@@ -2159,7 +2157,7 @@ export default function AdminPage() {
                                 : 'border-b-transparent font-normal text-slate-500'
                             }`}
                           >
-                            {ANNOUNCEMENT_LANG_LABELS[l]}
+                            {LANG_LABELS[l]}
                           </button>
                         ))}
                       </div>
@@ -2226,8 +2224,8 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             setEditingAnnouncement(undefined);
-                            setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
-                            setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                            setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+                            setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
                             setAnnouncementTarget('ADMIN_ONLY');
                           }}
                           className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
@@ -2238,7 +2236,7 @@ export default function AdminPage() {
                           onClick={async () => {
                             const titleObj: Record<string, string> = {};
                             const contentObj: Record<string, string> = {};
-                            for (const l of ANNOUNCEMENT_LANGS) {
+                            for (const l of LANG_CODES) {
                               const t = (announcementTitleI18n[l] ?? '').trim();
                               const c = (announcementContentI18n[l] ?? '').trim();
                               if (t || c) {
@@ -2308,8 +2306,8 @@ export default function AdminPage() {
                               }
 
                               setEditingAnnouncement(undefined);
-                              setAnnouncementTitleI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
-                              setAnnouncementContentI18n(Object.fromEntries(ANNOUNCEMENT_LANGS.map((l) => [l, ''])));
+                              setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+                              setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
                               setAnnouncementTarget('ADMIN_ONLY');
                               loadAnnouncements();
                             } catch (error: any) {

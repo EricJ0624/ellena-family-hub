@@ -1,3 +1,4 @@
+import { LANG_CODES } from '@/lib/language-fonts';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     if (i18n) {
       const titleObj: Record<string, string> = {};
       const contentObj: Record<string, string> = {};
-      for (const lang of ['ko', 'en', 'ja', 'zh-CN', 'zh-TW']) {
+      for (const lang of LANG_CODES) {
         const t = (title_i18n[lang] ?? '').toString().trim();
         const c = (content_i18n[lang] ?? '').toString().trim();
         if (t || c) {
@@ -208,7 +209,7 @@ export async function PUT(request: NextRequest) {
     if (i18n) {
       const titleObj: Record<string, string> = {};
       const contentObj: Record<string, string> = {};
-      for (const lang of ['ko', 'en', 'ja', 'zh-CN', 'zh-TW']) {
+      for (const lang of LANG_CODES) {
         const t = (title_i18n[lang] ?? '').toString().trim();
         const c = (content_i18n[lang] ?? '').toString().trim();
         if (t || c) {
