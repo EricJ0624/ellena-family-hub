@@ -72,13 +72,10 @@ export function getFrameCaptionName(
   return raw ?? 'Hearth';
 }
 
-/** 그룹 선택·관리 UI 라벨 — pending이면 appTitle */
+/** 그룹 선택·관리 UI 라벨 — pending·placeholder 제외, family_name 등 표시 규칙과 동일 */
 export function getGroupSelectorLabel(
   group: GroupDisplayNameFields | null | undefined,
   appTitle: string,
 ): string {
-  if (isGroupDisplayNamePending(group)) return appTitle;
-  const raw = group?.name?.trim();
-  if (!raw || raw === DISPLAY_NAME_PENDING_SENTINEL) return appTitle;
-  return raw;
+  return getGroupDisplayNameRaw(group) ?? appTitle;
 }

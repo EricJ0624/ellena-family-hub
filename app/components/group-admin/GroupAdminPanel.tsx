@@ -39,6 +39,7 @@ import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
+import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { DashboardWidgetSettings } from '@/app/components/group-admin/DashboardWidgetSettings';
 
@@ -213,7 +214,11 @@ export function GroupAdminPanel({
   }
 
   const effectiveGroupId = isEmbedded ? embeddedGroupId : contextGroupId;
-  const displayGroupName = isEmbedded ? embeddedGroupName ?? currentGroup?.name : currentGroup?.name;
+  const appTitle = ct('app_title');
+  const labelGroup =
+    groupList.find((group: { id: string }) => group.id === effectiveGroupId) ??
+    (isEmbedded && embeddedGroupName ? { name: embeddedGroupName } : currentGroup);
+  const displayGroupName = getGroupSelectorLabel(labelGroup, appTitle);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -952,7 +957,7 @@ export function GroupAdminPanel({
             >
               {adminGroups.map((group: any) => (
                 <option key={group.id} value={group.id}>
-                  {group.name}
+                  {getGroupSelectorLabel(group, appTitle)}
                 </option>
               ))}
             </select>

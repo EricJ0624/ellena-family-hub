@@ -42,6 +42,7 @@ import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, isValidLang, intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
+import { getGroupSelectorLabel } from '@/lib/group-display-name';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -1920,7 +1921,7 @@ export default function AdminPage() {
                     {/* 관리 가능한 그룹만 표시 */}
                     {manageableGroups.map((group) => (
                       <option key={group.id} value={group.id}>
-                        {group.name} ({group.member_count}명)
+                        {getGroupSelectorLabel(group, ct('app_title'))} ({fat('count_suffix', { count: group.member_count })})
                       </option>
                     ))}
                   </select>
@@ -1935,7 +1936,7 @@ export default function AdminPage() {
                   <GroupAdminPanel
                     variant="embedded"
                     embeddedGroupId={selectedGroupId}
-                    embeddedGroupName={selectedGroup.name}
+                    embeddedGroupName={getGroupSelectorLabel(selectedGroup, ct('app_title'))}
                     showPiggyArchivesTab
                     adminLangForPiggy={adminLang}
                     onEmbeddedClose={() => setActiveTab('dashboard')}
