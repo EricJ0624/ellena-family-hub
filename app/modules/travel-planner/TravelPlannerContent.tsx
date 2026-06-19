@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { getTravelTranslation } from '@/lib/translations/travel';
+import { getTravelTranslation, formatTravelTranslation } from '@/lib/translations/travel';
 import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
 import {
   canUserOptInDiaryForTrip,
@@ -67,124 +67,14 @@ export function TravelPlannerContent() {
   const searchParams = useSearchParams();
   const { lang } = useLanguage();
   const tt = (key: keyof import('@/lib/translations/travel').TravelTranslations) => getTravelTranslation(lang, key);
-  const uiText = useMemo(() => {
-    if (lang === 'ko') {
-      return {
-        transportShort: '교통',
-        confirmDeleteTrip: (title: string) => `"${title}" 여행을 삭제할까요?`,
-        confirmDeleteItinerary: (title: string) => `"${title}" 일정을 삭제할까요?`,
-        confirmRemoveFromItinerary: (title: string) => `"${title}" 항목을 일정에서 제거할까요?`,
-        removeFromItineraryFailed: '일정에서 제거하는데 실패했습니다.',
-        confirmDeleteExpense: '이 경비 항목을 삭제할까요?',
-        placeSelectAccommodation: '숙소명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.',
-        placeSelectDining: '먹거리 이름은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.',
-        placeSelectAttraction: '관광지명은 Google 장소 목록에서 선택해 주세요. 직접 입력하려면「직접 입력 모드」를 켜 주세요.',
-        attractionRequired: '관광지명과 날짜는 필수입니다.',
-        attractionAddFailed: '관광지 추가에 실패했습니다.',
-        attractionUpdateFailed: '관광지 수정에 실패했습니다.',
-        attractionDeleteFailed: '관광지 삭제에 실패했습니다.',
-        dateRequired: '날짜는 필수입니다.',
-        departureSelectRequired: '출발지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.',
-        arrivalSelectRequired: '도착지는 자동완성 목록에서 선택해주세요. 직접 입력하려면 직접 입력 모드를 켜주세요.',
-        transportAddFailed: '교통 추가에 실패했습니다.',
-        transportUpdateFailed: '교통 수정에 실패했습니다.',
-        transportDeleteFailed: '교통 삭제에 실패했습니다.',
-        confirmDeleteAccommodation: (name: string) => `"${name}" 숙소를 삭제할까요?`,
-        confirmDeleteDining: (name: string) => `"${name}" 먹거리를 삭제할까요?`,
-        confirmDeleteAttraction: (name: string) => `"${name}" 관광지를 삭제할까요?`,
-        confirmDeleteTransport: '이 교통수단을 삭제할까요?',
-        itineraryEmptyForPdf: '등록된 일정이 없습니다.',
-        goToDashboard: '대시보드로 이동',
-        createdLabel: '등록',
-        updatedLabel: '수정',
-        photo: '사진',
-        attachmentPhotos: '첨부 사진',
-        close: '닫기',
-        uploading: '업로드 중…',
-        addPhoto: '사진 추가',
-        autoOptimizedUpload: '자동 최적화 업로드',
-        filenameFilter: '파일명 필터',
-        expenseSection: '경비',
-        addBudget: '+ 경비추가',
-        addExpense: '- 지출추가',
-        balance: '잔액',
-        directInputMode: '직접 입력 모드 (Google 자동완성 호출 안 함)',
-        placeFillHint: '이름에서 장소를 선택하면 주소·좌표가 채워집니다',
-        coordInputAdvanced: '좌표 입력 (고급)',
-        diningSection: '먹거리',
-        addDining: '+ 먹거리 추가',
-        accommodationSection: '숙소',
-        addAccommodation: '+ 숙소 추가',
-        transportSection: '교통',
-        itinerarySection: '일정',
-        mapSectionTitle: '위치 지도 (숙소·먹거리·관광지)',
-        attractionTitle: (editing: boolean) => (editing ? '관광지 수정' : '관광지 추가'),
-        transportTitle: (editing: boolean) => (editing ? '교통 수정' : '교통 추가'),
-        pdfCoverKicker: 'ITINERARY',
-        pdfOverviewTitle: '일정 요약',
-        pdfDetailsTitle: '상세 일정',
-        pdfPlacesCount: (n: number) => `${n}곳`,
-        pdfSpentTotal: '지출 합계',
-      };
-    }
-    return {
-      transportShort: 'Transport',
-      confirmDeleteTrip: (title: string) => `Delete trip "${title}"?`,
-      confirmDeleteItinerary: (title: string) => `Delete itinerary "${title}"?`,
-      confirmRemoveFromItinerary: (title: string) => `Remove "${title}" from itinerary?`,
-      removeFromItineraryFailed: 'Failed to remove from itinerary.',
-      confirmDeleteExpense: 'Delete this expense item?',
-      placeSelectAccommodation: 'Please select accommodation from Google Places. Enable direct input mode to type manually.',
-      placeSelectDining: 'Please select dining place from Google Places. Enable direct input mode to type manually.',
-      placeSelectAttraction: 'Please select attraction from Google Places. Enable direct input mode to type manually.',
-      attractionRequired: 'Attraction name and date are required.',
-      attractionAddFailed: 'Failed to add attraction.',
-      attractionUpdateFailed: 'Failed to update attraction.',
-      attractionDeleteFailed: 'Failed to delete attraction.',
-      dateRequired: 'Date is required.',
-      departureSelectRequired: 'Please select departure from autocomplete list. Enable direct input mode to type manually.',
-      arrivalSelectRequired: 'Please select arrival from autocomplete list. Enable direct input mode to type manually.',
-      transportAddFailed: 'Failed to add transportation.',
-      transportUpdateFailed: 'Failed to update transportation.',
-      transportDeleteFailed: 'Failed to delete transportation.',
-      confirmDeleteAccommodation: (name: string) => `Delete accommodation "${name}"?`,
-      confirmDeleteDining: (name: string) => `Delete dining "${name}"?`,
-      confirmDeleteAttraction: (name: string) => `Delete attraction "${name}"?`,
-      confirmDeleteTransport: 'Delete this transport item?',
-      itineraryEmptyForPdf: 'No itinerary available.',
-      goToDashboard: 'Go to dashboard',
-      createdLabel: 'Created',
-      updatedLabel: 'Updated',
-      photo: 'Photo',
-      attachmentPhotos: 'Attachments',
-      close: 'Close',
-      uploading: 'Uploading…',
-      addPhoto: 'Add photo',
-      autoOptimizedUpload: 'Auto-optimized upload',
-      filenameFilter: 'Filename filter',
-      expenseSection: 'Budget',
-      addBudget: '+ Add budget',
-      addExpense: '- Add expense',
-      balance: 'Balance',
-      directInputMode: 'Direct input mode (disable Google autocomplete)',
-      placeFillHint: 'Selecting a place name fills address and coordinates',
-      coordInputAdvanced: 'Coordinate input (advanced)',
-      diningSection: 'Dining',
-      addDining: '+ Add dining',
-      accommodationSection: 'Accommodation',
-      addAccommodation: '+ Add accommodation',
-      transportSection: 'Transportation',
-      itinerarySection: 'Itinerary',
-      mapSectionTitle: 'Location map (accommodation, dining, attractions)',
-      attractionTitle: (editing: boolean) => (editing ? 'Edit attraction' : 'Add attraction'),
-      transportTitle: (editing: boolean) => (editing ? 'Edit transportation' : 'Add transportation'),
-      pdfCoverKicker: 'ITINERARY',
-      pdfOverviewTitle: 'Schedule overview',
-      pdfDetailsTitle: 'Full schedule',
-      pdfPlacesCount: (n: number) => (n === 1 ? '1 stop' : `${n} stops`),
-      pdfSpentTotal: 'Total spent',
-    };
-  }, [lang]);
+  const ft = (
+    key: keyof import('@/lib/translations/travel').TravelTranslations,
+    vars: Record<string, string | number>,
+  ) => formatTravelTranslation(lang, key, vars);
+  const formatPdfPlacesCount = useCallback(
+    (n: number) => (n === 1 ? tt('pdf_places_count_one') : formatTravelTranslation(lang, 'pdf_places_count', { n })),
+    [lang],
+  );
   const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
   const isTripAdmin = userRole === 'ADMIN' || isOwner;
   const [loading, setLoading] = useState(true);
@@ -1365,7 +1255,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteTrip = async (trip: TravelTrip) => {
-    if (!currentGroupId || !confirm(uiText.confirmDeleteTrip(trip.title))) return;
+    if (!currentGroupId || !confirm(ft('confirm_delete_trip', { title: trip.title }))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/trips/${trip.id}?groupId=${currentGroupId}`, {
@@ -1497,7 +1387,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteItinerary = async (item: TravelItinerary) => {
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteItinerary(item.title))) return;
+    if (!currentGroupId || !selectedTrip || !confirm(ft('confirm_delete_itinerary', { title: item.title }))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/itineraries/${item.id}?groupId=${currentGroupId}`, {
@@ -1516,7 +1406,7 @@ export function TravelPlannerContent() {
 
   const handleRemoveFromItinerary = async (item: ExpandedPlannerItineraryItem) => {
     const displayTitle = shortItineraryTitle(item.type, item.title, item.address);
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmRemoveFromItinerary(displayTitle))) return;
+    if (!currentGroupId || !selectedTrip || !confirm(ft('confirm_remove_from_itinerary', { title: displayTitle }))) return;
     try {
       const headers = await getAuthHeaders();
       let res: Response;
@@ -1559,10 +1449,10 @@ export function TravelPlannerContent() {
       
       if (!res!.ok) {
         const json = await res!.json();
-        throw new Error(json.error || uiText.removeFromItineraryFailed);
+        throw new Error(json.error || tt('remove_from_itinerary_failed'));
       }
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.removeFromItineraryFailed);
+      alert(e instanceof Error ? e.message : tt('remove_from_itinerary_failed'));
     }
   };
 
@@ -1722,7 +1612,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteExpense = async (item: TravelExpense) => {
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteExpense)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(tt('confirm_delete_expense'))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/expenses/${item.id}?groupId=${currentGroupId}`, {
@@ -1792,11 +1682,11 @@ export function TravelPlannerContent() {
     }
     if (!accDirectInputMode && accName.trim()) {
       if (!accPlaceId) {
-        alert(uiText.placeSelectAccommodation);
+        alert(tt('alert_place_select_accommodation'));
         return;
       }
       if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
-        alert(uiText.placeSelectAccommodation);
+        alert(tt('alert_place_select_accommodation'));
         return;
       }
     }
@@ -1845,11 +1735,11 @@ export function TravelPlannerContent() {
     }
     if (!accDirectInputMode && accName.trim()) {
       if (!accPlaceId) {
-        alert(uiText.placeSelectAccommodation);
+        alert(tt('alert_place_select_accommodation'));
         return;
       }
       if (accPlaceId !== '__existing__' && (!accPlaceName.trim() || accName.trim() !== accPlaceName.trim())) {
-        alert(uiText.placeSelectAccommodation);
+        alert(tt('alert_place_select_accommodation'));
         return;
       }
     }
@@ -1889,7 +1779,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteAccommodation = async (item: TravelAccommodation) => {
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteAccommodation(item.name))) return;
+    if (!currentGroupId || !selectedTrip || !confirm(ft('confirm_delete_accommodation', { name: item.name }))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/accommodations/${item.id}?groupId=${currentGroupId}`, {
@@ -1959,11 +1849,11 @@ export function TravelPlannerContent() {
     }
     if (!diningDirectInputMode && diningName.trim()) {
       if (!diningPlaceId) {
-        alert(uiText.placeSelectDining);
+        alert(tt('alert_place_select_dining'));
         return;
       }
       if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
-        alert(uiText.placeSelectDining);
+        alert(tt('alert_place_select_dining'));
         return;
       }
     }
@@ -2011,11 +1901,11 @@ export function TravelPlannerContent() {
     }
     if (!diningDirectInputMode && diningName.trim()) {
       if (!diningPlaceId) {
-        alert(uiText.placeSelectDining);
+        alert(tt('alert_place_select_dining'));
         return;
       }
       if (diningPlaceId !== '__existing__' && (!diningPlaceName.trim() || diningName.trim() !== diningPlaceName.trim())) {
-        alert(uiText.placeSelectDining);
+        alert(tt('alert_place_select_dining'));
         return;
       }
     }
@@ -2054,7 +1944,7 @@ export function TravelPlannerContent() {
   };
 
   const handleDeleteDining = async (item: TravelDining) => {
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteDining(item.name))) return;
+    if (!currentGroupId || !selectedTrip || !confirm(ft('confirm_delete_dining', { name: item.name }))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/dining/${item.id}?groupId=${currentGroupId}`, {
@@ -2118,16 +2008,16 @@ export function TravelPlannerContent() {
   const handleCreateAttraction = async (e: React.FormEvent, showInItinerary: boolean) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !attractionName.trim() || !attractionDayDate) {
-      alert(uiText.attractionRequired);
+      alert(tt('alert_attraction_name_date_required'));
       return;
     }
     if (!attractionDirectInputMode && attractionName.trim()) {
       if (!attractionPlaceId) {
-        alert(uiText.placeSelectAttraction);
+        alert(tt('alert_place_select_attraction'));
         return;
       }
       if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
-        alert(uiText.placeSelectAttraction);
+        alert(tt('alert_place_select_attraction'));
         return;
       }
     }
@@ -2156,12 +2046,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || uiText.attractionAddFailed);
+      if (!res.ok) throw new Error(json.error || tt('attraction_add_failed'));
       await fetchAttractions(selectedTrip.id);
       setShowAttractionForm(false);
       setEditingAttraction(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.attractionAddFailed);
+      alert(e instanceof Error ? e.message : tt('attraction_add_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -2170,16 +2060,16 @@ export function TravelPlannerContent() {
   const handleUpdateAttraction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAttraction || !currentGroupId || !attractionName.trim() || !attractionDayDate) {
-      alert(uiText.attractionRequired);
+      alert(tt('alert_attraction_name_date_required'));
       return;
     }
     if (!attractionDirectInputMode && attractionName.trim()) {
       if (!attractionPlaceId) {
-        alert(uiText.placeSelectAttraction);
+        alert(tt('alert_place_select_attraction'));
         return;
       }
       if (attractionPlaceId !== '__existing__' && (!attractionPlaceName.trim() || attractionName.trim() !== attractionPlaceName.trim())) {
-        alert(uiText.placeSelectAttraction);
+        alert(tt('alert_place_select_attraction'));
         return;
       }
     }
@@ -2206,19 +2096,19 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || uiText.attractionUpdateFailed);
+      if (!res.ok) throw new Error(json.error || tt('attraction_update_failed'));
       await fetchAttractions(selectedTrip!.id);
       setShowAttractionForm(false);
       setEditingAttraction(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.attractionUpdateFailed);
+      alert(e instanceof Error ? e.message : tt('attraction_update_failed'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteAttraction = async (item: TravelAttraction) => {
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteAttraction(item.name))) return;
+    if (!currentGroupId || !selectedTrip || !confirm(ft('confirm_delete_attraction', { name: item.name }))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/attractions/${item.id}?groupId=${currentGroupId}`, {
@@ -2227,11 +2117,11 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || uiText.attractionDeleteFailed);
+        throw new Error(json.error || tt('attraction_delete_failed'));
       }
       await fetchAttractions(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.attractionDeleteFailed);
+      alert(e instanceof Error ? e.message : tt('attraction_delete_failed'));
     }
   };
 
@@ -2273,16 +2163,16 @@ export function TravelPlannerContent() {
   const handleCreateTransport = async (e: React.FormEvent, showInItinerary: boolean) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !transportDayDate) {
-      alert(uiText.dateRequired);
+      alert(tt('alert_date_required'));
       return;
     }
     if (!transportDirectInputMode) {
       if (transportDeparture.trim() && !transportDeparturePlaceId) {
-        alert(uiText.departureSelectRequired);
+        alert(tt('alert_departure_select_required'));
         return;
       }
       if (transportArrival.trim() && !transportArrivalPlaceId) {
-        alert(uiText.arrivalSelectRequired);
+        alert(tt('alert_arrival_select_required'));
         return;
       }
     }
@@ -2312,12 +2202,12 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || uiText.transportAddFailed);
+      if (!res.ok) throw new Error(json.error || tt('transport_add_failed'));
       await fetchTransports(selectedTrip.id);
       setShowTransportForm(false);
       setEditingTransport(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.transportAddFailed);
+      alert(e instanceof Error ? e.message : tt('transport_add_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -2326,16 +2216,16 @@ export function TravelPlannerContent() {
   const handleUpdateTransport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTransport || !currentGroupId || !transportDayDate) {
-      alert(uiText.dateRequired);
+      alert(tt('alert_date_required'));
       return;
     }
     if (!transportDirectInputMode) {
       if (transportDeparture.trim() && !transportDeparturePlaceId) {
-        alert(uiText.departureSelectRequired);
+        alert(tt('alert_departure_select_required'));
         return;
       }
       if (transportArrival.trim() && !transportArrivalPlaceId) {
-        alert(uiText.arrivalSelectRequired);
+        alert(tt('alert_arrival_select_required'));
         return;
       }
     }
@@ -2363,19 +2253,19 @@ export function TravelPlannerContent() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || uiText.transportUpdateFailed);
+      if (!res.ok) throw new Error(json.error || tt('transport_update_failed'));
       await fetchTransports(selectedTrip!.id);
       setShowTransportForm(false);
       setEditingTransport(null);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.transportUpdateFailed);
+      alert(e instanceof Error ? e.message : tt('transport_update_failed'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteTransport = async (item: TravelTransport) => {
-    if (!currentGroupId || !selectedTrip || !confirm(uiText.confirmDeleteTransport)) return;
+    if (!currentGroupId || !selectedTrip || !confirm(tt('confirm_delete_transport'))) return;
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/transports/${item.id}?groupId=${currentGroupId}`, {
@@ -2384,11 +2274,11 @@ export function TravelPlannerContent() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || uiText.transportDeleteFailed);
+        throw new Error(json.error || tt('transport_delete_failed'));
       }
       await fetchTransports(selectedTrip.id);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : uiText.transportDeleteFailed);
+      alert(e instanceof Error ? e.message : tt('transport_delete_failed'));
     }
   };
 
@@ -2444,8 +2334,8 @@ export function TravelPlannerContent() {
   }, [itineraryRowsOutsideTrip]);
 
   const getItineraryTypeLabel = (type: string, transport_type?: 'air' | 'train' | 'car' | 'bike') => {
-    if (type === 'accommodation') return uiText.accommodationSection;
-    if (type === 'dining') return uiText.diningSection;
+    if (type === 'accommodation') return tt('ui_section_accommodation');
+    if (type === 'dining') return tt('ui_section_dining');
     if (type === 'attraction') return tt('add_attraction');
     if (type === 'transport') {
       if (transport_type === 'air') return tt('transport_type_air');
@@ -2469,8 +2359,8 @@ export function TravelPlannerContent() {
     const loc = intlLocaleForLang(lang);
     const expenseSummaryLines = [
       `${tt('total_budget')}: ${formatMoneyAmount(totalBudget, cur, loc)}`,
-      `${uiText.pdfSpentTotal}: ${formatMoneyAmount(expenseSum, cur, loc)}`,
-      `${uiText.balance}: ${formatMoneyAmount(balance, cur, loc)}`,
+      `${tt('pdf_spent_total')}: ${formatMoneyAmount(expenseSum, cur, loc)}`,
+      `${tt('ui_balance')}: ${formatMoneyAmount(balance, cur, loc)}`,
     ];
     void import('@/lib/modules/travel-planner/itinerary-pdf')
       .then(({ buildAndSaveTravelItineraryPdf }) =>
@@ -2493,12 +2383,12 @@ export function TravelPlannerContent() {
             transport_type: r.transport_type,
           })),
           getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
-          emptyItineraryMessage: uiText.itineraryEmptyForPdf,
+          emptyItineraryMessage: tt('itinerary_empty_for_pdf'),
           pdfLabels: {
-            coverKicker: uiText.pdfCoverKicker,
-            overviewTitle: uiText.pdfOverviewTitle,
-            detailsTitle: uiText.pdfDetailsTitle,
-            placesCount: uiText.pdfPlacesCount,
+            coverKicker: tt('pdf_cover_kicker'),
+            overviewTitle: tt('pdf_overview_title'),
+            detailsTitle: tt('pdf_details_title'),
+            placesCount: formatPdfPlacesCount,
             outsideTripSectionTitle: tt('pdf_section_outside_trip'),
           },
           expenseSummaryLines,
@@ -2515,10 +2405,9 @@ export function TravelPlannerContent() {
   }, [
     selectedTrip,
     expandedItineraryRows,
-    uiText,
+    formatPdfPlacesCount,
     getItineraryTypeLabel,
     lang,
-    tt,
     totalBudget,
     expenseSum,
     balance,
@@ -2537,7 +2426,7 @@ export function TravelPlannerContent() {
             onClick={() => router.push('/dashboard')}
             className="mt-4 cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
           >
-            {uiText.goToDashboard}
+            {tt('go_to_dashboard')}
           </button>
         </div>
       </div>
@@ -2618,8 +2507,8 @@ export function TravelPlannerContent() {
                     {tt('label_trip_currency')}: <strong className="text-slate-700">{tripCurrencyCode}</strong>
                   </p>
                   <p className="m-0 mt-1 text-xs text-slate-400">
-                    {uiText.createdLabel}: {getDisplayName(selectedTrip.created_by)}
-                    {selectedTrip.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(selectedTrip.updated_by)}`}
+                    {tt('ui_created_label')}: {getDisplayName(selectedTrip.created_by)}
+                    {selectedTrip.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(selectedTrip.updated_by)}`}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -2628,7 +2517,7 @@ export function TravelPlannerContent() {
                     onClick={() => setTravelAttachmentTarget({ entityType: 'travel_trip', entityId: selectedTrip.id })}
                     className="cursor-pointer rounded-lg border-0 bg-blue-50 px-3 py-2 text-[13px] font-semibold text-blue-700"
                   >
-                    {uiText.photo}
+                    {tt('ui_photo')}
                   </button>
                   <button
                     type="button"
@@ -2660,8 +2549,8 @@ export function TravelPlannerContent() {
             {travelAttachmentTarget && (
               <div className="my-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <strong className="text-[13px] text-slate-700">{uiText.attachmentPhotos}</strong>
-                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} className="cursor-pointer rounded-md border-0 bg-slate-200 px-2 py-1">{uiText.close}</button>
+                  <strong className="text-[13px] text-slate-700">{tt('ui_attachment_photos')}</strong>
+                  <button type="button" onClick={() => setTravelAttachmentTarget(null)} className="cursor-pointer rounded-md border-0 bg-slate-200 px-2 py-1">{tt('ui_close')}</button>
                 </div>
                 <input
                   ref={travelAttachmentInputRef}
@@ -2677,9 +2566,9 @@ export function TravelPlannerContent() {
                   disabled={travelAttachmentUploading}
                   className="cursor-pointer rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold"
                 >
-                  {travelAttachmentUploading ? uiText.uploading : uiText.addPhoto}
+                  {travelAttachmentUploading ? tt('ui_uploading') : tt('ui_add_photo')}
                 </button>
-                <span className="ml-2 text-xs text-slate-500">{uiText.autoOptimizedUpload}</span>
+                <span className="ml-2 text-xs text-slate-500">{tt('ui_auto_optimized_upload')}</span>
                 {travelAttachmentUploading && (
                   <button
                     type="button"
@@ -2692,7 +2581,7 @@ export function TravelPlannerContent() {
                 <input
                   value={travelAttachmentFilter}
                   onChange={(e) => setTravelAttachmentFilter(e.target.value)}
-                  placeholder={uiText.filenameFilter}
+                  placeholder={tt('ui_filename_filter')}
                   className="ml-2 min-w-[120px] rounded-md border border-slate-300 px-2 py-1.5"
                 />
                 {travelAttachmentJobs.length > 0 && (
@@ -2741,7 +2630,7 @@ export function TravelPlannerContent() {
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="m-0 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
                   <Wallet className="h-[18px] w-[18px]" />
-                  {uiText.expenseSection}
+                  {tt('ui_expense_section')}
                 </h3>
                 <div className="flex gap-2">
                   <button
@@ -2749,14 +2638,14 @@ export function TravelPlannerContent() {
                     onClick={() => openExpenseForm(null, 'addition')}
                     className="cursor-pointer rounded-md border-0 bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
-                    {uiText.addBudget}
+                    {tt('ui_add_budget')}
                   </button>
                   <button
                     type="button"
                     onClick={() => openExpenseForm(null, 'expense')}
                     className="cursor-pointer rounded-md border-0 bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
-                    {uiText.addExpense}
+                    {tt('ui_add_expense_line')}
                   </button>
                 </div>
                 </div>
@@ -2766,7 +2655,7 @@ export function TravelPlannerContent() {
                     <strong className="text-slate-800">{fmtTripMoney(totalBudget)}</strong>
                   </span>
                   <span className={`text-lg font-bold ${balance >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
-                    {uiText.balance} {fmtTripMoney(balance)}
+                    {tt('ui_balance')} {fmtTripMoney(balance)}
                   </span>
                 </div>
                 <div className="mb-1.5 text-[13px] font-semibold text-slate-600">{tt('add_list')}</div>
@@ -2783,7 +2672,7 @@ export function TravelPlannerContent() {
                           <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div className="flex shrink-0 gap-1">
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={uiText.photo}>📷</button>
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={tt('ui_photo')}>📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                         </div>
@@ -2805,7 +2694,7 @@ export function TravelPlannerContent() {
                           <div className="mt-0.5 text-[11px] text-slate-400">{tt('registered_by')}: {getDisplayName(e.created_by)}</div>
                         </div>
                         <div className="flex shrink-0 gap-1">
-                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={uiText.photo}>📷</button>
+                          <button type="button" onClick={() => setTravelAttachmentTarget({ entityType: 'travel_expense', entityId: e.id })} className="cursor-pointer rounded-md border-0 bg-blue-50 p-1.5 text-blue-700" title={tt('ui_photo')}>📷</button>
                           <button type="button" onClick={() => openExpenseForm(e)} className="cursor-pointer rounded-md border-0 bg-slate-100 p-1.5 text-slate-600" title={tt('edit')}><Pencil className="h-[14px] w-[14px]" /></button>
                           <button type="button" onClick={() => handleDeleteExpense(e)} className="cursor-pointer rounded-md border-0 bg-red-100 p-1.5 text-red-800" title={tt('delete')}><Trash2 className="h-[14px] w-[14px]" /></button>
                         </div>
@@ -2819,7 +2708,7 @@ export function TravelPlannerContent() {
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="m-0 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
                   <ListOrdered className="h-[18px] w-[18px]" />
-                  {uiText.itinerarySection}
+                  {tt('ui_itinerary_section')}
                 </h3>
                 <div className="flex gap-2">
                   <button
@@ -3133,7 +3022,7 @@ export function TravelPlannerContent() {
                 <span className="flex items-center gap-2">
                   {sectionOpenDining ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
                   <UtensilsCrossed className="h-[18px] w-[18px]" />
-                  {uiText.diningSection} ({dining.length})
+                  {tt('ui_section_dining')} ({dining.length})
                 </span>
               </button>
               {sectionOpenDining && (
@@ -3144,7 +3033,7 @@ export function TravelPlannerContent() {
                       onClick={() => openDiningForm(null)}
                       className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
-                      {uiText.addDining}
+                      {tt('ui_add_dining_line')}
                     </button>
                   </div>
                   <ul className="m-0 list-none p-0">
@@ -3165,8 +3054,8 @@ export function TravelPlannerContent() {
                               {d.category && <span className="ml-1.5 text-slate-500">{d.category}</span>}
                             </div>
                             <div className="mt-1 text-[11px] text-slate-400">
-                              {uiText.createdLabel}: {getDisplayName(d.created_by)}
-                              {d.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(d.updated_by)}`}
+                              {tt('ui_created_label')}: {getDisplayName(d.created_by)}
+                              {d.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(d.updated_by)}`}
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -3215,7 +3104,7 @@ export function TravelPlannerContent() {
                 <span className="flex items-center gap-2">
                   {sectionOpenAccommodation ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
                   <Home className="h-[18px] w-[18px]" />
-                  {uiText.accommodationSection} ({accommodations.length})
+                  {tt('ui_section_accommodation')} ({accommodations.length})
                 </span>
               </button>
               {sectionOpenAccommodation && (
@@ -3226,7 +3115,7 @@ export function TravelPlannerContent() {
                       onClick={() => openAccommodationForm(null)}
                       className="cursor-pointer rounded-md border-0 bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white"
                     >
-                      {uiText.addAccommodation}
+                      {tt('ui_add_accommodation_line')}
                     </button>
                   </div>
                   <ul className="m-0 list-none p-0">
@@ -3250,8 +3139,8 @@ export function TravelPlannerContent() {
                             </div>
                             {a.address && <div className="mt-1 text-[13px] text-slate-600">{a.address}</div>}
                             <div className="mt-1 text-[11px] text-slate-400">
-                              {uiText.createdLabel}: {getDisplayName(a.created_by)}
-                              {a.updated_by != null && ` · ${uiText.updatedLabel}: ${getDisplayName(a.updated_by)}`}
+                              {tt('ui_created_label')}: {getDisplayName(a.created_by)}
+                              {a.updated_by != null && ` · ${tt('ui_updated_label')}: ${getDisplayName(a.updated_by)}`}
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -3300,7 +3189,7 @@ export function TravelPlannerContent() {
                 <span className="flex items-center gap-2">
                   {sectionOpenTransport ? <ChevronDown className="h-[18px] w-[18px]" /> : <ChevronRight className="h-[18px] w-[18px]" />}
                   <Car className="h-[18px] w-[18px]" />
-                  {uiText.transportSection} ({transports.length})
+                  {tt('ui_section_transport')} ({transports.length})
                 </span>
               </button>
               {sectionOpenTransport && (
@@ -3386,7 +3275,7 @@ export function TravelPlannerContent() {
               <div className="mt-6">
                 <h3 className="m-0 mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-slate-600">
                   <MapPin className="h-[18px] w-[18px]" />
-                  {uiText.mapSectionTitle}
+                  {tt('ui_map_section_title')}
                 </h3>
                 {!showTravelMap ? (
                   <div
@@ -3445,7 +3334,7 @@ export function TravelPlannerContent() {
                   onClick={() => router.push('/dashboard')}
                   className="mt-4 cursor-pointer rounded-lg border-0 bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white"
                 >
-                  {uiText.goToDashboard}
+                  {tt('go_to_dashboard')}
                 </button>
               </>
             )}
@@ -3811,7 +3700,7 @@ export function TravelPlannerContent() {
                 </div>
               )}
               <details className="mb-5">
-                <summary className="cursor-pointer text-xs text-slate-500">{uiText.coordInputAdvanced}</summary>
+                <summary className="cursor-pointer text-xs text-slate-500">{tt('ui_coord_input_advanced')}</summary>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
@@ -3995,7 +3884,7 @@ export function TravelPlannerContent() {
                     }
                   }}
                 />
-                {uiText.directInputMode}
+                {tt('ui_direct_input_mode')}
               </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_checkin')}</label>
               <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
@@ -4045,7 +3934,7 @@ export function TravelPlannerContent() {
                 placeholder={
                   accDirectInputMode
                     ? tt('placeholder_search_address')
-                    : uiText.placeFillHint
+                    : tt('ui_place_fill_hint')
                 }
                 className={`mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
                   accDirectInputMode ? 'bg-white' : 'bg-slate-50'
@@ -4059,7 +3948,7 @@ export function TravelPlannerContent() {
                 </div>
               )}
               <details className="mb-3">
-                <summary className="cursor-pointer text-xs text-slate-500">{uiText.coordInputAdvanced}</summary>
+                <summary className="cursor-pointer text-xs text-slate-500">{tt('ui_coord_input_advanced')}</summary>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
@@ -4189,7 +4078,7 @@ export function TravelPlannerContent() {
                     }
                   }}
                 />
-                {uiText.directInputMode}
+                {tt('ui_direct_input_mode')}
               </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
               <div className="mb-3 overflow-hidden rounded-[10px] border border-slate-200">
@@ -4237,7 +4126,7 @@ export function TravelPlannerContent() {
                 placeholder={
                   diningDirectInputMode
                     ? tt('placeholder_search_address')
-                    : uiText.placeFillHint
+                    : tt('ui_place_fill_hint')
                 }
                 className={`mb-1 min-h-10 w-full box-border rounded-lg border border-slate-200 px-3 py-2.5 text-sm ${
                   diningDirectInputMode ? 'bg-white' : 'bg-slate-50'
@@ -4251,7 +4140,7 @@ export function TravelPlannerContent() {
                 </div>
               )}
               <details className="mb-3">
-                <summary className="cursor-pointer text-xs text-slate-500">{uiText.coordInputAdvanced}</summary>
+                <summary className="cursor-pointer text-xs text-slate-500">{tt('ui_coord_input_advanced')}</summary>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_lat_map')}</label>
@@ -4342,7 +4231,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="m-0 text-lg font-bold text-slate-800">{uiText.attractionTitle(!!editingAttraction)}</h3>
+              <h3 className="m-0 text-lg font-bold text-slate-800">{tt(!!editingAttraction ? 'edit_attraction' : 'add_attraction')}</h3>
               <button
                 type="button"
                 onClick={() => !submitting && setShowAttractionForm(false)}
@@ -4388,7 +4277,7 @@ export function TravelPlannerContent() {
                   }}
                   disabled={submitting}
                 />
-                {uiText.directInputMode}
+                {tt('ui_direct_input_mode')}
               </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_date')}</label>
               <input
@@ -4440,7 +4329,7 @@ export function TravelPlannerContent() {
                 }}
                 disabled={submitting}
                 placeholder={
-                  attractionDirectInputMode ? tt('placeholder_address') : uiText.placeFillHint
+                  attractionDirectInputMode ? tt('placeholder_address') : tt('ui_place_fill_hint')
                 }
                 className={`mb-1 w-full box-border rounded-lg border border-slate-300 px-3 py-2.5 text-sm ${
                   attractionDirectInputMode ? 'bg-white' : 'bg-slate-50'
@@ -4496,7 +4385,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="m-0 text-lg font-bold text-slate-800">{uiText.transportTitle(!!editingTransport)}</h3>
+              <h3 className="m-0 text-lg font-bold text-slate-800">{tt(!!editingTransport ? 'edit_transport' : 'add_transport')}</h3>
               <button
                 type="button"
                 onClick={() => !submitting && setShowTransportForm(false)}
@@ -4598,7 +4487,7 @@ export function TravelPlannerContent() {
                   }}
                   disabled={submitting}
                 />
-                {uiText.directInputMode}
+                {tt('ui_direct_input_mode')}
               </label>
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_distance_km')}</label>
               <input

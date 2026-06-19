@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { getAdminTranslation, getAdminAuditHeaders } from '@/lib/translations/admin';
+import { getAdminTranslation, getAdminAuditHeaders, formatAdminTranslation } from '@/lib/translations/admin';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { 
   Users, 
@@ -38,7 +38,8 @@ import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
-import { LANG_CODES, LANG_LABELS, type LangCode } from '@/lib/language-fonts';
+import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
+import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, isValidLang, intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 
@@ -184,25 +185,31 @@ interface DashboardAccessRequestInfo {
 }
 
 const ADMIN_LANG_STORAGE_KEY = 'admin_preferred_language';
-type AdminLang = 'ko' | 'en';
 
-function getStoredAdminLang(): AdminLang {
+function getStoredAdminLang(): LangCode {
   if (typeof window === 'undefined') return 'ko';
   const s = localStorage.getItem(ADMIN_LANG_STORAGE_KEY);
-  return s === 'en' ? 'en' : 'ko';
+  return isValidLang(s) ? s : 'ko';
 }
 
 export default function AdminPage() {
   const router = useRouter();
   const { setCurrentGroupId } = useGroup();
-  const [adminLang, setAdminLangState] = useState<AdminLang>('ko');
-  useLanguage(); // ensure provider is present; we use adminLang for this page
+  const [adminLang, setAdminLangState] = useState<LangCode>('ko');
+  useLanguage(); // ensure provider is present; admin UI uses adminLang (9 locales)
   useEffect(() => {
     setAdminLangState(getStoredAdminLang());
   }, []);
+  const adminLocale = intlLocaleForLang(adminLang);
   const at = (key: keyof import('@/lib/translations/admin').AdminTranslations) => getAdminTranslation(adminLang, key);
+  const fat = (
+    key: keyof import('@/lib/translations/admin').AdminTranslations,
+    vars: Record<string, string | number>,
+  ) => formatAdminTranslation(adminLang, key, vars);
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(adminLang, key);
-  const setAdminLang = useCallback((lang: AdminLang) => {
+  const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) =>
+    getGroupAdminTranslation(adminLang, key);
+  const setAdminLang = useCallback((lang: LangCode) => {
     setAdminLangState(lang);
     if (typeof window !== 'undefined') localStorage.setItem(ADMIN_LANG_STORAGE_KEY, lang);
   }, []);
@@ -1120,26 +1127,21 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
-              <button
-                type="button"
-                onClick={() => setAdminLang('ko')}
-                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
-                  adminLang === 'ko' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-500'
-                }`}
-              >
-                한국어
-              </button>
-              <button
-                type="button"
-                onClick={() => setAdminLang('en')}
-                className={`cursor-pointer rounded-md border-none px-3 py-1.5 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
-                  adminLang === 'en' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-500'
-                }`}
-              >
-                English
-              </button>
-            </div>
+            <label className="sr-only" htmlFor="admin-lang-select">
+              Language
+            </label>
+            <select
+              id="admin-lang-select"
+              value={adminLang}
+              onChange={(e) => setAdminLang(e.target.value as LangCode)}
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+            >
+              {LANG_OPTIONS.map(({ code, label }) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
             <button
               onClick={() => router.push('/dashboard')}
               className="flex cursor-pointer items-center gap-2 rounded-lg border-none bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
@@ -1379,24 +1381,24 @@ export default function AdminPage() {
                   <div className="mb-4 flex items-center justify-between">
                     <div>
                       <div className="mb-1 text-base font-semibold text-slate-800">
-                        최근 문의
+                        {at('recent_inquiries_title')}
                       </div>
-                      <div className="text-[13px] text-slate-500">
-                        미답변 문의: <span className={supportTickets.filter(t => t.status === 'pending').length > 0 ? 'font-semibold text-red-500' : 'font-semibold text-green-500'}>
-                          {supportTickets.filter(t => t.status === 'pending').length}건
-                        </span>
+                      <div className={`text-[13px] ${supportTickets.filter(t => t.status === 'pending').length > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                        {fat('pending_inquiries_count', {
+                          count: supportTickets.filter(t => t.status === 'pending').length,
+                        })}
                       </div>
                     </div>
                     <button
                       onClick={() => setActiveTab('all-support-tickets')}
                       className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                     >
-                      전체 보기
+                      {at('view_all_btn')}
                     </button>
                   </div>
                   {supportTickets.length === 0 ? (
                     <div className="p-8 text-center text-sm text-slate-400">
-                      문의가 없습니다.
+                      {at('no_inquiries')}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
@@ -1425,7 +1427,7 @@ export default function AdminPage() {
                               {ticket.groups?.name || ct('unknown')}
                             </span>
                             <span>•</span>
-                            <span>{new Date(ticket.created_at).toLocaleDateString('ko-KR')}</span>
+                            <span>{new Date(ticket.created_at).toLocaleDateString(adminLocale)}</span>
                           </div>
                         </div>
                       ))}
@@ -1436,7 +1438,7 @@ export default function AdminPage() {
                 {/* 가족 생성/가입 기능 버튼 */}
                 <div className="mt-8 rounded-xl border border-gray-200 bg-gray-50 p-6">
                   <div className="mb-3 text-base font-semibold text-slate-800">
-                    가족 생성/가입
+                    {at('family_onboarding_section_title')}
                   </div>
                   <div className="mb-4 text-sm text-slate-500">
                     {at('users_empty_hint')}
@@ -1446,7 +1448,7 @@ export default function AdminPage() {
                     className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_4px_rgba(147,51,234,0.2)] transition-all duration-200 hover:bg-purple-700 hover:shadow-[0_4px_8px_rgba(147,51,234,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
                     <UserPlus className="h-[18px] w-[18px]" />
-                    가족 생성/가입하기
+                    {at('family_onboarding_btn')}
                   </button>
                 </div>
               </div>
@@ -1457,7 +1459,7 @@ export default function AdminPage() {
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    회원 목록 ({filteredUsers.length}명)
+                    {fat('user_list_count_title', { count: filteredUsers.length })}
                   </h2>
                   <div
                     className="admin-search relative w-[300px]"
@@ -1478,22 +1480,22 @@ export default function AdminPage() {
                     <thead>
                       <tr className="border-b-2 border-slate-200 bg-slate-50">
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
-                          이메일
+                          {at('email')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
-                          별명
+                          {at('nickname')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
-                          가입일
+                          {at('joined_at')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
-                          그룹 수
+                          {at('groups_count_header')}
                         </th>
                         <th className="p-3 text-center text-sm font-semibold text-slate-600">
-                          권한
+                          {at('role')}
                         </th>
                         <th className="p-3 text-right text-sm font-semibold text-slate-600">
-                          액션
+                          {at('actions')}
                         </th>
                       </tr>
                     </thead>
@@ -1513,19 +1515,19 @@ export default function AdminPage() {
                             {user.nickname || '-'}
                           </td>
                           <td className="p-3 text-sm text-slate-500">
-                            {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                            {new Date(user.created_at).toLocaleDateString(adminLocale)}
                           </td>
                           <td className="p-3 text-sm text-slate-500">
-                            {user.groups_count}개
+                            {fat('count_suffix', { count: user.groups_count })}
                           </td>
                           <td className="p-3 text-center">
                             {systemAdmins.includes(user.id) ? (
                               <span className="rounded-xl bg-purple-700 px-3 py-1 text-xs font-semibold text-white">
-                                시스템 관리자
+                                {at('role_system_admin_badge')}
                               </span>
                             ) : (
                               <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                                일반 사용자
+                                {at('role_regular_user')}
                               </span>
                             )}
                           </td>
@@ -1586,7 +1588,7 @@ export default function AdminPage() {
                                   }}
                                 >
                                   <Shield className="h-4 w-4" />
-                                  권한 해제
+                                  {at('revoke_admin_btn')}
                                 </button>
                               ) : (
                                 <button
@@ -1641,7 +1643,7 @@ export default function AdminPage() {
                                   }}
                                 >
                                   <Shield className="h-4 w-4" />
-                                  관리자 승격
+                                  {at('promote_admin_btn')}
                                 </button>
                               )}
                               
@@ -1779,7 +1781,7 @@ export default function AdminPage() {
                           }} />
                         </div>
                       <div className="mb-4 text-xs text-slate-400">
-                        {at('created_at')}: {new Date(group.created_at).toLocaleDateString(adminLang === 'ko' ? 'ko-KR' : 'en-US')}
+                        {at('created_at')}: {new Date(group.created_at).toLocaleDateString(adminLocale)}
                       </div>
                       <div className="flex flex-wrap gap-2">
                           <button
@@ -2114,8 +2116,8 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="mt-3 text-xs text-slate-400">
-                        {at('written_at')} {new Date(announcement.created_at).toLocaleString('ko-KR')}
-                        {announcement.updated_at !== announcement.created_at && ` | ${at('updated_at_label')} ${new Date(announcement.updated_at).toLocaleString('ko-KR')}`}
+                        {at('written_at')} {new Date(announcement.created_at).toLocaleString(adminLocale)}
+                        {announcement.updated_at !== announcement.created_at && ` | ${at('updated_at_label')} ${new Date(announcement.updated_at).toLocaleString(adminLocale)}`}
                       </div>
                     </motion.div>
                   ))}
@@ -2176,7 +2178,7 @@ export default function AdminPage() {
                       />
                       <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
                         <label className="mb-3 block text-sm font-semibold text-slate-700">
-                          공지 대상 선택
+                          {at('announcement_target_label')}
                         </label>
                         <div className="flex gap-4">
                           <label
@@ -2193,7 +2195,7 @@ export default function AdminPage() {
                               className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             />
                             <span className={`text-sm text-slate-700 ${announcementTarget === 'ADMIN_ONLY' ? 'font-semibold' : 'font-normal'}`}>
-                              관리자만
+                              {at('target_admin_only')}
                             </span>
                           </label>
                           <label
@@ -2210,14 +2212,14 @@ export default function AdminPage() {
                               className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                             />
                             <span className={`text-sm text-slate-700 ${announcementTarget === 'ALL_MEMBERS' ? 'font-semibold' : 'font-normal'}`}>
-                              모든 멤버
+                              {at('target_all_members')}
                             </span>
                           </label>
                         </div>
                         <p className="mb-0 mt-2 text-xs text-slate-500">
                           {announcementTarget === 'ADMIN_ONLY' 
-                            ? '그룹 관리자와 시스템 관리자만 볼 수 있습니다.' 
-                            : '모든 그룹 멤버가 볼 수 있습니다.'}
+                            ? at('target_admin_only_hint')
+                            : at('target_all_members_hint')}
                         </p>
                       </div>
                       <div className="flex justify-end gap-2">
@@ -2334,7 +2336,7 @@ export default function AdminPage() {
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    전체 문의 ({supportTickets.filter(t => t.status === 'pending').length}개 미답변)
+                    {fat('support_all_pending_title', { count: supportTickets.filter(t => t.status === 'pending').length })}
                   </h2>
                   <div className="flex gap-2">
                     <select
@@ -2346,10 +2348,10 @@ export default function AdminPage() {
                         }
                       }}
                     >
-                      <option value="all">전체</option>
-                      <option value="pending">미답변</option>
-                      <option value="answered">답변완료</option>
-                      <option value="closed">종료</option>
+                      <option value="all">{at('filter_all')}</option>
+                      <option value="pending">{at('status_pending')}</option>
+                      <option value="answered">{at('status_answered')}</option>
+                      <option value="closed">{at('status_closed')}</option>
                     </select>
                   </div>
                 </div>
@@ -2393,7 +2395,7 @@ export default function AdminPage() {
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
-                                답변:
+                                {at('answer_label')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
@@ -2408,13 +2410,13 @@ export default function AdminPage() {
                               }`}
                             >
                               <div className={`mb-1.5 text-xs font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
-                                {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                                {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
                               <div className="mt-2 text-[11px] text-slate-400">
-                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                                {new Date(entry.created_at).toLocaleString(adminLocale)}
                               </div>
                             </div>
                           ))}
@@ -2423,7 +2425,7 @@ export default function AdminPage() {
                           type="button"
                           disabled={deletingSystemSupportTicketId === ticket.id}
                           onClick={async () => {
-                            if (!confirm('이 문의를 삭제할까요?')) return;
+                            if (!confirm(at('confirm_delete_support_ticket'))) return;
                             try {
                               setDeletingSystemSupportTicketId(ticket.id);
                               const { data: { session } } = await supabase.auth.getSession();
@@ -2440,11 +2442,11 @@ export default function AdminPage() {
                               );
                               const result = await response.json();
                               if (!response.ok) {
-                                throw new Error(result.error || '삭제에 실패했습니다.');
+                                throw new Error(result.error || at('error_delete_inquiry'));
                               }
                               loadAllSupportTickets();
                             } catch (e: unknown) {
-                              alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+                              alert(e instanceof Error ? e.message : at('error_delete_inquiry'));
                             } finally {
                               setDeletingSystemSupportTicketId(null);
                             }
@@ -2458,7 +2460,7 @@ export default function AdminPage() {
                           ) : (
                             <Trash2 className="h-[14px] w-[14px]" />
                           )}
-                          삭제
+                          {ct('delete')}
                         </button>
                       </div>
                       {ticket.status === 'pending' && (
@@ -2470,20 +2472,20 @@ export default function AdminPage() {
                             }}
                             className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           >
-                            답변하기
+                            {at('answer_btn')}
                           </button>
                         </div>
                       )}
                       <div className="mt-3 text-xs text-slate-400">
-                        {at('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        {at('written_at')} {new Date(ticket.created_at).toLocaleString(adminLocale)}
+                        {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString(adminLocale)}`}
                       </div>
                     </motion.div>
                   ))}
                   {supportTickets.length === 0 && (
                     <div className="p-12 text-center text-slate-400">
                       <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                      <p>문의가 없습니다.</p>
+                      <p>{at('no_inquiries')}</p>
                     </div>
                   )}
                 </div>
@@ -2510,14 +2512,14 @@ export default function AdminPage() {
                         </div>
                         {editingTicket.answer && (
                           <div className="mt-3 text-xs text-sky-700">
-                            <div className="mb-1 font-semibold">첫 답변</div>
+                            <div className="mb-1 font-semibold">{at('first_answer_label')}</div>
                             <div className="whitespace-pre-wrap text-slate-600">{editingTicket.answer}</div>
                           </div>
                         )}
                         {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
                           <div key={`m-${idx}`} className="mt-2.5 text-xs">
                             <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
-                              {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                              {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
                             </div>
                             <div className="whitespace-pre-wrap text-slate-600">{entry.body}</div>
                           </div>
@@ -2583,7 +2585,7 @@ export default function AdminPage() {
                           }}
                           className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                         >
-                          저장
+                          {ct('save')}
                         </button>
                       </div>
                     </div>
@@ -2596,7 +2598,7 @@ export default function AdminPage() {
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    {at('tab_member_inquiries')} ({memberGroupInquiries.filter((t) => t.status === 'pending').length}{adminLang === 'en' ? ' pending' : '건 미답변'})
+                    {at('tab_member_inquiries')} ({memberGroupInquiries.filter((t) => t.status === 'pending').length} {at('status_pending')})
                   </h2>
                 </div>
 
@@ -2654,7 +2656,7 @@ export default function AdminPage() {
                               }`}
                             >
                               <div className={`mb-1 text-xs font-semibold ${entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'}`}>
-                                {entry.role === 'member' ? (adminLang === 'en' ? 'Follow-up' : '추가 문의') : at('answer_label')}
+                                {entry.role === 'member' ? gat('thread_role_follow_up') : at('answer_label')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-[13px] text-slate-800">
                                 {entry.body}
@@ -2665,8 +2667,8 @@ export default function AdminPage() {
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <div className="text-xs text-slate-400">
-                          {at('written_at')} {new Date(ticket.created_at).toLocaleString(adminLang === 'en' ? 'en-US' : 'ko-KR')}
-                          {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString(adminLang === 'en' ? 'en-US' : 'ko-KR')}`}
+                          {at('written_at')} {new Date(ticket.created_at).toLocaleString(adminLocale)}
+                          {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString(adminLocale)}`}
                         </div>
                         <button
                           type="button"
@@ -2694,7 +2696,7 @@ export default function AdminPage() {
             {activeTab === 'support-tickets' && (
               <div>
                 <h2 className="mb-6 text-xl font-semibold text-slate-800">
-                  문의 관리 ({supportTickets.filter(t => t.status === 'pending').length}개 대기중)
+                  {fat('support_manage_pending_title', { count: supportTickets.filter(t => t.status === 'pending').length })}
                 </h2>
 
                 <div className="flex flex-col gap-4">
@@ -2726,7 +2728,7 @@ export default function AdminPage() {
                             </span>
                             {ticket.groups && (
                               <span className="text-sm text-slate-500">
-                                그룹: {ticket.groups.name}
+                                {at('group_prefix_label')} {ticket.groups.name}
                               </span>
                             )}
                           </div>
@@ -2736,7 +2738,7 @@ export default function AdminPage() {
                           {ticket.answer && (
                             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
                               <div className="mb-2 text-xs font-semibold text-sky-700">
-                                답변:
+                                {at('answer_label')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {ticket.answer}
@@ -2751,13 +2753,13 @@ export default function AdminPage() {
                               }`}
                             >
                               <div className={`mb-1.5 text-xs font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
-                                {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                                {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
                               </div>
                               <p className="m-0 whitespace-pre-wrap text-sm text-slate-800">
                                 {entry.body}
                               </p>
                               <div className="mt-2 text-[11px] text-slate-400">
-                                {new Date(entry.created_at).toLocaleString('ko-KR')}
+                                {new Date(entry.created_at).toLocaleString(adminLocale)}
                               </div>
                             </div>
                           ))}
@@ -2766,7 +2768,7 @@ export default function AdminPage() {
                           type="button"
                           disabled={deletingSystemSupportTicketId === ticket.id}
                           onClick={async () => {
-                            if (!confirm('이 문의를 삭제할까요?')) return;
+                            if (!confirm(at('confirm_delete_support_ticket'))) return;
                             try {
                               setDeletingSystemSupportTicketId(ticket.id);
                               const { data: { session } } = await supabase.auth.getSession();
@@ -2783,11 +2785,11 @@ export default function AdminPage() {
                               );
                               const result = await response.json();
                               if (!response.ok) {
-                                throw new Error(result.error || '삭제에 실패했습니다.');
+                                throw new Error(result.error || at('error_delete_inquiry'));
                               }
                               loadSupportTickets();
                             } catch (e: unknown) {
-                              alert(e instanceof Error ? e.message : '삭제에 실패했습니다.');
+                              alert(e instanceof Error ? e.message : at('error_delete_inquiry'));
                             } finally {
                               setDeletingSystemSupportTicketId(null);
                             }
@@ -2801,7 +2803,7 @@ export default function AdminPage() {
                           ) : (
                             <Trash2 className="h-[14px] w-[14px]" />
                           )}
-                          삭제
+                          {ct('delete')}
                         </button>
                       </div>
                       {ticket.status === 'pending' && (
@@ -2813,20 +2815,20 @@ export default function AdminPage() {
                             }}
                             className="cursor-pointer rounded-md border-none bg-purple-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                           >
-                            답변하기
+                            {at('answer_btn')}
                           </button>
                         </div>
                       )}
                       <div className="mt-3 text-xs text-slate-400">
-                        {at('written_at')} {new Date(ticket.created_at).toLocaleString('ko-KR')}
-                        {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString('ko-KR')}`}
+                        {at('written_at')} {new Date(ticket.created_at).toLocaleString(adminLocale)}
+                        {ticket.answered_at && ` | ${at('answered_at')} ${new Date(ticket.answered_at).toLocaleString(adminLocale)}`}
                       </div>
                     </motion.div>
                   ))}
                   {supportTickets.length === 0 && (
                     <div className="p-12 text-center text-slate-400">
                       <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                      <p>문의가 없습니다.</p>
+                      <p>{at('no_inquiries')}</p>
                     </div>
                   )}
                 </div>
@@ -2853,14 +2855,14 @@ export default function AdminPage() {
                         </div>
                         {editingTicket.answer && (
                           <div className="mt-3 text-xs text-sky-700">
-                            <div className="mb-1 font-semibold">첫 답변</div>
+                            <div className="mb-1 font-semibold">{at('first_answer_label')}</div>
                             <div className="whitespace-pre-wrap text-slate-600">{editingTicket.answer}</div>
                           </div>
                         )}
                         {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
                           <div key={`modal2-${idx}`} className="mt-2.5 text-xs">
                             <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
-                              {entry.role === 'group_admin' ? '추가 문의' : '시스템 답변'}
+                              {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
                             </div>
                             <div className="whitespace-pre-wrap text-slate-600">{entry.body}</div>
                           </div>
@@ -2943,7 +2945,7 @@ export default function AdminPage() {
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="m-0 text-xl font-semibold text-slate-800">
-                    대시보드 접근 요청 관리 ({accessRequests.filter(r => r.status === 'pending').length}개 대기중)
+                    {fat('access_requests_pending_title', { count: accessRequests.filter(r => r.status === 'pending').length })}
                   </h2>
                   <button
                     onClick={() => {
@@ -2954,7 +2956,7 @@ export default function AdminPage() {
                     className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
                     <Plus className="h-[18px] w-[18px]" />
-                    새 접근 요청
+                    {at('new_access_request_btn')}
                   </button>
                 </div>
 
@@ -2999,7 +3001,7 @@ export default function AdminPage() {
                           </p>
                           {request.status === 'approved' && request.expires_at && (
                             <div className="mb-2 text-sm text-emerald-600">
-                              {at('expires_at_label')} {new Date(request.expires_at).toLocaleString('ko-KR')}
+                              {at('expires_at_label')} {new Date(request.expires_at).toLocaleString(adminLocale)}
                             </div>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
@@ -3154,9 +3156,9 @@ console.error(at('error_revoke_failed'), error);
                         </div>
                       )}
                       <div className="mt-3 text-xs text-slate-400">
-                        요청일: {new Date(request.created_at).toLocaleString('ko-KR')}
-                        {request.approved_at && ` | ${at('approved_at_label')} ${new Date(request.approved_at).toLocaleString('ko-KR')}`}
-                        {request.rejected_at && ` | ${at('rejected_at_label')} ${new Date(request.rejected_at).toLocaleString('ko-KR')}`}
+                        {at('requested_at_label')} {new Date(request.created_at).toLocaleString(adminLocale)}
+                        {request.approved_at && ` | ${at('approved_at_label')} ${new Date(request.approved_at).toLocaleString(adminLocale)}`}
+                        {request.rejected_at && ` | ${at('rejected_at_label')} ${new Date(request.rejected_at).toLocaleString(adminLocale)}`}
                       </div>
                     </motion.div>
                   ))}
@@ -3183,11 +3185,11 @@ console.error(at('error_revoke_failed'), error);
                     onClick={(e) => e.stopPropagation()}
                     >
                       <h3 className="mb-4 text-xl font-semibold text-slate-800">
-                        새 접근 요청
+                        {at('new_access_request_modal_title')}
                       </h3>
                       <div className="mb-4">
                         <label className="mb-2 block text-sm font-semibold text-slate-800">
-                          그룹 선택
+                          {at('select_group_label')}
                         </label>
                         <select
                           value={newAccessRequestGroupId}
@@ -3204,7 +3206,7 @@ console.error(at('error_revoke_failed'), error);
                       </div>
                       <div className="mb-4">
                         <label className="mb-2 block text-sm font-semibold text-slate-800">
-                          요청 이유
+                          {at('placeholder_reason')}
                         </label>
                         <textarea
                           value={newAccessRequestReason}
@@ -3275,7 +3277,7 @@ console.error(at('error_revoke_failed'), error);
                           }}
                           className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                         >
-                          요청하기
+                          {at('submit_request_btn')}
                         </button>
                       </div>
                     </div>
@@ -3288,10 +3290,10 @@ console.error(at('error_revoke_failed'), error);
             {activeTab === 'audit-log' && (
               <div>
                 <h2 className="mb-6 text-xl font-semibold text-slate-800">
-                  관리자 감사 로그
+                  {at('audit_log_page_title')}
                 </h2>
                 <div className="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <label className="text-[13px] text-slate-600">기간</label>
+                  <label className="text-[13px] text-slate-600">{at('audit_period_label')}</label>
                   <input
                     type="date"
                     value={auditLogFilters.from}
@@ -3310,14 +3312,14 @@ console.error(at('error_revoke_failed'), error);
                     onChange={(e) => setAuditLogFilters((f) => ({ ...f, resource_type: e.target.value }))}
                     className="min-w-[140px] rounded-md border border-slate-200 px-3 py-2 text-sm"
                   >
-                    <option value="">전체 유형</option>
-                    <option value="group">그룹</option>
-                    <option value="user">사용자</option>
-                    <option value="announcement">공지</option>
-                    <option value="dashboard_access_request">접근 요청</option>
-                    <option value="support_ticket">문의</option>
-                    <option value="member_support_ticket">멤버 문의(그룹)</option>
-                    <option value="system_admin">시스템 관리자</option>
+                    <option value="">{at('audit_filter_all_types')}</option>
+                    <option value="group">{at('audit_type_group')}</option>
+                    <option value="user">{at('audit_type_user')}</option>
+                    <option value="announcement">{at('audit_type_announcement')}</option>
+                    <option value="dashboard_access_request">{at('audit_type_dashboard_access_request')}</option>
+                    <option value="support_ticket">{at('audit_type_support_ticket')}</option>
+                    <option value="member_support_ticket">{at('audit_type_member_support_ticket')}</option>
+                    <option value="system_admin">{at('audit_type_system_admin')}</option>
                   </select>
                   <input
                     type="text"
@@ -3341,14 +3343,14 @@ console.error(at('error_revoke_failed'), error);
                     }`}
                   >
                     {auditLogLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    조회
+                    {at('search_btn')}
                   </button>
                   <button
                     onClick={exportAuditLogsCsv}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
                   >
                     <Download className="h-4 w-4" />
-                    CSV 내보내기
+                    {at('export_csv_btn')}
                   </button>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -3377,7 +3379,7 @@ console.error(at('error_revoke_failed'), error);
                       ) : (
                         auditLogs.map((log) => (
                           <tr key={log.id} className="border-b border-slate-100">
-                            <td className="whitespace-nowrap px-3 py-2.5">{new Date(log.created_at).toLocaleString('ko-KR')}</td>
+                            <td className="whitespace-nowrap px-3 py-2.5">{new Date(log.created_at).toLocaleString(adminLocale)}</td>
                             <td className="px-3 py-2.5">{log.action}</td>
                             <td className="px-3 py-2.5">{log.resource_type}</td>
                             <td className="px-3 py-2.5 font-mono text-xs">{log.resource_id || '-'}</td>
@@ -3407,7 +3409,7 @@ console.error(at('error_revoke_failed'), error);
                           auditLogPage <= 1 || auditLogLoading ? 'cursor-not-allowed' : 'cursor-pointer'
                         }`}
                       >
-                        이전
+                        {at('pagination_prev')}
                       </button>
                       <span className="self-center text-[13px] text-slate-600">{auditLogPage} / {Math.ceil(auditLogTotal / auditLogLimit) || 1}</span>
                       <button
@@ -3417,7 +3419,7 @@ console.error(at('error_revoke_failed'), error);
                           auditLogPage >= Math.ceil(auditLogTotal / auditLogLimit) || auditLogLoading ? 'cursor-not-allowed' : 'cursor-pointer'
                         }`}
                       >
-                        다음
+                        {at('pagination_next')}
                       </button>
                     </div>
                   </div>

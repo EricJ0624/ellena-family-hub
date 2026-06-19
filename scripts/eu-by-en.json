@@ -4557,7 +4557,7 @@
     "es": "Reiniciar",
     "fr": "Réinitialiser",
     "de": "Zurücksetzen",
-    "it": "Reset"
+    "it": "Reimposta"
   },
   "Reset password": {
     "es": "Restablecer contraseña",
@@ -4662,7 +4662,11 @@
     "it": "Sasso, carta, forbici..."
   },
   "Role": {
-    "es": "Role",
+    "es": "Rol",
+    "fr": "Rôle",
+    "de": "Rolle",
+    "it": "Ruolo"
+  },
     "fr": "Rôle",
     "de": "Rolle",
     "it": "Ruolo"

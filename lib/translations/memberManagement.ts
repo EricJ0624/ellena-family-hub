@@ -275,7 +275,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     loading_members: 'Cargando miembros...',
     email: 'Correo electrónico',
     nickname: 'Apodo',
-    role: 'Role',
+    role: 'Rol',
     joined_at: 'Unido',
     manage: 'Comportamiento',
     promote_title: 'Promocionar a administrador',
