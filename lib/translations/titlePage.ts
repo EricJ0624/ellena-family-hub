@@ -13,6 +13,7 @@ export type TitlePageTranslations = {
   frame_polaroid_modern: string;
   frame_editorial: string;
   frame_gradient_rim: string;
+  frame_parchment: string;
   frame_no_frame: string;
   frame_baroque_desc: string;
   frame_vintage_desc: string;
@@ -21,6 +22,7 @@ export type TitlePageTranslations = {
   frame_polaroid_modern_desc: string;
   frame_editorial_desc: string;
   frame_gradient_rim_desc: string;
+  frame_parchment_desc: string;
   frame_no_frame_desc: string;
   font_inter: string;
   font_roboto: string;
@@ -62,6 +64,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: '폴라로이드 모던',
     frame_editorial: '에디토리얼',
     frame_gradient_rim: '그라디언트 림',
+    frame_parchment: '양피지',
     frame_no_frame: '프레임 없음',
     frame_baroque_desc: '화려하고 장식적인 클래식 프레임',
     frame_vintage_desc: '우아한 빈티지 스타일 프레임',
@@ -70,6 +73,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '하단 여백이 강조된 미니멀 폴라로이드',
     frame_editorial_desc: '거의 무프레임에 가까운 세련된 스타일',
     frame_gradient_rim_desc: '얇은 컬러 림으로 포인트를 준 스타일',
+    frame_parchment_desc: '데클 가장자리와 클래식 장식의 빈티지 양피지',
     frame_no_frame_desc: '대시보드 위젯과 동일한 카드 스타일',
     font_inter: 'Inter (모던)',
     font_roboto: 'Roboto (깔끔)',
@@ -109,6 +113,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'Polaroid Modern',
     frame_editorial: 'Editorial',
     frame_gradient_rim: 'Gradient Rim',
+    frame_parchment: 'Parchment',
     frame_no_frame: 'No Frame',
     frame_baroque_desc: 'Ornate classic frame',
     frame_vintage_desc: 'Elegant vintage-style frame',
@@ -117,6 +122,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: 'Minimal polaroid with emphasized bottom margin',
     frame_editorial_desc: 'Sleek near-frameless editorial look',
     frame_gradient_rim_desc: 'Thin gradient rim accent style',
+    frame_parchment_desc: 'Vintage parchment with deckled edges and classic ornament',
     frame_no_frame_desc: 'Matches the dashboard widget card style',
     font_inter: 'Inter (Modern)',
     font_roboto: 'Roboto (Clean)',
@@ -156,6 +162,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'ポラロイドモダン',
     frame_editorial: 'エディトリアル',
     frame_gradient_rim: 'グラデーションリム',
+    frame_parchment: 'パーチメント',
     frame_no_frame: 'フレームなし',
     frame_baroque_desc: '華やかなクラシックフレーム',
     frame_vintage_desc: 'エレガントなヴィンテージスタイル',
@@ -164,6 +171,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '下余白を強調したミニマルポラロイド',
     frame_editorial_desc: 'ほぼフレームレスな洗練スタイル',
     frame_gradient_rim_desc: '細いグラデーション縁のアクセント',
+    frame_parchment_desc: 'デックル端とクラシック装飾のヴィンテージ羊皮紙',
     frame_no_frame_desc: 'ダッシュボードのウィジェットと同じカードスタイル',
     font_inter: 'Inter (モダン)',
     font_roboto: 'Roboto (クリーン)',
@@ -203,6 +211,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: '现代拍立得',
     frame_editorial: '编辑风',
     frame_gradient_rim: '渐变边框',
+    frame_parchment: '羊皮纸',
     frame_no_frame: '无相框',
     frame_baroque_desc: '华丽装饰经典相框',
     frame_vintage_desc: '优雅复古风格相框',
@@ -211,6 +220,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '底部留白更明显的极简拍立得',
     frame_editorial_desc: '接近无边框的编辑风格',
     frame_gradient_rim_desc: '细渐变边框点缀风格',
+    frame_parchment_desc: '撕边与经典装饰的复古羊皮纸',
     frame_no_frame_desc: '与仪表盘小组件相同的卡片样式',
     font_inter: 'Inter (现代)',
     font_roboto: 'Roboto (简洁)',
@@ -250,6 +260,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: '現代拍立得',
     frame_editorial: '編輯風',
     frame_gradient_rim: '漸層邊框',
+    frame_parchment: '羊皮紙',
     frame_no_frame: '無相框',
     frame_baroque_desc: '華麗裝飾經典相框',
     frame_vintage_desc: '優雅復古風格相框',
@@ -258,6 +269,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: '底部留白更明顯的極簡拍立得',
     frame_editorial_desc: '接近無邊框的編輯風格',
     frame_gradient_rim_desc: '細漸層邊框點綴風格',
+    frame_parchment_desc: '撕邊與經典裝飾的復古羊皮紙',
     frame_no_frame_desc: '與儀表板小工具相同的卡片樣式',
     font_inter: 'Inter (現代)',
     font_roboto: 'Roboto (簡潔)',
@@ -297,6 +309,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'Polaroid moderna',
     frame_editorial: 'Editorial',
     frame_gradient_rim: 'Borde degradado',
+    frame_parchment: 'Pergamino',
     frame_no_frame: 'Sin marco',
     frame_baroque_desc: 'Marco clásico adornado',
     frame_vintage_desc: 'Marco elegante de estilo vintage',
@@ -305,6 +318,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: 'Polaroid minimalista con margen inferior resaltado',
     frame_editorial_desc: 'Aspecto editorial elegante casi sin marco',
     frame_gradient_rim_desc: 'Estilo de acento de borde degradado fino',
+    frame_parchment_desc: 'Pergamino vintage con bordes desgarrados y ornamento clásico',
     frame_no_frame_desc: 'Coincide con el estilo de la tarjeta del widget del panel',
     font_inter: 'Inter (moderno)',
     font_roboto: 'Roboto (limpio)',
@@ -344,6 +358,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'Polaroïd moderne',
     frame_editorial: 'Éditorial',
     frame_gradient_rim: 'Jante dégradée',
+    frame_parchment: 'Parchemin',
     frame_no_frame: 'Pas de cadre',
     frame_baroque_desc: 'Cadre classique orné',
     frame_vintage_desc: 'Cadre élégant de style vintage',
@@ -352,6 +367,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: 'Polaroïd minimal avec marge inférieure soulignée',
     frame_editorial_desc: 'Look éditorial élégant, presque sans cadre',
     frame_gradient_rim_desc: 'Style d\'accent à bord dégradé fin',
+    frame_parchment_desc: 'Parchemin vintage aux bords effilochés et ornements classiques',
     frame_no_frame_desc: 'Correspond au style de la carte du widget du tableau de bord',
     font_inter: 'Inter (moderne)',
     font_roboto: 'Roboto (Propre)',
@@ -391,6 +407,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'Polaroid Modern',
     frame_editorial: 'Leitartikel',
     frame_gradient_rim: 'Farbverlaufsrand',
+    frame_parchment: 'Pergament',
     frame_no_frame: 'Kein Rahmen',
     frame_baroque_desc: 'Verzierter klassischer Rahmen',
     frame_vintage_desc: 'Eleganter Rahmen im Vintage-Stil',
@@ -399,6 +416,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: 'Minimales Polaroid mit betontem unteren Rand',
     frame_editorial_desc: 'Schlanker, nahezu rahmenloser redaktioneller Look',
     frame_gradient_rim_desc: 'Akzentstil mit dünnem Farbverlaufsrand',
+    frame_parchment_desc: 'Vintage-Pergament mit ausgefransten Kanten und klassischer Ornamentik',
     frame_no_frame_desc: 'Entspricht dem Stil der Dashboard-Widget-Karte',
     font_inter: 'Inter (Modern)',
     font_roboto: 'Roboto (Sauber)',
@@ -438,6 +456,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern: 'Polaroid moderna',
     frame_editorial: 'Editoriale',
     frame_gradient_rim: 'Bordo sfumato',
+    frame_parchment: 'Pergamena',
     frame_no_frame: 'Nessuna cornice',
     frame_baroque_desc: 'Cornice classica decorata',
     frame_vintage_desc: 'Elegante cornice in stile vintage',
@@ -446,6 +465,7 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_polaroid_modern_desc: 'Polaroid minimale con margine inferiore enfatizzato',
     frame_editorial_desc: 'Look editoriale elegante, quasi senza cornice',
     frame_gradient_rim_desc: 'Stile con bordo sottile sfumato',
+    frame_parchment_desc: 'Pergamena vintage con bordi sfrangiati e ornamento classico',
     frame_no_frame_desc: 'Corrisponde allo stile della scheda widget del dashboard',
     font_inter: 'Inter (Moderna)',
     font_roboto: 'Roboto (pulito)',

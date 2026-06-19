@@ -21,6 +21,7 @@ export type FrameStyle =
   | 'polaroid_modern'
   | 'editorial'
   | 'gradient_rim'
+  | 'parchment'
   | 'no_frame';
 
 export interface FrameConfig {
@@ -68,6 +69,13 @@ export const GRADIENT_RIM_FRAME_INSET_CLASS =
 
 export const GRADIENT_RIM_FRAME_LANDSCAPE_SRC =
   '/photo-frames/gradient-frame-landscape.png';
+
+/** parchment-frame-landscape.png (prepare-parchment-frame.mjs) 사진 구역 inset */
+export const PARCHMENT_FRAME_INSET_CLASS =
+  'left-[6.3%] right-[6.8%] top-[8.3%] bottom-[7.3%]';
+
+export const PARCHMENT_FRAME_LANDSCAPE_SRC =
+  '/photo-frames/parchment-frame-landscape.png';
 
 /** polaroid-paper-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-polaroid-bg.mjs */
 export const POLAROID_FRAME_INSET_CLASS =
@@ -196,6 +204,12 @@ export const FRAME_CONFIGS: FrameConfig[] = [
     name: '그라디언트 림',
     description: '얇은 컬러 림으로 포인트를 준 스타일',
     color: '#a78bfa',
+  },
+  {
+    id: 'parchment',
+    name: '양피지',
+    description: '데클 가장자리와 클래식 장식의 빈티지 양피지',
+    color: '#e8dcc8',
   },
   {
     id: 'no_frame',
@@ -377,6 +391,16 @@ const GradientRimFrame: React.FC<{ color: string; uid: string }> = () => (
   />
 );
 
+// 양피지 스타일 프레임 (PNG 오버레이 — 외곽·개구부 투명)
+const ParchmentFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={PARCHMENT_FRAME_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
+
 // 메인 프레임 컴포넌트
 export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
   frameStyle,
@@ -394,6 +418,7 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
     polaroid_modern: PolaroidModernFrame,
     editorial: EditorialFrame,
     gradient_rim: GradientRimFrame,
+    parchment: ParchmentFrame,
     no_frame: NoFrame,
   }[frameStyle];
 

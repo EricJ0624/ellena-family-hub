@@ -15,6 +15,7 @@ import {
   VINTAGE_FRAME_INSET_CLASS,
   EDITORIAL_FRAME_INSET_CLASS,
   GRADIENT_RIM_FRAME_INSET_CLASS,
+  PARCHMENT_FRAME_INSET_CLASS,
   SOFT_GLASS_FRAME_INSET_CLASS,
   SOFT_GLASS_PHOTO_IMAGE_CLASS,
   BaroqueMatCaptionOverlay,
@@ -214,6 +215,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     polaroid_modern: POLAROID_FRAME_INSET_CLASS,
     editorial: EDITORIAL_FRAME_INSET_CLASS,
     gradient_rim: GRADIENT_RIM_FRAME_INSET_CLASS,
+    parchment: PARCHMENT_FRAME_INSET_CLASS,
     no_frame: 'inset-0',
   };
   const useCoverImage =
@@ -222,6 +224,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     frameStyle === 'polaroid_modern' ||
     frameStyle === 'editorial' ||
     frameStyle === 'gradient_rim' ||
+    frameStyle === 'parchment' ||
     frameStyle === 'no_frame';
   const isSoftGlassFrame = frameStyle === 'soft_glass';
   const isPolaroidFrame = frameStyle === 'polaroid_modern';
