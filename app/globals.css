@@ -1390,9 +1390,10 @@ select {
   background-position: center;
   container-type: size;
   container-name: chalk-modal;
-  /* PNG baked labels start ~22.3% (pixel scan of chalkboard-newtask.png 467×558) */
+  /* PNG baked labels start ~22.3%; green inner right ~6.4%; buttons clear chalk ~13% */
   --chalkboard-newtask-form-left: 22.5%;
-  --chalkboard-newtask-form-right: 8.5%;
+  --chalkboard-newtask-form-right: 6.5%;
+  --chalkboard-newtask-actions-right: 13%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
@@ -1462,13 +1463,21 @@ select {
 .chalkboard-modal-actions {
   position: absolute;
   left: var(--chalkboard-newtask-form-left);
-  right: var(--chalkboard-newtask-form-right);
+  right: var(--chalkboard-newtask-actions-right);
   bottom: 18%;
   display: flex;
   flex-shrink: 0;
   gap: var(--spacing-md);
   margin-top: 0;
   padding-top: 0;
+}
+
+.chalkboard-modal-container .chalkboard-btn-secondary {
+  flex: 1 1 0;
+}
+
+.chalkboard-modal-container .chalkboard-btn-primary {
+  flex: 1.65 1 0;
 }
 
 @container chalk-modal (min-width: 0px) {
