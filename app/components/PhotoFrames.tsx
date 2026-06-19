@@ -62,6 +62,13 @@ export const EDITORIAL_FRAME_INSET_CLASS =
 export const EDITORIAL_FRAME_LANDSCAPE_SRC =
   '/photo-frames/editorial-frame-landscape.png';
 
+/** gradient-frame-landscape.png (1024×1024, 외곽·개구부 투명) 사진 구역 inset */
+export const GRADIENT_RIM_FRAME_INSET_CLASS =
+  'left-[7.9%] right-[8.1%] top-[7.5%] bottom-[7.7%]';
+
+export const GRADIENT_RIM_FRAME_LANDSCAPE_SRC =
+  '/photo-frames/gradient-frame-landscape.png';
+
 /** polaroid-paper-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-polaroid-bg.mjs */
 export const POLAROID_FRAME_INSET_CLASS =
   'left-[10.4%] right-[9.4%] top-[10.7%] bottom-[16.7%]';
@@ -360,24 +367,15 @@ const EditorialFrame: React.FC<{ color: string; uid: string }> = () => (
 // 프레임 없음(위젯 카드 스타일) - 컨테이너에서 글래스 토큰을 직접 적용하므로 SVG는 비움
 const NoFrame: React.FC<{ color: string; uid: string }> = () => null;
 
-// 그라디언트 림 스타일 프레임 SVG
-const GradientRimFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <defs>
-        <linearGradient id={`gradientRimStroke-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="35%" stopColor={color} />
-          <stop offset="70%" stopColor="#f472b6" />
-          <stop offset="100%" stopColor="#f59e0b" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="400" height="300" rx="20" fill="rgba(15,23,42,0.04)" />
-      <rect x="4" y="4" width="392" height="292" rx="18" fill="none" stroke={`url(#gradientRimStroke-${uid})`} strokeWidth="3" />
-      <rect x="9" y="9" width="382" height="282" rx="14" fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="1" />
-    </svg>
-  );
-};
+// 그라디언트 림 스타일 프레임 (PNG 오버레이)
+const GradientRimFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={GRADIENT_RIM_FRAME_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 메인 프레임 컴포넌트
 export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
