@@ -9,8 +9,9 @@ import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 
-function usesBakedChalkboardTitle(sectionTitle: string): boolean {
-  return sectionTitle.trim().toLowerCase() === 'family tasks';
+/** chalkboard-bg.png 에 섹션 타이틀(Family Tasks)이 항상 포함됨 — 모든 언어에서 HTML 타이틀은 sr-only */
+function usesBakedChalkboardTitle(_sectionTitle: string): boolean {
+  return true;
 }
 
 interface FamilyTasksSectionProps {

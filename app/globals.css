@@ -1391,8 +1391,8 @@ select {
   container-type: size;
   container-name: chalk-modal;
   /* Align form controls with baked PNG label left edge ("What to do?" / "Who will do it?") */
-  --chalkboard-newtask-form-left: 10.5%;
-  --chalkboard-newtask-form-right: 15%;
+  --chalkboard-newtask-form-left: 12.5%;
+  --chalkboard-newtask-form-right: 14%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
