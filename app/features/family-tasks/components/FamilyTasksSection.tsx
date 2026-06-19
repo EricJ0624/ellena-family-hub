@@ -253,45 +253,42 @@ export function FamilyTasksSection({
     <>
       {isTodoModalOpen && createPortal(
         <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
-          <div className="chalkboard-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 className="chalkboard-modal-title">
-              <span className="chalkboard-modal-icon">📝</span>
-              {t.todo_modal_title}
-            </h3>
-            <div className="chalkboard-modal-form">
-              <div className="chalkboard-form-field">
-                <label className="chalkboard-form-label">{t.todo_what_label}</label>
-                <input
-                  ref={todoTextRef}
-                  type="text"
-                  className="chalkboard-form-input"
-                  placeholder={t.todo_what_placeholder}
-                />
+          <div className="chalkboard-modal-frame" onClick={(e) => e.stopPropagation()}>
+            <div className="chalkboard-modal-container">
+              <div className="chalkboard-modal-form">
+                <div className="chalkboard-modal-field chalkboard-modal-field--what">
+                  <input
+                    ref={todoTextRef}
+                    type="text"
+                    className="chalkboard-form-input"
+                    placeholder={t.todo_what_placeholder}
+                    aria-label={t.todo_what_label}
+                  />
+                </div>
+                <div className="chalkboard-modal-field chalkboard-modal-field--who">
+                  <select
+                    ref={todoWhoRef}
+                    className="chalkboard-form-input"
+                    defaultValue=""
+                    aria-label={t.todo_who_label}
+                  >
+                    <option value="">{t.todo_who_placeholder || t.anyone}</option>
+                    {taskMembers.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {formatAssigneeDisplay(m.userId)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="chalkboard-form-field">
-                <label className="chalkboard-form-label">{t.todo_who_label}</label>
-                <select
-                  ref={todoWhoRef}
-                  className="chalkboard-form-input"
-                  defaultValue=""
-                  aria-label={t.todo_who_label}
-                >
-                  <option value="">{t.todo_who_placeholder || t.anyone}</option>
-                  {taskMembers.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {formatAssigneeDisplay(m.userId)}
-                    </option>
-                  ))}
-                </select>
+              <div className="chalkboard-modal-actions">
+                <button type="button" onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
+                  {t.cancel}
+                </button>
+                <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
+                  {t.todo_register_btn}
+                </button>
               </div>
-            </div>
-            <div className="chalkboard-modal-actions">
-              <button type="button" onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
-                {t.cancel}
-              </button>
-              <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
-                {t.todo_register_btn}
-              </button>
             </div>
           </div>
         </div>

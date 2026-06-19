@@ -95,6 +95,9 @@
   --chalkboard-inset-right: 7%;
   --chalkboard-inset-bottom: 7.5%;
   --chalkboard-inset-left: 8%;
+  --chalkboard-newtask-image: url('/family-tasks/chalkboard-newtask.png');
+  /* public/family-tasks/chalkboard-newtask.png (467×558) */
+  --chalkboard-newtask-aspect: 467 / 558;
 }
 
 .dark {
@@ -1362,49 +1365,113 @@ select {
   text-shadow: var(--chalk-shadow-ui);
 }
 
-/* Chalkboard Modal Styles */
+/* Chalkboard Modal Styles — PNG plate + HTML inputs (labels baked into image) */
 .chalkboard-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 60;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
 }
 
-.chalkboard-modal-content {
-  width: 100%;
-  max-width: 400px;
-  padding: var(--spacing-2xl);
-  background-color: var(--chalkboard-bg);
-  background-image:
-    var(--chalkboard-grid),
-    radial-gradient(ellipse 45% 35% at 20% 25%, rgba(255, 255, 255, 0.06) 0%, transparent 70%),
-    linear-gradient(155deg, var(--chalkboard-bg) 0%, var(--chalkboard-bg-deep) 100%);
-  background-size: 22px 22px, 100% 100%, 100% 100%;
-  border: 14px solid #3d2a14;
-  border-radius: 6px;
-  box-shadow:
-    inset 4px 4px 14px rgba(0, 0, 0, 0.4),
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 0 2px var(--chalkboard-border-light),
-    0 0 0 4px var(--chalkboard-border-dark);
+.chalkboard-modal-frame {
   position: relative;
-  overflow: hidden;
+  flex-shrink: 0;
+  width: min(92vw, 467px);
+  max-height: min(92dvh, 558px);
+  aspect-ratio: var(--chalkboard-newtask-aspect);
+  background-color: transparent;
+  background-image: var(--chalkboard-newtask-image);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  container-type: size;
+  container-name: chalk-modal;
 }
 
-.chalkboard-modal-content::before {
-  content: '';
+@media (orientation: landscape) and (max-height: 640px) {
+  .chalkboard-modal-frame {
+    width: auto;
+    height: min(85dvh, 558px);
+    max-width: min(92vw, 467px);
+  }
+}
+
+.chalkboard-modal-container {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.1) 100%);
-  pointer-events: none;
+  inset: 33% 11.5% 14% 11.5%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  z-index: 1;
+}
+
+.chalkboard-modal-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10%;
+  min-height: 0;
+  margin-top: 2%;
+}
+
+.chalkboard-modal-field {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.chalkboard-modal-container .chalkboard-form-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chalkboard-modal-container select.chalkboard-form-input {
+  appearance: none;
+  padding-right: 2rem;
+  background-color: rgba(255, 255, 255, 0.08);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23ffffff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 0.65rem auto;
+}
+
+.chalkboard-modal-container select.chalkboard-form-input:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.chalkboard-modal-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--spacing-md);
+  margin-top: auto;
+  padding-top: 6%;
+}
+
+@container chalk-modal (min-width: 0px) {
+  .chalkboard-modal-container .chalkboard-form-input {
+    padding: 2.6cqi 3.2cqi;
+    font-size: 4.2cqi;
+  }
+
+  .chalkboard-modal-container select.chalkboard-form-input {
+    padding-right: 7cqi;
+    background-position: right 2.2cqi center;
+    background-size: 2.8cqi auto;
+  }
+
+  .chalkboard-modal-actions {
+    gap: 2.5cqi;
+  }
+
+  .chalkboard-modal-container .chalkboard-btn-secondary,
+  .chalkboard-modal-container .chalkboard-btn-primary {
+    padding: 2.4cqi 0;
+    font-size: 4cqi;
+  }
 }
 
 .chalkboard-modal-title {
@@ -1422,14 +1489,6 @@ select {
 .chalkboard-modal-icon {
   font-size: 1.75rem;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.chalkboard-modal-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  position: relative;
-  z-index: 1;
 }
 
 .chalkboard-form-field {
@@ -1465,14 +1524,6 @@ select {
 .chalkboard-form-input:focus {
   background: rgba(255, 255, 255, 0.15);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-}
-
-.chalkboard-modal-actions {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-2xl);
-  position: relative;
-  z-index: 1;
 }
 
 .chalkboard-btn-secondary {
