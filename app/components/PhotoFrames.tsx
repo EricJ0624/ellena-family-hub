@@ -17,7 +17,6 @@ export type FrameStyle =
   | 'baroque'
   | 'modern'
   | 'vintage'
-  | 'ornate'
   | 'soft_glass'
   | 'polaroid_modern'
   | 'editorial'
@@ -154,12 +153,6 @@ export const FRAME_CONFIGS: FrameConfig[] = [
     name: '바로크',
     description: '화려하고 장식적인 클래식 프레임',
     color: '#b8860b',
-  },
-  {
-    id: 'ornate',
-    name: '오네이트',
-    description: '정교한 조각 패턴의 고급 프레임',
-    color: '#3e1a13',
   },
   {
     id: 'vintage',
@@ -314,66 +307,6 @@ export function PolaroidMatCaptionOverlay({ displayName }: { displayName: string
   );
 }
 
-// 오네이트 스타일 프레임 SVG
-const OrnateFrame: React.FC<{ color: string; uid: string }> = ({ color, uid }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <defs>
-        <linearGradient id={`ornateWood-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={color} />
-          <stop offset="50%" stopColor="#2a1208" />
-          <stop offset="100%" stopColor={color} />
-        </linearGradient>
-        
-        <radialGradient id={`ornateGlow-${uid}`}>
-          <stop offset="0%" stopColor="rgba(255,215,0,0.4)" />
-          <stop offset="100%" stopColor="rgba(139,69,19,0)" />
-        </radialGradient>
-      </defs>
-
-      {/* 외곽 프레임 - 두꺼운 테두리 */}
-      <rect x="0" y="0" width="400" height="300" fill={`url(#ornateWood-${uid})`} />
-      
-      {/* 다층 테두리 효과 */}
-      <rect x="8" y="8" width="384" height="284" fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="2" />
-      <rect x="12" y="12" width="376" height="276" fill="none" stroke="rgba(139,69,19,0.8)" strokeWidth="1" />
-      <rect x="18" y="18" width="364" height="264" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="3" />
-
-      {/* 정교한 모서리 장식 */}
-      {[
-        { x: 15, y: 15, rotate: 0 },
-        { x: 385, y: 15, rotate: 90 },
-        { x: 385, y: 285, rotate: 180 },
-        { x: 15, y: 285, rotate: 270 },
-      ].map((corner, i) => (
-        <g key={i} transform={`translate(${corner.x}, ${corner.y}) rotate(${corner.rotate})`}>
-          <path
-            d="M 0,0 L 25,0 L 20,5 L 5,5 L 0,25 Z"
-            fill="rgba(139,69,19,0.9)"
-            stroke="rgba(0,0,0,0.6)"
-            strokeWidth="1"
-          />
-          <circle cx="12" cy="12" r="5" fill={`url(#ornateGlow-${uid})`} />
-          <path
-            d="M 5,5 Q 12,8 20,5"
-            stroke="rgba(255,215,0,0.5)"
-            strokeWidth="1.5"
-            fill="none"
-          />
-        </g>
-      ))}
-
-      {/* 측면 장식 패턴 */}
-      {[30, 60, 90, 120, 150, 180, 210, 240, 270].map((y, i) => (
-        <g key={`left-${i}`}>
-          <circle cx="10" cy={y} r="2" fill="rgba(255,215,0,0.3)" />
-          <circle cx="390" cy={y} r="2" fill="rgba(255,215,0,0.3)" />
-        </g>
-      ))}
-    </svg>
-  );
-};
-
 // 빈티지 스타일 프레임 (PNG 오버레이)
 const VintageFrame: React.FC<{ color: string; uid: string }> = () => (
   // eslint-disable-next-line @next/next/no-img-element
@@ -457,7 +390,6 @@ export const PhotoFrameSVG: React.FC<PhotoFrameSVGProps> = ({
 
   const FrameComponent = {
     baroque: BaroqueFrame,
-    ornate: OrnateFrame,
     vintage: VintageFrame,
     modern: ModernFrame,
     soft_glass: SoftGlassFrame,

@@ -7,7 +7,6 @@ export type TitlePageTranslations = {
   photo_alt_today_memory: string;
   frame_style_select: string;
   frame_baroque: string;
-  frame_ornate: string;
   frame_vintage: string;
   frame_modern: string;
   frame_soft_glass: string;
@@ -16,7 +15,6 @@ export type TitlePageTranslations = {
   frame_gradient_rim: string;
   frame_no_frame: string;
   frame_baroque_desc: string;
-  frame_ornate_desc: string;
   frame_vintage_desc: string;
   frame_modern_desc: string;
   frame_soft_glass_desc: string;
@@ -58,7 +56,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: '오늘의 추억',
     frame_style_select: '프레임 스타일 선택',
     frame_baroque: '바로크',
-    frame_ornate: '오네이트',
     frame_vintage: '빈티지',
     frame_modern: '모던',
     frame_soft_glass: '소프트 글래스',
@@ -67,7 +64,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: '그라디언트 림',
     frame_no_frame: '프레임 없음',
     frame_baroque_desc: '화려하고 장식적인 클래식 프레임',
-    frame_ornate_desc: '정교한 조각 패턴의 고급 프레임',
     frame_vintage_desc: '우아한 빈티지 스타일 프레임',
     frame_modern_desc: '깔끔하고 현대적인 프레임',
     frame_soft_glass_desc: '반투명 유리 질감의 트렌디 프레임',
@@ -107,7 +103,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: "Today's memory",
     frame_style_select: 'Select frame style',
     frame_baroque: 'Baroque',
-    frame_ornate: 'Ornate',
     frame_vintage: 'Vintage',
     frame_modern: 'Modern',
     frame_soft_glass: 'Soft Glass',
@@ -116,7 +111,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: 'Gradient Rim',
     frame_no_frame: 'No Frame',
     frame_baroque_desc: 'Ornate classic frame',
-    frame_ornate_desc: 'Intricate carved pattern frame',
     frame_vintage_desc: 'Elegant vintage-style frame',
     frame_modern_desc: 'Clean, modern frame',
     frame_soft_glass_desc: 'Trendy translucent glass frame',
@@ -156,7 +150,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: '今日の思い出',
     frame_style_select: 'フレームスタイルを選択',
     frame_baroque: 'バロック',
-    frame_ornate: 'オーネート',
     frame_vintage: 'ヴィンテージ',
     frame_modern: 'モダン',
     frame_soft_glass: 'ソフトグラス',
@@ -165,7 +158,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: 'グラデーションリム',
     frame_no_frame: 'フレームなし',
     frame_baroque_desc: '華やかなクラシックフレーム',
-    frame_ornate_desc: '精巧な彫刻パターンの高級フレーム',
     frame_vintage_desc: 'エレガントなヴィンテージスタイル',
     frame_modern_desc: 'シンプルでモダンなフレーム',
     frame_soft_glass_desc: '半透明ガラス質感のトレンディフレーム',
@@ -205,7 +197,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: '今日回忆',
     frame_style_select: '选择相框样式',
     frame_baroque: '巴洛克',
-    frame_ornate: '华丽',
     frame_vintage: '复古',
     frame_modern: '现代',
     frame_soft_glass: '柔光玻璃',
@@ -214,7 +205,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: '渐变边框',
     frame_no_frame: '无相框',
     frame_baroque_desc: '华丽装饰经典相框',
-    frame_ornate_desc: '精美雕刻图案高级相框',
     frame_vintage_desc: '优雅复古风格相框',
     frame_modern_desc: '简洁现代相框',
     frame_soft_glass_desc: '半透明玻璃质感的潮流相框',
@@ -254,7 +244,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: '今日回憶',
     frame_style_select: '選擇相框樣式',
     frame_baroque: '巴洛克',
-    frame_ornate: '華麗',
     frame_vintage: '復古',
     frame_modern: '現代',
     frame_soft_glass: '柔光玻璃',
@@ -263,7 +252,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: '漸層邊框',
     frame_no_frame: '無相框',
     frame_baroque_desc: '華麗裝飾經典相框',
-    frame_ornate_desc: '精美雕刻圖案高級相框',
     frame_vintage_desc: '優雅復古風格相框',
     frame_modern_desc: '簡潔現代相框',
     frame_soft_glass_desc: '半透明玻璃質感的潮流相框',
@@ -303,7 +291,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: 'la memoria de hoy',
     frame_style_select: 'Seleccionar estilo de marco',
     frame_baroque: 'Barroco',
-    frame_ornate: 'Florido',
     frame_vintage: 'Antiguo',
     frame_modern: 'Moderno',
     frame_soft_glass: 'Vidrio blando',
@@ -312,7 +299,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: 'Borde degradado',
     frame_no_frame: 'Sin marco',
     frame_baroque_desc: 'Marco clásico adornado',
-    frame_ornate_desc: 'Marco de patrón tallado intrincado',
     frame_vintage_desc: 'Marco elegante de estilo vintage',
     frame_modern_desc: 'Marco limpio y moderno',
     frame_soft_glass_desc: 'Marco de cristal translúcido de moda.',
@@ -352,7 +338,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: 'Le souvenir d\'aujourd\'hui',
     frame_style_select: 'Sélectionnez le style de cadre',
     frame_baroque: 'Baroque',
-    frame_ornate: 'Orné',
     frame_vintage: 'Ancien',
     frame_modern: 'Moderne',
     frame_soft_glass: 'Verre souple',
@@ -361,7 +346,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: 'Jante dégradée',
     frame_no_frame: 'Pas de cadre',
     frame_baroque_desc: 'Cadre classique orné',
-    frame_ornate_desc: 'Cadre à motif sculpté complexe',
     frame_vintage_desc: 'Cadre élégant de style vintage',
     frame_modern_desc: 'Cadre épuré et moderne',
     frame_soft_glass_desc: 'Cadre en verre translucide tendance',
@@ -401,7 +385,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: 'Die heutige Erinnerung',
     frame_style_select: 'Rahmenstil auswählen',
     frame_baroque: 'Barock',
-    frame_ornate: 'Aufwendig',
     frame_vintage: 'Jahrgang',
     frame_modern: 'Modern',
     frame_soft_glass: 'Weiches Glas',
@@ -410,7 +393,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: 'Farbverlaufsrand',
     frame_no_frame: 'Kein Rahmen',
     frame_baroque_desc: 'Verzierter klassischer Rahmen',
-    frame_ornate_desc: 'Aufwendig geschnitzter Musterrahmen',
     frame_vintage_desc: 'Eleganter Rahmen im Vintage-Stil',
     frame_modern_desc: 'Sauberer, moderner Rahmen',
     frame_soft_glass_desc: 'Trendiger transluzenter Glasrahmen',
@@ -450,7 +432,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     photo_alt_today_memory: 'Il ricordo di oggi',
     frame_style_select: 'Seleziona lo stile della cornice',
     frame_baroque: 'Barocco',
-    frame_ornate: 'Ornato',
     frame_vintage: 'Annata',
     frame_modern: 'Moderno',
     frame_soft_glass: 'Vetro morbido',
@@ -459,7 +440,6 @@ const titlePage: Record<LangCode, TitlePageTranslations> = {
     frame_gradient_rim: 'Bordo sfumato',
     frame_no_frame: 'Nessuna cornice',
     frame_baroque_desc: 'Cornice classica decorata',
-    frame_ornate_desc: 'Cornice con motivo intagliato intricato',
     frame_vintage_desc: 'Elegante cornice in stile vintage',
     frame_modern_desc: 'Struttura pulita e moderna',
     frame_soft_glass_desc: 'Cornice in vetro traslucido alla moda',

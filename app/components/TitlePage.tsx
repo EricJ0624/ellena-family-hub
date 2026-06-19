@@ -207,7 +207,6 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
     baroque: BAROQUE_FRAME_INSET_CLASS,
-    ornate: 'inset-[20px]',
     vintage: VINTAGE_FRAME_INSET_CLASS,
     modern: MODERN_FRAME_INSET_CLASS,
     soft_glass: SOFT_GLASS_FRAME_INSET_CLASS,
