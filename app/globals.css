@@ -1390,6 +1390,9 @@ select {
   background-position: center;
   container-type: size;
   container-name: chalk-modal;
+  /* Align form controls with baked PNG label left edge ("What to do?" / "Who will do it?") */
+  --chalkboard-newtask-form-left: 10.5%;
+  --chalkboard-newtask-form-right: 15%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
@@ -1413,8 +1416,8 @@ select {
 
 .chalkboard-modal-field {
   position: absolute;
-  left: 13%;
-  right: 15%;
+  left: var(--chalkboard-newtask-form-left);
+  right: var(--chalkboard-newtask-form-right);
   min-width: 0;
 }
 
@@ -1456,8 +1459,8 @@ select {
 
 .chalkboard-modal-actions {
   position: absolute;
-  left: 13%;
-  right: 15%;
+  left: var(--chalkboard-newtask-form-left);
+  right: var(--chalkboard-newtask-form-right);
   bottom: 15%;
   display: flex;
   flex-shrink: 0;
