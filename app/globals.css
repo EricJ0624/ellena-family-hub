@@ -1390,9 +1390,9 @@ select {
   background-position: center;
   container-type: size;
   container-name: chalk-modal;
-  /* Align form controls with baked PNG label left edge ("What to do?" / "Who will do it?") */
-  --chalkboard-newtask-form-left: 12.5%;
-  --chalkboard-newtask-form-right: 14%;
+  /* PNG baked labels start ~22.3% (pixel scan of chalkboard-newtask.png 467×558) */
+  --chalkboard-newtask-form-left: 22.5%;
+  --chalkboard-newtask-form-right: 8.5%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
@@ -1421,14 +1421,14 @@ select {
   min-width: 0;
 }
 
-/* PNG labels: "What to do?" ~31%, input sits just below */
+/* PNG labels: "What to do?" ~32%, input sits just below */
 .chalkboard-modal-field--what {
-  top: 37%;
+  top: 39%;
 }
 
-/* PNG labels: "Who will do it?" ~56%, input sits just below */
+/* PNG labels: "Who will do it?" ~54%, input sits just below */
 .chalkboard-modal-field--who {
-  top: 59.5%;
+  top: 61%;
 }
 
 .chalkboard-modal-container .chalkboard-form-input {
@@ -1440,6 +1440,7 @@ select {
 
 .chalkboard-modal-container select.chalkboard-form-input {
   appearance: none;
+  -webkit-appearance: none;
   padding-right: 2rem;
   background-color: rgba(255, 255, 255, 0.08);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23ffffff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -1448,20 +1449,21 @@ select {
   background-size: 0.65rem auto;
 }
 
+.chalkboard-modal-container select.chalkboard-form-input:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23ffffff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
 .chalkboard-modal-container select.chalkboard-form-input option {
   background-color: var(--chalkboard-bg);
   color: #ffffff;
-}
-
-.chalkboard-modal-container select.chalkboard-form-input:focus {
-  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .chalkboard-modal-actions {
   position: absolute;
   left: var(--chalkboard-newtask-form-left);
   right: var(--chalkboard-newtask-form-right);
-  bottom: 15%;
+  bottom: 18%;
   display: flex;
   flex-shrink: 0;
   gap: var(--spacing-md);
