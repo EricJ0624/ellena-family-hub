@@ -1392,7 +1392,7 @@ select {
   container-name: chalk-modal;
   /* PNG labels left ~22.3%; inputs + buttons share one content width */
   --chalkboard-newtask-form-left: 22.5%;
-  --chalkboard-newtask-form-right: 12%;
+  --chalkboard-newtask-form-right: 16%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
