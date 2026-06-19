@@ -306,22 +306,29 @@ export function FamilyTasksSection({
         <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
           <div className="chalkboard-modal-frame" onClick={(e) => e.stopPropagation()}>
             <div className="chalkboard-modal-container">
+              <h2 className="chalkboard-modal-heading">{t.todo_modal_title}</h2>
               <div className="chalkboard-modal-form">
                 <div className="chalkboard-modal-field chalkboard-modal-field--what">
+                  <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-what">
+                    {t.todo_what_label}
+                  </label>
                   <input
                     ref={todoTextRef}
+                    id="chalkboard-todo-what"
                     type="text"
                     className="chalkboard-form-input"
                     placeholder={t.todo_what_placeholder}
-                    aria-label={t.todo_what_label}
                   />
                 </div>
                 <div className="chalkboard-modal-field chalkboard-modal-field--who">
+                  <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-who">
+                    {t.todo_who_label}
+                  </label>
                   <select
                     ref={todoWhoRef}
+                    id="chalkboard-todo-who"
                     className="chalkboard-form-input"
                     defaultValue=""
-                    aria-label={t.todo_who_label}
                   >
                     <option value="">{t.todo_who_placeholder || t.anyone}</option>
                     {taskMembers.map((m) => (

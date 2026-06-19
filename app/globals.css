@@ -1040,6 +1040,8 @@ select {
 .todo-text,
 .todo-assignee,
 .chalkboard-modal-title,
+.chalkboard-modal-heading,
+.chalkboard-modal-field-label,
 .chalkboard-form-label,
 .chalkboard-form-input,
 .chalkboard-btn-secondary,
@@ -1169,7 +1171,7 @@ select {
   max-width: 100%;
   background: transparent;
   color: rgba(255, 255, 255, 0.97);
-  border: 0.14cqw solid rgba(255, 255, 255, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   border-radius: var(--chalk-sketch-radius);
   font-family: var(--chalk-font-title);
   font-size: 4.25cqw;
@@ -1368,7 +1370,7 @@ select {
   text-shadow: var(--chalk-shadow-ui);
 }
 
-/* Chalkboard Modal Styles — PNG plate + HTML inputs (labels baked into image) */
+/* Chalkboard Modal Styles — PNG plate + HTML labels/inputs */
 .chalkboard-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1422,16 +1424,49 @@ select {
   left: var(--chalkboard-newtask-form-left);
   right: var(--chalkboard-newtask-form-right);
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4cqi;
 }
 
-/* PNG labels: "What to do?" ~32%, input sits just below */
+/* PNG(467×558) 기준: 제목 ~14%, 필드 라벨 ~30% / ~50% */
+.chalkboard-modal-container .chalkboard-modal-heading {
+  position: absolute;
+  z-index: 1;
+  left: var(--chalkboard-newtask-form-left);
+  right: var(--chalkboard-newtask-form-right);
+  top: 14%;
+  margin: 0;
+  text-align: center;
+  font-family: var(--chalk-font-title);
+  font-size: 7.8cqi;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.97);
+  text-shadow: var(--chalk-shadow-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chalkboard-modal-container .chalkboard-modal-field-label {
+  margin: 0;
+  font-family: var(--chalk-font-title);
+  font-size: 5cqi;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.97);
+  text-shadow: var(--chalk-shadow-ui);
+}
+
 .chalkboard-modal-field--what {
-  top: 39%;
+  top: 28%;
 }
 
-/* PNG labels: "Who will do it?" ~54%, input sits just below */
 .chalkboard-modal-field--who {
-  top: 61%;
+  top: 50%;
 }
 
 .chalkboard-modal-container .chalkboard-form-input {
