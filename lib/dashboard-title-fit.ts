@@ -1,7 +1,8 @@
 /** canvas measureText로 가용 폭에 맞는 font-size(px) 계산 */
 
 export const DEFAULT_APP_TITLE_MAX_PX_PORTRAIT = 42;
-export const DEFAULT_APP_TITLE_MIN_PX_PORTRAIT = 28;
+/** 세로 기본 타이틀 — CJK 부제 포함 시 28px 하한으로는 170px대 박스에 안 들어갈 수 있음 */
+export const DEFAULT_APP_TITLE_MIN_PX_PORTRAIT = 22;
 
 export function measureTextWidthPx(
   text: string,

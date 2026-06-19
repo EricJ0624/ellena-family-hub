@@ -18,11 +18,15 @@ export function getDashboardPortraitTitleFitMaxWidth(
   rowWidth: number,
   adminWidth: number,
   viewportWidth: number,
+  hasAdminButton = false,
 ): number {
   const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
-  // flex [1fr | title | 1fr+Admin] — 타이틀 중앙 정렬 시 양쪽 1fr이 같아야 하므로 Admin 폭을 양쪽에서 예약
-  const symmetricCap = rowWidth - adminWidth * 2 - 16;
-  return Math.max(120, Math.min(frameCap, symmetricCap));
+  if (!hasAdminButton || adminWidth <= 0) {
+    return Math.max(120, Math.min(frameCap, rowWidth - 16));
+  }
+  // flex [1fr | title | 1fr+Admin] — Admin은 오른쪽 열만 점유, 타이틀은 행 폭 − Admin − gap
+  const layoutCap = rowWidth - adminWidth - 12;
+  return Math.max(120, Math.min(frameCap, layoutCap));
 }
 
 /** @deprecated — getDashboardPortraitTitleFitMaxWidth 사용 */

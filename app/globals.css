@@ -1354,14 +1354,17 @@ select {
   color: rgba(255, 255, 255, 0.92);
   font-family: var(--chalk-font-body);
   font-weight: 400;
-  font-size: 7.5cqw;
+  font-size: 5.5cqw;
   font-style: italic;
   text-align: center;
   position: relative;
   z-index: 1;
   width: 100%;
+  max-width: 92%;
+  margin-inline: auto;
   line-height: 1.2;
   letter-spacing: 0.02em;
+  white-space: nowrap;
   text-shadow: var(--chalk-shadow-ui);
 }
 

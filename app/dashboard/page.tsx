@@ -31,6 +31,7 @@ import {
 import {
   fitFontSizeToWidth,
   fitAppTitleFontSizeToWidth,
+  shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
   DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
@@ -40,7 +41,6 @@ import {
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
   DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
-  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
@@ -1440,11 +1440,12 @@ export default function FamilyHub() {
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
       const adminBtn = row?.querySelector('button');
+      const hasAdminButton = !!adminBtn;
       const adminWidth = adminBtn
         ? adminBtn.getBoundingClientRect().width + 8
-        : DASHBOARD_TITLE_ADMIN_RESERVE_PX;
+        : 0;
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth);
+      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton);
     }
     const row = titleRowRef.current;
     if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
@@ -1487,8 +1488,8 @@ export default function FamilyHub() {
         maxWidth,
         DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
         Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT),
-        fontFamily,
-        fontWeight,
+        titleFont.fontFamily,
+        titleFont.fontWeight,
         letterSpacing,
       );
     }
@@ -1547,8 +1548,8 @@ export default function FamilyHub() {
         maxWidth,
         DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
         Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT),
-        fontFamily,
-        fontWeight,
+        titleFont.fontFamily,
+        titleFont.fontWeight,
         letterSpacing,
       );
       setCustomTitleFontSize(fitted);
@@ -1603,15 +1604,27 @@ export default function FamilyHub() {
     };
   }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait]);
 
-  /** DOM 실측 — scrollWidth 초과 시 1px씩 축소 (canvas 추정 보정) */
+  /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정) */
   useLayoutEffect(() => {
-    if (!frameIsPortrait && isDefaultDashboardTitle) return;
     const el = titleH1Ref.current;
     if (!el) return;
+
+    if (frameIsPortrait && isDefaultDashboardTitle) {
+      const maxPx = Math.min(
+        customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
+        DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
+      );
+      const startPx = customTitleFontSize ?? estimatedCustomTitleFontSize ?? maxPx;
+      const fitted = shrinkFontSizeToElement(el, startPx, DEFAULT_APP_TITLE_MIN_PX_PORTRAIT);
+      if (fitted !== customTitleFontSize) {
+        setCustomTitleFontSize(fitted);
+      }
+      return;
+    }
+
+    if (!frameIsPortrait && isDefaultDashboardTitle) return;
     const computed = parseFloat(getComputedStyle(el).fontSize);
-    const minPx = frameIsPortrait && isDefaultDashboardTitle
-      ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT
-      : CUSTOM_TITLE_FONT_MIN_PX;
+    const minPx = CUSTOM_TITLE_FONT_MIN_PX;
     if (
       Number.isFinite(computed)
       && el.scrollWidth > el.clientWidth + 1
@@ -1626,6 +1639,7 @@ export default function FamilyHub() {
     estimatedCustomTitleFontSize,
     dashboardTitleText,
     customTitleFontFamily,
+    customFontSizeCap,
   ]);
   const dashboardMainContentStyle = {
     ['--dashboard-body-font' as any]: bodyFont.fontFamily,
@@ -5608,13 +5622,17 @@ export default function FamilyHub() {
     textOverflow: 'clip',
     fontSize: titleFontSizeValue,
     fontWeight: isDefaultDashboardTitle
-      ? (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight)
+      ? (frameIsPortrait
+        ? titleFont.fontWeight
+        : (effectiveTitleStyle?.fontWeight ?? titleFont.fontWeight))
       : BAROQUE_MAT_DASHBOARD_TITLE.fontWeight,
     letterSpacing: isDefaultDashboardTitle
       ? `${effectiveTitleStyle?.letterSpacing ?? -0.5}px`
       : `${BAROQUE_MAT_DASHBOARD_TITLE.letterSpacingPx}px`,
     fontFamily: isDefaultDashboardTitle
-      ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
+      ? (frameIsPortrait
+        ? titleFont.fontFamily
+        : (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily))
       : BAROQUE_MAT_DASHBOARD_TITLE.fontFamily,
     ...(isDefaultDashboardTitle
       ? {

@@ -4,10 +4,17 @@
 
 'use client';
 
-import React, { startTransition, useCallback, useEffect, useRef, useState } from 'react';
+import React, { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
+import { fitFontSizeToWidth, shrinkFontSizeToElement } from '@/lib/dashboard-title-fit';
+
+/** chalkboard-empty-state — Caveat 계열, globals.css --chalk-font-body 와 동일 */
+const CHALK_EMPTY_FONT_FAMILY = "'Caveat', 'Patrick Hand', cursive";
+const CHALK_EMPTY_FONT_MIN_PX = 10;
+/** 이전 7.5cqw 상한과 동일 비율 — 컨테이너 기준 최대 시작 크기 */
+const CHALK_EMPTY_FONT_MAX_CQW = 0.075;
 
 /** chalkboard-bg.png 에 섹션 타이틀(Family Tasks)이 항상 포함됨 — 모든 언어에서 HTML 타이틀은 sr-only */
 function usesBakedChalkboardTitle(_sectionTitle: string): boolean {
@@ -115,6 +122,8 @@ export function FamilyTasksSection({
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
+  const emptyStateRef = useRef<HTMLParagraphElement>(null);
+  const [emptyStateFontPx, setEmptyStateFontPx] = useState<number | null>(null);
 
   const formatAssigneeDisplay = useCallback(
     (uid: string) => {
@@ -250,6 +259,47 @@ export function FamilyTasksSection({
   const visibleTasks = dedupeFamilyTasks(tasks || []);
   const hideHtmlTitle = usesBakedChalkboardTitle(t.todo_section_title);
 
+  const fitEmptyStateFont = useCallback(() => {
+    const el = emptyStateRef.current;
+    const area = el?.parentElement;
+    if (!el || !area || area.clientWidth <= 0) return;
+
+    const maxWidth = area.clientWidth * 0.92;
+    const maxPx = Math.max(
+      CHALK_EMPTY_FONT_MIN_PX + 1,
+      area.clientWidth * CHALK_EMPTY_FONT_MAX_CQW,
+    );
+    const estimated = fitFontSizeToWidth(
+      t.todo_empty_state,
+      maxWidth,
+      CHALK_EMPTY_FONT_MIN_PX,
+      maxPx,
+      CHALK_EMPTY_FONT_FAMILY,
+      400,
+    );
+    const fitted = shrinkFontSizeToElement(el, estimated, CHALK_EMPTY_FONT_MIN_PX);
+    setEmptyStateFontPx(fitted);
+  }, [t.todo_empty_state]);
+
+  useLayoutEffect(() => {
+    if (visibleTasks.length > 0) {
+      setEmptyStateFontPx(null);
+      return;
+    }
+    fitEmptyStateFont();
+    const area = emptyStateRef.current?.parentElement;
+    if (!area) return;
+    const ro = new ResizeObserver(() => fitEmptyStateFont());
+    ro.observe(area);
+    const onFonts = () => fitEmptyStateFont();
+    document.fonts?.addEventListener?.('loadingdone', onFonts);
+    void document.fonts?.ready?.then(onFonts);
+    return () => {
+      ro.disconnect();
+      document.fonts?.removeEventListener?.('loadingdone', onFonts);
+    };
+  }, [visibleTasks.length, fitEmptyStateFont]);
+
   return (
     <>
       {isTodoModalOpen && createPortal(
@@ -350,7 +400,13 @@ export function FamilyTasksSection({
               ))}
             </div>
           ) : (
-            <p className="chalkboard-empty-state">{t.todo_empty_state}</p>
+            <p
+              ref={emptyStateRef}
+              className="chalkboard-empty-state"
+              style={emptyStateFontPx != null ? { fontSize: `${emptyStateFontPx}px` } : undefined}
+            >
+              {t.todo_empty_state}
+            </p>
           )}
         </div>
       </section>
