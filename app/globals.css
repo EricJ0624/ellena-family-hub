@@ -1390,10 +1390,9 @@ select {
   background-position: center;
   container-type: size;
   container-name: chalk-modal;
-  /* PNG baked labels start ~22.3%; green inner right ~6.4%; buttons clear chalk ~13% */
+  /* PNG labels left ~22.3%; inputs + buttons share one content width */
   --chalkboard-newtask-form-left: 22.5%;
-  --chalkboard-newtask-form-right: 6.5%;
-  --chalkboard-newtask-actions-right: 13%;
+  --chalkboard-newtask-form-right: 12%;
 }
 
 @media (orientation: landscape) and (max-height: 640px) {
@@ -1463,7 +1462,7 @@ select {
 .chalkboard-modal-actions {
   position: absolute;
   left: var(--chalkboard-newtask-form-left);
-  right: var(--chalkboard-newtask-actions-right);
+  right: var(--chalkboard-newtask-form-right);
   bottom: 18%;
   display: flex;
   flex-shrink: 0;
