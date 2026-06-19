@@ -13,6 +13,7 @@ import {
   POLAROID_FRAME_INSET_CLASS,
   POLAROID_PAPER_BACKPLATE_CLASS,
   VINTAGE_FRAME_INSET_CLASS,
+  EDITORIAL_FRAME_INSET_CLASS,
   SOFT_GLASS_FRAME_INSET_CLASS,
   SOFT_GLASS_PHOTO_IMAGE_CLASS,
   BaroqueMatCaptionOverlay,
@@ -211,7 +212,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     modern: MODERN_FRAME_INSET_CLASS,
     soft_glass: SOFT_GLASS_FRAME_INSET_CLASS,
     polaroid_modern: POLAROID_FRAME_INSET_CLASS,
-    editorial: 'inset-[10px]',
+    editorial: EDITORIAL_FRAME_INSET_CLASS,
     gradient_rim: 'inset-[12px]',
     no_frame: 'inset-0',
   };

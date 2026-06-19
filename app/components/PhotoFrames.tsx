@@ -56,6 +56,13 @@ export const VINTAGE_FRAME_INSET_CLASS =
 export const VINTAGE_FRAME_LANDSCAPE_SRC =
   '/photo-frames/vintage-frame-landscape.png';
 
+/** editorial-frame-landscape.png (496×372, 외곽·개구부 투명) 사진 구역 inset */
+export const EDITORIAL_FRAME_INSET_CLASS =
+  'left-[7.3%] right-[8.1%] top-[9.9%] bottom-[9.9%]';
+
+export const EDITORIAL_FRAME_LANDSCAPE_SRC =
+  '/photo-frames/editorial-frame-landscape.png';
+
 /** polaroid-paper-landscape.png (배경 크롭 후) 사진 구역 inset — scripts/crop-polaroid-bg.mjs */
 export const POLAROID_FRAME_INSET_CLASS =
   'left-[10.4%] right-[9.4%] top-[10.7%] bottom-[16.7%]';
@@ -407,16 +414,15 @@ const PolaroidModernFrame: React.FC<{ color: string; uid: string }> = () => (
   />
 );
 
-// 에디토리얼 스타일 프레임 SVG
-const EditorialFrame: React.FC<{ color: string; uid: string }> = ({ color }) => {
-  return (
-    <svg viewBox="0 0 400 300" preserveAspectRatio="none" className={frameSvgOverlayClass}>
-      <rect x="0" y="0" width="400" height="300" rx="10" fill="rgba(15,23,42,0.02)" />
-      <rect x="3" y="3" width="394" height="294" rx="8" fill="none" stroke={color} strokeOpacity="0.85" strokeWidth="1.2" />
-      <rect x="8" y="8" width="384" height="284" rx="6" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.9" />
-    </svg>
-  );
-};
+// 에디토리얼 스타일 프레임 (PNG 오버레이)
+const EditorialFrame: React.FC<{ color: string; uid: string }> = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src={EDITORIAL_FRAME_LANDSCAPE_SRC}
+    alt=""
+    className={`${frameSvgOverlayClass} object-fill`}
+  />
+);
 
 // 프레임 없음(위젯 카드 스타일) - 컨테이너에서 글래스 토큰을 직접 적용하므로 SVG는 비움
 const NoFrame: React.FC<{ color: string; uid: string }> = () => null;
