@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { ChevronLeft, X, Trash2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -26,6 +26,9 @@ const COMPRESSION_OPTIONS = {
   maxWidthOrHeight: 2560,
   initialQuality: 0.9,
 };
+
+/** 이 길이를 넘는 압축/원본 라벨은 헤더에서 세로 배치 (예: Compressed / Original) */
+const UPLOAD_MODE_LABEL_STACK_MAX_LEN = 7;
 
 function formatMemorySectionDate(date: Date, lang: LangCode): string {
   return new Intl.DateTimeFormat(intlLocaleForLang(lang), {
@@ -113,6 +116,14 @@ export default function MemoriesPage() {
   const { lang } = useLanguage();
   const dt = (key: keyof DashboardTranslations) => getDashboardTranslation(lang, key);
   const ct = (key: keyof CommonTranslations) => getCommonTranslation(lang, key);
+  const uploadModeCompressedLabel = dt('memories_mode_compressed');
+  const uploadModeOriginalLabel = dt('memories_mode_original');
+  const stackUploadModeOptions = useMemo(
+    () =>
+      Math.max(uploadModeCompressedLabel.length, uploadModeOriginalLabel.length) >
+      UPLOAD_MODE_LABEL_STACK_MAX_LEN,
+    [uploadModeCompressedLabel, uploadModeOriginalLabel],
+  );
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [lightboxViewport, setLightboxViewport] = useState({ top: 0, left: 0, width: 0, height: 0 });
@@ -544,30 +555,36 @@ export default function MemoriesPage() {
         <h1 className="m-0 flex-1 text-[calc(1.25rem*var(--hs))] font-bold">
           {dt('section_title_memories')}
         </h1>
-        <div className="flex flex-col gap-[calc(6px*var(--hs))]">
+        <div className="flex shrink-0 flex-col gap-[calc(6px*var(--hs))]">
           <span className="text-[calc(12px*var(--hs))] text-white/90">
             {dt('memories_upload_label')}
           </span>
-          <div className="grid grid-cols-2 gap-[calc(8px*var(--hs))]">
-            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] text-[calc(13px*var(--hs))]">
+          <div
+            className={`flex gap-[calc(6px*var(--hs))] ${
+              stackUploadModeOptions
+                ? 'flex-col items-start'
+                : 'flex-row flex-wrap items-center'
+            }`}
+          >
+            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] whitespace-nowrap text-[calc(13px*var(--hs))] leading-tight">
               <input
                 type="radio"
                 name="uploadMode"
                 checked={uploadMode === 'normal'}
                 onChange={() => setUploadMode('normal')}
-                className="h-[14px] w-[14px]"
+                className="h-[14px] w-[14px] shrink-0"
               />
-              {dt('memories_mode_compressed')}
+              {uploadModeCompressedLabel}
             </label>
-            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] text-[calc(13px*var(--hs))]">
+            <label className="flex cursor-pointer items-center gap-[calc(6px*var(--hs))] whitespace-nowrap text-[calc(13px*var(--hs))] leading-tight">
               <input
                 type="radio"
                 name="uploadMode"
                 checked={uploadMode === 'original'}
                 onChange={() => setUploadMode('original')}
-                className="h-[14px] w-[14px]"
+                className="h-[14px] w-[14px] shrink-0"
               />
-              {dt('memories_mode_original')}
+              {uploadModeOriginalLabel}
             </label>
           </div>
         </div>
