@@ -96,7 +96,7 @@
   --chalkboard-inset-bottom: 7.5%;
   --chalkboard-inset-left: 8%;
   --chalkboard-newtask-image: url('/family-tasks/chalkboard-newtask.png');
-  /* public/family-tasks/chalkboard-newtask.png (467×558) */
+  /* public/family-tasks/chalkboard-newtask.png (467×558) — 텍스트 없음, HTML i18n 오버레이 */
   --chalkboard-newtask-aspect: 467 / 558;
 }
 
@@ -1429,13 +1429,13 @@ select {
   gap: 1.4cqi;
 }
 
-/* PNG(467×558) 기준: 제목 ~14%, 필드 라벨 ~30% / ~50% */
+/* PNG(467×558) 빈 칠판 — 제목·필드 라벨은 HTML(i18n) */
 .chalkboard-modal-container .chalkboard-modal-heading {
   position: absolute;
   z-index: 1;
   left: var(--chalkboard-newtask-form-left);
   right: var(--chalkboard-newtask-form-right);
-  top: 14%;
+  top: 15%;
   margin: 0;
   text-align: center;
   font-family: var(--chalk-font-title);
@@ -1462,11 +1462,11 @@ select {
 }
 
 .chalkboard-modal-field--what {
-  top: 28%;
+  top: 29%;
 }
 
 .chalkboard-modal-field--who {
-  top: 50%;
+  top: 51%;
 }
 
 .chalkboard-modal-container .chalkboard-form-input {
