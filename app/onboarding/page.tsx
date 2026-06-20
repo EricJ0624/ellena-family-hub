@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback, isTransientAuthNetworkError } from '@/lib/auth-session-resilience';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Users, Loader2, AlertCircle, CheckCircle, Copy, X, ArrowRight } from 'lucide-react';
-import { LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/translations/onboarding';
@@ -58,7 +57,7 @@ interface UserGroup {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { lang, setLanguage } = useLanguage();
+  const { lang } = useLanguage();
   const { setCurrentGroupId } = useGroup();
   const [fromAdmin, setFromAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -73,9 +72,6 @@ export default function OnboardingPage() {
     getMemberManagementTranslation(lang, key);
   const ct = (key: 'save' | 'close' | 'cancel' | 'skip' | 'app_title') => getCommonTranslation(lang, key);
 
-  const setAppLanguage = (code: LangCode) => {
-    void setLanguage(code, { updateCurrentGroup: false });
-  };
   const [creating, setCreating] = useState(false);
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
   const [createdWithPendingName, setCreatedWithPendingName] = useState(false);
@@ -369,9 +365,6 @@ export default function OnboardingPage() {
         .single();
 
       if (fetchError) throw fetchError;
-
-      // 그룹 표시 언어 설정 (UI에서 선택한 언어 = 전역 lang)
-      await supabase.from('groups').update({ preferred_language: lang }).eq('id', data.id);
 
       // 그룹 생성자(소유자) 가족 표시 설정 (아빠/엄마)
       if (createFamilyRole && user) {
@@ -679,20 +672,6 @@ export default function OnboardingPage() {
                 <p className="m-0 text-base font-medium leading-relaxed text-slate-500">
                   {ot('subtitle')}
                 </p>
-                <div className="mx-auto mt-5 max-w-[320px] text-left">
-                  <label className="mb-2 block text-sm font-semibold text-slate-600">
-                    {ot('display_language')}
-                  </label>
-                  <select
-                    value={lang}
-                    onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                    className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
-                  >
-                    {LANG_OPTIONS.map(({ code, label }) => (
-                      <option key={code} value={code}>{label}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {/* 선택 카드 */}
@@ -851,22 +830,6 @@ export default function OnboardingPage() {
                       />
                     </div>
 
-                    {/* 표시 언어 선택 */}
-                    <div className="mb-5">
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        {ot('display_language')}
-                      </label>
-                      <select
-                        value={lang}
-                        onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                        className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
-                      >
-                        {LANG_OPTIONS.map(({ code, label }) => (
-                          <option key={code} value={code}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
-
                     {/* 가족 표시 (생성자: 아빠/엄마/선택 안함) */}
                     <div className="mb-5">
                       <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -960,20 +923,6 @@ export default function OnboardingPage() {
                     <ArrowRight className="h-4 w-4 rotate-180" />
                     {ot('back')}
                   </button>
-                  <div className="mb-5">
-                    <label className="mb-2 block text-sm font-semibold text-slate-600">
-                      {ot('display_language')}
-                    </label>
-                    <select
-                      value={lang}
-                      onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                      className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
-                    >
-                      {LANG_OPTIONS.map(({ code, label }) => (
-                        <option key={code} value={code}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
                   {!groupPreview && (
                     <>
                       <h2 className="m-0 mb-2 text-2xl font-bold text-slate-900">
@@ -1206,20 +1155,6 @@ export default function OnboardingPage() {
                 <p className="m-0 text-sm text-slate-500">
                   {ot('choose_group_subtitle')}
                 </p>
-                <div className="mt-5 text-left">
-                  <label className="mb-2 block text-sm font-semibold text-slate-600">
-                    {ot('display_language')}
-                  </label>
-                  <select
-                    value={lang}
-                    onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                    className="w-full rounded-[10px] border border-slate-200 bg-white px-[14px] py-3 text-[15px] text-slate-800"
-                  >
-                    {LANG_OPTIONS.map(({ code, label }) => (
-                      <option key={code} value={code}>{label}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               <div className="mb-6 flex flex-col gap-3">

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     const userIds = allUsers.map(u => u.id);
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, email, nickname')
+      .select('id, email, nickname, preferred_language, country_code')
       .in('id', userIds);
 
     // 각 사용자의 그룹 수 계산 (병렬 처리)
@@ -111,6 +111,8 @@ export async function GET(request: NextRequest) {
             id: authUser.id,
             email: authUser.email || profile?.email || null,
             nickname: profile?.nickname || authUser.user_metadata?.nickname || null,
+            preferred_language: profile?.preferred_language || null,
+            country_code: profile?.country_code || null,
             created_at: authUser.created_at || new Date().toISOString(),
             last_sign_in_at: authUser.last_sign_in_at || null,
             groups_count: totalGroups,
@@ -122,6 +124,8 @@ export async function GET(request: NextRequest) {
             id: authUser.id,
             email: authUser.email || profile?.email || null,
             nickname: profile?.nickname || authUser.user_metadata?.nickname || null,
+            preferred_language: profile?.preferred_language || null,
+            country_code: profile?.country_code || null,
             created_at: authUser.created_at || new Date().toISOString(),
             last_sign_in_at: authUser.last_sign_in_at || null,
             groups_count: 0,

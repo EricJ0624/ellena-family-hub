@@ -20,7 +20,9 @@ import { AppTitleContent } from '@/app/components/AppTitleContent';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { getFontStyle } from '@/lib/language-fonts';
+import { getFontStyle, intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
+import { getCountryOptions, isValidCountryCode } from '@/lib/countries';
+import { fetchProfilePreferences, saveProfilePreferences } from '@/lib/profile-preferences';
 import { getCommonTranslation, type CommonTranslations } from '@/lib/translations/common';
 import {
   getDashboardTitleText,
@@ -44,6 +46,7 @@ import {
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
+import { getLoginTranslation } from '@/lib/translations/login';
 import { getTravelTranslation, type TravelTranslations } from '@/lib/translations/travel';
 import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/games';
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
@@ -271,7 +274,7 @@ export default function FamilyHub() {
       console.warn('GroupProvider가 없습니다. 그룹 필터링이 비활성화됩니다.');
     }
   }
-  const { lang } = useLanguage();
+  const { lang, setLanguage } = useLanguage();
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
     () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
@@ -322,6 +325,8 @@ export default function FamilyHub() {
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
   const nicknameInputRef = useRef<HTMLInputElement>(null);
   const [nicknameModalFamilyRole, setNicknameModalFamilyRole] = useState<'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>(null);
+  const [accountModalLang, setAccountModalLang] = useState<LangCode>('en');
+  const [accountModalCountry, setAccountModalCountry] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; name: string; isCurrentUser: boolean }>>([]);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
@@ -875,12 +880,16 @@ export default function FamilyHub() {
     }
   }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
 
-  // 닉네임 모달 열릴 때 가족 표시 값을 현재 값으로 초기화
+  // 닉네임 모달 열릴 때 가족 표시·언어·국가 값 초기화
   useEffect(() => {
-    if (isNicknameModalOpen && userId) {
-      setNicknameModalFamilyRole(familyRoleByUserId[userId] ?? null);
-    }
-  }, [isNicknameModalOpen, userId, familyRoleByUserId]);
+    if (!isNicknameModalOpen || !userId) return;
+    setNicknameModalFamilyRole(familyRoleByUserId[userId] ?? null);
+    setAccountModalLang(lang);
+    void fetchProfilePreferences(userId).then((prefs) => {
+      if (prefs?.preferred_language) setAccountModalLang(prefs.preferred_language);
+      if (prefs?.country_code) setAccountModalCountry(prefs.country_code);
+    }).catch(() => undefined);
+  }, [isNicknameModalOpen, userId, familyRoleByUserId, lang]);
 
   // --- [EFFECTS] ---
   
@@ -5310,11 +5319,20 @@ export default function FamilyHub() {
       return;
     }
 
+    if (!accountModalCountry || !isValidCountryCode(accountModalCountry)) {
+      alert(dt('account_country_required'));
+      return;
+    }
+
     try {
       // 1. profiles 테이블에 nickname 저장/업데이트
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ nickname: sanitizedNickname })
+        .update({
+          nickname: sanitizedNickname,
+          preferred_language: accountModalLang,
+          country_code: accountModalCountry.toUpperCase(),
+        })
         .eq('id', userId);
 
       if (profileError) {
@@ -5324,7 +5342,9 @@ export default function FamilyHub() {
           .upsert({ 
             id: userId, 
             nickname: sanitizedNickname,
-            email: (await supabase.auth.getUser()).data.user?.email || ''
+            email: (await supabase.auth.getUser()).data.user?.email || '',
+            preferred_language: accountModalLang,
+            country_code: accountModalCountry.toUpperCase(),
           }, {
             onConflict: 'id'
           });
@@ -5337,7 +5357,11 @@ export default function FamilyHub() {
 
       // 2. Supabase user_metadata도 동기화 (기존 기능 유지)
       const { error: authError } = await supabase.auth.updateUser({
-        data: { nickname: sanitizedNickname }
+        data: {
+          nickname: sanitizedNickname,
+          preferred_language: accountModalLang,
+          country_code: accountModalCountry.toUpperCase(),
+        },
       });
 
       if (authError) {
@@ -5347,6 +5371,7 @@ export default function FamilyHub() {
 
       // 3. 로컬 상태 업데이트
       setUserName(sanitizedNickname);
+      await setLanguage(accountModalLang);
       setIsNicknameModalOpen(false);
       if (nicknameInputRef.current) {
         nicknameInputRef.current.value = "";
@@ -6162,6 +6187,31 @@ export default function FamilyHub() {
                       <option value="other">{getMemberManagementTranslation(lang, 'family_role_other')}</option>
                     </>
                   )}
+                </select>
+              </div>
+              <div className="form-field">
+                <label className="form-label">{dt('account_language_label')}</label>
+                <select
+                  className="form-input"
+                  value={accountModalLang}
+                  onChange={(e) => setAccountModalLang(e.target.value as LangCode)}
+                >
+                  {LANG_OPTIONS.map(({ code, label }) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label className="form-label">{dt('account_country_label')}</label>
+                <select
+                  className="form-input"
+                  value={accountModalCountry}
+                  onChange={(e) => setAccountModalCountry(e.target.value)}
+                >
+                  <option value="">{getLoginTranslation(lang, 'country_select_placeholder')}</option>
+                  {getCountryOptions(intlLocaleForLang(accountModalLang)).map(({ code, label }) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
                 </select>
               </div>
             </div>

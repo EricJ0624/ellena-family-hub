@@ -41,6 +41,20 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true);
     if (adminsError) throw adminsError;
 
+    const { data: profileLocaleRows, error: localeError } = await supabase
+      .from('profiles')
+      .select('preferred_language, country_code');
+    if (localeError) throw localeError;
+
+    const languageDistribution: Record<string, number> = {};
+    const countryDistribution: Record<string, number> = {};
+    for (const row of profileLocaleRows || []) {
+      const langKey = String(row.preferred_language || 'unknown');
+      const countryKey = String(row.country_code || 'unknown');
+      languageDistribution[langKey] = (languageDistribution[langKey] || 0) + 1;
+      countryDistribution[countryKey] = (countryDistribution[countryKey] || 0) + 1;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -48,6 +62,8 @@ export async function GET(request: NextRequest) {
         totalGroups: totalGroups || 0,
         activeUsers: activeUsers || 0,
         totalAdmins: totalAdmins || 0,
+        languageDistribution,
+        countryDistribution,
       },
     });
   } catch (error) {

@@ -23,6 +23,11 @@ type LoginTranslations = {
   error_password_min: string;
   error_nickname_required: string;
   error_nickname_length: string;
+  label_display_language: string;
+  label_country_residence: string;
+  country_select_placeholder: string;
+  country_residence_help: string;
+  error_country_required: string;
   error_email_taken: string;
   error_signup_failed: string;
   error_send_failed: string;
@@ -56,6 +61,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: '비밀번호는 최소 8자 이상이어야 합니다.',
     error_nickname_required: '별명을 입력해 주세요.',
     error_nickname_length: '별명은 2자 이상 20자 이하로 입력해 주세요.',
+    label_display_language: '표시 언어 (필수)',
+    label_country_residence: '거주 국가 (필수)',
+    country_select_placeholder: '국가를 선택해 주세요',
+    country_residence_help:
+      '현재 거주 중인 국가를 선택해 주세요. 표시 언어·서비스 제공 및 운영 통계에 사용되며, 가입 후 내 계정에서 변경할 수 있습니다.',
+    error_country_required: '거주 국가를 선택해 주세요.',
     error_email_taken: '이미 등록된 이메일입니다.',
     error_signup_failed: '가입 실패: 정보를 확인해주세요.',
     error_send_failed: '이메일 발송 실패: 이메일을 확인해주세요.',
@@ -87,6 +98,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: 'Password must be at least 8 characters.',
     error_nickname_required: 'Please enter a nickname.',
     error_nickname_length: 'Nickname must be 2 to 20 characters.',
+    label_display_language: 'Display language (required)',
+    label_country_residence: 'Country of residence (required)',
+    country_select_placeholder: 'Select your country',
+    country_residence_help:
+      'Select the country where you currently live. We use this to personalize the app and for aggregated service statistics. You can change it later in your account settings.',
+    error_country_required: 'Please select your country of residence.',
     error_email_taken: 'This email is already registered.',
     error_signup_failed: 'Sign up failed. Please check your information.',
     error_send_failed: 'Failed to send email. Please check the address.',
@@ -118,6 +135,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: 'パスワードは8文字以上で入力してください。',
     error_nickname_required: 'ニックネームを入力してください。',
     error_nickname_length: 'ニックネームは2〜20文字で入力してください。',
+    label_display_language: '表示言語（必須）',
+    label_country_residence: '居住国（必須）',
+    country_select_placeholder: '国を選択してください',
+    country_residence_help:
+      '現在お住まいの国を選択してください。表示言語・サービス提供・運用統計に使用します。登録後、アカウント設定で変更できます。',
+    error_country_required: '居住国を選択してください。',
     error_email_taken: 'このメールアドレスは既に登録されています。',
     error_signup_failed: '登録に失敗しました。情報を確認してください。',
     error_send_failed: '送信に失敗しました。メールアドレスを確認してください。',
@@ -149,6 +172,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: '密码至少需要8个字符。',
     error_nickname_required: '请输入昵称。',
     error_nickname_length: '昵称需为2至20个字符。',
+    label_display_language: '显示语言（必填）',
+    label_country_residence: '居住国家（必填）',
+    country_select_placeholder: '请选择国家',
+    country_residence_help:
+      '请选择您当前居住的国家。用于界面语言、服务提供及运营统计。注册后可在账户设置中更改。',
+    error_country_required: '请选择居住国家。',
     error_email_taken: '该邮箱已被注册。',
     error_signup_failed: '注册失败，请检查信息。',
     error_send_failed: '发送失败，请检查邮箱地址。',
@@ -180,6 +209,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: '密碼至少需要8個字元。',
     error_nickname_required: '請輸入暱稱。',
     error_nickname_length: '暱稱需為2至20個字元。',
+    label_display_language: '顯示語言（必填）',
+    label_country_residence: '居住國家（必填）',
+    country_select_placeholder: '請選擇國家',
+    country_residence_help:
+      '請選擇您目前居住的國家。用於介面語言、服務提供及營運統計。註冊後可於帳戶設定中變更。',
+    error_country_required: '請選擇居住國家。',
     error_email_taken: '該電子郵件已被註冊。',
     error_signup_failed: '註冊失敗，請檢查資訊。',
     error_send_failed: '發送失敗，請檢查電子郵件地址。',
@@ -211,6 +246,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: 'La contraseña debe tener al menos 8 caracteres.',
     error_nickname_required: 'Introduce un apodo.',
     error_nickname_length: 'El apodo debe tener entre 2 y 20 caracteres.',
+    label_display_language: 'Idioma de visualización (obligatorio)',
+    label_country_residence: 'País de residencia (obligatorio)',
+    country_select_placeholder: 'Selecciona tu país',
+    country_residence_help:
+      'Selecciona el país donde vives actualmente. Lo usamos para personalizar la app y estadísticas agregadas. Puedes cambiarlo después en tu cuenta.',
+    error_country_required: 'Selecciona tu país de residencia.',
     error_email_taken: 'Este correo ya está registrado.',
     error_signup_failed: 'Error al registrarse. Comprueba tus datos.',
     error_send_failed: 'No se pudo enviar el correo. Comprueba la dirección.',
@@ -242,6 +283,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: 'Le mot de passe doit contenir au moins 8 caractères.',
     error_nickname_required: 'Veuillez saisir un pseudo.',
     error_nickname_length: 'Le pseudo doit contenir entre 2 et 20 caractères.',
+    label_display_language: 'Langue d\'affichage (obligatoire)',
+    label_country_residence: 'Pays de résidence (obligatoire)',
+    country_select_placeholder: 'Sélectionnez votre pays',
+    country_residence_help:
+      'Sélectionnez le pays où vous résidez actuellement. Utilisé pour la langue, le service et les statistiques agrégées. Modifiable plus tard dans votre compte.',
+    error_country_required: 'Veuillez sélectionner votre pays de résidence.',
     error_email_taken: 'Cet e-mail est déjà enregistré.',
     error_signup_failed: 'Échec de l\'inscription. Vérifiez vos informations.',
     error_send_failed: 'Échec de l\'envoi de l\'e-mail. Vérifiez l\'adresse.',
@@ -273,6 +320,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
     error_nickname_required: 'Bitte geben Sie einen Spitznamen ein.',
     error_nickname_length: 'Der Spitzname muss 2 bis 20 Zeichen lang sein.',
+    label_display_language: 'Anzeigesprache (erforderlich)',
+    label_country_residence: 'Wohnsitzland (erforderlich)',
+    country_select_placeholder: 'Land auswählen',
+    country_residence_help:
+      'Wählen Sie das Land, in dem Sie derzeit wohnen. Wird für Sprache, Service und aggregierte Statistiken verwendet. Später in den Kontoeinstellungen änderbar.',
+    error_country_required: 'Bitte wählen Sie Ihr Wohnsitzland.',
     error_email_taken: 'Diese E-Mail ist bereits registriert.',
     error_signup_failed: 'Registrierung fehlgeschlagen. Bitte Angaben prüfen.',
     error_send_failed: 'E-Mail konnte nicht gesendet werden. Bitte Adresse prüfen.',
@@ -304,6 +357,12 @@ const login: Record<LangCode, LoginTranslations> = {
     error_password_min: 'La password deve avere almeno 8 caratteri.',
     error_nickname_required: 'Inserisci un nickname.',
     error_nickname_length: 'Il nickname deve avere da 2 a 20 caratteri.',
+    label_display_language: 'Lingua di visualizzazione (obbligatoria)',
+    label_country_residence: 'Paese di residenza (obbligatorio)',
+    country_select_placeholder: 'Seleziona il paese',
+    country_residence_help:
+      'Seleziona il paese in cui risiedi attualmente. Usato per lingua, servizio e statistiche aggregate. Modificabile in seguito nelle impostazioni account.',
+    error_country_required: 'Seleziona il paese di residenza.',
     error_email_taken: 'Questa email è già registrata.',
     error_signup_failed: 'Registrazione non riuscita. Controlla i dati.',
     error_send_failed: 'Invio email non riuscito. Controlla l\'indirizzo.',

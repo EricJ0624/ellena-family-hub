@@ -1,9 +1,42 @@
--- Sign up 500 오류 수정: auth.users 트리거 함수에 search_path 설정
--- 원인: supabase_auth_admin 역할로 트리거가 실행될 때 search_path 미설정으로
---      public 스키마 접근 실패(42P01/42501) → 500 발생
--- 적용: Supabase Dashboard → SQL Editor에서 이 스크립트 전체 실행
+-- profiles: 앱 표시 언어·거주 국가 (가입 시 필수, 계정 단위)
+-- 적용: Supabase Dashboard SQL Editor 또는 MCP apply_migration
+-- 기존 사용자(2계정): preferred_language='ko', country_code='KR' 백필
 
--- 1. handle_new_user (sign up 시 profiles INSERT)
+-- 1. 컬럼 추가
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS preferred_language TEXT,
+  ADD COLUMN IF NOT EXISTS country_code CHAR(2);
+
+COMMENT ON COLUMN public.profiles.preferred_language IS '앱 UI 표시 언어 (ko, en, ja, zh-CN, zh-TW, es, fr, de, it)';
+COMMENT ON COLUMN public.profiles.country_code IS '거주 국가 ISO 3166-1 alpha-2';
+
+-- 2. 기존 행 백필 (실사용 계정 소수 — 기본 ko/KR)
+UPDATE public.profiles
+SET
+  preferred_language = COALESCE(preferred_language, 'ko'),
+  country_code = UPPER(COALESCE(country_code, 'KR'))
+WHERE preferred_language IS NULL OR country_code IS NULL;
+
+-- 3. NOT NULL·기본값·검증
+ALTER TABLE public.profiles
+  ALTER COLUMN preferred_language SET DEFAULT 'en',
+  ALTER COLUMN country_code SET DEFAULT 'KR';
+
+ALTER TABLE public.profiles
+  ALTER COLUMN preferred_language SET NOT NULL,
+  ALTER COLUMN country_code SET NOT NULL;
+
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_preferred_language_check;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_preferred_language_check
+  CHECK (preferred_language IN ('ko', 'en', 'ja', 'zh-CN', 'zh-TW', 'es', 'fr', 'de', 'it'));
+
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_country_code_check;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_country_code_check
+  CHECK (country_code ~ '^[A-Z]{2}$');
+
+-- 4. sign up / auth.users 업데이트 시 profiles 동기화
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -36,7 +69,6 @@ BEGIN
 END;
 $$;
 
--- 2. handle_user_update (auth.users 업데이트 시 profiles 동기화)
 CREATE OR REPLACE FUNCTION public.handle_user_update()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -61,31 +93,3 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
--- 3. auto_add_system_admin (특정 이메일 시 system_admins INSERT)
--- 참고: 기존 함수가 있으면 교체, 없으면 생성됨
-CREATE OR REPLACE FUNCTION public.auto_add_system_admin()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  admin_emails TEXT[] := ARRAY['soungtak@icloud.com'];
-  user_email TEXT;
-BEGIN
-  user_email := NEW.email;
-  IF user_email = ANY(admin_emails) THEN
-    INSERT INTO public.system_admins (user_id, email, is_active)
-    VALUES (NEW.id, user_email, TRUE)
-    ON CONFLICT (user_id) DO UPDATE SET
-      is_active = TRUE,
-      email = user_email;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
--- 트리거는 이미 존재하므로 함수만 교체하면 됨 (트리거 재생성 불필요)
--- 검증: 아래 쿼리로 함수에 search_path가 설정되었는지 확인
--- SELECT proname, proconfig FROM pg_proc WHERE proname IN ('handle_new_user','handle_user_update','auto_add_system_admin');

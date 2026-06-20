@@ -10,12 +10,11 @@ import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/tra
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
-import { LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
 
 const GroupSelector: React.FC = () => {
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
-  const { lang, setLanguage } = useLanguage();
+  const { lang } = useLanguage();
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
   const ct = (key: 'loading' | 'close' | 'cancel' | 'save' | 'skip' | 'app_title') => getCommonTranslation(lang, key);
   const [isOpen, setIsOpen] = useState(false);
@@ -34,10 +33,6 @@ const GroupSelector: React.FC = () => {
 
   const mmt = (key: keyof import('@/lib/translations/memberManagement').MemberManagementTranslations) =>
     getMemberManagementTranslation(lang, key);
-
-  const setAppLanguage = (code: LangCode) => {
-    void setLanguage(code, { updateCurrentGroup: false });
-  };
 
   // 그룹 생성
   const handleCreateGroup = async (decideLater = false) => {
@@ -86,8 +81,6 @@ const GroupSelector: React.FC = () => {
         .single();
 
       if (fetchError) throw fetchError;
-
-      await supabase.from('groups').update({ preferred_language: lang }).eq('id', groupId);
 
       // 그룹 생성자(소유자) 가족 표시 설정 (아빠/엄마)
       if (createFamilyRole && user) {
@@ -279,22 +272,6 @@ const GroupSelector: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {ot('display_language')}
-                      </label>
-                      <select
-                        value={lang}
-                        onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        disabled={creating}
-                      >
-                        {LANG_OPTIONS.map(({ code, label }) => (
-                          <option key={code} value={code}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         {mmt('family_role_label')}
                       </label>
                       <select
@@ -405,21 +382,6 @@ const GroupSelector: React.FC = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {ot('display_language')}
-                      </label>
-                      <select
-                        value={lang}
-                        onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        disabled={joining}
-                      >
-                        {LANG_OPTIONS.map(({ code, label }) => (
-                          <option key={code} value={code}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         {ot('invite_code')}
@@ -761,22 +723,6 @@ const GroupSelector: React.FC = () => {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {ot('display_language')}
-                      </label>
-                      <select
-                        value={lang}
-                        onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        disabled={creating}
-                      >
-                        {LANG_OPTIONS.map(({ code, label }) => (
-                          <option key={code} value={code}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
-
                     {error && (
                       <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -873,21 +819,6 @@ const GroupSelector: React.FC = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {ot('display_language')}
-                      </label>
-                      <select
-                        value={lang}
-                        onChange={(e) => setAppLanguage(e.target.value as LangCode)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        disabled={joining}
-                      >
-                        {LANG_OPTIONS.map(({ code, label }) => (
-                          <option key={code} value={code}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         {ot('invite_code')}

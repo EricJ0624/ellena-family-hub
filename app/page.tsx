@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase, PERSIST_SESSION_FLAG_KEY } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/app/contexts/LanguageContext';
-import { getFontStyle } from '@/lib/language-fonts';
+import { getFontStyle, intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
+import { getCountryOptions, isValidCountryCode } from '@/lib/countries';
 import { getLoginTranslation, type LoginTranslations } from '@/lib/translations/login';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
@@ -25,10 +26,13 @@ const LAST_EMAIL_KEY = 'SFH_LAST_EMAIL';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { lang } = useLanguage();
-  const t = (key: keyof LoginTranslations) => getLoginTranslation(lang, key);
-  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
+  const { lang, setLanguage } = useLanguage();
   const [mode, setMode] = useState<Mode>('login');
+  const [signupLang, setSignupLang] = useState<LangCode>('en');
+  const [signupCountry, setSignupCountry] = useState('');
+  const displayLang: LangCode = mode === 'signup' ? signupLang : lang;
+  const t = (key: keyof LoginTranslations) => getLoginTranslation(displayLang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(displayLang, key);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,6 +49,12 @@ export default function LoginPage() {
   /** 이메일별 가입 쿨다운(전역이면 다른 이메일로 바꿔도 막히는 버그 방지) */
   const signupCooldownByEmailRef = useRef<Record<string, number>>({});
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
+  const countryOptions = getCountryOptions(intlLocaleForLang(displayLang));
+
+  const handleSignupLangChange = (code: LangCode) => {
+    setSignupLang(code);
+    void setLanguage(code);
+  };
 
   // Hydration 오류 방지: 마운트 후에만 클라이언트 사이드 로직 실행
   useEffect(() => {
@@ -308,6 +318,11 @@ export default function LoginPage() {
       return;
     }
 
+    if (!signupCountry || !isValidCountryCode(signupCountry)) {
+      setErrorMsg(t('error_country_required'));
+      return;
+    }
+
     let normalizedEmail = '';
     try {
       normalizedEmail = email.trim().toLowerCase();
@@ -350,6 +365,8 @@ export default function LoginPage() {
           data: {
             nickname: signupNickname,
             full_name: signupNickname,
+            preferred_language: signupLang,
+            country_code: signupCountry.toUpperCase(),
           },
         },
       });
@@ -388,12 +405,16 @@ export default function LoginPage() {
               id: data.user.id,
               email: normalizedEmail,
               nickname: signupNickname,
+              preferred_language: signupLang,
+              country_code: signupCountry.toUpperCase(),
             },
             { onConflict: 'id' }
           );
         } catch (profileError) {
           console.warn('profiles 테이블 업데이트 실패 (무시):', profileError);
         }
+
+        void setLanguage(signupLang);
 
         if (!isEmailConfirmed) {
           setSuccessMsg(t('success_signup_check_email'));
@@ -513,6 +534,7 @@ export default function LoginPage() {
     setPassword('');
     setConfirmPassword('');
     setNickname('');
+    setSignupCountry('');
   };
 
   const inputStyle = {
@@ -558,7 +580,7 @@ export default function LoginPage() {
   return (
     <div
       className="relative flex min-h-dvh flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
-      style={{ fontFamily: getFontStyle(lang, 'body').fontFamily }}
+      style={{ fontFamily: getFontStyle(displayLang, 'body').fontFamily }}
     >
       {/* 배경 장식 요소 */}
       <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
@@ -575,8 +597,8 @@ export default function LoginPage() {
             className="mb-3 overflow-hidden whitespace-nowrap bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-ellipsis tracking-[-0.5px] [background-clip:text] [color:transparent] [text-fill-color:transparent] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent]"
             style={{
               fontSize: loginTitleFontSize != null ? `${loginTitleFontSize}px` : '48px',
-              fontFamily: getFontStyle(lang, 'title').fontFamily,
-              fontWeight: getFontStyle(lang, 'title').fontWeight,
+              fontFamily: getFontStyle(displayLang, 'title').fontFamily,
+              fontWeight: getFontStyle(displayLang, 'title').fontWeight,
             }}
           >
             <AppTitleContent title={ct('app_title')} />
@@ -652,6 +674,49 @@ export default function LoginPage() {
                   e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
                 }}
               />
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div className="text-left">
+              <label className="mb-2 block text-left text-sm font-semibold text-slate-600">
+                {t('label_display_language')}
+              </label>
+              <select
+                value={signupLang}
+                onChange={(e) => handleSignupLangChange(e.target.value as LangCode)}
+                className="box-border min-h-[60px] w-full cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-5 text-base text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 focus:border-[rgb(var(--brand-primary))] focus:shadow-[0_4px_16px_rgba(102,126,234,0.2)]"
+              >
+                {LANG_OPTIONS.map(({ code, label }) => (
+                  <option key={code} value={code}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div className="text-left">
+              <label className="mb-2 block text-left text-sm font-semibold text-slate-600">
+                {t('label_country_residence')}
+              </label>
+              <select
+                value={signupCountry}
+                onChange={(e) => setSignupCountry(e.target.value)}
+                required
+                className="box-border min-h-[60px] w-full cursor-pointer rounded-2xl border-2 border-slate-200 bg-white px-5 text-base text-slate-800 shadow-[0_4px_12px_rgba(0,0,0,0.08)] outline-none transition-all duration-300 focus:border-[rgb(var(--brand-primary))] focus:shadow-[0_4px_16px_rgba(102,126,234,0.2)]"
+              >
+                <option value="">{t('country_select_placeholder')}</option>
+                {countryOptions.map(({ code, label }) => (
+                  <option key={code} value={code}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-left text-xs leading-relaxed text-slate-500">
+                {t('country_residence_help')}
+              </p>
             </div>
           )}
 

@@ -33,11 +33,13 @@ const FALLBACK_CODES: readonly string[] = [
 ];
 
 let cachedCodes: readonly string[] | null = null;
+/** UI 셀렉트·거주국가 필터의 단일 소스 (추가 국가·통화는 여기에 확장) */
 const TOP_CURRENCY_CODES: readonly string[] = [
   'USD', 'EUR', 'JPY', 'GBP', 'CNY',
   'KRW', 'AUD', 'CAD', 'CHF', 'HKD',
   'SGD', 'INR', 'THB', 'TWD', 'VND',
   'MYR', 'IDR', 'PHP', 'NZD', 'SEK',
+  'BRL', 'MXN', 'RUB',
 ];
 
 function collectSupported(): readonly string[] {

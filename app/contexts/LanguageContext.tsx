@@ -3,10 +3,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { type LangCode, isValidLang } from '@/lib/language-fonts';
+import { fetchProfilePreferences, saveProfilePreferences } from '@/lib/profile-preferences';
 
 const STORAGE_KEY = 'app_preferred_language';
 
-/** `updateCurrentGroup`: false 이면 앱/UI·localStorage만 바꾸고 현재 그룹 `preferred_language`는 건드리지 않음 (온보딩·새 그룹 생성 모달 등) */
+/** @deprecated 그룹 DB 동기화 제거됨. 하위 호환용으로만 유지 */
 export type SetLanguageOptions = {
   updateCurrentGroup?: boolean;
 };
@@ -32,53 +33,67 @@ function setStoredLang(lang: LangCode) {
 
 interface LanguageProviderProps {
   children: React.ReactNode;
-  currentGroup: { preferred_language?: string | null } | null;
-  currentGroupId: string | null;
-  isGroupAdmin: boolean;
-  refreshGroups: () => Promise<void>;
+  /** @deprecated 프로필 기반 언어로 전환 — 하위 호환용 */
+  currentGroup?: { preferred_language?: string | null } | null;
+  currentGroupId?: string | null;
+  isGroupAdmin?: boolean;
+  refreshGroups?: () => Promise<void>;
 }
 
-export function LanguageProvider({ children, currentGroup, currentGroupId, isGroupAdmin, refreshGroups }: LanguageProviderProps) {
-  const groupLang = currentGroup?.preferred_language;
-  const langFromGroup = isValidLang(groupLang) ? groupLang : null;
-
-  const [lang, setLangState] = useState<LangCode>(() => {
-    if (langFromGroup) return langFromGroup;
-    const stored = getStoredLang();
-    if (stored) return stored;
-    // 사용자가 저장한 언어·그룹 설정이 없을 때는 브라우저 locale 대신 영어를 기본으로 둠
-    return 'en';
-  });
-
-  const loading = false;
+export function LanguageProvider({ children }: LanguageProviderProps) {
+  const [lang, setLangState] = useState<LangCode>(() => getStoredLang() ?? 'en');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (langFromGroup) {
-      setLangState(langFromGroup);
-      setStoredLang(langFromGroup);
-      return;
-    }
-    const stored = getStoredLang();
-    if (stored) {
-      setLangState(stored);
-      return;
-    }
-    setLangState('en');
-  }, [langFromGroup]);
+    const applyLang = (next: LangCode) => {
+      setLangState(next);
+      setStoredLang(next);
+    };
 
-  const setLanguage = useCallback(async (newLang: LangCode, options?: SetLanguageOptions) => {
-    const syncGroup = options?.updateCurrentGroup !== false;
+    const loadForUser = async (userId: string | undefined) => {
+      if (!userId) {
+        applyLang(getStoredLang() ?? 'en');
+        setLoading(false);
+        return;
+      }
+      try {
+        const prefs = await fetchProfilePreferences(userId);
+        if (prefs?.preferred_language) {
+          applyLang(prefs.preferred_language);
+        } else {
+          applyLang(getStoredLang() ?? 'en');
+        }
+      } catch (e) {
+        console.warn('Failed to load profile preferred_language:', e);
+        applyLang(getStoredLang() ?? 'en');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      void loadForUser(session?.user?.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void loadForUser(session?.user?.id);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const setLanguage = useCallback(async (newLang: LangCode, _options?: SetLanguageOptions) => {
     setLangState(newLang);
     setStoredLang(newLang);
-    if (syncGroup && currentGroupId && isGroupAdmin) {
-      try {
-        await supabase.from('groups').update({ preferred_language: newLang }).eq('id', currentGroupId);
-        await refreshGroups();
-      } catch (e) {
-        console.warn('Failed to save group preferred_language:', e);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await saveProfilePreferences(user.id, { preferred_language: newLang });
       }
+    } catch (e) {
+      console.warn('Failed to save profile preferred_language:', e);
     }
-  }, [currentGroupId, isGroupAdmin, refreshGroups]);
+  }, []);
 
   const value = useMemo(() => ({ lang, setLanguage, loading }), [lang, setLanguage, loading]);
 

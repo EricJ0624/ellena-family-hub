@@ -22,7 +22,6 @@ import {
   isGroupDisplayNamePending,
 } from '@/lib/group-display-name';
 import type { TitleStyle } from '@/app/components/TitlePage';
-import { LANG_OPTIONS, isValidLang, type LangCode } from '@/lib/language-fonts';
 
 type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
 
@@ -76,11 +75,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       getGroupDisplayNameRaw(currentGroup) ?? ctApp('app_title'),
     ),
   );
-  const [preferredLanguage, setPreferredLanguage] = useState<LangCode>(() => {
-    const v = (currentGroup as { preferred_language?: string } | null)?.preferred_language;
-    if (isValidLang(v)) return v;
-    return 'ko';
-  });
   const [uiTheme, setUiTheme] = useState<UiTheme>(() =>
     parseUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme)
   );
@@ -134,7 +128,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
     ));
   }, [currentGroup?.id, currentGroup?.family_name, currentGroup?.title_style, currentGroup?.name, currentGroup?.display_name_pending]);
 
-  // currentGroup 변경 시 groupName, inviteCode, preferredLanguage 동기화
+  // currentGroup 변경 시 groupName, inviteCode 동기화
   useEffect(() => {
     if (currentGroup) {
       setGroupName(
@@ -143,8 +137,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           : (getGroupDisplayNameRaw(currentGroup) ?? ''),
       );
       setInviteCode(currentGroup.invite_code || '');
-      const v = (currentGroup as { preferred_language?: string }).preferred_language;
-      if (isValidLang(v)) setPreferredLanguage(v);
       setUiTheme(parseUiTheme((currentGroup as { ui_theme?: unknown }).ui_theme));
     }
   }, [currentGroup]);
@@ -194,7 +186,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           content: ctApp('app_title'),
         };
       }
-      updates.preferred_language = preferredLanguage;
       updates.ui_theme = uiTheme;
 
       const { error: updateError } = await supabase
@@ -361,28 +352,6 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                   />
                   <p className="mt-1.5 text-xs text-slate-500">
                     {gst('family_name_hint')}
-                  </p>
-                </td>
-              </tr>
-              <tr className="border-b border-slate-200">
-                <th
-                  className="w-40 bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600"
-                >
-                  {gst('display_language')}
-                </th>
-                <td className="p-3">
-                  <select
-                    value={preferredLanguage}
-                    onChange={(e) => setPreferredLanguage(e.target.value as LangCode)}
-                    disabled={saving}
-                    className="min-w-40 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
-                  >
-                    {LANG_OPTIONS.map(({ code, label }) => (
-                      <option key={code} value={code}>{label}</option>
-                    ))}
-                  </select>
-                  <p className="mt-1.5 text-xs text-slate-500">
-                    {gst('language_hint')}
                   </p>
                 </td>
               </tr>

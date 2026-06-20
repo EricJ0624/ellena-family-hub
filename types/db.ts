@@ -446,6 +446,8 @@ export interface Database {
           created_at: string | null
           nickname: string | null
           updated_at: string | null
+          preferred_language: string
+          country_code: string
         }
         Insert: {
           id: string
@@ -456,6 +458,8 @@ export interface Database {
           created_at?: string | null
           nickname?: string | null
           updated_at?: string | null
+          preferred_language?: string
+          country_code?: string
         }
         Update: {
           id?: string
@@ -466,6 +470,8 @@ export interface Database {
           created_at?: string | null
           nickname?: string | null
           updated_at?: string | null
+          preferred_language?: string
+          country_code?: string
         }
         Relationships: [
           {

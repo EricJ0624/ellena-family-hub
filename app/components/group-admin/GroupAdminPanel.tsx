@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
-import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { 
@@ -34,7 +33,7 @@ import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAdminTranslation, type AdminTranslations } from '@/lib/translations/admin';
-import { intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
+import { intlLocaleForLang, isValidLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
@@ -164,6 +163,14 @@ type GroupAdminTabId =
 
 type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
 
+const GROUP_ADMIN_LANG_STORAGE_KEY = 'group_admin_preferred_language';
+
+function getStoredGroupAdminLang(): LangCode {
+  if (typeof window === 'undefined') return 'en';
+  const stored = localStorage.getItem(GROUP_ADMIN_LANG_STORAGE_KEY);
+  return isValidLang(stored) ? stored : 'en';
+}
+
 function parseUiTheme(value: unknown): UiTheme {
   if (value === 'highend_glass') return 'highend_glass';
   if (value === 'stable_glass') return 'stable_glass';
@@ -181,12 +188,22 @@ export function GroupAdminPanel({
   const router = useRouter();
   const isEmbedded = variant === 'embedded';
 
-  const { lang, setLanguage } = useLanguage();
-  const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) => getGroupAdminTranslation(lang, key);
-  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
-  const piggyLang: LangCode = isEmbedded && adminLangForPiggy ? adminLangForPiggy : lang;
+  const [groupAdminLang, setGroupAdminLangState] = useState<LangCode>('en');
+  useEffect(() => {
+    setGroupAdminLangState(getStoredGroupAdminLang());
+  }, []);
+  const setGroupAdminLang = useCallback((next: LangCode) => {
+    setGroupAdminLangState(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(GROUP_ADMIN_LANG_STORAGE_KEY, next);
+    }
+  }, []);
+
+  const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) => getGroupAdminTranslation(groupAdminLang, key);
+  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(groupAdminLang, key);
+  const piggyLang: LangCode = isEmbedded && adminLangForPiggy ? adminLangForPiggy : groupAdminLang;
   const atPiggy = (key: keyof AdminTranslations) => getAdminTranslation(piggyLang, key);
-  const dateLocale = intlLocaleForLang(lang);
+  const dateLocale = intlLocaleForLang(groupAdminLang);
   const formatDateTime = (iso: string) => new Date(iso).toLocaleString(dateLocale);
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString(dateLocale);
   const withCount = (template: string, count: number) => template.replace(/\$\{count\}/g, String(count));
@@ -930,8 +947,8 @@ export function GroupAdminPanel({
             </label>
             <select
               id="group-admin-lang-select"
-              value={lang}
-              onChange={(e) => void setLanguage(e.target.value as LangCode)}
+              value={groupAdminLang}
+              onChange={(e) => setGroupAdminLang(e.target.value as LangCode)}
               className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
             >
               {LANG_OPTIONS.map(({ code, label }) => (
@@ -1090,7 +1107,7 @@ export function GroupAdminPanel({
                 <AnnouncementBanner 
                   announcements={announcements.map((announcement) => ({
                     ...announcement,
-                    ...getAnnouncementTexts(announcement, lang),
+                    ...getAnnouncementTexts(announcement, groupAdminLang),
                   }))}
                   label={gat('announcements_tab')}
                   onMarkAsRead={async (announcementId) => {
@@ -1291,7 +1308,7 @@ export function GroupAdminPanel({
                             {location.nickname || location.email || gat('no_name')}
                             {location.familyRole && (
                               <span className="ml-1.5">
-                                {getFamilyRoleEmoji(location.familyRole)} {getFamilyRoleLabel(lang, location.familyRole)}
+                                {getFamilyRoleEmoji(location.familyRole)} {getFamilyRoleLabel(groupAdminLang, location.familyRole)}
                               </span>
                             )}
                           </div>
@@ -1372,7 +1389,7 @@ export function GroupAdminPanel({
                         <div className="flex-1">
                           <div className="mb-2 flex items-center gap-2">
                             <h3 className="m-0 text-lg font-semibold text-slate-800">
-                              {getAnnouncementTexts(announcement, lang).title || announcement.title}
+                              {getAnnouncementTexts(announcement, groupAdminLang).title || announcement.title}
                             </h3>
                             {!announcement.is_read && (
                               <span className="rounded-xl bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -1381,7 +1398,7 @@ export function GroupAdminPanel({
                             )}
                           </div>
                           <p className="m-0 whitespace-pre-wrap text-sm text-slate-500">
-                            {getAnnouncementTexts(announcement, lang).content || announcement.content}
+                            {getAnnouncementTexts(announcement, groupAdminLang).content || announcement.content}
                           </p>
                         </div>
                       </div>

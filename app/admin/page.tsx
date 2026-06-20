@@ -40,6 +40,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, isValidLang, intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
+import { getCountryDisplayName } from '@/lib/countries';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
@@ -51,6 +52,8 @@ interface UserInfo {
   id: string;
   email: string | null;
   nickname: string | null;
+  preferred_language: string | null;
+  country_code: string | null;
   created_at: string;
   groups_count: number;
   is_active: boolean;
@@ -71,6 +74,8 @@ interface SystemStats {
   totalGroups: number;
   activeUsers: number;
   totalAdmins: number;
+  languageDistribution: Record<string, number>;
+  countryDistribution: Record<string, number>;
 }
 
 interface GroupDetailInfo {
@@ -364,6 +369,8 @@ export default function AdminPage() {
         totalGroups: Number(result?.data?.totalGroups || 0),
         activeUsers: Number(result?.data?.activeUsers || 0),
         totalAdmins: Number(result?.data?.totalAdmins || 0),
+        languageDistribution: result?.data?.languageDistribution || {},
+        countryDistribution: result?.data?.countryDistribution || {},
       });
     } catch (err: any) {
       console.error('통계 로드 오류:', err);
@@ -440,6 +447,8 @@ export default function AdminPage() {
         id: user.id,
         email: user.email,
         nickname: user.nickname,
+        preferred_language: user.preferred_language ?? null,
+        country_code: user.country_code ?? null,
         created_at: user.created_at || new Date().toISOString(),
         groups_count: user.groups_count || 0,
         is_active: user.is_active !== false,
@@ -1059,7 +1068,9 @@ export default function AdminPage() {
     return (
       user.email?.toLowerCase().includes(query) ||
       user.nickname?.toLowerCase().includes(query) ||
-      user.id.toLowerCase().includes(query)
+      user.id.toLowerCase().includes(query) ||
+      user.preferred_language?.toLowerCase().includes(query) ||
+      user.country_code?.toLowerCase().includes(query)
     );
   });
 
@@ -1377,6 +1388,39 @@ export default function AdminPage() {
                   </motion.div>
                 </div>
 
+                <div className="mt-8 grid gap-6 md:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-white p-6">
+                    <h3 className="mb-4 text-base font-semibold text-slate-800">
+                      {at('stats_language_distribution')}
+                    </h3>
+                    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                      {Object.entries(stats.languageDistribution)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([code, count]) => (
+                          <li key={code} className="flex items-center justify-between text-sm text-slate-700">
+                            <span>{isValidLang(code) ? (LANG_LABELS[code] || code) : code}</span>
+                            <span className="font-semibold">{count}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-6">
+                    <h3 className="mb-4 text-base font-semibold text-slate-800">
+                      {at('stats_country_distribution')}
+                    </h3>
+                    <ul className="m-0 flex max-h-64 list-none flex-col gap-2 overflow-y-auto p-0">
+                      {Object.entries(stats.countryDistribution)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([code, count]) => (
+                          <li key={code} className="flex items-center justify-between text-sm text-slate-700">
+                            <span>{getCountryDisplayName(code, adminLocale)}</span>
+                            <span className="font-semibold">{count}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                </div>
+
                 {/* 최근 문의 위젯 */}
                 <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
                   <div className="mb-4 flex items-center justify-between">
@@ -1487,6 +1531,12 @@ export default function AdminPage() {
                           {at('nickname')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
+                          {at('col_preferred_language')}
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold text-slate-600">
+                          {at('col_country_code')}
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold text-slate-600">
                           {at('joined_at')}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
@@ -1514,6 +1564,16 @@ export default function AdminPage() {
                           </td>
                           <td className="p-3 text-sm text-slate-800">
                             {user.nickname || '-'}
+                          </td>
+                          <td className="p-3 text-sm text-slate-500">
+                            {user.preferred_language && isValidLang(user.preferred_language)
+                              ? LANG_LABELS[user.preferred_language]
+                              : user.preferred_language || '-'}
+                          </td>
+                          <td className="p-3 text-sm text-slate-500">
+                            {user.country_code
+                              ? getCountryDisplayName(user.country_code, adminLocale)
+                              : '-'}
                           </td>
                           <td className="p-3 text-sm text-slate-500">
                             {new Date(user.created_at).toLocaleDateString(adminLocale)}
