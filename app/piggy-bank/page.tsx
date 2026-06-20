@@ -17,6 +17,7 @@ import {
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import { intlLocaleForLang } from '@/lib/language-fonts';
+import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,7 +71,7 @@ function piggyTxAttachmentKey(entityType: 'piggy_wallet_tx' | 'piggy_bank_tx', e
   return `${entityType}:${entityId}`;
 }
 
-export default function PiggyBankPage() {
+function PiggyBankPageContent() {
   const router = useRouter();
   const { lang } = useLanguage();
   const pt = (key: keyof import('@/lib/translations/piggy').PiggyTranslations) => getPiggyTranslation(lang, key);
@@ -1391,5 +1392,13 @@ export default function PiggyBankPage() {
         {pt('back_to_dashboard')}
       </button>
     </div>
+  );
+}
+
+export default function PiggyBankPage() {
+  return (
+    <GroupRequiredRouteGuard>
+      <PiggyBankPageContent />
+    </GroupRequiredRouteGuard>
   );
 }

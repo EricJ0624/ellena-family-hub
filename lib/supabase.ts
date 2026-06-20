@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { clearAuthPresenceCookie, setAuthPresenceCookie } from '@/lib/auth-presence-cookie';
 
 // 환경 변수에서 설정값을 가져옵니다.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -193,6 +194,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // 근본 원인 해결: refresh token 에러를 조용히 처리
 if (typeof window !== 'undefined') {
   supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session?.access_token) {
+      setAuthPresenceCookie();
+    } else {
+      clearAuthPresenceCookie();
+    }
+
     // Refresh Token 에러가 발생한 경우 조용히 처리
     if (event === 'SIGNED_OUT' && !session) {
       clearAuthStorage();
@@ -201,6 +208,11 @@ if (typeof window !== 'undefined') {
     if (event === 'TOKEN_REFRESHED' && !session) {
       clearAuthStorage();
     }
+  });
+
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.access_token) setAuthPresenceCookie();
+    else clearAuthPresenceCookie();
   });
   
   // 전역 에러 핸들러로 Refresh Token 에러 및 Map ID 에러 필터링

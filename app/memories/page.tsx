@@ -19,6 +19,7 @@ import {
 } from '@/lib/photo-upload-utils';
 import { supabase } from '@/lib/supabase';
 import * as exifr from 'exifr';
+import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB 통일
 const COMPRESSION_OPTIONS = {
@@ -110,7 +111,7 @@ async function extractTakenAt(file: File): Promise<string | null> {
   return null;
 }
 
-export default function MemoriesPage() {
+function MemoriesPageContent() {
   const { currentGroupId } = useGroup();
   const { album, addPhoto, deletePhoto, updatePhotoDescription, updatePhotoId } = useAlbum();
   const { lang } = useLanguage();
@@ -957,5 +958,13 @@ export default function MemoriesPage() {
         })()}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function MemoriesPage() {
+  return (
+    <GroupRequiredRouteGuard>
+      <MemoriesPageContent />
+    </GroupRequiredRouteGuard>
   );
 }

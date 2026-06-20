@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import nextDynamic from 'next/dynamic';
+import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getCommonTranslation } from '@/lib/translations/common';
 
@@ -22,5 +23,9 @@ const TravelPlannerContent = nextDynamic(
 );
 
 export default function TravelPlannerPage() {
-  return <TravelPlannerContent />;
+  return (
+    <GroupRequiredRouteGuard>
+      <TravelPlannerContent />
+    </GroupRequiredRouteGuard>
+  );
 }

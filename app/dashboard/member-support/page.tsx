@@ -15,8 +15,9 @@ import {
   type MemberSupportTicketRow,
 } from '@/lib/member-support';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
+import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
 
-export default function MemberSupportPage() {
+function MemberSupportPageContent() {
   const router = useRouter();
   const {
     currentGroupId,
@@ -511,5 +512,13 @@ export default function MemberSupportPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function MemberSupportPage() {
+  return (
+    <GroupRequiredRouteGuard>
+      <MemberSupportPageContent />
+    </GroupRequiredRouteGuard>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
+import { isRecoveryAuthCallback } from '@/lib/auth-callback-routing';
 import {
   buildOnboardingPath,
   getSessionStoredInviteCode,
@@ -60,6 +61,12 @@ export default function AuthCallbackPage() {
         const { user } = await getValidatedUserWithSessionFallback(supabase, session);
         if (!session?.access_token || !user) {
           router.push('/');
+          return;
+        }
+
+        // 비밀번호 재설정: onboarding/admin 분기 전에 reset-password로만 보냄
+        if (isRecoveryAuthCallback(hashParams, searchParams)) {
+          router.replace('/reset-password');
           return;
         }
 
