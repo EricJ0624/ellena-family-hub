@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { supabase, PERSIST_SESSION_FLAG_KEY } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -716,6 +717,33 @@ export default function LoginPage() {
               </select>
               <p className="mt-2 text-left text-xs leading-relaxed text-slate-500">
                 {t('country_residence_help')}
+              </p>
+              <p className="mt-2 text-left text-xs leading-relaxed text-slate-500">
+                {displayLang === 'ko' ? (
+                  <>
+                    가입 시{' '}
+                    <Link href="/legal/terms" className="text-purple-600 underline" target="_blank" rel="noopener noreferrer">
+                      이용약관
+                    </Link>
+                    {' '}및{' '}
+                    <Link href="/legal/privacy" className="text-purple-600 underline" target="_blank" rel="noopener noreferrer">
+                      개인정보 처리방침
+                    </Link>
+                    에 동의합니다.
+                  </>
+                ) : (
+                  <>
+                    By signing up you agree to the{' '}
+                    <Link href="/legal/terms" className="text-purple-600 underline" target="_blank" rel="noopener noreferrer">
+                      Terms of Service
+                    </Link>
+                    {' '}and{' '}
+                    <Link href="/legal/privacy" className="text-purple-600 underline" target="_blank" rel="noopener noreferrer">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </>
+                )}
               </p>
             </div>
           )}

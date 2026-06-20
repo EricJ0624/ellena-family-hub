@@ -386,16 +386,9 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     refreshMemberships,
   };
 
-  const isGroupAdmin = userRole === 'ADMIN' || isOwner;
-
   return (
     <GroupContext.Provider value={value}>
-      <LanguageProvider
-        currentGroup={currentGroup}
-        currentGroupId={currentGroupId}
-        isGroupAdmin={isGroupAdmin}
-        refreshGroups={refreshGroups}
-      >
+      <LanguageProvider>
         <DocumentTitle />
         {children}
       </LanguageProvider>

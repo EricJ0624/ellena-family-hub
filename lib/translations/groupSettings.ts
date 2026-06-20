@@ -10,8 +10,6 @@ export type GroupSettingsTranslations = {
   dashboard_title_label: string;
   dashboard_title_placeholder: string;
   dashboard_title_hint: string;
-  display_language: string;
-  language_hint: string;
   dashboard_theme_label: string;
   dashboard_theme_hint: string;
   theme_default_label: string;
@@ -52,8 +50,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: '대시보드 타이틀',
     dashboard_title_placeholder: '예: Hearth (허쓰): 패밀리 헤이븐',
     dashboard_title_hint: '대시보드 상단에 표시되는 문구입니다. 글자 크기는 화면에 맞게 자동 조정됩니다.',
-    display_language: '표시 언어',
-    language_hint: '그룹 대시보드의 타이틀·본문 폰트에 적용됩니다.',
     dashboard_theme_label: '대시보드 테마',
     dashboard_theme_hint: 'default는 테마 적용 전 오리지널 설정입니다. stable_glass와 highend_glass는 글래스 스타일 테마입니다.',
     theme_default_label: 'Default (오리지널)',
@@ -92,8 +88,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'Dashboard title',
     dashboard_title_placeholder: 'e.g. Hearth: Family Haven',
     dashboard_title_hint: 'This text is shown at the top of the dashboard. Font size adjusts automatically.',
-    display_language: 'Display language',
-    language_hint: 'Applied to title and body fonts on the group dashboard.',
     dashboard_theme_label: 'Dashboard theme',
     dashboard_theme_hint: 'default keeps the original pre-theme style. stable_glass and highend_glass apply glass-style themes.',
     theme_default_label: 'Default (original)',
@@ -132,8 +126,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'ダッシュボードタイトル',
     dashboard_title_placeholder: '例: Hearth (ハース): ファミリーヘイブン',
     dashboard_title_hint: 'ダッシュボード上部に表示されます。文字サイズは自動調整されます。',
-    display_language: '表示言語',
-    language_hint: 'グループのダッシュボードのタイトル・本文フォントに適用されます。',
     dashboard_theme_label: 'ダッシュボードテーマ',
     dashboard_theme_hint: 'default はテーマ適用前のオリジナル設定です。stable_glass と highend_glass はガラステーマです。',
     theme_default_label: 'Default（オリジナル）',
@@ -172,8 +164,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: '仪表盘标题',
     dashboard_title_placeholder: '例如：Hearth (赫斯): 法米利·黑文',
     dashboard_title_hint: '显示在仪表盘顶部。字号将自动调整。',
-    display_language: '显示语言',
-    language_hint: '应用于群组仪表盘的标题与正文字体。',
     dashboard_theme_label: '仪表盘主题',
     dashboard_theme_hint: 'default 为主题应用前的原始设置。stable_glass 与 highend_glass 为玻璃风格主题。',
     theme_default_label: 'Default（原始）',
@@ -212,8 +202,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: '儀表板標題',
     dashboard_title_placeholder: '例如：Hearth (赫斯): 法米利·黑文',
     dashboard_title_hint: '顯示在儀表板頂部。字型大小會自動調整。',
-    display_language: '顯示語言',
-    language_hint: '套用於群組儀表板的標題與內文字型。',
     dashboard_theme_label: '儀表板主題',
     dashboard_theme_hint: 'default 為套用主題前的原始設定。stable_glass 與 highend_glass 為玻璃風格主題。',
     theme_default_label: 'Default（原始）',
@@ -252,8 +240,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'Título del panel',
     dashboard_title_placeholder: 'p.ej. Hogar: refugio familiar',
     dashboard_title_hint: 'Este texto se muestra en la parte superior del panel. El tamaño de fuente se ajusta automáticamente.',
-    display_language: 'Idioma de visualización',
-    language_hint: 'Se aplica a las fuentes del título y del cuerpo en el panel del grupo.',
     dashboard_theme_label: 'Tema del panel',
     dashboard_theme_hint: 'El valor predeterminado mantiene el estilo original previo al tema. stable_glass y highend_glass aplican temas de estilo vidrio.',
     theme_default_label: 'Predeterminado (original)',
@@ -292,8 +278,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'Titre du tableau de bord',
     dashboard_title_placeholder: 'par ex. Foyer : Havre de famille',
     dashboard_title_hint: 'Ce texte est affiché en haut du tableau de bord. La taille de la police s\'ajuste automatiquement.',
-    display_language: 'Langue d\'affichage',
-    language_hint: 'Appliqué aux polices de titre et de corps sur le tableau de bord du groupe.',
     dashboard_theme_label: 'Thème du tableau de bord',
     dashboard_theme_hint: 'par défaut, il conserve le style original du pré-thème. stable_glass et highend_glass appliquent des thèmes de style verre.',
     theme_default_label: 'Par défaut (original)',
@@ -332,8 +316,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'Dashboard-Titel',
     dashboard_title_placeholder: 'z.B. Hearth: Familienparadies',
     dashboard_title_hint: 'Dieser Text wird oben im Dashboard angezeigt. Die Schriftgröße passt sich automatisch an.',
-    display_language: 'Anzeigesprache',
-    language_hint: 'Wird auf Titel- und Textschriftarten im Gruppen-Dashboard angewendet.',
     dashboard_theme_label: 'Dashboard-Thema',
     dashboard_theme_hint: 'Die Standardeinstellung behält den ursprünglichen Stil vor dem Design bei. Stable_glass und highend_glass wenden Themen im Glasstil an.',
     theme_default_label: 'Standard (Original)',
@@ -372,8 +354,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'Titolo della dashboard',
     dashboard_title_placeholder: 'per esempio. Focolare: rifugio per famiglie',
     dashboard_title_hint: 'Questo testo viene visualizzato nella parte superiore della dashboard. La dimensione del carattere si regola automaticamente.',
-    display_language: 'Lingua di visualizzazione',
-    language_hint: 'Applicato ai caratteri del titolo e del corpo nella dashboard del gruppo.',
     dashboard_theme_label: 'Tema del cruscotto',
     dashboard_theme_hint: 'l\'impostazione predefinita mantiene lo stile pre-tema originale. stable_glass e highend_glass applicano temi in stile vetro.',
     theme_default_label: 'Predefinito (originale)',
@@ -412,8 +392,6 @@ const groupSettings: Record<LangCode, GroupSettingsTranslations> = {
     dashboard_title_label: 'Título do painel',
     dashboard_title_placeholder: 'ex.: Hearth: Family Haven',
     dashboard_title_hint: 'Este texto aparece no topo do painel. O tamanho da fonte se ajusta automaticamente.',
-    display_language: 'Idioma de exibição',
-    language_hint: 'Aplicado às fontes de título e corpo no painel do grupo.',
     dashboard_theme_label: 'Tema do painel',
     dashboard_theme_hint: 'O padrão mantém o estilo original. stable_glass e highend_glass aplicam temas em estilo vidro.',
     theme_default_label: 'Padrão (original)',

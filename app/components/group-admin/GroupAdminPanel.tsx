@@ -34,7 +34,7 @@ import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAdminTranslation, type AdminTranslations } from '@/lib/translations/admin';
 import { intlLocaleForLang, isValidLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
-import { getAnnouncementTexts } from '@/lib/announcement-i18n';
+import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/memberManagement';
@@ -1105,7 +1105,9 @@ export function GroupAdminPanel({
               <div>
                 {/* {gat('announcement_unread_badge')}사항 배너 */}
                 <AnnouncementBanner 
-                  announcements={announcements.map((announcement) => ({
+                  announcements={announcements
+                    .filter((a) => isAnnouncementVisibleForLang(a, groupAdminLang))
+                    .map((announcement) => ({
                     ...announcement,
                     ...getAnnouncementTexts(announcement, groupAdminLang),
                   }))}
@@ -1389,7 +1391,7 @@ export function GroupAdminPanel({
                         <div className="flex-1">
                           <div className="mb-2 flex items-center gap-2">
                             <h3 className="m-0 text-lg font-semibold text-slate-800">
-                              {getAnnouncementTexts(announcement, groupAdminLang).title || announcement.title}
+                              {getAnnouncementTexts(announcement, groupAdminLang).title}
                             </h3>
                             {!announcement.is_read && (
                               <span className="rounded-xl bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -1398,7 +1400,7 @@ export function GroupAdminPanel({
                             )}
                           </div>
                           <p className="m-0 whitespace-pre-wrap text-sm text-slate-500">
-                            {getAnnouncementTexts(announcement, groupAdminLang).content || announcement.content}
+                            {getAnnouncementTexts(announcement, groupAdminLang).content}
                           </p>
                         </div>
                       </div>

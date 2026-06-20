@@ -14,7 +14,6 @@ export type OnboardingTranslations = {
   back: string;
   group_name: string;
   group_name_placeholder: string;
-  display_language: string;
   invite_code: string;
   share_code_hint: string;
   confirm_invite_hint: string;
@@ -88,7 +87,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: '돌아가기',
     group_name: '그룹 이름',
     group_name_placeholder: '예: 우리 가족',
-    display_language: '표시 언어',
     invite_code: '초대 코드',
     share_code_hint: '이 코드를 가족에게 공유하세요',
     confirm_invite_hint: '💡 초대코드는 관리자 페이지의 그룹설정에서 확인 가능합니다',
@@ -154,7 +152,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: 'Back',
     group_name: 'Group name',
     group_name_placeholder: 'e.g. My Family',
-    display_language: 'Display language',
     invite_code: 'Invite code',
     share_code_hint: 'Share this code with your family',
     confirm_invite_hint: '💡 You can find the invite code in Group settings in the admin page',
@@ -220,7 +217,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: '戻る',
     group_name: 'グループ名',
     group_name_placeholder: '例: マイファミリー',
-    display_language: '表示言語',
     invite_code: '招待コード',
     share_code_hint: 'このコードを家族と共有してください',
     confirm_invite_hint: '💡 招待コードは管理ページのグループ設定で確認できます',
@@ -286,7 +282,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: '返回',
     group_name: '群组名称',
     group_name_placeholder: '例如：我的家庭',
-    display_language: '显示语言',
     invite_code: '邀请码',
     share_code_hint: '请将此码分享给家人',
     confirm_invite_hint: '💡 邀请码可在管理页的群组设置中查看',
@@ -352,7 +347,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: '返回',
     group_name: '群組名稱',
     group_name_placeholder: '例如：我的家庭',
-    display_language: '顯示語言',
     invite_code: '邀請碼',
     share_code_hint: '請將此碼分享給家人',
     confirm_invite_hint: '💡 邀請碼可在管理頁的群組設定中查看',
@@ -418,7 +412,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: 'Atrás',
     group_name: 'Nombre del grupo',
     group_name_placeholder: 'p.ej. Mi familia',
-    display_language: 'Idioma de visualización',
     invite_code: 'código de invitación',
     share_code_hint: 'Comparte este código con tu familia.',
     confirm_invite_hint: '💡 Puedes encontrar el código de invitación en la configuración del grupo en la página de administración.',
@@ -484,7 +477,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: 'Dos',
     group_name: 'Nom du groupe',
     group_name_placeholder: 'par ex. Ma famille',
-    display_language: 'Langue d\'affichage',
     invite_code: 'Code d\'invitation',
     share_code_hint: 'Partagez ce code avec votre famille',
     confirm_invite_hint: '💡 Vous pouvez trouver le code d\'invitation dans les paramètres du groupe sur la page d\'administration',
@@ -550,7 +542,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: 'Zurück',
     group_name: 'Gruppenname',
     group_name_placeholder: 'z.B. Meine Familie',
-    display_language: 'Anzeigesprache',
     invite_code: 'Einladungscode',
     share_code_hint: 'Teilen Sie diesen Code mit Ihrer Familie',
     confirm_invite_hint: '💡 Den Einladungscode finden Sie in den Gruppeneinstellungen auf der Admin-Seite',
@@ -616,7 +607,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: 'Indietro',
     group_name: 'Nome del gruppo',
     group_name_placeholder: 'per esempio. La mia famiglia',
-    display_language: 'Lingua di visualizzazione',
     invite_code: 'Codice invito',
     share_code_hint: 'Condividi questo codice con la tua famiglia',
     confirm_invite_hint: '💡 Puoi trovare il codice di invito nelle impostazioni del gruppo nella pagina di amministrazione',
@@ -682,7 +672,6 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     back: 'Voltar',
     group_name: 'Nome do grupo',
     group_name_placeholder: 'ex.: Minha família',
-    display_language: 'Idioma de exibição',
     invite_code: 'Código de convite',
     share_code_hint: 'Compartilhe este código com sua família',
     confirm_invite_hint: '💡 Você encontra o código de convite em Configurações do grupo na página de administração',

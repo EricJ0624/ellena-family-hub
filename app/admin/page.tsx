@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -39,7 +40,7 @@ import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
-import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, isValidLang, intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
+import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, ANNOUNCEMENT_PRIMARY_LANG_CODES, ANNOUNCEMENT_EXTRA_LANG_CODES, isValidLang, intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
 import { getCountryDisplayName } from '@/lib/countries';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
@@ -246,6 +247,8 @@ export default function AdminPage() {
   const [announcementContentI18n, setAnnouncementContentI18n] = useState<Record<string, string>>(() => Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
   const [announcementTarget, setAnnouncementTarget] = useState<'ADMIN_ONLY' | 'ALL_MEMBERS'>('ADMIN_ONLY');
   const [announcementLangTab, setAnnouncementLangTab] = useState<LangCode>('ko');
+  const [announcementExtraEnabled, setAnnouncementExtraEnabled] = useState<Set<LangCode>>(() => new Set());
+  const [announcementExtraExpanded, setAnnouncementExtraExpanded] = useState(false);
   const [ticketAnswer, setTicketAnswer] = useState('');
   const [deletingSystemSupportTicketId, setDeletingSystemSupportTicketId] = useState<string | null>(null);
   const [accessRequestExpiresHours, setAccessRequestExpiresHours] = useState(24);
@@ -282,6 +285,62 @@ export default function AdminPage() {
     group_id: '',
   });
   const auditLogLimit = 50;
+
+  const resetAnnouncementForm = useCallback(() => {
+    setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+    setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
+    setAnnouncementTarget('ADMIN_ONLY');
+    setAnnouncementLangTab('ko');
+    setAnnouncementExtraEnabled(new Set());
+    setAnnouncementExtraExpanded(false);
+  }, []);
+
+  const openAnnouncementEdit = useCallback((announcement: AnnouncementInfo) => {
+    const ti =
+      announcement.title_i18n && typeof announcement.title_i18n === 'object'
+        ? announcement.title_i18n
+        : { ko: announcement.title };
+    const ci =
+      announcement.content_i18n && typeof announcement.content_i18n === 'object'
+        ? announcement.content_i18n
+        : { ko: announcement.content };
+    setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ti[l] ?? ''])));
+    setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ci[l] ?? ''])));
+    setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
+    setAnnouncementLangTab('ko');
+    const extra = new Set<LangCode>();
+    for (const l of ANNOUNCEMENT_EXTRA_LANG_CODES) {
+      if ((ti[l] ?? '').trim() || (ci[l] ?? '').trim()) extra.add(l);
+    }
+    setAnnouncementExtraEnabled(extra);
+    setAnnouncementExtraExpanded(extra.size > 0);
+  }, []);
+
+  const toggleAnnouncementExtraLang = useCallback((l: LangCode) => {
+    setAnnouncementExtraEnabled((prev) => {
+      const next = new Set(prev);
+      if (next.has(l)) {
+        next.delete(l);
+        setAnnouncementLangTab((tab) => (tab === l ? 'ko' : tab));
+      } else {
+        next.add(l);
+        setAnnouncementLangTab(l);
+        setAnnouncementExtraExpanded(true);
+      }
+      return next;
+    });
+  }, []);
+
+  const showAnnouncementEditor =
+    ANNOUNCEMENT_PRIMARY_LANG_CODES.includes(announcementLangTab) ||
+    announcementExtraEnabled.has(announcementLangTab);
+
+  const announcementExtraSectionLabel =
+    adminLang === 'ko' ? '추가 언어 (선택)' : 'Additional languages (optional)';
+  const announcementExtraHint =
+    adminLang === 'ko'
+      ? '필요한 언어만 선택한 뒤 번역문을 붙여넣을 수 있습니다.'
+      : 'Select only the languages you need and paste translated text.';
 
   const formatBytes = (bytes: number | null | undefined): string => {
     if (!bytes || bytes <= 0) return '0GB';
@@ -1139,6 +1198,15 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
+              <Link href="/legal/terms" target="_blank" rel="noopener noreferrer" className="hover:text-purple-600 hover:underline">
+                {adminLang === 'ko' ? '이용약관' : 'Terms'}
+              </Link>
+              <span aria-hidden>|</span>
+              <Link href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-purple-600 hover:underline">
+                {adminLang === 'ko' ? '개인정보 처리방침' : 'Privacy'}
+              </Link>
+            </div>
             <label className="sr-only" htmlFor="admin-lang-select">
               Language
             </label>
@@ -2022,10 +2090,7 @@ export default function AdminPage() {
                   <button
                     onClick={() => {
                       setEditingAnnouncement(null);
-                      setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                      setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                      setAnnouncementTarget('ADMIN_ONLY');
-                      setAnnouncementLangTab('ko');
+                      resetAnnouncementForm();
                     }}
                     className="inline-flex cursor-pointer items-center gap-2 rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
                   >
@@ -2051,7 +2116,7 @@ export default function AdminPage() {
                         <div className="flex-1">
                           <div className="mb-2 flex items-center gap-2">
                             <h3 className="m-0 text-lg font-semibold text-slate-800">
-                              {getAnnouncementTexts(announcement, adminLang).title || announcement.title}
+                              {getAnnouncementTexts(announcement, adminLang).title}
                             </h3>
                             {!announcement.is_active && (
                               <span className="rounded bg-red-200 px-2 py-1 text-[11px] font-semibold text-red-800">
@@ -2069,19 +2134,14 @@ export default function AdminPage() {
                             </span>
                           </div>
                           <p className="m-0 whitespace-pre-wrap text-sm text-slate-500">
-                            {getAnnouncementTexts(announcement, adminLang).content || announcement.content}
+                            {getAnnouncementTexts(announcement, adminLang).content}
                           </p>
                         </div>
                         <div className="ml-4 flex gap-2">
                           <button
                             onClick={() => {
                               setEditingAnnouncement(announcement);
-                              const ti = announcement.title_i18n && typeof announcement.title_i18n === 'object' ? announcement.title_i18n : { ko: announcement.title };
-                              const ci = announcement.content_i18n && typeof announcement.content_i18n === 'object' ? announcement.content_i18n : { ko: announcement.content };
-                              setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, (ti[l] ?? '')])));
-                              setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, (ci[l] ?? '')])));
-                              setAnnouncementTarget(announcement.target || 'ADMIN_ONLY');
-                              setAnnouncementLangTab('ko');
+                              openAnnouncementEdit(announcement);
                             }}
                             className="cursor-pointer rounded-md border-none bg-indigo-100 px-3 py-2 text-[13px] font-semibold text-indigo-800 transition-colors hover:bg-indigo-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
                           >
@@ -2196,9 +2256,7 @@ export default function AdminPage() {
                   className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
                   onClick={() => {
                     setEditingAnnouncement(undefined);
-                    setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                    setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                    setAnnouncementTarget('ADMIN_ONLY');
+                    resetAnnouncementForm();
                   }}
                   >
                     <div
@@ -2208,8 +2266,8 @@ export default function AdminPage() {
                       <h3 className="mb-4 text-xl font-semibold text-slate-800">
                         {editingAnnouncement ? at('edit_announcement_modal_title') : at('new_announcement_modal_title')}
                       </h3>
-                      <div className="mb-4 flex gap-1 border-b border-slate-200">
-                        {LANG_CODES.map((l) => (
+                      <div className="mb-3 flex gap-1 border-b border-slate-200">
+                        {ANNOUNCEMENT_PRIMARY_LANG_CODES.map((l) => (
                           <button
                             key={l}
                             type="button"
@@ -2224,19 +2282,69 @@ export default function AdminPage() {
                           </button>
                         ))}
                       </div>
-                      <input
-                        type="text"
-                        value={announcementTitleI18n[announcementLangTab] ?? ''}
-                        onChange={(e) => setAnnouncementTitleI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))}
-                        placeholder={at('placeholder_title')}
-                        className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base font-inherit"
-                      />
-                      <textarea
-                        value={announcementContentI18n[announcementLangTab] ?? ''}
-                        onChange={(e) => setAnnouncementContentI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))}
-                        placeholder={at('placeholder_content')}
-                        className="mb-4 min-h-[280px] w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
-                      />
+                      {showAnnouncementEditor && (
+                        <>
+                          <p className="mb-2 text-xs font-medium text-slate-500">
+                            {LANG_LABELS[announcementLangTab]}
+                          </p>
+                          <input
+                            type="text"
+                            value={announcementTitleI18n[announcementLangTab] ?? ''}
+                            onChange={(e) =>
+                              setAnnouncementTitleI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))
+                            }
+                            placeholder={at('placeholder_title')}
+                            className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base font-inherit"
+                          />
+                          <textarea
+                            value={announcementContentI18n[announcementLangTab] ?? ''}
+                            onChange={(e) =>
+                              setAnnouncementContentI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))
+                            }
+                            placeholder={at('placeholder_content')}
+                            className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
+                          />
+                        </>
+                      )}
+                      <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50">
+                        <button
+                          type="button"
+                          onClick={() => setAnnouncementExtraExpanded((v) => !v)}
+                          className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent px-4 py-3 text-left text-sm font-semibold text-slate-700"
+                        >
+                          {announcementExtraSectionLabel}
+                          <span className="text-xs font-normal text-slate-400">
+                            {announcementExtraExpanded ? '▲' : '▼'}
+                          </span>
+                        </button>
+                        {announcementExtraExpanded && (
+                          <div className="border-t border-slate-200 px-4 pb-4 pt-3">
+                            <p className="mb-3 text-xs text-slate-500">{announcementExtraHint}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {ANNOUNCEMENT_EXTRA_LANG_CODES.map((l) => {
+                                const enabled = announcementExtraEnabled.has(l);
+                                const hasContent =
+                                  !!(announcementTitleI18n[l] ?? '').trim() ||
+                                  !!(announcementContentI18n[l] ?? '').trim();
+                                return (
+                                  <button
+                                    key={l}
+                                    type="button"
+                                    onClick={() => toggleAnnouncementExtraLang(l)}
+                                    className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                                      enabled || announcementLangTab === l
+                                        ? 'border-purple-500 bg-purple-100 text-purple-800'
+                                        : 'border-slate-300 bg-white text-slate-600 hover:border-purple-300'
+                                    } ${hasContent && !enabled ? 'ring-1 ring-amber-300' : ''}`}
+                                  >
+                                    {LANG_LABELS[l]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
                         <label className="mb-3 block text-sm font-semibold text-slate-700">
                           {at('announcement_target_label')}
@@ -2287,9 +2395,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             setEditingAnnouncement(undefined);
-                            setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                            setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                            setAnnouncementTarget('ADMIN_ONLY');
+                            resetAnnouncementForm();
                           }}
                           className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                         >
@@ -2300,6 +2406,12 @@ export default function AdminPage() {
                             const titleObj: Record<string, string> = {};
                             const contentObj: Record<string, string> = {};
                             for (const l of LANG_CODES) {
+                              if (
+                                ANNOUNCEMENT_EXTRA_LANG_CODES.includes(l) &&
+                                !announcementExtraEnabled.has(l)
+                              ) {
+                                continue;
+                              }
                               const t = (announcementTitleI18n[l] ?? '').trim();
                               const c = (announcementContentI18n[l] ?? '').trim();
                               if (t || c) {
@@ -2369,9 +2481,7 @@ export default function AdminPage() {
                               }
 
                               setEditingAnnouncement(undefined);
-                              setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                              setAnnouncementContentI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
-                              setAnnouncementTarget('ADMIN_ONLY');
+                              resetAnnouncementForm();
                               loadAnnouncements();
                             } catch (error: any) {
                               console.error(at('error_announcement_update_failed'), error);

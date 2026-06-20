@@ -52,7 +52,7 @@ import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
-import { getAnnouncementTexts } from '@/lib/announcement-i18n';
+import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
@@ -6236,7 +6236,9 @@ export default function FamilyHub() {
       {/* 공지사항 배너 — app-container의 직접 flex 자식: main-content 위에 상단 고정 */}
       {announcements.length > 0 && (
         <AnnouncementBanner 
-          announcements={announcements.map((a) => {
+          announcements={announcements
+            .filter((a) => isAnnouncementVisibleForLang(a as Parameters<typeof isAnnouncementVisibleForLang>[0], lang))
+            .map((a) => {
             const { title, content } = getAnnouncementTexts(a as Parameters<typeof getAnnouncementTexts>[0], lang);
             return { id: a.id, title, content, created_at: a.created_at, is_read: a.is_read };
           })}

@@ -21,6 +21,14 @@ export const LANG_OPTIONS: readonly LangOption[] = [
 
 export const LANG_CODES: LangCode[] = LANG_OPTIONS.map((o) => o.code);
 
+/** 공지 작성: 기본 직접 입력 언어 */
+export const ANNOUNCEMENT_PRIMARY_LANG_CODES: LangCode[] = ['ko', 'en'];
+
+/** 공지 작성: 선택적 추가 언어 */
+export const ANNOUNCEMENT_EXTRA_LANG_CODES: LangCode[] = LANG_CODES.filter(
+  (c) => c !== 'ko' && c !== 'en',
+);
+
 export const LANG_LABELS: Record<LangCode, string> = Object.fromEntries(
   LANG_OPTIONS.map(({ code, label }) => [code, label]),
 ) as Record<LangCode, string>;

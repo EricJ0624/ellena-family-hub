@@ -29,7 +29,6 @@ export interface Database {
           storage_quota_bytes: number
           family_name: string | null
           title_style: Json | null
-          preferred_language: string | null
           piggy_currency: string
           ui_theme: 'default' | 'stable_glass' | 'highend_glass'
           display_name_pending: boolean
@@ -46,7 +45,6 @@ export interface Database {
           storage_quota_bytes?: number
           family_name?: string | null
           title_style?: Json | null
-          preferred_language?: string | null
           piggy_currency?: string
           ui_theme?: 'default' | 'stable_glass' | 'highend_glass'
           display_name_pending?: boolean
@@ -63,7 +61,6 @@ export interface Database {
           storage_quota_bytes?: number
           family_name?: string | null
           title_style?: Json | null
-          preferred_language?: string | null
           piggy_currency?: string
           ui_theme?: 'default' | 'stable_glass' | 'highend_glass'
           display_name_pending?: boolean

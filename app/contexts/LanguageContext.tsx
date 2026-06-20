@@ -7,14 +7,9 @@ import { fetchProfilePreferences, saveProfilePreferences } from '@/lib/profile-p
 
 const STORAGE_KEY = 'app_preferred_language';
 
-/** @deprecated 그룹 DB 동기화 제거됨. 하위 호환용으로만 유지 */
-export type SetLanguageOptions = {
-  updateCurrentGroup?: boolean;
-};
-
 interface LanguageContextType {
   lang: LangCode;
-  setLanguage: (lang: LangCode, options?: SetLanguageOptions) => Promise<void>;
+  setLanguage: (lang: LangCode) => Promise<void>;
   loading: boolean;
 }
 
@@ -33,11 +28,6 @@ function setStoredLang(lang: LangCode) {
 
 interface LanguageProviderProps {
   children: React.ReactNode;
-  /** @deprecated 프로필 기반 언어로 전환 — 하위 호환용 */
-  currentGroup?: { preferred_language?: string | null } | null;
-  currentGroupId?: string | null;
-  isGroupAdmin?: boolean;
-  refreshGroups?: () => Promise<void>;
 }
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
@@ -82,7 +72,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const setLanguage = useCallback(async (newLang: LangCode, _options?: SetLanguageOptions) => {
+  const setLanguage = useCallback(async (newLang: LangCode) => {
     setLangState(newLang);
     setStoredLang(newLang);
     try {
