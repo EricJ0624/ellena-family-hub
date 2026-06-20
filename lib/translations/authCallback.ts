@@ -52,6 +52,11 @@ const authCallback: Record<LangCode, AuthCallbackTranslations> = {
     redirect_message: 'Reindirizzamento al login...',
     error_message: 'Si è verificato un errore durante l\'accesso.',
   },
+  pt: {
+    processing: 'Autenticando...',
+    redirect_message: 'Redirecionando para o login em instantes...',
+    error_message: 'Ocorreu um erro durante a autenticação.',
+  },
 };
 
 export function getAuthCallbackTranslation(lang: LangCode, key: keyof AuthCallbackTranslations): string {

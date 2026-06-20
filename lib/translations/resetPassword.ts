@@ -102,6 +102,16 @@ const resetPassword: Record<LangCode, ResetPasswordTranslations> = {
     success_reset: 'Password aggiornata con successo!',
     error_reset_failed: 'Aggiornamento password non riuscito. Riprova.',
   },
+  pt: {
+    title: 'Redefinir senha',
+    subtitle: 'Digite sua nova senha',
+    placeholder_new_password: 'Nova senha',
+    placeholder_confirm: 'Confirmar senha',
+    btn_loading: 'Atualizando...',
+    btn_submit: 'Atualizar senha',
+    success_reset: 'Senha atualizada com sucesso!',
+    error_reset_failed: 'Falha ao atualizar a senha. Tente novamente.',
+  },
 };
 
 export function getResetPasswordTranslation(lang: LangCode, key: keyof ResetPasswordTranslations): string {

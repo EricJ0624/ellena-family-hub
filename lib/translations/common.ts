@@ -213,6 +213,27 @@ const common: Record<LangCode, CommonTranslations> = {
     back: 'Indietro',
     skip: 'Salta',
   },
+  pt: {
+    app_title: 'Hearth: Family Haven',
+    user: 'Usuário',
+    me: 'Eu',
+    me_suffix: ' (eu)',
+    anyone: 'Qualquer pessoa',
+    unknown: 'Desconhecido',
+    member: 'Membro',
+    delete: 'Excluir',
+    cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    save: 'Salvar',
+    loading: 'Carregando...',
+    admin: 'Administração',
+    logout: 'Sair',
+    close: 'Fechar',
+    delete_confirm: 'Tem certeza de que deseja excluir?',
+    error_unknown: 'Erro desconhecido',
+    back: 'Voltar',
+    skip: 'Pular',
+  },
 };
 
 /** DB·그룹 설정에 저장될 수 있는 기본 앱 타이틀 문자열(모든 UI 언어 + 레거시 영문 기본값) */

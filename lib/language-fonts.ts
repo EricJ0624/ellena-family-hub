@@ -1,7 +1,7 @@
 /**
  * 앱 표시 언어 코드 (profiles.preferred_language 및 폰트 매핑용)
  */
-export type LangCode = 'ko' | 'en' | 'ja' | 'zh-CN' | 'zh-TW' | 'es' | 'fr' | 'de' | 'it';
+export type LangCode = 'ko' | 'en' | 'ja' | 'zh-CN' | 'zh-TW' | 'es' | 'fr' | 'de' | 'it' | 'pt';
 
 export type LangOption = { code: LangCode; label: string };
 
@@ -16,6 +16,7 @@ export const LANG_OPTIONS: readonly LangOption[] = [
   { code: 'fr', label: 'Français' },
   { code: 'de', label: 'Deutsch' },
   { code: 'it', label: 'Italiano' },
+  { code: 'pt', label: 'Português' },
 ];
 
 export const LANG_CODES: LangCode[] = LANG_OPTIONS.map((o) => o.code);
@@ -55,6 +56,7 @@ export function getFontStyle(
     fr: { title: { fontFamily: 'Inter, sans-serif', fontWeight: 700 }, body: { fontFamily: 'Inter, sans-serif', fontWeight: 400 } },
     de: { title: { fontFamily: 'Inter, sans-serif', fontWeight: 700 }, body: { fontFamily: 'Inter, sans-serif', fontWeight: 400 } },
     it: { title: { fontFamily: 'Inter, sans-serif', fontWeight: 700 }, body: { fontFamily: 'Inter, sans-serif', fontWeight: 400 } },
+    pt: { title: { fontFamily: 'Inter, sans-serif', fontWeight: 700 }, body: { fontFamily: 'Inter, sans-serif', fontWeight: 400 } },
   };
   return map[lang]?.[type] ?? map.en[type];
 }
@@ -72,6 +74,7 @@ export function localeToLangCode(locale: string): LangCode {
   if (lower.startsWith('fr')) return 'fr';
   if (lower.startsWith('de')) return 'de';
   if (lower.startsWith('it')) return 'it';
+  if (lower.startsWith('pt')) return 'pt';
   return 'en';
 }
 
@@ -87,6 +90,7 @@ export function intlLocaleForLang(lang: LangCode): string {
     fr: 'fr-FR',
     de: 'de-DE',
     it: 'it-IT',
+    pt: 'pt-BR',
   };
   return map[lang] ?? 'en-US';
 }
