@@ -167,6 +167,9 @@ interface SortableCardProps {
   liveW: number | null;
   liveH: number | null;
   restoreLabel: string;
+  reorderAriaLabel: string;
+  toggleOnLabel: string;
+  toggleOffLabel: string;
   onToggle: () => void;
   onRestoreOne: () => void;
   onResizeHStart: (e: React.PointerEvent) => void;
@@ -188,6 +191,9 @@ function SortableCard({
   liveW,
   liveH,
   restoreLabel,
+  reorderAriaLabel,
+  toggleOnLabel,
+  toggleOffLabel,
   onToggle,
   onRestoreOne,
   onResizeHStart,
@@ -301,7 +307,7 @@ function SortableCard({
             'absolute right-0 top-0 z-50 flex touch-none items-center justify-center rounded-tr-xl bg-black/25 shadow-sm active:bg-black/40 [touch-action:none]',
             isNarrowCard ? 'h-8 w-8' : 'h-10 w-10',
           ].join(' ')}
-          aria-label="Reorder widget"
+          aria-label={reorderAriaLabel}
           onClick={(e) => e.stopPropagation()}
         >
           <DragHandleIcon />
@@ -346,7 +352,7 @@ function SortableCard({
             className="shrink-0 h-3.5 w-3.5 cursor-pointer"
           />
           <span className="text-[11px] font-medium text-slate-600">
-            {cfg.is_enabled ? 'ON' : 'OFF'}
+            {cfg.is_enabled ? toggleOnLabel : toggleOffLabel}
           </span>
           <button
             type="button"
@@ -421,6 +427,9 @@ export interface WidgetLayoutEditorProps {
     | 'widgets_preview_landscape'
     | 'widgets_preview_desktop'
     | 'widgets_disabled_section'
+    | 'widgets_reorder_aria'
+    | 'widgets_toggle_on'
+    | 'widgets_toggle_off'
   >;
   onDraftsChange: (d: WidgetConfigDraft[]) => void;
   onToggle: (key: DashboardWidgetKey) => void;
@@ -853,6 +862,9 @@ export function WidgetLayoutEditor({
                   liveH={liveH}
                   placementCellRowH={placementCellRowH}
                   restoreLabel={t.widgets_restore_defaults}
+                  reorderAriaLabel={t.widgets_reorder_aria}
+                  toggleOnLabel={t.widgets_toggle_on}
+                  toggleOffLabel={t.widgets_toggle_off}
                   onToggle={() => onToggle(cfg.widget_key)}
                   onRestoreOne={() => onRestoreOne(cfg.widget_key)}
                   onResizeHStart={(e) => {
@@ -942,6 +954,9 @@ export function WidgetLayoutEditor({
                   liveH={liveH}
                   placementCellRowH={placementCellRowH}
                   restoreLabel={t.widgets_restore_defaults}
+                  reorderAriaLabel={t.widgets_reorder_aria}
+                  toggleOnLabel={t.widgets_toggle_on}
+                  toggleOffLabel={t.widgets_toggle_off}
                   onToggle={() => onToggle(activeDragKey)}
                   onRestoreOne={() => onRestoreOne(activeDragKey)}
                   onResizeHStart={() => {}}

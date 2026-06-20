@@ -34,7 +34,7 @@ import MemberManagement from '@/app/components/MemberManagement';
 import GroupSettings from '@/app/components/GroupSettings';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
 import { getAdminTranslation, type AdminTranslations } from '@/lib/translations/admin';
-import { intlLocaleForLang, type LangCode } from '@/lib/language-fonts';
+import { intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
@@ -181,7 +181,7 @@ export function GroupAdminPanel({
   const router = useRouter();
   const isEmbedded = variant === 'embedded';
 
-  const { lang } = useLanguage();
+  const { lang, setLanguage } = useLanguage();
   const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) => getGroupAdminTranslation(lang, key);
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
   const piggyLang: LangCode = isEmbedded && adminLangForPiggy ? adminLangForPiggy : lang;
@@ -924,7 +924,23 @@ export function GroupAdminPanel({
               </div>
             </div>
           </div>
-          <button
+          <div className="flex items-center gap-3">
+            <label className="sr-only" htmlFor="group-admin-lang-select">
+              {gat('language_select_label')}
+            </label>
+            <select
+              id="group-admin-lang-select"
+              value={lang}
+              onChange={(e) => void setLanguage(e.target.value as LangCode)}
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+            >
+              {LANG_OPTIONS.map(({ code, label }) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
             onClick={() => {
               if (isEmbedded && onEmbeddedClose) {
                 onEmbeddedClose();
@@ -937,6 +953,7 @@ export function GroupAdminPanel({
             <X className="h-4 w-4" />
             {ct('close')}
           </button>
+          </div>
         </div>
 
         {canSwitchAdminGroups && (

@@ -7,22 +7,56 @@
  */
 
 import { Camera, Paperclip } from 'lucide-react';
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getDashboardTranslation } from '@/lib/translations/dashboard';
+import { getTravelTranslation } from '@/lib/translations/travel';
+import { getGamesTranslation } from '@/lib/translations/games';
+import { getTravelDiaryTranslation } from '@/lib/translations/travel-diary';
+import { getPiggyTranslation } from '@/lib/translations/piggy';
+import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
+import { getWidgetPreviewTranslation } from '@/lib/translations/widgetPreview';
+import { getFamilyRoleLabel } from '@/lib/translations/memberManagement';
+import { getCommonTranslation } from '@/lib/translations/common';
+import { intlLocaleForLang } from '@/lib/language-fonts';
+
+function useWidgetPreviewCopy() {
+  const { lang } = useLanguage();
+  const dateLocale = intlLocaleForLang(lang);
+
+  return useMemo(
+    () => ({
+      lang,
+      dateLocale,
+      dt: (key: Parameters<typeof getDashboardTranslation>[1]) => getDashboardTranslation(lang, key),
+      tt: (key: Parameters<typeof getTravelTranslation>[1]) => getTravelTranslation(lang, key),
+      gt: (key: Parameters<typeof getGamesTranslation>[1]) => getGamesTranslation(lang, key),
+      tdy: (key: Parameters<typeof getTravelDiaryTranslation>[1]) => getTravelDiaryTranslation(lang, key),
+      pt: (key: Parameters<typeof getPiggyTranslation>[1]) => getPiggyTranslation(lang, key),
+      gat: (key: Parameters<typeof getGroupAdminTranslation>[1]) => getGroupAdminTranslation(lang, key),
+      wp: (key: Parameters<typeof getWidgetPreviewTranslation>[1]) => getWidgetPreviewTranslation(lang, key),
+      ct: (key: Parameters<typeof getCommonTranslation>[1]) => getCommonTranslation(lang, key),
+      familyRole: (role: 'mom' | 'dad' | 'daughter') => getFamilyRoleLabel(lang, role),
+    }),
+    [lang, dateLocale],
+  );
+}
 
 // ── Tasks (칠판 스타일) ──────────────────────────────────────────
 function TasksPreview() {
+  const { dt, wp } = useWidgetPreviewCopy();
   const items = [
-    { text: '가족 저녁 식사 준비', done: false, assignee: '👩' },
-    { text: '마트 장보기', done: true, assignee: '👨' },
-    { text: '아이 학교 준비물', done: false, assignee: '👧' },
-    { text: '주말 청소', done: false, assignee: null },
+    { text: wp('preview_task_1'), done: false, assignee: '👩' },
+    { text: wp('preview_task_2'), done: true, assignee: '👨' },
+    { text: wp('preview_task_3'), done: false, assignee: '👧' },
+    { text: wp('preview_task_4'), done: false, assignee: null },
   ];
   return (
     <div className="chalkboard-frame flex w-full flex-col">
       <section className="chalkboard-container flex flex-col">
         <div className="chalkboard-top-bar">
-          <h3 className="chalkboard-title">Family Tasks</h3>
+          <h3 className="chalkboard-title">{dt('todo_section_title')}</h3>
         </div>
         <div className="section-body">
           <div className="todo-list">
@@ -52,7 +86,17 @@ function TasksPreview() {
 
 // ── Calendar (보라색 그라디언트) ────────────────────────────────
 function CalendarPreview() {
-  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const { dt, dateLocale } = useWidgetPreviewCopy();
+  const days = [
+    dt('calendar_weekday_0'),
+    dt('calendar_weekday_1'),
+    dt('calendar_weekday_2'),
+    dt('calendar_weekday_3'),
+    dt('calendar_weekday_4'),
+    dt('calendar_weekday_5'),
+    dt('calendar_weekday_6'),
+  ];
+  const monthLabel = new Date(2026, 4, 1).toLocaleDateString(dateLocale, { year: 'numeric', month: 'long' });
   const cells = [
     '', '', '', '', 1, 2, 3,
     4, 5, 6, 7, 8, 9, 10,
@@ -66,15 +110,19 @@ function CalendarPreview() {
       <div className="section-header mb-2.5">
         <h3 className="section-title m-0 flex items-center gap-2">
           <span className="text-violet-600">📅</span>
-          Family Calendar
+          {dt('section_title_calendar')}
         </h3>
       </div>
       <div className="section-body">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-base font-bold text-slate-800">2026년 5월</span>
+          <span className="text-base font-bold text-slate-800">{monthLabel}</span>
           <div className="flex gap-1">
-            <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">◀ 이전</div>
-            <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">다음 ▶</div>
+            <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">
+              ◀ {dt('calendar_prev_month')}
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">
+              {dt('calendar_next_month')} ▶
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-7 gap-0.5 text-center text-xs">
@@ -114,16 +162,17 @@ function CalendarPreview() {
 
 // ── Chat (메시지 스타일) ────────────────────────────────────────
 function ChatPreview() {
+  const { dt, ct, familyRole, wp } = useWidgetPreviewCopy();
   const messages = [
-    { user: '👩 엄마', time: '10:30', text: '오늘 저녁 뭐 먹을까?', mine: false },
-    { user: '나', time: '10:32', text: '치킨 어때요? 😋', mine: true },
-    { user: '👨 아빠', time: '10:35', text: '좋아! 오늘 내가 시킬게', mine: false },
-    { user: '나', time: '10:36', text: '👍', mine: true },
+    { user: `👩 ${familyRole('mom')}`, time: '10:30', text: wp('preview_chat_1'), mine: false },
+    { user: ct('me'), time: '10:32', text: wp('preview_chat_2'), mine: true },
+    { user: `👨 ${familyRole('dad')}`, time: '10:35', text: wp('preview_chat_3'), mine: false },
+    { user: ct('me'), time: '10:36', text: '👍', mine: true },
   ];
   return (
     <section className="content-section h-full">
       <div className="section-header">
-        <h3 className="section-title">Family Chat</h3>
+        <h3 className="section-title">{dt('section_title_chat')}</h3>
       </div>
       <div className="section-body">
         <div className="chat-messages">
@@ -145,7 +194,7 @@ function ChatPreview() {
             readOnly
             tabIndex={-1}
             className="chat-input min-w-0 flex-1"
-            placeholder="메시지 입력..."
+            placeholder={dt('chat_placeholder')}
             aria-hidden
           />
           <div className="chat-attach-wrap">
@@ -155,7 +204,7 @@ function ChatPreview() {
             </button>
           </div>
           <button type="button" tabIndex={-1} className="btn-send" aria-hidden>
-            전송
+            {dt('chat_send')}
           </button>
         </div>
       </div>
@@ -165,20 +214,21 @@ function ChatPreview() {
 
 // ── Location (지도 스타일) ──────────────────────────────────────
 function LocationPreview() {
+  const { dt, gat, familyRole, wp } = useWidgetPreviewCopy();
   const members = [
-    { emoji: '👩', name: '엄마', location: '서울 강남구' },
-    { emoji: '👨', name: '아빠', location: '서울 종로구' },
-    { emoji: '👧', name: '딸', location: '학교' },
+    { emoji: '👩', name: familyRole('mom'), location: 'Seoul' },
+    { emoji: '👨', name: familyRole('dad'), location: 'Seoul' },
+    { emoji: '👧', name: familyRole('daughter'), location: wp('preview_location_school') },
   ];
   return (
     <section className="content-section location-widget-section h-full min-h-0">
       <div className="section-header shrink-0">
         <h3 className="section-title flex items-center gap-2">
           <span>📍</span>
-          Family Location
+          {dt('section_title_location')}
         </h3>
         <div className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white">
-          📍 어디있어?
+          📍 {dt('location_where_btn')}
         </div>
       </div>
       <div className="section-body location-section-body min-h-0">
@@ -189,7 +239,7 @@ function LocationPreview() {
               <div key={i} className={`h-8 rounded ${i % 3 === 0 ? 'bg-green-100' : i % 3 === 1 ? 'bg-slate-100' : 'bg-blue-50'}`} />
             ))}
           </div>
-          <span className="text-xs text-slate-400">🗺️ 지도 영역</span>
+          <span className="text-xs text-slate-400">🗺️ {gat('widgets_preview_map_area')}</span>
         </div>
         </div>
         <div className="location-requests-panel grid shrink-0 gap-1.5 overflow-hidden">
@@ -214,12 +264,13 @@ const PHOTO_COLORS = [
   'bg-emerald-200', 'bg-violet-200', 'bg-orange-200',
 ];
 function AlbumPreview() {
+  const { dt } = useWidgetPreviewCopy();
   return (
     <section className="content-section h-full">
       <div className="section-header">
-        <h3 className="section-title">Family Album</h3>
+        <h3 className="section-title">{dt('section_title_memories')}</h3>
         <div className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white">
-          📸 전체보기
+          📸 {dt('album_view_all')}
         </div>
       </div>
       <div className="section-body">
@@ -240,17 +291,18 @@ function AlbumPreview() {
 
 // ── Travel (여행 플래너 스타일) ─────────────────────────────────
 function TravelPreview() {
+  const { tt, wp } = useWidgetPreviewCopy();
   const trips = [
-    { title: '제주도 가족 여행', dates: '2026.07.15 ~ 07.20' },
-    { title: '경주 역사 탐방', dates: '2026.08.10 ~ 08.12' },
-    { title: '강원도 캠핑', dates: '2026.09.05 ~ 09.07' },
+    { title: wp('preview_trip_1_title'), dates: wp('preview_trip_1_dates') },
+    { title: wp('preview_trip_2_title'), dates: wp('preview_trip_2_dates') },
+    { title: wp('preview_trip_3_title'), dates: wp('preview_trip_3_dates') },
   ];
   return (
     <section className="content-section h-full">
       <div className="section-header">
-        <h3 className="section-title">Travel Planner</h3>
+        <h3 className="section-title">{tt('title')}</h3>
         <div className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white">
-          + 여행 추가
+          + {tt('add_trip')}
         </div>
       </div>
       <div className="section-body">
@@ -272,17 +324,18 @@ function TravelPreview() {
 
 // ── Piggy Bank (저금통 스타일) ──────────────────────────────────
 function PiggyPreview() {
+  const { pt, wp, familyRole } = useWidgetPreviewCopy();
   const members = [
-    { name: '엄마', wallet: '₩ 50,000', bank: '₩ 1,200,000' },
-    { name: '아빠', wallet: '₩ 30,000', bank: '₩ 2,500,000' },
-    { name: '딸', wallet: '₩ 15,000', bank: '₩ 350,000' },
+    { name: familyRole('mom'), wallet: '₩ 50,000', bank: '₩ 1,200,000' },
+    { name: familyRole('dad'), wallet: '₩ 30,000', bank: '₩ 2,500,000' },
+    { name: familyRole('daughter'), wallet: '₩ 15,000', bank: '₩ 350,000' },
   ];
   return (
     <section className="content-section h-full">
       <div className="section-header">
-        <h3 className="section-title">Piggy Bank</h3>
+        <h3 className="section-title">{pt('piggy_label')}</h3>
         <div className="flex items-center gap-1.5 rounded-lg bg-red-500 px-2.5 py-1.5 text-xs font-semibold text-white">
-          <span>🐷</span> 관리
+          <span>🐷</span> {wp('preview_manage_btn')}
         </div>
       </div>
       <div className="section-body">
@@ -295,11 +348,11 @@ function PiggyPreview() {
               <div className="mb-1.5 text-sm font-bold text-slate-800">{m.name}</div>
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="rounded-lg bg-amber-50 px-2 py-1.5">
-                  <div className="text-[10px] text-amber-600">지갑</div>
+                  <div className="text-[10px] text-amber-600">{wp('preview_wallet')}</div>
                   <div className="text-xs font-bold text-amber-800">{m.wallet}</div>
                 </div>
                 <div className="rounded-lg bg-blue-50 px-2 py-1.5">
-                  <div className="text-[10px] text-blue-600">은행</div>
+                  <div className="text-[10px] text-blue-600">{wp('preview_bank')}</div>
                   <div className="text-xs font-bold text-blue-800">{m.bank}</div>
                 </div>
               </div>
@@ -313,11 +366,24 @@ function PiggyPreview() {
 
 // ── Games (Family Games) ───────────────────────────────────────────
 function GamesPreview() {
-  const tabs = ['사다리', '가위바위보', '룰렛'];
+  const { gt, wp } = useWidgetPreviewCopy();
+  const tabs = [gt('tab_ladder'), gt('tab_rps'), gt('tab_roulette')];
+  const names = [
+    wp('preview_game_name_1'),
+    wp('preview_game_name_2'),
+    wp('preview_game_name_3'),
+    wp('preview_game_name_4'),
+  ];
+  const destinations = [
+    wp('preview_game_dest_1'),
+    wp('preview_game_dest_2'),
+    wp('preview_game_dest_3'),
+    wp('preview_game_dest_4'),
+  ];
   return (
     <section className="content-section games-widget-section">
       <div className="section-header">
-        <h3 className="section-title">Family Games</h3>
+        <h3 className="section-title">{gt('section_title')}</h3>
       </div>
       <div className="section-body games-section-body">
         <div className="mb-2 flex flex-wrap gap-1 rounded-lg bg-slate-900/5 p-1">
@@ -334,7 +400,7 @@ function GamesPreview() {
         </div>
         <div className="glass-panel-soft rounded-xl p-3">
           <div className="mb-2 grid grid-cols-4 gap-1">
-            {['민수', '영희', '철수', '지우'].map((name) => (
+            {names.map((name) => (
               <div key={name} className="text-center text-[9px] font-semibold text-slate-700">
                 {name}
               </div>
@@ -351,7 +417,7 @@ function GamesPreview() {
             </svg>
           </div>
           <div className="mt-2 grid grid-cols-4 gap-1">
-            {['당번', '설거지', '치킨', '커피'].map((label) => (
+            {destinations.map((label) => (
               <div key={label} className="text-center text-[9px] font-medium text-slate-600">
                 {label}
               </div>
@@ -365,16 +431,17 @@ function GamesPreview() {
 
 // ── Travel diary ───────────────────────────────────────────────────
 function TravelDiaryPreview() {
+  const { tdy, wp } = useWidgetPreviewCopy();
   return (
     <section className="content-section">
       <div className="section-header">
-        <h3 className="section-title">Trip diary</h3>
+        <h3 className="section-title">{tdy('section_title')}</h3>
       </div>
       <div className="section-body">
         <div className="glass-panel-soft rounded-xl p-3">
-          <div className="text-sm font-bold text-slate-800">제주 가족 여행</div>
-          <div className="mt-0.5 text-xs text-slate-500">2025-07-01 ~ 2025-07-05</div>
-          <p className="mt-2 text-xs text-slate-600">한 줄 평 · 무드 · 사진</p>
+          <div className="text-sm font-bold text-slate-800">{wp('preview_diary_sample_title')}</div>
+          <div className="mt-0.5 text-xs text-slate-500">{wp('preview_diary_sample_dates')}</div>
+          <p className="mt-2 text-xs text-slate-600">{wp('preview_diary_sample_desc')}</p>
         </div>
       </div>
     </section>
