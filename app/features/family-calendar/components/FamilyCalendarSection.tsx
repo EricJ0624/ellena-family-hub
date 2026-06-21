@@ -381,7 +381,7 @@ export function FamilyCalendarSection({
       {/* Calendar Section */}
       <section className="content-section calendar-widget-section bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50">
         <div className="section-header calendar-section-header">
-          <h3 className="section-title m-0 flex items-center" style={{ gap: '2.5cqmin' }}>
+          <h3 className="section-title m-0 flex items-center calendar-section-title">
             <Calendar className="calendar-section-title-icon text-violet-600" />
             {t.section_title_calendar}
           </h3>
