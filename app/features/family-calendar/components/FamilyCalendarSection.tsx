@@ -378,19 +378,21 @@ export function FamilyCalendarSection({
         </div>
       , document.body)}
 
-      {/* Calendar Section */}
-      <section className="content-section calendar-widget-section bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50">
+      {/* Calendar Section — 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
+      <div
+        className={`calendar-widget-stack${
+          hasSelection ? ' calendar-widget-stack--expanded' : ''
+        }`}
+      >
+      <div className="calendar-widget-cq-frame">
+      <section className="content-section calendar-widget-section calendar-widget-section--frame bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50">
         <div className="section-header calendar-section-header">
           <h3 className="section-title m-0 flex items-center calendar-section-title">
             <Calendar className="calendar-section-title-icon text-violet-600" />
             {t.section_title_calendar}
           </h3>
         </div>
-        <div
-          className={`section-body calendar-section-body${
-            hasSelection ? ' calendar-section-body--has-selection' : ''
-          }`}
-        >
+        <div className="section-body calendar-section-body">
           <motion.div
             key={`${calendarGrid.year}-${calendarGrid.month}`}
             className="calendar-month-block"
@@ -489,6 +491,18 @@ export function FamilyCalendarSection({
             </div>
           </motion.div>
 
+          <button
+            type="button"
+            onClick={openEventModal}
+            className="calendar-add-btn transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+          >
+            <Plus className="calendar-add-btn-icon" />
+            {t.event_add_title}
+          </button>
+        </div>
+      </section>
+      </div>
+
           <AnimatePresence mode="wait">
             {selectedDate && (
               <motion.div
@@ -576,17 +590,7 @@ export function FamilyCalendarSection({
               </motion.div>
             )}
           </AnimatePresence>
-
-          <button
-            type="button"
-            onClick={openEventModal}
-            className="calendar-add-btn transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-          >
-            <Plus className="calendar-add-btn-icon" />
-            {t.event_add_title}
-          </button>
-        </div>
-      </section>
+      </div>
     </>
   );
 }
