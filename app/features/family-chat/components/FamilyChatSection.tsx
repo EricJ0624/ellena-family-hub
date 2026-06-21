@@ -50,7 +50,7 @@ interface FamilyChatSectionProps {
 }
 
 /** 다언어 섹션 타이틀: 너비에 맞게 축소, 높이·절대 상한 내에서 가능한 크게 */
-const CHAT_TITLE_ABS_MAX_PX = 26;
+const CHAT_TITLE_ABS_MAX_PX = 22;
 const CHAT_TITLE_MIN_PX = 7;
 const CHAT_TITLE_LINE_HEIGHT = 1.2;
 
