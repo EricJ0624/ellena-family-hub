@@ -41,6 +41,7 @@ import { getFamilyRoleEmoji, getFamilyRoleLabel } from '@/lib/translations/membe
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { DashboardWidgetSettings } from '@/app/components/group-admin/DashboardWidgetSettings';
+import { GlassSafeModal } from '@/app/components/GlassSafeModal';
 
 export type GroupAdminPanelVariant = 'standalone' | 'embedded';
 
@@ -1586,190 +1587,6 @@ export function GroupAdminPanel({
                     </div>
                   )}
                 </div>
-
-                {/* ??�쎈�?????�쎌?�占?筌뤴뫀??*/}
-                {showTicketForm && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => setShowTicketForm(false)}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
-                        {gat('ticket_compose_title')}
-                      </h3>
-                      <input
-                        type="text"
-                        value={ticketTitle}
-                        onChange={(e) => setTicketTitle(e.target.value)}
-                        placeholder={gat('title_placeholder')}
-                        className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base"
-                      />
-                      <textarea
-                        value={ticketContent}
-                        onChange={(e) => setTicketContent(e.target.value)}
-                        placeholder={gat('content_placeholder')}
-                        className="mb-4 min-h-[300px] w-full rounded-lg border border-slate-200 p-3 text-sm"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setShowTicketForm(false);
-                            setTicketTitle('');
-                            setTicketContent('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
-                        >
-                          {ct('cancel')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!ticketTitle.trim() || !ticketContent.trim()) {
-                              alert(gat('alert_title_content_required'));
-                              return;
-                            }
-
-                            if (!effectiveGroupId) {
-                              alert(gat('alert_group_info'));
-                              return;
-                            }
-
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(gat('alert_auth'));
-                                return;
-                              }
-
-                              const response = await fetch('/api/group-admin/support-tickets', {
-                                method: 'POST',
-                                headers: {
-                                  'Authorization': `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  group_id: effectiveGroupId,
-                                  title: ticketTitle,
-                                  content: ticketContent,
-                                }),
-                              });
-
-                              const result = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(result.error || gat('error_ticket_create'));
-                              }
-
-                              alert(gat('ticket_created'));
-                              setShowTicketForm(false);
-                              setTicketTitle('');
-                              setTicketContent('');
-                              loadSupportTickets();
-                            } catch (error: any) {
-                              console.error('announcement mark read', error);
-                              alert(error.message || gat('error_ticket_create'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
-                        >
-                          {gat('submit_compose')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {followUpForTicket && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => {
-                    setFollowUpForTicket(null);
-                    setFollowUpBody('');
-                  }}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[560px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-3 text-lg font-semibold text-slate-800">
-                        {gat('follow_up_btn')}
-                      </h3>
-                      <p className="mb-3 text-[13px] text-slate-500">
-                        {followUpForTicket.title}
-                      </p>
-                      <textarea
-                        value={followUpBody}
-                        onChange={(e) => setFollowUpBody(e.target.value)}
-                        placeholder={gat('follow_up_placeholder')}
-                        className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFollowUpForTicket(null);
-                            setFollowUpBody('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
-                        >
-                          {ct('cancel')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!followUpBody.trim()) {
-                              alert(gat('alert_enter_content'));
-                              return;
-                            }
-                            if (!effectiveGroupId || !followUpForTicket) {
-                              alert(gat('alert_group_info'));
-                              return;
-                            }
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(gat('alert_auth'));
-                                return;
-                              }
-                              const response = await fetch('/api/group-admin/support-tickets', {
-                                method: 'PATCH',
-                                headers: {
-                                  Authorization: `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  id: followUpForTicket.id,
-                                  group_id: effectiveGroupId,
-                                  follow_up: followUpBody.trim(),
-                                }),
-                              });
-                              const result = await response.json();
-                              if (!response.ok) {
-                                throw new Error(result.error || gat('error_follow_up_send'));
-                              }
-                              setFollowUpForTicket(null);
-                              setFollowUpBody('');
-                              loadSupportTickets();
-                            } catch (e: unknown) {
-                              alert(e instanceof Error ? e.message : gat('error_follow_up_send'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-                        >
-                          {gat('send_btn')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1894,113 +1711,9 @@ export function GroupAdminPanel({
                     </div>
                   )}
                 </div>
-
-                {editingMemberTicket && (
-                  <div
-                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                    onClick={() => setEditingMemberTicket(null)}
-                  >
-                    <div
-                      className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
-                        {gat('reply_compose_title')}
-                      </h3>
-                      {editingMemberTicket && (
-                        <div className="mb-4 rounded-lg bg-slate-50 p-3 text-[13px] text-slate-600">
-                          <div className="mb-1.5 font-semibold text-slate-800">{editingMemberTicket.title}</div>
-                          <div className="mb-2 whitespace-pre-wrap">{editingMemberTicket.content}</div>
-                          {editingMemberTicket.answer && (
-                            <div className="mt-2 border-t border-slate-200 pt-2">
-                              <span className="text-[11px] font-semibold text-sky-700">{gat('first_reply_label')}</span>
-                              <div className="mt-1 whitespace-pre-wrap">{editingMemberTicket.answer}</div>
-                            </div>
-                          )}
-                          {parseMemberSupportMessageThread(editingMemberTicket.message_thread).map((entry, i) => (
-                            <div key={`emt-${i}`} className="mt-2 border-t border-slate-200 pt-2">
-                              <span
-                                className={`text-[11px] font-semibold ${
-                                  entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
-                                }`}
-                              >
-                                {entry.role === 'member' ? gat('thread_role_follow_up') : gat('thread_role_previous_reply')}
-                              </span>
-                              <div className="mt-1 whitespace-pre-wrap">{entry.body}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <textarea
-                        value={memberTicketAnswer}
-                        onChange={(e) => setMemberTicketAnswer(e.target.value)}
-                        placeholder={gat('reply_placeholder')}
-                        className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingMemberTicket(null);
-                            setMemberTicketAnswer('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
-                        >
-                          {ct('cancel')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!editingMemberTicket || !memberTicketAnswer.trim()) {
-                              alert(gat('alert_reply_required'));
-                              return;
-                            }
-                            if (!effectiveGroupId) return;
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(gat('auth_required'));
-                                return;
-                              }
-                              const response = await fetch('/api/group-admin/member-support-tickets', {
-                                method: 'PUT',
-                                headers: {
-                                  'Authorization': `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  id: editingMemberTicket.id,
-                                  group_id: effectiveGroupId,
-                                  answer: memberTicketAnswer.trim(),
-                                  status: 'answered',
-                                }),
-                              });
-                              const result = await response.json();
-                              if (!response.ok) {
-                                throw new Error(result.error || gat('error_reply_save'));
-                              }
-                              alert(gat('reply_saved'));
-                              setEditingMemberTicket(null);
-                              setMemberTicketAnswer('');
-                              loadMemberSupportTickets();
-                            } catch (e: any) {
-                              console.error('member support reply save', e);
-                              alert(e.message || gat('error_reply_save'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
-                        >
-                          {ct('save')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* ???�쎌??????�쎌?�占???*/}
             {activeTab === 'dashboard-access-requests' && (
               <div>
                 <div className="mb-6 flex items-center justify-between">
@@ -2138,96 +1851,6 @@ export function GroupAdminPanel({
                     </div>
                   )}
                 </div>
-
-                {/* ???�쎌??????�쎌?�占????�쎌?�占?筌뤴뫀??*/}
-                {showAccessRequestForm && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => setShowAccessRequestForm(false)}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
-                        {gat('access_request_modal_title')}
-                      </h3>
-                      <p className="mb-4 text-sm text-slate-500">
-                        {gat('access_request_modal_hint')}
-                      </p>
-                      <textarea
-                        value={accessRequestReason}
-                        onChange={(e) => setAccessRequestReason(e.target.value)}
-                        placeholder={gat('reason_placeholder')}
-                        className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setShowAccessRequestForm(false);
-                            setAccessRequestReason('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
-                        >
-                          {ct('cancel')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!accessRequestReason.trim()) {
-                              alert(gat('alert_reason_required'));
-                              return;
-                            }
-
-                            if (!effectiveGroupId) {
-                              alert(gat('alert_group_info'));
-                              return;
-                            }
-
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(gat('alert_auth'));
-                                return;
-                              }
-
-                              const response = await fetch('/api/group-admin/dashboard-access-requests', {
-                                method: 'POST',
-                                headers: {
-                                  'Authorization': `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  group_id: effectiveGroupId,
-                                  reason: accessRequestReason,
-                                }),
-                              });
-
-                              const result = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(result.error || gat('error_request_create'));
-                              }
-
-                              alert(gat('request_created'));
-                              setShowAccessRequestForm(false);
-                              setAccessRequestReason('');
-                              loadAccessRequests();
-                            } catch (error: any) {
-                              console.error('announcement mark read', error);
-                              alert(error.message || gat('error_request_create'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
-                        >
-                          {gat('submit_request')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -2379,6 +2002,371 @@ export function GroupAdminPanel({
           </>
         )}
       </div>
+
+      {/* glass-panel 밖 portal 모달 — loadingData와 무관하게 유지 */}
+      <GlassSafeModal
+        open={showTicketForm}
+        onClose={() => {
+          setShowTicketForm(false);
+          setTicketTitle('');
+          setTicketContent('');
+        }}
+      >
+        <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
+          {gat('ticket_compose_title')}
+        </h3>
+        <input
+          type="text"
+          value={ticketTitle}
+          onChange={(e) => setTicketTitle(e.target.value)}
+          placeholder={gat('title_placeholder')}
+          className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base"
+        />
+        <textarea
+          value={ticketContent}
+          onChange={(e) => setTicketContent(e.target.value)}
+          placeholder={gat('content_placeholder')}
+          className="mb-4 min-h-[300px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => {
+              setShowTicketForm(false);
+              setTicketTitle('');
+              setTicketContent('');
+            }}
+            className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+          >
+            {ct('cancel')}
+          </button>
+          <button
+            onClick={async () => {
+              if (!ticketTitle.trim() || !ticketContent.trim()) {
+                alert(gat('alert_title_content_required'));
+                return;
+              }
+
+              if (!effectiveGroupId) {
+                alert(gat('alert_group_info'));
+                return;
+              }
+
+              try {
+                setLoadingData(true);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                  alert(gat('alert_auth'));
+                  return;
+                }
+
+                const response = await fetch('/api/group-admin/support-tickets', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    group_id: effectiveGroupId,
+                    title: ticketTitle,
+                    content: ticketContent,
+                  }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(result.error || gat('error_ticket_create'));
+                }
+
+                alert(gat('ticket_created'));
+                setShowTicketForm(false);
+                setTicketTitle('');
+                setTicketContent('');
+                loadSupportTickets();
+              } catch (error: unknown) {
+                console.error('ticket create', error);
+                alert(error instanceof Error ? error.message : gat('error_ticket_create'));
+              } finally {
+                setLoadingData(false);
+              }
+            }}
+            className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+          >
+            {gat('submit_compose')}
+          </button>
+        </div>
+      </GlassSafeModal>
+
+      <GlassSafeModal
+        open={!!followUpForTicket}
+        maxWidthClass="max-w-[560px]"
+        onClose={() => {
+          setFollowUpForTicket(null);
+          setFollowUpBody('');
+        }}
+      >
+        {followUpForTicket && (
+          <>
+            <h3 className="mb-3 text-lg font-semibold text-slate-800">
+              {gat('follow_up_btn')}
+            </h3>
+            <p className="mb-3 text-[13px] text-slate-500">
+              {followUpForTicket.title}
+            </p>
+            <textarea
+              value={followUpBody}
+              onChange={(e) => setFollowUpBody(e.target.value)}
+              placeholder={gat('follow_up_placeholder')}
+              className="mb-4 min-h-[160px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFollowUpForTicket(null);
+                  setFollowUpBody('');
+                }}
+                className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+              >
+                {ct('cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!followUpBody.trim()) {
+                    alert(gat('alert_enter_content'));
+                    return;
+                  }
+                  if (!effectiveGroupId || !followUpForTicket) {
+                    alert(gat('alert_group_info'));
+                    return;
+                  }
+                  try {
+                    setLoadingData(true);
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.access_token) {
+                      alert(gat('alert_auth'));
+                      return;
+                    }
+                    const response = await fetch('/api/group-admin/support-tickets', {
+                      method: 'PATCH',
+                      headers: {
+                        Authorization: `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        id: followUpForTicket.id,
+                        group_id: effectiveGroupId,
+                        follow_up: followUpBody.trim(),
+                      }),
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                      throw new Error(result.error || gat('error_follow_up_send'));
+                    }
+                    setFollowUpForTicket(null);
+                    setFollowUpBody('');
+                    loadSupportTickets();
+                  } catch (e: unknown) {
+                    alert(e instanceof Error ? e.message : gat('error_follow_up_send'));
+                  } finally {
+                    setLoadingData(false);
+                  }
+                }}
+                className="cursor-pointer rounded-lg border-none bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+              >
+                {gat('send_btn')}
+              </button>
+            </div>
+          </>
+        )}
+      </GlassSafeModal>
+
+      <GlassSafeModal
+        open={!!editingMemberTicket}
+        onClose={() => {
+          setEditingMemberTicket(null);
+          setMemberTicketAnswer('');
+        }}
+      >
+        {editingMemberTicket && (
+          <>
+            <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
+              {gat('reply_compose_title')}
+            </h3>
+            <div className="mb-4 rounded-lg bg-slate-50 p-3 text-[13px] text-slate-600">
+              <div className="mb-1.5 font-semibold text-slate-800">{editingMemberTicket.title}</div>
+              <div className="mb-2 whitespace-pre-wrap">{editingMemberTicket.content}</div>
+              {editingMemberTicket.answer && (
+                <div className="mt-2 border-t border-slate-200 pt-2">
+                  <span className="text-[11px] font-semibold text-sky-700">{gat('first_reply_label')}</span>
+                  <div className="mt-1 whitespace-pre-wrap">{editingMemberTicket.answer}</div>
+                </div>
+              )}
+              {parseMemberSupportMessageThread(editingMemberTicket.message_thread).map((entry, i) => (
+                <div key={`emt-modal-${i}`} className="mt-2 border-t border-slate-200 pt-2">
+                  <span
+                    className={`text-[11px] font-semibold ${
+                      entry.role === 'member' ? 'text-amber-700' : 'text-sky-700'
+                    }`}
+                  >
+                    {entry.role === 'member' ? gat('thread_role_follow_up') : gat('thread_role_previous_reply')}
+                  </span>
+                  <div className="mt-1 whitespace-pre-wrap">{entry.body}</div>
+                </div>
+              ))}
+            </div>
+            <textarea
+              value={memberTicketAnswer}
+              onChange={(e) => setMemberTicketAnswer(e.target.value)}
+              placeholder={gat('reply_placeholder')}
+              className="mb-4 min-h-[220px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setEditingMemberTicket(null);
+                  setMemberTicketAnswer('');
+                }}
+                className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+              >
+                {ct('cancel')}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!editingMemberTicket || !memberTicketAnswer.trim()) {
+                    alert(gat('alert_reply_required'));
+                    return;
+                  }
+                  if (!effectiveGroupId) return;
+                  try {
+                    setLoadingData(true);
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.access_token) {
+                      alert(gat('auth_required'));
+                      return;
+                    }
+                    const response = await fetch('/api/group-admin/member-support-tickets', {
+                      method: 'PUT',
+                      headers: {
+                        Authorization: `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        id: editingMemberTicket.id,
+                        group_id: effectiveGroupId,
+                        answer: memberTicketAnswer.trim(),
+                        status: 'answered',
+                      }),
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                      throw new Error(result.error || gat('error_reply_save'));
+                    }
+                    alert(gat('reply_saved'));
+                    setEditingMemberTicket(null);
+                    setMemberTicketAnswer('');
+                    loadMemberSupportTickets();
+                  } catch (e: unknown) {
+                    console.error('member support reply save', e);
+                    alert(e instanceof Error ? e.message : gat('error_reply_save'));
+                  } finally {
+                    setLoadingData(false);
+                  }
+                }}
+                className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+              >
+                {ct('save')}
+              </button>
+            </div>
+          </>
+        )}
+      </GlassSafeModal>
+
+      <GlassSafeModal
+        open={showAccessRequestForm}
+        onClose={() => {
+          setShowAccessRequestForm(false);
+          setAccessRequestReason('');
+        }}
+      >
+        <h3 className="mb-4 text-[20px] font-semibold text-slate-800">
+          {gat('access_request_modal_title')}
+        </h3>
+        <p className="mb-4 text-sm text-slate-500">
+          {gat('access_request_modal_hint')}
+        </p>
+        <textarea
+          value={accessRequestReason}
+          onChange={(e) => setAccessRequestReason(e.target.value)}
+          placeholder={gat('reason_placeholder')}
+          className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => {
+              setShowAccessRequestForm(false);
+              setAccessRequestReason('');
+            }}
+            className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+          >
+            {ct('cancel')}
+          </button>
+          <button
+            onClick={async () => {
+              if (!accessRequestReason.trim()) {
+                alert(gat('alert_reason_required'));
+                return;
+              }
+
+              if (!effectiveGroupId) {
+                alert(gat('alert_group_info'));
+                return;
+              }
+
+              try {
+                setLoadingData(true);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                  alert(gat('alert_auth'));
+                  return;
+                }
+
+                const response = await fetch('/api/group-admin/dashboard-access-requests', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    group_id: effectiveGroupId,
+                    reason: accessRequestReason,
+                  }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(result.error || gat('error_request_create'));
+                }
+
+                alert(gat('request_created'));
+                setShowAccessRequestForm(false);
+                setAccessRequestReason('');
+                loadAccessRequests();
+              } catch (error: unknown) {
+                console.error('access request create', error);
+                alert(error instanceof Error ? error.message : gat('error_request_create'));
+              } finally {
+                setLoadingData(false);
+              }
+            }}
+            className="cursor-pointer rounded-lg border-none bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+          >
+            {gat('submit_request')}
+          </button>
+        </div>
+      </GlassSafeModal>
 
       <style jsx>{`
         @keyframes spin {

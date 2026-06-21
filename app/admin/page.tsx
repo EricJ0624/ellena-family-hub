@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
+import { GlassSafeModal } from '@/app/components/GlassSafeModal';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getAnnouncementTexts } from '@/lib/announcement-i18n';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
@@ -2249,255 +2250,6 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {/* 공지 작성/수정 모달 */}
-                {editingAnnouncement !== undefined && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => {
-                    setEditingAnnouncement(undefined);
-                    resetAnnouncementForm();
-                  }}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-xl font-semibold text-slate-800">
-                        {editingAnnouncement ? at('edit_announcement_modal_title') : at('new_announcement_modal_title')}
-                      </h3>
-                      <div className="mb-3 flex gap-1 border-b border-slate-200">
-                        {ANNOUNCEMENT_PRIMARY_LANG_CODES.map((l) => (
-                          <button
-                            key={l}
-                            type="button"
-                            onClick={() => setAnnouncementLangTab(l)}
-                            className={`cursor-pointer border-none border-b-2 bg-transparent px-3.5 py-2 text-[13px] ${
-                              announcementLangTab === l
-                                ? 'border-b-purple-600 font-semibold text-purple-600'
-                                : 'border-b-transparent font-normal text-slate-500'
-                            }`}
-                          >
-                            {LANG_LABELS[l]}
-                          </button>
-                        ))}
-                      </div>
-                      {showAnnouncementEditor && (
-                        <>
-                          <p className="mb-2 text-xs font-medium text-slate-500">
-                            {LANG_LABELS[announcementLangTab]}
-                          </p>
-                          <input
-                            type="text"
-                            value={announcementTitleI18n[announcementLangTab] ?? ''}
-                            onChange={(e) =>
-                              setAnnouncementTitleI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))
-                            }
-                            placeholder={at('placeholder_title')}
-                            className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base font-inherit"
-                          />
-                          <textarea
-                            value={announcementContentI18n[announcementLangTab] ?? ''}
-                            onChange={(e) =>
-                              setAnnouncementContentI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))
-                            }
-                            placeholder={at('placeholder_content')}
-                            className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
-                          />
-                        </>
-                      )}
-                      <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50">
-                        <button
-                          type="button"
-                          onClick={() => setAnnouncementExtraExpanded((v) => !v)}
-                          className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent px-4 py-3 text-left text-sm font-semibold text-slate-700"
-                        >
-                          {announcementExtraSectionLabel}
-                          <span className="text-xs font-normal text-slate-400">
-                            {announcementExtraExpanded ? '▲' : '▼'}
-                          </span>
-                        </button>
-                        {announcementExtraExpanded && (
-                          <div className="border-t border-slate-200 px-4 pb-4 pt-3">
-                            <p className="mb-3 text-xs text-slate-500">{announcementExtraHint}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {ANNOUNCEMENT_EXTRA_LANG_CODES.map((l) => {
-                                const enabled = announcementExtraEnabled.has(l);
-                                const hasContent =
-                                  !!(announcementTitleI18n[l] ?? '').trim() ||
-                                  !!(announcementContentI18n[l] ?? '').trim();
-                                return (
-                                  <button
-                                    key={l}
-                                    type="button"
-                                    onClick={() => toggleAnnouncementExtraLang(l)}
-                                    className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                                      enabled || announcementLangTab === l
-                                        ? 'border-purple-500 bg-purple-100 text-purple-800'
-                                        : 'border-slate-300 bg-white text-slate-600 hover:border-purple-300'
-                                    } ${hasContent && !enabled ? 'ring-1 ring-amber-300' : ''}`}
-                                  >
-                                    {LANG_LABELS[l]}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                        <label className="mb-3 block text-sm font-semibold text-slate-700">
-                          {at('announcement_target_label')}
-                        </label>
-                        <div className="flex gap-4">
-                          <label
-                            className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors duration-200 ${
-                              announcementTarget === 'ADMIN_ONLY' ? 'bg-indigo-100' : 'bg-transparent'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="announcementTarget"
-                              value="ADMIN_ONLY"
-                              checked={announcementTarget === 'ADMIN_ONLY'}
-                              onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
-                              className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                            />
-                            <span className={`text-sm text-slate-700 ${announcementTarget === 'ADMIN_ONLY' ? 'font-semibold' : 'font-normal'}`}>
-                              {at('target_admin_only')}
-                            </span>
-                          </label>
-                          <label
-                            className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors duration-200 ${
-                              announcementTarget === 'ALL_MEMBERS' ? 'bg-indigo-100' : 'bg-transparent'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="announcementTarget"
-                              value="ALL_MEMBERS"
-                              checked={announcementTarget === 'ALL_MEMBERS'}
-                              onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
-                              className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                            />
-                            <span className={`text-sm text-slate-700 ${announcementTarget === 'ALL_MEMBERS' ? 'font-semibold' : 'font-normal'}`}>
-                              {at('target_all_members')}
-                            </span>
-                          </label>
-                        </div>
-                        <p className="mb-0 mt-2 text-xs text-slate-500">
-                          {announcementTarget === 'ADMIN_ONLY' 
-                            ? at('target_admin_only_hint')
-                            : at('target_all_members_hint')}
-                        </p>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingAnnouncement(undefined);
-                            resetAnnouncementForm();
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
-                        >
-                          {ct('cancel')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            const titleObj: Record<string, string> = {};
-                            const contentObj: Record<string, string> = {};
-                            for (const l of LANG_CODES) {
-                              if (
-                                ANNOUNCEMENT_EXTRA_LANG_CODES.includes(l) &&
-                                !announcementExtraEnabled.has(l)
-                              ) {
-                                continue;
-                              }
-                              const t = (announcementTitleI18n[l] ?? '').trim();
-                              const c = (announcementContentI18n[l] ?? '').trim();
-                              if (t || c) {
-                                titleObj[l] = t || '';
-                                contentObj[l] = c || '';
-                              }
-                            }
-                            const keys = Object.keys(titleObj);
-                            if (keys.length === 0) {
-                              alert(at('announcement_title_content_required'));
-                              return;
-                            }
-
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(at('error_auth'));
-                                return;
-                              }
-
-                              if (editingAnnouncement) {
-                                const response = await fetch('/api/admin/announcements', {
-                                  method: 'PUT',
-                                  headers: {
-                                    'Authorization': `Bearer ${session.access_token}`,
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: JSON.stringify({
-                                    id: editingAnnouncement.id,
-                                    title_i18n: titleObj,
-                                    content_i18n: contentObj,
-                                    is_active: true,
-                                    target: announcementTarget,
-                                  }),
-                                });
-
-                                const result = await response.json();
-
-                                if (!response.ok) {
-                                  throw new Error(result.error || at('error_announcement_update_failed'));
-                                }
-
-                                alert(at('success_announcement_updated'));
-                              } else {
-                                const response = await fetch('/api/admin/announcements', {
-                                  method: 'POST',
-                                  headers: {
-                                    'Authorization': `Bearer ${session.access_token}`,
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: JSON.stringify({
-                                    title_i18n: titleObj,
-                                    content_i18n: contentObj,
-                                    is_active: true,
-                                    target: announcementTarget,
-                                  }),
-                                });
-
-                                const result = await response.json();
-
-                                if (!response.ok) {
-                                  throw new Error(result.error || at('error_announcement_create_failed'));
-                                }
-
-                                alert(at('success_announcement_created'));
-                              }
-
-                              setEditingAnnouncement(undefined);
-                              resetAnnouncementForm();
-                              loadAnnouncements();
-                            } catch (error: any) {
-                              console.error(at('error_announcement_update_failed'), error);
-                              alert(error.message || at('error_announcement_update_failed'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                        >
-                          {editingAnnouncement ? at('edit_btn') : at('write_btn')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -2660,108 +2412,6 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {/* 답변 모달 */}
-                {editingTicket && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => setEditingTicket(null)}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-xl font-semibold text-slate-800">
-                        {at('submit_answer_btn')}
-                      </h3>
-                      <div className="mb-4 rounded-lg bg-slate-50 p-3">
-                        <div className="mb-1 text-sm font-semibold text-slate-800">
-                          {editingTicket.title}
-                        </div>
-                        <div className="text-[13px] text-slate-500">
-                          {editingTicket.content}
-                        </div>
-                        {editingTicket.answer && (
-                          <div className="mt-3 text-xs text-sky-700">
-                            <div className="mb-1 font-semibold">{at('first_answer_label')}</div>
-                            <div className="whitespace-pre-wrap text-slate-600">{editingTicket.answer}</div>
-                          </div>
-                        )}
-                        {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
-                          <div key={`m-${idx}`} className="mt-2.5 text-xs">
-                            <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
-                              {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
-                            </div>
-                            <div className="whitespace-pre-wrap text-slate-600">{entry.body}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <textarea
-                        value={ticketAnswer}
-                        onChange={(e) => setTicketAnswer(e.target.value)}
-                        placeholder={at('placeholder_answer')}
-                        className="mb-4 min-h-[200px] w-full resize-y rounded-lg border border-slate-200 p-3 text-sm font-inherit"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingTicket(null);
-                            setTicketAnswer('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
-                        >
-                          {at('cancel_btn')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!ticketAnswer.trim()) {
-                              alert(at('answer_required'));
-                              return;
-                            }
-
-                            try {
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(at('error_session_expired'));
-                                return;
-                              }
-
-                              const response = await fetch('/api/admin/support-tickets', {
-                                method: 'POST',
-                                headers: {
-                                  'Authorization': `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  id: editingTicket.id,
-                                  answer: ticketAnswer.trim(),
-                                  status: 'answered',
-                                }),
-                              });
-
-                              const result = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(result.error || at('answer_save_failed'));
-                              }
-
-                              alert(at('answer_saved'));
-                              setEditingTicket(null);
-                              setTicketAnswer('');
-                              loadAllSupportTickets();
-                            } catch (err: any) {
-                              console.error('답변 저장 오류:', err);
-                              alert(err.message || at('answer_save_error'));
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                        >
-                          {ct('save')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -3003,111 +2653,6 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {/* 답변 모달 */}
-                {editingTicket && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => setEditingTicket(null)}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-xl font-semibold text-slate-800">
-                        {at('submit_answer_btn')}
-                      </h3>
-                      <div className="mb-4 rounded-lg bg-slate-50 p-3">
-                        <div className="mb-1 text-sm font-semibold text-slate-800">
-                          {editingTicket.title}
-                        </div>
-                        <div className="text-[13px] text-slate-500">
-                          {editingTicket.content}
-                        </div>
-                        {editingTicket.answer && (
-                          <div className="mt-3 text-xs text-sky-700">
-                            <div className="mb-1 font-semibold">{at('first_answer_label')}</div>
-                            <div className="whitespace-pre-wrap text-slate-600">{editingTicket.answer}</div>
-                          </div>
-                        )}
-                        {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
-                          <div key={`modal2-${idx}`} className="mt-2.5 text-xs">
-                            <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
-                              {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
-                            </div>
-                            <div className="whitespace-pre-wrap text-slate-600">{entry.body}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <textarea
-                        value={ticketAnswer}
-                        onChange={(e) => setTicketAnswer(e.target.value)}
-                        placeholder={at('placeholder_answer')}
-                        className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingTicket(null);
-                            setTicketAnswer('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
-                        >
-                          {at('cancel_btn')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!ticketAnswer.trim()) {
-                              alert(at('answer_content_required'));
-                              return;
-                            }
-
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(at('error_auth'));
-                                return;
-                              }
-
-                              const response = await fetch('/api/admin/support-tickets', {
-                                method: 'POST',
-                                headers: {
-                                  'Authorization': `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  id: editingTicket.id,
-                                  answer: ticketAnswer.trim(),
-                                  status: 'answered',
-                                }),
-                              });
-
-                              const result = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(result.error || at('error_answer_failed'));
-                              }
-
-                              alert(at('success_answer_submitted'));
-                              setEditingTicket(null);
-                              setTicketAnswer('');
-                              loadSupportTickets();
-                            } catch (error: any) {
-                              console.error(at('error_answer_failed'), error);
-                              alert(error.message || at('error_answer_failed'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                        >
-                          {at('submit_answer_btn')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -3340,120 +2885,6 @@ console.error(at('error_revoke_failed'), error);
                     </div>
                   )}
                 </div>
-
-                {/* 새 접근 요청 모달 */}
-                {showNewAccessRequestModal && (
-                  <div
-                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-                  onClick={() => {
-                    setShowNewAccessRequestModal(false);
-                    setNewAccessRequestGroupId('');
-                    setNewAccessRequestReason('');
-                  }}
-                  >
-                    <div
-                    className="max-h-[80vh] w-[90%] max-w-[600px] overflow-auto rounded-xl bg-white p-6"
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                      <h3 className="mb-4 text-xl font-semibold text-slate-800">
-                        {at('new_access_request_modal_title')}
-                      </h3>
-                      <div className="mb-4">
-                        <label className="mb-2 block text-sm font-semibold text-slate-800">
-                          {at('select_group_label')}
-                        </label>
-                        <select
-                          value={newAccessRequestGroupId}
-                          onChange={(e) => setNewAccessRequestGroupId(e.target.value)}
-                          className="w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
-                        >
-                          <option value="">{at('select_group_option')}</option>
-                          {groups.map((group) => (
-                            <option key={group.id} value={group.id}>
-                              {group.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="mb-4">
-                        <label className="mb-2 block text-sm font-semibold text-slate-800">
-                          {at('placeholder_reason')}
-                        </label>
-                        <textarea
-                          value={newAccessRequestReason}
-                          onChange={(e) => setNewAccessRequestReason(e.target.value)}
-                          placeholder={at('placeholder_reason')}
-                          className="min-h-[150px] w-full resize-y rounded-lg border border-slate-200 p-3 text-sm font-inherit"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setShowNewAccessRequestModal(false);
-                            setNewAccessRequestGroupId('');
-                            setNewAccessRequestReason('');
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
-                        >
-                          {at('cancel_btn')}
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!newAccessRequestGroupId) {
-                              alert(at('select_group_prompt'));
-                              return;
-                            }
-                            if (!newAccessRequestReason.trim()) {
-                              alert(at('placeholder_reason'));
-                              return;
-                            }
-
-                            try {
-                              setLoadingData(true);
-                              const { data: { session } } = await supabase.auth.getSession();
-                              if (!session?.access_token) {
-                                alert(at('error_auth'));
-                                return;
-                              }
-
-                              const response = await fetch('/api/admin/dashboard-access-requests', {
-                                method: 'POST',
-                                headers: {
-                                  'Authorization': `Bearer ${session.access_token}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  group_id: newAccessRequestGroupId,
-                                  reason: newAccessRequestReason.trim(),
-                                }),
-                              });
-
-                              const result = await response.json();
-
-                              if (!response.ok) {
-                                throw new Error(result.error || at('error_create_request_failed'));
-                              }
-
-                              alert(at('success_request_created'));
-                              setShowNewAccessRequestModal(false);
-                              setNewAccessRequestGroupId('');
-                              setNewAccessRequestReason('');
-                              loadAccessRequests();
-                            } catch (error: any) {
-                              console.error(at('error_create_request_failed'), error);
-                              alert(error.message || at('error_create_request_failed'));
-                            } finally {
-                              setLoadingData(false);
-                            }
-                          }}
-                          className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-                        >
-                          {at('submit_request_btn')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -3601,6 +3032,479 @@ console.error(at('error_revoke_failed'), error);
           </>
         )}
       </div>
+
+      {/* glass-panel 밖 portal 모달 — loadingData와 무관하게 유지 */}
+      <GlassSafeModal
+        open={editingAnnouncement !== undefined}
+        onClose={() => {
+          setEditingAnnouncement(undefined);
+          resetAnnouncementForm();
+        }}
+      >
+        <h3 className="mb-4 text-xl font-semibold text-slate-800">
+          {editingAnnouncement ? at('edit_announcement_modal_title') : at('new_announcement_modal_title')}
+        </h3>
+        <div className="mb-3 flex gap-1 border-b border-slate-200">
+          {ANNOUNCEMENT_PRIMARY_LANG_CODES.map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setAnnouncementLangTab(l)}
+              className={`cursor-pointer border-none border-b-2 bg-transparent px-3.5 py-2 text-[13px] ${
+                announcementLangTab === l
+                  ? 'border-b-purple-600 font-semibold text-purple-600'
+                  : 'border-b-transparent font-normal text-slate-500'
+              }`}
+            >
+              {LANG_LABELS[l]}
+            </button>
+          ))}
+        </div>
+        {showAnnouncementEditor && (
+          <>
+            <p className="mb-2 text-xs font-medium text-slate-500">
+              {LANG_LABELS[announcementLangTab]}
+            </p>
+            <input
+              type="text"
+              value={announcementTitleI18n[announcementLangTab] ?? ''}
+              onChange={(e) =>
+                setAnnouncementTitleI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))
+              }
+              placeholder={at('placeholder_title')}
+              className="mb-4 w-full rounded-lg border border-slate-200 p-3 text-base font-inherit"
+            />
+            <textarea
+              value={announcementContentI18n[announcementLangTab] ?? ''}
+              onChange={(e) =>
+                setAnnouncementContentI18n((prev) => ({ ...prev, [announcementLangTab]: e.target.value }))
+              }
+              placeholder={at('placeholder_content')}
+              className="mb-4 min-h-[200px] w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
+            />
+          </>
+        )}
+        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50">
+          <button
+            type="button"
+            onClick={() => setAnnouncementExtraExpanded((v) => !v)}
+            className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent px-4 py-3 text-left text-sm font-semibold text-slate-700"
+          >
+            {announcementExtraSectionLabel}
+            <span className="text-xs font-normal text-slate-400">
+              {announcementExtraExpanded ? '▲' : '▼'}
+            </span>
+          </button>
+          {announcementExtraExpanded && (
+            <div className="border-t border-slate-200 px-4 pb-4 pt-3">
+              <p className="mb-3 text-xs text-slate-500">{announcementExtraHint}</p>
+              <div className="flex flex-wrap gap-2">
+                {ANNOUNCEMENT_EXTRA_LANG_CODES.map((l) => {
+                  const enabled = announcementExtraEnabled.has(l);
+                  const hasContent =
+                    !!(announcementTitleI18n[l] ?? '').trim() ||
+                    !!(announcementContentI18n[l] ?? '').trim();
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => toggleAnnouncementExtraLang(l)}
+                      className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        enabled || announcementLangTab === l
+                          ? 'border-purple-500 bg-purple-100 text-purple-800'
+                          : 'border-slate-300 bg-white text-slate-600 hover:border-purple-300'
+                      } ${hasContent && !enabled ? 'ring-1 ring-amber-300' : ''}`}
+                    >
+                      {LANG_LABELS[l]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <label className="mb-3 block text-sm font-semibold text-slate-700">
+            {at('announcement_target_label')}
+          </label>
+          <div className="flex gap-4">
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors duration-200 ${
+                announcementTarget === 'ADMIN_ONLY' ? 'bg-indigo-100' : 'bg-transparent'
+              }`}
+            >
+              <input
+                type="radio"
+                name="announcementTarget"
+                value="ADMIN_ONLY"
+                checked={announcementTarget === 'ADMIN_ONLY'}
+                onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
+                className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+              />
+              <span className={`text-sm text-slate-700 ${announcementTarget === 'ADMIN_ONLY' ? 'font-semibold' : 'font-normal'}`}>
+                {at('target_admin_only')}
+              </span>
+            </label>
+            <label
+              className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors duration-200 ${
+                announcementTarget === 'ALL_MEMBERS' ? 'bg-indigo-100' : 'bg-transparent'
+              }`}
+            >
+              <input
+                type="radio"
+                name="announcementTarget"
+                value="ALL_MEMBERS"
+                checked={announcementTarget === 'ALL_MEMBERS'}
+                onChange={(e) => setAnnouncementTarget(e.target.value as 'ADMIN_ONLY' | 'ALL_MEMBERS')}
+                className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+              />
+              <span className={`text-sm text-slate-700 ${announcementTarget === 'ALL_MEMBERS' ? 'font-semibold' : 'font-normal'}`}>
+                {at('target_all_members')}
+              </span>
+            </label>
+          </div>
+          <p className="mb-0 mt-2 text-xs text-slate-500">
+            {announcementTarget === 'ADMIN_ONLY'
+              ? at('target_admin_only_hint')
+              : at('target_all_members_hint')}
+          </p>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => {
+              setEditingAnnouncement(undefined);
+              resetAnnouncementForm();
+            }}
+            className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
+          >
+            {ct('cancel')}
+          </button>
+          <button
+            onClick={async () => {
+              const titleObj: Record<string, string> = {};
+              const contentObj: Record<string, string> = {};
+              for (const l of LANG_CODES) {
+                if (
+                  ANNOUNCEMENT_EXTRA_LANG_CODES.includes(l) &&
+                  !announcementExtraEnabled.has(l)
+                ) {
+                  continue;
+                }
+                const t = (announcementTitleI18n[l] ?? '').trim();
+                const c = (announcementContentI18n[l] ?? '').trim();
+                if (t || c) {
+                  titleObj[l] = t || '';
+                  contentObj[l] = c || '';
+                }
+              }
+              const keys = Object.keys(titleObj);
+              if (keys.length === 0) {
+                alert(at('announcement_title_content_required'));
+                return;
+              }
+
+              try {
+                setLoadingData(true);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                  alert(at('error_auth'));
+                  return;
+                }
+
+                if (editingAnnouncement) {
+                  const response = await fetch('/api/admin/announcements', {
+                    method: 'PUT',
+                    headers: {
+                      Authorization: `Bearer ${session.access_token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      id: editingAnnouncement.id,
+                      title_i18n: titleObj,
+                      content_i18n: contentObj,
+                      is_active: true,
+                      target: announcementTarget,
+                    }),
+                  });
+
+                  const result = await response.json();
+
+                  if (!response.ok) {
+                    throw new Error(result.error || at('error_announcement_update_failed'));
+                  }
+
+                  alert(at('success_announcement_updated'));
+                } else {
+                  const response = await fetch('/api/admin/announcements', {
+                    method: 'POST',
+                    headers: {
+                      Authorization: `Bearer ${session.access_token}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      title_i18n: titleObj,
+                      content_i18n: contentObj,
+                      is_active: true,
+                      target: announcementTarget,
+                    }),
+                  });
+
+                  const result = await response.json();
+
+                  if (!response.ok) {
+                    throw new Error(result.error || at('error_announcement_create_failed'));
+                  }
+
+                  alert(at('success_announcement_created'));
+                }
+
+                setEditingAnnouncement(undefined);
+                resetAnnouncementForm();
+                loadAnnouncements();
+              } catch (error: unknown) {
+                console.error(at('error_announcement_update_failed'), error);
+                alert(error instanceof Error ? error.message : at('error_announcement_update_failed'));
+              } finally {
+                setLoadingData(false);
+              }
+            }}
+            className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+          >
+            {editingAnnouncement ? at('edit_btn') : at('write_btn')}
+          </button>
+        </div>
+      </GlassSafeModal>
+
+      <GlassSafeModal
+        open={
+          !!editingTicket &&
+          (activeTab === 'all-support-tickets' || activeTab === 'support-tickets')
+        }
+        onClose={() => {
+          setEditingTicket(null);
+          setTicketAnswer('');
+        }}
+      >
+        {editingTicket && (
+          <>
+            <h3 className="mb-4 text-xl font-semibold text-slate-800">
+              {at('submit_answer_btn')}
+            </h3>
+            <div className="mb-4 rounded-lg bg-slate-50 p-3">
+              <div className="mb-1 text-sm font-semibold text-slate-800">
+                {editingTicket.title}
+              </div>
+              <div className="text-[13px] text-slate-500">
+                {editingTicket.content}
+              </div>
+              {editingTicket.answer && (
+                <div className="mt-3 text-xs text-sky-700">
+                  <div className="mb-1 font-semibold">{at('first_answer_label')}</div>
+                  <div className="whitespace-pre-wrap text-slate-600">{editingTicket.answer}</div>
+                </div>
+              )}
+              {parseMessageThread(editingTicket.message_thread).map((entry, idx) => (
+                <div key={`ticket-modal-${idx}`} className="mt-2.5 text-xs">
+                  <div className={`font-semibold ${entry.role === 'group_admin' ? 'text-amber-700' : 'text-sky-700'}`}>
+                    {entry.role === 'group_admin' ? gat('thread_role_follow_up') : gat('thread_role_system_reply')}
+                  </div>
+                  <div className="whitespace-pre-wrap text-slate-600">{entry.body}</div>
+                </div>
+              ))}
+            </div>
+            <textarea
+              value={ticketAnswer}
+              onChange={(e) => setTicketAnswer(e.target.value)}
+              placeholder={at('placeholder_answer')}
+              className="mb-4 min-h-[200px] w-full resize-y rounded-lg border border-slate-200 p-3 text-sm font-inherit"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setEditingTicket(null);
+                  setTicketAnswer('');
+                }}
+                className="cursor-pointer rounded-lg border-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
+              >
+                {at('cancel_btn')}
+              </button>
+              <button
+                onClick={async () => {
+                  const isAllSupportTab = activeTab === 'all-support-tickets';
+                  if (!ticketAnswer.trim()) {
+                    alert(isAllSupportTab ? at('answer_required') : at('answer_content_required'));
+                    return;
+                  }
+
+                  try {
+                    if (!isAllSupportTab) {
+                      setLoadingData(true);
+                    }
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.access_token) {
+                      alert(isAllSupportTab ? at('error_session_expired') : at('error_auth'));
+                      return;
+                    }
+
+                    const response = await fetch('/api/admin/support-tickets', {
+                      method: 'POST',
+                      headers: {
+                        Authorization: `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        id: editingTicket.id,
+                        answer: ticketAnswer.trim(),
+                        status: 'answered',
+                      }),
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                      throw new Error(
+                        result.error ||
+                          (isAllSupportTab ? at('answer_save_failed') : at('error_answer_failed')),
+                      );
+                    }
+
+                    alert(isAllSupportTab ? at('answer_saved') : at('success_answer_submitted'));
+                    setEditingTicket(null);
+                    setTicketAnswer('');
+                    if (isAllSupportTab) {
+                      loadAllSupportTickets();
+                    } else {
+                      loadSupportTickets();
+                    }
+                  } catch (err: unknown) {
+                    console.error('답변 저장 오류:', err);
+                    alert(
+                      err instanceof Error
+                        ? err.message
+                        : activeTab === 'all-support-tickets'
+                          ? at('answer_save_error')
+                          : at('error_answer_failed'),
+                    );
+                  } finally {
+                    if (activeTab === 'support-tickets') {
+                      setLoadingData(false);
+                    }
+                  }
+                }}
+                className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+              >
+                {activeTab === 'all-support-tickets' ? ct('save') : at('submit_answer_btn')}
+              </button>
+            </div>
+          </>
+        )}
+      </GlassSafeModal>
+
+      <GlassSafeModal
+        open={showNewAccessRequestModal}
+        onClose={() => {
+          setShowNewAccessRequestModal(false);
+          setNewAccessRequestGroupId('');
+          setNewAccessRequestReason('');
+        }}
+      >
+        <h3 className="mb-4 text-xl font-semibold text-slate-800">
+          {at('new_access_request_modal_title')}
+        </h3>
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-semibold text-slate-800">
+            {at('select_group_label')}
+          </label>
+          <select
+            value={newAccessRequestGroupId}
+            onChange={(e) => setNewAccessRequestGroupId(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 p-3 text-sm font-inherit"
+          >
+            <option value="">{at('select_group_option')}</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-semibold text-slate-800">
+            {at('placeholder_reason')}
+          </label>
+          <textarea
+            value={newAccessRequestReason}
+            onChange={(e) => setNewAccessRequestReason(e.target.value)}
+            placeholder={at('placeholder_reason')}
+            className="min-h-[150px] w-full resize-y rounded-lg border border-slate-200 p-3 text-sm font-inherit"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => {
+              setShowNewAccessRequestModal(false);
+              setNewAccessRequestGroupId('');
+              setNewAccessRequestReason('');
+            }}
+            className="cursor-pointer rounded-lg border-none bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
+          >
+            {at('cancel_btn')}
+          </button>
+          <button
+            onClick={async () => {
+              if (!newAccessRequestGroupId) {
+                alert(at('select_group_prompt'));
+                return;
+              }
+              if (!newAccessRequestReason.trim()) {
+                alert(at('placeholder_reason'));
+                return;
+              }
+
+              try {
+                setLoadingData(true);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                  alert(at('error_auth'));
+                  return;
+                }
+
+                const response = await fetch('/api/admin/dashboard-access-requests', {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    group_id: newAccessRequestGroupId,
+                    reason: newAccessRequestReason.trim(),
+                  }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                  throw new Error(result.error || at('error_create_request_failed'));
+                }
+
+                alert(at('success_request_created'));
+                setShowNewAccessRequestModal(false);
+                setNewAccessRequestGroupId('');
+                setNewAccessRequestReason('');
+                loadAccessRequests();
+              } catch (error: unknown) {
+                console.error(at('error_create_request_failed'), error);
+                alert(error instanceof Error ? error.message : at('error_create_request_failed'));
+              } finally {
+                setLoadingData(false);
+              }
+            }}
+            className="cursor-pointer rounded-lg border-none bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+          >
+            {at('submit_request_btn')}
+          </button>
+        </div>
+      </GlassSafeModal>
     </div>
   );
 }
