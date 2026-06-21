@@ -198,6 +198,28 @@ function locationRequestsSignature(
     .join('|');
 }
 
+/** todos 동일 여부 — Realtime/초기 로드 시 불필요한 setState 방지 */
+function tasksSignature(tasks: ReadonlyArray<FamilyTask>): string {
+  if (!tasks.length) return '';
+  return tasks
+    .map(
+      (t) =>
+        `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.supabaseId ?? ''}`,
+    )
+    .join('|');
+}
+
+/** events 동일 여부 — Realtime/초기 로드 시 불필요한 setState 방지 */
+function eventsSignature(events: ReadonlyArray<FamilyEvent>): string {
+  if (!events.length) return '';
+  return events
+    .map(
+      (e) =>
+        `${e.id}:${e.event_date}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.supabaseId ?? ''}`,
+    )
+    .join('|');
+}
+
 // --- [TYPES] 타입 안정성 추가 ---
 type Message = ChatUiMessage;
 type ChatAttachment = UploadedAttachment;
@@ -1679,14 +1701,12 @@ export default function FamilyHub() {
     }
 
     if (!frameIsPortrait && isDefaultDashboardTitle) return;
-    const computed = parseFloat(getComputedStyle(el).fontSize);
+
     const minPx = CUSTOM_TITLE_FONT_MIN_PX;
-    if (
-      Number.isFinite(computed)
-      && el.scrollWidth > el.clientWidth + 1
-      && computed > minPx
-    ) {
-      setCustomTitleFontSize(Math.max(minPx, Math.floor(computed) - 1));
+    const startPx = customTitleFontSize ?? estimatedCustomTitleFontSize ?? customTitleMaxPx;
+    const fitted = shrinkFontSizeToElement(el, startPx, minPx);
+    if (fitted !== customTitleFontSize) {
+      setCustomTitleFontSize(fitted);
     }
   }, [
     frameIsPortrait,
@@ -1694,7 +1714,7 @@ export default function FamilyHub() {
     customTitleFontSize,
     estimatedCustomTitleFontSize,
     dashboardTitleText,
-    customTitleFontFamily,
+    customTitleMaxPx,
     customFontSizeCap,
   ]);
   const dashboardMainContentStyle = {
@@ -5712,11 +5732,17 @@ export default function FamilyHub() {
   }, []);
 
   const handleTasksChange = useCallback((tasks: AppState['todos']) => {
-    setState((prev) => ({ ...prev, todos: tasks }));
+    setState((prev) => {
+      if (tasksSignature(prev.todos) === tasksSignature(tasks)) return prev;
+      return { ...prev, todos: tasks };
+    });
   }, []);
 
   const handleEventsChange = useCallback((events: AppState['events']) => {
-    setState((prev) => ({ ...prev, events }));
+    setState((prev) => {
+      if (eventsSignature(prev.events) === eventsSignature(events)) return prev;
+      return { ...prev, events };
+    });
   }, []);
 
   const {

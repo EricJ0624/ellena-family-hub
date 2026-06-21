@@ -174,13 +174,24 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   // 세로/가로 자동 맞춤 복구: 사진 비율 캐시로 재진입 시 리플로우 최소화
   const imageAspectRatioCacheRef = useRef<Record<string, number>>({});
+  const lastReportedPortraitRef = useRef<boolean | null>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
+
+  const reportPhotoOrientation = useCallback(
+    (isPortrait: boolean) => {
+      if (lastReportedPortraitRef.current === isPortrait) return;
+      lastReportedPortraitRef.current = isPortrait;
+      onPhotoOrientationChange?.(isPortrait);
+    },
+    [onPhotoOrientationChange],
+  );
+
   useEffect(() => {
     if (!selectedPhoto) {
       setImageAspectRatio(null);
       setImageLoadError(false);
-      onPhotoOrientationChange?.(false);
+      reportPhotoOrientation(false);
       return;
     }
     const cacheKey = String(selectedPhoto.id);
@@ -188,9 +199,9 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     const ratio = typeof cachedRatio === 'number' ? cachedRatio : null;
     setImageAspectRatio(ratio);
     if (ratio !== null) {
-      onPhotoOrientationChange?.(ratio < 1);
+      reportPhotoOrientation(ratio < 1);
     }
-  }, [selectedPhoto, onPhotoOrientationChange]);
+  }, [selectedPhoto, reportPhotoOrientation]);
 
   // 수동 셔플 핸들러 (부드러운 페이드 효과)
   const handleShuffle = useCallback(() => {
@@ -199,12 +210,13 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
   useEffect(() => {
+    if (!selectedPhoto) return;
     if (imageAspectRatio === null) {
-      onPhotoOrientationChange?.(false);
+      reportPhotoOrientation(false);
       return;
     }
-    onPhotoOrientationChange?.(imageAspectRatio < 1);
-  }, [imageAspectRatio, onPhotoOrientationChange]);
+    reportPhotoOrientation(imageAspectRatio < 1);
+  }, [selectedPhoto, imageAspectRatio, reportPhotoOrientation]);
 
   const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
