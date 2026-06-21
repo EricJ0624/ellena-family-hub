@@ -914,13 +914,13 @@ export function GroupAdminPanel({
     >
       {/* ???�쎌???*/}
       <div className="group-admin-header glass-panel mb-6 rounded-xl p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-blue-500 p-3 text-white">
+        <div className="group-admin-header-top mb-6 flex w-full min-w-0 items-center justify-between">
+          <div className="flex w-full min-w-0 items-center gap-3 sm:flex-1">
+            <div className="shrink-0 rounded-xl bg-blue-500 p-3 text-white">
               <Shield className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className="m-0 text-2xl font-bold text-slate-800">
+            <div className="min-w-0 flex-1">
+              <h1 className="m-0 break-keep text-xl font-bold text-slate-800 sm:text-2xl">
                 {gat('page_title')}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
@@ -942,7 +942,7 @@ export function GroupAdminPanel({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <label className="sr-only" htmlFor="group-admin-lang-select">
               {gat('language_select_label')}
             </label>
@@ -1000,7 +1000,7 @@ export function GroupAdminPanel({
         )}
 
         {/* ??筌롫?�??*/}
-        <div className="flex flex-wrap gap-2 overflow-x-auto border-b-2 border-slate-200">
+        <div className="group-admin-tabs flex gap-2 border-b-2 border-slate-200">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={tabButtonClass('dashboard')}
