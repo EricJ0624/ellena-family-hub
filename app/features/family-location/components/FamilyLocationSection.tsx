@@ -108,6 +108,9 @@ export function FamilyLocationSection({
 }: Props) {
   const lat = myLocation.latitude ?? 0;
   const lng = myLocation.longitude ?? 0;
+  const hasRequestUi = locationRequests.some(
+    (req) => req.status === 'pending' || req.status === 'accepted',
+  );
 
   useEffect(() => {
     if (!isLocationSharing || !hasGoogleMapsApiKey || mapError) return;
@@ -121,15 +124,18 @@ export function FamilyLocationSection({
   }, [isLocationSharing, hasGoogleMapsApiKey, mapError]);
 
   return (
-    <section className="content-section location-widget-section">
-      <div className="section-header">
+    <section
+      className={`content-section location-widget-section h-full min-h-0${
+        hasRequestUi ? ' location-widget-section--compact' : ''
+      }`}
+    >
+      <div className="section-header shrink-0">
         <h3 className="section-title">{t.section_title_location}</h3>
-        <div className="flex flex-wrap" style={{ gap: '2cqmin' }}>
+        <div className="location-header-actions">
           <button
             type="button"
             onClick={onOpenRequestModal}
-            className="flex cursor-pointer items-center rounded-lg border-none bg-emerald-500 font-medium text-white hover:bg-emerald-600"
-            style={{ gap: '1.5cqmin', padding: '2cqmin 4cqmin', fontSize: '5cqmin' }}
+            className="location-action-btn bg-emerald-500 text-white hover:bg-emerald-600"
           >
             <span>📍</span>
             <span>{t.location_where_btn}</span>
@@ -137,18 +143,21 @@ export function FamilyLocationSection({
           <button
             type="button"
             onClick={onOpenComeHereModal}
-            className="flex cursor-pointer items-center rounded-lg border-none bg-blue-500 font-medium text-white hover:bg-blue-600"
-            style={{ gap: '1.5cqmin', padding: '2cqmin 4cqmin', fontSize: '5cqmin' }}
+            className="location-action-btn bg-blue-500 text-white hover:bg-blue-600"
           >
             <span>🚶</span>
             <span>{t.location_come_btn}</span>
           </button>
         </div>
       </div>
-      <div className="section-body location-section-body">
+      <div
+        className={`section-body location-section-body min-h-0${
+          hasRequestUi ? ' location-section-body--has-requests' : ''
+        }`}
+      >
         {myLocation.address && (lat !== 0 || lng !== 0) && (
           <div className="location-address-row shrink-0">
-            <p className="location-text" style={{ marginBottom: '3cqmin', fontSize: '5cqmin' }}>
+            <p className="location-text">
               {t.location_ui_address_prefix} {extractLocationAddress(myLocation.address)}
             </p>
           </div>
@@ -158,12 +167,12 @@ export function FamilyLocationSection({
         {!isLocationSharing ? (
           <div
             className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
-            style={{ padding: '5cqmin' }}
+            style={{ padding: hasRequestUi ? '2cqmin' : '5cqmin' }}
           >
-            <p className="font-semibold text-slate-600" style={{ marginBottom: '2cqmin', fontSize: '6cqmin' }}>
+            <p className="location-map-placeholder-title font-semibold text-slate-600">
               {t.location_ui_map_title}
             </p>
-            <p className="text-center" style={{ maxWidth: '80cqmin', fontSize: '4.5cqmin', lineHeight: 1.5 }}>
+            <p className="location-map-placeholder-hint text-slate-500">
               {t.location_ui_map_hint_off}
             </p>
           </div>
@@ -298,8 +307,8 @@ export function FamilyLocationSection({
 
         {locationRequests.length > 0 && (
           <div className="location-requests-panel shrink-0">
-            <h4 className="font-semibold" style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}>{t.location_ui_requests_heading}</h4>
-            <div className="flex flex-col" style={{ gap: '2cqmin' }}>
+            <h4 className="location-requests-heading">{t.location_ui_requests_heading}</h4>
+            <div className="location-requests-list">
               {locationRequests
                 .filter((req) => req.status === 'pending')
                 .map((req) => {
@@ -321,39 +330,37 @@ export function FamilyLocationSection({
                   return (
                     <div
                       key={req.id}
-                      className={`flex items-center justify-between rounded-lg border ${
+                      className={`location-request-card rounded-lg border ${
                         isExpired ? 'border-red-300 bg-red-100' : 'border-slate-200 bg-slate-50'
                       }`}
-                      style={{ padding: '3cqmin' }}
                     >
-                      <div>
-                        <div className="font-medium" style={{ marginBottom: '1cqmin', fontSize: '5cqmin' }}>
+                      <div className="location-request-card-body">
+                        <div className="location-request-card-name">
                           {isRequester ? `→ ${otherUserName}${roleDisplay}` : `← ${otherUserName}${roleDisplay}`}
                         </div>
-                        <div className="text-slate-500" style={{ fontSize: '4cqmin' }}>
+                        <div className="location-request-card-meta">
                           {isRequester ? t.piggy_request_sent : t.piggy_request_received}
                           {isComeHere && (
-                            <span className="text-blue-600" style={{ marginLeft: '2cqmin' }}>
+                            <span className="text-blue-600" style={{ marginLeft: '1cqmin' }}>
                               ({t.location_request_come_label})
                             </span>
                           )}
                           {!isExpired && timeLeft > 0 && (
-                            <span style={{ marginLeft: '2cqmin' }}>
+                            <span style={{ marginLeft: '1cqmin' }}>
                               {fillHm(t.location_ui_dot_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
                             </span>
                           )}
                           {isExpired && (
-                            <span className="text-red-500" style={{ marginLeft: '2cqmin' }}>{t.location_ui_expired_suffix}</span>
+                            <span className="text-red-500" style={{ marginLeft: '1cqmin' }}>{t.location_ui_expired_suffix}</span>
                           )}
                         </div>
                       </div>
-                      <div className="flex" style={{ gap: '2cqmin' }}>
+                      <div className="location-request-card-actions">
                         {isRequester ? (
                           <button
                             type="button"
                             onClick={() => onLocationRequestAction(req.id, 'cancel')}
-                            className="cursor-pointer rounded-md border-none bg-red-500 text-white"
-                            style={{ padding: '1.5cqmin 3cqmin', fontSize: '4cqmin' }}
+                            className="location-request-btn location-request-btn--sm bg-red-500 text-white"
                           >
                             {cancelLabel}
                           </button>
@@ -375,10 +382,9 @@ export function FamilyLocationSection({
                                 }
                               }}
                               disabled={isExpired}
-                              className={`flex items-center rounded-md border-none font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 ${
-                                isExpired ? 'bg-slate-300' : isComeHere ? 'bg-blue-500' : 'bg-emerald-500'
+                              className={`location-request-btn disabled:cursor-not-allowed disabled:opacity-60 ${
+                                isExpired ? 'bg-slate-300 text-white' : isComeHere ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'
                               }`}
-                              style={{ gap: '1.5cqmin', padding: '2cqmin 4cqmin', fontSize: '5cqmin' }}
                             >
                               <span>{isComeHere ? '🚶' : '📍'}</span>
                               <span>{isComeHere ? t.location_got_it_btn : t.location_share_btn}</span>
@@ -386,8 +392,7 @@ export function FamilyLocationSection({
                             <button
                               type="button"
                               onClick={() => onLocationRequestAction(req.id, 'reject')}
-                              className="cursor-pointer rounded-md border-none bg-red-500 text-white"
-                              style={{ padding: '1.5cqmin 3cqmin', fontSize: '4cqmin' }}
+                              className="location-request-btn location-request-btn--sm bg-red-500 text-white"
                             >
                               {rejectLabel}
                             </button>
@@ -416,16 +421,15 @@ export function FamilyLocationSection({
                   return (
                     <div
                       key={req.id}
-                      className={`flex items-center justify-between rounded-lg border ${
+                      className={`location-request-card rounded-lg border ${
                         isExpired ? 'border-red-300 bg-red-100' : 'border-emerald-500 bg-emerald-100'
                       }`}
-                      style={{ padding: '3cqmin' }}
                     >
-                      <div>
-                        <div className="font-medium text-emerald-600" style={{ marginBottom: '1cqmin', fontSize: '5cqmin' }}>
+                      <div className="location-request-card-body">
+                        <div className="location-request-card-name text-emerald-600">
                           {fillName(t.location_ui_sharing_with, otherUserName + roleDisplay)}
                         </div>
-                        <div className="text-slate-500" style={{ fontSize: '4cqmin' }}>
+                        <div className="location-request-card-meta">
                           {!isExpired && timeLeft > 0 ? (
                             <span>
                               {fillHm(t.location_ui_pin_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
@@ -438,8 +442,7 @@ export function FamilyLocationSection({
                       <button
                         type="button"
                         onClick={() => onEndLocationSharing(req.id)}
-                        className="cursor-pointer rounded-md border-none bg-red-500 text-white"
-                        style={{ padding: '1.5cqmin 3cqmin', fontSize: '4cqmin' }}
+                        className="location-request-btn location-request-btn--sm bg-red-500 text-white"
                       >
                         {t.location_ui_end_sharing}
                       </button>
