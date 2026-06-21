@@ -6182,9 +6182,11 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
             onAddClick={() => router.push('/travel?openAdd=1')}
+            onImportClick={() => router.push('/travel/import')}
             translations={{
               section_title: tt('title'),
               add_trip: tt('add_trip'),
+              import_open_button: tt('import_open_button'),
               select_group: tt('dashboard_select_group'),
               trips_loading: tt('dashboard_trips_loading'),
               empty_state: tt('dashboard_card_empty'),

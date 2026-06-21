@@ -15,9 +15,11 @@ interface TravelPlannerSectionProps {
   currentGroupId: string | null;
   onTripClick: (tripId: string) => void;
   onAddClick: () => void;
+  onImportClick?: () => void;
   translations: {
     section_title: string;
     add_trip: string;
+    import_open_button: string;
     select_group: string;
     trips_loading: string;
     empty_state: string;
@@ -30,6 +32,7 @@ export function TravelPlannerSection({
   currentGroupId,
   onTripClick,
   onAddClick,
+  onImportClick,
   translations: t,
 }: TravelPlannerSectionProps) {
   return (
@@ -38,17 +41,29 @@ export function TravelPlannerSection({
         <h3 className="section-title m-0 min-w-0 flex-1">
           {t.section_title}
         </h3>
-        <div className={`w-full sm:w-auto ${currentGroupId ? '' : 'min-w-0'}`}>
+        <div className={`flex w-full flex-col gap-[1.5cqmin] sm:w-auto sm:flex-row ${currentGroupId ? '' : 'min-w-0'}`}>
           {currentGroupId ? (
-            <button
-              type="button"
-              onClick={onAddClick}
-              className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border-none bg-[#9333ea] font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
-              style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '5cqmin' }}
-            >
-              <Plus style={{ width: '5cqmin', height: '5cqmin' }} />
-              {t.add_trip}
-            </button>
+            <>
+              {onImportClick ? (
+                <button
+                  type="button"
+                  onClick={onImportClick}
+                  className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-violet-300 bg-white font-bold text-violet-800 transition-colors hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
+                  style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '5cqmin' }}
+                >
+                  {t.import_open_button}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={onAddClick}
+                className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border-none bg-[#9333ea] font-bold text-white transition-colors hover:bg-[#7e22ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 sm:w-auto"
+                style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '5cqmin' }}
+              >
+                <Plus style={{ width: '5cqmin', height: '5cqmin' }} />
+                {t.add_trip}
+              </button>
+            </>
           ) : null}
         </div>
       </div>
