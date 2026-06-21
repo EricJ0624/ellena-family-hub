@@ -64,7 +64,7 @@ function classifyLine(text: string): { kind: ImportItemKind; low_confidence: boo
   const t = text.trim();
   if (!t) return { kind: 'other', low_confidence: true };
 
-  const dining = DINING_RE.test(t) ? 3 : 0;
+  let dining = DINING_RE.test(t) ? 3 : 0;
   const acc = ACCOMMODATION_RE.test(t) ? 3 : 0;
   let transport = TRANSPORT_RE.test(t) ? 3 : 0;
   let attraction = ATTRACTION_RE.test(t) ? 2 : 0;
