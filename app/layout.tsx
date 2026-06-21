@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { GroupProviderWrapper } from "./providers/GroupProviderWrapper";
 import { ThemeProvider } from "./providers/ThemeProvider";
+import { ClientChunkRecovery } from "./components/ClientChunkRecovery";
 
 export const metadata: Metadata = {
   title: "Hearth: Family Haven",
@@ -55,6 +56,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body suppressHydrationWarning>
+        <ClientChunkRecovery />
         <ThemeProvider>
           <GroupProviderWrapper>{children}</GroupProviderWrapper>
         </ThemeProvider>
