@@ -3,11 +3,16 @@
  * 대시보드 `locationRequests` / 모달 사용자 목록과 동일한 형태를 유지합니다.
  */
 
+export type LocationRequestType = 'where' | 'come_here';
+
 export type DashboardLocationRequestRow = {
   id: string;
   requester_id: string;
   target_id: string;
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+  request_type?: LocationRequestType;
+  destination_lat?: number | null;
+  destination_lng?: number | null;
   created_at: string;
   expires_at?: string;
   requester?: { id: string; email: string; nickname?: string | null };

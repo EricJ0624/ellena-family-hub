@@ -11,12 +11,14 @@ import type { DashboardTranslations } from '@/lib/translations/dashboard';
 export type FamilyLocationRequestModalTranslations = Pick<
   DashboardTranslations,
   | 'location_modal_send_title'
+  | 'location_modal_come_title'
   | 'location_modal_loading_users'
   | 'location_modal_all_users_count'
   | 'location_modal_online'
   | 'location_modal_user_fallback'
   | 'location_modal_id_prefix'
   | 'location_modal_btn_send'
+  | 'location_modal_btn_come_send'
   | 'location_already_approved'
   | 'location_request_pending'
   | 'location_modal_empty'
@@ -26,6 +28,7 @@ export type FamilyLocationRequestModalTranslations = Pick<
 
 type Props = {
   open: boolean;
+  mode: 'where' | 'come_here';
   userId: string;
   loadingUsers: boolean;
   allUsers: LocationModalUserRow[];
@@ -33,6 +36,7 @@ type Props = {
   locationRequests: DashboardLocationRequestRow[];
   onBackdropClose: () => void;
   onSendLocationRequest: (targetUserId: string) => void;
+  onSendComeHereRequest: (targetUserId: string) => void;
   onRefreshUsers: () => void;
   t: FamilyLocationRequestModalTranslations;
   closeLabel: string;
@@ -52,6 +56,7 @@ function fillId(s: string, idShort: string) {
 
 export function FamilyLocationRequestModal({
   open,
+  mode,
   userId,
   loadingUsers,
   allUsers,
@@ -59,6 +64,7 @@ export function FamilyLocationRequestModal({
   locationRequests,
   onBackdropClose,
   onSendLocationRequest,
+  onSendComeHereRequest,
   onRefreshUsers,
   t,
   closeLabel,
@@ -69,6 +75,10 @@ export function FamilyLocationRequestModal({
 }: Props) {
   if (!open) return null;
 
+  const isComeHere = mode === 'come_here';
+  const modalTitle = isComeHere ? t.location_modal_come_title : t.location_modal_send_title;
+  const sendLabel = isComeHere ? t.location_modal_btn_come_send : t.location_modal_btn_send;
+
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
@@ -78,7 +88,7 @@ export function FamilyLocationRequestModal({
         className="max-h-[80vh] w-[90%] max-w-[500px] overflow-auto rounded-xl bg-white p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-4 text-lg font-semibold">{t.location_modal_send_title}</h3>
+        <h3 className="mb-4 text-lg font-semibold">{modalTitle}</h3>
         {loadingUsers ? (
           <div className="p-10 text-center text-[#64748b]">{t.location_modal_loading_users}</div>
         ) : (
@@ -145,10 +155,16 @@ export function FamilyLocationRequestModal({
                         {!hasAcceptedRequest && !hasPendingRequest && (
                           <button
                             type="button"
-                            onClick={() => onSendLocationRequest(user.id)}
-                            className="cursor-pointer rounded-md border-0 bg-[#3b82f6] px-3 py-1.5 text-xs text-white"
+                            onClick={() =>
+                              isComeHere
+                                ? onSendComeHereRequest(user.id)
+                                : onSendLocationRequest(user.id)
+                            }
+                            className={`cursor-pointer rounded-md border-0 px-3 py-1.5 text-xs text-white ${
+                              isComeHere ? 'bg-blue-500' : 'bg-[#3b82f6]'
+                            }`}
                           >
-                            {t.location_modal_btn_send}
+                            {sendLabel}
                           </button>
                         )}
                       </div>

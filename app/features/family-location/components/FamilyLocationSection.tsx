@@ -12,6 +12,9 @@ export type FamilyLocationSectionTranslations = Pick<
   DashboardTranslations,
   | 'section_title_location'
   | 'location_where_btn'
+  | 'location_come_btn'
+  | 'location_got_it_btn'
+  | 'location_request_come_label'
   | 'piggy_request_sent'
   | 'piggy_request_received'
   | 'location_share_btn'
@@ -50,6 +53,7 @@ export type FamilyLocationSectionTranslations = Pick<
 
 type Props = {
   onOpenRequestModal: () => void;
+  onOpenComeHereModal: () => void;
   myLocation: {
     address: string;
     latitude?: number;
@@ -62,6 +66,7 @@ type Props = {
   locationRequests: DashboardLocationRequestRow[];
   userId: string;
   onLocationRequestAction: (requestId: string, action: 'accept' | 'reject' | 'cancel') => void;
+  onAcceptComeHereRequest: (requestId: string, destinationLat: number, destinationLng: number) => void;
   onEndLocationSharing: (requestId: string) => void;
   translations: FamilyLocationSectionTranslations;
   cancelLabel: string;
@@ -82,6 +87,7 @@ function fillName(template: string, name: string) {
 
 export function FamilyLocationSection({
   onOpenRequestModal,
+  onOpenComeHereModal,
   myLocation,
   extractLocationAddress,
   isLocationSharing,
@@ -90,6 +96,7 @@ export function FamilyLocationSection({
   locationRequests,
   userId,
   onLocationRequestAction,
+  onAcceptComeHereRequest,
   onEndLocationSharing,
   translations: t,
   cancelLabel,
@@ -126,6 +133,15 @@ export function FamilyLocationSection({
           >
             <span>📍</span>
             <span>{t.location_where_btn}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenComeHereModal}
+            className="flex cursor-pointer items-center rounded-lg border-none bg-blue-500 font-medium text-white hover:bg-blue-600"
+            style={{ gap: '1.5cqmin', padding: '2cqmin 4cqmin', fontSize: '5cqmin' }}
+          >
+            <span>🚶</span>
+            <span>{t.location_come_btn}</span>
           </button>
         </div>
       </div>
@@ -298,6 +314,9 @@ export function FamilyLocationSection({
                   const now = new Date();
                   const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
                   const isExpired = expiresAt ? expiresAt < now : false;
+                  const isComeHere = req.request_type === 'come_here';
+                  const destLat = req.destination_lat;
+                  const destLng = req.destination_lng;
 
                   return (
                     <div
@@ -313,6 +332,11 @@ export function FamilyLocationSection({
                         </div>
                         <div className="text-slate-500" style={{ fontSize: '4cqmin' }}>
                           {isRequester ? t.piggy_request_sent : t.piggy_request_received}
+                          {isComeHere && (
+                            <span className="text-blue-600" style={{ marginLeft: '2cqmin' }}>
+                              ({t.location_request_come_label})
+                            </span>
+                          )}
                           {!isExpired && timeLeft > 0 && (
                             <span style={{ marginLeft: '2cqmin' }}>
                               {fillHm(t.location_ui_dot_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
@@ -337,15 +361,27 @@ export function FamilyLocationSection({
                           <>
                             <button
                               type="button"
-                              onClick={() => onLocationRequestAction(req.id, 'accept')}
+                              onClick={() => {
+                                if (
+                                  isComeHere &&
+                                  destLat != null &&
+                                  destLng != null &&
+                                  Number.isFinite(destLat) &&
+                                  Number.isFinite(destLng)
+                                ) {
+                                  onAcceptComeHereRequest(req.id, destLat, destLng);
+                                } else {
+                                  onLocationRequestAction(req.id, 'accept');
+                                }
+                              }}
                               disabled={isExpired}
                               className={`flex items-center rounded-md border-none font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 ${
-                                isExpired ? 'bg-slate-300' : 'bg-emerald-500'
+                                isExpired ? 'bg-slate-300' : isComeHere ? 'bg-blue-500' : 'bg-emerald-500'
                               }`}
                               style={{ gap: '1.5cqmin', padding: '2cqmin 4cqmin', fontSize: '5cqmin' }}
                             >
-                              <span>📍</span>
-                              <span>{t.location_share_btn}</span>
+                              <span>{isComeHere ? '🚶' : '📍'}</span>
+                              <span>{isComeHere ? t.location_got_it_btn : t.location_share_btn}</span>
                             </button>
                             <button
                               type="button"

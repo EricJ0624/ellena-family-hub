@@ -486,6 +486,9 @@ export interface Database {
           target_id: string
           group_id: string | null
           status: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+          request_type: 'where' | 'come_here'
+          destination_lat: number | null
+          destination_lng: number | null
           created_at: string
           updated_at: string
           expires_at: string
@@ -496,6 +499,9 @@ export interface Database {
           target_id: string
           group_id?: string | null
           status?: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+          request_type?: 'where' | 'come_here'
+          destination_lat?: number | null
+          destination_lng?: number | null
           created_at?: string
           updated_at?: string
           expires_at?: string
@@ -506,6 +512,9 @@ export interface Database {
           target_id?: string
           group_id?: string | null
           status?: 'pending' | 'accepted' | 'rejected' | 'cancelled'
+          request_type?: 'where' | 'come_here'
+          destination_lat?: number | null
+          destination_lng?: number | null
           created_at?: string
           updated_at?: string
           expires_at?: string

@@ -77,6 +77,8 @@ import { useFamilyChatRealtime } from '@/app/features/family-chat/hooks/useFamil
 import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyChatScroll';
 import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
 import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
+import { FamilyLocationNavMapModal } from '@/app/features/family-location/components/FamilyLocationNavMapModal';
+import { openNavMapApp, type NavMapApp } from '@/lib/nav-map-apps';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
@@ -178,6 +180,7 @@ function normalizeLocationRequestRow(req: any) {
   return {
     ...req,
     target_id: req?.target_id || req?.target_user_id || req?.target?.id || null,
+    request_type: req?.request_type === 'come_here' ? 'come_here' : 'where',
   };
 }
 
@@ -402,12 +405,22 @@ export default function FamilyHub() {
     requester_id: string;
     target_id: string;
     status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+    request_type?: 'where' | 'come_here';
+    destination_lat?: number | null;
+    destination_lng?: number | null;
     created_at: string;
     expires_at?: string;
     requester?: { id: string; email: string; nickname?: string | null };
     target?: { id: string; email: string; nickname?: string | null };
   }>>([]);
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
+  const [locationRequestModalMode, setLocationRequestModalMode] = useState<'where' | 'come_here'>('where');
+  const [showNavMapModal, setShowNavMapModal] = useState(false);
+  const [pendingComeHereAccept, setPendingComeHereAccept] = useState<{
+    requestId: string;
+    destinationLat: number;
+    destinationLng: number;
+  } | null>(null);
   const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
   // 모달 닫힘 직후 구독 race condition 방지:
   // tasks/calendar는 컴포넌트 내부에서 Supabase 구독을 관리하므로
@@ -4787,8 +4800,99 @@ export default function FamilyHub() {
     }
   };
 
+  // 일루와 요청 보내기 (요청자 현재 위치 스냅샷 포함)
+  const sendComeHereRequest = async (targetUserId: string) => {
+    if (!userId || !isAuthenticated) {
+      alert(dt('login_required'));
+      return;
+    }
+    if (!currentGroupId) {
+      alert(dt('group_info_missing'));
+      return;
+    }
+    if (!navigator.geolocation) {
+      alert(dt('location_geolocation_unsupported'));
+      return;
+    }
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      const address = '';
+
+      await saveLocationToSupabase(latitude, longitude, address);
+
+      setState((prev) => ({
+        ...prev,
+        location: {
+          address,
+          latitude,
+          longitude,
+          userId,
+          updatedAt: new Date().toISOString(),
+        },
+      }));
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        return;
+      }
+
+      const response = await fetch('/api/location-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          requesterId: userId,
+          targetId: targetUserId,
+          groupId: currentGroupId,
+          requestType: 'come_here',
+          destinationLat: latitude,
+          destinationLng: longitude,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(dt('location_come_request_sent'));
+        await loadLocationRequests();
+        setShowLocationRequestModal(false);
+        setSelectedUserForRequest(null);
+        setLoadingUsers(false);
+        setAllUsers([]);
+        loadingUsersRef.current = false;
+        modalOpenedRef.current = false;
+      } else {
+        alert(result.error || '일루와 요청 전송에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('일루와 요청 전송 오류:', error);
+      if (error?.code === 1) {
+        alert(dt('location_come_gps_required'));
+      } else {
+        alert(dt('location_request_send_error'));
+      }
+    }
+  };
+
   // 위치 요청 승인/거부/취소
-  const handleLocationRequestAction = async (requestId: string, action: 'accept' | 'reject' | 'cancel') => {
+  const handleLocationRequestAction = async (
+    requestId: string,
+    action: 'accept' | 'reject' | 'cancel',
+    options?: { navMapApp?: NavMapApp },
+  ) => {
     if (!userId || !isAuthenticated) {
       alert(dt('login_required'));
       return;
@@ -4892,7 +4996,22 @@ export default function FamilyHub() {
             // 위치 가져오기 실패해도 승인은 완료되었으므로 계속 진행
           }
           
-          alert(dt('location_share_approved'));
+          alert(
+            currentRequest?.request_type === 'come_here' || result.data?.request_type === 'come_here'
+              ? dt('location_got_it_approved')
+              : dt('location_share_approved'),
+          );
+
+          if (
+            options?.navMapApp &&
+            (currentRequest?.request_type === 'come_here' || result.data?.request_type === 'come_here')
+          ) {
+            const destLat = currentRequest?.destination_lat ?? result.data?.destination_lat;
+            const destLng = currentRequest?.destination_lng ?? result.data?.destination_lng;
+            if (destLat != null && destLng != null && Number.isFinite(destLat) && Number.isFinite(destLng)) {
+              openNavMapApp(options.navMapApp, destLat, destLng);
+            }
+          }
         } else if (action === 'reject' || action === 'cancel') {
           if (action === 'reject') alert(dt('location_request_rejected'));
           if (currentRequest) {
@@ -4944,6 +5063,24 @@ export default function FamilyHub() {
       // 처리 완료 표시 제거
       processingRequestsRef.current.delete(requestKey);
     }
+  };
+
+  const handleAcceptComeHereRequest = (requestId: string, destinationLat: number, destinationLng: number) => {
+    setPendingComeHereAccept({ requestId, destinationLat, destinationLng });
+    setShowNavMapModal(true);
+  };
+
+  const handleNavMapModalConfirm = async (app: NavMapApp) => {
+    if (!pendingComeHereAccept) return;
+    const { requestId } = pendingComeHereAccept;
+    setShowNavMapModal(false);
+    setPendingComeHereAccept(null);
+    await handleLocationRequestAction(requestId, 'accept', { navMapApp: app });
+  };
+
+  const handleNavMapModalCancel = () => {
+    setShowNavMapModal(false);
+    setPendingComeHereAccept(null);
   };
 
   // 회원탈퇴 Handler
@@ -5964,7 +6101,14 @@ export default function FamilyHub() {
       case 'location':
         return (
           <FamilyLocationSection
-            onOpenRequestModal={() => setShowLocationRequestModal(true)}
+            onOpenRequestModal={() => {
+              setLocationRequestModalMode('where');
+              setShowLocationRequestModal(true);
+            }}
+            onOpenComeHereModal={() => {
+              setLocationRequestModalMode('come_here');
+              setShowLocationRequestModal(true);
+            }}
             myLocation={state.location}
             extractLocationAddress={extractLocationAddress}
             isLocationSharing={isLocationSharing}
@@ -5973,10 +6117,14 @@ export default function FamilyHub() {
             locationRequests={locationRequests}
             userId={userId}
             onLocationRequestAction={handleLocationRequestAction}
+            onAcceptComeHereRequest={handleAcceptComeHereRequest}
             onEndLocationSharing={endLocationSharing}
             translations={{
               section_title_location: dt('section_title_location'),
               location_where_btn: dt('location_where_btn'),
+              location_come_btn: dt('location_come_btn'),
+              location_got_it_btn: dt('location_got_it_btn'),
+              location_request_come_label: dt('location_request_come_label'),
               piggy_request_sent: dt('piggy_request_sent'),
               piggy_request_received: dt('piggy_request_received'),
               location_share_btn: dt('location_share_btn'),
@@ -6513,6 +6661,7 @@ export default function FamilyHub() {
 
           <FamilyLocationRequestModal
           open={showLocationRequestModal}
+          mode={locationRequestModalMode}
           userId={userId}
           loadingUsers={loadingUsers}
           allUsers={allUsers}
@@ -6527,17 +6676,20 @@ export default function FamilyHub() {
             modalOpenedRef.current = false;
           }}
           onSendLocationRequest={sendLocationRequest}
+          onSendComeHereRequest={sendComeHereRequest}
           onRefreshUsers={() => {
             loadAllUsers(0, currentGroupId ? { groupId: currentGroupId } : undefined);
           }}
           t={{
             location_modal_send_title: dt('location_modal_send_title'),
+            location_modal_come_title: dt('location_modal_come_title'),
             location_modal_loading_users: dt('location_modal_loading_users'),
             location_modal_all_users_count: dt('location_modal_all_users_count'),
             location_modal_online: dt('location_modal_online'),
             location_modal_user_fallback: dt('location_modal_user_fallback'),
             location_modal_id_prefix: dt('location_modal_id_prefix'),
             location_modal_btn_send: dt('location_modal_btn_send'),
+            location_modal_btn_come_send: dt('location_modal_btn_come_send'),
             location_already_approved: dt('location_already_approved'),
             location_request_pending: dt('location_request_pending'),
             location_modal_empty: dt('location_modal_empty'),
@@ -6550,6 +6702,21 @@ export default function FamilyHub() {
           getFamilyRoleLabel={getFamilyRoleLabel}
           lang={lang}
         />
+
+          <FamilyLocationNavMapModal
+            open={showNavMapModal}
+            lang={lang}
+            onCancel={handleNavMapModalCancel}
+            onConfirm={handleNavMapModalConfirm}
+            t={{
+              title: dt('location_nav_modal_title'),
+              google: dt('location_nav_modal_google'),
+              kakao: dt('location_nav_modal_kakao'),
+              naver: dt('location_nav_modal_naver'),
+              start: dt('location_nav_modal_start'),
+              cancel: ct('cancel'),
+            }}
+          />
       </div>
       </div>
       

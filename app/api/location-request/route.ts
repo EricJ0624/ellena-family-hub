@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
     const targetId = typeof body.targetId === 'string' ? body.targetId.trim() : body.targetId;
     const requesterId = typeof body.requesterId === 'string' ? body.requesterId.trim() : body.requesterId;
     const groupId = typeof body.groupId === 'string' ? body.groupId.trim() : body.groupId;
+    const requestTypeRaw = typeof body.requestType === 'string' ? body.requestType.trim() : 'where';
+    const requestType = requestTypeRaw === 'come_here' ? 'come_here' : 'where';
+    const destinationLat = body.destinationLat != null ? Number(body.destinationLat) : null;
+    const destinationLng = body.destinationLng != null ? Number(body.destinationLng) : null;
 
     if (!targetId || !requesterId || !groupId) {
       return NextResponse.json(
@@ -46,6 +50,20 @@ export async function POST(request: NextRequest) {
         { error: '자기 자신에게 위치 요청을 보낼 수 없습니다.' },
         { status: 400 }
       );
+    }
+
+    if (requestType === 'come_here') {
+      if (
+        destinationLat == null ||
+        destinationLng == null ||
+        !Number.isFinite(destinationLat) ||
+        !Number.isFinite(destinationLng)
+      ) {
+        return NextResponse.json(
+          { error: '일루와 요청에는 destinationLat, destinationLng가 필요합니다.' },
+          { status: 400 }
+        );
+      }
     }
 
     const memberCheck = await requireGroupMember(user.id, groupId);
@@ -132,15 +150,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 위치 요청 생성 (1시간 후 만료)
+    const insertRow: Record<string, unknown> = {
+      requester_id: requesterId,
+      target_id: targetId,
+      group_id: groupId,
+      status: 'pending',
+      request_type: requestType,
+      expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    };
+    if (requestType === 'come_here') {
+      insertRow.destination_lat = destinationLat;
+      insertRow.destination_lng = destinationLng;
+    }
+
     const { data, error } = await supabase
       .from('location_requests')
-      .insert({
-        requester_id: requesterId,
-        target_id: targetId,
-        group_id: groupId,
-        status: 'pending',
-        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1시간 후 만료
-      })
+      .insert(insertRow)
       .select()
       .single();
 
@@ -171,7 +196,8 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           targetUserId: targetId,
           requesterName: requesterName,
-          requestId: data.id
+          requestId: data.id,
+          requestType,
         })
       });
 

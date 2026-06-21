@@ -34,7 +34,7 @@ const SUPABASE_SERVICE_KEY: string = supabaseServiceKey;
 // Web Push 푸시 알림 전송
 export async function POST(request: NextRequest) {
   try {
-    const { targetUserId, requesterName, requestId } = await request.json();
+    const { targetUserId, requesterName, requestId, requestType } = await request.json();
 
     if (!targetUserId || !requesterName || !requestId) {
       return NextResponse.json(
@@ -83,10 +83,14 @@ export async function POST(request: NextRequest) {
 
     const pushSubscription = JSON.parse(pushTokenData.token);
 
+    const isComeHere = requestType === 'come_here';
+
     // 푸시 알림 페이로드
     const payload = JSON.stringify({
-      title: '📍 위치 요청',
-      body: `${requesterName}님이 당신의 위치를 요청했습니다.`,
+      title: isComeHere ? '📍 일루와 요청' : '📍 위치 요청',
+      body: isComeHere
+        ? `${requesterName}님이 당신에게 일루와를 요청했습니다.`
+        : `${requesterName}님이 당신의 위치를 요청했습니다.`,
       icon: '/icon-192x192.png',
       badge: '/badge-72x72.png',
       tag: requestId,
