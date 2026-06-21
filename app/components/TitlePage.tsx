@@ -228,6 +228,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     frameStyle === 'no_frame';
   const isSoftGlassFrame = frameStyle === 'soft_glass';
   const isPolaroidFrame = frameStyle === 'polaroid_modern';
+  const isParchmentFrame = frameStyle === 'parchment';
   const photoInnerBgClass = 'bg-[#1a1a1a]';
   const frameWidthClass =
     frameStyle === 'polaroid_modern'
@@ -261,8 +262,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
       transition={{ duration: 0.6, delay: 0.2 }}
       className={cn('relative z-30 mb-6 mx-auto w-full', frameWidthClass)}
     >
-      {/* 액자 주변 밀도 보강 (폴라로이드는 마스크된 캔버스 백플레이트만 사용) */}
-      {!isPolaroidFrame && (
+      {/* 액자 주변 밀도 보강 (폴라로이드·양피지는 PNG 외곽 투명 → halo 제외) */}
+      {!isPolaroidFrame && !isParchmentFrame && (
         <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
       )}
 
