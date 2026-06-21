@@ -5153,8 +5153,8 @@ export default function FamilyHub() {
       startLat != null && startLng != null && Number.isFinite(startLat) && Number.isFinite(startLng)
         ? { lat: startLat, lng: startLng }
         : undefined;
-    void handleLocationRequestAction(requestId, 'accept');
     openNavMapApp('google', destinationLat, destinationLng, start);
+    void handleLocationRequestAction(requestId, 'accept');
   };
 
   const handleAcceptComeHereRequest = async (
@@ -5218,8 +5218,8 @@ export default function FamilyHub() {
       startLat != null && startLng != null
         ? { lat: startLat, lng: startLng }
         : undefined;
-    void handleLocationRequestAction(requestId, 'accept');
     openNavMapApp(app, destinationLat, destinationLng, start);
+    void handleLocationRequestAction(requestId, 'accept');
   };
 
   const handleNavMapModalCancel = () => {

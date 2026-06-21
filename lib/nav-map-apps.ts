@@ -92,13 +92,15 @@ export function buildNavMapUrls(
   const latStr = String(lat);
   const lngStr = String(lng);
   const appName = encodeURIComponent(getNavAppName());
+  const hasStart =
+    start != null && Number.isFinite(start.lat) && Number.isFinite(start.lng);
 
   switch (app) {
     case 'kakao': {
       const ep = `${latStr},${lngStr}`;
       const routeQuery =
-        start != null && Number.isFinite(start.lat) && Number.isFinite(start.lng)
-          ? `sp=${start.lat},${start.lng}&ep=${ep}&by=car`
+        hasStart
+          ? `sp=${start!.lat},${start!.lng}&ep=${ep}&by=car`
           : `ep=${ep}&by=car`;
       const web = `https://m.map.kakao.com/scheme/route?${routeQuery}`;
       const appScheme = `kakaomap://route?${routeQuery}`;
@@ -115,9 +117,20 @@ export function buildNavMapUrls(
     }
     case 'google':
     default: {
-      const web = `https://www.google.com/maps/dir/?api=1&destination=${latStr},${lngStr}&travelmode=driving&dir_action=navigate`;
-      const appScheme = `google.navigation:q=${latStr},${lngStr}`;
-      return { web, app: appScheme };
+      const destCoord = encodeURIComponent(`${latStr},${lngStr}`);
+      const originParam = hasStart
+        ? `&origin=${encodeURIComponent(`${start!.lat},${start!.lng}`)}`
+        : '';
+      // Maps URL API — iOS/Android 앱이 https 를 intercept (google.navigation 은 Android 전용)
+      const web =
+        `https://www.google.com/maps/dir/?api=1${originParam}&destination=${destCoord}&travelmode=driving&dir_action=navigate`;
+      const daddr = encodeURIComponent(`${latStr},${lngStr}`);
+      const iosScheme = hasStart
+        ? `comgooglemaps://?saddr=${encodeURIComponent(`${start!.lat},${start!.lng}`)}&daddr=${daddr}&directionsmode=driving`
+        : `comgooglemaps://?daddr=${daddr}&directionsmode=driving`;
+      const androidIntent =
+        `intent://www.google.com/maps/dir/?api=1${originParam}&destination=${destCoord}&travelmode=driving&dir_action=navigate#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.google.android.apps.maps;S.browser_fallback_url=${encodeURIComponent(web)};end`;
+      return { web, app: iosScheme, androidIntent };
     }
   }
 }
@@ -160,6 +173,20 @@ export function openNavMapApp(
   const userLng = start?.lng;
   const resolvedApp = resolveNavMapApp(app, userLat, userLng);
   const urls = buildNavMapUrls(resolvedApp, lat, lng, start);
+
+  if (resolvedApp === 'google') {
+    if (isMobileUserAgent()) {
+      // Android: GMM intent → Maps URL API 길찾기. iOS 등: https (앱 intercept)
+      if (isAndroidUserAgent() && urls.androidIntent) {
+        window.location.assign(urls.androidIntent);
+        return;
+      }
+      window.location.assign(urls.web);
+      return;
+    }
+    window.open(urls.web, '_blank', 'noopener,noreferrer');
+    return;
+  }
 
   if (isMobileUserAgent()) {
     if (isAndroidUserAgent() && urls.androidIntent) {
