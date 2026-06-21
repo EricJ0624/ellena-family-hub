@@ -187,6 +187,17 @@ function normalizeLocationRequestRow(req: any) {
   };
 }
 
+/** locationRequests 동일 여부 — 매 fetch마다 새 배열 참조로 effect 연쇄 re-render 방지 */
+function locationRequestsSignature(
+  requests: ReadonlyArray<{ id: string; status: string; updated_at?: string; request_type?: string }>,
+): string {
+  if (!requests.length) return '';
+  return requests
+    .map((r) => `${r.id}:${r.status}:${r.updated_at ?? ''}:${r.request_type ?? 'where'}`)
+    .sort()
+    .join('|');
+}
+
 // --- [TYPES] 타입 안정성 추가 ---
 type Message = ChatUiMessage;
 type ChatAttachment = UploadedAttachment;
@@ -416,6 +427,8 @@ export default function FamilyHub() {
     requester?: { id: string; email: string; nickname?: string | null };
     target?: { id: string; email: string; nickname?: string | null };
   }>>([]);
+  const locationRequestsRef = useRef(locationRequests);
+  locationRequestsRef.current = locationRequests;
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
   const [locationRequestModalMode, setLocationRequestModalMode] = useState<'where' | 'come_here'>('where');
   const [showNavMapModal, setShowNavMapModal] = useState(false);
@@ -1397,19 +1410,34 @@ export default function FamilyHub() {
     }
   }, [currentGroupId, loadPiggySummary]);
 
-  // 2.4.5. state가 로드되면 titleStyle 동기화
+  // 2.4.5. state가 로드되면 titleStyle 동기화 (값이 같으면 setState 생략 → re-render 연쇄 방지)
   useEffect(() => {
     if (state.titleStyle) {
-      setTitleStyle(state.titleStyle);
+      setTitleStyle((prev) => {
+        const next = state.titleStyle!;
+        if (
+          prev.content === next.content
+          && prev.color === next.color
+          && prev.fontSize === next.fontSize
+          && prev.fontWeight === next.fontWeight
+          && prev.letterSpacing === next.letterSpacing
+          && prev.fontFamily === next.fontFamily
+        ) {
+          return prev;
+        }
+        return next;
+      });
     } else if (state.familyName && !state.titleStyle) {
-      // titleStyle이 없지만 familyName이 있으면 기본값으로 초기화 (기존 데이터 호환성)
-      setTitleStyle({
-        content: state.familyName,
-        color: '#9333ea',
-        fontSize: 48,
-        fontWeight: '700',
-        letterSpacing: 0,
-        fontFamily: 'Inter',
+      setTitleStyle((prev) => {
+        if (prev.content === state.familyName) return prev;
+        return {
+          content: state.familyName,
+          color: '#9333ea',
+          fontSize: 48,
+          fontWeight: '700',
+          letterSpacing: 0,
+          fontFamily: 'Inter',
+        };
       });
     }
   }, [state.titleStyle, state.familyName]);
@@ -1599,7 +1627,7 @@ export default function FamilyHub() {
       fontWeight,
       letterSpacing,
     );
-    setCustomTitleFontSize(fitted);
+    setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
   }, [
     frameIsPortrait,
     isDefaultDashboardTitle,
@@ -2433,7 +2461,7 @@ export default function FamilyHub() {
         updateMapMarkersDebounceRef.current = null;
       }
     };
-  }, [isLocationSharing, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
+  }, [isLocationSharing, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, updateMapMarkers]);
 
   // 위젯 CQ/그리드 리사이즈 시 Google Maps 캔버스 크기 동기화
   useEffect(() => {
@@ -2782,7 +2810,6 @@ export default function FamilyHub() {
               const newRequest = payload.new;
               if (newRequest && newRequest.target_id === userId) {
                 await loadLocationRequests();
-                setState(prev => ({ ...prev }));
               } else {
                 loadLocationRequests();
               }
@@ -2879,7 +2906,6 @@ export default function FamilyHub() {
                 setTimeout(() => loadFamilyLocations(), delay);
               });
             }
-            setState(prev => ({ ...prev }));
           }
         )
         .subscribe((status, err) => {
@@ -3317,7 +3343,7 @@ export default function FamilyHub() {
       const now = new Date();
       const expiredAcceptedRequests: string[] = [];
       
-      locationRequests.forEach((req: any) => {
+      locationRequestsRef.current.forEach((req: any) => {
         // expires_at이 있는 경우에만 만료 체크
         if (req.expires_at) {
           const expiresAt = new Date(req.expires_at);
@@ -3350,7 +3376,7 @@ export default function FamilyHub() {
     return () => {
       clearInterval(interval);
     };
-  }, [isAuthenticated, userId, locationRequests]);
+  }, [isAuthenticated, userId]);
 
   // --- [LOGIC] 원본 Store.dispatch 로직 이식 ---
 
@@ -4198,8 +4224,12 @@ export default function FamilyHub() {
           currentLocationRequests = (result.data || []).map(normalizeLocationRequestRow);
           console.log('📍 [loadFamilyLocations] currentLocationRequests 개수:', currentLocationRequests.length);
           console.log('📍 [loadFamilyLocations] currentLocationRequests:', JSON.stringify(currentLocationRequests, null, 2));
-          // ✅ CRITICAL FIX: state에도 반영 (updateMapMarkers가 최신 locationRequests 참조하도록)
-          setLocationRequests(currentLocationRequests as any);
+          // ✅ CRITICAL FIX: state에도 반영 (내용 동일하면 참조 유지 → effect 연쇄 방지)
+          setLocationRequests((prev) => {
+            const next = currentLocationRequests as typeof prev;
+            if (locationRequestsSignature(prev) === locationRequestsSignature(next)) return prev;
+            return next;
+          });
         }
       } catch (err) {
         // 조회 실패 시 기존 locationRequests 사용
@@ -4418,6 +4448,10 @@ export default function FamilyHub() {
             return prev;
           }
           
+          if (!prev.familyLocations?.length) {
+            console.log('📍 [loadFamilyLocations] familyLocations 이미 비어 있음 - prev 유지');
+            return prev;
+          }
           console.log('❌ [loadFamilyLocations] familyLocations 비우기');
           // familyLocations를 비울 때 ref도 정리
           const removedUserIds = new Set((prev.familyLocations || []).map((loc: any) => loc.userId));
@@ -4517,7 +4551,10 @@ export default function FamilyHub() {
           return req;
         }).filter((req: any) => req !== null); // null 제거
         
-        setLocationRequests(processedRequests);
+        setLocationRequests((prev) => {
+          if (locationRequestsSignature(prev) === locationRequestsSignature(processedRequests)) return prev;
+          return processedRequests;
+        });
         
         // 만료된 accepted 요청들을 silent 모드로 자동 종료 (무한 루프 방지를 위해 상태 업데이트 후 처리)
         if (expiredAcceptedRequests.length > 0) {
