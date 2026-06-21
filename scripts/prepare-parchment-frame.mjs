@@ -1,8 +1,8 @@
 /**
  * parchment-frame-landscape.png — PNG 전처리
- * - 가장자리 양피지(따뜻한 크림 톤)만 유지
- * - 체커보드·린넨·사진 구역 → 투명 (프레임 뒤 대시보드 배경 비침)
- * - 사진 개구부 inset 출력
+ * - 각 변에서 안쪽으로 평탄한 크림 여백만 제거 → 투명 (대시보드 배경 비침)
+ * - 중앙 사진 개구부(이미 투명) bbox로 inset 측정
+ * - 데클·장식 프레임은 유지, opaque bbox 크롭
  * 실행: node scripts/prepare-parchment-frame.mjs
  */
 import sharp from 'sharp';
@@ -20,61 +20,56 @@ const px = (x, y) => {
   return [data[i], data[i + 1], data[i + 2], data[i + 3]];
 };
 
-/** 양피지·데클 테두리 (따뜻한 크림) */
-const isParchment = (p) => p[0] - p[2] > 5 && p[0] > 205 && p[1] > 195;
+const isBorder = (x, y) => x === 0 || y === 0 || x === w - 1 || y === h - 1;
 
-const dirs = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
+const localGradient = (x, y) => {
+  const p = px(x, y);
+  if (isBorder(x, y)) return 0;
+  const l = px(x - 1, y);
+  const r = px(x + 1, y);
+  const u = px(x, y - 1);
+  const d = px(x, y + 1);
+  return (
+    Math.abs(p[0] - l[0]) +
+    Math.abs(p[0] - r[0]) +
+    Math.abs(p[0] - u[0]) +
+    Math.abs(p[0] - d[0])
+  );
+};
 
-const parchment = new Uint8Array(w * h);
-const queue = [];
+/** 이미지 가장자리에서 연속되는 평탄 크림 여백 (장식·데클 직전까지) */
+const isFlatMargin = (x, y) => {
+  const p = px(x, y);
+  if (p[3] < 128) return true;
+  if (!(p[0] > 205 && p[1] > 195 && p[2] > 185 && p[0] - p[2] > 2)) return false;
+  return localGradient(x, y) < 30;
+};
 
-for (let x = 0; x < w; x++) {
-  for (const y of [0, h - 1]) {
-    const p = px(x, y);
-    const idx = y * w + x;
-    if (isParchment(p) && !parchment[idx]) {
-      parchment[idx] = 1;
-      queue.push([x, y]);
+function stripFlatMargins() {
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      if (!isFlatMargin(x, y)) break;
+      data[(y * w + x) * c + 3] = 0;
+    }
+    for (let y = h - 1; y >= 0; y--) {
+      if (!isFlatMargin(x, y)) break;
+      data[(y * w + x) * c + 3] = 0;
+    }
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!isFlatMargin(x, y)) break;
+      data[(y * w + x) * c + 3] = 0;
+    }
+    for (let x = w - 1; x >= 0; x--) {
+      if (!isFlatMargin(x, y)) break;
+      data[(y * w + x) * c + 3] = 0;
     }
   }
 }
-for (let y = 0; y < h; y++) {
-  for (const x of [0, w - 1]) {
-    const p = px(x, y);
-    const idx = y * w + x;
-    if (isParchment(p) && !parchment[idx]) {
-      parchment[idx] = 1;
-      queue.push([x, y]);
-    }
-  }
-}
 
-while (queue.length) {
-  const [x, y] = queue.pop();
-  for (const [dx, dy] of dirs) {
-    const nx = x + dx;
-    const ny = y + dy;
-    if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-    const idx = ny * w + nx;
-    if (parchment[idx]) continue;
-    if (!isParchment(px(nx, ny))) continue;
-    parchment[idx] = 1;
-    queue.push([nx, ny]);
-  }
-}
+stripFlatMargins();
 
-for (let i = 0; i < w * h; i++) {
-  if (!parchment[i]) {
-    data[i * c + 3] = 0;
-  }
-}
-
-/** 크롭 좌표계에서 내부 사진 홀 inset */
 let minX = w;
 let minY = h;
 let maxX = 0;
@@ -90,71 +85,66 @@ for (let y = 0; y < h; y++) {
   }
 }
 
+if (maxX < minX || maxY < minY) {
+  throw new Error('No visible frame content after margin strip');
+}
+
 const cw = maxX - minX + 1;
 const ch = maxY - minY + 1;
 
-const exterior = new Uint8Array(cw * ch);
-const extQueue = [];
-for (let x = 0; x < cw; x++) {
-  for (const y of [0, ch - 1]) {
-    const gx = minX + x;
-    const gy = minY + y;
-    if (data[(gy * w + gx) * c + 3] < 128) {
-      exterior[y * cw + x] = 1;
-      extQueue.push([x, y]);
-    }
-  }
+const dirs = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+/** 중앙 투명 개구부 flood → inset bbox */
+const opening = new Uint8Array(w * h);
+const cx = Math.floor(w / 2);
+const cy = Math.floor(h / 2);
+const openQueue = [];
+
+if (data[(cy * w + cx) * c + 3] < 128) {
+  opening[cy * w + cx] = 1;
+  openQueue.push([cx, cy]);
 }
-for (let y = 0; y < ch; y++) {
-  for (const x of [0, cw - 1]) {
-    const gx = minX + x;
-    const gy = minY + y;
-    if (data[(gy * w + gx) * c + 3] < 128 && !exterior[y * cw + x]) {
-      exterior[y * cw + x] = 1;
-      extQueue.push([x, y]);
-    }
-  }
-}
-while (extQueue.length) {
-  const [x, y] = extQueue.pop();
+
+while (openQueue.length) {
+  const [x, y] = openQueue.pop();
   for (const [dx, dy] of dirs) {
     const nx = x + dx;
     const ny = y + dy;
-    if (nx < 0 || ny < 0 || nx >= cw || ny >= ch) continue;
-    const idx = ny * cw + nx;
-    if (exterior[idx]) continue;
-    const gx = minX + nx;
-    const gy = minY + ny;
-    if (data[(gy * w + gx) * c + 3] >= 128) continue;
-    exterior[idx] = 1;
-    extQueue.push([nx, ny]);
+    if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+    const idx = ny * w + nx;
+    if (opening[idx]) continue;
+    if (data[idx * c + 3] >= 128) continue;
+    opening[idx] = 1;
+    openQueue.push([nx, ny]);
   }
 }
 
-let oMinX = cw;
-let oMinY = ch;
+let oMinX = w;
+let oMinY = h;
 let oMaxX = 0;
 let oMaxY = 0;
-for (let y = 0; y < ch; y++) {
-  for (let x = 0; x < cw; x++) {
-    const gx = minX + x;
-    const gy = minY + y;
-    if (data[(gy * w + gx) * c + 3] < 128 && !exterior[y * cw + x]) {
-      if (x < oMinX) oMinX = x;
-      if (x > oMaxX) oMaxX = x;
-      if (y < oMinY) oMinY = y;
-      if (y > oMaxY) oMaxY = y;
-    }
+for (let y = 0; y < h; y++) {
+  for (let x = 0; x < w; x++) {
+    if (!opening[y * w + x]) continue;
+    if (x < oMinX) oMinX = x;
+    if (x > oMaxX) oMaxX = x;
+    if (y < oMinY) oMinY = y;
+    if (y > oMaxY) oMaxY = y;
   }
 }
 
 const inset =
   oMaxX >= oMinX
     ? {
-        left: +((oMinX / cw) * 100).toFixed(1),
-        right: +(((cw - oMaxX - 1) / cw) * 100).toFixed(1),
-        top: +((oMinY / ch) * 100).toFixed(1),
-        bottom: +(((ch - oMaxY - 1) / ch) * 100).toFixed(1),
+        left: +(((oMinX - minX) / cw) * 100).toFixed(1),
+        right: +(((maxX - oMaxX) / cw) * 100).toFixed(1),
+        top: +(((oMinY - minY) / ch) * 100).toFixed(1),
+        bottom: +(((maxY - oMaxY) / ch) * 100).toFixed(1),
       }
     : null;
 
