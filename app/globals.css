@@ -2739,11 +2739,90 @@ select:not(.chalkboard-form-input) {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   }
 
-  .widget-chrome[data-widget-key='calendar'] .calendar-section-body--has-selection .calendar-month-block,
-  .widget-chrome[data-widget-key='calendar'] .calendar-section-body--has-selection .calendar-detail-panel {
-    flex: 1 1 0;
-    min-height: 0;
+  /*
+   * 날짜 선택 시: 고정 프레임 안에서 축소하지 않고, 상세 패널만큼 위젯·그리드 셀을 아래로 확장.
+   * (--widget-scale-box-h 는 그리드 아이템에서 상속)
+   */
+  .dashboard-widget-grid:not([data-layout-editor]) > *:has(.calendar-section-body--has-selection) {
+    align-self: start;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid:not([data-layout-editor])
+    > *:has(.calendar-section-body--has-selection)
+    > .widget-chrome[data-widget-key='calendar'] {
+    height: auto;
+    min-height: var(--widget-min-h, auto);
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) > .widget-scale-root {
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, 0px));
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection)
+    .content-section.calendar-widget-section {
+    height: auto;
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-section-body {
+    flex: 0 1 auto;
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-month-block {
+    flex: 0 0 auto;
+    min-height: calc(var(--widget-scale-box-h, 240px) - 22cqmin);
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-grid-wrap {
+    flex: 1 1 auto;
+    min-height: calc(var(--widget-scale-box-h, 240px) * 0.5);
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-grid {
+    flex: 1 1 auto;
+    min-height: calc(var(--widget-scale-box-h, 240px) * 0.46);
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-detail-panel {
+    flex: 0 0 auto;
     max-height: none;
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-detail-events {
+    flex: 0 1 auto;
+    overflow: visible;
+  }
+
+  .widget-chrome[data-widget-key='calendar']:has(.calendar-section-body--has-selection) .calendar-add-btn {
+    flex: 0 0 auto;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape']
+    > *:has(.calendar-section-body--has-selection)
+    > .widget-chrome[data-widget-key='calendar'] {
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid[data-layout='landscape']
+    > *:has(.calendar-section-body--has-selection)
+    > .widget-chrome[data-widget-key='calendar']
+    > .widget-scale-root {
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, 0px));
+    max-height: none;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-widget-section--compact .calendar-detail-panel {
