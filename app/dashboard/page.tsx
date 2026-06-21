@@ -181,6 +181,9 @@ function normalizeLocationRequestRow(req: any) {
     ...req,
     target_id: req?.target_id || req?.target_user_id || req?.target?.id || null,
     request_type: req?.request_type === 'come_here' ? 'come_here' : 'where',
+    destination_lat: req?.destination_lat ?? null,
+    destination_lng: req?.destination_lng ?? null,
+    expires_at: req?.expires_at ?? undefined,
   };
 }
 
@@ -1847,9 +1850,10 @@ export default function FamilyHub() {
     try {
       const google = (window as any).google;
       const { AdvancedMarkerElement, PinElement} = google.maps.marker || {};
+      const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID;
 
-      // AdvancedMarkerElement가 사용 가능한지 확인
-      const useAdvancedMarker = AdvancedMarkerElement && PinElement;
+      // Advanced Markers는 Map ID가 있을 때만 사용 (없으면 기본 Marker로 폴백)
+      const useAdvancedMarker = Boolean(AdvancedMarkerElement && PinElement && mapId);
 
       // 현재 위치 마커 업데이트 또는 생성
       if (state.location.latitude && state.location.longitude) {
@@ -2436,11 +2440,20 @@ export default function FamilyHub() {
     if (!isLocationSharing || !mapLoaded || !mapRef.current) return;
     if (typeof window === 'undefined') return;
 
+    let resizeRaf = 0;
     const triggerMapResize = () => {
-      const g = (window as any).google;
-      if (g?.maps?.event && mapRef.current) {
-        g.maps.event.trigger(mapRef.current, 'resize');
-      }
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = 0;
+        try {
+          const g = (window as any).google;
+          if (g?.maps?.event && mapRef.current) {
+            g.maps.event.trigger(mapRef.current, 'resize');
+          }
+        } catch (e) {
+          console.warn('[location-map] resize skipped:', e);
+        }
+      });
     };
 
     const slot = document.querySelector(
@@ -2454,7 +2467,10 @@ export default function FamilyHub() {
     ro.observe(slot);
     triggerMapResize();
 
-    return () => ro.disconnect();
+    return () => {
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      ro.disconnect();
+    };
   }, [isLocationSharing, mapLoaded]);
 
   // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
