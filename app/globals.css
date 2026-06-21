@@ -2396,14 +2396,6 @@ select:not(.chalkboard-form-input) {
     aspect-ratio: unset;
   }
 
-  /* 요청 없을 때만 4:3 힌트(공간 여유 시) — 요청 있으면 flex 높이 우선 */
-  .widget-chrome[data-widget-key='location'] .location-section-body:not(.location-section-body--has-requests) .location-map-surface {
-    flex: 0 1 auto;
-    height: auto;
-    max-height: min(100%, calc(100cqw * 3 / 4));
-    aspect-ratio: 4 / 3;
-  }
-
   .widget-chrome[data-widget-key='location'] .location-requests-panel {
     flex: 0 0 auto;
     margin-top: 1.5cqmin;

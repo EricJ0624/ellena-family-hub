@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { DashboardLocationRequestRow } from '../types';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
 
@@ -112,6 +112,18 @@ export function FamilyLocationSection({
     (req) => req.status === 'pending' || req.status === 'accepted',
   );
 
+  const mapSlotRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const slot = mapSlotRef.current;
+    if (!slot) return;
+    const ro = new ResizeObserver(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+    ro.observe(slot);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!isLocationSharing || !hasGoogleMapsApiKey || mapError) return;
     const mapEl = document.getElementById('map');
@@ -163,10 +175,10 @@ export function FamilyLocationSection({
           </div>
         )}
 
-        <div className="location-map-slot">
+        <div ref={mapSlotRef} className="location-map-slot min-h-0 flex-1">
         {!isLocationSharing ? (
           <div
-            className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
+            className="location-map-surface flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
             style={{ padding: hasRequestUi ? '2cqmin' : '5cqmin' }}
           >
             <p className="location-map-placeholder-title font-semibold text-slate-600">
@@ -225,7 +237,7 @@ export function FamilyLocationSection({
           ) : (
             <div
               id="map"
-              className="location-map-canvas w-full rounded-xl border border-slate-200"
+              className="location-map-canvas h-full min-h-0 w-full flex-1 rounded-xl border border-slate-200"
             />
           )
         ) : (

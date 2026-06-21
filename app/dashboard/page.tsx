@@ -78,7 +78,7 @@ import { useFamilyChatScroll } from '@/app/features/family-chat/hooks/useFamilyC
 import { FamilyLocationSection } from '@/app/features/family-location/components/FamilyLocationSection';
 import { FamilyLocationRequestModal } from '@/app/features/family-location/components/FamilyLocationRequestModal';
 import { FamilyLocationNavMapModal } from '@/app/features/family-location/components/FamilyLocationNavMapModal';
-import { openNavMapApp, type NavMapApp } from '@/lib/nav-map-apps';
+import { openNavMapApp, isLocationInSouthKorea, type NavMapApp } from '@/lib/nav-map-apps';
 import { FamilyAlbumSection } from '@/app/features/family-album/components/FamilyAlbumSection';
 import { TravelPlannerSection } from '@/app/features/travel-planner/components/TravelPlannerSection';
 import { FamilyGamesSection } from '@/app/features/family-games/components/FamilyGamesSection';
@@ -416,10 +416,13 @@ export default function FamilyHub() {
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
   const [locationRequestModalMode, setLocationRequestModalMode] = useState<'where' | 'come_here'>('where');
   const [showNavMapModal, setShowNavMapModal] = useState(false);
+  const [navMapInKorea, setNavMapInKorea] = useState(true);
   const [pendingComeHereAccept, setPendingComeHereAccept] = useState<{
     requestId: string;
     destinationLat: number;
     destinationLng: number;
+    startLat?: number;
+    startLng?: number;
   } | null>(null);
   const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
   // 모달 닫힘 직후 구독 race condition 방지:
@@ -2427,6 +2430,32 @@ export default function FamilyHub() {
       }
     };
   }, [isLocationSharing, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, mapLoaded, updateMapMarkers]);
+
+  // 위젯 CQ/그리드 리사이즈 시 Google Maps 캔버스 크기 동기화
+  useEffect(() => {
+    if (!isLocationSharing || !mapLoaded || !mapRef.current) return;
+    if (typeof window === 'undefined') return;
+
+    const triggerMapResize = () => {
+      const g = (window as any).google;
+      if (g?.maps?.event && mapRef.current) {
+        g.maps.event.trigger(mapRef.current, 'resize');
+      }
+    };
+
+    const slot = document.querySelector(
+      '.widget-chrome[data-widget-key="location"] .location-map-slot',
+    );
+    if (!slot) return;
+
+    const ro = new ResizeObserver(() => {
+      triggerMapResize();
+    });
+    ro.observe(slot);
+    triggerMapResize();
+
+    return () => ro.disconnect();
+  }, [isLocationSharing, mapLoaded]);
 
   // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
   const getCurrentKey = useCallback(() => {
@@ -5060,19 +5089,81 @@ export default function FamilyHub() {
     }
   };
 
-  const handleAcceptComeHereRequest = (requestId: string, destinationLat: number, destinationLng: number) => {
-    setPendingComeHereAccept({ requestId, destinationLat, destinationLng });
+  const beginComeHereAcceptWithNav = (
+    requestId: string,
+    destinationLat: number,
+    destinationLng: number,
+    startLat?: number,
+    startLng?: number,
+  ) => {
+    const start =
+      startLat != null && startLng != null && Number.isFinite(startLat) && Number.isFinite(startLng)
+        ? { lat: startLat, lng: startLng }
+        : undefined;
+    void handleLocationRequestAction(requestId, 'accept');
+    openNavMapApp('google', destinationLat, destinationLng, start);
+  };
+
+  const handleAcceptComeHereRequest = async (
+    requestId: string,
+    destinationLat: number,
+    destinationLng: number,
+  ) => {
+    let startLat: number | undefined;
+    let startLng: number | undefined;
+
+    if (state.location.latitude && state.location.longitude) {
+      startLat = state.location.latitude;
+      startLng = state.location.longitude;
+    } else if (navigator.geolocation) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 60000,
+          });
+        });
+        startLat = position.coords.latitude;
+        startLng = position.coords.longitude;
+      } catch {
+        // GPS 없으면 해외 안전 분기(Google)로 처리
+      }
+    }
+
+    if (
+      startLat != null &&
+      startLng != null &&
+      !isLocationInSouthKorea(startLat, startLng)
+    ) {
+      beginComeHereAcceptWithNav(requestId, destinationLat, destinationLng, startLat, startLng);
+      return;
+    }
+
+    if (startLat == null || startLng == null) {
+      beginComeHereAcceptWithNav(requestId, destinationLat, destinationLng);
+      return;
+    }
+
+    setNavMapInKorea(true);
+    setPendingComeHereAccept({
+      requestId,
+      destinationLat,
+      destinationLng,
+      startLat,
+      startLng,
+    });
     setShowNavMapModal(true);
   };
 
   const handleNavMapModalConfirm = (app: NavMapApp) => {
     if (!pendingComeHereAccept) return;
-    const { requestId, destinationLat, destinationLng } = pendingComeHereAccept;
+    const { requestId, destinationLat, destinationLng, startLat, startLng } = pendingComeHereAccept;
     setShowNavMapModal(false);
     setPendingComeHereAccept(null);
     const start =
-      state.location.latitude && state.location.longitude
-        ? { lat: state.location.latitude, lng: state.location.longitude }
+      startLat != null && startLng != null
+        ? { lat: startLat, lng: startLng }
         : undefined;
     void handleLocationRequestAction(requestId, 'accept');
     openNavMapApp(app, destinationLat, destinationLng, start);
@@ -6706,6 +6797,7 @@ export default function FamilyHub() {
           <FamilyLocationNavMapModal
             open={showNavMapModal}
             lang={lang}
+            inKorea={navMapInKorea}
             onCancel={handleNavMapModalCancel}
             onConfirm={handleNavMapModalConfirm}
             t={{

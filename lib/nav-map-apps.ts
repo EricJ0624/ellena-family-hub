@@ -6,13 +6,54 @@ export type NavMapApp = 'google' | 'kakao' | 'naver';
 
 export const NAV_MAP_STORAGE_KEY = 'family-hub.nav-map-app';
 
+/** 대한민국(제주 포함) 대략적 경계 — 해외/국내 지도앱 분기용 */
+const KOREA_LAT_MIN = 33.0;
+const KOREA_LAT_MAX = 38.7;
+const KOREA_LNG_MIN = 124.5;
+const KOREA_LNG_MAX = 132.1;
+
+export function isLocationInSouthKorea(lat: number, lng: number): boolean {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  return (
+    lat >= KOREA_LAT_MIN &&
+    lat <= KOREA_LAT_MAX &&
+    lng >= KOREA_LNG_MIN &&
+    lng <= KOREA_LNG_MAX
+  );
+}
+
+export const NAV_MAP_APPS_IN_KOREA: NavMapApp[] = ['google', 'kakao', 'naver'];
+export const NAV_MAP_APPS_ABROAD: NavMapApp[] = ['google'];
+
+export function getAvailableNavMapApps(inKorea: boolean): NavMapApp[] {
+  return inKorea ? NAV_MAP_APPS_IN_KOREA : NAV_MAP_APPS_ABROAD;
+}
+
+/** 한국 밖이면 카카오/네이버 선택을 Google로 강제 */
+export function resolveNavMapApp(
+  preferred: NavMapApp,
+  userLat?: number | null,
+  userLng?: number | null,
+): NavMapApp {
+  if (
+    userLat != null &&
+    userLng != null &&
+    Number.isFinite(userLat) &&
+    Number.isFinite(userLng)
+  ) {
+    return isLocationInSouthKorea(userLat, userLng) ? preferred : 'google';
+  }
+  return preferred;
+}
+
 export type NavMapUrls = {
   web: string;
   app?: string;
   androidIntent?: string;
 };
 
-export function getDefaultNavMapApp(lang: string): NavMapApp {
+export function getDefaultNavMapApp(lang: string, inKorea = true): NavMapApp {
+  if (!inKorea) return 'google';
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem(NAV_MAP_STORAGE_KEY);
     if (saved === 'google' || saved === 'kakao' || saved === 'naver') {
@@ -115,7 +156,10 @@ export function openNavMapApp(
 ): void {
   if (typeof window === 'undefined') return;
 
-  const urls = buildNavMapUrls(app, lat, lng, start);
+  const userLat = start?.lat;
+  const userLng = start?.lng;
+  const resolvedApp = resolveNavMapApp(app, userLat, userLng);
+  const urls = buildNavMapUrls(resolvedApp, lat, lng, start);
 
   if (isMobileUserAgent()) {
     if (isAndroidUserAgent() && urls.androidIntent) {

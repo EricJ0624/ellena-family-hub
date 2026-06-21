@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { NavMapApp } from '@/lib/nav-map-apps';
-import { getDefaultNavMapApp, saveNavMapAppPreference } from '@/lib/nav-map-apps';
+import { getAvailableNavMapApps, getDefaultNavMapApp, saveNavMapAppPreference } from '@/lib/nav-map-apps';
 
 export type NavMapModalTranslations = {
   title: string;
@@ -16,6 +16,7 @@ export type NavMapModalTranslations = {
 type Props = {
   open: boolean;
   lang: string;
+  inKorea: boolean;
   onCancel: () => void;
   onConfirm: (app: NavMapApp) => void;
   t: NavMapModalTranslations;
@@ -24,25 +25,29 @@ type Props = {
 export function FamilyLocationNavMapModal({
   open,
   lang,
+  inKorea,
   onCancel,
   onConfirm,
   t,
 }: Props) {
   const [selected, setSelected] = useState<NavMapApp>('google');
 
+  const options = useMemo(() => {
+    const labels: Record<NavMapApp, string> = {
+      google: t.google,
+      kakao: t.kakao,
+      naver: t.naver,
+    };
+    return getAvailableNavMapApps(inKorea).map((id) => ({ id, label: labels[id] }));
+  }, [inKorea, t.google, t.kakao, t.naver]);
+
   useEffect(() => {
     if (open) {
-      setSelected(getDefaultNavMapApp(lang));
+      setSelected(getDefaultNavMapApp(lang, inKorea));
     }
-  }, [open, lang]);
+  }, [open, lang, inKorea]);
 
   if (!open) return null;
-
-  const options: { id: NavMapApp; label: string }[] = [
-    { id: 'google', label: t.google },
-    { id: 'kakao', label: t.kakao },
-    { id: 'naver', label: t.naver },
-  ];
 
   return (
     <div
