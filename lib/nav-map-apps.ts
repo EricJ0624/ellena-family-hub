@@ -6,6 +6,12 @@ export type NavMapApp = 'google' | 'kakao' | 'naver';
 
 export const NAV_MAP_STORAGE_KEY = 'family-hub.nav-map-app';
 
+export type NavMapUrls = {
+  web: string;
+  app?: string;
+  androidIntent?: string;
+};
+
 export function getDefaultNavMapApp(lang: string): NavMapApp {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem(NAV_MAP_STORAGE_KEY);
@@ -21,22 +27,106 @@ export function saveNavMapAppPreference(app: NavMapApp): void {
   localStorage.setItem(NAV_MAP_STORAGE_KEY, app);
 }
 
-export function buildNavMapUrl(app: NavMapApp, lat: number, lng: number): string {
+function getNavAppName(): string {
+  if (typeof window === 'undefined') return 'ellena-family-hub';
+  return window.location.origin || 'ellena-family-hub';
+}
+
+function isMobileUserAgent(): boolean {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+function isAndroidUserAgent(): boolean {
+  return /Android/i.test(navigator.userAgent);
+}
+
+export type NavMapStart = { lat: number; lng: number };
+
+export function buildNavMapUrls(
+  app: NavMapApp,
+  lat: number,
+  lng: number,
+  start?: NavMapStart,
+): NavMapUrls {
   const latStr = String(lat);
   const lngStr = String(lng);
+  const appName = encodeURIComponent(getNavAppName());
 
   switch (app) {
-    case 'kakao':
-      return `https://m.map.kakao.com/scheme/route?ep=${latStr},${lngStr}&by=car`;
-    case 'naver':
-      return `https://map.naver.com/p/directions/-/-/${lngStr},${latStr}/car?c=15.00,0,0,0,dh`;
+    case 'kakao': {
+      const ep = `${latStr},${lngStr}`;
+      const routeQuery =
+        start != null && Number.isFinite(start.lat) && Number.isFinite(start.lng)
+          ? `sp=${start.lat},${start.lng}&ep=${ep}&by=car`
+          : `ep=${ep}&by=car`;
+      const web = `https://m.map.kakao.com/scheme/route?${routeQuery}`;
+      const appScheme = `kakaomap://route?${routeQuery}`;
+      const androidIntent =
+        `intent://route?${routeQuery}#Intent;scheme=kakaomap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=net.daum.android.map;S.browser_fallback_url=${encodeURIComponent(web)};end`;
+      return { web, app: appScheme, androidIntent };
+    }
+    case 'naver': {
+      const web = `https://map.naver.com/p/directions/-/-/${lngStr},${latStr}/car?c=15.00,0,0,0,dh`;
+      const appScheme = `nmap://route/car?dlat=${latStr}&dlng=${lngStr}&appname=${appName}`;
+      const androidIntent =
+        `intent://route/car?dlat=${latStr}&dlng=${lngStr}&appname=${appName}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(web)};end`;
+      return { web, app: appScheme, androidIntent };
+    }
     case 'google':
-    default:
-      return `https://www.google.com/maps/dir/?api=1&destination=${latStr},${lngStr}&travelmode=driving&dir_action=navigate`;
+    default: {
+      const web = `https://www.google.com/maps/dir/?api=1&destination=${latStr},${lngStr}&travelmode=driving&dir_action=navigate`;
+      const appScheme = `google.navigation:q=${latStr},${lngStr}`;
+      return { web, app: appScheme };
+    }
   }
 }
 
-export function openNavMapApp(app: NavMapApp, lat: number, lng: number): void {
-  const url = buildNavMapUrl(app, lat, lng);
-  window.open(url, '_blank', 'noopener,noreferrer');
+export function buildNavMapUrl(
+  app: NavMapApp,
+  lat: number,
+  lng: number,
+  start?: NavMapStart,
+): string {
+  return buildNavMapUrls(app, lat, lng, start).web;
+}
+
+function isIosUserAgent(): boolean {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function openAppScheme(url: string): void {
+  if (isIosUserAgent()) {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    window.setTimeout(() => iframe.remove(), 2000);
+    return;
+  }
+  window.location.assign(url);
+}
+
+/** 사용자 제스처 직후 호출해야 모바일에서 앱 전환이 안정적입니다. */
+export function openNavMapApp(
+  app: NavMapApp,
+  lat: number,
+  lng: number,
+  start?: NavMapStart,
+): void {
+  if (typeof window === 'undefined') return;
+
+  const urls = buildNavMapUrls(app, lat, lng, start);
+
+  if (isMobileUserAgent()) {
+    if (isAndroidUserAgent() && urls.androidIntent) {
+      window.location.assign(urls.androidIntent);
+      return;
+    }
+    if (urls.app) {
+      openAppScheme(urls.app);
+      return;
+    }
+  }
+
+  window.open(urls.web, '_blank', 'noopener,noreferrer');
 }

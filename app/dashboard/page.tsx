@@ -3831,7 +3831,7 @@ export default function FamilyHub() {
   };
 
   // 위치 공유 기능 (스트림 방식 - watchPosition 사용)
-  const updateLocation = async () => {
+  const updateLocation = async (options?: { embedMap?: boolean }) => {
     if (!userId || !isAuthenticated) {
       alert(dt('login_required'));
       return;
@@ -3849,8 +3849,11 @@ export default function FamilyHub() {
       return;
     }
 
-    setIsLocationSharing(true);
-    
+    const embedMap = options?.embedMap !== false;
+    if (embedMap) {
+      setIsLocationSharing(true);
+    }
+
     // 백그라운드 위치 추적 시작
     startBackgroundLocationTracking();
 
@@ -3859,7 +3862,9 @@ export default function FamilyHub() {
       const permissionResult = await navigator.permissions?.query({ name: 'geolocation' }).catch(() => null);
       if (permissionResult?.state === 'denied') {
         alert(dt('location_permission_denied'));
-        setIsLocationSharing(false);
+        if (embedMap) {
+          setIsLocationSharing(false);
+        }
         return;
       }
 
@@ -4036,8 +4041,10 @@ export default function FamilyHub() {
       } else {
         console.warn('위치 추적 시작 실패 (조용히 처리):', errorMessage);
       }
-      
-      setIsLocationSharing(false);
+
+      if (embedMap) {
+        setIsLocationSharing(false);
+      }
     }
   };
 
@@ -4891,7 +4898,6 @@ export default function FamilyHub() {
   const handleLocationRequestAction = async (
     requestId: string,
     action: 'accept' | 'reject' | 'cancel',
-    options?: { navMapApp?: NavMapApp },
   ) => {
     if (!userId || !isAuthenticated) {
       alert(dt('login_required'));
@@ -5001,17 +5007,6 @@ export default function FamilyHub() {
               ? dt('location_got_it_approved')
               : dt('location_share_approved'),
           );
-
-          if (
-            options?.navMapApp &&
-            (currentRequest?.request_type === 'come_here' || result.data?.request_type === 'come_here')
-          ) {
-            const destLat = currentRequest?.destination_lat ?? result.data?.destination_lat;
-            const destLng = currentRequest?.destination_lng ?? result.data?.destination_lng;
-            if (destLat != null && destLng != null && Number.isFinite(destLat) && Number.isFinite(destLng)) {
-              openNavMapApp(options.navMapApp, destLat, destLng);
-            }
-          }
         } else if (action === 'reject' || action === 'cancel') {
           if (action === 'reject') alert(dt('location_request_rejected'));
           if (currentRequest) {
@@ -5070,12 +5065,17 @@ export default function FamilyHub() {
     setShowNavMapModal(true);
   };
 
-  const handleNavMapModalConfirm = async (app: NavMapApp) => {
+  const handleNavMapModalConfirm = (app: NavMapApp) => {
     if (!pendingComeHereAccept) return;
-    const { requestId } = pendingComeHereAccept;
+    const { requestId, destinationLat, destinationLng } = pendingComeHereAccept;
     setShowNavMapModal(false);
     setPendingComeHereAccept(null);
-    await handleLocationRequestAction(requestId, 'accept', { navMapApp: app });
+    const start =
+      state.location.latitude && state.location.longitude
+        ? { lat: state.location.latitude, lng: state.location.longitude }
+        : undefined;
+    void handleLocationRequestAction(requestId, 'accept');
+    openNavMapApp(app, destinationLat, destinationLng, start);
   };
 
   const handleNavMapModalCancel = () => {
