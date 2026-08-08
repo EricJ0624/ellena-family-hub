@@ -13,7 +13,9 @@ export type PictureFindTranslations = {
   mode_spot_diff_desc: string;
   scenes_title: string;
   scenes_system: string;
+  scenes_group: string;
   scenes_empty: string;
+  scenes_group_empty: string;
   loading: string;
   timer_label: string;
   hints_label: string;
@@ -31,6 +33,28 @@ export type PictureFindTranslations = {
   change_mode: string;
   left_image: string;
   right_image: string;
+  upload_open: string;
+  upload_title: string;
+  upload_name_label: string;
+  upload_name_ph: string;
+  upload_diff_auto: string;
+  upload_diff_auto_desc: string;
+  upload_diff_manual: string;
+  upload_diff_manual_desc: string;
+  upload_original: string;
+  upload_variant: string;
+  upload_pick: string;
+  upload_camera: string;
+  upload_submit: string;
+  upload_uploading: string;
+  upload_success: string;
+  upload_need_group: string;
+  upload_need_original: string;
+  upload_need_variant: string;
+  delete_scene: string;
+  delete_confirm: string;
+  delete_failed: string;
+  manage_hint: string;
 };
 
 const ko: PictureFindTranslations = {
@@ -46,7 +70,9 @@ const ko: PictureFindTranslations = {
   mode_spot_diff_desc: '두 그림에서 다른 부분을 찾아보세요.',
   scenes_title: '그림을 선택하세요',
   scenes_system: '기본 그림',
+  scenes_group: '우리 가족 사진',
   scenes_empty: '플레이할 그림이 없습니다.',
+  scenes_group_empty: '아직 올린 가족 사진이 없습니다.',
   loading: '불러오는 중…',
   timer_label: '남은 시간',
   hints_label: '힌트',
@@ -64,6 +90,28 @@ const ko: PictureFindTranslations = {
   change_mode: '모드 변경',
   left_image: '원본',
   right_image: '비교',
+  upload_open: '사진 올리기',
+  upload_title: '가족 사진으로 만들기',
+  upload_name_label: '이름',
+  upload_name_ph: '예: 거실, 공원 나들이',
+  upload_diff_auto: '자동 틀린그림 (기본)',
+  upload_diff_auto_desc: '사진 1장으로 틀린그림을 자동 생성합니다.',
+  upload_diff_manual: '직접 만든 쌍',
+  upload_diff_manual_desc: '원본과 비교용 사진 2장을 올립니다.',
+  upload_original: '원본 사진',
+  upload_variant: '비교 사진 (틀린 부분)',
+  upload_pick: '갤러리에서 선택',
+  upload_camera: '카메라로 촬영',
+  upload_submit: '저장하고 플레이',
+  upload_uploading: '올리는 중…',
+  upload_success: '사진이 추가되었습니다.',
+  upload_need_group: '그룹을 선택한 뒤 올려 주세요.',
+  upload_need_original: '원본 사진을 선택해 주세요.',
+  upload_need_variant: '비교 사진을 선택해 주세요.',
+  delete_scene: '삭제',
+  delete_confirm: '이 가족 사진을 목록에서 제거할까요?',
+  delete_failed: '삭제에 실패했습니다.',
+  manage_hint: '올린 사람 또는 그룹 관리자가 삭제할 수 있습니다.',
 };
 
 const en: PictureFindTranslations = {
@@ -79,7 +127,9 @@ const en: PictureFindTranslations = {
   mode_spot_diff_desc: 'Find differences between two pictures.',
   scenes_title: 'Pick a scene',
   scenes_system: 'Default scenes',
+  scenes_group: 'Family photos',
   scenes_empty: 'No scenes available.',
+  scenes_group_empty: 'No family photos yet.',
   loading: 'Loading…',
   timer_label: 'Time left',
   hints_label: 'Hints',
@@ -97,6 +147,28 @@ const en: PictureFindTranslations = {
   change_mode: 'Change mode',
   left_image: 'Original',
   right_image: 'Compare',
+  upload_open: 'Upload photo',
+  upload_title: 'Make a family scene',
+  upload_name_label: 'Title',
+  upload_name_ph: 'e.g. Living room',
+  upload_diff_auto: 'Auto differences (default)',
+  upload_diff_auto_desc: 'Generate spot-the-difference from one photo.',
+  upload_diff_manual: 'Custom pair',
+  upload_diff_manual_desc: 'Upload original and edited photos.',
+  upload_original: 'Original photo',
+  upload_variant: 'Compare photo',
+  upload_pick: 'Choose from gallery',
+  upload_camera: 'Take photo',
+  upload_submit: 'Save & play',
+  upload_uploading: 'Uploading…',
+  upload_success: 'Photo added.',
+  upload_need_group: 'Select a group first.',
+  upload_need_original: 'Please choose an original photo.',
+  upload_need_variant: 'Please choose a compare photo.',
+  delete_scene: 'Delete',
+  delete_confirm: 'Remove this family photo from the list?',
+  delete_failed: 'Failed to delete.',
+  manage_hint: 'Uploader or group admin can delete.',
 };
 
 const pictureFind: Record<LangCode, PictureFindTranslations> = {
@@ -114,6 +186,10 @@ const pictureFind: Record<LangCode, PictureFindTranslations> = {
 
 export function getPictureFindTranslation(lang: LangCode, key: keyof PictureFindTranslations): string {
   return pictureFind[lang]?.[key] ?? pictureFind.en[key];
+}
+
+export function getPictureFindTranslations(lang: LangCode): PictureFindTranslations {
+  return pictureFind[lang] ?? pictureFind.en;
 }
 
 export function formatPictureFindText(template: string, vars: Record<string, string>): string {

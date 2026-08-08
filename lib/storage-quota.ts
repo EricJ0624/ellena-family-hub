@@ -21,17 +21,32 @@ export async function getGroupStorageQuotaBytes(groupId: string): Promise<number
 
 export async function getGroupStorageUsedBytes(groupId: string): Promise<number> {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
-    .select('original_file_size')
-    .eq('group_id', groupId);
+  const [{ data, error }, { data: sceneRows, error: sceneError }] = await Promise.all([
+    supabase
+      .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
+      .select('original_file_size')
+      .eq('group_id', groupId),
+    supabase
+      .from('picture_find_scenes')
+      .select('image_size_bytes, variant_image_size_bytes')
+      .eq('group_id', groupId)
+      .eq('scope', 'group')
+      .eq('is_active', true),
+  ]);
 
   if (error) {
     console.error('그룹 사용량 조회 오류:', error);
-    return 0;
+  }
+  if (sceneError && sceneError.code !== '42P01') {
+    console.error('그림찾기 장면 용량 조회 오류:', sceneError);
   }
 
-  return (data || []).reduce((sum, row) => sum + (row.original_file_size || 0), 0);
+  const albumBytes = (data || []).reduce((sum, row) => sum + (row.original_file_size || 0), 0);
+  const sceneBytes = (sceneRows || []).reduce(
+    (sum, row) => sum + (row.image_size_bytes || 0) + (row.variant_image_size_bytes || 0),
+    0,
+  );
+  return albumBytes + sceneBytes;
 }
 
 export async function getGroupStorageStats(groupId: string): Promise<{

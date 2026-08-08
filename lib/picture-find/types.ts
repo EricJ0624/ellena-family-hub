@@ -15,6 +15,7 @@ export type PictureFindScene = {
   supportsHidden: boolean;
   supportsSpotDiff: boolean;
   sortOrder: number;
+  createdBy: string | null;
 };
 
 export type NormalizedRegion = {
@@ -35,7 +36,7 @@ export type PictureFindPuzzle = {
   diffRegions: NormalizedRegion[];
 };
 
-export type PictureFindStep = 'mode' | 'scenes' | 'play' | 'result';
+export type PictureFindStep = 'mode' | 'scenes' | 'upload' | 'play' | 'result';
 
 export const PICTURE_FIND_ITEM_MIN = 5;
 export const PICTURE_FIND_ITEM_MAX = 10;

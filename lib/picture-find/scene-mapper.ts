@@ -11,6 +11,7 @@ type SceneRow = {
   supports_hidden: boolean;
   supports_spot_diff: boolean;
   sort_order: number;
+  created_by: string | null;
 };
 
 export function mapSceneRow(row: SceneRow): PictureFindScene {
@@ -25,8 +26,9 @@ export function mapSceneRow(row: SceneRow): PictureFindScene {
     supportsHidden: row.supports_hidden,
     supportsSpotDiff: row.supports_spot_diff,
     sortOrder: row.sort_order,
+    createdBy: row.created_by,
   };
 }
 
 export const PICTURE_FIND_SCENE_SELECT =
-  'id, scope, group_id, title, image_url, variant_image_url, diff_mode, supports_hidden, supports_spot_diff, sort_order';
+  'id, scope, group_id, title, image_url, variant_image_url, diff_mode, supports_hidden, supports_spot_diff, sort_order, created_by';

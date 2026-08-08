@@ -6346,6 +6346,7 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             userId={userId}
             members={familyTaskMembers}
+            canManageGroupScenes={isGroupAdmin}
             translations={{
               section_title: gt('section_title'),
               select_group: gt('select_group'),

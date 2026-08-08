@@ -2,18 +2,22 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ImageIcon, Search, X } from 'lucide-react';
+import { ArrowLeft, ImageIcon, Search, Trash2, Upload, X } from 'lucide-react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { buildPictureFindPuzzle } from '@/lib/picture-find/game-logic';
+import { deletePictureFindScene } from '@/lib/picture-find/upload-scene';
 import type { PictureFindMode, PictureFindScene, PictureFindStep } from '@/lib/picture-find/types';
-import { getPictureFindTranslation } from '@/lib/translations/picture-find';
+import { getPictureFindTranslations } from '@/lib/translations/picture-find';
 import { usePictureFindScenes } from '../hooks/usePictureFindScenes';
 import { PictureFindGamePlay, PictureFindResultPanel } from './PictureFindGamePlay';
+import { PictureFindUploadPanel } from './PictureFindUploadPanel';
 
 export type PictureFindModalProps = {
   open: boolean;
   onClose: () => void;
   groupId: string | null;
+  userId: string;
+  canManageGroupScenes: boolean;
 };
 
 type GameResult = {
@@ -24,16 +28,24 @@ type GameResult = {
   timedOut: boolean;
 };
 
-export function PictureFindModal({ open, onClose, groupId }: PictureFindModalProps) {
+export function PictureFindModal({
+  open,
+  onClose,
+  groupId,
+  userId,
+  canManageGroupScenes,
+}: PictureFindModalProps) {
   const { lang } = useLanguage();
-  const t = (key: Parameters<typeof getPictureFindTranslation>[1]) => getPictureFindTranslation(lang, key);
-  const { scenes, loading } = usePictureFindScenes(open ? groupId : null);
+  const t = getPictureFindTranslations(lang);
+  const { scenes, loading, reload } = usePictureFindScenes(open ? groupId : null);
 
   const [step, setStep] = useState<PictureFindStep>('mode');
   const [mode, setMode] = useState<PictureFindMode | null>(null);
   const [scene, setScene] = useState<PictureFindScene | null>(null);
   const [playSeed, setPlaySeed] = useState('');
   const [result, setResult] = useState<GameResult | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [manageError, setManageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -42,6 +54,7 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
       setScene(null);
       setPlaySeed('');
       setResult(null);
+      setManageError(null);
     }
   }, [open]);
 
@@ -58,10 +71,25 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
     };
   }, [open, onClose]);
 
-  const filteredScenes = useMemo(() => {
-    if (!mode) return scenes;
-    return scenes.filter((s) => (mode === 'hidden' ? s.supportsHidden : s.supportsSpotDiff));
-  }, [scenes, mode]);
+  const systemScenes = useMemo(
+    () =>
+      scenes.filter(
+        (s) =>
+          s.scope === 'system' &&
+          (!mode || (mode === 'hidden' ? s.supportsHidden : s.supportsSpotDiff)),
+      ),
+    [scenes, mode],
+  );
+
+  const groupScenes = useMemo(
+    () =>
+      scenes.filter(
+        (s) =>
+          s.scope === 'group' &&
+          (!mode || (mode === 'hidden' ? s.supportsHidden : s.supportsSpotDiff)),
+      ),
+    [scenes, mode],
+  );
 
   const puzzle = useMemo(() => {
     if (!scene || !playSeed) return null;
@@ -80,21 +108,43 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
     setStep('result');
   };
 
+  const canDeleteScene = (item: PictureFindScene) =>
+    item.scope === 'group' && (canManageGroupScenes || item.createdBy === userId);
+
+  const handleDelete = async (item: PictureFindScene, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canDeleteScene(item)) return;
+    if (!window.confirm(t.delete_confirm)) return;
+    setManageError(null);
+    setDeletingId(item.id);
+    try {
+      await deletePictureFindScene(item.id);
+      await reload();
+    } catch (err) {
+      setManageError(err instanceof Error ? err.message : t.delete_failed);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (!open || typeof document === 'undefined') return null;
 
   const headerTitle =
     step === 'mode'
-      ? t('entry_title')
+      ? t.entry_title
       : step === 'scenes'
-        ? t('scenes_title')
-        : step === 'play'
-          ? mode === 'hidden'
-            ? t('mode_hidden')
-            : t('mode_spot_diff')
-          : t('result_title');
+        ? t.scenes_title
+        : step === 'upload'
+          ? t.upload_title
+          : step === 'play'
+            ? mode === 'hidden'
+              ? t.mode_hidden
+              : t.mode_spot_diff
+            : t.result_title;
 
   const goBack = () => {
     if (step === 'scenes') setStep('mode');
+    else if (step === 'upload') setStep('scenes');
     else if (step === 'play' || step === 'result') setStep('scenes');
   };
 
@@ -109,7 +159,7 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={t('entry_title')}
+        aria-label={t.entry_title}
       >
         <div className="flex shrink-0 items-center gap-2 border-b border-slate-200 px-3 py-3 sm:px-5">
           {step !== 'mode' && (
@@ -117,7 +167,7 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
               type="button"
               onClick={goBack}
               className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
-              aria-label={t('back')}
+              aria-label={t.back}
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -127,7 +177,7 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
-            aria-label={t('modal_close')}
+            aria-label={t.modal_close}
           >
             <X className="h-5 w-5" />
           </button>
@@ -138,8 +188,8 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
             <div className="mx-auto grid max-w-lg gap-3 sm:grid-cols-2">
               <ModeCard
                 icon={<Search className="h-8 w-8 text-indigo-600" />}
-                title={t('mode_hidden')}
-                description={t('mode_hidden_desc')}
+                title={t.mode_hidden}
+                description={t.mode_hidden_desc}
                 onClick={() => {
                   setMode('hidden');
                   setStep('scenes');
@@ -147,8 +197,8 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
               />
               <ModeCard
                 icon={<ImageIcon className="h-8 w-8 text-violet-600" />}
-                title={t('mode_spot_diff')}
-                description={t('mode_spot_diff_desc')}
+                title={t.mode_spot_diff}
+                description={t.mode_spot_diff_desc}
                 onClick={() => {
                   setMode('spot_diff');
                   setStep('scenes');
@@ -158,29 +208,74 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
           )}
 
           {step === 'scenes' && (
-            <div className="flex flex-col gap-3">
-              {loading && <p className="text-sm text-slate-500">{t('loading')}</p>}
-              {!loading && filteredScenes.length === 0 && (
-                <p className="text-sm text-slate-500">{t('scenes_empty')}</p>
+            <div className="flex flex-col gap-4">
+              {loading && <p className="text-sm text-slate-500">{t.loading}</p>}
+              {manageError && (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{manageError}</p>
               )}
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('scenes_system')}</p>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.scenes_group}</p>
+                <button
+                  type="button"
+                  disabled={!groupId}
+                  onClick={() => setStep('upload')}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {t.upload_open}
+                </button>
+              </div>
+
+              {!loading && groupScenes.length === 0 ? (
+                <p className="text-sm text-slate-500">{t.scenes_group_empty}</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {groupScenes.map((item) => (
+                    <SceneCard
+                      key={item.id}
+                      item={item}
+                      canDelete={canDeleteScene(item)}
+                      deleting={deletingId === item.id}
+                      deleteLabel={t.delete_scene}
+                      onPlay={() => startPlay(item)}
+                      onDelete={(e) => void handleDelete(item, e)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-slate-400">{t.manage_hint}</p>
+
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.scenes_system}</p>
+              {!loading && systemScenes.length === 0 && groupScenes.length === 0 && (
+                <p className="text-sm text-slate-500">{t.scenes_empty}</p>
+              )}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {filteredScenes.map((item) => (
-                  <button
+                {systemScenes.map((item) => (
+                  <SceneCard
                     key={item.id}
-                    type="button"
-                    onClick={() => startPlay(item)}
-                    className="overflow-hidden rounded-xl border border-slate-200 text-left shadow-sm transition hover:border-indigo-300 hover:shadow-md"
-                  >
-                    <div className="aspect-[4/3] w-full bg-slate-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
-                    </div>
-                    <span className="block px-2 py-2 text-sm font-semibold text-slate-700">{item.title}</span>
-                  </button>
+                    item={item}
+                    canDelete={false}
+                    deleting={false}
+                    deleteLabel={t.delete_scene}
+                    onPlay={() => startPlay(item)}
+                  />
                 ))}
               </div>
             </div>
+          )}
+
+          {step === 'upload' && (
+            <PictureFindUploadPanel
+              groupId={groupId}
+              t={t}
+              onCancel={() => setStep('scenes')}
+              onCreated={(created) => {
+                void reload();
+                startPlay(created);
+              }}
+            />
           )}
 
           {step === 'play' && mode && scene && puzzle && (
@@ -188,76 +283,14 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
               mode={mode}
               scene={scene}
               puzzle={puzzle}
-              t={{
-                entry_title: t('entry_title'),
-                entry_subtitle: t('entry_subtitle'),
-                entry_start: t('entry_start'),
-                modal_close: t('modal_close'),
-                back: t('back'),
-                mode_title: t('mode_title'),
-                mode_hidden: t('mode_hidden'),
-                mode_hidden_desc: t('mode_hidden_desc'),
-                mode_spot_diff: t('mode_spot_diff'),
-                mode_spot_diff_desc: t('mode_spot_diff_desc'),
-                scenes_title: t('scenes_title'),
-                scenes_system: t('scenes_system'),
-                scenes_empty: t('scenes_empty'),
-                loading: t('loading'),
-                timer_label: t('timer_label'),
-                hints_label: t('hints_label'),
-                found_label: t('found_label'),
-                hint_button: t('hint_button'),
-                hint_none_left: t('hint_none_left'),
-                wrong_tap: t('wrong_tap'),
-                time_up: t('time_up'),
-                result_title: t('result_title'),
-                result_found: t('result_found'),
-                result_time: t('result_time'),
-                result_hints: t('result_hints'),
-                play_again: t('play_again'),
-                pick_another: t('pick_another'),
-                change_mode: t('change_mode'),
-                left_image: t('left_image'),
-                right_image: t('right_image'),
-              }}
+              t={t}
               onComplete={handleComplete}
             />
           )}
 
           {step === 'result' && result && (
             <PictureFindResultPanel
-              t={{
-                entry_title: t('entry_title'),
-                entry_subtitle: t('entry_subtitle'),
-                entry_start: t('entry_start'),
-                modal_close: t('modal_close'),
-                back: t('back'),
-                mode_title: t('mode_title'),
-                mode_hidden: t('mode_hidden'),
-                mode_hidden_desc: t('mode_hidden_desc'),
-                mode_spot_diff: t('mode_spot_diff'),
-                mode_spot_diff_desc: t('mode_spot_diff_desc'),
-                scenes_title: t('scenes_title'),
-                scenes_system: t('scenes_system'),
-                scenes_empty: t('scenes_empty'),
-                loading: t('loading'),
-                timer_label: t('timer_label'),
-                hints_label: t('hints_label'),
-                found_label: t('found_label'),
-                hint_button: t('hint_button'),
-                hint_none_left: t('hint_none_left'),
-                wrong_tap: t('wrong_tap'),
-                time_up: t('time_up'),
-                result_title: t('result_title'),
-                result_found: t('result_found'),
-                result_time: t('result_time'),
-                result_hints: t('result_hints'),
-                play_again: t('play_again'),
-                pick_another: t('pick_another'),
-                change_mode: t('change_mode'),
-                left_image: t('left_image'),
-                right_image: t('right_image'),
-              }}
+              t={t}
               foundCount={result.foundCount}
               total={result.total}
               remainingMs={result.remainingMs}
@@ -275,6 +308,45 @@ export function PictureFindModal({ open, onClose, groupId }: PictureFindModalPro
       </div>
     </div>,
     document.body,
+  );
+}
+
+function SceneCard({
+  item,
+  canDelete,
+  deleting,
+  deleteLabel,
+  onPlay,
+  onDelete,
+}: {
+  item: PictureFindScene;
+  canDelete: boolean;
+  deleting: boolean;
+  deleteLabel: string;
+  onPlay: () => void;
+  onDelete?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 text-left shadow-sm transition hover:border-indigo-300 hover:shadow-md">
+      <button type="button" onClick={onPlay} className="block w-full text-left">
+        <div className="aspect-[4/3] w-full bg-slate-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+        </div>
+        <span className="block px-2 py-2 pr-8 text-sm font-semibold text-slate-700">{item.title}</span>
+      </button>
+      {canDelete && onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="absolute right-1.5 top-1.5 rounded-md bg-black/55 p-1.5 text-white hover:bg-black/70 disabled:opacity-50"
+          aria-label={deleteLabel}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
   );
 }
 

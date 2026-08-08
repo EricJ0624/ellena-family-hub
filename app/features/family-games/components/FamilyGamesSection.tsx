@@ -20,6 +20,7 @@ export interface FamilyGamesSectionProps {
   currentGroupId: string | null;
   userId: string;
   members: FamilyTaskMemberOption[];
+  canManageGroupScenes?: boolean;
   translations: {
     section_title: string;
     select_group: string;
@@ -101,6 +102,7 @@ export function FamilyGamesSection({
   currentGroupId,
   userId,
   members,
+  canManageGroupScenes = false,
   translations: t,
 }: FamilyGamesSectionProps) {
   const [activeTab, setActiveTab] = useState<GameTab>('ladder');
@@ -358,6 +360,8 @@ export function FamilyGamesSection({
         open={pictureFindOpen}
         onClose={() => setPictureFindOpen(false)}
         groupId={currentGroupId}
+        userId={userId}
+        canManageGroupScenes={canManageGroupScenes}
       />
 
       <GamePlayModal
