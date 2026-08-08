@@ -328,6 +328,13 @@ export function PictureFindResultPanel({
   onPlayAgain,
   onPickAnother,
   onChangeMode,
+  onShare,
+  shareLoading,
+  shareMessage,
+  shareDisabled,
+  leaderboard,
+  leaderboardLoading,
+  myUserId,
 }: {
   t: PictureFindTranslations;
   foundCount: number;
@@ -338,6 +345,22 @@ export function PictureFindResultPanel({
   onPlayAgain: () => void;
   onPickAnother: () => void;
   onChangeMode: () => void;
+  onShare?: () => void;
+  shareLoading?: boolean;
+  shareMessage?: string | null;
+  shareDisabled?: boolean;
+  leaderboard?: Array<{
+    rank: number;
+    userId: string;
+    nickname?: string | null;
+    foundCount: number;
+    totalCount: number;
+    elapsedMs: number;
+    hintsUsed: number;
+    completed: boolean;
+  }>;
+  leaderboardLoading?: boolean;
+  myUserId?: string;
 }) {
   const summary = useMemo(
     () => ({
@@ -362,6 +385,49 @@ export function PictureFindResultPanel({
       <p className="text-base text-slate-700">{summary.found}</p>
       <p className="text-sm text-slate-500">{summary.time}</p>
       <p className="text-sm text-slate-500">{summary.hints}</p>
+
+      {onShare && (
+        <button
+          type="button"
+          disabled={shareLoading || shareDisabled}
+          onClick={onShare}
+          className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {shareLoading ? t.loading : t.family_share}
+        </button>
+      )}
+      {shareMessage && <p className="text-sm text-indigo-700">{shareMessage}</p>}
+
+      {(leaderboardLoading || (leaderboard && leaderboard.length >= 0)) && (
+        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-slate-50 p-3 text-left">
+          <p className="mb-2 text-sm font-bold text-slate-800">{t.leaderboard_title}</p>
+          {leaderboardLoading ? (
+            <p className="text-xs text-slate-500">{t.leaderboard_loading}</p>
+          ) : !leaderboard || leaderboard.length === 0 ? (
+            <p className="text-xs text-slate-500">{t.leaderboard_empty}</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {leaderboard.slice(0, 10).map((entry) => (
+                <li
+                  key={entry.userId}
+                  className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-xs ${
+                    entry.userId === myUserId ? 'bg-indigo-100 text-indigo-900' : 'bg-white text-slate-700'
+                  }`}
+                >
+                  <span className="font-semibold">
+                    {formatPictureFindText(t.leaderboard_rank, { rank: String(entry.rank) })}{' '}
+                    {entry.nickname || (entry.userId === myUserId ? t.leaderboard_me : entry.userId.slice(0, 6))}
+                  </span>
+                  <span>
+                    {entry.foundCount}/{entry.totalCount} · {Math.round(entry.elapsedMs / 1000)}s · hint {entry.hintsUsed}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap justify-center gap-2 pt-2">
         <button type="button" onClick={onPlayAgain} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
           {t.play_again}

@@ -55,6 +55,22 @@ export type PictureFindTranslations = {
   delete_confirm: string;
   delete_failed: string;
   manage_hint: string;
+  family_puzzles: string;
+  family_puzzles_empty: string;
+  family_share: string;
+  family_share_done: string;
+  family_share_failed: string;
+  family_share_need_db: string;
+  family_play: string;
+  family_played: string;
+  family_attempts: string;
+  leaderboard_title: string;
+  leaderboard_empty: string;
+  leaderboard_rank: string;
+  leaderboard_me: string;
+  leaderboard_loading: string;
+  delete_puzzle: string;
+  delete_puzzle_confirm: string;
 };
 
 const ko: PictureFindTranslations = {
@@ -112,6 +128,22 @@ const ko: PictureFindTranslations = {
   delete_confirm: '이 가족 사진을 목록에서 제거할까요?',
   delete_failed: '삭제에 실패했습니다.',
   manage_hint: '올린 사람 또는 그룹 관리자가 삭제할 수 있습니다.',
+  family_puzzles: '가족 퍼즐',
+  family_puzzles_empty: '아직 공유된 가족 퍼즐이 없습니다. 플레이 후 「가족에게 공유」를 눌러 보세요.',
+  family_share: '가족에게 공유',
+  family_share_done: '가족 퍼즐로 공유했습니다.',
+  family_share_failed: '공유에 실패했습니다.',
+  family_share_need_db: '기본 폴백 그림은 공유할 수 없습니다. 목록을 새로고침해 주세요.',
+  family_play: '도전하기',
+  family_played: '기록 있음',
+  family_attempts: '{count}명 도전',
+  leaderboard_title: '가족 순위',
+  leaderboard_empty: '아직 기록이 없습니다.',
+  leaderboard_rank: '{rank}위',
+  leaderboard_me: '나',
+  leaderboard_loading: '순위 불러오는 중…',
+  delete_puzzle: '퍼즐 삭제',
+  delete_puzzle_confirm: '이 가족 퍼즐을 목록에서 제거할까요?',
 };
 
 const en: PictureFindTranslations = {
@@ -169,6 +201,22 @@ const en: PictureFindTranslations = {
   delete_confirm: 'Remove this family photo from the list?',
   delete_failed: 'Failed to delete.',
   manage_hint: 'Uploader or group admin can delete.',
+  family_puzzles: 'Family puzzles',
+  family_puzzles_empty: 'No shared puzzles yet. Play a scene and tap “Share with family”.',
+  family_share: 'Share with family',
+  family_share_done: 'Shared as a family puzzle.',
+  family_share_failed: 'Failed to share.',
+  family_share_need_db: 'Fallback scenes cannot be shared. Please refresh the list.',
+  family_play: 'Play',
+  family_played: 'Played',
+  family_attempts: '{count} played',
+  leaderboard_title: 'Family ranking',
+  leaderboard_empty: 'No scores yet.',
+  leaderboard_rank: '#{rank}',
+  leaderboard_me: 'You',
+  leaderboard_loading: 'Loading ranking…',
+  delete_puzzle: 'Remove puzzle',
+  delete_puzzle_confirm: 'Remove this family puzzle from the list?',
 };
 
 const pictureFind: Record<LangCode, PictureFindTranslations> = {
