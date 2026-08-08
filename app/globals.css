@@ -3144,6 +3144,13 @@ select:not(.chalkboard-form-input) {
     gap: 1.5cqw;
   }
 
+  .widget-chrome[data-widget-key='games'] .games-lobby-toolbar,
+  .widget-chrome[data-widget-key='games'] .games-lobby-actions {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
   .widget-chrome[data-widget-key='games'] .games-lobby-body {
     display: grid;
     flex: 1 1 auto;

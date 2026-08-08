@@ -12,9 +12,18 @@ import { GamePlayModal } from './GamePlayModal';
 import { LadderGameTab } from './LadderGameTab';
 import { RPSGameTab } from './RPSGameTab';
 import { RouletteGameTab } from './RouletteGameTab';
-import { PictureFindModal } from '@/app/features/picture-find/components/PictureFindModal';
+import dynamic from 'next/dynamic';
+import { PictureFindErrorBoundary } from '@/app/features/picture-find/components/PictureFindErrorBoundary';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getPictureFindTranslation } from '@/lib/translations/picture-find';
+
+const PictureFindModal = dynamic(
+  () =>
+    import('@/app/features/picture-find/components/PictureFindModal').then((m) => ({
+      default: m.PictureFindModal,
+    })),
+  { ssr: false },
+);
 
 export interface FamilyGamesSectionProps {
   currentGroupId: string | null;
@@ -108,6 +117,7 @@ export function FamilyGamesSection({
   const [activeTab, setActiveTab] = useState<GameTab>('ladder');
   const [modalOpen, setModalOpen] = useState(false);
   const [pictureFindOpen, setPictureFindOpen] = useState(false);
+  const [tabHint, setTabHint] = useState<string | null>(null);
   const { lang } = useLanguage();
   const pft = (key: Parameters<typeof getPictureFindTranslation>[1]) => getPictureFindTranslation(lang, key);
 
@@ -145,6 +155,10 @@ export function FamilyGamesSection({
   }, [hasLiveSession, sessionGameType, activeTab, bundle?.session.id]);
 
   useEffect(() => {
+    if (!hasLiveSession) setTabHint(null);
+  }, [hasLiveSession]);
+
+  useEffect(() => {
     if (!bundle) {
       setModalOpen(false);
       return;
@@ -158,6 +172,15 @@ export function FamilyGamesSection({
     if (tab === 'ladder') return t.tab_ladder;
     if (tab === 'rps') return t.tab_rps;
     return t.tab_roulette;
+  };
+
+  const handleTabClick = (tab: GameTab) => {
+    if (hasLiveSession && sessionGameType && sessionGameType !== tab) {
+      setTabHint(isLobby ? t.games_lobby_wrong_tab : t.games_lobby_wrong_game);
+      return;
+    }
+    setTabHint(null);
+    setActiveTab(tab);
   };
 
   const modalTitle = useMemo(() => {
@@ -300,7 +323,7 @@ export function FamilyGamesSection({
               )}
 
               <div
-                className="games-tab-bar flex flex-shrink-0 flex-wrap rounded-xl bg-slate-900/5 p-1"
+                className="games-tab-bar relative z-[2] flex flex-shrink-0 flex-wrap rounded-xl bg-slate-900/5 p-1"
                 role="tablist"
                 style={{ gap: '1cqw' }}
               >
@@ -310,13 +333,13 @@ export function FamilyGamesSection({
                     type="button"
                     role="tab"
                     aria-selected={activeTab === tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => handleTabClick(tab)}
                     className={`rounded-lg px-3 py-2 font-semibold transition-colors ${
                       activeTab === tab
                         ? 'bg-white text-indigo-700 shadow-sm'
                         : 'text-slate-600 hover:bg-white/60'
                     } ${
-                      hasLiveSession && sessionGameType === tab && activeTab !== tab
+                      hasLiveSession && sessionGameType === tab
                         ? 'ring-2 ring-indigo-300 ring-offset-1'
                         : ''
                     }`}
@@ -327,40 +350,59 @@ export function FamilyGamesSection({
                 ))}
               </div>
 
+              {tabHint && (
+                <p
+                  className="flex-shrink-0 rounded-lg bg-amber-50 px-2.5 py-1.5 font-medium text-amber-900"
+                  style={{ fontSize: '3.3cqw' }}
+                  role="status"
+                >
+                  {tabHint}
+                </p>
+              )}
+
               {tabBody ? <div className="games-tab-body">{tabBody}</div> : null}
 
-              <div className="games-picture-find-entry relative z-10 flex-shrink-0 border-t border-slate-200/80 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setPictureFindOpen(true)}
-                  className="flex w-full items-center gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 px-2.5 py-1.5 text-left transition hover:from-violet-100 hover:to-indigo-100"
+              <div className="games-picture-find-entry relative z-[1] flex-shrink-0 border-t border-slate-200/80 pt-1">
+                <PictureFindErrorBoundary
+                  fallbackLabel={pft('entry_title')}
+                  retryLabel={pft('entry_start')}
                 >
-                  <span className="min-w-0 flex-1 truncate font-semibold text-indigo-900" style={{ fontSize: '3.8cqw' }}>
-                    {pft('entry_title')}
-                    <span className="ml-1 font-normal text-indigo-700/75" style={{ fontSize: '3.2cqw' }}>
-                      · {pft('entry_subtitle')}
-                    </span>
-                  </span>
-                  <span
-                    className="shrink-0 rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white"
-                    style={{ fontSize: '3.2cqw' }}
+                  <button
+                    type="button"
+                    onClick={() => setPictureFindOpen(true)}
+                    className="flex w-full items-center gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 px-2.5 py-1.5 text-left transition hover:from-violet-100 hover:to-indigo-100"
                   >
-                    {pft('entry_start')}
-                  </span>
-                </button>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-indigo-900" style={{ fontSize: '3.8cqw' }}>
+                      {pft('entry_title')}
+                      <span className="ml-1 font-normal text-indigo-700/75" style={{ fontSize: '3.2cqw' }}>
+                        · {pft('entry_subtitle')}
+                      </span>
+                    </span>
+                    <span
+                      className="shrink-0 rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white"
+                      style={{ fontSize: '3.2cqw' }}
+                    >
+                      {pft('entry_start')}
+                    </span>
+                  </button>
+                </PictureFindErrorBoundary>
               </div>
             </div>
           )}
         </div>
       </section>
 
-      <PictureFindModal
-        open={pictureFindOpen}
-        onClose={() => setPictureFindOpen(false)}
-        groupId={currentGroupId}
-        userId={userId}
-        canManageGroupScenes={canManageGroupScenes}
-      />
+      <PictureFindErrorBoundary>
+        {pictureFindOpen ? (
+          <PictureFindModal
+            open={pictureFindOpen}
+            onClose={() => setPictureFindOpen(false)}
+            groupId={currentGroupId}
+            userId={userId}
+            canManageGroupScenes={canManageGroupScenes}
+          />
+        ) : null}
+      </PictureFindErrorBoundary>
 
       <GamePlayModal
         open={modalOpen && bundle !== null && !isLobby}

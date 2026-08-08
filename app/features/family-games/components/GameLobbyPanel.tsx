@@ -86,60 +86,62 @@ export function GameLobbyPanel({
   const canAdd = showSlotControls && canAddLobbySlot(maxSlots, maxCap, gameType);
   const canRemove =
     showSlotControls && canRemoveLobbySlot(maxSlots, joinedCount, gameType);
+  const slotsLabel = formatText(t.games_lobby_slots, {
+    joined: String(joinedCount),
+    max: String(maxSlots),
+  });
 
   const labelFor = (memberUserId: string) =>
     getMemberNickname(members, memberUserId, userId, t.ladder_you);
 
   return (
     <div className="games-tab-panel games-tab-lobby">
-      <div className="games-lobby-body">
-        <div
-          className="flex flex-wrap items-center justify-between rounded-lg bg-slate-50/90 px-2.5 py-1.5"
-          style={{ gap: '1cqw' }}
-        >
-          <div className="min-w-0">
-            <p className="truncate font-medium text-[#334155]" style={{ fontSize: '3.6cqw' }}>
-              {isParticipant ? t.games_lobby_status_joined : t.games_lobby_status_not_joined}
-              {isParticipant && isHost ? (
-                <span className="ml-1 text-indigo-700" style={{ fontSize: '3.2cqw' }}>
-                  · {t.games_lobby_you_host}
-                </span>
-              ) : null}
-            </p>
-          </div>
-          {!isParticipant ? (
-            <button
-              type="button"
-              onClick={() => onJoin().catch(console.error)}
-              disabled={actionLoading}
-              className="relative z-[1] shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1.5 font-semibold text-white disabled:opacity-50"
-              style={{ fontSize: '3.6cqw' }}
-            >
-              {bundle ? t.games_join : t.games_create_game}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onLeave().catch(console.error)}
-              disabled={actionLoading}
-              className="relative z-[1] shrink-0 rounded-lg bg-slate-200 px-2.5 py-1.5 font-semibold text-slate-700 disabled:opacity-50"
-              style={{ fontSize: '3.6cqw' }}
-            >
-              {t.games_leave}
-            </button>
-          )}
+      {/* 상태·참가/나가기: 잘리지 않도록 상단 고정 */}
+      <div
+        className="games-lobby-toolbar flex flex-shrink-0 flex-wrap items-center justify-between rounded-lg bg-slate-50/90 px-2.5 py-1.5"
+        style={{ gap: '1cqw' }}
+      >
+        <div className="min-w-0">
+          <p className="truncate font-medium text-[#334155]" style={{ fontSize: '3.6cqw' }}>
+            {isParticipant ? t.games_lobby_status_joined : t.games_lobby_status_not_joined}
+            {isParticipant && isHost ? (
+              <span className="ml-1 text-indigo-700" style={{ fontSize: '3.2cqw' }}>
+                · {t.games_lobby_you_host}
+              </span>
+            ) : null}
+            <span className="ml-1 text-[#64748b]" style={{ fontSize: '3.2cqw' }}>
+              · {slotsLabel}
+            </span>
+          </p>
         </div>
+        {!isParticipant ? (
+          <button
+            type="button"
+            onClick={() => onJoin().catch(console.error)}
+            disabled={actionLoading}
+            className="relative z-[1] shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1.5 font-semibold text-white disabled:opacity-50"
+            style={{ fontSize: '3.6cqw' }}
+          >
+            {bundle ? t.games_join : t.games_create_game}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onLeave().catch(console.error)}
+            disabled={actionLoading}
+            className="relative z-[1] shrink-0 rounded-lg bg-slate-200 px-2.5 py-1.5 font-semibold text-slate-700 disabled:opacity-50"
+            style={{ fontSize: '3.6cqw' }}
+          >
+            {t.games_leave}
+          </button>
+        )}
+      </div>
 
+      <div className="games-lobby-body">
         <div className="games-lobby-participants">
           <div className="mb-1 flex flex-wrap items-center justify-between" style={{ gap: '1cqw' }}>
             <span className="font-semibold text-[#334155]" style={{ fontSize: '3.6cqw' }}>
               {t.ladder_participants}
-            </span>
-            <span className="font-medium text-[#64748b]" style={{ fontSize: '3.2cqw' }}>
-              {formatText(t.games_lobby_slots, {
-                joined: String(joinedCount),
-                max: String(maxSlots),
-              })}
             </span>
           </div>
           <ul className="m-0 list-none p-0" style={{ display: 'grid', gap: '0.8cqw' }}>
@@ -198,17 +200,24 @@ export function GameLobbyPanel({
         </div>
       </div>
 
-      <div className="grid flex-shrink-0" style={{ gap: '1cqw' }}>
+      <div className="games-lobby-actions grid flex-shrink-0" style={{ gap: '1cqw' }}>
         {isHost ? (
-          <button
-            type="button"
-            onClick={() => onStart().catch(console.error)}
-            disabled={!canStart || actionLoading}
-            className="games-setup-actions relative z-[1] w-full rounded-lg bg-emerald-600 px-2.5 py-2 font-semibold text-white disabled:opacity-50"
-            style={{ fontSize: '3.8cqw' }}
-          >
-            {t.games_launch}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => onStart().catch(console.error)}
+              disabled={!canStart || actionLoading}
+              className="games-setup-actions relative z-[1] w-full rounded-lg bg-emerald-600 px-2.5 py-2 font-semibold text-white disabled:opacity-50"
+              style={{ fontSize: '3.8cqw' }}
+            >
+              {t.games_launch}
+            </button>
+            {!canStart && (
+              <p className="text-center text-[#64748b]" style={{ fontSize: '3.2cqw' }}>
+                {slotsLabel}
+              </p>
+            )}
+          </>
         ) : (
           bundle &&
           isParticipant && (
