@@ -1815,12 +1815,22 @@ select:not(.chalkboard-form-input) {
 }
 
 .album-photo-cell {
-  flex: 0 0 auto;
+  position: relative;
+  flex: 0 0 var(--album-thumb-size);
   box-sizing: border-box;
+  /* cqi/cqh 변수라 width·height 동일 값 — 세로 사진이 칸을 늘리지 못함 */
   width: var(--album-thumb-size);
-  aspect-ratio: 1 / 1;
-  height: auto;
-  max-width: 100%;
+  height: var(--album-thumb-size);
+  overflow: hidden;
+}
+
+.album-photo-cell > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .message-item {
