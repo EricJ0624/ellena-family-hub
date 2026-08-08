@@ -760,16 +760,24 @@ select:not(.chalkboard-form-input) {
   border: 1px solid transparent;
   animation: fadeIn 0.4s ease-out forwards;
   height: 100%;
+  /*
+   * 근본 클립: backdrop-filter / 반투명 배경이 border-radius 밖 사각 코너로
+   * 새는 브라우저 이슈를 inset round 로 강제 절단.
+   */
+  clip-path: inset(0 round var(--border-radius-xl));
+  isolation: isolate;
 }
 
 /*
- * Kids / Original: 보더 스트로크 없음 → radius + soft shadow 만으로 부드러운 카드.
- * (이전 border + clip-path 조합이 둥근 윤곽선으로 보였음)
+ * Kids / Original / High-end 공통: 윤곽 스트로크 없음.
+ * 형태는 radius + clip + soft shadow 만 사용 (각진 코너 bleed 제거).
  */
 :root[data-ui-theme='kids_friendly'] .content-section,
 .dark[data-ui-theme='kids_friendly'] .content-section,
 :root[data-ui-theme='default'] .content-section,
-.dark[data-ui-theme='default'] .content-section {
+.dark[data-ui-theme='default'] .content-section,
+:root[data-ui-theme='highend_glass'] .content-section,
+.dark[data-ui-theme='highend_glass'] .content-section {
   border-color: transparent;
 }
 
@@ -784,25 +792,32 @@ select:not(.chalkboard-form-input) {
 :root[data-ui-theme='default'] .glass-panel-strong,
 .dark[data-ui-theme='default'] .glass-panel,
 .dark[data-ui-theme='default'] .glass-panel-soft,
-.dark[data-ui-theme='default'] .glass-panel-strong {
+.dark[data-ui-theme='default'] .glass-panel-strong,
+:root[data-ui-theme='highend_glass'] .glass-panel,
+:root[data-ui-theme='highend_glass'] .glass-panel-soft,
+:root[data-ui-theme='highend_glass'] .glass-panel-strong,
+.dark[data-ui-theme='highend_glass'] .glass-panel,
+.dark[data-ui-theme='highend_glass'] .glass-panel-soft,
+.dark[data-ui-theme='highend_glass'] .glass-panel-strong {
   border-color: transparent;
 }
 
 /*
- * High-end: 공통 유리 재질.
- * - 얇은 rim 보더는 유리 가장자리용으로만 유지
- * - 위젯 크롬은 투명 → 셸 orb가 카드 사이로 보임
+ * High-end: 프로스트 재질 + 동일 radius 클립 유지.
+ * rim 보더는 쓰지 않음(곡선 테두리 + 사각 bleed 재발 방지).
  */
 :root[data-ui-theme='highend_glass'] .content-section,
 .dark[data-ui-theme='highend_glass'] .content-section {
   overflow: hidden;
-  border-color: var(--glass-medium-border);
+  border-color: transparent;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.22), transparent 58%),
     var(--glass-medium-bg);
   box-shadow: var(--glass-medium-shadow);
   -webkit-backdrop-filter: blur(var(--glass-medium-blur));
   backdrop-filter: blur(var(--glass-medium-blur));
+  clip-path: inset(0 round var(--border-radius-xl));
+  isolation: isolate;
 }
 
 :root[data-ui-theme='highend_glass'] .glass-panel,
@@ -863,16 +878,22 @@ select:not(.chalkboard-form-input) {
 .glass-panel {
   @apply relative isolate overflow-hidden border border-glass-medium shadow-glass-medium backdrop-blur-glass-medium;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.28), transparent 55%), var(--glass-medium-bg);
+  border-radius: var(--border-radius-lg);
+  clip-path: inset(0 round var(--border-radius-lg));
 }
 
 .glass-panel-soft {
   @apply relative isolate overflow-hidden border border-glass-soft shadow-glass-soft backdrop-blur-glass-soft;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), transparent 60%), var(--glass-soft-bg);
+  border-radius: var(--border-radius-lg);
+  clip-path: inset(0 round var(--border-radius-lg));
 }
 
 .glass-panel-strong {
   @apply relative isolate overflow-hidden border border-glass-strong shadow-glass-strong backdrop-blur-glass-strong;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.35), transparent 55%), var(--glass-strong-bg);
+  border-radius: var(--border-radius-lg);
+  clip-path: inset(0 round var(--border-radius-lg));
 }
 
 .glass-panel-interactive {
