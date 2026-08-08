@@ -327,9 +327,9 @@ export function FamilyGamesSection({
                 ))}
               </div>
 
-              {tabBody ? <div className="games-tab-scroll">{tabBody}</div> : null}
+              {tabBody ? <div className="games-tab-body">{tabBody}</div> : null}
 
-              <div className="games-picture-find-entry flex-shrink-0 border-t border-slate-200/80 pt-1.5">
+              <div className="games-picture-find-entry relative z-10 flex-shrink-0 border-t border-slate-200/80 pt-1">
                 <button
                   type="button"
                   onClick={() => setPictureFindOpen(true)}

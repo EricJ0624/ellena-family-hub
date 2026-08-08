@@ -3087,7 +3087,7 @@ select:not(.chalkboard-form-input) {
     min-height: 0;
     max-height: 100%;
     overflow: hidden;
-    gap: 2cqw;
+    gap: 1.5cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-ladder-preview {
@@ -3101,19 +3101,19 @@ select:not(.chalkboard-form-input) {
     flex: 0 0 auto;
   }
 
-  /* 탭 본문(로비 등): 남는 공간만 쓰고 넘치면 스크롤 — 하단 그림찾기와 겹침 방지 */
-  .widget-chrome[data-widget-key='games'] .games-tab-scroll {
+  /* 탭 본문: 스크롤 없이 남는 높이에 맞춤 (하단 그림찾기와 겹치지 않음) */
+  .widget-chrome[data-widget-key='games'] .games-tab-body {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: hidden;
   }
 
   .widget-chrome[data-widget-key='games'] .games-picture-find-entry {
     flex: 0 0 auto;
+    position: relative;
+    z-index: 2;
   }
 
   .widget-chrome[data-widget-key='games'] .games-tab-panel {
@@ -3121,8 +3121,8 @@ select:not(.chalkboard-form-input) {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: visible;
-    gap: 2cqw;
+    overflow: hidden;
+    gap: 1.5cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-setup-columns {
@@ -3148,7 +3148,9 @@ select:not(.chalkboard-form-input) {
     display: grid;
     flex: 1 1 auto;
     min-height: 0;
-    gap: 2cqw;
+    overflow: hidden;
+    align-content: start;
+    gap: 1.5cqw;
   }
 
   .widget-chrome[data-widget-key='games'] .games-tab-panel.games-tab-lobby {
@@ -3156,8 +3158,13 @@ select:not(.chalkboard-form-input) {
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: visible;
-    gap: 2cqw;
+    overflow: hidden;
+    gap: 1.5cqw;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-lobby-participants {
+    min-height: 0;
+    overflow: hidden;
   }
 
   .widget-chrome[data-widget-key='games'] .games-setup-actions {
