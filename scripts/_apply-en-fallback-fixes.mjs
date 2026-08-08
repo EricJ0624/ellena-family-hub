@@ -135,31 +135,31 @@ const FIXES = {
     fr: { content_section_photos: 'Photos (${count})' },
     ja: {
       theme_default_short: 'デフォルト',
-      theme_stable_glass_short: 'ステーブルガラス',
+      theme_kids_friendly_short: 'Kids Friendly',
       theme_highend_glass_short: 'ハイエンドガラス',
     },
     'zh-CN': {
       theme_default_short: '默认',
-      theme_stable_glass_short: '稳定玻璃',
+      theme_kids_friendly_short: 'Kids Friendly',
       theme_highend_glass_short: '高端玻璃',
     },
     'zh-TW': {
       theme_default_short: '預設',
-      theme_stable_glass_short: '穩定玻璃',
+      theme_kids_friendly_short: 'Kids Friendly',
       theme_highend_glass_short: '高端玻璃',
     },
   },
   'groupSettings.ts': {
     ja: {
-      theme_stable_glass_label: 'ステーブルガラス',
+      theme_kids_friendly_label: 'Kids Friendly',
       theme_highend_glass_label: 'ハイエンドガラス',
     },
     'zh-CN': {
-      theme_stable_glass_label: '稳定玻璃',
+      theme_kids_friendly_label: 'Kids Friendly',
       theme_highend_glass_label: '高端玻璃',
     },
     'zh-TW': {
-      theme_stable_glass_label: '穩定玻璃',
+      theme_kids_friendly_label: 'Kids Friendly',
       theme_highend_glass_label: '高端玻璃',
     },
   },

@@ -137,88 +137,108 @@
 }
 
 :root[data-ui-theme='highend_glass'] {
-  /* 보라·인디고·로즈 — stable(민트·틸) 계열과 분리 */
-  --app-shell-inner-bg: linear-gradient(135deg, #faf5ff 0%, #ede9fe 32%, #dbeafe 68%, #fce7f3 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 10% 0%, #e9d5ff 0%, #c4b5fd 26%, #bfdbfe 58%, #fbcfe8 100%);
-  --glass-soft-bg: rgba(255, 255, 255, 0.58);
-  --glass-medium-bg: rgba(255, 255, 255, 0.7);
-  --glass-strong-bg: rgba(255, 255, 255, 0.82);
-  --glass-soft-blur: 22px;
-  --glass-medium-blur: 30px;
-  --glass-strong-blur: 38px;
-  --glass-soft-border: rgba(255, 255, 255, 0.68);
-  --glass-medium-border: rgba(255, 255, 255, 0.82);
-  --glass-strong-border: rgba(255, 255, 255, 0.92);
-  --glass-soft-shadow: 0 14px 38px rgba(91, 33, 182, 0.16);
-  --glass-medium-shadow: 0 26px 62px rgba(79, 70, 229, 0.22);
-  --glass-strong-shadow: 0 34px 76px rgba(124, 58, 237, 0.26);
+  /* 레퍼런스형 글래스: soft orb 배경 + 프로스트 패널 (라이트) */
+  --app-shell-inner-bg:
+    radial-gradient(ellipse 70% 55% at 12% 18%, rgba(196, 181, 253, 0.85) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 50% at 88% 12%, rgba(251, 207, 232, 0.8) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 45% at 70% 85%, rgba(125, 211, 252, 0.55) 0%, transparent 50%),
+    linear-gradient(155deg, #ede9fe 0%, #fce7f3 42%, #e0f2fe 100%);
+  --app-shell-outer-bg:
+    radial-gradient(circle at 18% 8%, #c4b5fd 0%, transparent 42%),
+    radial-gradient(circle at 82% 20%, #f9a8d4 0%, transparent 40%),
+    linear-gradient(160deg, #a78bfa 0%, #7dd3fc 55%, #fbcfe8 100%);
+  --glass-bg: rgba(255, 255, 255, 0.28);
+  --glass-soft-bg: rgba(255, 255, 255, 0.22);
+  --glass-medium-bg: rgba(255, 255, 255, 0.32);
+  --glass-strong-bg: rgba(255, 255, 255, 0.45);
+  --glass-soft-blur: 24px;
+  --glass-medium-blur: 36px;
+  --glass-strong-blur: 48px;
+  --glass-soft-border: rgba(255, 255, 255, 0.35);
+  --glass-medium-border: rgba(255, 255, 255, 0.48);
+  --glass-strong-border: rgba(255, 255, 255, 0.62);
+  --glass-soft-shadow: 0 12px 40px rgba(79, 70, 229, 0.14);
+  --glass-medium-shadow: 0 22px 56px rgba(91, 33, 182, 0.18);
+  --glass-strong-shadow: 0 32px 72px rgba(67, 56, 202, 0.22);
 }
 
 .dark[data-ui-theme='highend_glass'] {
-  --app-shell-inner-bg: linear-gradient(135deg, #0b0618 0%, #1e1b4b 42%, #312e81 78%, #4c1d95 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 12% 8%, #5b21b6 0%, #312e81 38%, #0f172a 100%);
-  --glass-soft-bg: rgba(15, 23, 42, 0.54);
-  --glass-medium-bg: rgba(15, 23, 42, 0.64);
-  --glass-strong-bg: rgba(15, 23, 42, 0.76);
-  --glass-soft-blur: 22px;
-  --glass-medium-blur: 30px;
-  --glass-strong-blur: 38px;
-  --glass-soft-border: rgba(167, 139, 250, 0.32);
-  --glass-medium-border: rgba(196, 181, 253, 0.42);
-  --glass-strong-border: rgba(216, 180, 254, 0.52);
-  --glass-soft-shadow: 0 16px 42px rgba(49, 46, 129, 0.38);
-  --glass-medium-shadow: 0 26px 64px rgba(76, 29, 149, 0.45);
-  --glass-strong-shadow: 0 34px 80px rgba(15, 23, 42, 0.55);
+  /* 레퍼런스형 글래스: 딥 네이비 + cyan/pink/orange orb (다크) */
+  --app-shell-inner-bg:
+    radial-gradient(ellipse 75% 55% at 10% 15%, rgba(34, 211, 238, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 90% 10%, rgba(244, 114, 182, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 50% at 75% 90%, rgba(251, 146, 60, 0.35) 0%, transparent 52%),
+    linear-gradient(160deg, #020617 0%, #0f172a 40%, #1e1b4b 100%);
+  --app-shell-outer-bg:
+    radial-gradient(circle at 15% 10%, #22d3ee 0%, transparent 38%),
+    radial-gradient(circle at 85% 18%, #f472b6 0%, transparent 36%),
+    linear-gradient(165deg, #020617 0%, #0c4a6e 50%, #312e81 100%);
+  --glass-bg: rgba(15, 23, 42, 0.42);
+  --glass-soft-bg: rgba(255, 255, 255, 0.08);
+  --glass-medium-bg: rgba(255, 255, 255, 0.12);
+  --glass-strong-bg: rgba(255, 255, 255, 0.18);
+  --glass-soft-blur: 24px;
+  --glass-medium-blur: 36px;
+  --glass-strong-blur: 48px;
+  --glass-soft-border: rgba(255, 255, 255, 0.16);
+  --glass-medium-border: rgba(255, 255, 255, 0.24);
+  --glass-strong-border: rgba(255, 255, 255, 0.34);
+  --glass-soft-shadow: 0 14px 42px rgba(2, 6, 23, 0.45);
+  --glass-medium-shadow: 0 24px 64px rgba(2, 6, 23, 0.55);
+  --glass-strong-shadow: 0 34px 80px rgba(2, 6, 23, 0.65);
 }
 
-:root[data-ui-theme='stable_glass'] {
-  /* 민트·틸·하늘 — default(슬레이트 그레이) / highend(바이올렛) 와 분리 */
-  --app-shell-inner-bg: linear-gradient(135deg, #ecfdf5 0%, #ccfbf1 38%, #e0f2fe 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 18% 12%, #f0fdf4 0%, #5eead4 32%, #64748b 100%);
-  --glass-soft-bg: rgba(255, 255, 255, 0.56);
-  --glass-medium-bg: rgba(255, 255, 255, 0.66);
-  --glass-strong-bg: rgba(255, 255, 255, 0.78);
-  --glass-soft-blur: 15px;
-  --glass-medium-blur: 22px;
-  --glass-strong-blur: 30px;
-  --glass-soft-border: rgba(255, 255, 255, 0.58);
-  --glass-medium-border: rgba(255, 255, 255, 0.72);
-  --glass-strong-border: rgba(255, 255, 255, 0.84);
-  --glass-soft-shadow: 0 12px 34px rgba(13, 148, 136, 0.14);
-  --glass-medium-shadow: 0 20px 52px rgba(13, 148, 136, 0.18);
-  --glass-strong-shadow: 0 28px 64px rgba(15, 118, 110, 0.22);
+:root[data-ui-theme='kids_friendly'] {
+  /* 키즈/일러스트 셸 — 글래스 아님 (불투명 서페이스, blur 0) */
+  --app-shell-inner-bg: linear-gradient(135deg, #fff7ed 0%, #fef9c3 30%, #e0f2fe 68%, #fce7f3 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 16% 10%, #fdba74 0%, #7dd3fc 38%, #f9a8d4 72%, #94a3b8 100%);
+  --glass-bg: rgba(255, 255, 255, 0.96);
+  --glass-soft-bg: rgba(255, 251, 235, 0.97);
+  --glass-medium-bg: rgba(255, 255, 255, 0.98);
+  --glass-strong-bg: #ffffff;
+  --glass-soft-blur: 0px;
+  --glass-medium-blur: 0px;
+  --glass-strong-blur: 0px;
+  --glass-soft-border: rgba(251, 191, 36, 0.5);
+  --glass-medium-border: rgba(56, 189, 248, 0.45);
+  --glass-strong-border: rgba(244, 114, 182, 0.4);
+  --glass-soft-shadow: 0 8px 18px rgba(180, 83, 9, 0.12);
+  --glass-medium-shadow: 0 12px 28px rgba(14, 165, 233, 0.14);
+  --glass-strong-shadow: 0 16px 36px rgba(219, 39, 119, 0.14);
 }
 
-.dark[data-ui-theme='stable_glass'] {
-  --app-shell-inner-bg: linear-gradient(135deg, #071815 0%, #134e4a 48%, #155e75 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 15% 10%, #115e59 0%, #0f172a 58%);
-  --glass-soft-bg: rgba(15, 23, 42, 0.5);
-  --glass-medium-bg: rgba(15, 23, 42, 0.62);
-  --glass-strong-bg: rgba(15, 23, 42, 0.74);
-  --glass-soft-blur: 18px;
-  --glass-medium-blur: 24px;
-  --glass-strong-blur: 32px;
-  --glass-soft-border: rgba(45, 212, 191, 0.28);
-  --glass-medium-border: rgba(94, 234, 212, 0.34);
-  --glass-strong-border: rgba(153, 246, 228, 0.42);
-  --glass-soft-shadow: 0 14px 38px rgba(2, 44, 34, 0.45);
-  --glass-medium-shadow: 0 22px 56px rgba(2, 44, 34, 0.52);
-  --glass-strong-shadow: 0 30px 68px rgba(2, 44, 34, 0.58);
+.dark[data-ui-theme='kids_friendly'] {
+  --app-shell-inner-bg: linear-gradient(135deg, #1c1917 0%, #292524 42%, #0c4a6e 100%);
+  --app-shell-outer-bg: radial-gradient(circle at 14% 12%, #b45309 0%, #0f172a 55%);
+  --glass-bg: rgba(41, 37, 36, 0.94);
+  --glass-soft-bg: rgba(68, 64, 60, 0.92);
+  --glass-medium-bg: rgba(41, 37, 36, 0.95);
+  --glass-strong-bg: rgba(28, 25, 23, 0.98);
+  --glass-soft-blur: 0px;
+  --glass-medium-blur: 0px;
+  --glass-strong-blur: 0px;
+  --glass-soft-border: rgba(251, 191, 36, 0.35);
+  --glass-medium-border: rgba(125, 211, 252, 0.32);
+  --glass-strong-border: rgba(249, 168, 212, 0.3);
+  --glass-soft-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --glass-medium-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+  --glass-strong-shadow: 0 22px 48px rgba(0, 0, 0, 0.5);
 }
 
-/* Original baseline before glass theme variants */
+/* Original — 기본 위젯 UI용 슬레이트 베이스 (비글래스에 가깝게) */
 :root[data-ui-theme='default'] {
   --app-shell-inner-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   --app-shell-outer-bg: radial-gradient(circle at top left, #e2e8f0, #94a3b8);
-  --glass-soft-bg: rgba(255, 255, 255, 0.8);
-  --glass-medium-bg: rgba(255, 255, 255, 0.8);
-  --glass-strong-bg: rgba(255, 255, 255, 0.85);
-  --glass-soft-blur: 20px;
-  --glass-medium-blur: 20px;
-  --glass-strong-blur: 22px;
-  --glass-soft-border: rgba(255, 255, 255, 0.4);
-  --glass-medium-border: rgba(255, 255, 255, 0.45);
-  --glass-strong-border: rgba(255, 255, 255, 0.5);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-soft-bg: rgba(255, 255, 255, 0.92);
+  --glass-medium-bg: rgba(255, 255, 255, 0.95);
+  --glass-strong-bg: #ffffff;
+  --glass-soft-blur: 0px;
+  --glass-medium-blur: 0px;
+  --glass-strong-blur: 2px;
+  --glass-soft-border: rgba(148, 163, 184, 0.35);
+  --glass-medium-border: rgba(148, 163, 184, 0.4);
+  --glass-strong-border: rgba(100, 116, 139, 0.45);
   --glass-soft-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --glass-medium-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --glass-strong-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);

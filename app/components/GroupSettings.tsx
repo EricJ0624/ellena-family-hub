@@ -22,8 +22,7 @@ import {
   isGroupDisplayNamePending,
 } from '@/lib/group-display-name';
 import type { TitleStyle } from '@/app/components/TitlePage';
-
-type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
+import { resolveUiTheme, type UiTheme } from '@/lib/ui-theme';
 
 interface GroupSettingsProps {
   onClose: () => void;
@@ -38,12 +37,6 @@ const DEFAULT_TITLE_STYLE: TitleStyle = {
   letterSpacing: 0,
   fontFamily: 'Inter',
 };
-
-function parseUiTheme(raw: unknown): UiTheme {
-  if (raw === 'highend_glass') return 'highend_glass';
-  if (raw === 'stable_glass') return 'stable_glass';
-  return 'default';
-}
 
 function parseTitleStyle(raw: unknown, fallbackContent: string): TitleStyle {
   if (raw && typeof raw === 'object' && 'content' in (raw as object)) {
@@ -76,7 +69,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
     ),
   );
   const [uiTheme, setUiTheme] = useState<UiTheme>(() =>
-    parseUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme)
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme)
   );
   const [inviteCode, setInviteCode] = useState(currentGroup?.invite_code || '');
   const [copied, setCopied] = useState(false);
@@ -137,7 +130,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
           : (getGroupDisplayNameRaw(currentGroup) ?? ''),
       );
       setInviteCode(currentGroup.invite_code || '');
-      setUiTheme(parseUiTheme((currentGroup as { ui_theme?: unknown }).ui_theme));
+      setUiTheme(resolveUiTheme((currentGroup as { ui_theme?: unknown }).ui_theme));
     }
   }, [currentGroup]);
 
@@ -146,7 +139,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute('data-ui-theme', uiTheme);
     return () => {
-      const persistedTheme = parseUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
+      const persistedTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
       document.documentElement.setAttribute('data-ui-theme', persistedTheme);
     };
   }, [uiTheme, currentGroup]);
@@ -370,7 +363,7 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       className="min-w-48 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
                     >
                       <option value="default">{gst('theme_default_label')}</option>
-                      <option value="stable_glass">{gst('theme_stable_glass_label')}</option>
+                      <option value="kids_friendly">{gst('theme_kids_friendly_label')}</option>
                       <option value="highend_glass">{gst('theme_highend_glass_label')}</option>
                     </select>
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -395,20 +388,20 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       </button>
                       <button
                         type="button"
-                        onClick={() => setUiTheme('stable_glass')}
+                        onClick={() => setUiTheme('kids_friendly')}
                         disabled={saving}
                         className={`rounded-xl border p-3 text-left transition-colors ${
-                          uiTheme === 'stable_glass'
-                            ? 'border-blue-400 bg-blue-50'
+                          uiTheme === 'kids_friendly'
+                            ? 'border-amber-400 bg-amber-50'
                             : 'border-slate-200 bg-white hover:bg-slate-50'
                         }`}
                       >
-                        <p className="text-sm font-semibold text-slate-800">{gst('theme_stable_glass_label')}</p>
-                        <p className="mt-1 text-xs text-slate-500">{gst('theme_stable_glass_desc')}</p>
-                        <div className="mt-3 overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 p-2">
-                          <div className="rounded-md border border-white/70 bg-white/70 p-2 shadow-[0_8px_16px_rgba(15,23,42,0.08)] backdrop-blur-[8px]">
-                            <div className="h-2 w-16 rounded bg-indigo-200" />
-                            <div className="mt-2 h-1.5 w-24 rounded bg-slate-300/80" />
+                        <p className="text-sm font-semibold text-slate-800">{gst('theme_kids_friendly_label')}</p>
+                        <p className="mt-1 text-xs text-slate-500">{gst('theme_kids_friendly_desc')}</p>
+                        <div className="mt-3 overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-br from-amber-100 via-sky-100 to-rose-100 p-2">
+                          <div className="rounded-md border-2 border-amber-300/80 bg-amber-50 p-2 shadow-sm">
+                            <div className="h-2 w-16 rounded bg-rose-300" />
+                            <div className="mt-2 h-1.5 w-24 rounded bg-sky-300/90" />
                           </div>
                         </div>
                       </button>
@@ -424,10 +417,10 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                       >
                         <p className="text-sm font-semibold text-slate-800">{gst('theme_highend_glass_label')}</p>
                         <p className="mt-1 text-xs text-slate-500">{gst('theme_highend_glass_desc')}</p>
-                        <div className="mt-3 overflow-hidden rounded-lg border border-white/80 bg-gradient-to-br from-blue-100 via-violet-100 to-fuchsia-100 p-2">
-                          <div className="rounded-md border border-white/85 bg-white/78 p-2 shadow-[0_12px_24px_rgba(79,70,229,0.18)] backdrop-blur-[16px]">
-                            <div className="h-2 w-16 rounded bg-violet-300/90" />
-                            <div className="mt-2 h-1.5 w-24 rounded bg-slate-400/70" />
+                        <div className="mt-3 overflow-hidden rounded-lg border border-white/80 bg-gradient-to-br from-indigo-900 via-fuchsia-800 to-cyan-700 p-2">
+                          <div className="rounded-md border border-white/40 bg-white/20 p-2 shadow-[0_12px_24px_rgba(15,23,42,0.35)] backdrop-blur-[12px]">
+                            <div className="h-2 w-16 rounded bg-white/80" />
+                            <div className="mt-2 h-1.5 w-24 rounded bg-white/50" />
                           </div>
                         </div>
                       </button>

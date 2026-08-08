@@ -30,7 +30,7 @@ export interface Database {
           family_name: string | null
           title_style: Json | null
           piggy_currency: string
-          ui_theme: 'default' | 'stable_glass' | 'highend_glass'
+          ui_theme: 'default' | 'kids_friendly' | 'highend_glass'
           display_name_pending: boolean
         }
         Insert: {
@@ -46,7 +46,7 @@ export interface Database {
           family_name?: string | null
           title_style?: Json | null
           piggy_currency?: string
-          ui_theme?: 'default' | 'stable_glass' | 'highend_glass'
+          ui_theme?: 'default' | 'kids_friendly' | 'highend_glass'
           display_name_pending?: boolean
         }
         Update: {
@@ -62,7 +62,7 @@ export interface Database {
           family_name?: string | null
           title_style?: Json | null
           piggy_currency?: string
-          ui_theme?: 'default' | 'stable_glass' | 'highend_glass'
+          ui_theme?: 'default' | 'kids_friendly' | 'highend_glass'
           display_name_pending?: boolean
         }
         Relationships: [

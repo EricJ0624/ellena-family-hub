@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { getGroupAdminTranslation } from '@/lib/translations/groupAdmin';
 import { getCommonTranslation } from '@/lib/translations/common';
+import { resolveUiTheme } from '@/lib/ui-theme';
 import { 
   Users, 
   Settings, 
@@ -162,20 +163,12 @@ type GroupAdminTabId =
   | 'piggy-archives'
   | 'widgets';
 
-type UiTheme = 'default' | 'stable_glass' | 'highend_glass';
-
 const GROUP_ADMIN_LANG_STORAGE_KEY = 'group_admin_preferred_language';
 
 function getStoredGroupAdminLang(): LangCode {
   if (typeof window === 'undefined') return 'en';
   const stored = localStorage.getItem(GROUP_ADMIN_LANG_STORAGE_KEY);
   return isValidLang(stored) ? stored : 'en';
-}
-
-function parseUiTheme(value: unknown): UiTheme {
-  if (value === 'highend_glass') return 'highend_glass';
-  if (value === 'stable_glass') return 'stable_glass';
-  return 'default';
 }
 
 export function GroupAdminPanel({
@@ -890,15 +883,15 @@ export function GroupAdminPanel({
     return membership?.role === 'ADMIN';
   });
   const selectedGroupFromList = groupList.find((group: any) => group.id === effectiveGroupId);
-  const effectiveUiTheme = parseUiTheme(
+  const effectiveUiTheme = resolveUiTheme(
     (selectedGroupFromList as { ui_theme?: unknown } | undefined)?.ui_theme ??
       (currentGroup as { ui_theme?: unknown } | null)?.ui_theme
   );
   const activeThemeLabel =
     effectiveUiTheme === 'highend_glass'
       ? gat('theme_highend_glass_short')
-      : effectiveUiTheme === 'stable_glass'
-        ? gat('theme_stable_glass_short')
+      : effectiveUiTheme === 'kids_friendly'
+        ? gat('theme_kids_friendly_short')
         : gat('theme_default_short');
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
   const tabButtonClass = (tab: GroupAdminTabId) =>
@@ -932,8 +925,8 @@ export function GroupAdminPanel({
                   className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
                     effectiveUiTheme === 'highend_glass'
                       ? 'border-violet-300 bg-violet-50 text-violet-700'
-                      : effectiveUiTheme === 'stable_glass'
-                        ? 'border-blue-300 bg-blue-50 text-blue-700'
+                      : effectiveUiTheme === 'kids_friendly'
+                        ? 'border-amber-300 bg-amber-50 text-amber-800'
                         : 'border-emerald-300 bg-emerald-50 text-emerald-700'
                   }`}
                 >

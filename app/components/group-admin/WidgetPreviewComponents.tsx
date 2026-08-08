@@ -20,6 +20,8 @@ import { getWidgetPreviewTranslation } from '@/lib/translations/widgetPreview';
 import { getFamilyRoleLabel } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { intlLocaleForLang } from '@/lib/language-fonts';
+import { useGroup } from '@/app/contexts/GroupContext';
+import { resolveUiTheme } from '@/lib/ui-theme';
 
 function useWidgetPreviewCopy() {
   const { lang } = useLanguage();
@@ -43,15 +45,59 @@ function useWidgetPreviewCopy() {
   );
 }
 
-// ── Tasks (칠판 스타일) ──────────────────────────────────────────
+// ── Tasks (kids_friendly=칠판 / 그 외=기본 위젯) ──────────────────
 function TasksPreview() {
   const { dt, wp } = useWidgetPreviewCopy();
+  const { currentGroup } = useGroup();
+  const isKidsTheme =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
   const items = [
     { text: wp('preview_task_1'), done: false, assignee: '👩' },
     { text: wp('preview_task_2'), done: true, assignee: '👨' },
     { text: wp('preview_task_3'), done: false, assignee: '👧' },
     { text: wp('preview_task_4'), done: false, assignee: null },
   ];
+
+  if (!isKidsTheme) {
+    return (
+      <section className="content-section">
+        <div className="section-header">
+          <h3 className="section-title">{dt('todo_section_title')}</h3>
+        </div>
+        <div className="section-body">
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {items.map((item, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-2 rounded-xl border border-glass-medium bg-glass-soft px-3 py-2 shadow-glass-soft"
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                    item.done
+                      ? 'border-indigo-500 bg-indigo-500 text-white'
+                      : 'border-slate-300 bg-white'
+                  }`}
+                >
+                  {item.done ? (
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : null}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-sm font-medium text-slate-800 ${item.done ? 'line-through opacity-60' : ''}`}>
+                    {item.text}
+                  </span>
+                  {item.assignee ? <span className="mt-0.5 block text-xs text-slate-500">{item.assignee}</span> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div className="chalkboard-frame flex w-full flex-col">
       <section className="chalkboard-container flex flex-col">

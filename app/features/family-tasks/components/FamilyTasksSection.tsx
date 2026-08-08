@@ -1,5 +1,7 @@
 /**
  * 가족 임무(Family Tasks) 섹션 컴포넌트
+ * - kids_friendly: 칠판(키즈) 디자인
+ * - default / highend_glass: 다른 위젯과 같은 기본 UI
  */
 
 'use client';
@@ -9,6 +11,8 @@ import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 import { fitFontSizeToWidth, shrinkFontSizeToElement } from '@/lib/dashboard-title-fit';
+import { useGroup } from '@/app/contexts/GroupContext';
+import { resolveUiTheme } from '@/lib/ui-theme';
 
 /** chalkboard-empty-state — Caveat 계열, globals.css --chalk-font-body 와 동일 */
 const CHALK_EMPTY_FONT_FAMILY = "'Caveat', 'Patrick Hand', cursive";
@@ -119,6 +123,9 @@ export function FamilyTasksSection({
   onChatDragLeave,
   onChatDrop,
 }: FamilyTasksSectionProps) {
+  const { currentGroup } = useGroup();
+  const isKidsTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
+
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
@@ -247,7 +254,7 @@ export function FamilyTasksSection({
           created_by: inserted.created_by ?? userId,
           done: inserted.is_completed ?? false,
         },
-        ...previousTasks.filter((t) => t.id !== tempId && t.id !== inserted.id),
+        ...previousTasks.filter((row) => row.id !== tempId && row.id !== inserted.id),
       ]);
     } catch (error) {
       console.error('임무 추가 실패:', error);
@@ -257,7 +264,7 @@ export function FamilyTasksSection({
   };
 
   const visibleTasks = dedupeFamilyTasks(tasks || []);
-  const hideHtmlTitle = usesBakedChalkboardTitle(t.todo_section_title);
+  const hideHtmlTitle = isKidsTheme && usesBakedChalkboardTitle(t.todo_section_title);
 
   const fitEmptyStateFont = useCallback(() => {
     const el = emptyStateRef.current;
@@ -282,7 +289,7 @@ export function FamilyTasksSection({
   }, [t.todo_empty_state]);
 
   useLayoutEffect(() => {
-    if (visibleTasks.length > 0) {
+    if (!isKidsTheme || visibleTasks.length > 0) {
       setEmptyStateFontPx(null);
       return;
     }
@@ -298,38 +305,86 @@ export function FamilyTasksSection({
       ro.disconnect();
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
-  }, [visibleTasks.length, fitEmptyStateFont]);
+  }, [isKidsTheme, visibleTasks.length, fitEmptyStateFont]);
 
-  return (
-    <>
-      {isTodoModalOpen && createPortal(
-        <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
-          <div className="chalkboard-modal-frame" onClick={(e) => e.stopPropagation()}>
-            <div className="chalkboard-modal-container">
-              <h2 className="chalkboard-modal-heading">{t.todo_modal_title}</h2>
-              <div className="chalkboard-modal-form">
-                <div className="chalkboard-modal-field chalkboard-modal-field--what">
-                  <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-what">
+  const todoModal = isTodoModalOpen
+    ? createPortal(
+        isKidsTheme ? (
+          <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
+            <div className="chalkboard-modal-frame" onClick={(e) => e.stopPropagation()}>
+              <div className="chalkboard-modal-container">
+                <h2 className="chalkboard-modal-heading">{t.todo_modal_title}</h2>
+                <div className="chalkboard-modal-form">
+                  <div className="chalkboard-modal-field chalkboard-modal-field--what">
+                    <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-what">
+                      {t.todo_what_label}
+                    </label>
+                    <input
+                      ref={todoTextRef}
+                      id="chalkboard-todo-what"
+                      type="text"
+                      className="chalkboard-form-input"
+                      placeholder={t.todo_what_placeholder}
+                    />
+                  </div>
+                  <div className="chalkboard-modal-field chalkboard-modal-field--who">
+                    <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-who">
+                      {t.todo_who_label}
+                    </label>
+                    <select
+                      ref={todoWhoRef}
+                      id="chalkboard-todo-who"
+                      className="chalkboard-form-input"
+                      defaultValue=""
+                    >
+                      <option value="">{t.todo_who_placeholder || t.anyone}</option>
+                      {taskMembers.map((m) => (
+                        <option key={m.userId} value={m.userId}>
+                          {formatAssigneeDisplay(m.userId)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="chalkboard-modal-actions">
+                  <button type="button" onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
+                    {t.cancel}
+                  </button>
+                  <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
+                    {t.todo_register_btn}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/45 p-4"
+            onClick={() => setIsTodoModalOpen(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-glass-medium bg-glass-strong p-5 shadow-glass-medium backdrop-blur-glass-medium"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="m-0 text-lg font-semibold text-slate-800">{t.todo_modal_title}</h2>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-600" htmlFor="plain-todo-what">
                     {t.todo_what_label}
                   </label>
                   <input
                     ref={todoTextRef}
-                    id="chalkboard-todo-what"
+                    id="plain-todo-what"
                     type="text"
-                    className="chalkboard-form-input"
+                    className="form-input w-full"
                     placeholder={t.todo_what_placeholder}
                   />
                 </div>
-                <div className="chalkboard-modal-field chalkboard-modal-field--who">
-                  <label className="chalkboard-modal-field-label" htmlFor="chalkboard-todo-who">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-600" htmlFor="plain-todo-who">
                     {t.todo_who_label}
                   </label>
-                  <select
-                    ref={todoWhoRef}
-                    id="chalkboard-todo-who"
-                    className="chalkboard-form-input"
-                    defaultValue=""
-                  >
+                  <select ref={todoWhoRef} id="plain-todo-who" className="form-input w-full" defaultValue="">
                     <option value="">{t.todo_who_placeholder || t.anyone}</option>
                     {taskMembers.map((m) => (
                       <option key={m.userId} value={m.userId}>
@@ -339,84 +394,185 @@ export function FamilyTasksSection({
                   </select>
                 </div>
               </div>
-              <div className="chalkboard-modal-actions">
-                <button type="button" onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsTodoModalOpen(false)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
                   {t.cancel}
                 </button>
-                <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
+                <button
+                  type="button"
+                  onClick={submitNewTodo}
+                  className="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-600"
+                >
                   {t.todo_register_btn}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      , document.body)}
+        ),
+        document.body
+      )
+    : null;
 
-      <div className="chalkboard-frame flex w-full min-w-0 flex-col">
-      <section className="chalkboard-container flex flex-col">
-        <div className="chalkboard-top-bar">
-          <h3
-            className={
-              hideHtmlTitle ? 'chalkboard-title chalkboard-title--sr-only' : 'chalkboard-title'
-            }
-          >
-            {t.todo_section_title}
-          </h3>
-          <div className="chalkboard-top-actions">
-            <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
+  if (!isKidsTheme) {
+    return (
+      <>
+        {todoModal}
+        <section className="content-section">
+          <div className="section-header">
+            <h3 className="section-title">{t.todo_section_title}</h3>
+            <button
+              type="button"
+              onClick={openTodoModal}
+              className="inline-flex cursor-pointer items-center rounded-lg border-0 bg-indigo-500 font-bold text-white transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70"
+              style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '4cqmin' }}
+            >
               {t.todo_add_btn}
             </button>
           </div>
-        </div>
-        <div
-          className={`chalkboard-task-area ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
-          ref={chatDropRef}
-          onDragOver={onChatDragOver}
-          onDragLeave={onChatDragLeave}
-          onDrop={onChatDrop}
-        >
-          {visibleTasks.length > 0 ? (
-            <div className="todo-list">
-              {visibleTasks.map((task) => (
-                <div key={task.id} className="todo-item">
-                  <div onClick={() => handleToggleTask(task.id)} className="todo-content">
-                    <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
-                      {task.done && (
-                        <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M5 13l4 4L19 7"></path>
-                        </svg>
-                      )}
-                    </div>
-                    <div className="todo-text-wrapper">
-                      <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
-                      {task.assignee && (
-                        <span className="todo-assignee">
-                          {task.assignee === '누구나' ? t.anyone : task.assignee}
+          <div
+            className={`section-body ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
+            ref={chatDropRef}
+            onDragOver={onChatDragOver}
+            onDragLeave={onChatDragLeave}
+            onDrop={onChatDrop}
+          >
+            {visibleTasks.length > 0 ? (
+              <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                {visibleTasks.map((task) => (
+                  <li
+                    key={task.id}
+                    className="flex items-center gap-2 rounded-xl border border-glass-medium bg-glass-soft px-3 py-2 shadow-glass-soft backdrop-blur-glass-soft"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTask(task.id)}
+                      className="flex min-w-0 flex-1 items-start gap-2 border-0 bg-transparent p-0 text-left"
+                    >
+                      <span
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                          task.done
+                            ? 'border-indigo-500 bg-indigo-500 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        }`}
+                      >
+                        {task.done ? (
+                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block text-sm font-medium text-slate-800 ${task.done ? 'line-through opacity-60' : ''}`}
+                        >
+                          {task.text}
                         </span>
-                      )}
-                    </div>
-                  </div>
-                  {(task.created_by === userId || !task.created_by) && (
-                    <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
-                      <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-                      </svg>
+                        {task.assignee ? (
+                          <span className="mt-0.5 block text-xs text-slate-500">
+                            {task.assignee === '누구나' ? t.anyone : task.assignee}
+                          </span>
+                        ) : null}
+                      </span>
                     </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p
-              ref={emptyStateRef}
-              className="chalkboard-empty-state"
-              style={emptyStateFontPx != null ? { fontSize: `${emptyStateFontPx}px` } : undefined}
+                    {(task.created_by === userId || !task.created_by) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="delete"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="m-0 text-center text-slate-500" style={{ padding: '8cqmin 4cqmin', fontSize: '5cqmin' }}>
+                {t.todo_empty_state}
+              </p>
+            )}
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {todoModal}
+
+      <div className="chalkboard-frame flex w-full min-w-0 flex-col">
+        <section className="chalkboard-container flex flex-col">
+          <div className="chalkboard-top-bar">
+            <h3
+              className={
+                hideHtmlTitle ? 'chalkboard-title chalkboard-title--sr-only' : 'chalkboard-title'
+              }
             >
-              {t.todo_empty_state}
-            </p>
-          )}
-        </div>
-      </section>
+              {t.todo_section_title}
+            </h3>
+            <div className="chalkboard-top-actions">
+              <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
+                {t.todo_add_btn}
+              </button>
+            </div>
+          </div>
+          <div
+            className={`chalkboard-task-area ${chatDragOver ? 'rounded-[10px] outline outline-2 outline-offset-4 outline-dashed outline-indigo-500' : ''}`}
+            ref={chatDropRef}
+            onDragOver={onChatDragOver}
+            onDragLeave={onChatDragLeave}
+            onDrop={onChatDrop}
+          >
+            {visibleTasks.length > 0 ? (
+              <div className="todo-list">
+                {visibleTasks.map((task) => (
+                  <div key={task.id} className="todo-item">
+                    <div onClick={() => handleToggleTask(task.id)} className="todo-content">
+                      <div className={`todo-checkbox ${task.done ? 'todo-checkbox-checked' : ''}`}>
+                        {task.done && (
+                          <svg className="todo-checkmark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 13l4 4L19 7"></path>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="todo-text-wrapper">
+                        <span className={`todo-text ${task.done ? 'todo-text-done' : ''}`}>{task.text}</span>
+                        {task.assignee && (
+                          <span className="todo-assignee">
+                            {task.assignee === '누구나' ? t.anyone : task.assignee}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {(task.created_by === userId || !task.created_by) && (
+                      <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
+                        <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p
+                ref={emptyStateRef}
+                className="chalkboard-empty-state"
+                style={emptyStateFontPx != null ? { fontSize: `${emptyStateFontPx}px` } : undefined}
+              >
+                {t.todo_empty_state}
+              </p>
+            )}
+          </div>
+        </section>
       </div>
     </>
   );
