@@ -3,8 +3,8 @@
  * Dashboard용 위챗식 썸네일 그리드
  * - 기본 위젯: 5×2 슬롯 기준으로 ~10장 맞춤 (스크롤 없음)
  * - 10장 초과: 열/행을 늘리고 칸을 줄여 위젯 안에 모두 표시
- * - 칸은 width+padding-bottom으로 정사각 고정 → 세/가로 모두 동일 칸 크기
- * - 사진은 cover로 칸을 채움 (여백 없음)
+ * - 칸은 width+padding-bottom으로 정사각 고정
+ * - 사진은 contain으로 칸 안에 맞춤 (잘림 없이 축소)
  */
 
 'use client';
@@ -51,21 +51,30 @@ export function FamilyAlbumSection({
   translations: t,
 }: FamilyAlbumSectionProps) {
   const { cols, rows } = getAlbumGridLayout(photos.length);
-  const gridRef = useRef<HTMLDivElement>(null);
+  /** 위젯이 잡아 주는 고정 영역 — 썸네일 크기와 무관해야 Resize 루프가 안 생김 */
+  const measureRef = useRef<HTMLDivElement>(null);
   const [thumbPx, setThumbPx] = useState(ALBUM_THUMB_MIN_PX);
 
   useEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
+    const el = measureRef.current;
+    if (!el || photos.length === 0) return;
 
+    let rafId = 0;
     const update = () => {
-      setThumbPx(computeThumbSize(el.clientWidth, el.clientHeight, cols, rows));
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const next = computeThumbSize(el.clientWidth, el.clientHeight, cols, rows);
+        setThumbPx((prev) => (prev === next ? prev : next));
+      });
     };
 
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, [cols, rows, photos.length]);
 
   return (
@@ -82,14 +91,13 @@ export function FamilyAlbumSection({
           {photos.length > 0 && ` (${photos.length})`}
         </button>
       </div>
-      <div className="section-body">
+      <div ref={measureRef} className="section-body">
         {photos.length === 0 ? (
           <p className="text-center text-[#64748b]" style={{ padding: '8cqmin 4cqmin', fontSize: '5cqmin' }}>
             {t.empty_state}
           </p>
         ) : (
           <div
-            ref={gridRef}
             className="album-photo-grid"
             style={{ gap: ALBUM_GAP_PX }}
           >

@@ -1788,7 +1788,7 @@ select:not(.chalkboard-form-input) {
    앨범 위챗식 썸네일 그리드 (위젯 맞춤, 스크롤 없음)
    - 칸 너비(px)는 ResizeObserver 인라인
    - 높이는 padding-bottom:100%로 너비와 동일 강제 → 모든 칸 동일 정사각
-   - 사진은 cover로 칸을 채움 (위아래/좌우 여백 없음)
+   - 사진은 contain으로 칸 안에 맞춤 (세로 사진 잘림 없이 축소)
    ============================================ */
 .album-photo-grid {
   display: flex;
@@ -1830,7 +1830,7 @@ select:not(.chalkboard-form-input) {
   height: 100%;
   max-width: none;
   max-height: none;
-  object-fit: cover; /* 여백 없이 정사각 칸을 채움 (가장자리 일부 크롭) */
+  object-fit: contain; /* 잘림 없이 칸에 맞춤 — 세로 사진은 좌우 여백 */
   object-position: center;
   pointer-events: none;
 }
