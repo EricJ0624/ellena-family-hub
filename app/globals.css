@@ -3115,14 +3115,16 @@ select:not(.chalkboard-form-input) {
 
   .widget-chrome[data-widget-key='games'] .games-tab-bar {
     flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* 탭 본문: 스크롤 없이 남는 높이에 맞춤 (하단 그림찾기와 겹치지 않음) */
+  /* 탭 본문: 로비가 0 높이로 붕괴하지 않도록 최소 높이 보장 */
   .widget-chrome[data-widget-key='games'] .games-tab-body {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    min-height: 0;
+    min-height: min(9rem, 32cqh);
     overflow: hidden;
   }
 
@@ -3130,6 +3132,31 @@ select:not(.chalkboard-form-input) {
     flex: 0 0 auto;
     position: relative;
     z-index: 2;
+  }
+
+  /* 좁은 위젯(스마트폰): 패딩·갭 축소, 그림찾기 부제 숨김 */
+  @container widget (max-width: 360px) {
+    .widget-chrome[data-widget-key='games'] .games-widget-content {
+      gap: 1cqw;
+    }
+
+    .widget-chrome[data-widget-key='games'] .games-tab-bar {
+      padding: 0.5cqw;
+    }
+
+    .widget-chrome[data-widget-key='games'] .games-tab-btn {
+      padding-inline: 0.5cqw;
+      padding-block: 1.5cqw;
+      font-size: 3.2cqw;
+    }
+
+    .widget-chrome[data-widget-key='games'] .games-tab-panel.games-tab-lobby {
+      gap: 1cqw;
+    }
+
+    .widget-chrome[data-widget-key='games'] .games-picture-find-subtitle {
+      display: none;
+    }
   }
 
   .widget-chrome[data-widget-key='games'] .games-tab-panel {

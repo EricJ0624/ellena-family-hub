@@ -323,7 +323,7 @@ export function FamilyGamesSection({
               )}
 
               <div
-                className="games-tab-bar relative z-[2] flex flex-shrink-0 flex-wrap rounded-xl bg-slate-900/5 p-1"
+                className="games-tab-bar relative z-[2] grid flex-shrink-0 grid-cols-3 rounded-xl bg-slate-900/5 p-1"
                 role="tablist"
                 style={{ gap: '1cqw' }}
               >
@@ -334,7 +334,7 @@ export function FamilyGamesSection({
                     role="tab"
                     aria-selected={activeTab === tab}
                     onClick={() => handleTabClick(tab)}
-                    className={`rounded-lg px-3 py-2 font-semibold transition-colors ${
+                    className={`games-tab-btn min-w-0 truncate rounded-lg px-1.5 py-2 text-center font-semibold transition-colors ${
                       activeTab === tab
                         ? 'bg-white text-indigo-700 shadow-sm'
                         : 'text-slate-600 hover:bg-white/60'
@@ -343,7 +343,8 @@ export function FamilyGamesSection({
                         ? 'ring-2 ring-indigo-300 ring-offset-1'
                         : ''
                     }`}
-                    style={{ fontSize: '4cqw' }}
+                    style={{ fontSize: '3.6cqw' }}
+                    title={tabLabel(tab)}
                   >
                     {tabLabel(tab)}
                   </button>
@@ -374,7 +375,7 @@ export function FamilyGamesSection({
                   >
                     <span className="min-w-0 flex-1 truncate font-semibold text-indigo-900" style={{ fontSize: '3.8cqw' }}>
                       {pft('entry_title')}
-                      <span className="ml-1 font-normal text-indigo-700/75" style={{ fontSize: '3.2cqw' }}>
+                      <span className="games-picture-find-subtitle ml-1 font-normal text-indigo-700/75" style={{ fontSize: '3.2cqw' }}>
                         · {pft('entry_subtitle')}
                       </span>
                     </span>
