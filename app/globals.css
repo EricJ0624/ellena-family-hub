@@ -1786,42 +1786,30 @@ select:not(.chalkboard-form-input) {
 
 /* ============================================
    앨범 위챗식 썸네일 그리드 (위젯 맞춤, 스크롤 없음)
-   - ≤10: 5×2 슬롯 기준으로 칸 크기 고정 → 소수 장도 과대 확대 안 함
-   - 10+: --album-cols/--album-rows 증가 → 칸 축소로 위젯 안에 맞춤
+   - 칸 크기(px)는 FamilyAlbumSection ResizeObserver가 인라인으로 고정
+   - 사진은 칸을 밀어내지 못함 (absolute + contain)
    ============================================ */
 .album-photo-grid {
-  --album-cols: 5;
-  --album-rows: 2;
-  --album-gap: 6px;
-  /* 가로·세로 중 더 작은 쪽에 맞춰 정사각 유지 */
-  --album-thumb-size: min(
-    calc((100cqi - (var(--album-cols) - 1) * var(--album-gap)) / var(--album-cols)),
-    calc((100cqh - (var(--album-rows) - 1) * var(--album-gap)) / var(--album-rows))
-  );
-
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: var(--album-gap);
   overflow: hidden; /* 스크롤 없음 */
   flex: 1;
   min-height: 0;
   min-width: 0;
   width: 100%;
   height: 100%;
-  container-type: size;
 }
 
 .album-photo-cell {
   position: relative;
-  flex: 0 0 var(--album-thumb-size);
   box-sizing: border-box;
-  /* cqi/cqh 변수라 width·height 동일 값 — 세로 사진이 칸을 늘리지 못함 */
-  width: var(--album-thumb-size);
-  height: var(--album-thumb-size);
   overflow: hidden;
+  /* 인라인 width/height가 소스 오브 트루스. 콘텐츠(세로 사진)가 칸을 키우지 못함 */
+  contain: strict;
+  flex-shrink: 0;
 }
 
 .album-photo-cell > img {
@@ -1829,8 +1817,11 @@ select:not(.chalkboard-form-input) {
   inset: 0;
   width: 100%;
   height: 100%;
+  max-width: none;
+  max-height: none;
   object-fit: contain;
   object-position: center;
+  pointer-events: none;
 }
 
 .message-item {
