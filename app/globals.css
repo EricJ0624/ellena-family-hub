@@ -1785,61 +1785,42 @@ select:not(.chalkboard-form-input) {
 }
 
 /* ============================================
-   앨범 위챗식 작은 썸네일 그리드
-   - width만 지정 + aspect-ratio로 정사각 (height에 % 넣지 않음 → 납작해짐 방지)
-   - 10장 초과: data-tier로 칸 크기 축소 → 더 많이 표시
+   앨범 위챗식 썸네일 그리드 (위젯 맞춤, 스크롤 없음)
+   - ≤10: 5×2 슬롯 기준으로 칸 크기 고정 → 소수 장도 과대 확대 안 함
+   - 10+: --album-cols/--album-rows 증가 → 칸 축소로 위젯 안에 맞춤
    ============================================ */
 .album-photo-grid {
+  --album-cols: 5;
+  --album-rows: 2;
+  --album-gap: 6px;
+  /* 가로·세로 중 더 작은 쪽에 맞춰 정사각 유지 */
+  --album-thumb-size: min(
+    calc((100cqi - (var(--album-cols) - 1) * var(--album-gap)) / var(--album-cols)),
+    calc((100cqh - (var(--album-rows) - 1) * var(--album-gap)) / var(--album-rows))
+  );
+
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
   align-items: flex-start;
-  gap: 8px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  justify-content: flex-start;
+  gap: var(--album-gap);
+  overflow: hidden; /* 스크롤 없음 */
   flex: 1;
   min-height: 0;
-  padding-bottom: 4px;
-  container-type: inline-size;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  container-type: size;
 }
 
 .album-photo-cell {
   flex: 0 0 auto;
   box-sizing: border-box;
   width: var(--album-thumb-size);
-  /* height는 aspect-ratio에 맡김 — width/height 동시 % 해석으로 납작해지던 문제 방지 */
   aspect-ratio: 1 / 1;
   height: auto;
   max-width: 100%;
-}
-
-/* ≤10: 정사각 썸네일 (위젯 폭에 맞춰 소폭 조절) */
-.album-photo-grid[data-tier="10"] {
-  --album-thumb-size: clamp(96px, 28cqi, 120px);
-}
-
-/* 11–16 */
-.album-photo-grid[data-tier="16"] {
-  --album-thumb-size: clamp(80px, 22cqi, 100px);
-}
-
-/* 17–25 */
-.album-photo-grid[data-tier="25"] {
-  --album-thumb-size: clamp(68px, 18cqi, 84px);
-}
-
-/* 26+ */
-.album-photo-grid[data-tier="many"] {
-  --album-thumb-size: clamp(56px, 14cqi, 72px);
-}
-
-.album-photo-grid::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-.album-photo-grid::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.4);
-  border-radius: 999px;
 }
 
 .message-item {

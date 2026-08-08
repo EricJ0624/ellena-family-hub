@@ -1,8 +1,8 @@
 /**
  * 가족 앨범(Family Album) 섹션 컴포넌트
- * Dashboard용 위챗식 작은 썸네일 그리드
- * - 기본: 작은 사이즈로 최대 ~10장
- * - 10장 초과: 썸네일 크기를 줄여 더 많이 표시
+ * Dashboard용 위챗식 썸네일 그리드
+ * - 기본 위젯: 5×2 슬롯 기준으로 ~10장 맞춤 (스크롤 없음)
+ * - 10장 초과: 열/행을 늘리고 칸을 줄여 위젯 안에 모두 표시
  */
 
 'use client';
@@ -24,12 +24,12 @@ interface FamilyAlbumSectionProps {
   };
 }
 
-/** 위챗식: ≤10은 기본 소형, 초과 시 단계적으로 축소 */
-function getThumbTier(count: number): '10' | '16' | '25' | 'many' {
-  if (count <= 10) return '10';
-  if (count <= 16) return '16';
-  if (count <= 25) return '25';
-  return 'many';
+/** 위젯 영역에 맞출 그리드(열×행). ≤10은 항상 5×2 슬롯 크기로 맞춤 */
+function getAlbumGridLayout(count: number): { cols: number; rows: number } {
+  if (count <= 10) return { cols: 5, rows: 2 };
+  const cols = Math.max(4, Math.ceil(Math.sqrt(count)));
+  const rows = Math.max(1, Math.ceil(count / cols));
+  return { cols, rows };
 }
 
 export function FamilyAlbumSection({
@@ -38,7 +38,7 @@ export function FamilyAlbumSection({
   onViewAllClick,
   translations: t,
 }: FamilyAlbumSectionProps) {
-  const thumbTier = getThumbTier(photos.length);
+  const { cols, rows } = getAlbumGridLayout(photos.length);
 
   return (
     <section className="content-section">
@@ -62,13 +62,18 @@ export function FamilyAlbumSection({
         ) : (
           <div
             className="album-photo-grid"
-            data-tier={thumbTier}
+            style={
+              {
+                '--album-cols': cols,
+                '--album-rows': rows,
+              } as React.CSSProperties
+            }
           >
             {photos.map((photo) => (
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                className="album-photo-cell relative cursor-pointer overflow-hidden rounded-lg bg-[#f1f5f9] transition-[transform,box-shadow,filter] duration-200 ease-in-out hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:brightness-105"
+                className="album-photo-cell relative cursor-pointer overflow-hidden rounded-md bg-[#f1f5f9] transition-[filter] duration-200 ease-in-out hover:brightness-105"
               >
                 <img
                   src={photo.data}
