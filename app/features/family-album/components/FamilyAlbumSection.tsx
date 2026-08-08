@@ -78,7 +78,7 @@ export function FamilyAlbumSection({
                 <img
                   src={photo.data}
                   alt={photo.description || ''}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                   loading="lazy"
                 />
                 {photo.isUploading && (
