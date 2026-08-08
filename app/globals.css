@@ -3119,12 +3119,15 @@ select:not(.chalkboard-form-input) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* 탭 본문: 로비가 0 높이로 붕괴하지 않도록 최소 높이 보장 */
+  /*
+   * 탭 본문: 남는 높이를 쓰되 그림찾기(하단 flex-shrink:0)를 밀어내지 않음.
+   * 참가자 목록만 수축하고 toolbar/actions는 GameLobbyPanel에서 shrink:0.
+   */
   .widget-chrome[data-widget-key='games'] .games-tab-body {
     display: flex;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     flex-direction: column;
-    min-height: min(9rem, 32cqh);
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -3132,6 +3135,7 @@ select:not(.chalkboard-form-input) {
     flex: 0 0 auto;
     position: relative;
     z-index: 2;
+    min-height: 2.25rem;
   }
 
   /* 좁은 위젯(스마트폰): 패딩·갭 축소, 그림찾기 부제 숨김 */
@@ -3156,6 +3160,17 @@ select:not(.chalkboard-form-input) {
 
     .widget-chrome[data-widget-key='games'] .games-picture-find-subtitle {
       display: none;
+    }
+  }
+
+  /* 짧은 위젯: 참가자 목록만 숨겨 초대/시작 + 그림찾기 동시 가시 */
+  @container widget (max-height: 340px) {
+    .widget-chrome[data-widget-key='games'] .games-lobby-body {
+      display: none;
+    }
+
+    .widget-chrome[data-widget-key='games'] .games-widget-content {
+      gap: 1cqw;
     }
   }
 
