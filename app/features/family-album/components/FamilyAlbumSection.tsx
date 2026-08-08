@@ -3,7 +3,7 @@
  * Dashboard용 위챗식 썸네일 그리드
  * - 기본 위젯: 5×2 슬롯 기준으로 ~10장 맞춤 (스크롤 없음)
  * - 10장 초과: 열/행을 늘리고 칸을 줄여 위젯 안에 모두 표시
- * - 바깥 칸: 정사각 통일 / 안쪽 고정 높이 밴드에 맞춰 모든 사진 동일 높이
+ * - 정사각 통일, cover로 여백 없이 채움, 사진 모서리만 둥글게
  */
 
 'use client';
@@ -104,22 +104,19 @@ export function FamilyAlbumSection({
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                className="album-photo-cell cursor-pointer bg-[#f1f5f9] transition-[filter] duration-200 ease-in-out hover:brightness-105"
+                className="album-photo-cell cursor-pointer transition-[filter] duration-200 ease-in-out hover:brightness-105"
                 style={{
                   width: thumbPx,
                   flex: `0 0 ${thumbPx}px`,
                 }}
               >
-                {/* 정사각 칸 + 고정 높이 밴드: 모든 사진 동일 높이 (세로는 축소, 가로는 좌우만 약간 잘릴 수 있음) */}
                 <div className="album-photo-frame">
-                  <div className="album-photo-fit">
-                    <img
-                      src={photo.data}
-                      alt={photo.description || ''}
-                      loading="lazy"
-                      draggable={false}
-                    />
-                  </div>
+                  <img
+                    src={photo.data}
+                    alt={photo.description || ''}
+                    loading="lazy"
+                    draggable={false}
+                  />
                 </div>
                 {photo.isUploading && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 font-semibold text-white" style={{ fontSize: '4cqmin' }}>

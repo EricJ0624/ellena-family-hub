@@ -1786,10 +1786,8 @@ select:not(.chalkboard-form-input) {
 
 /* ============================================
    앨범 위챗식 썸네일 그리드 (위젯 맞춤, 스크롤 없음)
-   - 칸 너비(px)는 ResizeObserver 인라인
-   - 바깥 칸: 정사각 통일
-   - 안쪽 밴드: 높이 고정 → img height:100% 로 가로/세로 보이는 높이 동일
-     (세로는 좌우 여백, 가로가 매우 넓으면 좌우만 약간 클립)
+   - 정사각 통일 + cover로 여백 없이 채움
+   - border-radius로 사진 모서리만 둥글게 (회색 여백 프레임 없음)
    ============================================ */
 .album-photo-grid {
   display: flex;
@@ -1812,39 +1810,30 @@ select:not(.chalkboard-form-input) {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  /* 썸네일 크기에 비례해 모서리를 부드럽게 */
-  border-radius: 22%;
+  background: transparent;
+  /* 사진 모서리를 부드럽게 (여백 박스가 아님) */
+  border-radius: 18%;
 }
 
-/* 정사각 프레임: 높이는 항상 너비와 같음 */
+/* 정사각: 높이는 항상 너비와 같음 */
 .album-photo-frame {
   position: relative;
   width: 100%;
   height: 0;
   padding-bottom: 100%;
   overflow: hidden;
+  border-radius: inherit;
 }
 
-/* 모든 사진이 공유하는 고정 높이 밴드 */
-.album-photo-fit {
+.album-photo-frame > img {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 72%;
-  transform: translateY(-50%);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.album-photo-fit > img {
+  inset: 0;
+  width: 100%;
   height: 100%;
-  width: auto;
   max-width: none;
   max-height: none;
-  flex-shrink: 0;
+  object-fit: cover; /* 여백 없이 칸을 사진으로 채움 */
+  object-position: center;
   pointer-events: none;
 }
 
