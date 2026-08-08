@@ -137,43 +137,46 @@
 }
 
 :root[data-ui-theme='highend_glass'] {
-  /* 레퍼런스형 글래스: soft orb 배경 + 프로스트 패널 (라이트) */
+  /* 레퍼런스형: soft orb가 위젯 뒤로 비치도록 대비 강화 (라이트도 딥 베이스) */
   --app-shell-inner-bg:
-    radial-gradient(ellipse 70% 55% at 12% 18%, rgba(196, 181, 253, 0.85) 0%, transparent 55%),
-    radial-gradient(ellipse 65% 50% at 88% 12%, rgba(251, 207, 232, 0.8) 0%, transparent 52%),
-    radial-gradient(ellipse 55% 45% at 70% 85%, rgba(125, 211, 252, 0.55) 0%, transparent 50%),
-    linear-gradient(155deg, #ede9fe 0%, #fce7f3 42%, #e0f2fe 100%);
+    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(34, 211, 238, 0.55) 0%, transparent 58%),
+    radial-gradient(ellipse 80% 60% at 92% 8%, rgba(244, 114, 182, 0.5) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(251, 146, 60, 0.42) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 45% at 30% 75%, rgba(167, 139, 250, 0.45) 0%, transparent 50%),
+    linear-gradient(160deg, #312e81 0%, #1e1b4b 38%, #0f172a 72%, #164e63 100%);
   --app-shell-outer-bg:
-    radial-gradient(circle at 18% 8%, #c4b5fd 0%, transparent 42%),
-    radial-gradient(circle at 82% 20%, #f9a8d4 0%, transparent 40%),
-    linear-gradient(160deg, #a78bfa 0%, #7dd3fc 55%, #fbcfe8 100%);
-  --glass-bg: rgba(255, 255, 255, 0.28);
-  --glass-soft-bg: rgba(255, 255, 255, 0.22);
-  --glass-medium-bg: rgba(255, 255, 255, 0.32);
-  --glass-strong-bg: rgba(255, 255, 255, 0.45);
+    radial-gradient(circle at 12% 10%, #22d3ee 0%, transparent 40%),
+    radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 38%),
+    radial-gradient(circle at 70% 90%, #fb923c 0%, transparent 42%),
+    linear-gradient(165deg, #1e1b4b 0%, #0f172a 50%, #083344 100%);
+  --glass-bg: rgba(255, 255, 255, 0.14);
+  --glass-soft-bg: rgba(255, 255, 255, 0.1);
+  --glass-medium-bg: rgba(255, 255, 255, 0.16);
+  --glass-strong-bg: rgba(255, 255, 255, 0.24);
   --glass-soft-blur: 24px;
   --glass-medium-blur: 36px;
   --glass-strong-blur: 48px;
-  --glass-soft-border: rgba(255, 255, 255, 0.35);
-  --glass-medium-border: rgba(255, 255, 255, 0.48);
-  --glass-strong-border: rgba(255, 255, 255, 0.62);
-  --glass-soft-shadow: 0 12px 40px rgba(79, 70, 229, 0.14);
-  --glass-medium-shadow: 0 22px 56px rgba(91, 33, 182, 0.18);
-  --glass-strong-shadow: 0 32px 72px rgba(67, 56, 202, 0.22);
+  --glass-soft-border: rgba(255, 255, 255, 0.28);
+  --glass-medium-border: rgba(255, 255, 255, 0.38);
+  --glass-strong-border: rgba(255, 255, 255, 0.5);
+  --glass-soft-shadow: 0 12px 40px rgba(2, 6, 23, 0.28);
+  --glass-medium-shadow: 0 22px 56px rgba(2, 6, 23, 0.34);
+  --glass-strong-shadow: 0 32px 72px rgba(2, 6, 23, 0.4);
 }
 
 .dark[data-ui-theme='highend_glass'] {
-  /* 레퍼런스형 글래스: 딥 네이비 + cyan/pink/orange orb (다크) */
   --app-shell-inner-bg:
-    radial-gradient(ellipse 75% 55% at 10% 15%, rgba(34, 211, 238, 0.45) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 45% at 90% 10%, rgba(244, 114, 182, 0.4) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 50% at 75% 90%, rgba(251, 146, 60, 0.35) 0%, transparent 52%),
+    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(34, 211, 238, 0.5) 0%, transparent 58%),
+    radial-gradient(ellipse 80% 60% at 92% 8%, rgba(244, 114, 182, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(251, 146, 60, 0.38) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 45% at 28% 72%, rgba(129, 140, 248, 0.4) 0%, transparent 50%),
     linear-gradient(160deg, #020617 0%, #0f172a 40%, #1e1b4b 100%);
   --app-shell-outer-bg:
-    radial-gradient(circle at 15% 10%, #22d3ee 0%, transparent 38%),
-    radial-gradient(circle at 85% 18%, #f472b6 0%, transparent 36%),
+    radial-gradient(circle at 12% 10%, #22d3ee 0%, transparent 38%),
+    radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 36%),
+    radial-gradient(circle at 72% 88%, #fb923c 0%, transparent 40%),
     linear-gradient(165deg, #020617 0%, #0c4a6e 50%, #312e81 100%);
-  --glass-bg: rgba(15, 23, 42, 0.42);
+  --glass-bg: rgba(15, 23, 42, 0.35);
   --glass-soft-bg: rgba(255, 255, 255, 0.08);
   --glass-medium-bg: rgba(255, 255, 255, 0.12);
   --glass-strong-bg: rgba(255, 255, 255, 0.18);
@@ -365,6 +368,40 @@ select:not(.chalkboard-form-input) {
   /* App Container - Flexbox 기반 메인 레이아웃 */
 .app-container {
     @apply flex h-dvh w-full flex-col overflow-y-auto overflow-x-hidden bg-app-shell-inner;
+  }
+
+  /*
+   * High-end only: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ambient 레이어.
+   * Kids/Original 은 기존 bg-app-shell-inner 만 사용.
+   */
+  :root[data-ui-theme='highend_glass'] .app-container,
+  .dark[data-ui-theme='highend_glass'] .app-container {
+    position: relative;
+    isolation: isolate;
+    background-image: var(--app-shell-inner-bg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+  }
+
+  :root[data-ui-theme='highend_glass'] .app-container::before,
+  .dark[data-ui-theme='highend_glass'] .app-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--app-shell-outer-bg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    opacity: 0.55;
+    mix-blend-mode: screen;
+  }
+
+  :root[data-ui-theme='highend_glass'] .app-container > *,
+  .dark[data-ui-theme='highend_glass'] .app-container > * {
+    position: relative;
+    z-index: 1;
   }
 
   @media (min-width: 768px) {
@@ -724,6 +761,79 @@ select:not(.chalkboard-form-input) {
   height: 100%;
   /* shadow가 카드 경계 밖으로 번지지 않도록 클리핑: 위젯 액자 겹침 방지 */
   clip-path: inset(0 round var(--border-radius-xl));
+}
+
+/*
+ * High-end: 공통 유리 재질.
+ * - clip-path 제거(backdrop-filter 가림 방지)
+ * - 위젯 크롬은 투명 → 셸 orb가 카드 사이로 보임
+ * - content-section 이 프로스트 패널 역할
+ */
+:root[data-ui-theme='highend_glass'] .content-section,
+.dark[data-ui-theme='highend_glass'] .content-section {
+  clip-path: none;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.22), transparent 58%),
+    var(--glass-medium-bg);
+  border-color: var(--glass-medium-border);
+  box-shadow: var(--glass-medium-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-medium-blur));
+  backdrop-filter: blur(var(--glass-medium-blur));
+}
+
+:root[data-ui-theme='highend_glass'] .glass-panel,
+.dark[data-ui-theme='highend_glass'] .glass-panel {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.24), transparent 55%),
+    var(--glass-medium-bg);
+}
+
+:root[data-ui-theme='highend_glass'] .glass-panel-soft,
+.dark[data-ui-theme='highend_glass'] .glass-panel-soft {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), transparent 60%),
+    var(--glass-soft-bg);
+}
+
+:root[data-ui-theme='highend_glass'] .glass-panel-strong,
+.dark[data-ui-theme='highend_glass'] .glass-panel-strong {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.3), transparent 55%),
+    var(--glass-strong-bg);
+}
+
+/*
+ * High-end step 3: 위젯 hard-coded opaque fill 이 유리를 가리지 않게 완화.
+ * 컴포넌트 로직/마크업은 유지하고 테마 스코프 CSS 만 적용.
+ */
+:root[data-ui-theme='highend_glass'] .calendar-widget-section--frame,
+.dark[data-ui-theme='highend_glass'] .calendar-widget-section--frame {
+  background-image: none !important;
+  background-color: transparent !important;
+}
+
+:root[data-ui-theme='highend_glass'] .location-map-surface,
+.dark[data-ui-theme='highend_glass'] .location-map-surface {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+:root[data-ui-theme='highend_glass'] .location-map-surface.bg-slate-50,
+.dark[data-ui-theme='highend_glass'] .location-map-surface.bg-slate-50 {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+:root[data-ui-theme='highend_glass'] .content-section .glass-panel-soft,
+.dark[data-ui-theme='highend_glass'] .content-section .glass-panel-soft,
+:root[data-ui-theme='highend_glass'] .content-section .glass-panel,
+.dark[data-ui-theme='highend_glass'] .content-section .glass-panel {
+  background-color: transparent;
+}
+
+:root[data-ui-theme='highend_glass'] .content-section .hover\:bg-white\/50:hover,
+.dark[data-ui-theme='highend_glass'] .content-section .hover\:bg-white\/50:hover {
+  background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
 /* Glass Panel Presets - Phase 1 */
@@ -2306,6 +2416,11 @@ select:not(.chalkboard-form-input) {
     overflow: visible;
     border-radius: 1rem; /* rounded-2xl */
     background: var(--glass-medium-bg);
+  }
+
+  :root[data-ui-theme='highend_glass'] .widget-chrome,
+  .dark[data-ui-theme='highend_glass'] .widget-chrome {
+    background: transparent;
   }
 
   /*
