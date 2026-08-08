@@ -3,8 +3,7 @@
  * Dashboard용 위챗식 썸네일 그리드
  * - 기본 위젯: 5×2 슬롯 기준으로 ~10장 맞춤 (스크롤 없음)
  * - 10장 초과: 열/행을 늘리고 칸을 줄여 위젯 안에 모두 표시
- * - 칸은 width+padding-bottom으로 정사각 고정
- * - 사진은 contain으로 칸 안에 맞춤 (잘림 없이 축소)
+ * - 바깥 칸: 정사각 통일 / 안쪽 4:3 슬롯에 contain → 보이는 높이 통일, 잘림 없음
  */
 
 'use client';
@@ -111,14 +110,16 @@ export function FamilyAlbumSection({
                   flex: `0 0 ${thumbPx}px`,
                 }}
               >
-                {/* padding-bottom 100%: 너비=높이 정사각. 이미지 intrinsic이 칸을 키울 수 없음 */}
+                {/* 정사각 칸 + 내부 4:3 슬롯 → 가로/세로 모두 같은 보이는 높이, 잘림 없음 */}
                 <div className="album-photo-frame">
-                  <img
-                    src={photo.data}
-                    alt={photo.description || ''}
-                    loading="lazy"
-                    draggable={false}
-                  />
+                  <div className="album-photo-fit">
+                    <img
+                      src={photo.data}
+                      alt={photo.description || ''}
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  </div>
                 </div>
                 {photo.isUploading && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 font-semibold text-white" style={{ fontSize: '4cqmin' }}>
