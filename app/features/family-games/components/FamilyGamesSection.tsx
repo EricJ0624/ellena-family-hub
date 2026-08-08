@@ -215,7 +215,7 @@ export function FamilyGamesSection({
     no_members: t.no_members,
   };
 
-  const renderTabBody = () => {
+  const tabBody = (() => {
     if (showLobbyPanel) {
       const lobbyBundle = isLobby ? bundle : null;
       const lobbyGameType =
@@ -241,7 +241,7 @@ export function FamilyGamesSection({
       );
     }
     return null;
-  };
+  })();
 
   return (
     <>
@@ -327,25 +327,23 @@ export function FamilyGamesSection({
                 ))}
               </div>
 
-              {renderTabBody()}
+              {tabBody ? <div className="games-tab-scroll">{tabBody}</div> : null}
 
-              <div className="mt-1 flex-shrink-0 border-t border-slate-200/80 pt-2">
+              <div className="games-picture-find-entry flex-shrink-0 border-t border-slate-200/80 pt-1.5">
                 <button
                   type="button"
                   onClick={() => setPictureFindOpen(true)}
-                  className="flex w-full items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-violet-50 to-indigo-50 px-3 py-2.5 text-left transition hover:from-violet-100 hover:to-indigo-100"
+                  className="flex w-full items-center gap-2 rounded-lg bg-gradient-to-r from-violet-50 to-indigo-50 px-2.5 py-1.5 text-left transition hover:from-violet-100 hover:to-indigo-100"
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-indigo-900" style={{ fontSize: '4cqw' }}>
-                      {pft('entry_title')}
-                    </p>
-                    <p className="text-indigo-700/80" style={{ fontSize: '3.2cqw' }}>
-                      {pft('entry_subtitle')}
-                    </p>
-                  </div>
+                  <span className="min-w-0 flex-1 truncate font-semibold text-indigo-900" style={{ fontSize: '3.8cqw' }}>
+                    {pft('entry_title')}
+                    <span className="ml-1 font-normal text-indigo-700/75" style={{ fontSize: '3.2cqw' }}>
+                      · {pft('entry_subtitle')}
+                    </span>
+                  </span>
                   <span
-                    className="shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1.5 font-semibold text-white"
-                    style={{ fontSize: '3.5cqw' }}
+                    className="shrink-0 rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white"
+                    style={{ fontSize: '3.2cqw' }}
                   >
                     {pft('entry_start')}
                   </span>

@@ -3101,6 +3101,21 @@ select:not(.chalkboard-form-input) {
     flex: 0 0 auto;
   }
 
+  /* 탭 본문(로비 등): 남는 공간만 쓰고 넘치면 스크롤 — 하단 그림찾기와 겹침 방지 */
+  .widget-chrome[data-widget-key='games'] .games-tab-scroll {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .widget-chrome[data-widget-key='games'] .games-picture-find-entry {
+    flex: 0 0 auto;
+  }
+
   .widget-chrome[data-widget-key='games'] .games-tab-panel {
     display: flex;
     flex: 1 1 auto;
