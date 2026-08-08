@@ -1812,6 +1812,8 @@ select:not(.chalkboard-form-input) {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  /* 썸네일 크기에 비례해 모서리를 부드럽게 */
+  border-radius: 22%;
 }
 
 /* 정사각 프레임: 높이는 항상 너비와 같음 */

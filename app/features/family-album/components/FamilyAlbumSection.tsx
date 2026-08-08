@@ -104,7 +104,7 @@ export function FamilyAlbumSection({
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                className="album-photo-cell cursor-pointer rounded-md bg-[#f1f5f9] transition-[filter] duration-200 ease-in-out hover:brightness-105"
+                className="album-photo-cell cursor-pointer bg-[#f1f5f9] transition-[filter] duration-200 ease-in-out hover:brightness-105"
                 style={{
                   width: thumbPx,
                   flex: `0 0 ${thumbPx}px`,
