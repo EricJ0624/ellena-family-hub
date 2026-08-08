@@ -43,6 +43,7 @@ import {
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
   DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
+  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
@@ -1517,15 +1518,21 @@ export default function FamilyHub() {
     if (frameIsPortrait) {
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
+      const adminBtn = row?.querySelector('button');
+      // 버튼 마운트 전에도 관리자 슬롯 예약 (세로 그리드 좌우 동일 폭)
+      const hasAdminButton = !!adminBtn || isAdminTitleContext;
+      const adminWidth = adminBtn
+        ? adminBtn.getBoundingClientRect().width + 8
+        : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0);
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      return getDashboardPortraitTitleFitMaxWidth(rowWidth, 0, viewportWidth, false);
+      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton);
     }
     const row = titleRowRef.current;
     if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
     const adminBtn = row.querySelector('button');
     const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
     return Math.max(120, row.clientWidth - btnWidth - 4);
-  }, [frameIsPortrait, titleRole]);
+  }, [frameIsPortrait, titleRole, isAdminTitleContext]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
     ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1675,7 +1682,7 @@ export default function FamilyHub() {
       ro.disconnect();
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
-  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait]);
+  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait, isAdminTitleContext]);
 
   /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정) */
   useLayoutEffect(() => {
@@ -5940,7 +5947,7 @@ export default function FamilyHub() {
     maxWidth: frameIsPortrait
       ? `${portraitTitleMaxWidthPx}px`
       : '100%',
-    width: frameIsPortrait ? 'auto' : undefined,
+    width: frameIsPortrait ? '100%' : undefined,
     lineHeight: frameIsPortrait ? 1.15 : undefined,
     justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
@@ -6570,7 +6577,7 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 — 세로: 중앙+Admin absolute / 가로: 기존 flex 원복 */}
+        {/* 타이틀 + 관리자 — 세로: [슬롯|타이틀|슬롯+Admin] 그리드 / 가로: 기존 flex */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
@@ -6578,12 +6585,13 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="relative flex min-h-12 w-full min-w-0 items-center justify-center"
+              className="grid min-h-12 w-full min-w-0 grid-cols-[5.75rem_minmax(0,1fr)_5.75rem] items-center"
             >
+              <div className="min-w-0" aria-hidden />
               <h1
                 ref={titleH1Ref}
                 style={dashboardTitleStyle}
-                className="min-w-0 max-w-full text-center leading-[1.15]"
+                className="min-w-0 justify-self-center text-center leading-[1.15]"
               >
                 {isDefaultDashboardTitle ? (
                   <AppTitleContent title={dashboardTitleText} />
@@ -6591,7 +6599,7 @@ export default function FamilyHub() {
                   dashboardTitleText
                 )}
               </h1>
-              <div className="absolute inset-y-0 right-0 z-10 flex items-center">
+              <div className="flex min-w-0 items-center justify-end">
                 {isGroupLoading ? (
                   <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (

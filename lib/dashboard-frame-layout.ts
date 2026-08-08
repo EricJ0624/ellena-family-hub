@@ -16,14 +16,17 @@ export const DASHBOARD_TITLE_ADMIN_RESERVE_PX = 92;
 
 export function getDashboardPortraitTitleFitMaxWidth(
   rowWidth: number,
-  _adminWidth: number,
+  adminWidth: number,
   viewportWidth: number,
-  _hasAdminButton = false,
+  hasAdminButton = false,
 ): number {
   const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
-  // 타이틀 박스·폰트는 액자 폭에 맞춤. Admin은 absolute overlay라 fit에서 차감하지 않음
-  // (좌우 이중 차감 시 ~190px로 줄어 커스텀 이름이 과도하게 작아짐).
-  return Math.max(120, Math.min(frameCap, rowWidth - 16));
+  if (!hasAdminButton || adminWidth <= 0) {
+    return Math.max(120, Math.min(frameCap, rowWidth - 16));
+  }
+  // grid [adminSlot | title | adminSlot] — 좌우 동일 슬롯으로 액자 중심축 유지, 겹침 방지
+  const sideReserve = Math.max(adminWidth, DASHBOARD_TITLE_ADMIN_RESERVE_PX);
+  return Math.max(120, Math.min(frameCap, rowWidth - sideReserve * 2));
 }
 
 /** @deprecated — getDashboardPortraitTitleFitMaxWidth 사용 */
