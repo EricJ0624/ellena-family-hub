@@ -1786,7 +1786,7 @@ select:not(.chalkboard-form-input) {
 
 /* ============================================
    앨범 위챗식 작은 썸네일 그리드
-   - 기본(~10장): 소형 고정 상한, 위젯 높이에 맞춰 커지지 않음
+   - width만 지정 + aspect-ratio로 정사각 (height에 % 넣지 않음 → 납작해짐 방지)
    - 10장 초과: data-tier로 칸 크기 축소 → 더 많이 표시
    ============================================ */
 .album-photo-grid {
@@ -1794,39 +1794,43 @@ select:not(.chalkboard-form-input) {
   flex-wrap: wrap;
   align-content: flex-start;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
   overflow-x: hidden;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
   padding-bottom: 4px;
+  container-type: inline-size;
 }
 
 .album-photo-cell {
   flex: 0 0 auto;
-  aspect-ratio: 1;
+  box-sizing: border-box;
   width: var(--album-thumb-size);
-  height: var(--album-thumb-size);
+  /* height는 aspect-ratio에 맡김 — width/height 동시 % 해석으로 납작해지던 문제 방지 */
+  aspect-ratio: 1 / 1;
+  height: auto;
+  max-width: 100%;
 }
 
-/* ≤10: 한 줄에 약 5칸 × 2행 ≈ 10장, max로 1장일 때 거대화 방지 */
+/* ≤10: 정사각 썸네일 (위젯 폭에 맞춰 소폭 조절) */
 .album-photo-grid[data-tier="10"] {
-  --album-thumb-size: min(72px, calc((100% - 24px) / 5));
+  --album-thumb-size: clamp(96px, 28cqi, 120px);
 }
 
-/* 11–16: 6열 기준 축소 */
+/* 11–16 */
 .album-photo-grid[data-tier="16"] {
-  --album-thumb-size: min(58px, calc((100% - 30px) / 6));
+  --album-thumb-size: clamp(80px, 22cqi, 100px);
 }
 
-/* 17–25: 7열 기준 축소 */
+/* 17–25 */
 .album-photo-grid[data-tier="25"] {
-  --album-thumb-size: min(48px, calc((100% - 36px) / 7));
+  --album-thumb-size: clamp(68px, 18cqi, 84px);
 }
 
-/* 26+: 8열 기준 최소 크기 */
+/* 26+ */
 .album-photo-grid[data-tier="many"] {
-  --album-thumb-size: min(40px, calc((100% - 42px) / 8));
+  --album-thumb-size: clamp(56px, 14cqi, 72px);
 }
 
 .album-photo-grid::-webkit-scrollbar {
