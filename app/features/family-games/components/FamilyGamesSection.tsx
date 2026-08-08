@@ -12,6 +12,9 @@ import { GamePlayModal } from './GamePlayModal';
 import { LadderGameTab } from './LadderGameTab';
 import { RPSGameTab } from './RPSGameTab';
 import { RouletteGameTab } from './RouletteGameTab';
+import { PictureFindModal } from '@/app/features/picture-find/components/PictureFindModal';
+import { useLanguage } from '@/app/contexts/LanguageContext';
+import { getPictureFindTranslation } from '@/lib/translations/picture-find';
 
 export interface FamilyGamesSectionProps {
   currentGroupId: string | null;
@@ -102,6 +105,9 @@ export function FamilyGamesSection({
 }: FamilyGamesSectionProps) {
   const [activeTab, setActiveTab] = useState<GameTab>('ladder');
   const [modalOpen, setModalOpen] = useState(false);
+  const [pictureFindOpen, setPictureFindOpen] = useState(false);
+  const { lang } = useLanguage();
+  const pft = (key: Parameters<typeof getPictureFindTranslation>[1]) => getPictureFindTranslation(lang, key);
 
   const {
     bundle,
@@ -320,10 +326,39 @@ export function FamilyGamesSection({
               </div>
 
               {renderTabBody()}
+
+              <div className="mt-1 flex-shrink-0 border-t border-slate-200/80 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPictureFindOpen(true)}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-violet-50 to-indigo-50 px-3 py-2.5 text-left transition hover:from-violet-100 hover:to-indigo-100"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold text-indigo-900" style={{ fontSize: '4cqw' }}>
+                      {pft('entry_title')}
+                    </p>
+                    <p className="text-indigo-700/80" style={{ fontSize: '3.2cqw' }}>
+                      {pft('entry_subtitle')}
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1.5 font-semibold text-white"
+                    style={{ fontSize: '3.5cqw' }}
+                  >
+                    {pft('entry_start')}
+                  </span>
+                </button>
+              </div>
             </div>
           )}
         </div>
       </section>
+
+      <PictureFindModal
+        open={pictureFindOpen}
+        onClose={() => setPictureFindOpen(false)}
+        groupId={currentGroupId}
+      />
 
       <GamePlayModal
         open={modalOpen && bundle !== null && !isLobby}
