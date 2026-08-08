@@ -3,7 +3,8 @@
  * Dashboard용 위챗식 썸네일 그리드
  * - 기본 위젯: 5×2 슬롯 기준으로 ~10장 맞춤 (스크롤 없음)
  * - 10장 초과: 열/행을 늘리고 칸을 줄여 위젯 안에 모두 표시
- * - 모든 칸은 동일 정사각(px 고정). 세로는 contain으로 칸 안에만 맞춤
+ * - 칸은 width+padding-bottom으로 정사각 고정 → 세/가로 모두 동일 칸 크기
+ * - 사진은 cover로 칸을 채움 (여백 없음)
  */
 
 'use client';
@@ -96,31 +97,23 @@ export function FamilyAlbumSection({
               <div
                 key={photo.id}
                 onClick={onPhotoClick || onViewAllClick}
-                className="album-photo-cell relative cursor-pointer overflow-hidden rounded-md bg-[#f1f5f9] transition-[filter] duration-200 ease-in-out hover:brightness-105"
+                className="album-photo-cell cursor-pointer rounded-md bg-[#f1f5f9] transition-[filter] duration-200 ease-in-out hover:brightness-105"
                 style={{
                   width: thumbPx,
-                  height: thumbPx,
                   flex: `0 0 ${thumbPx}px`,
                 }}
               >
-                <img
-                  src={photo.data}
-                  alt={photo.description || ''}
-                  loading="lazy"
-                  draggable={false}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    width: '100%',
-                    height: '100%',
-                    maxWidth: 'none',
-                    maxHeight: 'none',
-                    objectFit: 'contain',
-                    objectPosition: 'center',
-                  }}
-                />
+                {/* padding-bottom 100%: 너비=높이 정사각. 이미지 intrinsic이 칸을 키울 수 없음 */}
+                <div className="album-photo-frame">
+                  <img
+                    src={photo.data}
+                    alt={photo.description || ''}
+                    loading="lazy"
+                    draggable={false}
+                  />
+                </div>
                 {photo.isUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 font-semibold text-white" style={{ fontSize: '4cqmin' }}>
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 font-semibold text-white" style={{ fontSize: '4cqmin' }}>
                     업로드 중...
                   </div>
                 )}
