@@ -180,11 +180,22 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 
   const reportPhotoOrientation = useCallback(
     (isPortrait: boolean) => {
-      if (lastReportedPortraitRef.current === isPortrait) return;
+      // 동일 값이어도 부모와 동기화 (부모 remount/state reset 후 미통지 방지)
       lastReportedPortraitRef.current = isPortrait;
       onPhotoOrientationChange?.(isPortrait);
     },
     [onPhotoOrientationChange],
+  );
+
+  const applyImageAspectRatio = useCallback(
+    (photoId: string | number, naturalWidth: number, naturalHeight: number) => {
+      if (!naturalWidth || !naturalHeight) return;
+      const ratio = naturalWidth / naturalHeight;
+      if (!Number.isFinite(ratio) || ratio <= 0) return;
+      imageAspectRatioCacheRef.current[String(photoId)] = ratio;
+      setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
+    },
+    [],
   );
 
   useEffect(() => {
@@ -198,6 +209,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     const cachedRatio = imageAspectRatioCacheRef.current[cacheKey];
     const ratio = typeof cachedRatio === 'number' ? cachedRatio : null;
     setImageAspectRatio(ratio);
+    // 캐시 hit 시에만 즉시 보고. null(=미확정)일 때 landscape(false)로 강제하지 않음
     if (ratio !== null) {
       reportPhotoOrientation(ratio < 1);
     }
@@ -211,10 +223,8 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
   useEffect(() => {
     if (!selectedPhoto) return;
-    if (imageAspectRatio === null) {
-      reportPhotoOrientation(false);
-      return;
-    }
+    // 비율 미확정 시 false로 덮어쓰지 않음 — 대시보드가 가로 타이틀 레이아웃에 고착되는 원인
+    if (imageAspectRatio === null) return;
     reportPhotoOrientation(imageAspectRatio < 1);
   }, [selectedPhoto, imageAspectRatio, reportPhotoOrientation]);
 
@@ -342,11 +352,20 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                     unoptimized={true}
                     onLoad={(e) => {
                       const target = e.target as HTMLImageElement;
-                      if (!target?.naturalWidth || !target?.naturalHeight || !selectedPhoto) return;
-                      const ratio = target.naturalWidth / target.naturalHeight;
-                      const cacheKey = String(selectedPhoto.id);
-                      imageAspectRatioCacheRef.current[cacheKey] = ratio;
-                      setImageAspectRatio((prev) => (prev === ratio ? prev : ratio));
+                      if (!selectedPhoto || !target) return;
+                      applyImageAspectRatio(
+                        selectedPhoto.id,
+                        target.naturalWidth,
+                        target.naturalHeight,
+                      );
+                    }}
+                    onLoadingComplete={(img) => {
+                      if (!selectedPhoto) return;
+                      applyImageAspectRatio(
+                        selectedPhoto.id,
+                        img.naturalWidth,
+                        img.naturalHeight,
+                      );
                     }}
                     onError={() => setImageLoadError(true)}
                   />

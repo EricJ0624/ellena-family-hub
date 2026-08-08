@@ -38,7 +38,6 @@ import {
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
   DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
   customTitleMaxFontSize,
-  DASHBOARD_TITLE_MAX_WIDTH,
 } from '@/lib/dashboard-title-fit';
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
@@ -1514,18 +1513,15 @@ export default function FamilyHub() {
   );
 
   const getTitleFitMaxWidth = useCallback(() => {
+    const row = titleRowRef.current;
+    const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
     if (frameIsPortrait) {
-      const row = titleRowRef.current;
-      const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
-      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
       return getDashboardPortraitTitleFitMaxWidth(rowWidth, 0, viewportWidth, false);
     }
-    const row = titleRowRef.current;
-    if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
-    const adminBtn = row.querySelector('button');
-    const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
-    return Math.max(120, row.clientWidth - btnWidth - 4);
-  }, [frameIsPortrait, titleRole]);
+    // Admin absolute — 가로도 행 전체 기준으로 fit (버튼 폭 이중 차감 없음)
+    return Math.max(120, Math.min(DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.landscape, rowWidth - 16));
+  }, [frameIsPortrait]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
     ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1594,15 +1590,12 @@ export default function FamilyHub() {
   ]);
 
   const measureCustomTitleFontSize = useCallback(() => {
+    const maxWidth = getTitleFitMaxWidth();
+    setPortraitTitleMaxWidthPx(maxWidth);
+
     if (!frameIsPortrait && isDefaultDashboardTitle) {
       setCustomTitleFontSize(null);
-      setPortraitTitleMaxWidthPx(DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait);
       return;
-    }
-
-    const maxWidth = getTitleFitMaxWidth();
-    if (frameIsPortrait) {
-      setPortraitTitleMaxWidthPx(maxWidth);
     }
 
     const fontFamily = isDefaultDashboardTitle
@@ -5935,19 +5928,15 @@ export default function FamilyHub() {
   })();
   const dashboardTitleStyle: React.CSSProperties = {
     margin: 0,
-    flex: frameIsPortrait ? undefined : '1 1 0%',
     minWidth: 0,
-    maxWidth: frameIsPortrait
-      ? `${portraitTitleMaxWidthPx}px`
-      : '100%',
-    width: frameIsPortrait ? 'auto' : undefined,
-    lineHeight: frameIsPortrait ? 1.15 : undefined,
-    justifySelf: frameIsPortrait ? 'center' : undefined,
-    textAlign: frameIsPortrait ? 'center' : 'left',
+    maxWidth: `${portraitTitleMaxWidthPx}px`,
+    width: 'auto',
+    lineHeight: 1.15,
+    textAlign: 'center',
     whiteSpace: 'nowrap' as const,
     overflowX: 'hidden',
     overflowY: 'visible',
-    textOverflow: frameIsPortrait ? 'ellipsis' : 'clip',
+    textOverflow: 'ellipsis',
     fontSize: titleFontSizeValue,
     fontWeight: isDefaultDashboardTitle
       ? (frameIsPortrait
@@ -6570,59 +6559,27 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 — 세로: 타이틀 중앙(액자 축) + Admin absolute 우측 */}
+        {/* 타이틀 + 관리자 — 액자 중심축 정렬, Admin은 absolute(방향 무관 동일 레이아웃) */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
         >
-          {frameIsPortrait ? (
-            <div
-              ref={titleContainerRef}
-              className="relative flex min-h-12 w-full min-w-0 items-center justify-center"
+          <div
+            ref={titleContainerRef}
+            className="relative flex min-h-12 w-full min-w-0 items-center justify-center"
+          >
+            <h1
+              ref={titleH1Ref}
+              style={dashboardTitleStyle}
+              className="min-w-0 max-w-full text-center leading-[1.15]"
             >
-              <h1
-                ref={titleH1Ref}
-                style={dashboardTitleStyle}
-                className="min-w-0 max-w-full text-center leading-[1.15]"
-              >
-                {isDefaultDashboardTitle ? (
-                  <AppTitleContent title={dashboardTitleText} />
-                ) : (
-                  dashboardTitleText
-                )}
-              </h1>
-              <div className="absolute inset-y-0 right-0 z-10 flex items-center">
-                {isGroupLoading ? (
-                  <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
-                ) : showAdminButton ? (
-                  <button
-                    onClick={() => router.push(adminPagePath)}
-                    className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
-                      isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
-                    }`}
-                    aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
-                  >
-                    <span className="text-sm">⚙️</span>
-                    {ct('admin')}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          ) : (
-            <div
-              ref={titleContainerRef}
-              className="flex w-full min-w-0 items-center gap-3"
-            >
-              <h1
-                ref={titleH1Ref}
-                style={dashboardTitleStyle}
-              >
-                {isDefaultDashboardTitle ? (
-                  <AppTitleContent title={dashboardTitleText} />
-                ) : (
-                  dashboardTitleText
-                )}
-              </h1>
+              {isDefaultDashboardTitle ? (
+                <AppTitleContent title={dashboardTitleText} />
+              ) : (
+                dashboardTitleText
+              )}
+            </h1>
+            <div className="absolute inset-y-0 right-0 z-10 flex items-center">
               {isGroupLoading ? (
                 <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
               ) : showAdminButton ? (
@@ -6638,7 +6595,7 @@ export default function FamilyHub() {
                 </button>
               ) : null}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Header (사진 액자 항상 표시, 타이틀/배경 제거) */}
