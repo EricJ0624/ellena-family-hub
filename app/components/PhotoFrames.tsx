@@ -109,7 +109,7 @@ export const SOFT_GLASS_FRAME_OVERLAY_CLASS =
  * wrapper blur/transform 조합 금지. 모서리 둥글림은 PNG 개구부 알파 담당
  */
 export const SOFT_GLASS_PHOTO_IMAGE_CLASS =
-  'scale-[1.06] blur-[1.5px] brightness-[0.96]';
+  'scale-[1.06] blur-[0.5px] brightness-[0.98]';
 
 export const SOFT_GLASS_LANDSCAPE_SRC =
   '/photo-frames/soft-glass-landscape.png';
