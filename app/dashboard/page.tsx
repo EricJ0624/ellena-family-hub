@@ -43,7 +43,6 @@ import {
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
   DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
-  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
@@ -1518,21 +1517,15 @@ export default function FamilyHub() {
     if (frameIsPortrait) {
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
-      const adminBtn = row?.querySelector('button');
-      // 버튼 마운트 전에도 관리자 예약 폭을 반영 (ResizeObserver가 row 폭 불변 시 재측정 누락 방지)
-      const hasAdminButton = !!adminBtn || isAdminTitleContext;
-      const adminWidth = adminBtn
-        ? adminBtn.getBoundingClientRect().width + 8
-        : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0);
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton);
+      return getDashboardPortraitTitleFitMaxWidth(rowWidth, 0, viewportWidth, false);
     }
     const row = titleRowRef.current;
     if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
     const adminBtn = row.querySelector('button');
     const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
     return Math.max(120, row.clientWidth - btnWidth - 4);
-  }, [frameIsPortrait, titleRole, isAdminTitleContext]);
+  }, [frameIsPortrait, titleRole]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
     ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1682,7 +1675,7 @@ export default function FamilyHub() {
       ro.disconnect();
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
-  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait, isAdminTitleContext]);
+  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait]);
 
   /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정) */
   useLayoutEffect(() => {
@@ -5947,7 +5940,8 @@ export default function FamilyHub() {
     maxWidth: frameIsPortrait
       ? `${portraitTitleMaxWidthPx}px`
       : '100%',
-    width: frameIsPortrait ? '100%' : undefined,
+    width: frameIsPortrait ? 'auto' : undefined,
+    lineHeight: frameIsPortrait ? 1.15 : undefined,
     justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
     whiteSpace: 'nowrap' as const,
@@ -6584,12 +6578,12 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="relative flex w-full min-w-0 items-center justify-center"
+              className="relative flex min-h-12 w-full min-w-0 items-center justify-center"
             >
               <h1
                 ref={titleH1Ref}
                 style={dashboardTitleStyle}
-                className="min-w-0 text-center"
+                className="min-w-0 max-w-full text-center leading-[1.15]"
               >
                 {isDefaultDashboardTitle ? (
                   <AppTitleContent title={dashboardTitleText} />
@@ -6597,7 +6591,7 @@ export default function FamilyHub() {
                   dashboardTitleText
                 )}
               </h1>
-              <div className="absolute right-0 top-1/2 z-10 flex -translate-y-1/2 items-center">
+              <div className="absolute inset-y-0 right-0 z-10 flex items-center">
                 {isGroupLoading ? (
                   <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (
