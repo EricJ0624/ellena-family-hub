@@ -309,7 +309,7 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             frameInsetClass[frameStyle],
           )}
         >
-          {/* soft_glass: PNG 개구부 알fa = 둥근 모서리 / 사진 = CSS filter blur */}
+          {/* soft_glass: PNG 개구부 알파 = 둥근 모서리 / 사진 = 약한 유리 뒤 filter */}
           <div
             className={cn(
               'relative h-full w-full overflow-hidden',
