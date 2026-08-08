@@ -1,7 +1,8 @@
 /**
  * 가족 앨범(Family Album) 섹션 컴포넌트
- * Dashboard용 가로 스크롤 사진 그리드 뷰
- * rowSpan 기반으로 사진 행 수(1~3행) 자동 결정
+ * Dashboard용 위챗식 작은 썸네일 그리드
+ * - 기본: 작은 사이즈로 최대 ~10장
+ * - 10장 초과: 썸네일 크기를 줄여 더 많이 표시
  */
 
 'use client';
@@ -13,6 +14,7 @@ interface FamilyAlbumSectionProps {
   photos: Photo[];
   onPhotoClick?: () => void;
   onViewAllClick: () => void;
+  /** @deprecated 레이아웃은 사진 수 기반으로 결정. 호출부 호환용으로 유지 */
   rowSpan?: number;
   translations: {
     section_title: string;
@@ -22,16 +24,21 @@ interface FamilyAlbumSectionProps {
   };
 }
 
+/** 위챗식: ≤10은 기본 소형, 초과 시 단계적으로 축소 */
+function getThumbTier(count: number): '10' | '16' | '25' | 'many' {
+  if (count <= 10) return '10';
+  if (count <= 16) return '16';
+  if (count <= 25) return '25';
+  return 'many';
+}
+
 export function FamilyAlbumSection({
   photos,
   onPhotoClick,
   onViewAllClick,
-  rowSpan,
   translations: t,
 }: FamilyAlbumSectionProps) {
-  // rowSpan 기반으로 사진 행 수 결정
-  // rowSpan ≤ 6 (S/M): 1행, rowSpan 7-10: 2행, rowSpan ≥ 11 (L 이상): 3행
-  const photoRows = rowSpan && rowSpan >= 11 ? 3 : rowSpan && rowSpan >= 7 ? 2 : 1;
+  const thumbTier = getThumbTier(photos.length);
 
   return (
     <section className="content-section">
@@ -55,7 +62,7 @@ export function FamilyAlbumSection({
         ) : (
           <div
             className="album-photo-grid"
-            data-rows={String(photoRows)}
+            data-tier={thumbTier}
           >
             {photos.map((photo) => (
               <div
