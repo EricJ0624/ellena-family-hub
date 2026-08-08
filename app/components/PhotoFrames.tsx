@@ -72,7 +72,7 @@ export const GRADIENT_RIM_FRAME_LANDSCAPE_SRC =
 
 /** parchment-frame-landscape.png (prepare-parchment-frame.mjs) 사진 구역 inset */
 export const PARCHMENT_FRAME_INSET_CLASS =
-  'left-[6.3%] right-[6.8%] top-[8.2%] bottom-[7.1%]';
+  'left-[3%] right-[5.5%] top-[4.4%] bottom-[6.7%]';
 
 export const PARCHMENT_FRAME_LANDSCAPE_SRC =
   '/photo-frames/parchment-frame-landscape.png';

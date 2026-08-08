@@ -1,8 +1,8 @@
 /**
  * parchment-frame-landscape.png — PNG 전처리
- * - 각 변에서 안쪽으로 평탄한 크림 여백만 제거 → 투명 (대시보드 배경 비침)
- * - 중앙 사진 개구부(이미 투명) bbox로 inset 측정
- * - 데클·장식 프레임은 유지, opaque bbox 크롭
+ * - 중앙 사진 개구부(체커보드·중성 회색/흰색) → 투명
+ * - 양피지 프레임·캡션 블록·외곽 소프트 섀도 유지
+ * - 개구부 bbox는 투명화 전에 측정 (데클 갭으로 외곽과 연결되어도 inset 유지)
  * 실행: node scripts/prepare-parchment-frame.mjs
  */
 import sharp from 'sharp';
@@ -20,55 +20,72 @@ const px = (x, y) => {
   return [data[i], data[i + 1], data[i + 2], data[i + 3]];
 };
 
-const isBorder = (x, y) => x === 0 || y === 0 || x === w - 1 || y === h - 1;
+/** 체커보드/중성 플레이스홀더 (채도 거의 없음). 따뜻한 양피지·장식은 제외 */
+const isCheckerPlaceholder = (p) => {
+  if (p[3] < 128) return false;
+  const max = Math.max(p[0], p[1], p[2]);
+  const min = Math.min(p[0], p[1], p[2]);
+  return max - min < 12;
+};
 
-const localGradient = (x, y) => {
-  const p = px(x, y);
-  if (isBorder(x, y)) return 0;
-  const l = px(x - 1, y);
-  const r = px(x + 1, y);
-  const u = px(x, y - 1);
-  const d = px(x, y + 1);
-  return (
-    Math.abs(p[0] - l[0]) +
-    Math.abs(p[0] - r[0]) +
-    Math.abs(p[0] - u[0]) +
-    Math.abs(p[0] - d[0])
+const dirs = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+const opening = new Uint8Array(w * h);
+const cx = Math.floor(w / 2);
+const cy = Math.floor(h / 2);
+const openQueue = [];
+
+if (!isCheckerPlaceholder(px(cx, cy))) {
+  throw new Error(
+    `Center pixel is not a checkerboard placeholder (got ${px(cx, cy).join(',')}).`,
   );
-};
+}
 
-/** 이미지 가장자리에서 연속되는 평탄 크림 여백 (장식·데클 직전까지) */
-const isFlatMargin = (x, y) => {
-  const p = px(x, y);
-  if (p[3] < 128) return true;
-  if (!(p[0] > 205 && p[1] > 195 && p[2] > 185 && p[0] - p[2] > 2)) return false;
-  return localGradient(x, y) < 30;
-};
+opening[cy * w + cx] = 1;
+openQueue.push([cx, cy]);
 
-function stripFlatMargins() {
-  for (let x = 0; x < w; x++) {
-    for (let y = 0; y < h; y++) {
-      if (!isFlatMargin(x, y)) break;
-      data[(y * w + x) * c + 3] = 0;
-    }
-    for (let y = h - 1; y >= 0; y--) {
-      if (!isFlatMargin(x, y)) break;
-      data[(y * w + x) * c + 3] = 0;
-    }
-  }
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!isFlatMargin(x, y)) break;
-      data[(y * w + x) * c + 3] = 0;
-    }
-    for (let x = w - 1; x >= 0; x--) {
-      if (!isFlatMargin(x, y)) break;
-      data[(y * w + x) * c + 3] = 0;
-    }
+while (openQueue.length) {
+  const [x, y] = openQueue.pop();
+  for (const [dx, dy] of dirs) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+    const idx = ny * w + nx;
+    if (opening[idx]) continue;
+    if (!isCheckerPlaceholder(px(nx, ny))) continue;
+    opening[idx] = 1;
+    openQueue.push([nx, ny]);
   }
 }
 
-stripFlatMargins();
+let oMinX = w;
+let oMinY = h;
+let oMaxX = 0;
+let oMaxY = 0;
+let openingCount = 0;
+for (let y = 0; y < h; y++) {
+  for (let x = 0; x < w; x++) {
+    if (!opening[y * w + x]) continue;
+    openingCount++;
+    if (x < oMinX) oMinX = x;
+    if (x > oMaxX) oMaxX = x;
+    if (y < oMinY) oMinY = y;
+    if (y > oMaxY) oMaxY = y;
+  }
+}
+
+if (openingCount < 10000) {
+  throw new Error(`Opening flood too small (${openingCount} px). Check checker detection.`);
+}
+
+for (let i = 0; i < w * h; i++) {
+  if (opening[i]) data[i * c + 3] = 0;
+}
 
 let minX = w;
 let minY = h;
@@ -86,74 +103,34 @@ for (let y = 0; y < h; y++) {
 }
 
 if (maxX < minX || maxY < minY) {
-  throw new Error('No visible frame content after margin strip');
+  throw new Error('No visible frame content after opening removal');
 }
 
 const cw = maxX - minX + 1;
 const ch = maxY - minY + 1;
 
-const dirs = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
+const inset = {
+  left: +(((oMinX - minX) / cw) * 100).toFixed(1),
+  right: +(((maxX - oMaxX) / cw) * 100).toFixed(1),
+  top: +(((oMinY - minY) / ch) * 100).toFixed(1),
+  bottom: +(((maxY - oMaxY) / ch) * 100).toFixed(1),
+};
 
-/** 중앙 투명 개구부 flood → inset bbox */
-const opening = new Uint8Array(w * h);
-const cx = Math.floor(w / 2);
-const cy = Math.floor(h / 2);
-const openQueue = [];
-
-if (data[(cy * w + cx) * c + 3] < 128) {
-  opening[cy * w + cx] = 1;
-  openQueue.push([cx, cy]);
-}
-
-while (openQueue.length) {
-  const [x, y] = openQueue.pop();
-  for (const [dx, dy] of dirs) {
-    const nx = x + dx;
-    const ny = y + dy;
-    if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-    const idx = ny * w + nx;
-    if (opening[idx]) continue;
-    if (data[idx * c + 3] >= 128) continue;
-    opening[idx] = 1;
-    openQueue.push([nx, ny]);
-  }
-}
-
-let oMinX = w;
-let oMinY = h;
-let oMaxX = 0;
-let oMaxY = 0;
-for (let y = 0; y < h; y++) {
-  for (let x = 0; x < w; x++) {
-    if (!opening[y * w + x]) continue;
-    if (x < oMinX) oMinX = x;
-    if (x > oMaxX) oMaxX = x;
-    if (y < oMinY) oMinY = y;
-    if (y > oMaxY) oMaxY = y;
-  }
-}
-
-const inset =
-  oMaxX >= oMinX
-    ? {
-        left: +(((oMinX - minX) / cw) * 100).toFixed(1),
-        right: +(((maxX - oMaxX) / cw) * 100).toFixed(1),
-        top: +(((oMinY - minY) / ch) * 100).toFixed(1),
-        bottom: +(((maxY - oMaxY) / ch) * 100).toFixed(1),
-      }
-    : null;
-
-console.log(JSON.stringify({ crop: { minX, minY, cw, ch }, inset }, null, 2));
-if (inset) {
-  console.log(
-    `PARCHMENT_FRAME_INSET_CLASS = 'left-[${inset.left}%] right-[${inset.right}%] top-[${inset.top}%] bottom-[${inset.bottom}%]';`,
-  );
-}
+console.log(
+  JSON.stringify(
+    {
+      openingPixels: openingCount,
+      openingBBox: { oMinX, oMinY, oMaxX, oMaxY },
+      crop: { minX, minY, cw, ch },
+      inset,
+    },
+    null,
+    2,
+  ),
+);
+console.log(
+  `PARCHMENT_FRAME_INSET_CLASS = 'left-[${inset.left}%] right-[${inset.right}%] top-[${inset.top}%] bottom-[${inset.bottom}%]';`,
+);
 
 await sharp(data, { raw: { width: w, height: h, channels: c } })
   .extract({ left: minX, top: minY, width: cw, height: ch })
