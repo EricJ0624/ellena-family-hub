@@ -43,6 +43,7 @@ import {
 import { BAROQUE_MAT_DASHBOARD_TITLE } from '@/lib/baroque-mat-layout';
 import {
   DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX,
+  DASHBOARD_TITLE_ADMIN_RESERVE_PX,
   getDashboardPortraitTitleFitMaxWidth,
 } from '@/lib/dashboard-frame-layout';
 import { getDashboardTranslation, type DashboardTranslations } from '@/lib/translations/dashboard';
@@ -1518,10 +1519,11 @@ export default function FamilyHub() {
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
       const adminBtn = row?.querySelector('button');
-      const hasAdminButton = !!adminBtn;
+      // 버튼 마운트 전에도 관리자 예약 폭을 반영 (ResizeObserver가 row 폭 불변 시 재측정 누락 방지)
+      const hasAdminButton = !!adminBtn || isAdminTitleContext;
       const adminWidth = adminBtn
         ? adminBtn.getBoundingClientRect().width + 8
-        : 0;
+        : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0);
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
       return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton);
     }
@@ -1530,7 +1532,7 @@ export default function FamilyHub() {
     const adminBtn = row.querySelector('button');
     const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
     return Math.max(120, row.clientWidth - btnWidth - 4);
-  }, [frameIsPortrait, titleRole]);
+  }, [frameIsPortrait, titleRole, isAdminTitleContext]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
     ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1680,7 +1682,7 @@ export default function FamilyHub() {
       ro.disconnect();
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
-  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait]);
+  }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait, isAdminTitleContext]);
 
   /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정) */
   useLayoutEffect(() => {
@@ -5945,13 +5947,13 @@ export default function FamilyHub() {
     maxWidth: frameIsPortrait
       ? `${portraitTitleMaxWidthPx}px`
       : '100%',
-    width: frameIsPortrait ? 'max-content' : undefined,
+    width: frameIsPortrait ? '100%' : undefined,
     justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
     whiteSpace: 'nowrap' as const,
     overflowX: 'hidden',
     overflowY: 'visible',
-    textOverflow: 'clip',
+    textOverflow: frameIsPortrait ? 'ellipsis' : 'clip',
     fontSize: titleFontSizeValue,
     fontWeight: isDefaultDashboardTitle
       ? (frameIsPortrait
@@ -6574,7 +6576,7 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 — 세로: [1fr|타이틀|1fr+Admin] 액자와 동일 축 */}
+        {/* 타이틀 + 관리자 — 세로: 타이틀 중앙(액자 축) + Admin absolute 우측 */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
@@ -6582,13 +6584,12 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="flex w-full items-center gap-x-1"
+              className="relative flex w-full min-w-0 items-center justify-center"
             >
-              <div className="min-w-0 flex-1" aria-hidden />
               <h1
                 ref={titleH1Ref}
                 style={dashboardTitleStyle}
-                className="w-max shrink-0 text-center"
+                className="min-w-0 text-center"
               >
                 {isDefaultDashboardTitle ? (
                   <AppTitleContent title={dashboardTitleText} />
@@ -6596,7 +6597,7 @@ export default function FamilyHub() {
                   dashboardTitleText
                 )}
               </h1>
-              <div className="flex min-w-0 flex-1 justify-end">
+              <div className="absolute right-0 top-1/2 z-10 flex -translate-y-1/2 items-center">
                 {isGroupLoading ? (
                   <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (

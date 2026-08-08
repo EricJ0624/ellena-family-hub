@@ -24,8 +24,9 @@ export function getDashboardPortraitTitleFitMaxWidth(
   if (!hasAdminButton || adminWidth <= 0) {
     return Math.max(120, Math.min(frameCap, rowWidth - 16));
   }
-  // flex [1fr | title | 1fr+Admin] — Admin은 오른쪽 열만 점유, 타이틀은 행 폭 − Admin − gap
-  const layoutCap = rowWidth - adminWidth - 12;
+  // Admin은 absolute(우측) — 좌우 동일 gutter로 타이틀이 액자 중심축에 맞게 남도록 예약
+  const sideReserve = Math.max(adminWidth, DASHBOARD_TITLE_ADMIN_RESERVE_PX);
+  const layoutCap = rowWidth - sideReserve * 2;
   return Math.max(120, Math.min(frameCap, layoutCap));
 }
 
