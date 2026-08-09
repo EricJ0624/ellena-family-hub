@@ -17,16 +17,15 @@ export const DASHBOARD_TITLE_ADMIN_RESERVE_PX = 92;
 export function getDashboardPortraitTitleFitMaxWidth(
   rowWidth: number,
   adminWidth: number,
-  viewportWidth: number,
+  _viewportWidth: number,
   hasAdminButton = false,
 ): number {
-  const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
-  // 좌우 admin 슬롯(패딩)을 뺀 실제 텍스트 가용 폭 — 액자 폭을 상한으로만 사용
+  // 세로도 좌측 정렬 — 가용 폭은 행 − 우측 admin 만 (좌우 이중 차감/액자 cap 제거로 글자 키움)
   if (!hasAdminButton || adminWidth <= 0) {
-    return Math.max(120, Math.min(frameCap, rowWidth - 16));
+    return Math.max(120, rowWidth - 16);
   }
   const sideReserve = Math.max(adminWidth, DASHBOARD_TITLE_ADMIN_RESERVE_PX);
-  return Math.max(120, Math.min(frameCap, rowWidth - sideReserve * 2));
+  return Math.max(120, rowWidth - sideReserve - 12);
 }
 
 /** @deprecated — getDashboardPortraitTitleFitMaxWidth 사용 */
