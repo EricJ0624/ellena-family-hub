@@ -4,8 +4,10 @@ import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { buildExpandedPlannerItinerary } from '@/lib/modules/travel-planner/itinerary-display-expand';
 import { buildItineraryDocumentHtml } from '@/lib/modules/travel-planner/itinerary-document-html';
 import { renderHtmlToPdfBuffer } from '@/lib/modules/travel-planner/render-itinerary-pdf';
+import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
 import { getTravelTranslation } from '@/lib/translations/travel';
 import type { LangCode } from '@/lib/language-fonts';
+import { DB_TABLES } from '@/lib/db-table-names';
 import type {
   TravelAccommodation,
   TravelAttraction,
@@ -59,6 +61,7 @@ export async function POST(
       attractionsRes,
       transportsRes,
       dayTitlesRes,
+      coverAttRes,
     ] = await Promise.all([
       supabase
         .from('travel_itineraries')
@@ -96,6 +99,15 @@ export async function POST(
         .eq('trip_id', tripId)
         .eq('group_id', groupId)
         .is('deleted_at', null),
+      supabase
+        .from(DB_TABLES.ATTACHMENTS)
+        .select('image_url, thumbnail_url, created_at')
+        .eq('group_id', groupId)
+        .eq('entity_type', 'travel_trip')
+        .eq('entity_id', tripId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+        .limit(1),
     ]);
 
     const itineraries = (itinerariesRes.data ?? []) as TravelItinerary[];
@@ -104,6 +116,13 @@ export async function POST(
     const attractions = (attractionsRes.data ?? []) as TravelAttraction[];
     const transports = (transportsRes.data ?? []) as TravelTransport[];
     const dayTitleRows = (dayTitlesRes.data ?? []) as TravelDayTitle[];
+    const coverRow = (coverAttRes.data ?? [])[0] as
+      | { image_url?: string | null; thumbnail_url?: string | null }
+      | undefined;
+    const coverImageUrl = (coverRow?.image_url || coverRow?.thumbnail_url || '').trim() || null;
+    const mapImageUrl = buildStaticMapUrl(
+      collectTripMapPoints({ accommodations, dining, attractions, itineraries }),
+    );
 
     const expanded = buildExpandedPlannerItinerary({
       trip_start_date: (trip as TravelTrip).start_date,
@@ -135,6 +154,8 @@ export async function POST(
       accommodations,
       transports,
       dayTitles,
+      coverImageUrl,
+      mapImageUrl,
       labels: {
         overviewKo: getTravelTranslation(lang, 'doc_overview_ko'),
         overviewEn: getTravelTranslation(lang, 'doc_overview_en'),

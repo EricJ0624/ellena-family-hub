@@ -140,6 +140,14 @@ const CSS = `
   .time { color: #D88C75; font-size: 12px; font-weight: 700; }
   .slot-title { font-size: 14px; font-weight: 700; margin-top: 2px; }
   .slot-desc { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.5; }
+  .cover-img-wrap { margin-top: 20px; border-radius: 16px; overflow: hidden; }
+  .cover-img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+  .hotel-block { padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  .hotel-block:last-child { border-bottom: none; }
+  .hotel-name { font-size: 14px; font-weight: 700; }
+  .hotel-line { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .hotel-memo { font-size: 12px; color: #475569; margin-top: 6px; }
+  .map-img { width: 100%; border-radius: 12px; display: block; margin-top: 8px; }
 `;
 
 export function buildItineraryDocumentHtml(params: {
@@ -158,6 +166,8 @@ export function buildItineraryDocumentHtml(params: {
     detailsKo: string;
     detailsEn: string;
   };
+  coverImageUrl?: string | null;
+  mapImageUrl?: string | null;
 }): string {
   const { trip, items, accommodations, transports, dayTitles, labels } = params;
   const badge = resolveCoverBadge(trip);
@@ -169,13 +179,9 @@ export function buildItineraryDocumentHtml(params: {
   const packing = normalizePackingChecklist(trip.packing_checklist as TravelPackingItem[] | null);
   const flight =
     (trip.flight_summary ?? '').trim() || buildAutoFlightSummary(transports) || '';
-  const hotel = accommodations[0];
-  const hotelName = hotel?.name?.trim() || '';
-  const checkIn = hotel?.check_in_time?.trim()
-    ? `${hotel.check_in_time} 이후`
-    : hotel
-      ? hotel.check_in_date
-      : '';
+  const hotels = accommodations.filter((a) => (a.name ?? '').trim());
+  const cover = (params.coverImageUrl ?? '').trim();
+  const mapUrl = (params.mapImageUrl ?? '').trim();
 
   const days = enumerateTripDays(trip.start_date, trip.end_date);
   const byDay = new Map<string, HtmlDocItem[]>();
@@ -192,7 +198,13 @@ export function buildItineraryDocumentHtml(params: {
   }
 
   const hasOverview = Boolean(
-    flight || hotelName || emergency.local || emergency.consular || emergency.embassy || packing.length > 0,
+    flight ||
+      hotels.length ||
+      emergency.local ||
+      emergency.consular ||
+      emergency.embassy ||
+      packing.length > 0 ||
+      mapUrl,
   );
 
   const metaRows = [
@@ -221,6 +233,43 @@ export function buildItineraryDocumentHtml(params: {
       )
       .join('');
 
+  const formatStay = (a: TravelAccommodation) => {
+    const cin = a.check_in_time?.trim()
+      ? `${a.check_in_date} ${a.check_in_time}`
+      : a.check_in_date;
+    const cout = a.check_out_time?.trim()
+      ? `${a.check_out_date} ${a.check_out_time}`
+      : a.check_out_date;
+    return `${cin} → ${cout}`;
+  };
+
+  const hotelBlock =
+    hotels.length === 0
+      ? ''
+      : `
+    <div class="ov-card" style="margin-top:12px">
+      <h3 class="ov-title"><span class="bar"></span>🏨 호텔 / 숙소</h3>
+      ${hotels
+        .map(
+          (h) => `
+        <div class="hotel-block">
+          <div class="hotel-name">${esc(h.name)}</div>
+          ${h.address ? `<div class="hotel-line">${esc(h.address)}</div>` : ''}
+          <div class="hotel-line">체크인/아웃: ${esc(formatStay(h))}</div>
+          ${h.memo ? `<div class="hotel-memo">${esc(h.memo)}</div>` : ''}
+        </div>`,
+        )
+        .join('')}
+    </div>`;
+
+  const mapBlock = !mapUrl
+    ? ''
+    : `
+    <div class="ov-card" style="margin-top:12px">
+      <h3 class="ov-title"><span class="bar"></span>🗺️ 여행 지도</h3>
+      <img class="map-img" src="${esc(mapUrl)}" alt="Trip map" />
+    </div>`;
+
   const packingBlock =
     packing.length === 0
       ? ''
@@ -248,12 +297,8 @@ export function buildItineraryDocumentHtml(params: {
     <div class="accent-line"></div>
     <div class="grid2">
       <div class="ov-card">
-        <h3 class="ov-title"><span class="bar"></span>✈️ 항공 및 호텔 정보</h3>
-        ${overviewRows([
-          ['항공편', flight],
-          ['숙소', hotelName],
-          ['체크인', checkIn],
-        ])}
+        <h3 class="ov-title"><span class="bar"></span>✈️ 항공 정보</h3>
+        ${overviewRows([['항공편', flight]])}
       </div>
       <div class="ov-card">
         <h3 class="ov-title"><span class="bar"></span>🚨 긴급 연락처</h3>
@@ -264,8 +309,14 @@ export function buildItineraryDocumentHtml(params: {
         ])}
       </div>
     </div>
+    ${hotelBlock}
+    ${mapBlock}
     ${packingBlock}
   </section>`;
+
+  const coverImg = !cover
+    ? ''
+    : `<div class="cover-img-wrap"><img class="cover-img" src="${esc(cover)}" alt="" /></div>`;
 
   const activeDays = days.filter((d) => (byDay.get(d) ?? []).length > 0 || (dayTitles[d] ?? '').trim());
   const chunks: string[][] = [];
@@ -359,6 +410,7 @@ export function buildItineraryDocumentHtml(params: {
     <div class="badge">${esc(badge)}</div>
     <h1>${esc(trip.title)}</h1>
     ${subtitle ? `<p class="sub">${esc(subtitle)}</p>` : ''}
+    ${coverImg}
     <div class="card">${metaRows}</div>
   </section>
   ${overviewPage}

@@ -44,12 +44,15 @@ type Props = {
   }>;
   dayTitles: Record<string, string>;
   labels: ItineraryDocumentLabels;
-  /** 인쇄/PDF용 루트 id */
+  /** 여행 첨부 첫 장 등 표지 이미지 */
+  coverImageUrl?: string | null;
+  /** Static Maps 이미지 URL */
+  mapImageUrl?: string | null;
   rootId?: string;
 };
 
 function AccentBar() {
-  return <span className="inline-block h-4 w-1 shrink-0 rounded-sm bg-[var(--itin-accent)]" aria-hidden />;
+  return <span className="itin-accent-bar" aria-hidden />;
 }
 
 function MetaRow({
@@ -63,13 +66,11 @@ function MetaRow({
 }) {
   if (!value.trim()) return null;
   return (
-    <div className="flex items-start gap-3 border-b border-slate-100 py-3 last:border-b-0">
-      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600">
-        {icon}
-      </div>
+    <div className="itin-meta-row">
+      <div className="itin-meta-icon">{icon}</div>
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-semibold tracking-[0.14em] text-slate-400 uppercase">{label}</div>
-        <div className="mt-0.5 text-[15px] font-bold text-slate-800">{value}</div>
+        <div className="itin-meta-label">{label}</div>
+        <div className="itin-meta-value">{value}</div>
       </div>
     </div>
   );
@@ -87,8 +88,8 @@ function OverviewCard({
   const visible = rows.filter((r) => r.value.trim());
   if (visible.length === 0) return null;
   return (
-    <section className="break-inside-avoid rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 flex items-center gap-2 text-[15px] font-bold text-slate-800">
+    <section className="itin-card break-inside-avoid">
+      <h3 className="itin-card-title">
         <AccentBar />
         <span>
           {emoji} {title}
@@ -96,12 +97,9 @@ function OverviewCard({
       </h3>
       <dl className="m-0">
         {visible.map((r) => (
-          <div
-            key={r.label}
-            className="grid grid-cols-[7.5rem_1fr] gap-2 border-b border-slate-100 py-2.5 text-[13px] last:border-b-0"
-          >
-            <dt className="font-medium text-slate-400">{r.label}</dt>
-            <dd className="m-0 font-semibold text-slate-800">{r.value}</dd>
+          <div key={r.label} className="itin-kv-row">
+            <dt className="itin-kv-label">{r.label}</dt>
+            <dd className="itin-kv-value">{r.value}</dd>
           </div>
         ))}
       </dl>
@@ -114,6 +112,16 @@ function formatTimeRange(start?: string | null, end?: string | null): string {
   return `${start || '--'} - ${end || '--'}`;
 }
 
+function formatStay(a: TravelAccommodation): string {
+  const cin = a.check_in_time?.trim()
+    ? `${a.check_in_date} ${a.check_in_time}`
+    : a.check_in_date;
+  const cout = a.check_out_time?.trim()
+    ? `${a.check_out_date} ${a.check_out_time}`
+    : a.check_out_date;
+  return `${cin} → ${cout}`;
+}
+
 export function ItineraryDocument({
   trip,
   items,
@@ -121,6 +129,8 @@ export function ItineraryDocument({
   transports,
   dayTitles,
   labels,
+  coverImageUrl,
+  mapImageUrl,
   rootId = 'itinerary-document-root',
 }: Props) {
   const badge = resolveCoverBadge(trip);
@@ -132,13 +142,9 @@ export function ItineraryDocument({
   const packing = normalizePackingChecklist(trip.packing_checklist as TravelPackingItem[] | null);
   const flight =
     (trip.flight_summary ?? '').trim() || buildAutoFlightSummary(transports) || '';
-  const hotel = accommodations[0];
-  const hotelName = hotel?.name?.trim() || '';
-  const checkIn = hotel?.check_in_time?.trim()
-    ? `${hotel.check_in_time} 이후`
-    : hotel
-      ? hotel.check_in_date
-      : '';
+  const hotels = accommodations.filter((a) => (a.name ?? '').trim());
+  const cover = (coverImageUrl ?? '').trim();
+  const mapUrl = (mapImageUrl ?? '').trim();
 
   const days = enumerateTripDays(trip.start_date, trip.end_date);
   const byDay = new Map<string, ItineraryDocumentItem[]>();
@@ -155,29 +161,41 @@ export function ItineraryDocument({
     packingByCat.set(p.category, list);
   }
 
-  const hasOverview =
-    Boolean(flight || hotelName || emergency.local || emergency.consular || emergency.embassy || packing.length > 0);
+  const hasOverview = Boolean(
+    flight ||
+      hotels.length ||
+      emergency.local ||
+      emergency.consular ||
+      emergency.embassy ||
+      packing.length ||
+      mapUrl,
+  );
 
   return (
     <div
       id={rootId}
-      className="itin-document mx-auto max-w-[210mm] bg-[var(--itin-bg)] text-slate-800 antialiased"
+      className="itin-document mx-auto max-w-[210mm] text-slate-800 antialiased"
       style={
         {
-          ['--itin-bg' as string]: '#F7F5F2',
-          ['--itin-accent' as string]: '#D88C75',
+          ['--itin-bg' as string]: 'var(--itin-doc-bg, #F7F5F2)',
+          ['--itin-accent' as string]: 'var(--itin-doc-accent, #D88C75)',
         } as CSSProperties
       }
     >
       {/* Cover */}
-      <section className="break-after-page px-8 py-10 sm:px-12 sm:py-14">
-        <div className="inline-block rounded-md bg-[var(--itin-accent)] px-3 py-1 text-[11px] font-bold tracking-wide text-white">
-          {badge}
-        </div>
-        <h1 className="mt-5 text-3xl leading-tight font-bold text-slate-900 sm:text-4xl">{trip.title}</h1>
-        {subtitle ? <p className="mt-3 text-base text-slate-500 sm:text-lg">{subtitle}</p> : null}
+      <section className="itin-page break-after-page">
+        <div className="itin-badge">{badge}</div>
+        <h1 className="itin-cover-title">{trip.title}</h1>
+        {subtitle ? <p className="itin-cover-sub">{subtitle}</p> : null}
 
-        <div className="mt-10 rounded-2xl border border-slate-100 bg-white px-5 py-2 shadow-sm">
+        {cover ? (
+          <div className="itin-cover-image-wrap">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={cover} alt="" className="itin-cover-image" />
+          </div>
+        ) : null}
+
+        <div className="itin-card itin-meta-card">
           <MetaRow icon={<Calendar className="h-5 w-5 text-rose-500" />} label="TRIP DURATION" value={duration} />
           <MetaRow icon={<Users className="h-5 w-5 text-sky-600" />} label="TRAVELERS" value={travelers} />
           <MetaRow icon={<Sparkles className="h-5 w-5 text-amber-500" />} label="MAIN THEME" value={theme} />
@@ -186,22 +204,18 @@ export function ItineraryDocument({
 
       {/* Overview */}
       {hasOverview ? (
-        <section className="break-after-page px-8 py-10 sm:px-12">
-          <div className="mb-2 flex items-end justify-between gap-3">
-            <h2 className="m-0 text-xl font-bold text-slate-900">{labels.overviewKo}</h2>
-            <span className="text-xs text-slate-400">{labels.overviewEn}</span>
+        <section className="itin-page break-after-page">
+          <div className="itin-section-head">
+            <h2 className="itin-section-title">{labels.overviewKo}</h2>
+            <span className="itin-section-en">{labels.overviewEn}</span>
           </div>
-          <div className="mb-6 h-px bg-[var(--itin-accent)]" />
+          <div className="itin-accent-line" />
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="itin-grid-2">
             <OverviewCard
-              title="항공 및 호텔 정보"
+              title="항공 정보"
               emoji="✈️"
-              rows={[
-                { label: '항공편', value: flight },
-                { label: '숙소', value: hotelName },
-                { label: '체크인', value: checkIn },
-              ]}
+              rows={[{ label: '항공편', value: flight }]}
             />
             <OverviewCard
               title="긴급 연락처"
@@ -214,20 +228,47 @@ export function ItineraryDocument({
             />
           </div>
 
+          {hotels.length > 0 ? (
+            <section className="itin-card mt-4 break-inside-avoid">
+              <h3 className="itin-card-title">
+                <AccentBar />
+                <span>🏨 호텔 / 숙소</span>
+              </h3>
+              <div className="flex flex-col gap-4">
+                {hotels.map((h) => (
+                  <div key={h.id} className="itin-hotel-block">
+                    <div className="itin-hotel-name">{h.name}</div>
+                    {h.address ? <div className="itin-hotel-line">{h.address}</div> : null}
+                    <div className="itin-hotel-line">체크인/아웃: {formatStay(h)}</div>
+                    {h.memo ? <div className="itin-hotel-memo">{h.memo}</div> : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {mapUrl ? (
+            <section className="itin-card mt-4 break-inside-avoid">
+              <h3 className="itin-card-title">
+                <AccentBar />
+                <span>🗺️ 여행 지도</span>
+              </h3>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mapUrl} alt="Trip map" className="itin-map-image" />
+            </section>
+          ) : null}
+
           {packing.length > 0 ? (
-            <section className="mt-4 break-inside-avoid rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <h3 className="mb-3 flex items-center gap-2 text-[15px] font-bold text-slate-800">
+            <section className="itin-card mt-4 break-inside-avoid">
+              <h3 className="itin-card-title">
                 <AccentBar />
                 <span>🎒 패밀리 준비물 체크리스트</span>
               </h3>
               <dl className="m-0">
                 {[...packingByCat.entries()].map(([cat, list]) => (
-                  <div
-                    key={cat}
-                    className="grid grid-cols-[7.5rem_1fr] gap-2 border-b border-slate-100 py-2.5 text-[13px] last:border-b-0"
-                  >
-                    <dt className="font-medium text-slate-400">{cat}</dt>
-                    <dd className="m-0 font-semibold text-slate-800">
+                  <div key={cat} className="itin-kv-row">
+                    <dt className="itin-kv-label">{cat}</dt>
+                    <dd className="itin-kv-value">
                       {list.map((p) => (p.checked ? `✓ ${p.text}` : p.text)).join(', ')}
                     </dd>
                   </div>
@@ -238,7 +279,7 @@ export function ItineraryDocument({
         </section>
       ) : null}
 
-      {/* Details — chunk days in pairs for visual pages */}
+      {/* Details */}
       {(() => {
         const activeDays = days.filter((d) => (byDay.get(d) ?? []).length > 0 || (dayTitles[d] ?? '').trim());
         const chunks: string[][] = [];
@@ -247,12 +288,12 @@ export function ItineraryDocument({
         }
         if (chunks.length === 0) {
           return (
-            <section className="px-8 py-10 sm:px-12">
-              <div className="mb-2 flex items-end justify-between gap-3">
-                <h2 className="m-0 text-xl font-bold text-slate-900">{labels.detailsKo}</h2>
-                <span className="text-xs text-slate-400">{labels.detailsEn}</span>
+            <section className="itin-page">
+              <div className="itin-section-head">
+                <h2 className="itin-section-title">{labels.detailsKo}</h2>
+                <span className="itin-section-en">{labels.detailsEn}</span>
               </div>
-              <div className="mb-6 h-px bg-[var(--itin-accent)]" />
+              <div className="itin-accent-line" />
               <p className="text-sm text-slate-400">등록된 상세 일정이 없습니다.</p>
             </section>
           );
@@ -262,14 +303,14 @@ export function ItineraryDocument({
           const rangeLabel =
             dayNums.length === 1 ? `Day ${dayNums[0]}` : `Day ${dayNums[0]} - Day ${dayNums[dayNums.length - 1]}`;
           return (
-            <section key={`chunk-${ci}`} className="break-after-page px-8 py-10 sm:px-12 last:break-after-auto">
-              <div className="mb-2 flex items-end justify-between gap-3">
-                <h2 className="m-0 text-xl font-bold text-slate-900">
+            <section key={`chunk-${ci}`} className="itin-page break-after-page last:break-after-auto">
+              <div className="itin-section-head">
+                <h2 className="itin-section-title">
                   {labels.detailsKo} ({rangeLabel})
                 </h2>
-                <span className="text-xs text-slate-400">{labels.detailsEn}</span>
+                <span className="itin-section-en">{labels.detailsEn}</span>
               </div>
-              <div className="mb-6 h-px bg-[var(--itin-accent)]" />
+              <div className="itin-accent-line" />
 
               <div className="flex flex-col gap-4">
                 {chunk.map((dayYmd) => {
@@ -277,11 +318,8 @@ export function ItineraryDocument({
                   const dayTitle = (dayTitles[dayYmd] ?? '').trim();
                   const dayItems = byDay.get(dayYmd) ?? [];
                   return (
-                    <article
-                      key={dayYmd}
-                      className="break-inside-avoid rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
-                    >
-                      <h3 className="mb-4 flex items-center gap-2 text-[15px] font-bold text-slate-900">
+                    <article key={dayYmd} className="itin-card break-inside-avoid">
+                      <h3 className="itin-card-title">
                         <AccentBar />
                         <span>
                           ☀️ Day {dayNum}
@@ -297,13 +335,9 @@ export function ItineraryDocument({
                             const title = shortItineraryTitle(it.type, it.title, it.address);
                             return (
                               <div key={`${dayYmd}-${idx}-${title}`}>
-                                {time ? (
-                                  <div className="text-[13px] font-semibold text-[var(--itin-accent)]">{time}</div>
-                                ) : null}
-                                <div className="mt-0.5 text-[15px] font-bold text-slate-800">{title}</div>
-                                {it.description ? (
-                                  <div className="mt-1 text-[13px] leading-relaxed text-slate-500">{it.description}</div>
-                                ) : null}
+                                {time ? <div className="itin-slot-time">{time}</div> : null}
+                                <div className="itin-slot-title">{title}</div>
+                                {it.description ? <div className="itin-slot-desc">{it.description}</div> : null}
                               </div>
                             );
                           })

@@ -18,6 +18,7 @@ import type {
   TravelDayTitle,
 } from '@/lib/modules/travel-planner/types';
 import { buildAutoFlightSummary, normalizeEmergencyContacts, normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
+import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
 import { ItineraryDocument } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
@@ -208,6 +209,7 @@ export function TravelPlannerContent() {
   const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
   const [showItineraryDocPreview, setShowItineraryDocPreview] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [tripCoverImageUrl, setTripCoverImageUrl] = useState<string | null>(null);
   const [travelAttachmentTarget, setTravelAttachmentTarget] = useState<{ entityType: 'travel_trip' | 'travel_expense'; entityId: string } | null>(null);
   const [travelAttachments, setTravelAttachments] = useState<UploadedAttachment[]>([]);
   const [travelAttachmentUploading, setTravelAttachmentUploading] = useState(false);
@@ -639,6 +641,21 @@ export function TravelPlannerContent() {
     }
   }, [currentGroupId, getAuthHeaders]);
 
+  const fetchTripCoverImage = useCallback(async (tripId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const rows = await listAttachments({
+        groupId: currentGroupId,
+        entityType: 'travel_trip',
+        entityIds: [tripId],
+      });
+      const first = rows[0];
+      setTripCoverImageUrl((first?.image_url || first?.thumbnail_url || '').trim() || null);
+    } catch {
+      setTripCoverImageUrl(null);
+    }
+  }, [currentGroupId]);
+
   const saveDayTitle = useCallback(
     async (dayDate: string, title: string) => {
       if (!currentGroupId || !selectedTrip) return;
@@ -1059,6 +1076,7 @@ export function TravelPlannerContent() {
       fetchAttractions(selectedTrip.id);
       fetchTransports(selectedTrip.id);
       fetchDayTitles(selectedTrip.id);
+      fetchTripCoverImage(selectedTrip.id);
     } else {
       setItineraries([]);
       setExpenses([]);
@@ -1067,8 +1085,9 @@ export function TravelPlannerContent() {
       setAttractions([]);
       setTransports([]);
       setDayTitles({});
+      setTripCoverImageUrl(null);
     }
-  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports, fetchDayTitles]);
+  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports, fetchDayTitles, fetchTripCoverImage]);
 
   useEffect(() => {
     if (!travelAttachmentTarget) {
@@ -1105,6 +1124,9 @@ export function TravelPlannerContent() {
         onJobsChange: setTravelAttachmentJobs,
       });
       await loadTravelAttachments(travelAttachmentTarget.entityType, travelAttachmentTarget.entityId);
+      if (travelAttachmentTarget.entityType === 'travel_trip') {
+        await fetchTripCoverImage(travelAttachmentTarget.entityId);
+      }
     } catch (error) {
       alert(error instanceof Error ? error.message : tt('load_failed'));
     } finally {
@@ -2412,6 +2434,12 @@ export function TravelPlannerContent() {
     }
     return { days, map };
   }, [itineraryRowsOutsideTrip]);
+
+  const itineraryMapImageUrl = useMemo(() => {
+    return buildStaticMapUrl(
+      collectTripMapPoints({ accommodations, dining, attractions, itineraries }),
+    );
+  }, [accommodations, dining, attractions, itineraries]);
 
   const getItineraryTypeLabel = (type: string, transport_type?: 'air' | 'train' | 'car' | 'bike') => {
     if (type === 'accommodation') return tt('ui_section_accommodation');
@@ -3863,6 +3891,8 @@ export function TravelPlannerContent() {
                 accommodations={accommodations}
                 transports={transports}
                 dayTitles={dayTitles}
+                coverImageUrl={tripCoverImageUrl}
+                mapImageUrl={itineraryMapImageUrl}
                 labels={{
                   overviewKo: tt('doc_overview_ko'),
                   overviewEn: tt('doc_overview_en'),
