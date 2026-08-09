@@ -163,7 +163,7 @@ export function FamilyTasksSection({
     if (changed) onTasksChange(next);
   }, [taskMembers, familyRoleByUserId, lang, onTasksChange]);
 
-  const { addTask, toggleTask, deleteTask } = useFamilyTasks({
+  const { addTask, toggleTask, deleteTask, claimTask } = useFamilyTasks({
     currentGroupId,
     userId,
     getCurrentKey,
@@ -181,6 +181,28 @@ export function FamilyTasksSection({
     onTasksChange(tasks.map((x) => (x.id === taskId ? { ...x, done: !x.done } : x)));
 
     toggleTask(taskId, !task.done);
+  };
+
+  const handleClaimTask = (taskId: number | string) => {
+    const task = tasks.find((x) => x.id === taskId);
+    if (!task || task.done || task.assigned_to_user_id) return;
+
+    const display = formatAssigneeDisplay(userId);
+    const previous = tasks;
+    onTasksChange(
+      tasks.map((x) =>
+        x.id === taskId ? { ...x, assigned_to_user_id: userId, assignee: display } : x,
+      ),
+    );
+
+    void (async () => {
+      try {
+        await claimTask(taskId);
+      } catch (error) {
+        onTasksChange(previous);
+        alert(error instanceof Error ? error.message : '임무를 맡는 데 실패했습니다.');
+      }
+    })();
   };
 
   const handleDeleteTask = (taskId: number | string) => {
@@ -478,6 +500,15 @@ export function FamilyTasksSection({
                         ) : null}
                       </span>
                     </button>
+                    {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleClaimTask(task.id)}
+                        className="shrink-0 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                      >
+                        내가 할게요
+                      </button>
+                    ) : null}
                     {(task.created_by === userId || !task.created_by) && (
                       <button
                         type="button"
@@ -552,6 +583,16 @@ export function FamilyTasksSection({
                         )}
                       </div>
                     </div>
+                    {!task.done && !task.assigned_to_user_id && !isTempTaskId(task.id) ? (
+                      <button
+                        type="button"
+                        onClick={() => handleClaimTask(task.id)}
+                        className="chalkboard-btn-add"
+                        style={{ fontSize: '10px', padding: '2px 6px', marginRight: '4px' }}
+                      >
+                        내가 할게요
+                      </button>
+                    ) : null}
                     {(task.created_by === userId || !task.created_by) && (
                       <button type="button" onClick={() => handleDeleteTask(task.id)} className="chalkboard-btn-delete">
                         <svg className="chalkboard-icon-delete" fill="none" stroke="currentColor" viewBox="0 0 24 24">

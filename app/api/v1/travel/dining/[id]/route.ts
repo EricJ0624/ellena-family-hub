@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** PATCH: 먹거리 수정 */
 export async function PATCH(
@@ -83,6 +84,14 @@ export async function PATCH(
       return NextResponse.json({ error: '먹거리 수정에 실패했습니다.' }, { status: 500 });
     }
 
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: data?.trip_id ? String(data.trip_id) : null,
+      summary: '여행 식당이 수정되었습니다.',
+    });
+
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
     console.error('PATCH /api/v1/travel/dining/[id]:', e);
@@ -121,6 +130,14 @@ export async function DELETE(
       console.error('travel_dining DELETE:', error);
       return NextResponse.json({ error: '먹거리 삭제에 실패했습니다.' }, { status: 500 });
     }
+
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: null,
+      summary: '여행 식당이 삭제되었습니다.',
+    });
 
     return NextResponse.json({ success: true });
   } catch (e: any) {

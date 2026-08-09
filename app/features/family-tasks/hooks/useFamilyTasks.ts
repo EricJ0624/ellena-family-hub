@@ -103,6 +103,16 @@ export function useFamilyTasks({
         entityId: String(inserted.id),
         recipientUserIds: [assignedTo],
       });
+    } else if (!assignedTo) {
+      void emitNotificationClient({
+        groupId: currentGroupId,
+        widgetKey: 'tasks',
+        eventType: 'TASK_OPEN_CREATED',
+        title: '✅ 새 가족 임무',
+        body: '담당자 없는(누구나) 임무가 등록되었습니다.',
+        url: '/dashboard?focus=tasks',
+        entityId: String(inserted.id),
+      });
     }
 
     return inserted as { id: string; created_by?: string; is_completed?: boolean };
@@ -150,6 +160,49 @@ export function useFamilyTasks({
         entityId: String(taskId),
       });
     }
+  };
+
+  /** 「누구나」임무를 현재 사용자가 맡기 */
+  const claimTask = async (taskId: number | string) => {
+    const taskIdStr = String(taskId);
+    const isNumericId = typeof taskId === 'number' || /^\d+$/.test(taskIdStr);
+    if (isNumericId) return;
+
+    if (!currentGroupId) {
+      throw new Error('CLAIM_TODO: currentGroupId가 없습니다.');
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('family_tasks')
+      .select('id, assigned_to, is_completed')
+      .eq('id', taskIdStr)
+      .eq('group_id', currentGroupId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!existing) throw new Error('임무를 찾을 수 없습니다.');
+    if (existing.is_completed) throw new Error('이미 완료된 임무입니다.');
+    if (isAssignedToUserUuid(existing.assigned_to)) {
+      throw new Error('이미 담당자가 지정된 임무입니다.');
+    }
+
+    const { error } = await supabase
+      .from('family_tasks')
+      .update({ assigned_to: userId })
+      .eq('id', taskIdStr)
+      .eq('group_id', currentGroupId);
+
+    if (error) throw error;
+
+    void emitNotificationClient({
+      groupId: currentGroupId,
+      widgetKey: 'tasks',
+      eventType: 'TASK_CLAIMED',
+      title: '✅ 임무 담당 확정',
+      body: '가족 멤버가 「누구나」임무를 맡았습니다.',
+      url: '/dashboard?focus=tasks',
+      entityId: taskIdStr,
+    });
   };
 
   // DELETE TODO — 성공 시 delete 1회만; 0행일 때만 select로 권한/부재 구분
@@ -525,5 +578,6 @@ export function useFamilyTasks({
     addTask,
     toggleTask,
     deleteTask,
+    claimTask,
   };
 }

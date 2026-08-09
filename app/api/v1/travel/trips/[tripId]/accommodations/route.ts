@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/api-guards';
+import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** GET: 해당 여행의 숙소 목록 */
 export async function GET(
@@ -134,6 +135,14 @@ export async function POST(
       console.error('travel_accommodations POST:', error);
       return NextResponse.json({ error: '숙소 추가에 실패했습니다.' }, { status: 500 });
     }
+
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: tripId,
+      summary: '여행 숙소가 추가되었습니다.',
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {

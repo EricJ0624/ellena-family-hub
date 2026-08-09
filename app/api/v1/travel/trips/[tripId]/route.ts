@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, requireGroupAdmin } from '@/lib/api-guards';
+import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import {
   diaryInviteStatusOnCompletedTransition,
@@ -189,6 +190,14 @@ export async function PATCH(
         console.error('travel_expenses currency sync:', expErr);
       }
     }
+
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: tripId,
+      summary: '여행 정보가 수정되었습니다.',
+    });
 
     return NextResponse.json({ success: true, data: result });
   } catch (e: any) {

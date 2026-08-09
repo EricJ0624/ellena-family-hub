@@ -184,6 +184,67 @@ export function useFamilyCalendar({
     }
   };
 
+  // UPDATE EVENT
+  const updateEvent = async (payload: {
+    id: string;
+    month: string;
+    day: string;
+    title: string;
+    desc: string;
+    event_date: string;
+    repeat_type?: 'none' | 'monthly' | 'yearly';
+  }) => {
+    if (!payload?.id || !payload.title) {
+      throw new Error('UPDATE_EVENT: invalid payload');
+    }
+    if (!currentGroupId) {
+      throw new Error('UPDATE_EVENT: currentGroupId가 없습니다.');
+    }
+
+    const eventIdStr = String(payload.id);
+    if (/^\d+$/.test(eventIdStr)) {
+      throw new Error('아직 저장되지 않은 일정입니다.');
+    }
+
+    const { data: existing } = await supabase
+      .from('family_events')
+      .select('id, created_by')
+      .eq('id', eventIdStr)
+      .eq('group_id', currentGroupId)
+      .maybeSingle();
+
+    if (!existing) throw new Error('일정을 찾을 수 없습니다.');
+    if (existing.created_by && String(existing.created_by) !== String(userId)) {
+      throw new Error('작성자만 수정할 수 있습니다.');
+    }
+
+    const encryptedTitle = CryptoService.encrypt(payload.title, getCurrentKey());
+    const encryptedDesc = payload.desc ? CryptoService.encrypt(payload.desc, getCurrentKey()) : '';
+
+    const { error } = await supabase
+      .from('family_events')
+      .update({
+        title: encryptedTitle,
+        description: encryptedDesc,
+        event_date: payload.event_date,
+        repeat_type: payload.repeat_type || 'none',
+      })
+      .eq('id', eventIdStr)
+      .eq('group_id', currentGroupId);
+
+    if (error) throw error;
+
+    void emitNotificationClient({
+      groupId: currentGroupId,
+      widgetKey: 'calendar',
+      eventType: 'CALENDAR_EVENT_UPDATED',
+      title: '📅 일정 수정',
+      body: '가족 일정이 수정되었습니다.',
+      url: '/dashboard?focus=calendar',
+      entityId: eventIdStr,
+    });
+  };
+
   // 초기 데이터 로드
   useEffect(() => {
     if (!currentGroupId || !userId) return;
@@ -529,6 +590,7 @@ export function useFamilyCalendar({
 
   return {
     addEvent,
+    updateEvent,
     deleteEvent,
   };
 }

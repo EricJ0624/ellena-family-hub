@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** PATCH: 교통 수정 */
 export async function PATCH(
@@ -92,6 +93,14 @@ export async function PATCH(
       return NextResponse.json({ error: '교통 수정에 실패했습니다.' }, { status: 500 });
     }
 
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: data?.trip_id ? String(data.trip_id) : null,
+      summary: '여행 교통이 수정되었습니다.',
+    });
+
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
     console.error('PATCH /api/v1/travel/transports/[id]:', e);
@@ -130,6 +139,14 @@ export async function DELETE(
       console.error('travel_transports DELETE:', error);
       return NextResponse.json({ error: '교통 삭제에 실패했습니다.' }, { status: 500 });
     }
+
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: null,
+      summary: '여행 교통이 삭제되었습니다.',
+    });
 
     return NextResponse.json({ success: true });
   } catch (e: any) {

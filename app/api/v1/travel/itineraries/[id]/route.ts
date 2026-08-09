@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** PATCH: 일정 수정 */
 export async function PATCH(
@@ -86,6 +87,14 @@ export async function PATCH(
       return NextResponse.json({ error: '일정 수정에 실패했습니다.' }, { status: 500 });
     }
 
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: data?.trip_id ? String(data.trip_id) : null,
+      summary: '여행 일정이 수정되었습니다.',
+    });
+
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
     console.error('PATCH /api/v1/travel/itineraries/[id]:', e);
@@ -113,6 +122,12 @@ export async function DELETE(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    const { data: existing } = await supabase
+      .from('travel_itineraries')
+      .select('trip_id')
+      .eq('id', id)
+      .eq('group_id', groupId)
+      .maybeSingle();
     const now = new Date().toISOString();
     const { error } = await supabase
       .from('travel_itineraries')
@@ -124,6 +139,14 @@ export async function DELETE(
       console.error('travel_itineraries DELETE:', error);
       return NextResponse.json({ error: '일정 삭제에 실패했습니다.' }, { status: 500 });
     }
+
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId: existing?.trip_id ? String(existing.trip_id) : null,
+      summary: '여행 일정이 삭제되었습니다.',
+    });
 
     return NextResponse.json({ success: true });
   } catch (e: any) {

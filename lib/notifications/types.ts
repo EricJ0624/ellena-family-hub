@@ -20,8 +20,11 @@ export type NotificationEventType =
   | 'LOCATION_RESPONSE'
   | 'CHAT_MESSAGE'
   | 'TASK_ASSIGNED'
+  | 'TASK_OPEN_CREATED'
+  | 'TASK_CLAIMED'
   | 'TASK_COMPLETED'
   | 'CALENDAR_EVENT_CREATED'
+  | 'CALENDAR_EVENT_UPDATED'
   | 'CALENDAR_EVENT_DELETED'
   | 'PIGGY_ACCOUNT_REQUEST'
   | 'PIGGY_ACCOUNT_RESOLVED'
@@ -31,7 +34,8 @@ export type NotificationEventType =
   | 'PIGGY_DEPOSIT'
   | 'GAME_SESSION_CREATED'
   | 'GAME_LOBBY_JOINED'
-  | 'TRAVEL_TRIP_CREATED';
+  | 'TRAVEL_TRIP_CREATED'
+  | 'TRAVEL_DETAIL_CHANGED';
 
 export interface NotifyFamilyInput {
   groupId: string;

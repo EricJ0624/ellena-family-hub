@@ -81,7 +81,7 @@ async function loadPreferenceMap(
  * 가족 알림 공통 진입점.
  * - preferences 반영 (없으면 기본 on)
  * - notifications 인앱 기록
- * - Web Push 발송
+ * - Web Push 발송 (해당 그룹에 미확인 알림이 있으면 푸시 생략 — 목록만 추가)
  * 실패해도 throw하지 않고 결과/로그만 반환 (본 기능 성공 유지).
  */
 export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFamilyResult> {
@@ -109,7 +109,7 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
     const prefs = await loadPreferenceMap(supabase, input.groupId, uniqueRecipients, input.widgetKey);
 
     const inappRecipients: string[] = [];
-    const pushRecipients: string[] = [];
+    const pushCandidates: string[] = [];
 
     for (const userId of uniqueRecipients) {
       const pref = prefs.get(userId) || { push_enabled: true, inapp_enabled: true };
@@ -118,7 +118,7 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
         continue;
       }
       if (pref.inapp_enabled) inappRecipients.push(userId);
-      if (pref.push_enabled) pushRecipients.push(userId);
+      if (pref.push_enabled) pushCandidates.push(userId);
     }
 
     if (inappRecipients.length > 0) {
@@ -140,6 +140,35 @@ export async function notifyFamily(input: NotifyFamilyInput): Promise<NotifyFami
         console.error('[notifyFamily] notifications insert 실패:', insertError.message);
       } else {
         result.notified = inappRecipients.length;
+      }
+    }
+
+    // 미확인 알림이 이미 있는 수신자에게는 OS 푸시를 보내지 않음 (인앱 목록만 누적)
+    const pushRecipients: string[] = [];
+    if (pushCandidates.length > 0) {
+      const { data: unreadRows } = await supabase
+        .from('notifications')
+        .select('recipient_user_id')
+        .eq('group_id', input.groupId)
+        .in('recipient_user_id', pushCandidates)
+        .is('read_at', null);
+
+      const unreadCounts = new Map<string, number>();
+      for (const row of unreadRows || []) {
+        const uid = String(row.recipient_user_id);
+        unreadCounts.set(uid, (unreadCounts.get(uid) || 0) + 1);
+      }
+
+      for (const userId of pushCandidates) {
+        // insert 직후이므로 inapp 켠 유저는 unread >= 1. 푸시는 "이번이 첫 미확인"일 때만.
+        // = 이번 insert 전 unread가 0이었으면, insert 후 unread === 1 → 푸시
+        const unreadAfter = unreadCounts.get(userId) || 0;
+        const hadPriorUnread = inappRecipients.includes(userId) ? unreadAfter > 1 : unreadAfter > 0;
+        if (hadPriorUnread) {
+          result.skipped += 1;
+          continue;
+        }
+        pushRecipients.push(userId);
       }
     }
 

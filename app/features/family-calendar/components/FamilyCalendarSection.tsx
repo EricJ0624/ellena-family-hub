@@ -66,6 +66,9 @@ interface FamilyCalendarSectionProps {
     close: string;
     delete: string;
     delete_confirm: string;
+    event_edit_title?: string;
+    event_update_btn?: string;
+    edit?: string;
   };
 }
 
@@ -94,6 +97,7 @@ export function FamilyCalendarSection({
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventFormDate, setEventFormDate] = useState<Date | null>(null);
   const [eventForm, setEventForm] = useState<{ title: string; month: string; day: string; desc: string; repeat_type: 'none' | 'monthly' | 'yearly' }>({
     title: '',
@@ -103,7 +107,7 @@ export function FamilyCalendarSection({
     repeat_type: 'none',
   });
 
-  const { addEvent, deleteEvent } = useFamilyCalendar({
+  const { addEvent, updateEvent, deleteEvent } = useFamilyCalendar({
     currentGroupId,
     userId,
     getCurrentKey,
@@ -176,6 +180,7 @@ export function FamilyCalendarSection({
 
   const openEventModal = () => {
     const d = selectedDate || new Date();
+    setEditingEventId(null);
     setEventFormDate(d);
     const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
     const day = d.getDate().toString();
@@ -183,8 +188,32 @@ export function FamilyCalendarSection({
     setShowEventModal(true);
   };
 
+  const openEditEventModal = (event: FamilyEvent) => {
+    if (event.created_by != null && String(event.created_by).trim() !== String(userId).trim()) {
+      alert('작성자만 수정할 수 있습니다.');
+      return;
+    }
+    const idStr = String(event.id);
+    if (/^\d+$/.test(idStr)) {
+      alert('아직 저장되지 않은 일정입니다.');
+      return;
+    }
+    const d = event.event_date ? new Date(event.event_date + 'T12:00:00') : selectedDate || new Date();
+    setEditingEventId(idStr);
+    setEventFormDate(d);
+    setEventForm({
+      title: event.title || '',
+      month: event.month || d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+      day: event.day || String(d.getDate()),
+      desc: event.desc || '',
+      repeat_type: event.repeat_type === 'monthly' || event.repeat_type === 'yearly' ? event.repeat_type : 'none',
+    });
+    setShowEventModal(true);
+  };
+
   const closeEventModal = () => {
     setShowEventModal(false);
+    setEditingEventId(null);
     setEventFormDate(null);
     setEventForm({ title: '', month: '', day: '', desc: '', repeat_type: 'none' });
   };
@@ -214,6 +243,42 @@ export function FamilyCalendarSection({
     const eventDateStr = eventFormDate
       ? `${eventFormDate.getFullYear()}-${String(eventFormDate.getMonth() + 1).padStart(2, '0')}-${String(eventFormDate.getDate()).padStart(2, '0')}`
       : '';
+
+    if (editingEventId) {
+      const previousEvents = events;
+      onEventsChange(
+        events.map((e) =>
+          String(e.id) === editingEventId
+            ? {
+                ...e,
+                month: sanitizedMonth,
+                day: sanitizedDay,
+                title: sanitizedTitle,
+                desc: sanitizedDesc,
+                event_date: eventDateStr,
+                repeat_type: eventForm.repeat_type || 'none',
+              }
+            : e,
+        ),
+      );
+
+      updateEvent({
+        id: editingEventId,
+        month: sanitizedMonth,
+        day: sanitizedDay,
+        title: sanitizedTitle,
+        desc: sanitizedDesc,
+        event_date: eventDateStr,
+        repeat_type: eventForm.repeat_type || 'none',
+      }).catch((error) => {
+        console.error('일정 수정 실패, 복구 중:', error);
+        onEventsChange(previousEvents);
+        alert(error instanceof Error ? error.message : t.event_save_failed);
+      });
+
+      closeEventModal();
+      return;
+    }
 
     const newEvent: FamilyEvent = {
       id: Date.now(),
@@ -298,7 +363,9 @@ export function FamilyCalendarSection({
             className="w-[90%] max-w-[500px] rounded-xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 mt-0 text-xl font-semibold">{t.event_add_title}</h3>
+            <h3 className="mb-2 mt-0 text-xl font-semibold">
+              {editingEventId ? (t.event_edit_title || '일정 수정') : t.event_add_title}
+            </h3>
             {eventFormDate && (
               <p className="mb-5 mt-0 text-sm text-slate-500">
                 {formatLongDate(eventFormDate)}
@@ -371,7 +438,7 @@ export function FamilyCalendarSection({
                 onClick={handleEventSubmit}
                 className="cursor-pointer rounded-lg border-none bg-indigo-500 px-5 py-2.5 text-[15px] font-medium text-white transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
               >
-                {t.event_submit_btn}
+                {editingEventId ? (t.event_update_btn || '저장') : t.event_submit_btn}
               </button>
             </div>
           </div>
@@ -564,17 +631,30 @@ export function FamilyCalendarSection({
                             )}
                           </div>
                           {e.created_by != null && String(e.created_by).trim() === String(userId).trim() && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteEvent(e.id)}
-                              className="shrink-0 cursor-pointer rounded-md border-none bg-transparent text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
-                              style={{ padding: '1.5cqmin' }}
-                              aria-label={t.delete}
-                            >
-                              <svg className="calendar-nav-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
+                            <div className="flex shrink-0 flex-col gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEditEventModal(e)}
+                                className="cursor-pointer rounded-md border-none bg-transparent text-violet-600 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                                style={{ padding: '1.5cqmin' }}
+                                aria-label={t.edit || '수정'}
+                              >
+                                <svg className="calendar-nav-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEvent(e.id)}
+                                className="cursor-pointer rounded-md border-none bg-transparent text-red-500 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                                style={{ padding: '1.5cqmin' }}
+                                aria-label={t.delete}
+                              >
+                                <svg className="calendar-nav-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </motion.div>

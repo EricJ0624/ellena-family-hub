@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/api-guards';
+import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 
 /** GET: 해당 여행의 일정 목록 */
 export async function GET(
@@ -145,6 +146,14 @@ export async function POST(
       console.error('travel_itineraries POST:', error);
       return NextResponse.json({ error: '일정 추가에 실패했습니다.' }, { status: 500 });
     }
+
+    await notifyTravelDetailChanged({
+      supabase,
+      groupId,
+      actorUserId: user.id,
+      tripId,
+      summary: '여행 일정이 추가되었습니다.',
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (e: any) {
