@@ -1,13 +1,36 @@
+import { existsSync } from 'fs';
 import type { Browser } from 'puppeteer-core';
 
-export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
-  const isServerless = Boolean(process.env.AWS_REGION || process.env.VERCEL);
+function isVercelRuntime(): boolean {
+  // AWS_REGION alone is often set for S3 locally — do NOT treat as serverless Chromium.
+  return process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+}
 
+function localChromeCandidates(): string[] {
+  const fromEnv = [process.env.PUPPETEER_EXECUTABLE_PATH, process.env.CHROME_PATH].filter(
+    (p): p is string => Boolean(p && p.trim()),
+  );
+  const defaults = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+  ];
+  return [...fromEnv, ...defaults].filter((p) => existsSync(p));
+}
+
+export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
   let browser: Browser | null = null;
   try {
-    if (isServerless) {
+    const puppeteer = await import('puppeteer-core');
+
+    if (isVercelRuntime()) {
       const chromium = (await import('@sparticuz/chromium')).default;
-      const puppeteer = await import('puppeteer-core');
       browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: { width: 1200, height: 1600, deviceScaleFactor: 1 },
@@ -15,18 +38,7 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
         headless: true,
       });
     } else {
-      // 로컬: puppeteer-core + 시스템 Chrome, 없으면 전체 puppeteer 시도
-      const puppeteer = await import('puppeteer-core');
-      const candidates = [
-        process.env.PUPPETEER_EXECUTABLE_PATH,
-        process.env.CHROME_PATH,
-        'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe',
-        'C:\\\\Program Files (x86)\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe',
-        '/usr/bin/google-chrome',
-        '/usr/bin/chromium',
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      ].filter(Boolean) as string[];
-
+      const candidates = localChromeCandidates();
       let lastErr: unknown;
       for (const executablePath of candidates) {
         try {
@@ -41,13 +53,17 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
         }
       }
       if (!browser) {
-        throw lastErr ?? new Error('Chrome executable not found for PDF render');
+        throw lastErr ?? new Error(
+          'Chrome/Edge executable not found for PDF render. Install Chrome or set PUPPETEER_EXECUTABLE_PATH.',
+        );
       }
     }
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load', timeout: 60000 });
     await page.evaluate(() => document.fonts.ready).catch(() => undefined);
+    // Give remote images (cover / static map) a short settle window
+    await new Promise((r) => setTimeout(r, 800));
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,

@@ -32,9 +32,9 @@ export interface TravelTrip {
   subtitle?: string | null;
   /** 메인 테마 */
   theme?: string | null;
-  /** 여행자 표시 문구 */
+  /** @deprecated 참가자 자동 표시로 대체. DB 레거시 컬럼 */
   travelers_text?: string | null;
-  /** 항공편 요약 */
+  /** @deprecated 교통(비행기) 자동 요약으로 대체. DB 레거시 컬럼 */
   flight_summary?: string | null;
   /** 긴급 연락처 */
   emergency_contacts?: TravelEmergencyContacts | null;
@@ -48,10 +48,33 @@ export interface TravelTrip {
   deleted_by?: string | null;
 }
 
+/** 여행별 참가자 */
+export interface TravelTripParticipant {
+  id: string;
+  trip_id: string;
+  group_id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export type TravelEmergencyCountryContact = {
+  code: string;
+  nameKo: string;
+  local: string;
+  embassy: string;
+};
+
 export type TravelEmergencyContacts = {
   local?: string | null;
   consular?: string | null;
   embassy?: string | null;
+  /** 다국가 일정용 국가별 연락처 */
+  countries?: TravelEmergencyCountryContact[] | null;
 };
 
 export type TravelPackingItem = {

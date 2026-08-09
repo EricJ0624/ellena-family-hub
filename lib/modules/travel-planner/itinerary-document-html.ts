@@ -2,10 +2,11 @@ import type { TravelAccommodation, TravelEmergencyContacts, TravelPackingItem, T
 import {
   buildAutoFlightSummary,
   formatTripDurationKo,
-  normalizeEmergencyContacts,
+  formatTravelersFromNames,
   normalizePackingChecklist,
   resolveCoverBadge,
 } from './document-meta';
+import { resolveEmergencyForDocument } from './emergency-contacts-auto';
 import { shortItineraryTitle } from './short-itinerary-title';
 import { enumerateTripDays } from './itinerary-display-expand';
 
@@ -158,6 +159,9 @@ export function buildItineraryDocumentHtml(params: {
     transport_type: string;
     departure?: string | null;
     arrival?: string | null;
+    start_time?: string | null;
+    end_time?: string | null;
+    memo?: string | null;
   }>;
   dayTitles: Record<string, string>;
   labels: {
@@ -166,19 +170,31 @@ export function buildItineraryDocumentHtml(params: {
     detailsKo: string;
     detailsEn: string;
   };
+  travelerNames?: string[];
+  /** 여행 참가자 국적 ISO */
+  travelerNationalities?: string[];
   coverImageUrl?: string | null;
   mapImageUrl?: string | null;
 }): string {
   const { trip, items, accommodations, transports, dayTitles, labels } = params;
   const badge = resolveCoverBadge(trip);
   const duration = formatTripDurationKo(trip.start_date, trip.end_date);
-  const travelers = (trip.travelers_text ?? '').trim();
+  const travelers = formatTravelersFromNames(params.travelerNames ?? []);
   const theme = (trip.theme ?? '').trim();
   const subtitle = (trip.subtitle ?? '').trim();
-  const emergency = normalizeEmergencyContacts(trip.emergency_contacts as TravelEmergencyContacts | null);
+  const emergency = resolveEmergencyForDocument({
+    destination: trip.destination,
+    stored: trip.emergency_contacts as TravelEmergencyContacts | null,
+    travelerNationalities: params.travelerNationalities,
+    locationParts: [
+      trip.title,
+      ...accommodations.flatMap((a) => [a.name, a.address, a.memo]),
+      ...transports.flatMap((t) => [t.departure, t.arrival, t.memo]),
+      ...items.flatMap((it) => [it.title, it.description, it.address]),
+    ],
+  });
   const packing = normalizePackingChecklist(trip.packing_checklist as TravelPackingItem[] | null);
-  const flight =
-    (trip.flight_summary ?? '').trim() || buildAutoFlightSummary(transports) || '';
+  const flight = buildAutoFlightSummary(transports) || '';
   const hotels = accommodations.filter((a) => (a.name ?? '').trim());
   const cover = (params.coverImageUrl ?? '').trim();
   const mapUrl = (params.mapImageUrl ?? '').trim();
@@ -197,22 +213,11 @@ export function buildItineraryDocumentHtml(params: {
     packingByCat.set(p.category, list);
   }
 
-  const hasOverview = Boolean(
-    flight ||
-      hotels.length ||
-      emergency.local ||
-      emergency.consular ||
-      emergency.embassy ||
-      packing.length > 0 ||
-      mapUrl,
-  );
-
   const metaRows = [
     ['TRIP DURATION', duration],
-    ['TRAVELERS', travelers],
-    ['MAIN THEME', theme],
+    ['TRAVELERS', travelers || '—'],
+    ['MAIN THEME', theme || '—'],
   ]
-    .filter(([, v]) => v)
     .map(
       ([label, value]) => `
       <div class="meta-row">
@@ -226,11 +231,11 @@ export function buildItineraryDocumentHtml(params: {
 
   const overviewRows = (rows: Array<[string, string]>) =>
     rows
-      .filter(([, v]) => v.trim())
-      .map(
-        ([label, value]) => `
-        <div class="row"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`,
-      )
+      .map(([label, value]) => {
+        const v = value.trim() || '—';
+        return `
+        <div class="row"><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`;
+      })
       .join('');
 
   const formatStay = (a: TravelAccommodation) => {
@@ -245,7 +250,11 @@ export function buildItineraryDocumentHtml(params: {
 
   const hotelBlock =
     hotels.length === 0
-      ? ''
+      ? `
+    <div class="ov-card" style="margin-top:12px">
+      <h3 class="ov-title"><span class="bar"></span>🏨 호텔 / 숙소</h3>
+      <p style="margin:0;font-size:13px;color:#94a3b8">숙소 메뉴에서 등록하면 여기에 표시됩니다.</p>
+    </div>`
       : `
     <div class="ov-card" style="margin-top:12px">
       <h3 class="ov-title"><span class="bar"></span>🏨 호텔 / 숙소</h3>
@@ -272,7 +281,11 @@ export function buildItineraryDocumentHtml(params: {
 
   const packingBlock =
     packing.length === 0
-      ? ''
+      ? `
+    <div class="ov-card" style="margin-top:12px">
+      <h3 class="ov-title"><span class="bar"></span>🎒 패밀리 준비물 체크리스트</h3>
+      <p style="margin:0;font-size:13px;color:#94a3b8">일정표 정보에서 준비물을 추가하세요.</p>
+    </div>`
       : `
     <div class="ov-card" style="margin-top:12px">
       <h3 class="ov-title"><span class="bar"></span>🎒 패밀리 준비물 체크리스트</h3>
@@ -286,9 +299,7 @@ export function buildItineraryDocumentHtml(params: {
         .join('')}
     </div>`;
 
-  const overviewPage = !hasOverview
-    ? ''
-    : `
+  const overviewPage = `
   <section class="page">
     <div class="section-head">
       <h2>${esc(labels.overviewKo)}</h2>
@@ -302,11 +313,23 @@ export function buildItineraryDocumentHtml(params: {
       </div>
       <div class="ov-card">
         <h3 class="ov-title"><span class="bar"></span>🚨 긴급 연락처</h3>
-        ${overviewRows([
-          ['현지 긴급', emergency.local ?? ''],
-          ['영사콜센터', emergency.consular ?? ''],
-          ['비상 대사관', emergency.embassy ?? ''],
-        ])}
+        <div class="row"><dt>영사콜센터</dt><dd>${esc(emergency.consular)}</dd></div>
+        ${
+          emergency.countries.length === 0
+            ? `<p style="margin:8px 0 0;font-size:13px;color:#94a3b8">${esc(
+                emergency.unresolvedHint || '',
+              )}</p>`
+            : emergency.countries
+                .map(
+                  (c) => `
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9">
+            <div style="font-size:12px;font-weight:700;margin-bottom:4px">${esc(c.nameKo)}</div>
+            <div class="row"><dt>현지 긴급</dt><dd>${esc(c.local)}</dd></div>
+            <div class="row"><dt>비상 대사관</dt><dd>${esc(c.embassy)}</dd></div>
+          </div>`,
+                )
+                .join('')
+        }
       </div>
     </div>
     ${hotelBlock}

@@ -28,10 +28,27 @@ export function formatTripDurationKo(startDate: string, endDate: string): string
 export function normalizeEmergencyContacts(
   value: TravelEmergencyContacts | null | undefined
 ): TravelEmergencyContacts {
+  const countries = Array.isArray(value?.countries)
+    ? value!.countries!
+        .map((c) => {
+          const code = String(c?.code ?? '').trim();
+          const local = String(c?.local ?? '').trim();
+          const embassy = String(c?.embassy ?? '').trim();
+          if (!code || (!local && !embassy)) return null;
+          return {
+            code,
+            nameKo: String(c?.nameKo ?? '').trim() || code,
+            local: local || '—',
+            embassy: embassy || '—',
+          };
+        })
+        .filter(Boolean)
+    : [];
   return {
     local: value?.local?.trim() || null,
     consular: value?.consular?.trim() || null,
     embassy: value?.embassy?.trim() || null,
+    countries: countries.length ? (countries as TravelEmergencyContacts['countries']) : [],
   };
 }
 
@@ -60,6 +77,9 @@ export function buildAutoFlightSummary(
     arrival?: string | null;
     day_date?: string;
     end_day_date?: string | null;
+    start_time?: string | null;
+    end_time?: string | null;
+    memo?: string | null;
   }>
 ): string | null {
   const airs = transports.filter((t) => t.transport_type === 'air');
@@ -67,9 +87,21 @@ export function buildAutoFlightSummary(
   const parts = airs.map((t) => {
     const from = (t.departure ?? '').trim() || '?';
     const to = (t.arrival ?? '').trim() || '?';
-    return `${from} → ${to}`;
+    const timeBits = [t.start_time, t.end_time].filter(Boolean).join('–');
+    const memo = (t.memo ?? '').trim();
+    const core = `${from} → ${to}`;
+    if (timeBits && memo) return `${core} (${timeBits}, ${memo})`;
+    if (timeBits) return `${core} (${timeBits})`;
+    if (memo) return `${core} (${memo})`;
+    return core;
   });
   if (airs.length === 1) return parts[0] ?? null;
   if (airs.length === 2) return `가는 편 ${parts[0]} / 오는 편 ${parts[1]}`;
   return parts.join(' · ');
+}
+
+/** 그룹 멤버 표시명 → 일정표 TRAVELERS 한 줄 */
+export function formatTravelersFromNames(names: string[]): string {
+  const cleaned = names.map((n) => n.trim()).filter(Boolean);
+  return cleaned.join(', ');
 }

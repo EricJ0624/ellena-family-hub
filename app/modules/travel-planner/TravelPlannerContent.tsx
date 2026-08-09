@@ -16,8 +16,10 @@ import type {
   TravelTransport,
   TravelPackingItem,
   TravelDayTitle,
+  TravelTripParticipant,
 } from '@/lib/modules/travel-planner/types';
-import { buildAutoFlightSummary, normalizeEmergencyContacts, normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
+import { normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
+import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
 import { ItineraryDocument } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
@@ -52,6 +54,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileDown,
+  FileText,
 } from 'lucide-react';
 import {
   deleteAttachment,
@@ -200,14 +203,12 @@ export function TravelPlannerContent() {
   const [formCoverBadge, setFormCoverBadge] = useState('');
   const [formSubtitle, setFormSubtitle] = useState('');
   const [formTheme, setFormTheme] = useState('');
-  const [formTravelersText, setFormTravelersText] = useState('');
-  const [formFlightSummary, setFormFlightSummary] = useState('');
-  const [formEmergencyLocal, setFormEmergencyLocal] = useState('');
-  const [formEmergencyConsular, setFormEmergencyConsular] = useState('');
-  const [formEmergencyEmbassy, setFormEmergencyEmbassy] = useState('');
   const [formPacking, setFormPacking] = useState<TravelPackingItem[]>([]);
   const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
+  const [tripParticipantIds, setTripParticipantIds] = useState<string[]>([]);
+  const [participantsBusy, setParticipantsBusy] = useState(false);
   const [showItineraryDocPreview, setShowItineraryDocPreview] = useState(false);
+  const [showDocMetaForm, setShowDocMetaForm] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [tripCoverImageUrl, setTripCoverImageUrl] = useState<string | null>(null);
   const [travelAttachmentTarget, setTravelAttachmentTarget] = useState<{ entityType: 'travel_trip' | 'travel_expense'; entityId: string } | null>(null);
@@ -220,6 +221,8 @@ export function TravelPlannerContent() {
 
   /** userId → 표시명 (nickname || email || '멤버'). 그룹 멤버 + 프로필에서 로드 */
   const [memberDisplayNames, setMemberDisplayNames] = useState<Map<string, string>>(new Map());
+  /** userId → 국적 ISO (profiles.country_code) */
+  const [memberCountryCodes, setMemberCountryCodes] = useState<Map<string, string>>(new Map());
   /** 지도 사용 시에만 로드 (위치 공유와 동일) */
   const [showTravelMap, setShowTravelMap] = useState(false);
 
@@ -641,6 +644,68 @@ export function TravelPlannerContent() {
     }
   }, [currentGroupId, getAuthHeaders]);
 
+  const fetchParticipants = useCallback(async (tripId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${tripId}/participants?groupId=${currentGroupId}`, { headers });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'participants');
+      const ids = ((json.data ?? []) as TravelTripParticipant[])
+        .map((r) => r.user_id)
+        .filter(Boolean);
+      setTripParticipantIds(ids);
+    } catch {
+      setTripParticipantIds([]);
+    }
+  }, [currentGroupId, getAuthHeaders]);
+
+  const saveTripParticipants = useCallback(
+    async (userIds: string[]) => {
+      if (!currentGroupId || !selectedTrip) return;
+      const prev = tripParticipantIds;
+      setTripParticipantIds(userIds);
+      setParticipantsBusy(true);
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/participants`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId, userIds }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || tt('update_failed'));
+        const ids = ((json.data ?? []) as TravelTripParticipant[])
+          .map((r) => r.user_id)
+          .filter(Boolean);
+        setTripParticipantIds(ids);
+      } catch (e: unknown) {
+        setTripParticipantIds(prev);
+        alert(e instanceof Error ? e.message : tt('update_failed'));
+      } finally {
+        setParticipantsBusy(false);
+      }
+    },
+    [currentGroupId, selectedTrip, tripParticipantIds, getAuthHeaders, tt],
+  );
+
+  const tripTravelerNames = useMemo(
+    () =>
+      tripParticipantIds
+        .map((id) => memberDisplayNames.get(id))
+        .filter((n): n is string => Boolean(n && n.trim())),
+    [tripParticipantIds, memberDisplayNames],
+  );
+
+  const tripTravelerNationalities = useMemo(
+    () =>
+      tripParticipantIds.map((id) => {
+        const code = (memberCountryCodes.get(id) || '').trim().toUpperCase();
+        return /^[A-Z]{2}$/.test(code) ? code : 'KR';
+      }),
+    [tripParticipantIds, memberCountryCodes],
+  );
+
   const fetchTripCoverImage = useCallback(async (tripId: string) => {
     if (!currentGroupId) return;
     try {
@@ -1031,6 +1096,7 @@ export function TravelPlannerContent() {
   useEffect(() => {
     if (!currentGroupId) {
       setMemberDisplayNames(new Map());
+      setMemberCountryCodes(new Map());
       return;
     }
     let cancelled = false;
@@ -1042,21 +1108,35 @@ export function TravelPlannerContent() {
           .eq('group_id', currentGroupId);
         const userIds = [...new Set((memberships ?? []).map((m) => m.user_id))];
         if (userIds.length === 0) {
-          if (!cancelled) setMemberDisplayNames(new Map());
+          if (!cancelled) {
+            setMemberDisplayNames(new Map());
+            setMemberCountryCodes(new Map());
+          }
           return;
         }
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, nickname, email')
+          .select('id, nickname, email, country_code')
           .in('id', userIds);
         const map = new Map<string, string>();
+        const countryMap = new Map<string, string>();
         (profiles ?? []).forEach((p) => {
           const name = (p.nickname && String(p.nickname).trim()) || p.email || tt('member_fallback');
           map.set(p.id, name);
+          const cc = String(p.country_code ?? '')
+            .trim()
+            .toUpperCase();
+          if (/^[A-Z]{2}$/.test(cc)) countryMap.set(p.id, cc);
         });
-        if (!cancelled) setMemberDisplayNames(map);
+        if (!cancelled) {
+          setMemberDisplayNames(map);
+          setMemberCountryCodes(countryMap);
+        }
       } catch {
-        if (!cancelled) setMemberDisplayNames(new Map());
+        if (!cancelled) {
+          setMemberDisplayNames(new Map());
+          setMemberCountryCodes(new Map());
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -1076,6 +1156,7 @@ export function TravelPlannerContent() {
       fetchAttractions(selectedTrip.id);
       fetchTransports(selectedTrip.id);
       fetchDayTitles(selectedTrip.id);
+      fetchParticipants(selectedTrip.id);
       fetchTripCoverImage(selectedTrip.id);
     } else {
       setItineraries([]);
@@ -1085,9 +1166,10 @@ export function TravelPlannerContent() {
       setAttractions([]);
       setTransports([]);
       setDayTitles({});
+      setTripParticipantIds([]);
       setTripCoverImageUrl(null);
     }
-  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports, fetchDayTitles, fetchTripCoverImage]);
+  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports, fetchDayTitles, fetchParticipants, fetchTripCoverImage]);
 
   useEffect(() => {
     if (!travelAttachmentTarget) {
@@ -1266,6 +1348,20 @@ export function TravelPlannerContent() {
     }
   };
 
+  const fillTripFormFromSelected = useCallback(() => {
+    if (!selectedTrip) return;
+    setFormTitle(selectedTrip.title);
+    setFormDestination(selectedTrip.destination ?? '');
+    setFormStartDate(selectedTrip.start_date);
+    setFormEndDate(selectedTrip.end_date);
+    setFormBudget(selectedTrip.budget != null ? String(selectedTrip.budget) : '');
+    setFormTripCurrency((selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW');
+    setFormCoverBadge(selectedTrip.cover_badge ?? '');
+    setFormSubtitle(selectedTrip.subtitle ?? '');
+    setFormTheme(selectedTrip.theme ?? '');
+    setFormPacking(normalizePackingChecklist(selectedTrip.packing_checklist));
+  }, [selectedTrip]);
+
   const handleUpdateTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentGroupId || !selectedTrip || !formTitle.trim() || !formStartDate || !formEndDate) {
@@ -1294,13 +1390,15 @@ export function TravelPlannerContent() {
         cover_badge: formCoverBadge.trim() || null,
         subtitle: formSubtitle.trim() || null,
         theme: formTheme.trim() || null,
-        travelers_text: formTravelersText.trim() || null,
-        flight_summary: formFlightSummary.trim() || null,
-        emergency_contacts: {
-          local: formEmergencyLocal.trim() || null,
-          consular: formEmergencyConsular.trim() || null,
-          embassy: formEmergencyEmbassy.trim() || null,
-        },
+        emergency_contacts: buildEmergencyContactsFromDestination(
+          formDestination.trim() || null,
+          [
+            formTitle,
+            ...accommodations.flatMap((a) => [a.name, a.address, a.memo]),
+            ...transports.flatMap((t) => [t.departure, t.arrival, t.memo]),
+          ],
+          tripTravelerNationalities,
+        ),
         packing_checklist: normalizePackingChecklist(formPacking),
       };
       if (isTripAdmin) {
@@ -1317,6 +1415,7 @@ export function TravelPlannerContent() {
       await fetchTrips();
       await fetchExpenses(selectedTrip.id);
       setShowTripEditForm(false);
+      setShowDocMetaForm(false);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('update_failed'));
     } finally {
@@ -2527,18 +2626,28 @@ export function TravelPlannerContent() {
           method: 'POST',
           headers,
         });
-        if (!res.ok) {
-          throw new Error(`pdf ${res.status}`);
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `itinerary-${selectedTrip.title.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60)}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+          return;
         }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `itinerary-${selectedTrip.title.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60)}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
+        let detail = `pdf ${res.status}`;
+        try {
+          const j = (await res.json()) as { error?: string };
+          if (j?.error) detail = j.error;
+        } catch {
+          /* ignore */
+        }
+        console.warn('[itinerary-pdf] server failed, using pdf-lib fallback:', detail);
+        alert(tt('itinerary_pdf_server_failed'));
+        await runPdfLibFallback();
       } catch (err) {
-        console.error(err);
+        console.warn('[itinerary-pdf] fallback path:', err);
         try {
           alert(tt('itinerary_pdf_server_failed'));
           await runPdfLibFallback();
@@ -2659,22 +2768,7 @@ export function TravelPlannerContent() {
                   <button
                     type="button"
                     onClick={() => {
-                      setFormTitle(selectedTrip.title);
-                      setFormDestination(selectedTrip.destination ?? '');
-                      setFormStartDate(selectedTrip.start_date);
-                      setFormEndDate(selectedTrip.end_date);
-                      setFormBudget(selectedTrip.budget != null ? String(selectedTrip.budget) : '');
-                      setFormTripCurrency((selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW');
-                      setFormCoverBadge(selectedTrip.cover_badge ?? '');
-                      setFormSubtitle(selectedTrip.subtitle ?? '');
-                      setFormTheme(selectedTrip.theme ?? '');
-                      setFormTravelersText(selectedTrip.travelers_text ?? '');
-                      setFormFlightSummary(selectedTrip.flight_summary ?? '');
-                      const ec = normalizeEmergencyContacts(selectedTrip.emergency_contacts);
-                      setFormEmergencyLocal(ec.local ?? '');
-                      setFormEmergencyConsular(ec.consular ?? '');
-                      setFormEmergencyEmbassy(ec.embassy ?? '');
-                      setFormPacking(normalizePackingChecklist(selectedTrip.packing_checklist));
+                      fillTripFormFromSelected();
                       setShowTripEditForm(true);
                     }}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-slate-100 px-3 py-2 text-[13px] font-semibold text-slate-600"
@@ -2691,6 +2785,68 @@ export function TravelPlannerContent() {
                     {tt('delete')}
                   </button>
                 </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[13px] font-semibold text-slate-700">{tt('trip_participants')}</div>
+                    <p className="m-0 text-[11px] text-slate-500">{tt('trip_participants_hint')}</p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      disabled={participantsBusy || memberDisplayNames.size === 0}
+                      onClick={() => void saveTripParticipants(Array.from(memberDisplayNames.keys()))}
+                      className="cursor-pointer rounded-md border-0 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 disabled:opacity-50"
+                    >
+                      {tt('trip_participants_select_all')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={participantsBusy || tripParticipantIds.length === 0}
+                      onClick={() => void saveTripParticipants([])}
+                      className="cursor-pointer rounded-md border-0 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 disabled:opacity-50"
+                    >
+                      {tt('trip_participants_clear')}
+                    </button>
+                  </div>
+                </div>
+                {memberDisplayNames.size === 0 ? (
+                  <p className="m-0 text-[12px] text-slate-400">{tt('trip_participants_empty_members')}</p>
+                ) : (
+                  <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                    {Array.from(memberDisplayNames.entries()).map(([userId, name]) => {
+                      const checked = tripParticipantIds.includes(userId);
+                      return (
+                        <li key={userId}>
+                          <label
+                            className={[
+                              'inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px]',
+                              checked
+                                ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                : 'border-slate-200 bg-white text-slate-600',
+                              participantsBusy ? 'opacity-60' : '',
+                            ].join(' ')}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={participantsBusy}
+                              onChange={() => {
+                                const next = checked
+                                  ? tripParticipantIds.filter((id) => id !== userId)
+                                  : [...tripParticipantIds, userId];
+                                void saveTripParticipants(next);
+                              }}
+                            />
+                            <span>{name}</span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
 
             {travelAttachmentTarget && (
@@ -2857,7 +3013,18 @@ export function TravelPlannerContent() {
                   <ListOrdered className="h-[18px] w-[18px]" />
                   {tt('ui_itinerary_section')}
                 </h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fillTripFormFromSelected();
+                      setShowDocMetaForm(true);
+                    }}
+                    className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white"
+                  >
+                    <FileText className="h-[14px] w-[14px]" />
+                    {tt('edit_doc_meta')}
+                  </button>
                   <button
                     type="button"
                     onClick={() => setShowItineraryDocPreview(true)}
@@ -3688,9 +3855,55 @@ export function TravelPlannerContent() {
                 </>
               )}
 
-              <div className="mb-2 mt-1 border-t border-slate-100 pt-4 text-[13px] font-semibold text-slate-700">
-                {tt('doc_meta_section')}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTripEditForm(false)}
+                  disabled={submitting}
+                  className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
+                    submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {tt('cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold text-white ${
+                    submitting ? 'cursor-not-allowed bg-purple-600' : 'cursor-pointer bg-purple-600'
+                  }`}
+                >
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {tt('save')}
+                </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDocMetaForm && selectedTrip && (
+        <div
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !submitting && setShowDocMetaForm(false)}
+        >
+          <div
+            className="max-h-[90vh] w-[90%] min-w-0 max-w-[520px] overflow-y-auto overflow-x-hidden rounded-xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="m-0 text-lg font-semibold text-slate-800">{tt('edit_doc_meta')}</h3>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setShowDocMetaForm(false)}
+                className="cursor-pointer border-0 bg-transparent p-1 text-slate-500 disabled:cursor-not-allowed"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-4 text-[12px] leading-snug text-slate-500">{tt('doc_meta_hotel_hint')}</p>
+            <form onSubmit={handleUpdateTrip} className="min-w-0 overflow-hidden">
               <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_cover_badge')}</label>
               <input
                 value={formCoverBadge}
@@ -3708,60 +3921,6 @@ export function TravelPlannerContent() {
               <input
                 value={formTheme}
                 onChange={(e) => setFormTheme(e.target.value)}
-                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_travelers')}</label>
-              <div className="mb-3 flex gap-2">
-                <input
-                  value={formTravelersText}
-                  onChange={(e) => setFormTravelersText(e.target.value)}
-                  className="box-border min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const names = Array.from(memberDisplayNames.values()).filter(Boolean);
-                    if (names.length) setFormTravelersText(names.join(', '));
-                  }}
-                  className="shrink-0 cursor-pointer rounded-lg border-0 bg-slate-100 px-3 text-xs font-semibold text-slate-700"
-                >
-                  {tt('travelers_load_members')}
-                </button>
-              </div>
-              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_flight_summary')}</label>
-              <div className="mb-3 flex gap-2">
-                <input
-                  value={formFlightSummary}
-                  onChange={(e) => setFormFlightSummary(e.target.value)}
-                  className="box-border min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const auto = buildAutoFlightSummary(transports);
-                    if (auto) setFormFlightSummary(auto);
-                  }}
-                  className="shrink-0 cursor-pointer rounded-lg border-0 bg-slate-100 px-3 text-xs font-semibold text-slate-700"
-                >
-                  Auto
-                </button>
-              </div>
-              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_emergency_local')}</label>
-              <input
-                value={formEmergencyLocal}
-                onChange={(e) => setFormEmergencyLocal(e.target.value)}
-                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_emergency_consular')}</label>
-              <input
-                value={formEmergencyConsular}
-                onChange={(e) => setFormEmergencyConsular(e.target.value)}
-                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-              />
-              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_emergency_embassy')}</label>
-              <input
-                value={formEmergencyEmbassy}
-                onChange={(e) => setFormEmergencyEmbassy(e.target.value)}
                 className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               />
               <div className="mb-1 text-[13px] font-medium text-slate-600">{tt('label_packing')}</div>
@@ -3823,7 +3982,7 @@ export function TravelPlannerContent() {
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowTripEditForm(false)}
+                  onClick={() => setShowDocMetaForm(false)}
                   disabled={submitting}
                   className={`rounded-lg border-0 px-[18px] py-2.5 text-sm font-semibold ${
                     submitting ? 'cursor-not-allowed bg-slate-100 text-slate-600' : 'cursor-pointer bg-slate-100 text-slate-600'
@@ -3891,6 +4050,8 @@ export function TravelPlannerContent() {
                 accommodations={accommodations}
                 transports={transports}
                 dayTitles={dayTitles}
+                travelerNames={tripTravelerNames}
+                travelerNationalities={tripTravelerNationalities}
                 coverImageUrl={tripCoverImageUrl}
                 mapImageUrl={itineraryMapImageUrl}
                 labels={{

@@ -4,6 +4,7 @@ import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import { enrichTripsWithAutoStatus } from '@/lib/modules/travel-planner/trip-enrich';
 import { computeAutoTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { getGroupMemberUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 /** GET: 해당 그룹의 여행 목록 (tenant = groupId) */
@@ -82,12 +83,28 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const initialStatus = computeAutoTripStatus(start_date, end_date);
 
+    const dest = destination ? String(destination).trim() : null;
+    let creatorCountry = 'KR';
+    try {
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('country_code')
+        .eq('id', user.id)
+        .maybeSingle();
+      const cc = String(creatorProfile?.country_code ?? '')
+        .trim()
+        .toUpperCase();
+      if (/^[A-Z]{2}$/.test(cc)) creatorCountry = cc;
+    } catch {
+      /* ignore */
+    }
+
     const { data, error } = await supabase
       .from('travel_trips')
       .insert({
         group_id: groupId,
         title: String(title).trim(),
-        destination: destination ? String(destination).trim() : null,
+        destination: dest,
         start_date,
         end_date,
         created_by: user.id,
@@ -95,6 +112,11 @@ export async function POST(request: NextRequest) {
         status: initialStatus,
         status_source: 'auto',
         diary_enabled: false,
+        emergency_contacts: buildEmergencyContactsFromDestination(
+          dest,
+          [String(title).trim()],
+          [creatorCountry],
+        ),
       })
       .select()
       .single();
@@ -102,6 +124,19 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('travel_trips POST:', error);
       return NextResponse.json({ error: '여행 생성에 실패했습니다.' }, { status: 500 });
+    }
+
+    if (data?.id) {
+      const { error: participantError } = await supabase.from('travel_trip_participants').insert({
+        trip_id: data.id,
+        group_id: groupId,
+        user_id: user.id,
+        created_by: user.id,
+        updated_by: user.id,
+      });
+      if (participantError) {
+        console.warn('travel trip creator participant:', participantError);
+      }
     }
 
     try {

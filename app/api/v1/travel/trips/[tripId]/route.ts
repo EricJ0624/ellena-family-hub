@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, requireGroupAdmin } from '@/lib/api-guards';
 import { notifyTravelDetailChanged } from '@/lib/notifications/travel';
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
+import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import {
   diaryInviteStatusOnCompletedTransition,
   isValidDiaryInviteStatus,
@@ -102,15 +103,35 @@ export async function PATCH(
     if (body.cover_badge !== undefined) updatePayload.cover_badge = trimOrNull(body.cover_badge);
     if (body.subtitle !== undefined) updatePayload.subtitle = trimOrNull(body.subtitle);
     if (body.theme !== undefined) updatePayload.theme = trimOrNull(body.theme);
-    if (body.travelers_text !== undefined) updatePayload.travelers_text = trimOrNull(body.travelers_text);
-    if (body.flight_summary !== undefined) updatePayload.flight_summary = trimOrNull(body.flight_summary);
     if (body.emergency_contacts !== undefined) {
       const ec = body.emergency_contacts && typeof body.emergency_contacts === 'object' ? body.emergency_contacts : {};
+      const countriesRaw = Array.isArray((ec as { countries?: unknown }).countries)
+        ? ((ec as { countries: unknown[] }).countries)
+        : [];
+      const countries = countriesRaw
+        .map((item) => {
+          if (!item || typeof item !== 'object') return null;
+          const row = item as { code?: unknown; nameKo?: unknown; local?: unknown; embassy?: unknown };
+          const code = trimOrNull(row.code);
+          if (!code) return null;
+          return {
+            code,
+            nameKo: trimOrNull(row.nameKo) || code,
+            local: trimOrNull(row.local) || '—',
+            embassy: trimOrNull(row.embassy) || '—',
+          };
+        })
+        .filter(Boolean);
       updatePayload.emergency_contacts = {
         local: trimOrNull((ec as { local?: unknown }).local),
         consular: trimOrNull((ec as { consular?: unknown }).consular),
         embassy: trimOrNull((ec as { embassy?: unknown }).embassy),
+        countries,
       };
+    } else if (body.destination !== undefined) {
+      updatePayload.emergency_contacts = buildEmergencyContactsFromDestination(
+        body.destination ? String(body.destination).trim() : null,
+      );
     }
     if (body.packing_checklist !== undefined) {
       const list = Array.isArray(body.packing_checklist) ? body.packing_checklist : [];

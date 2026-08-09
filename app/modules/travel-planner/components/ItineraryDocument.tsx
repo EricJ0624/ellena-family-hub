@@ -5,10 +5,11 @@ import type { TravelAccommodation, TravelEmergencyContacts, TravelPackingItem, T
 import {
   buildAutoFlightSummary,
   formatTripDurationKo,
-  normalizeEmergencyContacts,
+  formatTravelersFromNames,
   normalizePackingChecklist,
   resolveCoverBadge,
 } from '@/lib/modules/travel-planner/document-meta';
+import { resolveEmergencyForDocument } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { shortItineraryTitle } from '@/lib/modules/travel-planner/short-itinerary-title';
 import { enumerateTripDays } from '@/lib/modules/travel-planner/itinerary-display-expand';
 import { Calendar, Sparkles, Users } from 'lucide-react';
@@ -41,9 +42,14 @@ type Props = {
     arrival?: string | null;
     day_date?: string;
     end_day_date?: string | null;
+    memo?: string | null;
   }>;
   dayTitles: Record<string, string>;
   labels: ItineraryDocumentLabels;
+  /** 그룹 멤버 표시명 (TRAVELERS 자동) */
+  travelerNames?: string[];
+  /** 여행 참가자 국적 ISO (대사관 선택) */
+  travelerNationalities?: string[];
   /** 여행 첨부 첫 장 등 표지 이미지 */
   coverImageUrl?: string | null;
   /** Static Maps 이미지 URL */
@@ -64,13 +70,13 @@ function MetaRow({
   label: string;
   value: string;
 }) {
-  if (!value.trim()) return null;
+  const display = value.trim() || '—';
   return (
     <div className="itin-meta-row">
       <div className="itin-meta-icon">{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="itin-meta-label">{label}</div>
-        <div className="itin-meta-value">{value}</div>
+        <div className={`itin-meta-value${value.trim() ? '' : ' text-slate-400'}`}>{display}</div>
       </div>
     </div>
   );
@@ -85,8 +91,6 @@ function OverviewCard({
   emoji: string;
   rows: Array<{ label: string; value: string }>;
 }) {
-  const visible = rows.filter((r) => r.value.trim());
-  if (visible.length === 0) return null;
   return (
     <section className="itin-card break-inside-avoid">
       <h3 className="itin-card-title">
@@ -96,10 +100,12 @@ function OverviewCard({
         </span>
       </h3>
       <dl className="m-0">
-        {visible.map((r) => (
+        {rows.map((r) => (
           <div key={r.label} className="itin-kv-row">
             <dt className="itin-kv-label">{r.label}</dt>
-            <dd className="itin-kv-value">{r.value}</dd>
+            <dd className={`itin-kv-value${r.value.trim() ? '' : ' text-slate-400'}`}>
+              {r.value.trim() || '—'}
+            </dd>
           </div>
         ))}
       </dl>
@@ -129,19 +135,30 @@ export function ItineraryDocument({
   transports,
   dayTitles,
   labels,
+  travelerNames,
+  travelerNationalities,
   coverImageUrl,
   mapImageUrl,
   rootId = 'itinerary-document-root',
 }: Props) {
   const badge = resolveCoverBadge(trip);
   const duration = formatTripDurationKo(trip.start_date, trip.end_date);
-  const travelers = (trip.travelers_text ?? '').trim();
+  const travelers = formatTravelersFromNames(travelerNames ?? []);
   const theme = (trip.theme ?? '').trim();
   const subtitle = (trip.subtitle ?? '').trim();
-  const emergency = normalizeEmergencyContacts(trip.emergency_contacts as TravelEmergencyContacts | null);
+  const emergency = resolveEmergencyForDocument({
+    destination: trip.destination,
+    stored: trip.emergency_contacts as TravelEmergencyContacts | null,
+    travelerNationalities,
+    locationParts: [
+      trip.title,
+      ...accommodations.flatMap((a) => [a.name, a.address, a.memo]),
+      ...transports.flatMap((t) => [t.departure, t.arrival, t.memo]),
+      ...items.flatMap((it) => [it.title, it.description, it.address]),
+    ],
+  });
   const packing = normalizePackingChecklist(trip.packing_checklist as TravelPackingItem[] | null);
-  const flight =
-    (trip.flight_summary ?? '').trim() || buildAutoFlightSummary(transports) || '';
+  const flight = buildAutoFlightSummary(transports) || '';
   const hotels = accommodations.filter((a) => (a.name ?? '').trim());
   const cover = (coverImageUrl ?? '').trim();
   const mapUrl = (mapImageUrl ?? '').trim();
@@ -160,16 +177,6 @@ export function ItineraryDocument({
     list.push(p);
     packingByCat.set(p.category, list);
   }
-
-  const hasOverview = Boolean(
-    flight ||
-      hotels.length ||
-      emergency.local ||
-      emergency.consular ||
-      emergency.embassy ||
-      packing.length ||
-      mapUrl,
-  );
 
   return (
     <div
@@ -203,8 +210,7 @@ export function ItineraryDocument({
       </section>
 
       {/* Overview */}
-      {hasOverview ? (
-        <section className="itin-page break-after-page">
+      <section className="itin-page break-after-page">
           <div className="itin-section-head">
             <h2 className="itin-section-title">{labels.overviewKo}</h2>
             <span className="itin-section-en">{labels.overviewEn}</span>
@@ -217,15 +223,39 @@ export function ItineraryDocument({
               emoji="✈️"
               rows={[{ label: '항공편', value: flight }]}
             />
-            <OverviewCard
-              title="긴급 연락처"
-              emoji="🚨"
-              rows={[
-                { label: '현지 긴급', value: emergency.local ?? '' },
-                { label: '영사콜센터', value: emergency.consular ?? '' },
-                { label: '비상 대사관', value: emergency.embassy ?? '' },
-              ]}
-            />
+            <section className="itin-card break-inside-avoid">
+              <h3 className="itin-card-title">
+                <AccentBar />
+                <span>🚨 긴급 연락처</span>
+              </h3>
+              <dl className="m-0">
+                <div className="itin-kv-row">
+                  <dt className="itin-kv-label">영사콜센터</dt>
+                  <dd className="itin-kv-value">{emergency.consular}</dd>
+                </div>
+              </dl>
+              {emergency.countries.length > 0 ? (
+                <div className="mt-3 flex flex-col gap-3">
+                  {emergency.countries.map((c) => (
+                    <div key={c.code} className="rounded-lg border border-slate-100 bg-white/60 px-3 py-2">
+                      <div className="mb-1 text-[12px] font-bold text-slate-700">{c.nameKo}</div>
+                      <dl className="m-0">
+                        <div className="itin-kv-row">
+                          <dt className="itin-kv-label">현지 긴급</dt>
+                          <dd className="itin-kv-value">{c.local}</dd>
+                        </div>
+                        <div className="itin-kv-row">
+                          <dt className="itin-kv-label">비상 대사관</dt>
+                          <dd className="itin-kv-value">{c.embassy}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 mb-0 text-sm text-slate-400">{emergency.unresolvedHint}</p>
+              )}
+            </section>
           </div>
 
           {hotels.length > 0 ? (
@@ -245,7 +275,15 @@ export function ItineraryDocument({
                 ))}
               </div>
             </section>
-          ) : null}
+          ) : (
+            <section className="itin-card mt-4 break-inside-avoid">
+              <h3 className="itin-card-title">
+                <AccentBar />
+                <span>🏨 호텔 / 숙소</span>
+              </h3>
+              <p className="m-0 text-sm text-slate-400">숙소 메뉴에서 등록하면 여기에 표시됩니다.</p>
+            </section>
+          )}
 
           {mapUrl ? (
             <section className="itin-card mt-4 break-inside-avoid">
@@ -258,12 +296,12 @@ export function ItineraryDocument({
             </section>
           ) : null}
 
-          {packing.length > 0 ? (
-            <section className="itin-card mt-4 break-inside-avoid">
-              <h3 className="itin-card-title">
-                <AccentBar />
-                <span>🎒 패밀리 준비물 체크리스트</span>
-              </h3>
+          <section className="itin-card mt-4 break-inside-avoid">
+            <h3 className="itin-card-title">
+              <AccentBar />
+              <span>🎒 패밀리 준비물 체크리스트</span>
+            </h3>
+            {packing.length > 0 ? (
               <dl className="m-0">
                 {[...packingByCat.entries()].map(([cat, list]) => (
                   <div key={cat} className="itin-kv-row">
@@ -274,10 +312,11 @@ export function ItineraryDocument({
                   </div>
                 ))}
               </dl>
-            </section>
-          ) : null}
+            ) : (
+              <p className="m-0 text-sm text-slate-400">일정표 정보에서 준비물을 추가하세요.</p>
+            )}
+          </section>
         </section>
-      ) : null}
 
       {/* Details */}
       {(() => {

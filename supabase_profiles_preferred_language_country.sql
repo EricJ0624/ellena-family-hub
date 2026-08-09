@@ -8,7 +8,7 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS country_code CHAR(2);
 
 COMMENT ON COLUMN public.profiles.preferred_language IS '앱 UI 표시 언어 (ko, en, ja, zh-CN, zh-TW, es, fr, de, it, pt)';
-COMMENT ON COLUMN public.profiles.country_code IS '거주 국가 ISO 3166-1 alpha-2';
+COMMENT ON COLUMN public.profiles.country_code IS '국적(여권 국가) ISO 3166-1 alpha-2. 가입/계정에서 설정, 여행 긴급 대사관 선택에 사용';
 
 -- 2. 기존 행 백필 (실사용 계정 소수 — 기본 ko/KR)
 UPDATE public.profiles

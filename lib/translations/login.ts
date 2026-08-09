@@ -62,7 +62,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_nickname_required: '별명을 입력해 주세요.',
     error_nickname_length: '별명은 2자 이상 20자 이하로 입력해 주세요.',
     label_display_language: '표시 언어 (필수)',
-    label_country_residence: '거주 국가 (필수)',
+    label_country_residence: '국적 (필수)',
     country_select_placeholder: '국가를 선택해 주세요',
     country_residence_help:
       '현재 거주 중인 국가를 선택해 주세요. 표시 언어·서비스 제공 및 운영 통계에 사용되며, 가입 후 내 계정에서 변경할 수 있습니다.',
@@ -99,7 +99,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_nickname_required: 'Please enter a nickname.',
     error_nickname_length: 'Nickname must be 2 to 20 characters.',
     label_display_language: 'Display language (required)',
-    label_country_residence: 'Country of residence (required)',
+    label_country_residence: 'Nationality (required)',
     country_select_placeholder: 'Select your country',
     country_residence_help:
       'Select the country where you currently live. We use this to personalize the app and for aggregated service statistics. You can change it later in your account settings.',

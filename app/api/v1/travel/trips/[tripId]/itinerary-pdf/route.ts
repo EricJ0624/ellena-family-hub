@@ -139,6 +139,47 @@ export async function POST(
       if (row.day_date) dayTitles[row.day_date] = row.title ?? '';
     }
 
+    const { data: memberships } = await supabase
+      .from('memberships')
+      .select('user_id')
+      .eq('group_id', groupId);
+    const memberIds = [...new Set((memberships ?? []).map((m) => m.user_id as string))];
+
+    const { data: participantRows } = await supabase
+      .from('travel_trip_participants')
+      .select('user_id')
+      .eq('trip_id', tripId)
+      .eq('group_id', groupId)
+      .is('deleted_at', null);
+    const participantIds = [...new Set((participantRows ?? []).map((p) => p.user_id as string))].filter(
+      (id) => memberIds.includes(id),
+    );
+
+    let travelerNames: string[] = [];
+    let travelerNationalities: string[] = [];
+    if (participantIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, nickname, email, country_code')
+        .in('id', participantIds);
+      const byId = new Map(
+        (profiles ?? []).map((p) => {
+          const nick = p.nickname && String(p.nickname).trim();
+          return [p.id as string, nick || p.email || '멤버'] as const;
+        }),
+      );
+      const countryById = new Map(
+        (profiles ?? []).map((p) => {
+          const cc = String(p.country_code ?? '')
+            .trim()
+            .toUpperCase();
+          return [p.id as string, /^[A-Z]{2}$/.test(cc) ? cc : 'KR'] as const;
+        }),
+      );
+      travelerNames = participantIds.map((id) => byId.get(id) || '멤버');
+      travelerNationalities = participantIds.map((id) => countryById.get(id) || 'KR');
+    }
+
     const lang: LangCode = 'ko';
     const html = buildItineraryDocumentHtml({
       trip: trip as TravelTrip,
@@ -154,6 +195,8 @@ export async function POST(
       accommodations,
       transports,
       dayTitles,
+      travelerNames,
+      travelerNationalities,
       coverImageUrl,
       mapImageUrl,
       labels: {

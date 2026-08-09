@@ -1,5 +1,6 @@
 /**
- * 거주 국가 선택 (ISO 3166-1 alpha-2).
+ * 국가 선택 (ISO 3166-1 alpha-2).
+ * 프로필 country_code는 가입/계정에서 받으며, 여행 긴급연락처(대사관)의 국적으로 사용합니다.
  * 앱 UI 통화(getTopCurrencyCodes)를 법정/사실상 주요 통화로 쓰는 국가만 허용.
  */
 import { getTopCurrencyCodes } from '@/lib/currencies';
