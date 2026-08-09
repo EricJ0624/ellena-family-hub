@@ -5,7 +5,7 @@
 'use client';
 
 import { Camera, ImageIcon, Paperclip } from 'lucide-react';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { ChatUiMessage } from '../types';
@@ -49,11 +49,6 @@ interface FamilyChatSectionProps {
   };
 }
 
-/** 다언어 섹션 타이틀: 너비에 맞게 축소, 높이·절대 상한 내에서 가능한 크게 */
-const CHAT_TITLE_ABS_MAX_PX = 22;
-const CHAT_TITLE_MIN_PX = 7;
-const CHAT_TITLE_LINE_HEIGHT = 1.2;
-
 export function FamilyChatSection({
   messages,
   userId,
@@ -78,11 +73,7 @@ export function FamilyChatSection({
   lang,
   translations: t,
 }: FamilyChatSectionProps) {
-  const chatHeaderRowRef = useRef<HTMLDivElement>(null);
-  const chatTitleBoxRef = useRef<HTMLDivElement>(null);
-  const chatTitleRef = useRef<HTMLHeadingElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
-  const [sectionTitleFontPx, setSectionTitleFontPx] = useState<number | null>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -113,40 +104,6 @@ export function FamilyChatSection({
     chatCameraInputRef.current?.click();
   };
 
-  useLayoutEffect(() => {
-    const row = chatHeaderRowRef.current;
-    const box = chatTitleBoxRef.current;
-    const el = chatTitleRef.current;
-    if (!box || !el) return;
-
-    const fitTitle = () => {
-      const w = box.clientWidth;
-      if (w <= 0) return;
-
-      // hello 말풍선 제거 후 row 높이가 작아져 타이틀이 과도하게 축소되는 문제를 방지
-      let fs = CHAT_TITLE_ABS_MAX_PX;
-      el.style.fontSize = `${fs}px`;
-      void el.offsetHeight;
-      while (el.scrollWidth > w + 1 && fs > CHAT_TITLE_MIN_PX) {
-        fs -= 0.5;
-        el.style.fontSize = `${fs}px`;
-        void el.offsetHeight;
-      }
-      setSectionTitleFontPx(fs);
-    };
-
-    const ro = new ResizeObserver(() => {
-      requestAnimationFrame(fitTitle);
-    });
-    if (row) ro.observe(row);
-    ro.observe(box);
-    fitTitle();
-    requestAnimationFrame(() => requestAnimationFrame(fitTitle));
-    void document.fonts.ready.then(() => requestAnimationFrame(fitTitle));
-
-    return () => ro.disconnect();
-  }, [t.section_title_chat, lang]);
-
   const handleSendClick = () => {
     if (isSendingText) return;
     const input = chatInputRef.current;
@@ -169,32 +126,9 @@ export function FamilyChatSection({
   };
 
   return (
-    <section
-      className="content-section"
-      style={{ paddingLeft: '4cqmin', paddingRight: '4cqmin', paddingTop: '2cqmin', paddingBottom: '2cqmin' }}
-    >
-      <div
-        ref={chatHeaderRowRef}
-        className="section-header mt-0 items-center justify-start"
-        style={{ marginBottom: '2cqmin' }}
-      >
-        <div
-          ref={chatTitleBoxRef}
-          className="flex min-w-0 flex-[1_1_0%] items-center self-stretch overflow-hidden"
-        >
-          <h3
-            ref={chatTitleRef}
-            className="section-title m-0 overflow-hidden text-ellipsis whitespace-nowrap tracking-[0.16em] leading-[1.2]"
-            style={{
-              fontSize:
-                sectionTitleFontPx != null
-                  ? `${sectionTitleFontPx}px`
-                  : `${CHAT_TITLE_ABS_MAX_PX}px`,
-            }}
-          >
-            {t.section_title_chat}
-          </h3>
-        </div>
+    <section className="content-section">
+      <div className="section-header">
+        <h3 className="section-title">{t.section_title_chat}</h3>
       </div>
       <div className="section-body">
         <div ref={chatBoxRef} className="chat-messages">

@@ -455,7 +455,7 @@ export function FamilyCalendarSection({
       <section className="content-section calendar-widget-section calendar-widget-section--frame bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50">
         <div className="section-header calendar-section-header">
           <h3 className="section-title m-0 flex items-center calendar-section-title">
-            <Calendar className="calendar-section-title-icon text-violet-600" />
+            <Calendar className="calendar-section-title-icon" />
             {t.section_title_calendar}
           </h3>
         </div>

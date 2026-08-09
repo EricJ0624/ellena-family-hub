@@ -28,6 +28,8 @@
   --secondary-foreground: 30 41 59; /* #1e293b slate-800 */
   --muted: 248 250 252; /* #f8fafc slate-50 */
   --muted-foreground: 100 116 139; /* #64748b slate-500 */
+  --section-title-fg: 100 116 139; /* default = muted-foreground; highend_glass overrides */
+  --section-title-icon: 124 58 237; /* violet-600 */
   --accent: 147 51 234; /* #9333ea purple-600 */
   --accent-foreground: 255 255 255; /* #ffffff white */
   --destructive: 239 68 68; /* #ef4444 red-500 */
@@ -112,6 +114,8 @@
   --secondary-foreground: 241 245 249; /* #f1f5f9 slate-100 */
   --muted: 51 65 85; /* #334155 slate-700 */
   --muted-foreground: 148 163 184; /* #94a3b8 slate-400 */
+  --section-title-fg: 148 163 184;
+  --section-title-icon: 167 139 250; /* violet-400-ish for dark */
   --accent: 192 132 252; /* #c084fc purple-400 */
   --accent-foreground: 15 23 42; /* #0f172a slate-900 */
   --destructive: 248 113 113; /* #f87171 red-400 */
@@ -149,6 +153,9 @@
     radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 38%),
     radial-gradient(circle at 70% 90%, #fb923c 0%, transparent 42%),
     linear-gradient(165deg, #1e1b4b 0%, #0f172a 50%, #083344 100%);
+  /* Widget titles on frosted glass — solid near-white (RGB triplet for rgb()) */
+  --section-title-fg: 255 255 255;
+  --section-title-icon: 165 243 252; /* cyan-200 */
   --glass-bg: rgba(255, 255, 255, 0.14);
   --glass-soft-bg: rgba(255, 255, 255, 0.1);
   --glass-medium-bg: rgba(255, 255, 255, 0.16);
@@ -176,6 +183,8 @@
     radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 36%),
     radial-gradient(circle at 72% 88%, #fb923c 0%, transparent 40%),
     linear-gradient(165deg, #020617 0%, #0c4a6e 50%, #312e81 100%);
+  --section-title-fg: 255 255 255;
+  --section-title-icon: 165 243 252;
   --glass-bg: rgba(15, 23, 42, 0.35);
   --glass-soft-bg: rgba(255, 255, 255, 0.08);
   --glass-medium-bg: rgba(255, 255, 255, 0.12);
@@ -928,7 +937,7 @@ select:not(.chalkboard-form-input) {
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  color: rgb(var(--muted-foreground));
+  color: rgb(var(--section-title-fg));
 }
 
 .section-title-large {
@@ -2037,7 +2046,7 @@ select:not(.chalkboard-form-input) {
 .message-bubble {
   display: inline-block;
   background: rgba(255, 255, 255, 0.5);
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-lg);
   border-top-left-radius: 0;
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -3213,7 +3222,7 @@ select:not(.chalkboard-form-input) {
     width: 5cqmin;
     height: 5cqmin;
     flex-shrink: 0;
-    color: #7c3aed;
+    color: rgb(var(--section-title-icon));
   }
 
   .dashboard-widget-grid .editor-widget-preview-inner .calendar-widget-section {
@@ -3589,7 +3598,7 @@ select:not(.chalkboard-form-input) {
       gap: 1.5cqmin;
     }
     .message-bubble {
-      padding: 2cqmin 3cqmin;
+      padding: 1cqmin 2cqmin;
     }
     .message-text {
       font-size: 4.5cqmin;
