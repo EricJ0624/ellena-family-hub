@@ -94,6 +94,42 @@ export async function PATCH(
     if (body.end_date !== undefined) updatePayload.end_date = body.end_date;
     if (body.budget !== undefined) updatePayload.budget = body.budget == null ? null : Number(body.budget);
 
+    const trimOrNull = (v: unknown) => {
+      if (v == null) return null;
+      const s = String(v).trim();
+      return s ? s : null;
+    };
+    if (body.cover_badge !== undefined) updatePayload.cover_badge = trimOrNull(body.cover_badge);
+    if (body.subtitle !== undefined) updatePayload.subtitle = trimOrNull(body.subtitle);
+    if (body.theme !== undefined) updatePayload.theme = trimOrNull(body.theme);
+    if (body.travelers_text !== undefined) updatePayload.travelers_text = trimOrNull(body.travelers_text);
+    if (body.flight_summary !== undefined) updatePayload.flight_summary = trimOrNull(body.flight_summary);
+    if (body.emergency_contacts !== undefined) {
+      const ec = body.emergency_contacts && typeof body.emergency_contacts === 'object' ? body.emergency_contacts : {};
+      updatePayload.emergency_contacts = {
+        local: trimOrNull((ec as { local?: unknown }).local),
+        consular: trimOrNull((ec as { consular?: unknown }).consular),
+        embassy: trimOrNull((ec as { embassy?: unknown }).embassy),
+      };
+    }
+    if (body.packing_checklist !== undefined) {
+      const list = Array.isArray(body.packing_checklist) ? body.packing_checklist : [];
+      updatePayload.packing_checklist = list
+        .map((item: unknown, idx: number) => {
+          if (!item || typeof item !== 'object') return null;
+          const row = item as { id?: unknown; category?: unknown; text?: unknown; checked?: unknown };
+          const text = String(row.text ?? '').trim();
+          if (!text) return null;
+          return {
+            id: String(row.id ?? `pack-${idx}-${Date.now()}`),
+            category: String(row.category ?? '').trim() || '기타',
+            text,
+            checked: Boolean(row.checked),
+          };
+        })
+        .filter(Boolean);
+    }
+
     if (body.diary_enabled !== undefined) {
       updatePayload.diary_enabled = Boolean(body.diary_enabled);
       if (Boolean(body.diary_enabled)) {
@@ -246,6 +282,12 @@ export async function DELETE(
       .eq('group_id', groupId);
     await supabase
       .from('travel_expenses')
+      .update({ deleted_at: now, deleted_by: user.id })
+      .eq('trip_id', tripId)
+      .eq('group_id', groupId);
+
+    await supabase
+      .from('travel_day_titles')
       .update({ deleted_at: now, deleted_by: user.id })
       .eq('trip_id', tripId)
       .eq('group_id', groupId);

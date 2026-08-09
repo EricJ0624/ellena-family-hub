@@ -3665,3 +3665,25 @@ select:not(.chalkboard-form-input) {
     }
   }
 }
+
+/* Travel itinerary document - print / preview */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #itinerary-document-root,
+  #itinerary-document-root * {
+    visibility: visible !important;
+  }
+  #itinerary-document-root {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    background: #f7f5f2 !important;
+  }
+  .itin-doc-preview-scroll {
+    overflow: visible !important;
+  }
+}

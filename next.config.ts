@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+
   // 보안: HTTP 보안 헤더 추가
   async headers() {
     return [

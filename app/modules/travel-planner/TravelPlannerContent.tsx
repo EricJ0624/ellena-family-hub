@@ -6,7 +6,19 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getTravelTranslation, formatTravelTranslation } from '@/lib/translations/travel';
-import type { TravelTrip, TravelItinerary, TravelExpense, TravelAccommodation, TravelDining, TravelAttraction, TravelTransport } from '@/lib/modules/travel-planner/types';
+import type {
+  TravelTrip,
+  TravelItinerary,
+  TravelExpense,
+  TravelAccommodation,
+  TravelDining,
+  TravelAttraction,
+  TravelTransport,
+  TravelPackingItem,
+  TravelDayTitle,
+} from '@/lib/modules/travel-planner/types';
+import { buildAutoFlightSummary, normalizeEmergencyContacts, normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
+import { ItineraryDocument } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
   showDiaryCompletedInviteHint,
@@ -22,6 +34,7 @@ import { buildTransportItineraryTitle, shortItineraryTitle } from '@/lib/modules
 import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies';
 import { formatMoneyAmount } from '@/lib/format-currency';
 import {
+  Eye,
   MapPin,
   ChevronLeft,
   Calendar,
@@ -183,6 +196,18 @@ export function TravelPlannerContent() {
   const [formEndDate, setFormEndDate] = useState('');
   const [formBudget, setFormBudget] = useState('');
   const [formTripCurrency, setFormTripCurrency] = useState('KRW');
+  const [formCoverBadge, setFormCoverBadge] = useState('');
+  const [formSubtitle, setFormSubtitle] = useState('');
+  const [formTheme, setFormTheme] = useState('');
+  const [formTravelersText, setFormTravelersText] = useState('');
+  const [formFlightSummary, setFormFlightSummary] = useState('');
+  const [formEmergencyLocal, setFormEmergencyLocal] = useState('');
+  const [formEmergencyConsular, setFormEmergencyConsular] = useState('');
+  const [formEmergencyEmbassy, setFormEmergencyEmbassy] = useState('');
+  const [formPacking, setFormPacking] = useState<TravelPackingItem[]>([]);
+  const [dayTitles, setDayTitles] = useState<Record<string, string>>({});
+  const [showItineraryDocPreview, setShowItineraryDocPreview] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [travelAttachmentTarget, setTravelAttachmentTarget] = useState<{ entityType: 'travel_trip' | 'travel_expense'; entityId: string } | null>(null);
   const [travelAttachments, setTravelAttachments] = useState<UploadedAttachment[]>([]);
   const [travelAttachmentUploading, setTravelAttachmentUploading] = useState(false);
@@ -597,6 +622,48 @@ export function TravelPlannerContent() {
     }
   }, [currentGroupId, getAuthHeaders]);
 
+  const fetchDayTitles = useCallback(async (tripId: string) => {
+    if (!currentGroupId) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/trips/${tripId}/day-titles?groupId=${currentGroupId}`, { headers });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'day titles');
+      const map: Record<string, string> = {};
+      for (const row of (json.data ?? []) as TravelDayTitle[]) {
+        if (row?.day_date) map[row.day_date] = row.title ?? '';
+      }
+      setDayTitles(map);
+    } catch {
+      setDayTitles({});
+    }
+  }, [currentGroupId, getAuthHeaders]);
+
+  const saveDayTitle = useCallback(
+    async (dayDate: string, title: string) => {
+      if (!currentGroupId || !selectedTrip) return;
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/day-titles`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId, day_date: dayDate, title }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || tt('update_failed'));
+        setDayTitles((prev) => {
+          const next = { ...prev };
+          if (!title.trim()) delete next[dayDate];
+          else next[dayDate] = title.trim();
+          return next;
+        });
+      } catch (e: unknown) {
+        alert(e instanceof Error ? e.message : tt('update_failed'));
+      }
+    },
+    [currentGroupId, selectedTrip, getAuthHeaders, tt],
+  );
+
   const loadTravelAttachments = useCallback(async (entityType: 'travel_trip' | 'travel_expense', entityId: string) => {
     if (!currentGroupId) return;
     const rows = await listAttachments({
@@ -991,6 +1058,7 @@ export function TravelPlannerContent() {
       fetchDining(selectedTrip.id);
       fetchAttractions(selectedTrip.id);
       fetchTransports(selectedTrip.id);
+      fetchDayTitles(selectedTrip.id);
     } else {
       setItineraries([]);
       setExpenses([]);
@@ -998,8 +1066,9 @@ export function TravelPlannerContent() {
       setDining([]);
       setAttractions([]);
       setTransports([]);
+      setDayTitles({});
     }
-  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports]);
+  }, [selectedTrip, fetchItineraries, fetchExpenses, fetchAccommodations, fetchDining, fetchAttractions, fetchTransports, fetchDayTitles]);
 
   useEffect(() => {
     if (!travelAttachmentTarget) {
@@ -1200,6 +1269,17 @@ export function TravelPlannerContent() {
         start_date: formStartDate,
         end_date: formEndDate,
         budget: formBudget.trim() ? Number(formBudget) : null,
+        cover_badge: formCoverBadge.trim() || null,
+        subtitle: formSubtitle.trim() || null,
+        theme: formTheme.trim() || null,
+        travelers_text: formTravelersText.trim() || null,
+        flight_summary: formFlightSummary.trim() || null,
+        emergency_contacts: {
+          local: formEmergencyLocal.trim() || null,
+          consular: formEmergencyConsular.trim() || null,
+          embassy: formEmergencyEmbassy.trim() || null,
+        },
+        packing_checklist: normalizePackingChecklist(formPacking),
       };
       if (isTripAdmin) {
         body.currency = nextCur;
@@ -2353,7 +2433,7 @@ export function TravelPlannerContent() {
   const totalBudget = initialBudget + additionSum;
   const balance = totalBudget - expenseSum;
 
-  const downloadItineraryPdf = useCallback(() => {
+  const runPdfLibFallback = useCallback(() => {
     if (!selectedTrip) return;
     const cur = (selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW';
     const loc = intlLocaleForLang(lang);
@@ -2362,58 +2442,87 @@ export function TravelPlannerContent() {
       `${tt('pdf_spent_total')}: ${formatMoneyAmount(expenseSum, cur, loc)}`,
       `${tt('ui_balance')}: ${formatMoneyAmount(balance, cur, loc)}`,
     ];
-    void import('@/lib/modules/travel-planner/itinerary-pdf')
-      .then(({ buildAndSaveTravelItineraryPdf }) =>
-        buildAndSaveTravelItineraryPdf({
-          lang,
-          trip: {
-            title: selectedTrip.title,
-            destination: selectedTrip.destination,
-            start_date: selectedTrip.start_date,
-            end_date: selectedTrip.end_date,
-          },
-          items: expandedItineraryRows.map((r) => ({
-            type: r.type,
-            day_date: r.display_day,
-            start_time: r.start_time,
-            end_time: r.end_time,
-            title: r.title,
-            description: r.description,
-            address: r.address,
-            transport_type: r.transport_type,
-          })),
-          getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
-          emptyItineraryMessage: tt('itinerary_empty_for_pdf'),
-          pdfLabels: {
-            coverKicker: tt('pdf_cover_kicker'),
-            overviewTitle: tt('pdf_overview_title'),
-            detailsTitle: tt('pdf_details_title'),
-            placesCount: formatPdfPlacesCount,
-            outsideTripSectionTitle: tt('pdf_section_outside_trip'),
-          },
-          expenseSummaryLines,
-          formatScheduleDayHeading: (dayNum, iso) =>
-            `${tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · ${formatTripDateLong(iso)}`,
-          formatOutsideDayHeading: (iso) =>
-            `${tt('itinerary_section_outside_trip')} · ${formatTripDateLong(iso)}`,
-        }),
-      )
-      .catch((err) => {
-        console.error(err);
-        setError(tt('itinerary_pdf_build_failed'));
-      });
+    return import('@/lib/modules/travel-planner/itinerary-pdf').then(({ buildAndSaveTravelItineraryPdf }) =>
+      buildAndSaveTravelItineraryPdf({
+        lang,
+        trip: {
+          title: selectedTrip.title,
+          destination: selectedTrip.destination,
+          start_date: selectedTrip.start_date,
+          end_date: selectedTrip.end_date,
+        },
+        items: expandedItineraryRows.map((r) => ({
+          type: r.type,
+          day_date: r.display_day,
+          start_time: r.start_time,
+          end_time: r.end_time,
+          title: r.title,
+          description: r.description,
+          address: r.address,
+          transport_type: r.transport_type,
+        })),
+        getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
+        emptyItineraryMessage: tt('itinerary_empty_for_pdf'),
+        pdfLabels: {
+          coverKicker: tt('pdf_cover_kicker'),
+          overviewTitle: tt('pdf_overview_title'),
+          detailsTitle: tt('pdf_details_title'),
+          placesCount: formatPdfPlacesCount,
+          outsideTripSectionTitle: tt('pdf_section_outside_trip'),
+        },
+        expenseSummaryLines,
+        formatScheduleDayHeading: (dayNum, iso) =>
+          `${tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · ${formatTripDateLong(iso)}`,
+        formatOutsideDayHeading: (iso) =>
+          `${tt('itinerary_section_outside_trip')} · ${formatTripDateLong(iso)}`,
+      }),
+    );
   }, [
     selectedTrip,
     expandedItineraryRows,
     formatPdfPlacesCount,
-    getItineraryTypeLabel,
     lang,
     totalBudget,
     expenseSum,
     balance,
     formatTripDateLong,
-    setError,
+    tt,
   ]);
+
+  const downloadItineraryPdf = useCallback(() => {
+    if (!selectedTrip || !currentGroupId || pdfBusy) return;
+    void (async () => {
+      setPdfBusy(true);
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}/itinerary-pdf?groupId=${currentGroupId}`, {
+          method: 'POST',
+          headers,
+        });
+        if (!res.ok) {
+          throw new Error(`pdf ${res.status}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `itinerary-${selectedTrip.title.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 60)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        try {
+          alert(tt('itinerary_pdf_server_failed'));
+          await runPdfLibFallback();
+        } catch (e2) {
+          console.error(e2);
+          setError(tt('itinerary_pdf_build_failed'));
+        }
+      } finally {
+        setPdfBusy(false);
+      }
+    })();
+  }, [selectedTrip, currentGroupId, pdfBusy, getAuthHeaders, runPdfLibFallback, tt, setError]);
 
   if (!currentGroupId) {
     return (
@@ -2528,6 +2637,16 @@ export function TravelPlannerContent() {
                       setFormEndDate(selectedTrip.end_date);
                       setFormBudget(selectedTrip.budget != null ? String(selectedTrip.budget) : '');
                       setFormTripCurrency((selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW');
+                      setFormCoverBadge(selectedTrip.cover_badge ?? '');
+                      setFormSubtitle(selectedTrip.subtitle ?? '');
+                      setFormTheme(selectedTrip.theme ?? '');
+                      setFormTravelersText(selectedTrip.travelers_text ?? '');
+                      setFormFlightSummary(selectedTrip.flight_summary ?? '');
+                      const ec = normalizeEmergencyContacts(selectedTrip.emergency_contacts);
+                      setFormEmergencyLocal(ec.local ?? '');
+                      setFormEmergencyConsular(ec.consular ?? '');
+                      setFormEmergencyEmbassy(ec.embassy ?? '');
+                      setFormPacking(normalizePackingChecklist(selectedTrip.packing_checklist));
                       setShowTripEditForm(true);
                     }}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-slate-100 px-3 py-2 text-[13px] font-semibold text-slate-600"
@@ -2713,10 +2832,19 @@ export function TravelPlannerContent() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={downloadItineraryPdf}
-                    className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-emerald-500 px-2.5 py-1.5 text-xs font-semibold text-white"
+                    onClick={() => setShowItineraryDocPreview(true)}
+                    className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-slate-700 px-2.5 py-1.5 text-xs font-semibold text-white"
                   >
-                    <FileDown className="h-[14px] w-[14px]" />
+                    <Eye className="h-[14px] w-[14px]" />
+                    {tt('preview_itinerary_doc')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={downloadItineraryPdf}
+                    disabled={pdfBusy}
+                    className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-emerald-500 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                  >
+                    {pdfBusy ? <Loader2 className="h-[14px] w-[14px] animate-spin" /> : <FileDown className="h-[14px] w-[14px]" />}
                     {tt('view_itinerary_pdf')}
                   </button>
                   <button
@@ -2740,8 +2868,21 @@ export function TravelPlannerContent() {
                         if (dayRows.length === 0) return null;
                         return (
                           <div key={dayYmd} className="mb-4">
-                            <div className="mb-2 border-b border-indigo-200 pb-1.5 text-[13px] font-bold text-indigo-900">
-                              {tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · {formatTripDateLong(dayYmd)}
+                            <div className="mb-2 border-b border-indigo-200 pb-1.5">
+                              <div className="text-[13px] font-bold text-indigo-900">
+                                {tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · {formatTripDateLong(dayYmd)}
+                              </div>
+                              <input
+                                defaultValue={dayTitles[dayYmd] ?? ''}
+                                key={`${dayYmd}-${dayTitles[dayYmd] ?? ''}`}
+                                placeholder={tt('day_title_placeholder')}
+                                onBlur={(e) => {
+                                  const next = e.target.value.trim();
+                                  if (next === (dayTitles[dayYmd] ?? '').trim()) return;
+                                  void saveDayTitle(dayYmd, next);
+                                }}
+                                className="mt-1 box-border w-full rounded-md border border-indigo-100 bg-white px-2 py-1 text-xs text-slate-700"
+                              />
                             </div>
                             <ul className="m-0 list-none p-0">
                               {dayRows.map((i) => (
@@ -3446,7 +3587,7 @@ export function TravelPlannerContent() {
           onClick={() => !submitting && setShowTripEditForm(false)}
         >
           <div
-            className="w-[90%] min-w-0 max-w-[400px] overflow-hidden rounded-xl bg-white p-6 shadow-2xl"
+            className="max-h-[90vh] w-[90%] min-w-0 max-w-[480px] overflow-y-auto overflow-x-hidden rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
@@ -3518,6 +3659,139 @@ export function TravelPlannerContent() {
                   </select>
                 </>
               )}
+
+              <div className="mb-2 mt-1 border-t border-slate-100 pt-4 text-[13px] font-semibold text-slate-700">
+                {tt('doc_meta_section')}
+              </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_cover_badge')}</label>
+              <input
+                value={formCoverBadge}
+                onChange={(e) => setFormCoverBadge(e.target.value)}
+                placeholder="FAMILY VOYAGE 2026"
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_subtitle')}</label>
+              <input
+                value={formSubtitle}
+                onChange={(e) => setFormSubtitle(e.target.value)}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_theme')}</label>
+              <input
+                value={formTheme}
+                onChange={(e) => setFormTheme(e.target.value)}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_travelers')}</label>
+              <div className="mb-3 flex gap-2">
+                <input
+                  value={formTravelersText}
+                  onChange={(e) => setFormTravelersText(e.target.value)}
+                  className="box-border min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const names = Array.from(memberDisplayNames.values()).filter(Boolean);
+                    if (names.length) setFormTravelersText(names.join(', '));
+                  }}
+                  className="shrink-0 cursor-pointer rounded-lg border-0 bg-slate-100 px-3 text-xs font-semibold text-slate-700"
+                >
+                  {tt('travelers_load_members')}
+                </button>
+              </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_flight_summary')}</label>
+              <div className="mb-3 flex gap-2">
+                <input
+                  value={formFlightSummary}
+                  onChange={(e) => setFormFlightSummary(e.target.value)}
+                  className="box-border min-h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const auto = buildAutoFlightSummary(transports);
+                    if (auto) setFormFlightSummary(auto);
+                  }}
+                  className="shrink-0 cursor-pointer rounded-lg border-0 bg-slate-100 px-3 text-xs font-semibold text-slate-700"
+                >
+                  Auto
+                </button>
+              </div>
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_emergency_local')}</label>
+              <input
+                value={formEmergencyLocal}
+                onChange={(e) => setFormEmergencyLocal(e.target.value)}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_emergency_consular')}</label>
+              <input
+                value={formEmergencyConsular}
+                onChange={(e) => setFormEmergencyConsular(e.target.value)}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              />
+              <label className="mb-1 block text-[13px] font-medium text-slate-600">{tt('label_emergency_embassy')}</label>
+              <input
+                value={formEmergencyEmbassy}
+                onChange={(e) => setFormEmergencyEmbassy(e.target.value)}
+                className="mb-3 box-border min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              />
+              <div className="mb-1 text-[13px] font-medium text-slate-600">{tt('label_packing')}</div>
+              <ul className="mb-2 list-none space-y-2 p-0">
+                {formPacking.map((item, idx) => (
+                  <li key={item.id} className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(item.checked)}
+                      onChange={(e) => {
+                        setFormPacking((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, checked: e.target.checked } : p)),
+                        );
+                      }}
+                    />
+                    <input
+                      value={item.category}
+                      onChange={(e) => {
+                        setFormPacking((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, category: e.target.value } : p)),
+                        );
+                      }}
+                      placeholder="카테고리"
+                      className="box-border w-24 rounded-md border border-slate-200 px-2 py-1.5 text-xs"
+                    />
+                    <input
+                      value={item.text}
+                      onChange={(e) => {
+                        setFormPacking((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, text: e.target.value } : p)),
+                        );
+                      }}
+                      placeholder={tt('packing_item_placeholder')}
+                      className="box-border min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormPacking((prev) => prev.filter((_, i) => i !== idx))}
+                      className="cursor-pointer rounded border-0 bg-red-50 px-2 py-1 text-xs text-red-700"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormPacking((prev) => [
+                    ...prev,
+                    { id: `pack-${Date.now()}`, category: '기타', text: '', checked: false },
+                  ])
+                }
+                className="mb-5 cursor-pointer rounded-lg border-0 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700"
+              >
+                + {tt('packing_add_item')}
+              </button>
+
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -3541,6 +3815,62 @@ export function TravelPlannerContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showItineraryDocPreview && selectedTrip && (
+        <div
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-3 sm:p-6"
+          onClick={() => setShowItineraryDocPreview(false)}
+        >
+          <div
+            className="flex max-h-[95vh] w-full max-w-[900px] flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <h3 className="m-0 text-base font-semibold text-slate-800">{tt('preview_itinerary_doc')}</h3>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="cursor-pointer rounded-lg border-0 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                >
+                  Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowItineraryDocPreview(false)}
+                  className="cursor-pointer border-0 bg-transparent p-1 text-slate-500"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="itin-doc-preview-scroll min-h-0 flex-1 overflow-auto bg-[#F7F5F2]">
+              <ItineraryDocument
+                trip={selectedTrip}
+                items={expandedItineraryRows.map((r) => ({
+                  type: r.type,
+                  day_date: r.display_day,
+                  start_time: r.start_time,
+                  end_time: r.end_time,
+                  title: r.title,
+                  description: r.description,
+                  address: r.address,
+                  transport_type: r.transport_type,
+                }))}
+                accommodations={accommodations}
+                transports={transports}
+                dayTitles={dayTitles}
+                labels={{
+                  overviewKo: tt('doc_overview_ko'),
+                  overviewEn: tt('doc_overview_en'),
+                  detailsKo: tt('doc_details_ko'),
+                  detailsEn: tt('doc_details_en'),
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

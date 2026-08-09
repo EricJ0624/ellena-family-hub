@@ -26,9 +26,50 @@ export interface TravelTrip {
   currency?: string;
   /** 여행 총 예산 (기준 통화). 잔액 = budget + 추가합계 - 지출합계 */
   budget?: number | null;
+  /** PDF/문서 표지 뱃지 (비우면 FAMILY VOYAGE {연도}) */
+  cover_badge?: string | null;
+  /** 영문·보조 서브타이틀 */
+  subtitle?: string | null;
+  /** 메인 테마 */
+  theme?: string | null;
+  /** 여행자 표시 문구 */
+  travelers_text?: string | null;
+  /** 항공편 요약 */
+  flight_summary?: string | null;
+  /** 긴급 연락처 */
+  emergency_contacts?: TravelEmergencyContacts | null;
+  /** 준비물 체크리스트 */
+  packing_checklist?: TravelPackingItem[] | null;
   created_by: string;
   created_at: string;
   updated_at: string;
+  updated_by?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+}
+
+export type TravelEmergencyContacts = {
+  local?: string | null;
+  consular?: string | null;
+  embassy?: string | null;
+};
+
+export type TravelPackingItem = {
+  id: string;
+  category: string;
+  text: string;
+  checked?: boolean;
+};
+
+export interface TravelDayTitle {
+  id: string;
+  trip_id: string;
+  group_id: string;
+  day_date: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
   updated_by?: string | null;
   deleted_at?: string | null;
   deleted_by?: string | null;
