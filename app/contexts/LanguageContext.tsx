@@ -31,7 +31,8 @@ interface LanguageProviderProps {
 }
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
-  const [lang, setLangState] = useState<LangCode>(() => getStoredLang() ?? 'en');
+  // SSR·첫 클라이언트 렌더는 동일하게 'en'으로 고정 (localStorage는 mount 후에만 읽어 hydration mismatch 방지)
+  const [lang, setLangState] = useState<LangCode>('en');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,6 +61,10 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         setLoading(false);
       }
     };
+
+    // 세션 조회 전에도 저장된 언어을 즉시 반영 (한 프레임만 en일 수 있음)
+    const stored = getStoredLang();
+    if (stored) applyLang(stored);
 
     void supabase.auth.getSession().then(({ data: { session } }) => {
       void loadForUser(session?.user?.id);
