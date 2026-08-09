@@ -28,11 +28,11 @@ export const BAROQUE_MAT_LAYOUT = {
   },
 } as const;
 
-/** 대시보드 커스텀 타이틀 — 액자 매트 sans 와 동일 fontFamily */
+/** 대시보드 커스텀 타이틀 — Montserrat bold (매트 caption 400과 별도) */
 export const BAROQUE_MAT_DASHBOARD_TITLE = {
   fontFamily: BAROQUE_MAT_LAYOUT.typography.fontFamily,
-  fontWeight: '400' as const,
-  letterSpacingPx: 1,
+  fontWeight: '700' as const,
+  letterSpacingPx: 0.25,
 } as const;
 
 export function baroqueMatFontSizeForName(nameLength: number): number {
