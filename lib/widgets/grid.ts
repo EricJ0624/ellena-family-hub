@@ -395,7 +395,8 @@ export function layoutYHToCssGridRowStart(
 /**
  * resolveWidgetGridPlacement → CSS gridColumn/gridRow.
  * 공통: layout y/h → CSS 행 슬롯(span 1) + minHeight(layout_h×cellRowH).
- * gap-3는 위젯 사이만; tasks/games는 height:auto·--*-min-h로 내용 증가 시 행 성장.
+ * gap-3는 위젯 사이만; games·칠판(tasks)은 height:auto·--*-min-h로 내용 증가 시 행 성장.
+ * tasks(default/highend_glass)도 다른 위젯과 동일하게 --widget-min-h / --widget-scale-box-h 사용.
  */
 export function buildWidgetGridItemStyle(
   widgetKey: DashboardWidgetKey,
@@ -412,9 +413,7 @@ export function buildWidgetGridItemStyle(
   const cssRowStart = layoutYHToCssGridRowStart(gridRowStart, rowSpan);
   const gridRow = cssRowStart != null
     ? `${cssRowStart} / span 1`
-    : widgetKey === 'tasks'
-      ? 'auto'
-      : 'span 1';
+    : 'span 1';
 
   const style: WidgetGridItemStyle = {
     gridColumn,
@@ -434,19 +433,17 @@ export function buildWidgetGridItemStyle(
       style.overflow = 'hidden';
       style['--editor-preview-h'] = `${previewPx}px`;
     }
+    style['--widget-min-h'] = `${minPx}px`;
+    style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;
     if (widgetKey === 'tasks') {
+      // kids 칠판 min-height 폴백 (CSS :has(.chalkboard-frame))
       style['--tasks-min-h'] = `${minPx}px`;
     } else if (widgetKey === 'games') {
-      style['--widget-min-h'] = `${minPx}px`;
       style['--games-min-h'] = `${minPx}px`;
-      style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;
-    } else {
-      style['--widget-min-h'] = `${minPx}px`;
-      style['--widget-scale-box-h'] = `${inEditor ? previewPx : minPx}px`;
     }
   }
 
-  if (scaleContext && widgetKey !== 'tasks') {
+  if (scaleContext) {
     const { scaleW, scaleH, scale } = resolveWidgetScaleFactors(placement, scaleContext);
     style['--widget-scale-w'] = String(scaleW);
     style['--widget-scale-h'] = String(scaleH);

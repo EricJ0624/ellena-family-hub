@@ -6757,12 +6757,8 @@ export default function FamilyHub() {
                 <div
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
-                  // tasks: overflow-hidden 제거 — 셀 높이가 내용(칠판)에 맞게 잡히도록
-                  className={
-                    cfg.widget_key === 'tasks'
-                      ? 'min-w-0 max-w-full isolate overflow-visible'
-                      : 'min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible'
-                  }
+                  // kids 칠판은 CSS :has(.chalkboard-frame) 로 overflow visible 보정
+                  className="min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible"
                   data-widget-size={cfg.size}
                   style={buildWidgetGridItemStyle(
                     cfg.widget_key,

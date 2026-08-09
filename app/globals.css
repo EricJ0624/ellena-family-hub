@@ -3492,6 +3492,7 @@ select:not(.chalkboard-form-input) {
   /*
    * Family Tasks — 그리드·크롬만 (칠판·임무 .chalkboard-* 유지):
    * chrome overflow:hidden·container-type:size 가 칠판을 눌러 자름 → 아래 보정.
+   * default/highend_glass(일반 content-section)는 다른 위젯과 동일 scale-root 높이 유지.
    */
   .dashboard-widget-grid > *:has(.chalkboard-frame) {
     align-self: start;
@@ -3506,19 +3507,36 @@ select:not(.chalkboard-form-input) {
     display: block;
     container-type: inline-size;
     height: auto;
-    min-height: var(--tasks-min-h, auto);
+    min-height: var(--tasks-min-h, var(--widget-min-h, auto));
     width: 100%;
     min-width: 0;
     overflow: visible;
+  }
+
+  /* kids 칠판: scale-root 고정 높이를 풀어 내용(칠판)에 맞게 성장 */
+  .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome > .widget-scale-root {
+    height: auto;
+    min-height: var(--tasks-min-h, var(--widget-min-h, auto));
+    max-height: none;
+    overflow: visible;
+    container-type: inline-size;
   }
 
   .widget-chrome:has(.chalkboard-frame) {
     background: transparent;
     container-type: inline-size;
     height: auto;
-    min-height: var(--tasks-min-h, auto);
+    min-height: var(--tasks-min-h, var(--widget-min-h, auto));
     overflow: visible;
     border-radius: 1rem;
+  }
+
+  .widget-chrome:has(.chalkboard-frame) > .widget-scale-root {
+    height: auto;
+    min-height: var(--tasks-min-h, var(--widget-min-h, auto));
+    max-height: none;
+    overflow: visible;
+    container-type: inline-size;
   }
 
   /* 200px 미만: 최소 텍스트 스케일 */
