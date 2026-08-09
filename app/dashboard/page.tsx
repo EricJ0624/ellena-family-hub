@@ -1606,14 +1606,18 @@ export default function FamilyHub() {
 
   const measureCustomTitleFontSize = useCallback(() => {
     if (!frameIsPortrait && isDefaultDashboardTitle) {
-      setCustomTitleFontSize(null);
-      setPortraitTitleMaxWidthPx(DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait);
+      setCustomTitleFontSize((prev) => (prev === null ? prev : null));
+      setPortraitTitleMaxWidthPx((prev) =>
+        prev === DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait
+          ? prev
+          : DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait,
+      );
       return;
     }
 
     const maxWidth = getTitleFitMaxWidth();
     if (frameIsPortrait) {
-      setPortraitTitleMaxWidthPx(maxWidth);
+      setPortraitTitleMaxWidthPx((prev) => (prev === maxWidth ? prev : maxWidth));
     }
 
     const fontFamily = isDefaultDashboardTitle
@@ -1636,7 +1640,7 @@ export default function FamilyHub() {
         titleFont.fontWeight,
         letterSpacing,
       );
-      setCustomTitleFontSize(fitted);
+      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
       return;
     }
 
@@ -1675,12 +1679,11 @@ export default function FamilyHub() {
     measureCustomTitleFontSize();
     const row = titleRowRef.current;
     const container = titleContainerRef.current;
-    const h1 = titleH1Ref.current;
-    if (!row && !container && !h1) return;
+    // h1은 관찰하지 않음 — fontSize 변경으로 높이가 바뀌면 RO→setState 무한 루프(#185)
+    if (!row && !container) return;
     const ro = new ResizeObserver(() => measureCustomTitleFontSize());
     if (row) ro.observe(row);
     if (container) ro.observe(container);
-    if (h1) ro.observe(h1);
     const onFonts = () => measureCustomTitleFontSize();
     document.fonts?.addEventListener?.('loadingdone', onFonts);
     void document.fonts?.ready?.then(onFonts);
@@ -1702,9 +1705,7 @@ export default function FamilyHub() {
       );
       const startPx = customTitleFontSize ?? estimatedCustomTitleFontSize ?? maxPx;
       const fitted = shrinkFontSizeToElement(el, startPx, DEFAULT_APP_TITLE_MIN_PX_PORTRAIT);
-      if (fitted !== customTitleFontSize) {
-        setCustomTitleFontSize(fitted);
-      }
+      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
       return;
     }
 
@@ -1713,9 +1714,7 @@ export default function FamilyHub() {
     const minPx = CUSTOM_TITLE_FONT_MIN_PX;
     const startPx = customTitleFontSize ?? estimatedCustomTitleFontSize ?? customTitleMaxPx;
     const fitted = shrinkFontSizeToElement(el, startPx, minPx);
-    if (fitted !== customTitleFontSize) {
-      setCustomTitleFontSize(fitted);
-    }
+    setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
   }, [
     frameIsPortrait,
     isDefaultDashboardTitle,
