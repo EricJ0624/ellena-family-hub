@@ -1524,18 +1524,22 @@ export default function FamilyHub() {
       }
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
-      const adminBtn = row?.querySelector('button');
+      const adminBtn = row?.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
+      const notifEl = row?.querySelector('[data-notification-center]') as HTMLElement | null;
       const hasAdminButton = !!adminBtn || isAdminTitleContext;
-      const adminWidth = adminBtn
+      const adminWidth = (adminBtn
         ? adminBtn.getBoundingClientRect().width + 8
-        : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0);
+        : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0))
+        + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton);
+      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton || !!notifEl);
     }
     const row = titleRowRef.current;
     if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
-    const adminBtn = row.querySelector('button');
-    const btnWidth = adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0;
+    const adminBtn = row.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
+    const notifEl = row.querySelector('[data-notification-center]') as HTMLElement | null;
+    const btnWidth = (adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0)
+      + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
     return Math.max(120, row.clientWidth - btnWidth - 4);
   }, [frameIsPortrait, titleRole, isAdminTitleContext]);
 
@@ -6611,6 +6615,7 @@ export default function FamilyHub() {
                 <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
               ) : showAdminButton ? (
                 <button
+                  data-dashboard-admin-btn
                   onClick={() => router.push(adminPagePath)}
                   className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
                     isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'

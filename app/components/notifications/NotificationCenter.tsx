@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import {
   NOTIFIABLE_WIDGET_KEYS,
@@ -49,6 +50,8 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
   const [prefs, setPrefs] = useState<PrefRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [panelPos, setPanelPos] = useState<{ top: number; right: number } | null>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
 
   const loadList = useCallback(async () => {
     if (!groupId) return;
@@ -120,6 +123,28 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
     if (open && tab === 'settings') void loadPrefs();
   }, [open, tab, loadPrefs]);
 
+  useLayoutEffect(() => {
+    if (!open || !bellRef.current) {
+      setPanelPos(null);
+      return;
+    }
+    const update = () => {
+      const rect = bellRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPanelPos({
+        top: rect.bottom + 8,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open]);
+
   const markAllRead = async () => {
     if (!groupId) return;
     const headers = await authHeaders();
@@ -154,7 +179,7 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
     }
     setOpen(false);
     if (item.url) {
-      window.location.href = item.url;
+      window.location.assign(item.url);
     }
   };
 
@@ -207,13 +232,148 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
 
   if (!groupId) return null;
 
+  // 미확인 알림이 있을 때만 벨 표시 (패널 연 동안은 유지)
+  const hasUnread = unreadCount > 0;
+  if (!hasUnread && !open) return null;
+
+  const panel =
+    open && panelPos && typeof document !== 'undefined'
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[1100] cursor-default bg-transparent"
+              aria-label="알림 닫기"
+              onClick={() => setOpen(false)}
+            />
+            <div
+              className="fixed z-[1101] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+              style={{ top: panelPos.top, right: panelPos.right }}
+              role="dialog"
+              aria-label="알림"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                      tab === 'list' ? 'bg-slate-900 text-white' : 'text-slate-600'
+                    }`}
+                    onClick={() => setTab('list')}
+                  >
+                    알림
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                      tab === 'settings' ? 'bg-slate-900 text-white' : 'text-slate-600'
+                    }`}
+                    onClick={() => setTab('settings')}
+                  >
+                    설정
+                  </button>
+                </div>
+                {tab === 'list' && (
+                  <button
+                    type="button"
+                    disabled={loading || unreadCount === 0}
+                    onClick={() => void markAllRead()}
+                    className="text-xs font-medium text-blue-600 disabled:opacity-40"
+                  >
+                    모두 읽음
+                  </button>
+                )}
+              </div>
+
+              {tab === 'list' ? (
+                <ul className="max-h-80 overflow-y-auto">
+                  {items.length === 0 ? (
+                    <li className="px-3 py-8 text-center text-sm text-slate-400">알림이 없습니다</li>
+                  ) : (
+                    items.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => void openItem(item)}
+                          className={`flex w-full flex-col gap-0.5 border-b border-slate-50 px-3 py-2.5 text-left hover:bg-slate-50 ${
+                            item.read_at ? 'opacity-70' : 'bg-sky-50/60'
+                          }`}
+                        >
+                          <span className="text-[11px] font-medium text-slate-500">
+                            {WIDGET_LABELS[item.widget_key as NotifiableWidgetKey] || item.widget_key}
+                          </span>
+                          <span className="text-sm font-semibold text-slate-800">{item.title}</span>
+                          <span className="line-clamp-2 text-xs text-slate-600">{item.body}</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              ) : (
+                <div className="max-h-80 overflow-y-auto px-3 py-2">
+                  <p className="mb-2 text-[11px] text-slate-500">
+                    위젯별로 푸시/앱 알림을 끌 수 있습니다. 앨범·여행 다이어리는 알림 대상이 아닙니다.
+                  </p>
+                  <ul className="space-y-2">
+                    {NOTIFIABLE_WIDGET_KEYS.map((key) => {
+                      const pref = prefs.find((p) => p.widget_key === key) || {
+                        widget_key: key,
+                        push_enabled: true,
+                        inapp_enabled: true,
+                      };
+                      return (
+                        <li key={key} className="rounded-lg border border-slate-100 px-2.5 py-2">
+                          <div className="mb-1.5 text-xs font-semibold text-slate-800">
+                            {WIDGET_LABELS[key]}
+                          </div>
+                          <div className="flex gap-3 text-[11px] text-slate-600">
+                            <label className="inline-flex cursor-pointer items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={pref.push_enabled}
+                                onChange={() => togglePref(key, 'push_enabled')}
+                              />
+                              푸시
+                            </label>
+                            <label className="inline-flex cursor-pointer items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={pref.inapp_enabled}
+                                onChange={() => togglePref(key, 'inapp_enabled')}
+                              />
+                              앱 안
+                            </label>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void savePrefs()}
+                    className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {saving ? '저장 중…' : '설정 저장'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </>,
+          document.body,
+        )
+      : null;
+
   return (
-    <div className="relative shrink-0">
+    <div className="relative shrink-0" data-notification-center>
       <button
+        ref={bellRef}
         type="button"
+        data-notification-bell
         onClick={() => setOpen((v) => !v)}
         className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
         aria-label="알림"
+        aria-expanded={open}
       >
         <span aria-hidden className="text-base">
           🔔
@@ -224,128 +384,7 @@ export default function NotificationCenter({ groupId, userId }: NotificationCent
           </span>
         )}
       </button>
-
-      {open && (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40 cursor-default bg-transparent"
-            aria-label="알림 닫기"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                    tab === 'list' ? 'bg-slate-900 text-white' : 'text-slate-600'
-                  }`}
-                  onClick={() => setTab('list')}
-                >
-                  알림
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                    tab === 'settings' ? 'bg-slate-900 text-white' : 'text-slate-600'
-                  }`}
-                  onClick={() => setTab('settings')}
-                >
-                  설정
-                </button>
-              </div>
-              {tab === 'list' && (
-                <button
-                  type="button"
-                  disabled={loading || unreadCount === 0}
-                  onClick={() => void markAllRead()}
-                  className="text-xs font-medium text-blue-600 disabled:opacity-40"
-                >
-                  모두 읽음
-                </button>
-              )}
-            </div>
-
-            {tab === 'list' ? (
-              <ul className="max-h-80 overflow-y-auto">
-                {items.length === 0 ? (
-                  <li className="px-3 py-8 text-center text-sm text-slate-400">알림이 없습니다</li>
-                ) : (
-                  items.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => void openItem(item)}
-                        className={`flex w-full flex-col gap-0.5 border-b border-slate-50 px-3 py-2.5 text-left hover:bg-slate-50 ${
-                          item.read_at ? 'opacity-70' : 'bg-sky-50/60'
-                        }`}
-                      >
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {WIDGET_LABELS[item.widget_key as NotifiableWidgetKey] || item.widget_key}
-                        </span>
-                        <span className="text-sm font-semibold text-slate-800">{item.title}</span>
-                        <span className="line-clamp-2 text-xs text-slate-600">{item.body}</span>
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-            ) : (
-              <div className="max-h-80 overflow-y-auto px-3 py-2">
-                <p className="mb-2 text-[11px] text-slate-500">
-                  위젯별로 푸시/앱 알림을 끌 수 있습니다. 앨범·여행 다이어리는 알림 대상이 아닙니다.
-                </p>
-                <ul className="space-y-2">
-                  {NOTIFIABLE_WIDGET_KEYS.map((key) => {
-                    const pref = prefs.find((p) => p.widget_key === key) || {
-                      widget_key: key,
-                      push_enabled: true,
-                      inapp_enabled: true,
-                    };
-                    return (
-                      <li
-                        key={key}
-                        className="rounded-lg border border-slate-100 px-2.5 py-2"
-                      >
-                        <div className="mb-1.5 text-xs font-semibold text-slate-800">
-                          {WIDGET_LABELS[key]}
-                        </div>
-                        <div className="flex gap-3 text-[11px] text-slate-600">
-                          <label className="inline-flex cursor-pointer items-center gap-1">
-                            <input
-                              type="checkbox"
-                              checked={pref.push_enabled}
-                              onChange={() => togglePref(key, 'push_enabled')}
-                            />
-                            푸시
-                          </label>
-                          <label className="inline-flex cursor-pointer items-center gap-1">
-                            <input
-                              type="checkbox"
-                              checked={pref.inapp_enabled}
-                              onChange={() => togglePref(key, 'inapp_enabled')}
-                            />
-                            앱 안
-                          </label>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => void savePrefs()}
-                  className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-xs font-semibold text-white disabled:opacity-50"
-                >
-                  {saving ? '저장 중…' : '설정 저장'}
-                </button>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+      {panel}
     </div>
   );
 }
