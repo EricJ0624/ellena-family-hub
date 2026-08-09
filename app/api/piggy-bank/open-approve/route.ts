@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser, ensurePiggyWallet } from '@/lib/piggy-bank';
+import { notifyFamily } from '@/lib/notifications/notify';
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,6 +136,22 @@ export async function POST(request: NextRequest) {
 
     if (requestUpdateError) {
       throw requestUpdateError;
+    }
+
+    try {
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: [requestData.child_id],
+        widgetKey: 'piggy',
+        eventType: 'PIGGY_OPEN_RESOLVED',
+        title: '🐷 개봉 승인',
+        body: '저금통 개봉 요청이 승인되었습니다.',
+        url: '/piggy-bank',
+        entityId: String(requestData.id),
+      });
+    } catch (notifyError) {
+      console.warn('piggy open approve notify:', notifyError);
     }
 
     return NextResponse.json({ success: true, data: { status: 'approved' } });

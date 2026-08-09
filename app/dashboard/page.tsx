@@ -53,6 +53,7 @@ import { getGamesTranslation, type GamesTranslations } from '@/lib/translations/
 import { getOnboardingTranslation } from '@/lib/translations/onboarding';
 import { getFamilyRoleEmoji, getFamilyRoleLabel, getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import AnnouncementBanner from '@/app/components/AnnouncementBanner';
+import NotificationCenter from '@/app/components/notifications/NotificationCenter';
 import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announcement-i18n';
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6604,20 +6605,23 @@ export default function FamilyHub() {
                 dashboardTitleText
               )}
             </h1>
-            {isGroupLoading ? (
-              <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
-            ) : showAdminButton ? (
-              <button
-                onClick={() => router.push(adminPagePath)}
-                className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
-                  isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
-                }`}
-                aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
-              >
-                <span className="text-sm">⚙️</span>
-                {ct('admin')}
-              </button>
-            ) : null}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <NotificationCenter groupId={currentGroupId} userId={userId} lang={lang} />
+              {isGroupLoading ? (
+                <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
+              ) : showAdminButton ? (
+                <button
+                  onClick={() => router.push(adminPagePath)}
+                  className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                    isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
+                  }`}
+                  aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
+                >
+                  <span className="text-sm">⚙️</span>
+                  {ct('admin')}
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 

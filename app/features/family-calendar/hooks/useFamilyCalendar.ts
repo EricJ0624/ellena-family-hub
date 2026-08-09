@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -86,6 +87,16 @@ export function useFamilyCalendar({
       throw error;
     } else {
       console.log('ADD_EVENT: family_events 테이블 저장 성공:', data);
+      const insertedId = data?.[0]?.id;
+      void emitNotificationClient({
+        groupId: currentGroupId,
+        widgetKey: 'calendar',
+        eventType: 'CALENDAR_EVENT_CREATED',
+        title: '📅 새 가족 일정',
+        body: '새 일정이 등록되었습니다.',
+        url: '/dashboard?focus=calendar',
+        entityId: insertedId ? String(insertedId) : null,
+      });
     }
   };
 
@@ -159,6 +170,16 @@ export function useFamilyCalendar({
           '⚠️ 일정 삭제: 삭제된 행이 없음. ID가 존재하지 않거나 이미 삭제되었을 수 있습니다:',
           eventIdStr
         );
+      } else {
+        void emitNotificationClient({
+          groupId: currentGroupId,
+          widgetKey: 'calendar',
+          eventType: 'CALENDAR_EVENT_DELETED',
+          title: '📅 일정 삭제',
+          body: '가족 일정이 삭제되었습니다.',
+          url: '/dashboard?focus=calendar',
+          entityId: eventIdStr,
+        });
       }
     }
   };

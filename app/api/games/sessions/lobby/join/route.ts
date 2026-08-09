@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { lobbyJoinGameSession } from '@/lib/family-games/session-service';
 import type { LobbyJoinBody } from '@/lib/family-games/session-types';
+import { getGroupMemberUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +27,23 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
     const bundle = await lobbyJoinGameSession(supabase, user.id, body);
+
+    try {
+      const members = await getGroupMemberUserIds(groupId, supabase);
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: members,
+        widgetKey: 'games',
+        eventType: 'GAME_LOBBY_JOINED',
+        title: '🎲 게임 참가',
+        body: '가족 멤버가 게임 로비에 참가했습니다.',
+        url: '/dashboard?focus=games',
+        entityId: bundle?.session?.id ? String(bundle.session.id) : null,
+      });
+    } catch (notifyError) {
+      console.warn('game lobby join notify:', notifyError);
+    }
 
     return NextResponse.json({ success: true, data: bundle });
   } catch (error) {

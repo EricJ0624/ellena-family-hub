@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
+import { notifyFamily } from '@/lib/notifications/notify';
 
 function parseAmount(raw: any): number | null {
   const value = typeof raw === 'string' ? Number(raw) : raw;
@@ -59,6 +60,21 @@ export async function POST(request: NextRequest) {
 
     if (txError) {
       throw txError;
+    }
+
+    try {
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: [childId],
+        widgetKey: 'piggy',
+        eventType: 'PIGGY_DEPOSIT',
+        title: '🐷 저금통 입금',
+        body: '저금통에 입금되었습니다.',
+        url: '/piggy-bank',
+      });
+    } catch (notifyError) {
+      console.warn('piggy deposit notify:', notifyError);
     }
 
     return NextResponse.json({

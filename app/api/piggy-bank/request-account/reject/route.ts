@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
+import { notifyFamily } from '@/lib/notifications/notify';
 
 /** 관리자 전용: 저금통 생성 요청 거절 */
 export async function POST(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const { data: reqRow, error: fetchError } = await supabase
       .from('piggy_account_requests')
-      .select('id, group_id, status')
+      .select('id, group_id, user_id, status')
       .eq('id', requestId)
       .single();
 
@@ -40,6 +41,22 @@ export async function POST(request: NextRequest) {
       .eq('id', requestId);
 
     if (updateError) throw updateError;
+
+    try {
+      await notifyFamily({
+        groupId: reqRow.group_id,
+        actorUserId: user.id,
+        recipientUserIds: [reqRow.user_id],
+        widgetKey: 'piggy',
+        eventType: 'PIGGY_ACCOUNT_RESOLVED',
+        title: '🐷 저금통 거절',
+        body: '저금통 생성 요청이 거절되었습니다.',
+        url: '/piggy-bank',
+        entityId: String(requestId),
+      });
+    } catch (notifyError) {
+      console.warn('piggy account reject notify:', notifyError);
+    }
 
     return NextResponse.json({
       success: true,

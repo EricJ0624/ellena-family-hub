@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { getGroupAdminUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 /** 멤버 전용: 저금통 생성 요청. 이미 pending이 있으면 무시. */
 export async function POST(request: NextRequest) {
@@ -47,6 +48,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, data: { alreadyRequested: true }, message: '이미 요청 중입니다.' });
       }
       throw error;
+    }
+
+    try {
+      const admins = await getGroupAdminUserIds(groupId, supabase);
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: admins,
+        widgetKey: 'piggy',
+        eventType: 'PIGGY_ACCOUNT_REQUEST',
+        title: '🐷 저금통 생성 요청',
+        body: '멤버가 저금통 생성을 요청했습니다.',
+        url: '/piggy-bank',
+        entityId: data?.id ? String(data.id) : null,
+      });
+    } catch (notifyError) {
+      console.warn('piggy account request notify:', notifyError);
     }
 
     return NextResponse.json({

@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import { supabase } from '@/lib/supabase';
+import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyTask } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -87,6 +88,23 @@ export function useFamilyTasks({
       throw new Error('ADD_TODO: insert succeeded but no row returned');
     }
 
+    const assignedTo =
+      payload.assignedToUserId && isAssignedToUserUuid(payload.assignedToUserId)
+        ? payload.assignedToUserId
+        : null;
+    if (assignedTo && assignedTo !== userId) {
+      void emitNotificationClient({
+        groupId: currentGroupId,
+        widgetKey: 'tasks',
+        eventType: 'TASK_ASSIGNED',
+        title: '✅ 새 임무 할당',
+        body: '당신에게 가족 임무가 할당되었습니다.',
+        url: '/dashboard?focus=tasks',
+        entityId: String(inserted.id),
+        recipientUserIds: [assignedTo],
+      });
+    }
+
     return inserted as { id: string; created_by?: string; is_completed?: boolean };
   };
 
@@ -121,6 +139,16 @@ export function useFamilyTasks({
       if (process.env.NODE_ENV === 'development') {
         console.error('에러 상세:', JSON.stringify(error, null, 2));
       }
+    } else if (done) {
+      void emitNotificationClient({
+        groupId: currentGroupId,
+        widgetKey: 'tasks',
+        eventType: 'TASK_COMPLETED',
+        title: '✅ 임무 완료',
+        body: '가족 임무가 완료되었습니다.',
+        url: '/dashboard?focus=tasks',
+        entityId: String(taskId),
+      });
     }
   };
 

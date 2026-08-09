@@ -7,6 +7,7 @@ import {
   finalizeSessionAfterCreate,
 } from '@/lib/family-games/session-service';
 import type { CreateGameSessionBody } from '@/lib/family-games/session-types';
+import { getGroupMemberUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +55,23 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     let bundle = await createGameSession(supabase, user.id, body);
     bundle = await finalizeSessionAfterCreate(supabase, bundle);
+
+    try {
+      const members = await getGroupMemberUserIds(groupId, supabase);
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: members,
+        widgetKey: 'games',
+        eventType: 'GAME_SESSION_CREATED',
+        title: '🎲 가족 게임',
+        body: '새 게임 로비가 열렸습니다.',
+        url: '/dashboard?focus=games',
+        entityId: bundle?.session?.id ? String(bundle.session.id) : null,
+      });
+    } catch (notifyError) {
+      console.warn('game session create notify:', notifyError);
+    }
 
     return NextResponse.json({ success: true, data: bundle });
   } catch (error) {

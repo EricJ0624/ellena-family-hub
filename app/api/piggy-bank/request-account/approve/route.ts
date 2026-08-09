@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupAdmin } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser, ensurePiggyWallet } from '@/lib/piggy-bank';
+import { notifyFamily } from '@/lib/notifications/notify';
 
 /** 관리자 전용: 저금통 생성 요청 승인 → 계정 생성 후 요청 상태를 approved로 변경 */
 export async function POST(request: NextRequest) {
@@ -44,6 +45,22 @@ export async function POST(request: NextRequest) {
       .eq('id', requestId);
 
     if (updateError) throw updateError;
+
+    try {
+      await notifyFamily({
+        groupId: reqRow.group_id,
+        actorUserId: user.id,
+        recipientUserIds: [reqRow.user_id],
+        widgetKey: 'piggy',
+        eventType: 'PIGGY_ACCOUNT_RESOLVED',
+        title: '🐷 저금통 승인',
+        body: '저금통 생성 요청이 승인되었습니다.',
+        url: '/piggy-bank',
+        entityId: String(requestId),
+      });
+    } catch (notifyError) {
+      console.warn('piggy account approve notify:', notifyError);
+    }
 
     return NextResponse.json({
       success: true,

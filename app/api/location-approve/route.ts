@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { notifyFamily } from '@/lib/notifications/notify';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -141,6 +142,33 @@ export async function POST(request: NextRequest) {
         { error: '요청 상태 업데이트에 실패했습니다.', details: error.message },
         { status: 500 }
       );
+    }
+
+    // 승인/거절 시 요청자에게 알림 (silent/cancel 제외)
+    if (!silent && (action === 'accept' || action === 'reject')) {
+      try {
+        const recipientId =
+          locationRequest.target_id === userId
+            ? locationRequest.requester_id
+            : locationRequest.target_id;
+        const isAccept = action === 'accept';
+        await notifyFamily({
+          groupId,
+          actorUserId: userId,
+          recipientUserIds: [recipientId],
+          widgetKey: 'location',
+          eventType: 'LOCATION_RESPONSE',
+          title: isAccept ? '📍 위치 요청 승인' : '📍 위치 요청 거절',
+          body: isAccept
+            ? '상대방이 위치 요청을 승인했습니다.'
+            : '상대방이 위치 요청을 거절했습니다.',
+          url: '/dashboard?focus=location',
+          entityId: requestId,
+          tag: requestId,
+        });
+      } catch (notifyError) {
+        console.warn('위치 요청 응답 알림 오류 (상태 업데이트는 성공):', notifyError);
+      }
     }
 
     return NextResponse.json({ success: true, data }, { status: 200 });

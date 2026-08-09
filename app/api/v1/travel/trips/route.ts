@@ -4,6 +4,7 @@ import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { isAllowedCurrency, normalizeCurrencyCode } from '@/lib/currencies';
 import { enrichTripsWithAutoStatus } from '@/lib/modules/travel-planner/trip-enrich';
 import { computeAutoTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import { getGroupMemberUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 /** GET: 해당 그룹의 여행 목록 (tenant = groupId) */
 export async function GET(request: NextRequest) {
@@ -101,6 +102,23 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('travel_trips POST:', error);
       return NextResponse.json({ error: '여행 생성에 실패했습니다.' }, { status: 500 });
+    }
+
+    try {
+      const members = await getGroupMemberUserIds(groupId, supabase);
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: members,
+        widgetKey: 'travel',
+        eventType: 'TRAVEL_TRIP_CREATED',
+        title: '✈️ 새 여행',
+        body: `새 여행이 등록되었습니다: ${String(title).trim().slice(0, 40)}`,
+        url: '/travel',
+        entityId: data?.id ? String(data.id) : null,
+      });
+    } catch (notifyError) {
+      console.warn('travel trip create notify:', notifyError);
     }
 
     return NextResponse.json({ success: true, data });

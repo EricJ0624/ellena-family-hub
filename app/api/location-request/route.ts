@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
+import { notifyFamily } from '@/lib/notifications/notify';
 
 // 환경 변수 안전하게 가져오기 (Non-null assertion 제거)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -186,26 +187,29 @@ export async function POST(request: NextRequest) {
 
     const requesterName = requesterProfile?.nickname || requesterProfile?.email || '알 수 없음';
 
-    // Web Push 알림 전송 (비동기, 실패해도 요청은 성공으로 처리)
+    // 알림 직접 발송 (APP_URL self-fetch 제거 — 배포에서도 동작). 실패해도 요청은 성공.
     try {
-      const pushResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/push/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          targetUserId: targetId,
-          requesterName: requesterName,
-          requestId: data.id,
-          requestType,
-        })
+      const isComeHere = requestType === 'come_here';
+      const result = await notifyFamily({
+        groupId,
+        actorUserId: requesterId,
+        recipientUserIds: [targetId],
+        widgetKey: 'location',
+        eventType: 'LOCATION_REQUEST',
+        title: isComeHere ? '📍 일루와 요청' : '📍 위치 요청',
+        body: isComeHere
+          ? `${requesterName}님이 당신에게 일루와를 요청했습니다.`
+          : `${requesterName}님이 당신의 위치를 요청했습니다.`,
+        url: '/dashboard?locationRequest=' + data.id,
+        entityId: data.id,
+        payload: { requestId: data.id, requestType },
+        tag: data.id,
       });
-
-      if (!pushResponse.ok) {
-        console.warn('Web Push 알림 전송 실패 (요청은 성공):', await pushResponse.text());
+      if (result.pushSent === 0) {
+        console.warn('위치 요청 알림: 푸시 미전송(토큰 없음/설정 off/실패)', result);
       }
     } catch (pushError) {
-      console.warn('Web Push 알림 전송 중 오류 (요청은 성공):', pushError);
+      console.warn('위치 요청 알림 전송 중 오류 (요청은 성공):', pushError);
     }
 
     return NextResponse.json({ success: true, data }, { status: 201 });

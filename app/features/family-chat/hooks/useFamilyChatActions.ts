@@ -14,6 +14,7 @@ import {
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
+import { emitNotificationClient } from '@/lib/notifications/client';
 
 type PermissionCache = { key: string; expiresAt: number } | null;
 
@@ -417,6 +418,15 @@ export function useFamilyChatActions({
         revokeOutgoingPreviews(mid);
         outgoingPreviewMessageId = null;
         void loadChatAttachmentsRef.current();
+        void emitNotificationClient({
+          groupId: currentGroupId,
+          widgetKey: 'chat',
+          eventType: 'CHAT_MESSAGE',
+          title: '💬 새 채팅 사진',
+          body: '가족 채팅에 새 사진이 있습니다.',
+          url: '/dashboard?focus=chat',
+          entityId: mid,
+        });
         familyChatDebug(`사진 ${attachments.length}개 업로드 완료`, inserted.id);
       } catch (error) {
         console.error('[FamilyChat] 사진 전송 오류:', error);
@@ -556,6 +566,15 @@ export function useFamilyChatActions({
           );
           familyChatDebug('텍스트 메시지 전송 완료', inserted.id);
           familyChatDebug('sendChat 총 소요', { elapsedMs: Date.now() - startedAt });
+          void emitNotificationClient({
+            groupId: currentGroupId,
+            widgetKey: 'chat',
+            eventType: 'CHAT_MESSAGE',
+            title: '💬 새 채팅 메시지',
+            body: '가족 채팅에 새 메시지가 있습니다.',
+            url: '/dashboard?focus=chat',
+            entityId: String(inserted.id),
+          });
         } catch (e) {
           console.error('[FamilyChat] 메시지 전송 오류:', e);
           const msg = e instanceof Error ? e.message : '';

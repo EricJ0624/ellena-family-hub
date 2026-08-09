@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { ensurePiggyAccountForUser } from '@/lib/piggy-bank';
+import { getGroupAdminUserIds, notifyFamily } from '@/lib/notifications/notify';
 
 function parseAmount(raw: any): number | null {
   const value = typeof raw === 'string' ? Number(raw) : raw;
@@ -59,6 +60,23 @@ export async function POST(request: NextRequest) {
 
     if (requestError || !requestData) {
       throw requestError || new Error('개봉 요청 생성에 실패했습니다.');
+    }
+
+    try {
+      const admins = await getGroupAdminUserIds(groupId, supabase);
+      await notifyFamily({
+        groupId,
+        actorUserId: user.id,
+        recipientUserIds: admins,
+        widgetKey: 'piggy',
+        eventType: 'PIGGY_OPEN_REQUEST',
+        title: '🐷 저금통 개봉 요청',
+        body: '멤버가 저금통 개봉을 요청했습니다.',
+        url: '/piggy-bank',
+        entityId: String(requestData.id),
+      });
+    } catch (notifyError) {
+      console.warn('piggy open request notify:', notifyError);
     }
 
     return NextResponse.json({
