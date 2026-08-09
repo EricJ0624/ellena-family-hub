@@ -146,12 +146,21 @@ export function shrinkFontSizeToElement(
   maxPx: number,
   minPx: number,
 ): number {
+  // ellipsis 상태에서는 일부 브라우저가 scrollWidth≈clientWidth로 보고 축소를 건너뜀
+  const prevOverflow = el.style.overflowX;
+  const prevTextOverflow = el.style.textOverflow;
+  el.style.overflowX = 'hidden';
+  el.style.textOverflow = 'clip';
+
   let size = maxPx;
   el.style.fontSize = `${size}px`;
   while (el.scrollWidth > el.clientWidth + 1 && size > minPx) {
     size -= 1;
     el.style.fontSize = `${size}px`;
   }
+
+  el.style.overflowX = prevOverflow;
+  el.style.textOverflow = prevTextOverflow;
   return size;
 }
 

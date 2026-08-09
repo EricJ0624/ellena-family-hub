@@ -1516,10 +1516,14 @@ export default function FamilyHub() {
 
   const getTitleFitMaxWidth = useCallback(() => {
     if (frameIsPortrait) {
+      const h1 = titleH1Ref.current;
+      // 레이아웃 확정 후 실측 폭이 최우선 (추정치/ellipsis 불일치 방지)
+      if (h1 && h1.clientWidth > 0) {
+        return h1.clientWidth;
+      }
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
       const adminBtn = row?.querySelector('button');
-      // 버튼 마운트 전에도 관리자 슬롯 예약 (세로 그리드 좌우 동일 폭)
       const hasAdminButton = !!adminBtn || isAdminTitleContext;
       const adminWidth = adminBtn
         ? adminBtn.getBoundingClientRect().width + 8
@@ -1671,10 +1675,12 @@ export default function FamilyHub() {
     measureCustomTitleFontSize();
     const row = titleRowRef.current;
     const container = titleContainerRef.current;
-    if (!row && !container) return;
+    const h1 = titleH1Ref.current;
+    if (!row && !container && !h1) return;
     const ro = new ResizeObserver(() => measureCustomTitleFontSize());
     if (row) ro.observe(row);
     if (container) ro.observe(container);
+    if (h1) ro.observe(h1);
     const onFonts = () => measureCustomTitleFontSize();
     document.fonts?.addEventListener?.('loadingdone', onFonts);
     void document.fonts?.ready?.then(onFonts);
@@ -5944,17 +5950,15 @@ export default function FamilyHub() {
     margin: 0,
     flex: frameIsPortrait ? undefined : '1 1 0%',
     minWidth: 0,
-    maxWidth: frameIsPortrait
-      ? `${portraitTitleMaxWidthPx}px`
-      : '100%',
+    maxWidth: '100%',
     width: frameIsPortrait ? '100%' : undefined,
     lineHeight: frameIsPortrait ? 1.15 : undefined,
-    justifySelf: frameIsPortrait ? 'center' : undefined,
     textAlign: frameIsPortrait ? 'center' : 'left',
     whiteSpace: 'nowrap' as const,
     overflowX: 'hidden',
     overflowY: 'visible',
-    textOverflow: frameIsPortrait ? 'ellipsis' : 'clip',
+    // ellipsis는 scrollWidth 오탐으로 폰트 축소를 막아 "Fami..." 고착의 주원인
+    textOverflow: 'clip',
     fontSize: titleFontSizeValue,
     fontWeight: isDefaultDashboardTitle
       ? (frameIsPortrait
@@ -6577,7 +6581,7 @@ export default function FamilyHub() {
         style={dashboardMainContentStyle}
       >
 
-        {/* 타이틀 + 관리자 — 세로: [슬롯|타이틀|슬롯+Admin] 그리드 / 가로: 기존 flex */}
+        {/* 타이틀 + 관리자 — 세로: 래퍼 패딩+h1 실측 fit / 가로: 기존 flex */}
         <div
           ref={titleRowRef}
           className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
@@ -6585,21 +6589,32 @@ export default function FamilyHub() {
           {frameIsPortrait ? (
             <div
               ref={titleContainerRef}
-              className="grid min-h-12 w-full min-w-0 grid-cols-[5.75rem_minmax(0,1fr)_5.75rem] items-center"
+              className="relative flex min-h-12 w-full min-w-0 items-center"
             >
-              <div className="min-w-0" aria-hidden />
-              <h1
-                ref={titleH1Ref}
-                style={dashboardTitleStyle}
-                className="min-w-0 justify-self-center text-center leading-[1.15]"
+              <div
+                className="box-border min-w-0 w-full"
+                style={
+                  showAdminButton || isGroupLoading
+                    ? {
+                        paddingLeft: DASHBOARD_TITLE_ADMIN_RESERVE_PX,
+                        paddingRight: DASHBOARD_TITLE_ADMIN_RESERVE_PX,
+                      }
+                    : undefined
+                }
               >
-                {isDefaultDashboardTitle ? (
-                  <AppTitleContent title={dashboardTitleText} />
-                ) : (
-                  dashboardTitleText
-                )}
-              </h1>
-              <div className="flex min-w-0 items-center justify-end">
+                <h1
+                  ref={titleH1Ref}
+                  style={dashboardTitleStyle}
+                  className="min-w-0 text-center leading-[1.15]"
+                >
+                  {isDefaultDashboardTitle ? (
+                    <AppTitleContent title={dashboardTitleText} />
+                  ) : (
+                    dashboardTitleText
+                  )}
+                </h1>
+              </div>
+              <div className="absolute inset-y-0 right-0 z-10 flex items-center">
                 {isGroupLoading ? (
                   <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
                 ) : showAdminButton ? (

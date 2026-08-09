@@ -21,10 +21,10 @@ export function getDashboardPortraitTitleFitMaxWidth(
   hasAdminButton = false,
 ): number {
   const frameCap = getDashboardPortraitFrameMaxWidthPx(viewportWidth);
+  // 좌우 admin 슬롯(패딩)을 뺀 실제 텍스트 가용 폭 — 액자 폭을 상한으로만 사용
   if (!hasAdminButton || adminWidth <= 0) {
     return Math.max(120, Math.min(frameCap, rowWidth - 16));
   }
-  // grid [adminSlot | title | adminSlot] — 좌우 동일 슬롯으로 액자 중심축 유지, 겹침 방지
   const sideReserve = Math.max(adminWidth, DASHBOARD_TITLE_ADMIN_RESERVE_PX);
   return Math.max(120, Math.min(frameCap, rowWidth - sideReserve * 2));
 }
