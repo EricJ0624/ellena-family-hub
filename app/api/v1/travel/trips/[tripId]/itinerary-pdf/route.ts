@@ -222,7 +222,14 @@ export async function POST(
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '서버 오류';
-    console.error('POST itinerary-pdf:', e);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const stack = e instanceof Error ? e.stack : undefined;
+    console.error('POST itinerary-pdf:', message, stack ?? e);
+    return NextResponse.json(
+      {
+        error: message,
+        hint: 'Vercel Chromium PDF failed. Check function logs; cold start may download chromium pack once.',
+      },
+      { status: 500 },
+    );
   }
 }

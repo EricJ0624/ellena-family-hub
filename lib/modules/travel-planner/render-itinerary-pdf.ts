@@ -1,9 +1,20 @@
 import { existsSync } from 'fs';
 import type { Browser } from 'puppeteer-core';
 
+/** Keep in sync with @sparticuz/chromium-min package version. */
+const CHROMIUM_PACK_VERSION = '149.0.0';
+
 function isVercelRuntime(): boolean {
   // AWS_REGION alone is often set for S3 locally — do NOT treat as serverless Chromium.
   return process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+}
+
+function chromiumPackUrl(): string {
+  if (process.env.CHROMIUM_PACK_URL?.trim()) {
+    return process.env.CHROMIUM_PACK_URL.trim();
+  }
+  const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+  return `https://github.com/Sparticuz/chromium/releases/download/v${CHROMIUM_PACK_VERSION}/chromium-v${CHROMIUM_PACK_VERSION}-pack.${arch}.tar`;
 }
 
 function localChromeCandidates(): string[] {
@@ -30,9 +41,11 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
     const puppeteer = await import('puppeteer-core');
 
     if (isVercelRuntime()) {
-      const chromium = (await import('@sparticuz/chromium')).default;
-      // @sparticuz/chromium v133+ / v149: headless "shell" + await defaultArgs()
-      const executablePath = await chromium.executablePath();
+      // Full @sparticuz/chromium often exceeds Vercel function size / NFT tracing.
+      // Official approach: chromium-min + remote pack extracted to /tmp at runtime.
+      const chromium = (await import('@sparticuz/chromium-min')).default;
+      chromium.setGraphicsMode = false;
+      const executablePath = await chromium.executablePath(chromiumPackUrl());
       const args = await puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' });
       browser = await puppeteer.launch({
         args,

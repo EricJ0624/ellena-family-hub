@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "app/api/v1/travel/trips/[tripId]/itinerary-pdf/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}
