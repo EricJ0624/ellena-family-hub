@@ -21,7 +21,7 @@ import type {
 import { normalizePackingChecklist } from '@/lib/modules/travel-planner/document-meta';
 import { buildEmergencyContactsFromDestination } from '@/lib/modules/travel-planner/emergency-contacts-auto';
 import { buildStaticMapUrl, collectTripMapPoints } from '@/lib/modules/travel-planner/static-map-url';
-import { ItineraryDocument } from '@/app/modules/travel-planner/components/ItineraryDocument';
+import { ItineraryDocument, printItineraryDocumentPreview } from '@/app/modules/travel-planner/components/ItineraryDocument';
 import {
   canUserOptInDiaryForTrip,
   showDiaryCompletedInviteHint,
@@ -2560,11 +2560,11 @@ export function TravelPlannerContent() {
     setShowItineraryDocPreview(true);
     window.setTimeout(() => {
       try {
-        window.print();
+        printItineraryDocumentPreview();
       } catch {
         /* ignore */
       }
-    }, 500);
+    }, 600);
   }, []);
 
   const downloadItineraryPdf = useCallback(() => {
@@ -3967,7 +3967,7 @@ export function TravelPlannerContent() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => printItineraryDocumentPreview()}
                   className="cursor-pointer rounded-lg border-0 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
                 >
                   Print

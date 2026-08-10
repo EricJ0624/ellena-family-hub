@@ -1,4 +1,8 @@
 import type { TravelAccommodation, TravelEmergencyContacts, TravelPackingItem, TravelTrip } from './types';
+/**
+ * 일정표(브로슈어) HTML — 미리보기·서버 PDF의 단일 소스.
+ * 디자인/문구/섹션 변경은 이 파일만 수정하면 양쪽이 동일하게 반영됩니다.
+ */
 import {
   buildAutoFlightSummary,
   formatTripDurationKo,
@@ -9,6 +13,7 @@ import {
 import { resolveEmergencyForDocument } from './emergency-contacts-auto';
 import { shortItineraryTitle } from './short-itinerary-title';
 import { enumerateTripDays } from './itinerary-display-expand';
+import { docSectionIconHtml, type DocSectionIconKind } from './doc-section-icons';
 
 export type HtmlDocItem = {
   type: 'accommodation' | 'dining' | 'attraction' | 'transport' | 'other';
@@ -26,6 +31,10 @@ function esc(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function ovTitle(kind: DocSectionIconKind, title: string): string {
+  return `<h3 class="ov-title"><span class="bar"></span>${docSectionIconHtml(kind)}<span>${esc(title)}</span></h3>`;
 }
 
 const CSS = `
@@ -101,6 +110,12 @@ const CSS = `
     font-size: 14px;
     font-weight: 700;
     margin: 0 0 10px;
+  }
+  .ov-emoji {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: block;
   }
   .bar {
     width: 4px;
@@ -252,12 +267,12 @@ export function buildItineraryDocumentHtml(params: {
     hotels.length === 0
       ? `
     <div class="ov-card" style="margin-top:12px">
-      <h3 class="ov-title"><span class="bar"></span>🏨 호텔 / 숙소</h3>
+      ${ovTitle('hotel', '호텔 / 숙소')}
       <p style="margin:0;font-size:13px;color:#94a3b8">숙소 메뉴에서 등록하면 여기에 표시됩니다.</p>
     </div>`
       : `
     <div class="ov-card" style="margin-top:12px">
-      <h3 class="ov-title"><span class="bar"></span>🏨 호텔 / 숙소</h3>
+      ${ovTitle('hotel', '호텔 / 숙소')}
       ${hotels
         .map(
           (h) => `
@@ -275,7 +290,7 @@ export function buildItineraryDocumentHtml(params: {
     ? ''
     : `
     <div class="ov-card" style="margin-top:12px">
-      <h3 class="ov-title"><span class="bar"></span>🗺️ 여행 지도</h3>
+      ${ovTitle('map', '여행 지도')}
       <img class="map-img" src="${esc(mapUrl)}" alt="Trip map" />
     </div>`;
 
@@ -283,12 +298,12 @@ export function buildItineraryDocumentHtml(params: {
     packing.length === 0
       ? `
     <div class="ov-card" style="margin-top:12px">
-      <h3 class="ov-title"><span class="bar"></span>🎒 패밀리 준비물 체크리스트</h3>
+      ${ovTitle('packing', '패밀리 준비물 체크리스트')}
       <p style="margin:0;font-size:13px;color:#94a3b8">일정표 정보에서 준비물을 추가하세요.</p>
     </div>`
       : `
     <div class="ov-card" style="margin-top:12px">
-      <h3 class="ov-title"><span class="bar"></span>🎒 패밀리 준비물 체크리스트</h3>
+      ${ovTitle('packing', '패밀리 준비물 체크리스트')}
       ${[...packingByCat.entries()]
         .map(
           ([cat, list]) => `
@@ -308,11 +323,11 @@ export function buildItineraryDocumentHtml(params: {
     <div class="accent-line"></div>
     <div class="grid2">
       <div class="ov-card">
-        <h3 class="ov-title"><span class="bar"></span>✈️ 항공 정보</h3>
+        ${ovTitle('flight', '항공 정보')}
         ${overviewRows([['항공편', flight]])}
       </div>
       <div class="ov-card">
-        <h3 class="ov-title"><span class="bar"></span>🚨 긴급 연락처</h3>
+        ${ovTitle('emergency', '긴급 연락처')}
         <div class="row"><dt>영사콜센터</dt><dd>${esc(emergency.consular)}</dd></div>
         ${
           emergency.countries.length === 0
@@ -414,7 +429,7 @@ export function buildItineraryDocumentHtml(params: {
   ${CSS}
   </style>
 </head>
-<body>
+<body id="itinerary-document-root">
   <section class="page">
     <div class="badge">${esc(badge)}</div>
     <h1>${esc(trip.title)}</h1>
