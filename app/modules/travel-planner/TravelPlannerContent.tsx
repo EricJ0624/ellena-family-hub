@@ -88,10 +88,6 @@ export function TravelPlannerContent() {
     key: keyof import('@/lib/translations/travel').TravelTranslations,
     vars: Record<string, string | number>,
   ) => formatTravelTranslation(lang, key, vars);
-  const formatPdfPlacesCount = useCallback(
-    (n: number) => (n === 1 ? tt('pdf_places_count_one') : formatTravelTranslation(lang, 'pdf_places_count', { n })),
-    [lang],
-  );
   const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
   const isTripAdmin = userRole === 'ADMIN' || isOwner;
   const [loading, setLoading] = useState(true);
@@ -2560,61 +2556,16 @@ export function TravelPlannerContent() {
   const totalBudget = initialBudget + additionSum;
   const balance = totalBudget - expenseSum;
 
-  const runPdfLibFallback = useCallback(() => {
-    if (!selectedTrip) return;
-    const cur = (selectedTrip.currency || 'KRW').trim().toUpperCase() || 'KRW';
-    const loc = intlLocaleForLang(lang);
-    const expenseSummaryLines = [
-      `${tt('total_budget')}: ${formatMoneyAmount(totalBudget, cur, loc)}`,
-      `${tt('pdf_spent_total')}: ${formatMoneyAmount(expenseSum, cur, loc)}`,
-      `${tt('ui_balance')}: ${formatMoneyAmount(balance, cur, loc)}`,
-    ];
-    return import('@/lib/modules/travel-planner/itinerary-pdf').then(({ buildAndSaveTravelItineraryPdf }) =>
-      buildAndSaveTravelItineraryPdf({
-        lang,
-        trip: {
-          title: selectedTrip.title,
-          destination: selectedTrip.destination,
-          start_date: selectedTrip.start_date,
-          end_date: selectedTrip.end_date,
-        },
-        items: expandedItineraryRows.map((r) => ({
-          type: r.type,
-          day_date: r.display_day,
-          start_time: r.start_time,
-          end_time: r.end_time,
-          title: r.title,
-          description: r.description,
-          address: r.address,
-          transport_type: r.transport_type,
-        })),
-        getTypeLabel: (type, transport_type) => getItineraryTypeLabel(type, transport_type),
-        emptyItineraryMessage: tt('itinerary_empty_for_pdf'),
-        pdfLabels: {
-          coverKicker: tt('pdf_cover_kicker'),
-          overviewTitle: tt('pdf_overview_title'),
-          detailsTitle: tt('pdf_details_title'),
-          placesCount: formatPdfPlacesCount,
-          outsideTripSectionTitle: tt('pdf_section_outside_trip'),
-        },
-        expenseSummaryLines,
-        formatScheduleDayHeading: (dayNum, iso) =>
-          `${tt('itinerary_day_label').replace(/\{n\}/g, String(dayNum))} · ${formatTripDateLong(iso)}`,
-        formatOutsideDayHeading: (iso) =>
-          `${tt('itinerary_section_outside_trip')} · ${formatTripDateLong(iso)}`,
-      }),
-    );
-  }, [
-    selectedTrip,
-    expandedItineraryRows,
-    formatPdfPlacesCount,
-    lang,
-    totalBudget,
-    expenseSum,
-    balance,
-    formatTripDateLong,
-    tt,
-  ]);
+  const printItineraryDocument = useCallback(() => {
+    setShowItineraryDocPreview(true);
+    window.setTimeout(() => {
+      try {
+        window.print();
+      } catch {
+        /* ignore */
+      }
+    }, 500);
+  }, []);
 
   const downloadItineraryPdf = useCallback(() => {
     if (!selectedTrip || !currentGroupId || pdfBusy) return;
@@ -2643,23 +2594,18 @@ export function TravelPlannerContent() {
         } catch {
           /* ignore */
         }
-        console.warn('[itinerary-pdf] server failed, using pdf-lib fallback:', detail);
+        console.warn('[itinerary-pdf] server failed, opening print for new design:', detail);
         alert(tt('itinerary_pdf_server_failed'));
-        await runPdfLibFallback();
+        printItineraryDocument();
       } catch (err) {
         console.warn('[itinerary-pdf] fallback path:', err);
-        try {
-          alert(tt('itinerary_pdf_server_failed'));
-          await runPdfLibFallback();
-        } catch (e2) {
-          console.error(e2);
-          setError(tt('itinerary_pdf_build_failed'));
-        }
+        alert(tt('itinerary_pdf_server_failed'));
+        printItineraryDocument();
       } finally {
         setPdfBusy(false);
       }
     })();
-  }, [selectedTrip, currentGroupId, pdfBusy, getAuthHeaders, runPdfLibFallback, tt, setError]);
+  }, [selectedTrip, currentGroupId, pdfBusy, getAuthHeaders, printItineraryDocument, tt]);
 
   if (!currentGroupId) {
     return (

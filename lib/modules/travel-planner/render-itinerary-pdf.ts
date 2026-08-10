@@ -31,11 +31,14 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
 
     if (isVercelRuntime()) {
       const chromium = (await import('@sparticuz/chromium')).default;
+      // @sparticuz/chromium v133+ / v149: headless "shell" + await defaultArgs()
+      const executablePath = await chromium.executablePath();
+      const args = await puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' });
       browser = await puppeteer.launch({
-        args: chromium.args,
+        args,
         defaultViewport: { width: 1200, height: 1600, deviceScaleFactor: 1 },
-        executablePath: await chromium.executablePath(),
-        headless: true,
+        executablePath,
+        headless: 'shell',
       });
     } else {
       const candidates = localChromeCandidates();
@@ -60,7 +63,8 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Uint8Array> {
     }
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load', timeout: 60000 });
+    // Prefer 'load' over networkidle0 — CDN fonts/images can keep connections open and time out on Vercel
+    await page.setContent(html, { waitUntil: 'load', timeout: 45000 });
     await page.evaluate(() => document.fonts.ready).catch(() => undefined);
     // Give remote images (cover / static map) a short settle window
     await new Promise((r) => setTimeout(r, 800));

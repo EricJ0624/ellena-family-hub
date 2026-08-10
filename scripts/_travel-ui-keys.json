@@ -175,17 +175,6 @@
     "de": "Dieses Transportmittel löschen?",
     "it": "Eliminare questo trasporto?"
   },
-  "itinerary_empty_for_pdf": {
-    "ko": "등록된 일정이 없습니다.",
-    "en": "No itinerary available.",
-    "ja": "登録された日程がありません。",
-    "zh-CN": "没有可用行程。",
-    "zh-TW": "沒有可用行程。",
-    "es": "No hay itinerario disponible.",
-    "fr": "Aucun itinéraire disponible.",
-    "de": "Kein Reiseplan verfügbar.",
-    "it": "Nessun itinerario disponibile."
-  },
   "go_to_dashboard": {
     "ko": "대시보드로 이동",
     "en": "Go to dashboard",
@@ -449,71 +438,5 @@
     "fr": "Carte des lieux (hébergement, restauration, attractions)",
     "de": "Standortkarte (Unterkunft, Essen, Sehenswürdigkeiten)",
     "it": "Mappa posizioni (alloggio, ristorazione, attrazioni)"
-  },
-  "pdf_cover_kicker": {
-    "ko": "ITINERARY",
-    "en": "ITINERARY",
-    "ja": "ITINERARY",
-    "zh-CN": "ITINERARY",
-    "zh-TW": "ITINERARY",
-    "es": "ITINERARY",
-    "fr": "ITINERARY",
-    "de": "ITINERARY",
-    "it": "ITINERARY"
-  },
-  "pdf_overview_title": {
-    "ko": "일정 요약",
-    "en": "Schedule overview",
-    "ja": "日程概要",
-    "zh-CN": "行程概览",
-    "zh-TW": "行程概覽",
-    "es": "Resumen del itinerario",
-    "fr": "Aperçu du programme",
-    "de": "Reiseübersicht",
-    "it": "Panoramica del programma"
-  },
-  "pdf_details_title": {
-    "ko": "상세 일정",
-    "en": "Full schedule",
-    "ja": "詳細日程",
-    "zh-CN": "详细行程",
-    "zh-TW": "詳細行程",
-    "es": "Itinerario completo",
-    "fr": "Programme détaillé",
-    "de": "Detaillierter Plan",
-    "it": "Programma completo"
-  },
-  "pdf_places_count": {
-    "ko": "{n}곳",
-    "en": "{n} stops",
-    "ja": "{n}か所",
-    "zh-CN": "{n} 处",
-    "zh-TW": "{n} 處",
-    "es": "{n} paradas",
-    "fr": "{n} étapes",
-    "de": "{n} Stopps",
-    "it": "{n} tappe"
-  },
-  "pdf_places_count_one": {
-    "ko": "1곳",
-    "en": "1 stop",
-    "ja": "1か所",
-    "zh-CN": "1 处",
-    "zh-TW": "1 處",
-    "es": "1 parada",
-    "fr": "1 étape",
-    "de": "1 Stopp",
-    "it": "1 tappa"
-  },
-  "pdf_spent_total": {
-    "ko": "지출 합계",
-    "en": "Total spent",
-    "ja": "支出合計",
-    "zh-CN": "支出合计",
-    "zh-TW": "支出合計",
-    "es": "Total gastado",
-    "fr": "Total dépensé",
-    "de": "Gesamtausgaben",
-    "it": "Totale speso"
   }
 }
