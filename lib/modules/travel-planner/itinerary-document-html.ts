@@ -33,7 +33,7 @@ const CSS = `
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: "Noto Sans KR", "Noto Sans CJK KR", "Malgun Gothic", sans-serif;
+    font-family: "ItineraryDocSans", "Noto Sans KR", "Malgun Gothic", sans-serif;
     color: #1e293b;
     background: #F7F5F2;
     -webkit-print-color-adjust: exact;
@@ -409,22 +409,8 @@ export function buildItineraryDocumentHtml(params: {
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <style>
-  @font-face {
-    font-family: "Noto Sans KR";
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2") format("woff2");
-  }
-  @font-face {
-    font-family: "Noto Sans KR";
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2") format("woff2");
-  }
+  /*__ITIN_EMBEDDED_FONTS__*/
   ${CSS}
   </style>
 </head>
