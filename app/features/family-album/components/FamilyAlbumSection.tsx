@@ -13,7 +13,8 @@ import type { Photo } from '../types';
 
 interface FamilyAlbumSectionProps {
   photos: Photo[];
-  onPhotoClick?: () => void;
+  /** 썸네일 클릭 시 해당 사진 전달. 없으면 onViewAllClick */
+  onPhotoClick?: (photo: Photo) => void;
   onViewAllClick: () => void;
   /** @deprecated 레이아웃은 사진 수 기반으로 결정. 호출부 호환용으로 유지 */
   rowSpan?: number;
@@ -103,7 +104,10 @@ export function FamilyAlbumSection({
             {photos.map((photo) => (
               <div
                 key={photo.id}
-                onClick={onPhotoClick || onViewAllClick}
+                onClick={() => {
+                  if (onPhotoClick) onPhotoClick(photo);
+                  else onViewAllClick();
+                }}
                 className="album-photo-cell cursor-pointer transition-[filter] duration-200 ease-in-out hover:brightness-105"
                 style={{
                   width: thumbPx,

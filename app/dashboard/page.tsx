@@ -6275,6 +6275,9 @@ export default function FamilyHub() {
         return (
           <FamilyAlbumSection
             photos={stableAlbum}
+            onPhotoClick={(photo) =>
+              router.push(`/memories?photo=${encodeURIComponent(String(photo.id))}`)
+            }
             onViewAllClick={() => router.push('/memories')}
             rowSpan={widgetRowSpan}
             translations={{

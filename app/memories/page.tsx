@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { ChevronLeft, X, Trash2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -112,6 +113,8 @@ async function extractTakenAt(file: File): Promise<string | null> {
 }
 
 function MemoriesPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentGroupId } = useGroup();
   const { album, addPhoto, deletePhoto, updatePhotoDescription, updatePhotoId } = useAlbum();
   const { lang } = useLanguage();
@@ -146,6 +149,8 @@ function MemoriesPageContent() {
   const lightboxOpenRef = useRef(false);
   /** 라이트박스 열릴 때 뷰포트 크기 고정 → 줌인 시에도 사진이 작아지지 않음 */
   const lightboxSizeRef = useRef<{ w: number; h: number } | null>(null);
+  /** ?photo= 쿼리로 라이트박스를 이미 열었는지 (앨범 갱신 시 재오픈 방지) */
+  const openedPhotoQueryRef = useRef<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const headerRefWidthRef = useRef<number>(0);
   const [headerScale, setHeaderScale] = useState<number>(1);
@@ -292,6 +297,35 @@ function MemoriesPageContent() {
   const displayListForLightbox: Photo[] = viewMode === 'byDate'
     ? groupedByDate.flatMap((s) => s.photos)
     : album;
+
+  /** 대시보드 썸네일 → /memories?photo=<id> 진입 시 해당 사진 라이트박스 오픈 */
+  useEffect(() => {
+    const photoParam = searchParams.get('photo');
+    if (!photoParam) return;
+    if (openedPhotoQueryRef.current === photoParam) return;
+
+    const list =
+      viewMode === 'byDate' ? groupedByDate.flatMap((s) => s.photos) : album;
+    if (list.length === 0) return;
+
+    const index = list.findIndex(
+      (p) =>
+        String(p.id) === photoParam ||
+        (p.supabaseId != null && String(p.supabaseId) === photoParam),
+    );
+
+    // 앨범은 로드됐는데 id가 없으면 쿼리만 정리 (재시도/재오픈 방지)
+    if (index < 0) {
+      openedPhotoQueryRef.current = photoParam;
+      router.replace('/memories', { scroll: false });
+      return;
+    }
+
+    openedPhotoQueryRef.current = photoParam;
+    setEditingId(null);
+    setSelectedIndex(index);
+    router.replace('/memories', { scroll: false });
+  }, [searchParams, album, viewMode, groupedByDate, router]);
 
   const handleBack = () => { window.location.href = '/dashboard'; };
 
