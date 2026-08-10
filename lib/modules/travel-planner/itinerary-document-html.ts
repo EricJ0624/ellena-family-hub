@@ -400,7 +400,7 @@ export function buildItineraryDocumentHtml(params: {
                         .join('');
                 return `
               <article class="day-card">
-                <h3 class="day-title"><span class="bar"></span>☀️ Day ${dayNum}${
+                <h3 class="day-title"><span class="bar"></span>${docSectionIconHtml('day')} Day ${dayNum}${
                   dayTitle ? ` : ${esc(dayTitle)}` : ''
                 }</h3>
                 ${slots}
