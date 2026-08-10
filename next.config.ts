@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   serverExternalPackages: ['@sparticuz/chromium-min', 'puppeteer-core'],
+  // Ensure bundled Korean fonts are available inside the itinerary-pdf serverless function
+  outputFileTracingIncludes: {
+    '/api/v1/travel/trips/[tripId]/itinerary-pdf': [
+      './lib/modules/travel-planner/fonts/**/*',
+    ],
+  },
 
   // 보안: HTTP 보안 헤더 추가
   async headers() {

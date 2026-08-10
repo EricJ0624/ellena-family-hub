@@ -2595,11 +2595,12 @@ export function TravelPlannerContent() {
           /* ignore */
         }
         console.warn('[itinerary-pdf] server failed, opening print for new design:', detail);
-        alert(tt('itinerary_pdf_server_failed'));
+        alert(`${tt('itinerary_pdf_server_failed')}\n\n${detail.slice(0, 240)}`);
         printItineraryDocument();
       } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
         console.warn('[itinerary-pdf] fallback path:', err);
-        alert(tt('itinerary_pdf_server_failed'));
+        alert(`${tt('itinerary_pdf_server_failed')}\n\n${detail.slice(0, 240)}`);
         printItineraryDocument();
       } finally {
         setPdfBusy(false);
