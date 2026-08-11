@@ -20,7 +20,6 @@ import {
   getSessionStoredInviteCode,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
 
@@ -1148,7 +1147,9 @@ export default function OnboardingPage() {
               className="w-full max-w-[500px] rounded-3xl bg-white p-10 shadow-[0_20px_60px_rgba(0,0,0,0.1)]"
             >
               <div className="mb-8 text-center">
-                <Users className="mx-auto mb-4 h-12 w-12 text-indigo-500" />
+                <div className="mb-4 text-[64px] leading-none [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]">
+                  🏠
+                </div>
                 <h2 className="mb-2 text-2xl font-bold text-slate-800">
                   {ot('select_group')}
                 </h2>
