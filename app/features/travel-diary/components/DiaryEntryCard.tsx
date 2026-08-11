@@ -12,6 +12,26 @@ import {
 
 const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
 
+/** 고정 4:3 박스 안 장수별 콜라주 (표현만, 업로드 로직 무관) */
+const COLLAGE_VISIBLE_MAX = 5;
+
+function collageGridClass(visibleCount: number): string {
+  if (visibleCount <= 1) return 'grid-cols-1 grid-rows-1';
+  if (visibleCount === 2) return 'grid-cols-2 grid-rows-1';
+  if (visibleCount === 3) return 'grid-cols-2 grid-rows-[minmax(0,1fr)_minmax(0,1fr)]';
+  if (visibleCount === 4) return 'grid-cols-2 grid-rows-[minmax(0,1fr)_minmax(0,1fr)]';
+  return 'grid-cols-6 grid-rows-[minmax(0,1fr)_minmax(0,1fr)]';
+}
+
+function collageCellClass(visibleCount: number, index: number): string {
+  if (visibleCount === 3 && index === 0) return 'row-span-2';
+  if (visibleCount >= 5) {
+    if (index <= 1) return 'col-span-3';
+    return 'col-span-2';
+  }
+  return '';
+}
+
 type Props = {
   slot: DiaryTimelineSlot;
   groupId: string;
@@ -133,10 +153,65 @@ export function DiaryEntryCard({ slot, groupId, feedback, labels, onSave }: Prop
     }
   };
 
+  const photoCount = attachments.length;
+  const visiblePhotos = attachments.slice(0, COLLAGE_VISIBLE_MAX);
+  const visibleCount = visiblePhotos.length;
+  const overflowCount = photoCount - visibleCount;
+
   return (
     <div className="glass-panel-soft rounded-xl p-4">
       <div className="text-sm font-semibold text-slate-800">{slot.title}</div>
       <div className="mt-0.5 text-xs text-slate-500">{slot.day_date}</div>
+
+      {photoCount > 0 && (
+        <div
+          className="relative mt-3 aspect-[4/3] overflow-hidden rounded-xl"
+          aria-label={labels.photos_label}
+        >
+          <div
+            className={['absolute inset-0 grid gap-1', collageGridClass(visibleCount)].join(' ')}
+          >
+            {visiblePhotos.map((a, index) => {
+              const isLastVisible = index === visibleCount - 1;
+              const showOverflow = isLastVisible && overflowCount > 0;
+              const src = a.thumbnail_url || a.image_url;
+              return (
+                <div
+                  key={a.id}
+                  className={[
+                    'relative min-h-0 min-w-0 overflow-hidden bg-slate-200',
+                    collageCellClass(visibleCount, index),
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  {/* 여백 톤 맞춤: 같은 사진 블러 배경 */}
+                  <img
+                    src={src}
+                    alt=""
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-slate-900/10"
+                  />
+                  <img
+                    src={src}
+                    alt=""
+                    className="relative z-[1] h-full w-full object-contain"
+                  />
+                  {showOverflow && (
+                    <div className="absolute inset-0 z-[2] flex items-center justify-center bg-slate-900/55 text-lg font-semibold text-white">
+                      +{overflowCount}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <textarea
         value={note}
@@ -233,19 +308,6 @@ export function DiaryEntryCard({ slot, groupId, feedback, labels, onSave }: Prop
           onChange={(e) => void onPickFiles(e)}
         />
       </div>
-
-      {attachments.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {attachments.map((a) => (
-            <img
-              key={a.id}
-              src={a.thumbnail_url || a.image_url}
-              alt=""
-              className="h-16 w-16 rounded-lg object-cover"
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
