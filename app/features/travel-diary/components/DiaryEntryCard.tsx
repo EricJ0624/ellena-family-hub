@@ -12,7 +12,7 @@ import {
 
 const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
 
-/** 고정 4:3 박스 안 장수별 콜라주 (표현만, 업로드 로직 무관) */
+/** 고정 4:3 콜라주 (표현만, 업로드 로직 무관) */
 const COLLAGE_VISIBLE_MAX = 5;
 
 function collageGridClass(visibleCount: number): string {
@@ -179,30 +179,15 @@ export function DiaryEntryCard({ slot, groupId, feedback, labels, onSave }: Prop
                 <div
                   key={a.id}
                   className={[
-                    'relative min-h-0 min-w-0 overflow-hidden bg-slate-200',
+                    'relative min-h-0 min-w-0 overflow-hidden',
                     collageCellClass(visibleCount, index),
                   ]
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  {/* 여백 톤 맞춤: 같은 사진 블러 배경 */}
-                  <img
-                    src={src}
-                    alt=""
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover blur-xl"
-                  />
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 bg-slate-900/10"
-                  />
-                  <img
-                    src={src}
-                    alt=""
-                    className="relative z-[1] h-full w-full object-contain"
-                  />
+                  <img src={src} alt="" className="h-full w-full object-cover" />
                   {showOverflow && (
-                    <div className="absolute inset-0 z-[2] flex items-center justify-center bg-slate-900/55 text-lg font-semibold text-white">
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/55 text-lg font-semibold text-white">
                       +{overflowCount}
                     </div>
                   )}
