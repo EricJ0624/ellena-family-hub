@@ -81,8 +81,9 @@
   --chalkboard-border-light: #9a7420;
   --chalkboard-border-mid: #6b5010;
   --chalkboard-border-dark: #4a3208;
-  --chalk-font-title: 'Gochi Hand', 'Patrick Hand', 'Chalkboard SE', cursive;
-  --chalk-font-body: 'Caveat', 'Patrick Hand', cursive;
+  /* Latin chalk first; Gaegu covers Hangul (Gochi/Caveat have no KR glyphs) */
+  --chalk-font-title: 'Gochi Hand', 'Gaegu', 'Patrick Hand', 'Chalkboard SE', cursive;
+  --chalk-font-body: 'Caveat', 'Gaegu', 'Patrick Hand', cursive;
   --chalk-font: var(--chalk-font-body);
   --chalk-sketch-radius: 16px 11px 18px 10px / 11px 17px 10px 15px;
   --chalk-shadow: 0 0 2px rgba(255, 255, 255, 0.65), 0 0 5px rgba(255, 255, 255, 0.45),

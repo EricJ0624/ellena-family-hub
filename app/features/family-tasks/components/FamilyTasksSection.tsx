@@ -14,8 +14,8 @@ import { fitFontSizeToWidth, shrinkFontSizeToElement } from '@/lib/dashboard-tit
 import { useGroup } from '@/app/contexts/GroupContext';
 import { resolveUiTheme } from '@/lib/ui-theme';
 
-/** chalkboard-empty-state — Caveat 계열, globals.css --chalk-font-body 와 동일 */
-const CHALK_EMPTY_FONT_FAMILY = "'Caveat', 'Patrick Hand', cursive";
+/** chalkboard-empty-state — Caveat + Gaegu(Hangul), globals.css --chalk-font-body 와 동일 */
+const CHALK_EMPTY_FONT_FAMILY = "'Caveat', 'Gaegu', 'Patrick Hand', cursive";
 const CHALK_EMPTY_FONT_MIN_PX = 10;
 /** 이전 7.5cqw 상한과 동일 비율 — 컨테이너 기준 최대 시작 크기 */
 const CHALK_EMPTY_FONT_MAX_CQW = 0.075;
