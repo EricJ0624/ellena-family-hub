@@ -15,6 +15,8 @@ export type TravelDiaryTranslations = {
   cannot_write: string;
   save: string;
   saved: string;
+  edit: string;
+  cancel: string;
   save_failed: string;
   note_placeholder: string;
   mood_label: string;
@@ -41,6 +43,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: '이 여행은 다이어리 작성이 시작되지 않았습니다.',
     save: '저장',
     saved: '저장됨',
+    edit: '편집',
+    cancel: '취소',
     save_failed: '저장에 실패했습니다.',
     note_placeholder: '한 줄 평을 남겨 보세요',
     mood_label: '무드',
@@ -65,6 +69,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'Diary writing has not been started for this trip.',
     save: 'Save',
     saved: 'Saved',
+    edit: 'Edit',
+    cancel: 'Cancel',
     save_failed: 'Save failed.',
     note_placeholder: 'Add a short note',
     mood_label: 'Mood',
@@ -89,6 +95,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'この旅行はダイアリーが開始されていません。',
     save: '保存',
     saved: '保存しました',
+    edit: '編集',
+    cancel: 'キャンセル',
     save_failed: '保存に失敗しました。',
     note_placeholder: 'ひとことを書く',
     mood_label: 'ムード',
@@ -113,6 +121,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: '此旅行尚未开始写日记。',
     save: '保存',
     saved: '已保存',
+    edit: '编辑',
+    cancel: '取消',
     save_failed: '保存失败。',
     note_placeholder: '写一句感想',
     mood_label: '心情',
@@ -137,6 +147,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: '此旅行尚未開始撰寫日記。',
     save: '儲存',
     saved: '已儲存',
+    edit: '編輯',
+    cancel: '取消',
     save_failed: '儲存失敗。',
     note_placeholder: '寫一句感想',
     mood_label: '心情',
@@ -161,6 +173,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'No se ha comenzado a escribir el diario para este viaje.',
     save: 'Ahorrar',
     saved: 'Guardado',
+    edit: 'Editar',
+    cancel: 'Cancelar',
     save_failed: 'Error al guardar.',
     note_placeholder: 'Añadir una breve nota',
     mood_label: 'Ánimo',
@@ -185,6 +199,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'La rédaction du journal n\'a pas encore commencé pour ce voyage.',
     save: 'Sauvegarder',
     saved: 'Enregistré',
+    edit: 'Modifier',
+    cancel: 'Annuler',
     save_failed: 'L\'enregistrement a échoué.',
     note_placeholder: 'Ajouter une courte note',
     mood_label: 'Humeur',
@@ -209,6 +225,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'Für diese Reise wurde noch nicht mit dem Tagebuchschreiben begonnen.',
     save: 'Speichern',
     saved: 'Gespeichert',
+    edit: 'Bearbeiten',
+    cancel: 'Abbrechen',
     save_failed: 'Speichern fehlgeschlagen.',
     note_placeholder: 'Fügen Sie eine kurze Notiz hinzu',
     mood_label: 'Stimmung',
@@ -233,6 +251,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'Per questo viaggio non è stata avviata la scrittura del diario.',
     save: 'Salva',
     saved: 'Salvato',
+    edit: 'Modifica',
+    cancel: 'Annulla',
     save_failed: 'Salvataggio non riuscito.',
     note_placeholder: 'Aggiungi una breve nota',
     mood_label: 'Umore',
@@ -257,6 +277,8 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     cannot_write: 'A escrita do diário ainda não foi iniciada para esta viagem.',
     save: 'Salvar',
     saved: 'Salvo',
+    edit: 'Editar',
+    cancel: 'Cancelar',
     save_failed: 'Falha ao salvar.',
     note_placeholder: 'Adicione uma nota curta',
     mood_label: 'Humor',

@@ -12,10 +12,12 @@ import type {
   TravelAccommodation,
   TravelAttraction,
   TravelDining,
+  TravelExpense,
   TravelItinerary,
   TravelPlaceFeedback,
   TravelTransport,
 } from '@/lib/modules/travel-planner/types';
+import { intlLocaleForLang } from '@/lib/language-fonts';
 import type { TravelDiaryEntry } from '@/lib/modules/travel-planner/diary-types';
 import { buildUnifiedItineraries } from '@/lib/modules/travel-planner/unified-itinerary';
 import { buildDiaryTimelineSlots } from '@/lib/modules/travel-planner/diary-timeline';
@@ -46,6 +48,7 @@ export function TravelDiaryPageContent() {
   const [trip, setTrip] = useState<TravelTrip | null>(null);
   const [entries, setEntries] = useState<TravelDiaryEntry[]>([]);
   const [feedback, setFeedback] = useState<TravelPlaceFeedback[]>([]);
+  const [expenses, setExpenses] = useState<TravelExpense[]>([]);
   const [planner, setPlanner] = useState<PlannerBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
@@ -55,6 +58,7 @@ export function TravelDiaryPageContent() {
       setTrip(null);
       setEntries([]);
       setFeedback([]);
+      setExpenses([]);
       setPlanner(null);
       setLoading(false);
       return;
@@ -68,10 +72,11 @@ export function TravelDiaryPageContent() {
       const gid = currentGroupId;
       const tid = tripIdParam;
 
-      const [tripRes, entRes, fbRes, accRes, dinRes, attRes, trRes, itRes] = await Promise.all([
+      const [tripRes, entRes, fbRes, expRes, accRes, dinRes, attRes, trRes, itRes] = await Promise.all([
         fetch(`${API}/trips/${tid}?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/diary-entries?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/place-feedback?groupId=${gid}`, { headers }),
+        fetch(`${API}/trips/${tid}/expenses?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/accommodations?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/dining?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/attractions?groupId=${gid}`, { headers }),
@@ -82,11 +87,13 @@ export function TravelDiaryPageContent() {
       const tripJson = await tripRes.json();
       const entJson = await entRes.json();
       const fbJson = await fbRes.json();
+      const expJson = await expRes.json();
       if (!tripRes.ok) throw new Error(tripJson.error);
 
       setTrip(tripJson.data);
       setEntries(Array.isArray(entJson.data) ? entJson.data : []);
       setFeedback(Array.isArray(fbJson.data) ? fbJson.data : []);
+      setExpenses(Array.isArray(expJson.data) ? (expJson.data as TravelExpense[]) : []);
       setPlanner({
         accommodations: ((await accRes.json()).data ?? []) as TravelAccommodation[],
         dining: ((await dinRes.json()).data ?? []) as TravelDining[],
@@ -147,6 +154,20 @@ export function TravelDiaryPageContent() {
     }
     return m;
   }, [feedback]);
+
+  const expenseBySource = useMemo(() => {
+    const m = new Map<string, TravelExpense>();
+    for (const e of expenses) {
+      if (!e.source_kind || !e.source_id) continue;
+      const key = `${e.source_kind}:${e.source_id}`;
+      const prev = m.get(key);
+      if (!prev || e.diary_origin) m.set(key, e);
+    }
+    return m;
+  }, [expenses]);
+
+  const tripCurrency = (trip?.currency || 'KRW').trim().toUpperCase() || 'KRW';
+  const moneyLocale = intlLocaleForLang(lang);
 
   const canWrite = trip ? canWriteDiary(trip) : false;
 
@@ -238,12 +259,22 @@ export function TravelDiaryPageContent() {
                 slot.source_kind && slot.source_id
                   ? feedbackBySource.get(`${slot.source_kind}:${slot.source_id}`) ?? null
                   : null;
+              const linkedExpense =
+                (fb?.travel_expense_id
+                  ? expenses.find((e) => e.id === fb.travel_expense_id) ?? null
+                  : null) ??
+                (slot.source_kind && slot.source_id
+                  ? expenseBySource.get(`${slot.source_kind}:${slot.source_id}`) ?? null
+                  : null);
               return (
                 <DiaryEntryCard
                   key={slot.key}
                   slot={slot}
                   groupId={currentGroupId}
                   feedback={fb}
+                  linkedExpense={linkedExpense}
+                  tripCurrency={tripCurrency}
+                  moneyLocale={moneyLocale}
                   labels={{
                     note_placeholder: t('note_placeholder'),
                     mood_label: t('mood_label'),
@@ -253,6 +284,8 @@ export function TravelDiaryPageContent() {
                     expense_label: t('expense_label'),
                     save: t('save'),
                     saved: t('saved'),
+                    edit: t('edit'),
+                    cancel: t('cancel'),
                     save_failed: t('save_failed'),
                     upload_failed: t('upload_failed'),
                   }}
