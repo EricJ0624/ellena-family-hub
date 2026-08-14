@@ -336,9 +336,11 @@ export function DiaryEntryCard({
   };
   const canShowMap = canShowDiaryPlaceMap(placeRef, slot.source_kind);
   const displayMap = showMapPref && canShowMap;
-  const showRatingBlock =
-    Boolean(slot.source_kind) && (rating != null || isRevisit || hasSavedExpense);
+  const showRatingBlock = Boolean(slot.source_kind) && (rating != null || isRevisit);
   const showLeftMeta = selectedMoods.length > 0 || (displayMap && showRatingBlock);
+  const expenseText = hasSavedExpense
+    ? `${labels.expense_label} ${formatMoneyAmount(savedExpenseAmount, currencyCode, moneyLocale)}`
+    : null;
 
   return (
     <div className="glass-panel-soft rounded-xl p-4">
@@ -403,11 +405,6 @@ export function DiaryEntryCard({
                         {labels.revisit_label}
                       </span>
                     )}
-                    {hasSavedExpense && (
-                      <span className="text-sm font-medium text-slate-700">
-                        {labels.expense_label} {formatMoneyAmount(savedExpenseAmount, currencyCode, moneyLocale)}
-                      </span>
-                    )}
                   </>
                 ) : null}
               </div>
@@ -442,15 +439,10 @@ export function DiaryEntryCard({
                   {labels.revisit_label}
                 </span>
               )}
-              {hasSavedExpense && (
-                <span className="text-sm font-medium text-slate-700">
-                  {labels.expense_label} {formatMoneyAmount(savedExpenseAmount, currencyCode, moneyLocale)}
-                </span>
-              )}
             </div>
           ) : null}
 
-          <div className="mt-3">
+          <div className="mt-3 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setMode('edit')}
@@ -459,6 +451,9 @@ export function DiaryEntryCard({
               <Pencil className="h-3.5 w-3.5" />
               {labels.edit}
             </button>
+            {expenseText ? (
+              <span className="text-sm font-medium text-slate-700">{expenseText}</span>
+            ) : null}
           </div>
         </>
       ) : (
