@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getSupabaseServerClient,
-  deleteFromS3,
-} from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { deleteS3IfUnreferenced } from '@/lib/storage-object-refs';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -62,10 +60,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // S3에서 파일 삭제 (Cloudinary 제거)
+    // S3는 앨범·다이어리 둘 다 안 쓸 때만 삭제 (같은 파일 공유)
     let s3Deleted = false;
     if (photoData.s3_key) {
-      s3Deleted = await deleteFromS3(photoData.s3_key);
+      s3Deleted = await deleteS3IfUnreferenced(
+        supabaseServer,
+        groupId,
+        photoData.s3_key,
+        { ignoreAlbumId: String(photoId) },
+      );
       if (process.env.NODE_ENV === 'development') {
         console.log('S3 삭제 결과:', { s3Key: photoData.s3_key, success: s3Deleted });
       }

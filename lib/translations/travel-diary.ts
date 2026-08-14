@@ -26,6 +26,16 @@ export type TravelDiaryTranslations = {
   expense_label: string;
   no_slots: string;
   upload_failed: string;
+  photos_close: string;
+  photos_slots_label: string;
+  photos_slots_hint: string;
+  photos_slot_remove: string;
+  photos_style_label: string;
+  photos_style_film: string;
+  photos_style_postal: string;
+  photos_album: string;
+  photos_album_empty: string;
+  photos_album_add: string;
 };
 
 const td: Record<LangCode, TravelDiaryTranslations> = {
@@ -54,6 +64,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: '실제 지출',
     no_slots: '표시할 일정이 없습니다. 플래너에서 일정을 추가해 보세요.',
     upload_failed: '사진 업로드에 실패했습니다.',
+    photos_close: '닫기',
+    photos_slots_label: '다이어리에 보이는 사진',
+    photos_slots_hint: '테두리 안 6장만 카드에 보여요. 사진을 끌어다 넣거나, 고른 뒤 칸을 누르세요.',
+    photos_slot_remove: '이 칸에서 빼기',
+    photos_style_label: '사진 스타일',
+    photos_style_film: '필름 조각',
+    photos_style_postal: '우편 앨범',
+    photos_album: '가족 앨범',
+    photos_album_empty: '가족 앨범에 고를 사진이 없습니다.',
+    photos_album_add: '추가',
   },
   en: {
     section_title: 'Trip diary',
@@ -80,6 +100,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: 'Actual spend',
     no_slots: 'No itinerary items. Add plans in the travel planner.',
     upload_failed: 'Photo upload failed.',
+    photos_close: 'Close',
+    photos_slots_label: 'Photos on the card',
+    photos_slots_hint: 'Only the 6 bordered photos appear on the card. Drag a photo in, or tap a photo then a slot.',
+    photos_slot_remove: 'Remove from slot',
+    photos_style_label: 'Photo style',
+    photos_style_film: 'Film strips',
+    photos_style_postal: 'Postal album',
+    photos_album: 'Family album',
+    photos_album_empty: 'No photos available in the family album.',
+    photos_album_add: 'Add',
   },
   ja: {
     section_title: '旅行ダイアリー',
@@ -106,6 +136,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: '実際の支出',
     no_slots: '表示する予定がありません。',
     upload_failed: 'アップロードに失敗しました。',
+    photos_close: '閉じる',
+    photos_slots_label: 'カードに表示する写真',
+    photos_slots_hint: '枠の中の6枚だけがカードに表示されます。ドラッグするか、写真を選んで枠をタップしてください。',
+    photos_slot_remove: '枠から外す',
+    photos_style_label: '写真スタイル',
+    photos_style_film: 'フィルム',
+    photos_style_postal: '郵便アルバム',
+    photos_album: '家族アルバム',
+    photos_album_empty: '家族アルバムに選べる写真がありません。',
+    photos_album_add: '追加',
   },
   'zh-CN': {
     section_title: '旅行日记',
@@ -132,6 +172,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: '实际支出',
     no_slots: '没有行程可显示。',
     upload_failed: '上传失败。',
+    photos_close: '关闭',
+    photos_slots_label: '卡片上显示的照片',
+    photos_slots_hint: '只有边框内的 6 张会显示在卡片上。拖入照片，或先点选照片再点格子。',
+    photos_slot_remove: '从格子中移除',
+    photos_style_label: '照片样式',
+    photos_style_film: '胶片',
+    photos_style_postal: '邮册',
+    photos_album: '家庭相册',
+    photos_album_empty: '家庭相册中没有可选照片。',
+    photos_album_add: '添加',
   },
   'zh-TW': {
     section_title: '旅行日記',
@@ -158,6 +208,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: '實際支出',
     no_slots: '沒有行程可顯示。',
     upload_failed: '上傳失敗。',
+    photos_close: '關閉',
+    photos_slots_label: '卡片上顯示的照片',
+    photos_slots_hint: '只有邊框內的 6 張會顯示在卡片上。拖入照片，或先點選照片再點格子。',
+    photos_slot_remove: '從格子中移除',
+    photos_style_label: '照片樣式',
+    photos_style_film: '膠片',
+    photos_style_postal: '郵冊',
+    photos_album: '家庭相簿',
+    photos_album_empty: '家庭相簿中沒有可選照片。',
+    photos_album_add: '新增',
   },
   es: {
     section_title: 'diario de viaje',
@@ -184,6 +244,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: 'Gasto real',
     no_slots: 'Sin elementos de itinerario. Agregue planes en el planificador de viajes.',
     upload_failed: 'Error al subir la foto.',
+    photos_close: 'Cerrar',
+    photos_slots_label: 'Fotos en la tarjeta',
+    photos_slots_hint: 'Solo las 6 fotos del recuadro aparecen en la tarjeta. Arrastra una foto o tócala y luego un hueco.',
+    photos_slot_remove: 'Quitar del hueco',
+    photos_style_label: 'Estilo de fotos',
+    photos_style_film: 'Tiras de film',
+    photos_style_postal: 'Álbum postal',
+    photos_album: 'Álbum familiar',
+    photos_album_empty: 'No hay fotos en el álbum familiar.',
+    photos_album_add: 'Añadir',
   },
   fr: {
     section_title: 'Carnet de voyage',
@@ -210,6 +280,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: 'Dépenses réelles',
     no_slots: 'Aucun élément d\'itinéraire. Ajoutez des projets dans le planificateur de voyage.',
     upload_failed: 'Le téléchargement des photos a échoué.',
+    photos_close: 'Fermer',
+    photos_slots_label: 'Photos sur la carte',
+    photos_slots_hint: 'Seules les 6 photos encadrées apparaissent sur la carte. Glissez une photo, ou touchez une photo puis un emplacement.',
+    photos_slot_remove: 'Retirer de l’emplacement',
+    photos_style_label: 'Style des photos',
+    photos_style_film: 'Pellicule',
+    photos_style_postal: 'Album postal',
+    photos_album: 'Album famille',
+    photos_album_empty: 'Aucune photo dans l’album famille.',
+    photos_album_add: 'Ajouter',
   },
   de: {
     section_title: 'Reisetagebuch',
@@ -236,6 +316,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: 'Tatsächliche Ausgaben',
     no_slots: 'Keine Reiseplanelemente. Fügen Sie Pläne im Reiseplaner hinzu.',
     upload_failed: 'Das Hochladen des Fotos ist fehlgeschlagen.',
+    photos_close: 'Schließen',
+    photos_slots_label: 'Fotos auf der Karte',
+    photos_slots_hint: 'Nur die 6 umrandeten Fotos erscheinen auf der Karte. Ziehen Sie ein Foto hinein oder tippen Sie Foto und dann ein Feld.',
+    photos_slot_remove: 'Aus dem Feld nehmen',
+    photos_style_label: 'Fotostil',
+    photos_style_film: 'Filmstreifen',
+    photos_style_postal: 'Postalbum',
+    photos_album: 'Familienalbum',
+    photos_album_empty: 'Keine Fotos im Familienalbum.',
+    photos_album_add: 'Hinzufügen',
   },
   it: {
     section_title: 'Diario di viaggio',
@@ -262,6 +352,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: 'Spesa effettiva',
     no_slots: 'Nessun elemento dell\'itinerario. Aggiungi piani nel pianificatore di viaggio.',
     upload_failed: 'Caricamento foto non riuscito.',
+    photos_close: 'Chiudi',
+    photos_slots_label: 'Foto sulla scheda',
+    photos_slots_hint: 'Solo le 6 foto nel riquadro appaiono sulla scheda. Trascina una foto oppure tocca una foto e poi uno spazio.',
+    photos_slot_remove: 'Rimuovi dallo spazio',
+    photos_style_label: 'Stile foto',
+    photos_style_film: 'Pellicola',
+    photos_style_postal: 'Album postale',
+    photos_album: 'Album di famiglia',
+    photos_album_empty: 'Nessuna foto nell’album di famiglia.',
+    photos_album_add: 'Aggiungi',
   },
   pt: {
     section_title: 'Diário de viagem',
@@ -288,6 +388,16 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     expense_label: 'Gasto real',
     no_slots: 'Nenhum item no roteiro. Adicione planos no planejador de viagens.',
     upload_failed: 'Falha ao enviar a foto.',
+    photos_close: 'Fechar',
+    photos_slots_label: 'Fotos no cartão',
+    photos_slots_hint: 'Só as 6 fotos da moldura aparecem no cartão. Arraste uma foto ou toque numa foto e depois num espaço.',
+    photos_slot_remove: 'Remover do espaço',
+    photos_style_label: 'Estilo das fotos',
+    photos_style_film: 'Filme',
+    photos_style_postal: 'Álbum postal',
+    photos_album: 'Álbum da família',
+    photos_album_empty: 'Não há fotos no álbum da família.',
+    photos_album_add: 'Adicionar',
   }
 };
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { ensureFamilyAlbumItemForDiaryPhoto } from '@/lib/storage-object-refs';
 
 const ALLOWED_ENTITY_TYPES = new Set([
   'chat_message',
@@ -93,6 +94,17 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: '첨부 저장에 실패했습니다.' }, { status: 500 });
+    }
+
+    if (String(entityType) === 'travel_diary_entry') {
+      await ensureFamilyAlbumItemForDiaryPhoto(supabase, {
+        groupId: String(groupId),
+        userId: user.id,
+        s3Key: String(s3Key),
+        originalFilename: String(originalFilename),
+        mimeType: mimeNorm === 'image/heif' ? 'image/heic' : mimeNorm,
+        sizeBytes,
+      });
     }
 
     return NextResponse.json({ success: true, data });

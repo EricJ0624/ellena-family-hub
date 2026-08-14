@@ -4,6 +4,10 @@ import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/ap
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
 import { syncPlaceFeedbackWithExpense } from '@/lib/modules/travel-planner/place-feedback-sync';
 import type { TravelPlaceSourceKind } from '@/lib/modules/travel-planner/unified-itinerary';
+import {
+  parseCollageAttachmentIds,
+  parseCollageStyle,
+} from '@/lib/modules/travel-planner/diary-collage';
 
 const SOURCE_KINDS = new Set([
   'attraction',
@@ -23,6 +27,8 @@ function normalizeEntryRow(row: Record<string, unknown>) {
   return {
     ...row,
     mood_tags: Array.isArray(moods) ? moods.map(String) : [],
+    collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
+    collage_style: parseCollageStyle(row.collage_style),
   };
 }
 
@@ -140,7 +146,7 @@ export async function POST(
     const moodTags = parseMoodTags(body.mood_tags);
     const note = body.note != null ? (body.note ? String(body.note).trim() : null) : null;
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       group_id: groupId,
       trip_id: tripId,
       source_kind: sourceKind,
@@ -152,6 +158,12 @@ export async function POST(
       updated_at: now,
       updated_by: user.id,
     };
+    if (body.collage_attachment_ids !== undefined) {
+      payload.collage_attachment_ids = parseCollageAttachmentIds(body.collage_attachment_ids);
+    }
+    if (body.collage_style !== undefined) {
+      payload.collage_style = parseCollageStyle(body.collage_style);
+    }
 
     let saved: Record<string, unknown> | null = null;
 

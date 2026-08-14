@@ -9,6 +9,8 @@ export interface TravelDiaryEntry {
   day_date: string;
   note: string | null;
   mood_tags: string[];
+  collage_attachment_ids: (string | null)[] | null;
+  collage_style: 'film' | 'postal';
   sort_order: number;
   created_by: string | null;
   created_at: string;
@@ -25,6 +27,8 @@ export type TravelDiaryEntryUpsertInput = {
   day_date: string;
   note?: string | null;
   mood_tags?: string[];
+  collage_attachment_ids?: (string | null)[] | null;
+  collage_style?: 'film' | 'postal';
   sort_order?: number;
   rating?: number | null;
   is_revisit?: boolean | null;

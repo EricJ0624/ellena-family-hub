@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteFromS3, getSupabaseServerClient } from '@/lib/api-helpers';
+import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { DB_TABLES } from '@/lib/db-table-names';
+import { deleteS3IfUnreferenced } from '@/lib/storage-object-refs';
 
 const ALLOWED_ENTITY_TYPES = new Set([
   'chat_message',
@@ -126,8 +127,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '첨부를 삭제할 권한이 없습니다.' }, { status: 403 });
     }
 
-    if (row.s3_key) await deleteFromS3(row.s3_key);
-    if (row.thumbnail_s3_key) await deleteFromS3(row.thumbnail_s3_key);
+    if (row.s3_key) {
+      await deleteS3IfUnreferenced(supabase, String(groupId), row.s3_key, {
+        ignoreAttachmentId: String(attachmentId),
+      });
+    }
+    if (row.thumbnail_s3_key) {
+      await deleteS3IfUnreferenced(supabase, String(groupId), row.thumbnail_s3_key, {
+        ignoreAttachmentId: String(attachmentId),
+      });
+    }
 
     const { error: delError } = await supabase
       .from(DB_TABLES.ATTACHMENTS)

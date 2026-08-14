@@ -179,6 +179,7 @@ export function TravelDiaryPageContent() {
       rating: number | null;
       is_revisit: boolean;
       actual_expense: number | null;
+      collage_style?: 'film' | 'postal';
     },
   ): Promise<string | null> => {
     if (!currentGroupId || !tripIdParam) return null;
@@ -203,12 +204,45 @@ export function TravelDiaryPageContent() {
         is_revisit: payload.is_revisit,
         actual_expense: payload.actual_expense,
         place_title: slot.title,
+        collage_style: payload.collage_style,
       }),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error);
     await loadAll();
     return json.data?.id ?? null;
+  };
+
+  const saveCollage = async (payload: {
+    entryId: string;
+    collage_attachment_ids?: (string | null)[];
+    collage_style?: 'film' | 'postal';
+  }) => {
+    if (!currentGroupId) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) throw new Error('auth');
+    const body: Record<string, unknown> = { groupId: currentGroupId };
+    if (payload.collage_attachment_ids !== undefined) {
+      body.collage_attachment_ids = payload.collage_attachment_ids;
+    }
+    if (payload.collage_style !== undefined) {
+      body.collage_style = payload.collage_style;
+    }
+    const res = await fetch(`${API}/diary-entries/${payload.entryId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+    const saved = json.data as TravelDiaryEntry | undefined;
+    if (saved?.id) {
+      setEntries((prev) => prev.map((row) => (row.id === saved.id ? { ...row, ...saved } : row)));
+    }
   };
 
   if (!currentGroupId) {
@@ -288,8 +322,19 @@ export function TravelDiaryPageContent() {
                     cancel: t('cancel'),
                     save_failed: t('save_failed'),
                     upload_failed: t('upload_failed'),
+                    photos_close: t('photos_close'),
+                    photos_slots_label: t('photos_slots_label'),
+                    photos_slots_hint: t('photos_slots_hint'),
+                    photos_slot_remove: t('photos_slot_remove'),
+                    photos_style_label: t('photos_style_label'),
+                    photos_style_film: t('photos_style_film'),
+                    photos_style_postal: t('photos_style_postal'),
+                    photos_album: t('photos_album'),
+                    photos_album_empty: t('photos_album_empty'),
+                    photos_album_add: t('photos_album_add'),
                   }}
                   onSave={(p) => saveSlot(slot, p)}
+                  onCollageSave={saveCollage}
                 />
               );
             })}

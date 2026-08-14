@@ -2,11 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
+import {
+  parseCollageAttachmentIds,
+  parseCollageStyle,
+} from '@/lib/modules/travel-planner/diary-collage';
 
 function parseMoodTags(raw: unknown): string[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) return [];
   return raw.map((x) => String(x).trim()).filter(Boolean).slice(0, 12);
+}
+
+function normalizeEntryRow(row: Record<string, unknown>) {
+  const moods = row.mood_tags;
+  return {
+    ...row,
+    mood_tags: Array.isArray(moods) ? moods.map(String) : [],
+    collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
+    collage_style: parseCollageStyle(row.collage_style),
+  };
 }
 
 /** PATCH: update diary entry */
@@ -63,6 +77,12 @@ export async function PATCH(
     const moods = parseMoodTags(body.mood_tags);
     if (moods !== undefined) updatePayload.mood_tags = moods;
     if (body.sort_order !== undefined) updatePayload.sort_order = Number(body.sort_order);
+    if (body.collage_attachment_ids !== undefined) {
+      updatePayload.collage_attachment_ids = parseCollageAttachmentIds(body.collage_attachment_ids);
+    }
+    if (body.collage_style !== undefined) {
+      updatePayload.collage_style = parseCollageStyle(body.collage_style);
+    }
 
     const { data, error } = await supabase
       .from('travel_diary_entries')
@@ -79,7 +99,7 @@ export async function PATCH(
     const row = data as Record<string, unknown>;
     return NextResponse.json({
       success: true,
-      data: { ...row, mood_tags: Array.isArray(row.mood_tags) ? row.mood_tags : [] },
+      data: normalizeEntryRow(row),
     });
   } catch (e: unknown) {
     console.error('PATCH diary-entry:', e);

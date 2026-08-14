@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pencil, Star } from 'lucide-react';
 import type { DiaryTimelineSlot } from '@/lib/modules/travel-planner/diary-timeline';
 import type { TravelExpense, TravelPlaceFeedback } from '@/lib/modules/travel-planner/types';
@@ -11,28 +11,19 @@ import {
   validateAttachmentFile,
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
+import {
+  emptyCollageSlots,
+  parseCollageStyle,
+  resolveCollageSlots,
+  type CollageSlotIds,
+  type DiaryCollageStyle,
+} from '@/lib/modules/travel-planner/diary-collage';
+import { supabase } from '@/lib/supabase';
+import { DiaryPhotoCollage } from './DiaryPhotoCollage';
+import { DiaryPhotoGalleryModal } from './DiaryPhotoGalleryModal';
+import { FamilyAlbumPickerModal } from './FamilyAlbumPickerModal';
 
 const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
-
-/** 고정 4:3 콜라주 (표현만, 업로드 로직 무관) */
-const COLLAGE_VISIBLE_MAX = 5;
-
-function collageGridClass(visibleCount: number): string {
-  if (visibleCount <= 1) return 'grid-cols-1 grid-rows-1';
-  if (visibleCount === 2) return 'grid-cols-2 grid-rows-1';
-  if (visibleCount === 3) return 'grid-cols-2 grid-rows-[minmax(0,1fr)_minmax(0,1fr)]';
-  if (visibleCount === 4) return 'grid-cols-2 grid-rows-[minmax(0,1fr)_minmax(0,1fr)]';
-  return 'grid-cols-6 grid-rows-[minmax(0,1fr)_minmax(0,1fr)]';
-}
-
-function collageCellClass(visibleCount: number, index: number): string {
-  if (visibleCount === 3 && index === 0) return 'row-span-2';
-  if (visibleCount >= 5) {
-    if (index <= 1) return 'col-span-3';
-    return 'col-span-2';
-  }
-  return '';
-}
 
 type Labels = {
   note_placeholder: string;
@@ -47,6 +38,16 @@ type Labels = {
   cancel: string;
   save_failed: string;
   upload_failed: string;
+  photos_close: string;
+  photos_slots_label: string;
+  photos_slots_hint: string;
+  photos_slot_remove: string;
+  photos_style_label: string;
+  photos_style_film: string;
+  photos_style_postal: string;
+  photos_album: string;
+  photos_album_empty: string;
+  photos_album_add: string;
 };
 
 type Props = {
@@ -63,55 +64,14 @@ type Props = {
     rating: number | null;
     is_revisit: boolean;
     actual_expense: number | null;
+    collage_style?: DiaryCollageStyle;
   }) => Promise<string | null>;
+  onCollageSave: (payload: {
+    entryId: string;
+    collage_attachment_ids?: CollageSlotIds;
+    collage_style?: DiaryCollageStyle;
+  }) => Promise<void>;
 };
-
-function PhotoCollage({
-  attachments,
-  photosLabel,
-}: {
-  attachments: UploadedAttachment[];
-  photosLabel: string;
-}) {
-  const photoCount = attachments.length;
-  if (photoCount === 0) return null;
-  const visiblePhotos = attachments.slice(0, COLLAGE_VISIBLE_MAX);
-  const visibleCount = visiblePhotos.length;
-  const overflowCount = photoCount - visibleCount;
-
-  return (
-    <div
-      className="relative mt-3 aspect-[4/3] overflow-hidden rounded-xl"
-      aria-label={photosLabel}
-    >
-      <div className={['absolute inset-0 grid gap-1', collageGridClass(visibleCount)].join(' ')}>
-        {visiblePhotos.map((a, index) => {
-          const isLastVisible = index === visibleCount - 1;
-          const showOverflow = isLastVisible && overflowCount > 0;
-          const src = a.thumbnail_url || a.image_url;
-          return (
-            <div
-              key={a.id}
-              className={[
-                'relative min-h-0 min-w-0 overflow-hidden',
-                collageCellClass(visibleCount, index),
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <img src={src} alt="" className="h-full w-full object-cover" />
-              {showOverflow && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/55 text-lg font-semibold text-white">
-                  +{overflowCount}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function expenseInputValue(linkedExpense?: TravelExpense | null): string {
   if (linkedExpense == null) return '';
@@ -129,6 +89,7 @@ export function DiaryEntryCard({
   moneyLocale,
   labels,
   onSave,
+  onCollageSave,
 }: Props) {
   const entry = slot.entry;
   const [note, setNote] = useState(entry?.note ?? '');
@@ -141,6 +102,14 @@ export function DiaryEntryCard({
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [mode, setMode] = useState<'view' | 'edit'>(entry?.id ? 'view' : 'edit');
+  const [collageStyle, setCollageStyle] = useState<DiaryCollageStyle>(
+    parseCollageStyle(entry?.collage_style),
+  );
+  const [slotIds, setSlotIds] = useState<CollageSlotIds>(() => emptyCollageSlots());
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const slotsCustomized = useRef(entry?.collage_attachment_ids != null);
+  const slotIdsRef = useRef<CollageSlotIds>(emptyCollageSlots());
   const fileRef = useRef<HTMLInputElement>(null);
   const entryId = entry?.id ?? null;
 
@@ -163,6 +132,11 @@ export function DiaryEntryCard({
   }, [linkedExpense?.id, linkedExpense?.amount]);
 
   useEffect(() => {
+    setCollageStyle(parseCollageStyle(entry?.collage_style));
+    slotsCustomized.current = entry?.collage_attachment_ids != null;
+  }, [entry?.id, entry?.collage_style, entry?.collage_attachment_ids]);
+
+  useEffect(() => {
     if (!entryId) {
       setAttachments([]);
       return;
@@ -171,6 +145,35 @@ export function DiaryEntryCard({
       .then(setAttachments)
       .catch(() => setAttachments([]));
   }, [groupId, entryId]);
+
+  useEffect(() => {
+    slotIdsRef.current = slotIds;
+  }, [slotIds]);
+
+  useEffect(() => {
+    const ids = attachments.map((item) => item.id);
+    const local = slotIdsRef.current;
+    const localHas = local.some(Boolean);
+    const saved = entry?.collage_attachment_ids ?? null;
+    if (slotsCustomized.current) {
+      setSlotIds(resolveCollageSlots(ids, localHas ? local : saved));
+      return;
+    }
+    setSlotIds(resolveCollageSlots(ids, saved));
+  }, [attachments, entry?.collage_attachment_ids, entry?.id]);
+
+  const visiblePhotos = useMemo(
+    () =>
+      slotIds
+        .map((id) => (id ? attachments.find((item) => item.id === id) : null))
+        .filter((item): item is UploadedAttachment => Boolean(item)),
+    [slotIds, attachments],
+  );
+
+  const attachedImageUrls = useMemo(
+    () => attachments.map((item) => item.image_url),
+    [attachments],
+  );
 
   const toggleMood = (m: string) => {
     setMoods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
@@ -182,23 +185,52 @@ export function DiaryEntryCard({
     setRating(feedback?.rating ?? null);
     setIsRevisit(Boolean(feedback?.is_revisit));
     setExpense(expenseInputValue(linkedExpense));
+    setCollageStyle(parseCollageStyle(entry?.collage_style));
   };
 
   const currencyCode = (linkedExpense?.currency || tripCurrency || 'KRW').trim().toUpperCase() || 'KRW';
   const savedExpenseAmount = Number(linkedExpense?.amount);
   const hasSavedExpense = Number.isFinite(savedExpenseAmount) && savedExpenseAmount > 0;
 
+  const persistCollage = async (
+    nextIds: CollageSlotIds | undefined,
+    nextStyle: DiaryCollageStyle | undefined,
+    targetId = entryId,
+  ) => {
+    if (!targetId) return;
+    try {
+      await onCollageSave({
+        entryId: targetId,
+        collage_attachment_ids: nextIds,
+        collage_style: nextStyle,
+      });
+    } catch {
+      alert(labels.save_failed);
+    }
+  };
+
+  const handleSlotIdsChange = (next: CollageSlotIds) => {
+    slotsCustomized.current = true;
+    setSlotIds(next);
+    void persistCollage(next, collageStyle);
+  };
+
+  const handleStyleChange = (next: DiaryCollageStyle) => {
+    setCollageStyle(next);
+    void persistCollage(slotsCustomized.current ? slotIds : undefined, next);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const exp =
-        expense.trim() === '' ? null : Number(expense.replace(/,/g, ''));
+      const exp = expense.trim() === '' ? null : Number(expense.replace(/,/g, ''));
       const id = await onSave({
         note,
         mood_tags: moods,
         rating,
         is_revisit: isRevisit,
         actual_expense: exp != null && Number.isFinite(exp) ? exp : null,
+        collage_style: collageStyle,
       });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
@@ -212,16 +244,27 @@ export function DiaryEntryCard({
     }
   };
 
+  const refreshAttachments = async (targetId: string) => {
+    const rows = await getAttachmentsForEntity({
+      groupId,
+      entityType: 'travel_diary_entry',
+      entityId: targetId,
+    });
+    setAttachments(rows);
+  };
+
+  const ensureEntryId = async () => {
+    if (entryId) return entryId;
+    return handleSave();
+  };
+
   const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
     if (files.length === 0) return;
 
-    let targetId = entryId;
-    if (!targetId) {
-      targetId = await handleSave();
-      if (!targetId) return;
-    }
+    const targetId = await ensureEntryId();
+    if (!targetId) return;
 
     setUploading(true);
     try {
@@ -237,12 +280,33 @@ export function DiaryEntryCard({
         entityId: targetId,
         files: toUpload,
       });
-      const rows = await getAttachmentsForEntity({
-        groupId,
-        entityType: 'travel_diary_entry',
-        entityId: targetId,
+      await refreshAttachments(targetId);
+    } catch {
+      alert(labels.upload_failed);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onAlbumConfirm = async (albumItemIds: string[]) => {
+    const targetId = await ensureEntryId();
+    if (!targetId) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) {
+      alert(labels.save_failed);
+      return;
+    }
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/v1/travel/diary-entries/${targetId}/from-album`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, albumItemIds }),
       });
-      setAttachments(rows);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error);
+      await refreshAttachments(targetId);
     } catch {
       alert(labels.upload_failed);
     } finally {
@@ -258,7 +322,14 @@ export function DiaryEntryCard({
       <div className="text-sm font-semibold text-slate-800">{slot.title}</div>
       <div className="mt-0.5 text-xs text-slate-500">{slot.day_date}</div>
 
-      <PhotoCollage attachments={attachments} photosLabel={labels.photos_label} />
+      {attachments.length > 0 ? (
+        <DiaryPhotoCollage
+          photos={visiblePhotos}
+          style={collageStyle}
+          photosLabel={labels.photos_label}
+          onOpen={() => setGalleryOpen(true)}
+        />
+      ) : null}
 
       {isView ? (
         <>
@@ -356,6 +427,36 @@ export function DiaryEntryCard({
             </div>
           </div>
 
+          <div className="mt-3">
+            <span className="text-xs font-medium text-slate-600">{labels.photos_style_label}</span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleStyleChange('film')}
+                className={[
+                  'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium',
+                  collageStyle === 'film'
+                    ? 'border-violet-400 bg-violet-100 text-violet-800'
+                    : 'border-slate-200 bg-white text-slate-700',
+                ].join(' ')}
+              >
+                {labels.photos_style_film}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStyleChange('postal')}
+                className={[
+                  'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium',
+                  collageStyle === 'postal'
+                    ? 'border-violet-400 bg-violet-100 text-violet-800'
+                    : 'border-slate-200 bg-white text-slate-700',
+                ].join(' ')}
+              >
+                {labels.photos_style_postal}
+              </button>
+            </div>
+          </div>
+
           {slot.source_kind && (
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <label className="text-xs text-slate-600">
@@ -416,6 +517,14 @@ export function DiaryEntryCard({
             >
               {labels.photos_label}
             </button>
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => setAlbumOpen(true)}
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              {labels.photos_album}
+            </button>
             {entryId && (
               <button
                 type="button"
@@ -440,6 +549,35 @@ export function DiaryEntryCard({
           </div>
         </>
       )}
+
+      <DiaryPhotoGalleryModal
+        open={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        attachments={attachments}
+        slotIds={slotIds}
+        labels={{
+          photosLabel: labels.photos_label,
+          closeLabel: labels.photos_close,
+          slotsLabel: labels.photos_slots_label,
+          slotsHint: labels.photos_slots_hint,
+          slotRemove: labels.photos_slot_remove,
+        }}
+        onSlotIdsChange={handleSlotIdsChange}
+      />
+
+      <FamilyAlbumPickerModal
+        open={albumOpen}
+        onClose={() => setAlbumOpen(false)}
+        groupId={groupId}
+        attachedImageUrls={attachedImageUrls}
+        labels={{
+          title: labels.photos_album,
+          close: labels.photos_close,
+          empty: labels.photos_album_empty,
+          add: labels.photos_album_add,
+        }}
+        onConfirm={onAlbumConfirm}
+      />
     </div>
   );
 }
