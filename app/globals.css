@@ -1190,7 +1190,7 @@ select:not(.chalkboard-form-input) {
 .chalkboard-title {
   font-family: var(--chalk-font-title);
   font-size: 10cqw;
-  font-weight: 400;
+  font-weight: 700;
   color: rgba(255, 255, 255, 0.97);
   margin: 0;
   position: absolute;
@@ -1215,8 +1215,7 @@ select:not(.chalkboard-form-input) {
   border: 0;
 }
 
-.chalkboard-title:not(.chalkboard-title--sr-only),
-.chalkboard-btn-add {
+.chalkboard-title:not(.chalkboard-title--sr-only) {
   text-shadow: var(--chalk-shadow-ui);
 }
 
@@ -1354,36 +1353,47 @@ select:not(.chalkboard-form-input) {
   width: auto;
   max-width: 100%;
   background: transparent;
-  color: rgba(255, 255, 255, 0.97);
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  /* Dusty off-white like chalkboard-bg.png title (not solid neon white) */
+  color: rgba(255, 248, 235, 0.86);
+  border: 2.5px solid rgba(255, 248, 235, 0.72);
   border-radius: var(--chalk-sketch-radius);
   font-family: var(--chalk-font-title);
-  font-size: 4.25cqw;
-  font-weight: 400;
+  font-size: 4.6cqw;
+  font-weight: 700;
   cursor: pointer;
   transition:
     color 0.2s ease,
     text-shadow 0.2s ease,
     background 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease,
+    filter 0.2s ease;
   letter-spacing: 0.1em;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   align-self: center;
-  box-shadow:
-    0 0 1px rgba(255, 255, 255, 0.45),
-    inset 0 0 10px rgba(255, 255, 255, 0.03);
+  /* Mild stroke thicken — keep Hangul(추) readable at small cqw */
+  -webkit-text-stroke: 0.45px rgba(255, 248, 235, 0.45);
+  paint-order: stroke fill;
+  /* Grain + rough edges — see #chalkboard-chalk-texture in FamilyTasksSection */
+  filter: url('#chalkboard-chalk-texture');
+  /* Soft board contact shadow (PNG title has dark under-smudge, not white neon glow) */
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.32),
+    0 0 1.5px rgba(255, 255, 255, 0.28);
+  box-shadow: none;
 }
 
 .chalkboard-btn-add:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 248, 235, 0.92);
+  border-color: rgba(255, 248, 235, 0.84);
+  -webkit-text-stroke-color: rgba(255, 248, 235, 0.52);
+  filter: url('#chalkboard-chalk-texture') brightness(1.06);
   text-shadow:
-    0 0 2px rgba(255, 255, 255, 0.75),
-    0 0 4px rgba(255, 255, 255, 0.45),
-    var(--chalk-shadow-ui);
+    1px 1px 0 rgba(0, 0, 0, 0.3),
+    0 0 2px rgba(255, 255, 255, 0.34);
 }
 
 .chalkboard-btn-add:active {
@@ -1537,9 +1547,10 @@ select:not(.chalkboard-form-input) {
 
 .chalkboard-empty-state {
   padding: 6cqw 0;
-  color: rgba(255, 255, 255, 0.92);
+  /* Same chalk ink as .chalkboard-btn-add / PNG title tone */
+  color: rgba(255, 248, 235, 0.86);
   font-family: var(--chalk-font-body);
-  font-weight: 400;
+  font-weight: 700;
   font-size: 5.5cqw;
   font-style: italic;
   text-align: center;
@@ -1551,7 +1562,12 @@ select:not(.chalkboard-form-input) {
   line-height: 1.2;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  text-shadow: var(--chalk-shadow-ui);
+  -webkit-text-stroke: 0.4px rgba(255, 248, 235, 0.42);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.32),
+    0 0 1.5px rgba(255, 255, 255, 0.28);
 }
 
 /* Chalkboard Modal Styles — PNG plate + HTML labels/inputs */
@@ -1626,11 +1642,16 @@ select:not(.chalkboard-form-input) {
   text-align: center;
   font-family: var(--chalk-font-title);
   font-size: 7.8cqi;
-  font-weight: 400;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.97);
-  text-shadow: var(--chalk-shadow-ui);
+  color: rgba(255, 248, 235, 0.86);
+  -webkit-text-stroke: 0.45px rgba(255, 248, 235, 0.42);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.32),
+    0 0 1.5px rgba(255, 255, 255, 0.28);
   white-space: nowrap;
   overflow-x: clip;
   overflow-y: visible;
@@ -1643,11 +1664,16 @@ select:not(.chalkboard-form-input) {
   padding: 0.08em 0;
   font-family: var(--chalk-font-title);
   font-size: 5cqi;
-  font-weight: 400;
+  font-weight: 700;
   line-height: 1.15;
   letter-spacing: 0.03em;
-  color: rgba(255, 255, 255, 0.97);
-  text-shadow: var(--chalk-shadow-ui);
+  color: rgba(255, 248, 235, 0.86);
+  -webkit-text-stroke: 0.4px rgba(255, 248, 235, 0.42);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.32),
+    0 0 1.5px rgba(255, 255, 255, 0.28);
   overflow-x: clip;
   overflow-y: visible;
   white-space: nowrap;
@@ -1667,6 +1693,21 @@ select:not(.chalkboard-form-input) {
   box-sizing: border-box;
   min-height: 2.25rem;
   color-scheme: dark;
+  font-family: var(--chalk-font-body);
+  font-weight: 700;
+  color: rgba(255, 248, 235, 0.88);
+  border: 2px solid rgba(255, 248, 235, 0.7);
+  -webkit-text-stroke: 0.35px rgba(255, 248, 235, 0.35);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.28),
+    0 0 1.5px rgba(255, 255, 255, 0.24);
+  box-shadow: none;
+}
+
+.chalkboard-modal-container .chalkboard-form-input::placeholder {
+  color: rgba(255, 248, 235, 0.42);
 }
 
 .chalkboard-modal-container select.chalkboard-form-input {
@@ -1674,21 +1715,21 @@ select:not(.chalkboard-form-input) {
   -webkit-appearance: none;
   padding-right: 2rem;
   color-scheme: dark;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(255, 248, 235, 0.7);
   border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px;
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23ffffff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-color: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 248, 235, 0.88);
+  box-shadow: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23fff8eb' stroke-opacity='0.75' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.65rem center;
   background-size: 0.65rem auto;
 }
 
 .chalkboard-modal-container select.chalkboard-form-input:focus {
-  background-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23ffffff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23fff8eb' stroke-opacity='0.85' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .chalkboard-modal-container select.chalkboard-form-input option {
@@ -1793,36 +1834,54 @@ select:not(.chalkboard-form-input) {
 .chalkboard-btn-secondary {
   flex: 1;
   padding: var(--spacing-md) 0;
-  color: #ffffff;
+  color: rgba(255, 248, 235, 0.86);
+  font-family: var(--chalk-font-title);
   font-weight: 700;
   background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px;
+  border: 2px solid rgba(255, 248, 235, 0.7);
+  border-radius: var(--chalk-sketch-radius);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  -webkit-text-stroke: 0.4px rgba(255, 248, 235, 0.42);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.32),
+    0 0 1.5px rgba(255, 255, 255, 0.28);
+  box-shadow: none;
 }
 
 .chalkboard-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 248, 235, 0.92);
+  border-color: rgba(255, 248, 235, 0.82);
 }
 
 .chalkboard-btn-primary {
   flex: 2;
   padding: var(--spacing-md) 0;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 248, 235, 0.86);
+  border: 2px solid rgba(255, 248, 235, 0.7);
+  border-radius: var(--chalk-sketch-radius);
+  font-family: var(--chalk-font-title);
   font-weight: 700;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  -webkit-text-stroke: 0.4px rgba(255, 248, 235, 0.42);
+  paint-order: stroke fill;
+  filter: url('#chalkboard-chalk-texture');
+  text-shadow:
+    1px 1px 0 rgba(0, 0, 0, 0.32),
+    0 0 1.5px rgba(255, 255, 255, 0.28);
+  box-shadow: none;
   transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .chalkboard-btn-primary:hover {
-  background: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 248, 235, 0.92);
+  border-color: rgba(255, 248, 235, 0.82);
+  box-shadow: none;
 }
 
 .chalkboard-btn-primary:active {

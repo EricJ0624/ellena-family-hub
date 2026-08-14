@@ -537,6 +537,45 @@ export function FamilyTasksSection({
 
   return (
     <>
+      {/* Shared chalk grain filter — add btn, empty state, modal (portal) all use this id */}
+      <svg aria-hidden="true" focusable="false" width={0} height={0} className="pointer-events-none absolute overflow-hidden">
+        <defs>
+          <filter
+            id="chalkboard-chalk-texture"
+            x="-50%"
+            y="-50%"
+            width="200%"
+            height="200%"
+            colorInterpolationFilters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="1.05"
+              numOctaves="3"
+              seed="5"
+              stitchTiles="stitch"
+              result="noise"
+            />
+            {/* Gentler dust holes — strong punch made Hangul(추) unreadable */}
+            <feColorMatrix
+              in="noise"
+              type="matrix"
+              values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.85 1.08"
+              result="dustAlpha"
+            />
+            <feComposite in="SourceGraphic" in2="dustAlpha" operator="in" result="dusty" />
+            <feDisplacementMap
+              in="dusty"
+              in2="noise"
+              scale="1.15"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="rough"
+            />
+            <feGaussianBlur in="rough" stdDeviation="0.18" />
+          </filter>
+        </defs>
+      </svg>
       {todoModal}
 
       <div className="chalkboard-frame flex w-full min-w-0 flex-col">
