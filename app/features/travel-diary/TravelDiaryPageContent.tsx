@@ -180,6 +180,7 @@ export function TravelDiaryPageContent() {
       is_revisit: boolean;
       actual_expense: number | null;
       collage_style?: 'film' | 'postal';
+      show_map?: boolean;
     },
   ): Promise<string | null> => {
     if (!currentGroupId || !tripIdParam) return null;
@@ -205,6 +206,7 @@ export function TravelDiaryPageContent() {
         actual_expense: payload.actual_expense,
         place_title: slot.title,
         collage_style: payload.collage_style,
+        show_map: payload.show_map,
       }),
     });
     const json = await res.json();
@@ -332,6 +334,9 @@ export function TravelDiaryPageContent() {
                     photos_album: t('photos_album'),
                     photos_album_empty: t('photos_album_empty'),
                     photos_album_add: t('photos_album_add'),
+                    map_label: t('map_label'),
+                    map_add: t('map_add'),
+                    map_remove: t('map_remove'),
                   }}
                   onSave={(p) => saveSlot(slot, p)}
                   onCollageSave={saveCollage}

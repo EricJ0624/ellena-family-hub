@@ -27,6 +27,7 @@ export type UnifiedItineraryItem = {
   title: string;
   description?: string | null;
   address?: string | null;
+  place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   transport_type?: 'air' | 'train' | 'car' | 'bike';
@@ -72,6 +73,7 @@ export function buildUnifiedItineraries(params: {
       title: a.name,
       description: a.memo,
       address: a.address,
+      place_id: a.place_id,
       latitude: a.latitude,
       longitude: a.longitude,
       show_in_itinerary: a.show_in_itinerary,
@@ -90,6 +92,7 @@ export function buildUnifiedItineraries(params: {
       title: d.name,
       description: d.memo,
       address: d.address,
+      place_id: d.place_id,
       latitude: d.latitude,
       longitude: d.longitude,
       show_in_itinerary: d.show_in_itinerary,
@@ -110,6 +113,7 @@ export function buildUnifiedItineraries(params: {
       title: a.name,
       description: a.description,
       address: a.address,
+      place_id: a.place_id,
       latitude: a.latitude,
       longitude: a.longitude,
       show_in_itinerary: a.show_in_itinerary,
@@ -131,6 +135,7 @@ export function buildUnifiedItineraries(params: {
       title,
       description: t.memo,
       address: null,
+      place_id: null,
       latitude: null,
       longitude: null,
       transport_type: t.transport_type,
@@ -149,6 +154,7 @@ export function buildUnifiedItineraries(params: {
       title: i.title,
       description: i.description,
       address: i.address,
+      place_id: null,
       latitude: i.latitude,
       longitude: i.longitude,
       show_in_itinerary: true,

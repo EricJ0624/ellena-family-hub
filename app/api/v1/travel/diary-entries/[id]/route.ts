@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember } from '@/lib/api-guards';
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
+import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import {
   parseCollageAttachmentIds,
   parseCollageStyle,
@@ -20,6 +21,7 @@ function normalizeEntryRow(row: Record<string, unknown>) {
     mood_tags: Array.isArray(moods) ? moods.map(String) : [],
     collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
     collage_style: parseCollageStyle(row.collage_style),
+    show_map: parseShowMap(row.show_map),
   };
 }
 
@@ -82,6 +84,9 @@ export async function PATCH(
     }
     if (body.collage_style !== undefined) {
       updatePayload.collage_style = parseCollageStyle(body.collage_style);
+    }
+    if (body.show_map !== undefined) {
+      updatePayload.show_map = parseShowMap(body.show_map);
     }
 
     const { data, error } = await supabase

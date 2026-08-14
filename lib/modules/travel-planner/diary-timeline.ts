@@ -7,6 +7,10 @@ export type DiaryTimelineSlot = {
   title: string;
   source_kind: UnifiedItineraryItem['kind'] | null;
   source_id: string | null;
+  address?: string | null;
+  place_id?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   entry: TravelDiaryEntry | null;
 };
 
@@ -38,6 +42,10 @@ export function buildDiaryTimelineSlots(
       title: u.title,
       source_kind: u.kind,
       source_id: u.id,
+      address: u.address ?? null,
+      place_id: u.place_id ?? null,
+      latitude: u.latitude ?? null,
+      longitude: u.longitude ?? null,
       entry: entryBySource.get(k) ?? null,
     };
   });
@@ -49,6 +57,10 @@ export function buildDiaryTimelineSlots(
       title: e.note?.trim() || '—',
       source_kind: null,
       source_id: null,
+      address: null,
+      place_id: null,
+      latitude: null,
+      longitude: null,
       entry: e,
     });
   }

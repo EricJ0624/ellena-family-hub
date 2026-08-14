@@ -36,6 +36,9 @@ export type TravelDiaryTranslations = {
   photos_album: string;
   photos_album_empty: string;
   photos_album_add: string;
+  map_label: string;
+  map_add: string;
+  map_remove: string;
 };
 
 const td: Record<LangCode, TravelDiaryTranslations> = {
@@ -74,6 +77,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: '가족 앨범',
     photos_album_empty: '가족 앨범에 고를 사진이 없습니다.',
     photos_album_add: '추가',
+    map_label: '지도',
+    map_add: '지도 넣기',
+    map_remove: '지도 빼기',
   },
   en: {
     section_title: 'Trip diary',
@@ -110,6 +116,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: 'Family album',
     photos_album_empty: 'No photos available in the family album.',
     photos_album_add: 'Add',
+    map_label: 'Map',
+    map_add: 'Add map',
+    map_remove: 'Remove map',
   },
   ja: {
     section_title: '旅行ダイアリー',
@@ -146,6 +155,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: '家族アルバム',
     photos_album_empty: '家族アルバムに選べる写真がありません。',
     photos_album_add: '追加',
+    map_label: '地図',
+    map_add: '地図を入れる',
+    map_remove: '地図を外す',
   },
   'zh-CN': {
     section_title: '旅行日记',
@@ -182,6 +194,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: '家庭相册',
     photos_album_empty: '家庭相册中没有可选照片。',
     photos_album_add: '添加',
+    map_label: '地图',
+    map_add: '加入地图',
+    map_remove: '移除地图',
   },
   'zh-TW': {
     section_title: '旅行日記',
@@ -218,6 +233,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: '家庭相簿',
     photos_album_empty: '家庭相簿中沒有可選照片。',
     photos_album_add: '新增',
+    map_label: '地圖',
+    map_add: '加入地圖',
+    map_remove: '移除地圖',
   },
   es: {
     section_title: 'diario de viaje',
@@ -254,6 +272,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: 'Álbum familiar',
     photos_album_empty: 'No hay fotos en el álbum familiar.',
     photos_album_add: 'Añadir',
+    map_label: 'Mapa',
+    map_add: 'Añadir mapa',
+    map_remove: 'Quitar mapa',
   },
   fr: {
     section_title: 'Carnet de voyage',
@@ -290,6 +311,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: 'Album famille',
     photos_album_empty: 'Aucune photo dans l’album famille.',
     photos_album_add: 'Ajouter',
+    map_label: 'Carte',
+    map_add: 'Ajouter la carte',
+    map_remove: 'Retirer la carte',
   },
   de: {
     section_title: 'Reisetagebuch',
@@ -326,6 +350,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: 'Familienalbum',
     photos_album_empty: 'Keine Fotos im Familienalbum.',
     photos_album_add: 'Hinzufügen',
+    map_label: 'Karte',
+    map_add: 'Karte hinzufügen',
+    map_remove: 'Karte entfernen',
   },
   it: {
     section_title: 'Diario di viaggio',
@@ -362,6 +389,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: 'Album di famiglia',
     photos_album_empty: 'Nessuna foto nell’album di famiglia.',
     photos_album_add: 'Aggiungi',
+    map_label: 'Mappa',
+    map_add: 'Aggiungi mappa',
+    map_remove: 'Rimuovi mappa',
   },
   pt: {
     section_title: 'Diário de viagem',
@@ -398,6 +428,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     photos_album: 'Álbum da família',
     photos_album_empty: 'Não há fotos no álbum da família.',
     photos_album_add: 'Adicionar',
+    map_label: 'Mapa',
+    map_add: 'Adicionar mapa',
+    map_remove: 'Remover mapa',
   }
 };
 

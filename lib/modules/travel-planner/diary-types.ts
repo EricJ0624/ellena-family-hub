@@ -11,6 +11,7 @@ export interface TravelDiaryEntry {
   mood_tags: string[];
   collage_attachment_ids: (string | null)[] | null;
   collage_style: 'film' | 'postal';
+  show_map: boolean;
   sort_order: number;
   created_by: string | null;
   created_at: string;
@@ -29,9 +30,15 @@ export type TravelDiaryEntryUpsertInput = {
   mood_tags?: string[];
   collage_attachment_ids?: (string | null)[] | null;
   collage_style?: 'film' | 'postal';
+  show_map?: boolean;
   sort_order?: number;
   rating?: number | null;
   is_revisit?: boolean | null;
   actual_expense?: number | null;
   place_title?: string;
 };
+
+export function parseShowMap(raw: unknown): boolean {
+  if (raw === false || raw === 'false' || raw === 0) return false;
+  return true;
+}

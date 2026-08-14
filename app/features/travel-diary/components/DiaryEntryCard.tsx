@@ -19,8 +19,11 @@ import {
   type DiaryCollageStyle,
 } from '@/lib/modules/travel-planner/diary-collage';
 import { supabase } from '@/lib/supabase';
+import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
+import { canShowDiaryPlaceMap } from '@/lib/modules/travel-planner/google-maps-embed';
 import { DiaryPhotoCollage } from './DiaryPhotoCollage';
 import { DiaryPhotoGalleryModal } from './DiaryPhotoGalleryModal';
+import { DiaryPlaceMapPreview } from './DiaryPlaceMapPreview';
 import { FamilyAlbumPickerModal } from './FamilyAlbumPickerModal';
 
 const MOOD_OPTIONS = ['😊', '🍜', '📸', '🌧️', '❤️', '🚶', '☀️'];
@@ -48,6 +51,9 @@ type Labels = {
   photos_album: string;
   photos_album_empty: string;
   photos_album_add: string;
+  map_label: string;
+  map_add: string;
+  map_remove: string;
 };
 
 type Props = {
@@ -65,6 +71,7 @@ type Props = {
     is_revisit: boolean;
     actual_expense: number | null;
     collage_style?: DiaryCollageStyle;
+    show_map?: boolean;
   }) => Promise<string | null>;
   onCollageSave: (payload: {
     entryId: string;
@@ -105,6 +112,7 @@ export function DiaryEntryCard({
   const [collageStyle, setCollageStyle] = useState<DiaryCollageStyle>(
     parseCollageStyle(entry?.collage_style),
   );
+  const [showMapPref, setShowMapPref] = useState(() => parseShowMap(entry?.show_map));
   const [slotIds, setSlotIds] = useState<CollageSlotIds>(() => emptyCollageSlots());
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [albumOpen, setAlbumOpen] = useState(false);
@@ -133,8 +141,9 @@ export function DiaryEntryCard({
 
   useEffect(() => {
     setCollageStyle(parseCollageStyle(entry?.collage_style));
+    setShowMapPref(parseShowMap(entry?.show_map));
     slotsCustomized.current = entry?.collage_attachment_ids != null;
-  }, [entry?.id, entry?.collage_style, entry?.collage_attachment_ids]);
+  }, [entry?.id, entry?.collage_style, entry?.collage_attachment_ids, entry?.show_map]);
 
   useEffect(() => {
     if (!entryId) {
@@ -186,6 +195,7 @@ export function DiaryEntryCard({
     setIsRevisit(Boolean(feedback?.is_revisit));
     setExpense(expenseInputValue(linkedExpense));
     setCollageStyle(parseCollageStyle(entry?.collage_style));
+    setShowMapPref(parseShowMap(entry?.show_map));
   };
 
   const currencyCode = (linkedExpense?.currency || tripCurrency || 'KRW').trim().toUpperCase() || 'KRW';
@@ -231,6 +241,7 @@ export function DiaryEntryCard({
         is_revisit: isRevisit,
         actual_expense: exp != null && Number.isFinite(exp) ? exp : null,
         collage_style: collageStyle,
+        show_map: showMapPref,
       });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
@@ -316,6 +327,18 @@ export function DiaryEntryCard({
 
   const isView = mode === 'view';
   const selectedMoods = MOOD_OPTIONS.filter((m) => moods.includes(m));
+  const placeRef = {
+    title: slot.title,
+    address: slot.address,
+    place_id: slot.place_id,
+    latitude: slot.latitude,
+    longitude: slot.longitude,
+  };
+  const canShowMap = canShowDiaryPlaceMap(placeRef, slot.source_kind);
+  const displayMap = showMapPref && canShowMap;
+  const showRatingBlock =
+    Boolean(slot.source_kind) && (rating != null || isRevisit || hasSavedExpense);
+  const showLeftMeta = selectedMoods.length > 0 || (displayMap && showRatingBlock);
 
   return (
     <div className="glass-panel-soft rounded-xl p-4">
@@ -339,20 +362,62 @@ export function DiaryEntryCard({
             </p>
           ) : null}
 
-          {selectedMoods.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              {selectedMoods.map((m) => (
-                <span
-                  key={m}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-violet-50 text-lg"
-                >
-                  {m}
-                </span>
-              ))}
-            </div>
-          )}
+          {showLeftMeta || displayMap ? (
+            <div className={`flex items-stretch gap-2${note.trim() ? ' mt-2' : ' mt-3'}`}>
+              <div className="flex w-max max-w-[58%] shrink-0 flex-col justify-center gap-1.5">
+                {selectedMoods.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {selectedMoods.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-violet-50 text-lg"
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
 
-          {slot.source_kind && (rating != null || isRevisit || hasSavedExpense) && (
+                {displayMap && showRatingBlock ? (
+                  <>
+                    {rating != null && (
+                      <div
+                        className="flex items-center gap-0.5"
+                        aria-label={`${labels.rating_label} ${rating}`}
+                      >
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            className={[
+                              'h-4 w-4',
+                              n <= rating
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'fill-transparent text-slate-300',
+                            ].join(' ')}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {isRevisit && (
+                      <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">
+                        {labels.revisit_label}
+                      </span>
+                    )}
+                    {hasSavedExpense && (
+                      <span className="text-sm font-medium text-slate-700">
+                        {labels.expense_label} {formatMoneyAmount(savedExpenseAmount, currencyCode, moneyLocale)}
+                      </span>
+                    )}
+                  </>
+                ) : null}
+              </div>
+              {displayMap ? (
+                <DiaryPlaceMapPreview place={placeRef} sourceKind={slot.source_kind} />
+              ) : null}
+            </div>
+          ) : null}
+
+          {!displayMap && showRatingBlock ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {rating != null && (
                 <div
@@ -383,7 +448,7 @@ export function DiaryEntryCard({
                 </span>
               )}
             </div>
-          )}
+          ) : null}
 
           <div className="mt-3">
             <button
@@ -406,26 +471,63 @@ export function DiaryEntryCard({
             className="mt-3 w-full resize-y rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-800"
           />
 
-          <div className="mt-3">
-            <span className="text-xs font-medium text-slate-600">{labels.mood_label}</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {MOOD_OPTIONS.map((m) => (
+          <div className="mt-3 flex items-stretch gap-2">
+            <div className="flex w-max max-w-[58%] min-w-0 shrink-0 flex-col">
+              <span className="text-xs font-medium text-slate-600">{labels.mood_label}</span>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {MOOD_OPTIONS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => toggleMood(m)}
+                    className={[
+                      'cursor-pointer rounded-full border px-2 py-0.5 text-sm',
+                      moods.includes(m)
+                        ? 'border-violet-400 bg-violet-100'
+                        : 'border-slate-200 bg-white',
+                    ].join(' ')}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {displayMap ? (
+              <DiaryPlaceMapPreview place={placeRef} sourceKind={slot.source_kind} />
+            ) : null}
+          </div>
+
+          {canShowMap ? (
+            <div className="mt-3">
+              <span className="text-xs font-medium text-slate-600">{labels.map_label}</span>
+              <div className="mt-1 flex flex-wrap gap-2">
                 <button
-                  key={m}
                   type="button"
-                  onClick={() => toggleMood(m)}
+                  onClick={() => setShowMapPref(true)}
                   className={[
-                    'cursor-pointer rounded-full border px-2 py-0.5 text-sm',
-                    moods.includes(m)
-                      ? 'border-violet-400 bg-violet-100'
-                      : 'border-slate-200 bg-white',
+                    'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium',
+                    showMapPref
+                      ? 'border-violet-400 bg-violet-100 text-violet-800'
+                      : 'border-slate-200 bg-white text-slate-700',
                   ].join(' ')}
                 >
-                  {m}
+                  {labels.map_add}
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setShowMapPref(false)}
+                  className={[
+                    'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-medium',
+                    !showMapPref
+                      ? 'border-violet-400 bg-violet-100 text-violet-800'
+                      : 'border-slate-200 bg-white text-slate-700',
+                  ].join(' ')}
+                >
+                  {labels.map_remove}
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="mt-3">
             <span className="text-xs font-medium text-slate-600">{labels.photos_style_label}</span>
@@ -458,7 +560,7 @@ export function DiaryEntryCard({
           </div>
 
           {slot.source_kind && (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className={displayMap ? 'mt-3 flex flex-col gap-2' : 'mt-3 grid gap-2 sm:grid-cols-2'}>
               <label className="text-xs text-slate-600">
                 {labels.rating_label}
                 <select
@@ -476,7 +578,7 @@ export function DiaryEntryCard({
                   ))}
                 </select>
               </label>
-              <label className="flex items-center gap-2 text-xs text-slate-600 sm:mt-5">
+              <label className={`flex items-center gap-2 text-xs text-slate-600${displayMap ? '' : ' sm:mt-5'}`}>
                 <input
                   type="checkbox"
                   checked={isRevisit}
@@ -484,7 +586,7 @@ export function DiaryEntryCard({
                 />
                 {labels.revisit_label}
               </label>
-              <label className="text-xs text-slate-600 sm:col-span-2">
+              <label className={`text-xs text-slate-600${displayMap ? '' : ' sm:col-span-2'}`}>
                 {labels.expense_label}
                 <span className="mt-1 flex items-center gap-2">
                   <input

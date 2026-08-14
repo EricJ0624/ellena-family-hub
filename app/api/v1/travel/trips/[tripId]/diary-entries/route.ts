@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireGroupMember, assertTripInGroup } from '@/lib/api-guards';
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
 import { syncPlaceFeedbackWithExpense } from '@/lib/modules/travel-planner/place-feedback-sync';
+import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import type { TravelPlaceSourceKind } from '@/lib/modules/travel-planner/unified-itinerary';
 import {
   parseCollageAttachmentIds,
@@ -29,6 +30,7 @@ function normalizeEntryRow(row: Record<string, unknown>) {
     mood_tags: Array.isArray(moods) ? moods.map(String) : [],
     collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
     collage_style: parseCollageStyle(row.collage_style),
+    show_map: parseShowMap(row.show_map),
   };
 }
 
@@ -163,6 +165,9 @@ export async function POST(
     }
     if (body.collage_style !== undefined) {
       payload.collage_style = parseCollageStyle(body.collage_style);
+    }
+    if (body.show_map !== undefined) {
+      payload.show_map = parseShowMap(body.show_map);
     }
 
     let saved: Record<string, unknown> | null = null;
