@@ -366,42 +366,71 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           onClick={closeEventModal}
         >
           <div
-            className="w-[90%] max-w-[500px] rounded-xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+            className={`w-[90%] max-w-[480px] rounded-[28px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]`}
+            style={isKidsTheme ? {
+              background: 'linear-gradient(160deg, #ede9fe 0%, #e0e7ff 40%, #fce7f3 80%, #fed7aa 100%)',
+              border: '1.5px solid rgba(255,255,255,0.7)',
+            } : { background: '#fff', borderRadius: '12px' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 mt-0 text-xl font-semibold">
+            {isKidsTheme && (
+              <p className="mb-0 mt-0 text-center text-xs font-bold uppercase tracking-widest text-violet-400">
+                FAMILY CALENDAR
+              </p>
+            )}
+            <h3
+              className={`mt-1 text-center font-bold ${
+                isKidsTheme
+                  ? 'mb-1 text-3xl text-violet-700'
+                  : 'mb-2 mt-0 text-xl font-semibold text-slate-800'
+              }`}
+            >
               {editingEventId ? (t.event_edit_title || '일정 수정') : t.event_add_title}
             </h3>
             {eventFormDate && (
-              <p className="mb-5 mt-0 text-sm text-slate-500">
+              <p className={`mt-0 text-center ${isKidsTheme ? 'mb-5 text-sm font-semibold text-violet-500' : 'mb-5 text-sm text-slate-500'}`}>
                 {formatLongDate(eventFormDate)}
               </p>
             )}
 
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium">{t.event_title_label}</label>
+              <label className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+                {t.event_title_label}
+              </label>
               <input
                 type="text"
                 value={eventForm.title}
                 onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                 placeholder={t.event_title_placeholder}
-                className="w-full box-border rounded-lg border border-slate-200 p-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                className={`w-full box-border p-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 ${
+                  isKidsTheme
+                    ? 'rounded-2xl border-none bg-white/80 shadow-sm'
+                    : 'rounded-lg border border-slate-200'
+                }`}
               />
             </div>
 
             <div className="mb-5">
-              <label className="mb-2 block text-sm font-medium">{t.event_desc_label}</label>
+              <label className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+                {t.event_desc_label}
+              </label>
               <textarea
                 value={eventForm.desc}
                 onChange={(e) => setEventForm({ ...eventForm, desc: e.target.value })}
                 placeholder={t.event_desc_placeholder}
                 rows={3}
-                className="w-full box-border resize-y rounded-lg border border-slate-200 p-3 text-[15px] font-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                className={`w-full box-border resize-y p-3 text-[15px] font-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 ${
+                  isKidsTheme
+                    ? 'rounded-2xl border-none bg-white/80 shadow-sm'
+                    : 'rounded-lg border border-slate-200'
+                }`}
               />
             </div>
 
             <div className="mb-5">
-              <label className="mb-2 block text-sm font-medium">{t.event_repeat_label}</label>
+              <label className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
+                {t.event_repeat_label}
+              </label>
               <div className="flex flex-wrap gap-4">
                 <label className="flex cursor-pointer items-center gap-1.5 text-sm">
                   <input
@@ -433,16 +462,28 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
+            <div className={`flex gap-3 ${isKidsTheme ? 'justify-center' : 'justify-end'}`}>
               <button
                 onClick={closeEventModal}
-                className="cursor-pointer rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[15px] font-medium text-slate-500 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60"
+                className={`cursor-pointer font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${
+                  isKidsTheme
+                    ? 'rounded-2xl border-none bg-white/80 px-7 py-3 text-[15px] text-slate-500 shadow-sm hover:bg-white'
+                    : 'rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-[15px] text-slate-500 hover:bg-slate-50'
+                }`}
               >
                 {t.cancel}
               </button>
               <button
                 onClick={handleEventSubmit}
-                className="cursor-pointer rounded-lg border-none bg-indigo-500 px-5 py-2.5 text-[15px] font-medium text-white transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+                className={`cursor-pointer font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 ${
+                  isKidsTheme
+                    ? 'rounded-2xl border-none px-7 py-3 text-[15px]'
+                    : 'rounded-lg border-none px-5 py-2.5 text-[15px] font-medium'
+                }`}
+                style={isKidsTheme ? {
+                  background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                  boxShadow: '0 4px 14px rgba(124,58,237,0.4)',
+                } : { background: '#6366f1' }}
               >
                 {editingEventId ? (t.event_update_btn || '저장') : t.event_submit_btn}
               </button>
