@@ -3285,6 +3285,11 @@ select:not(.chalkboard-form-input) {
     color: rgb(var(--section-title-icon));
   }
 
+  /* ── Kids Friendly 테마: 캘린더 위젯 여백 — 아래 간격은 TSX inline style로 직접 제어 ── */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell {
+    padding: 1cqmin 0.5cqmin;
+  }
+
   .dashboard-widget-grid .editor-widget-preview-inner .calendar-widget-section {
     display: flex;
     height: 100%;

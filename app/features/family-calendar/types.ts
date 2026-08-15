@@ -3,12 +3,13 @@
  */
 
 export type FamilyEvent = {
-  id: number | string; // 로컬 임시 id(숫자) 또는 Supabase UUID(문자열)
-  month: string; // 'JAN', 'FEB', ... (3글자 대문자)
-  day: string; // '1', '2', ...
+  id: number | string;
+  month: string;
+  day: string;
   title: string;
   desc: string;
-  event_date: string; // ISO 날짜 문자열
+  event_date: string;
+  end_date?: string;       // 기간 이벤트 종료 날짜 (YYYY-MM-DD, 없으면 단일 날짜)
   created_by?: string;
   created_at?: string;
   supabaseId?: string | number;
@@ -22,5 +23,6 @@ export type FamilyEventPayload = {
   title: string;
   desc: string;
   event_date: string;
+  end_date?: string;
   repeat_type?: 'none' | 'monthly' | 'yearly';
 };

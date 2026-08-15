@@ -15,6 +15,22 @@ import { intlLocaleForLang } from '@/lib/language-fonts';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { resolveUiTheme } from '@/lib/ui-theme';
 
+/** YYYY-MM-DD 문자열을 days만큼 이동 (type="date" 사용 안 함 — Chromium/Windows 버그 회피) */
+function shiftDateStr(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Date 객체를 YYYY-MM-DD 문자열로 변환 */
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const PICKER_MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const PICKER_WEEKS  = ['일','월','화','수','목','금','토'];
+
 interface FamilyCalendarSectionProps {
   events: FamilyEvent[];
   onEventsChange: (events: FamilyEvent[]) => void;
@@ -134,12 +150,20 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventFormDate, setEventFormDate] = useState<Date | null>(null);
-  const [eventForm, setEventForm] = useState<{ title: string; month: string; day: string; desc: string; repeat_type: 'none' | 'monthly' | 'yearly' }>({
+  const [datePickerOpen, setDatePickerOpen] = useState<'start' | 'end' | null>(null);
+  const [pickerView, setPickerView] = useState<{ year: number; month: number }>({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+  });
+  const [pickerAnchor, setPickerAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+  const dateRowRef = useRef<HTMLDivElement>(null);
+  const [eventForm, setEventForm] = useState<{ title: string; month: string; day: string; desc: string; repeat_type: 'none' | 'monthly' | 'yearly'; endDateStr: string }>({
     title: '',
     month: '',
     day: '',
     desc: '',
     repeat_type: 'none',
+    endDateStr: '',
   });
 
   const { addEvent, updateEvent, deleteEvent } = useFamilyCalendar({
@@ -163,6 +187,10 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       const monthName = MONTH_NAMES[parseInt(mm, 10) - 1] ?? '';
       return e.month === monthName && e.day === dd.replace(/^0/, '');
     } else {
+      // 기간 이벤트: end_date > event_date 이면 범위 전체에 표시
+      if (e.end_date && e.end_date > e.event_date) {
+        return dateKey >= e.event_date && dateKey <= e.end_date;
+      }
       return e.event_date === dateKey;
     }
   }, []);
@@ -220,7 +248,8 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     setEventFormDate(d);
     const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
     const day = d.getDate().toString();
-    setEventForm({ title: '', month, day, desc: '', repeat_type: 'none' });
+    const dateStr = toDateStr(d);
+    setEventForm({ title: '', month, day, desc: '', repeat_type: 'none', endDateStr: dateStr });
     setShowEventModal(true);
   };
 
@@ -243,6 +272,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       day: event.day || String(d.getDate()),
       desc: event.desc || '',
       repeat_type: event.repeat_type === 'monthly' || event.repeat_type === 'yearly' ? event.repeat_type : 'none',
+      endDateStr: event.end_date || toDateStr(d),
     });
     setShowEventModal(true);
   };
@@ -251,7 +281,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     setShowEventModal(false);
     setEditingEventId(null);
     setEventFormDate(null);
-    setEventForm({ title: '', month: '', day: '', desc: '', repeat_type: 'none' });
+    setDatePickerOpen(null);
+    setPickerAnchor(null);
+    setEventForm({ title: '', month: '', day: '', desc: '', repeat_type: 'none', endDateStr: '' });
   };
 
   const handleEventSubmit = () => {
@@ -280,6 +312,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       ? `${eventFormDate.getFullYear()}-${String(eventFormDate.getMonth() + 1).padStart(2, '0')}-${String(eventFormDate.getDate()).padStart(2, '0')}`
       : '';
 
+    // end_date: endDateStr이 start보다 클 때만 유효 (단일 날짜면 null)
+    const end_date = (eventForm.endDateStr && eventForm.endDateStr > eventDateStr)
+      ? eventForm.endDateStr
+      : undefined;
+
     if (editingEventId) {
       const previousEvents = events;
       onEventsChange(
@@ -292,6 +329,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                 title: sanitizedTitle,
                 desc: sanitizedDesc,
                 event_date: eventDateStr,
+                end_date,
                 repeat_type: eventForm.repeat_type || 'none',
               }
             : e,
@@ -305,6 +343,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         title: sanitizedTitle,
         desc: sanitizedDesc,
         event_date: eventDateStr,
+        end_date,
         repeat_type: eventForm.repeat_type || 'none',
       }).catch((error) => {
         console.error('일정 수정 실패, 복구 중:', error);
@@ -323,6 +362,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       title: sanitizedTitle,
       desc: sanitizedDesc,
       event_date: eventDateStr,
+      end_date,
       repeat_type: eventForm.repeat_type || 'none',
     };
 
@@ -334,7 +374,6 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       setTimeout(fireConfetti, 500);
     }
 
-    // Supabase 추가
     addEvent(newEvent)
       .catch((error) => {
         console.error('일정 저장 실패, 복구 중:', error);
@@ -416,17 +455,105 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             <h3
               className={`mt-1 text-center font-bold ${
                 isKidsTheme
-                  ? 'mb-1 text-3xl text-violet-700'
-                  : 'mb-2 mt-0 text-xl font-semibold text-slate-800'
+                  ? 'mb-3 text-3xl text-violet-700'
+                  : 'mb-3 mt-0 text-xl font-semibold text-slate-800'
               }`}
             >
               {editingEventId ? (t.event_edit_title || '일정 수정') : t.event_add_title}
             </h3>
-            {eventFormDate && (
-              <p className={`mt-0 text-center ${isKidsTheme ? 'mb-5 text-sm font-semibold text-violet-500' : 'mb-5 text-sm text-slate-500'}`}>
-                {formatLongDate(eventFormDate)}
-              </p>
-            )}
+
+            {/* 날짜 범위 선택 — 좌: 시작날짜, 우: 종료날짜 (팝업 캘린더) */}
+            {(() => {
+              const startStr = eventFormDate ? toDateStr(eventFormDate) : '';
+              const isRange  = !!(eventForm.endDateStr && eventForm.endDateStr > startStr);
+
+              const shiftStart = (days: number) => {
+                if (!eventFormDate) return;
+                const nd   = new Date(eventFormDate);
+                nd.setDate(nd.getDate() + days);
+                const ndStr = toDateStr(nd);
+                setEventFormDate(nd);
+                setEventForm(prev => ({
+                  ...prev,
+                  month: nd.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+                  day: String(nd.getDate()),
+                  endDateStr: (prev.endDateStr && prev.endDateStr >= ndStr) ? prev.endDateStr : ndStr,
+                }));
+              };
+              const shiftEnd = (days: number) => {
+                const base = eventForm.endDateStr || startStr;
+                const next = shiftDateStr(base, days);
+                if (next >= startStr) setEventForm(prev => ({ ...prev, endDateStr: next }));
+              };
+              const openPicker = (which: 'start' | 'end') => {
+                const refStr = which === 'start' ? startStr : (eventForm.endDateStr || startStr);
+                if (refStr) {
+                  const d = new Date(refStr + 'T12:00:00');
+                  setPickerView({ year: d.getFullYear(), month: d.getMonth() });
+                }
+                if (dateRowRef.current) {
+                  const rect = dateRowRef.current.getBoundingClientRect();
+                  setPickerAnchor({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+                }
+                setDatePickerOpen(prev => (prev === which ? null : which));
+              };
+
+              const fieldCls = `flex items-center gap-0.5 ${isKidsTheme ? 'rounded-2xl bg-white/85 px-2 py-1.5 shadow-sm' : 'rounded-lg border border-slate-200 px-2 py-1.5'}`;
+              const btnCls   = `flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors focus-visible:outline-none ${isKidsTheme ? 'text-violet-600 hover:bg-violet-100' : 'text-slate-500 hover:bg-slate-100 border border-slate-200'}`;
+              const labelCls = `mb-1 text-xs font-bold ${isKidsTheme ? 'text-violet-600' : 'text-slate-500'}`;
+
+              return (
+                <div ref={dateRowRef} className="mb-4">
+                  <div className="flex gap-3">
+                    {/* 시작 날짜 LEFT */}
+                    <div className="min-w-0 flex-1">
+                      <p className={labelCls}>시작 날짜</p>
+                      <div className={fieldCls}>
+                        <button type="button" onClick={() => shiftStart(-1)} className={btnCls}>−</button>
+                        <button
+                          type="button"
+                          onClick={() => openPicker('start')}
+                          className={`flex-1 truncate text-center text-[13px] font-semibold tabular-nums transition-colors hover:text-violet-500 focus-visible:outline-none ${
+                            datePickerOpen === 'start' ? 'text-violet-500' : (isKidsTheme ? 'text-violet-700' : 'text-slate-700')
+                          }`}
+                        >{startStr}</button>
+                        <button type="button" onClick={() => shiftStart(1)} className={btnCls}>+</button>
+                      </div>
+                    </div>
+
+                    {/* 종료 날짜 RIGHT */}
+                    <div className="min-w-0 flex-1">
+                      <p className={labelCls}>
+                        종료 날짜
+                        {!isRange && <span className="ml-1 font-normal text-slate-400">(미설정)</span>}
+                      </p>
+                      <div className={fieldCls}>
+                        <button type="button" onClick={() => shiftEnd(-1)} className={btnCls}>−</button>
+                        <button
+                          type="button"
+                          onClick={() => openPicker('end')}
+                          className={`flex-1 truncate text-center text-[13px] font-semibold tabular-nums transition-colors hover:text-violet-500 focus-visible:outline-none ${
+                            datePickerOpen === 'end'
+                              ? 'text-violet-500'
+                              : isRange
+                                ? (isKidsTheme ? 'text-violet-700' : 'text-slate-700')
+                                : 'text-slate-400'
+                          }`}
+                        >{eventForm.endDateStr || startStr}</button>
+                        <button type="button" onClick={() => shiftEnd(1)} className={btnCls}>+</button>
+                      </div>
+                      {isRange && (
+                        <button
+                          type="button"
+                          onClick={() => setEventForm(prev => ({ ...prev, endDateStr: '' }))}
+                          className="mt-0.5 text-[11px] text-slate-400 transition-colors hover:text-red-400"
+                        >× 단일 날짜로</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="mb-4">
               <label className={`mb-2 block text-sm font-bold ${isKidsTheme ? 'text-slate-700' : 'font-medium text-slate-700'}`}>
@@ -527,6 +654,103 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         </div>
       , document.body)}
 
+      {/* 날짜 팝업 캘린더 — 모달 overflow 바깥 document.body에 렌더링 */}
+      {showEventModal && datePickerOpen && pickerAnchor && createPortal(
+        (() => {
+          const startStr  = eventFormDate ? toDateStr(eventFormDate) : '';
+          const isRange   = !!(eventForm.endDateStr && eventForm.endDateStr > startStr);
+          const { year: pY, month: pM } = pickerView;
+          const firstDow  = new Date(pY, pM, 1).getDay();
+          const daysInMo  = new Date(pY, pM + 1, 0).getDate();
+          const todayStr  = toDateStr(new Date());
+          const safeLeft  = typeof window !== 'undefined'
+            ? Math.max(8, Math.min(pickerAnchor.left + pickerAnchor.width / 2 - 118, window.innerWidth - 244))
+            : pickerAnchor.left;
+          const navBtnCls = `flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold transition-colors ${isKidsTheme ? 'text-violet-600 hover:bg-violet-100' : 'text-slate-500 hover:bg-slate-100'}`;
+          return (
+            <>
+              {/* 바깥 클릭 시 닫기 */}
+              <div
+                className="fixed inset-0"
+                style={{ zIndex: 10000 }}
+                onClick={() => setDatePickerOpen(null)}
+              />
+              {/* 팝업 캘린더 */}
+              <div
+                className={`rounded-xl p-2 shadow-2xl ${isKidsTheme ? 'border border-violet-100 bg-gradient-to-br from-violet-50 to-fuchsia-50' : 'border border-slate-200 bg-white'}`}
+                style={{ position: 'fixed', top: pickerAnchor.top, left: safeLeft, width: 236, zIndex: 10001 }}
+              >
+                {/* 월 네비게이션 */}
+                <div className="mb-1 flex items-center justify-between px-0.5">
+                  <button type="button" className={navBtnCls}
+                    onClick={() => { const d = new Date(pY, pM - 1); setPickerView({ year: d.getFullYear(), month: d.getMonth() }); }}
+                  >‹</button>
+                  <span className={`text-xs font-bold ${isKidsTheme ? 'text-violet-700' : 'text-slate-700'}`}>
+                    {pY}년 {PICKER_MONTHS[pM]}
+                    <span className={`ml-1.5 text-[10px] font-normal ${isKidsTheme ? 'text-violet-400' : 'text-slate-400'}`}>
+                      {datePickerOpen === 'start' ? '시작' : '종료'}
+                    </span>
+                  </span>
+                  <button type="button" className={navBtnCls}
+                    onClick={() => { const d = new Date(pY, pM + 1); setPickerView({ year: d.getFullYear(), month: d.getMonth() }); }}
+                  >›</button>
+                </div>
+                {/* 요일 헤더 */}
+                <div className="grid grid-cols-7">
+                  {PICKER_WEEKS.map(w => (
+                    <div key={w} className={`text-center text-[10px] font-semibold ${isKidsTheme ? 'text-violet-400' : 'text-slate-400'}`}>{w}</div>
+                  ))}
+                </div>
+                {/* 날짜 격자 */}
+                <div className="grid grid-cols-7">
+                  {Array.from({ length: firstDow }, (_, i) => <div key={`b${i}`} />)}
+                  {Array.from({ length: daysInMo }, (_, i) => {
+                    const d   = i + 1;
+                    const ds  = `${pY}-${String(pM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const isSel   = (datePickerOpen === 'start' && ds === startStr) || (datePickerOpen === 'end' && ds === (eventForm.endDateStr || startStr));
+                    const inRange = isRange && ds > startStr && ds < eventForm.endDateStr;
+                    const isToday = ds === todayStr;
+                    const isPast  = datePickerOpen === 'end' && ds < startStr;
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        disabled={isPast}
+                        onClick={() => {
+                          if (datePickerOpen === 'start') {
+                            const nd = new Date(ds + 'T12:00:00');
+                            setEventFormDate(nd);
+                            setEventForm(prev => ({
+                              ...prev,
+                              month: nd.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+                              day: String(nd.getDate()),
+                              endDateStr: (prev.endDateStr && prev.endDateStr >= ds) ? prev.endDateStr : ds,
+                            }));
+                          } else {
+                            setEventForm(prev => ({ ...prev, endDateStr: ds }));
+                          }
+                          setDatePickerOpen(null);
+                        }}
+                        className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-25 ${
+                          isSel
+                            ? 'bg-violet-600 text-white shadow-sm'
+                            : inRange
+                              ? (isKidsTheme ? 'bg-violet-100 text-violet-700' : 'bg-violet-50 text-violet-600')
+                              : isToday
+                                ? 'ring-1 ring-violet-400 text-violet-700'
+                                : (isKidsTheme ? 'text-slate-700 hover:bg-violet-100' : 'text-slate-600 hover:bg-slate-100')
+                        }`}
+                      >{d}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          );
+        })(),
+        document.body
+      )}
+
       {/* Calendar Section — 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
       <div
         className={`calendar-widget-stack${
@@ -544,7 +768,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         } : undefined}
       >
         {isKidsTheme ? (
-          <div className="section-header calendar-section-header">
+          <div className="section-header calendar-section-header" style={{ marginTop: '0.75rem', marginBottom: '3cqmin' }}>
             <h3
               className="section-title m-0 flex items-center calendar-section-title"
               style={{ color: '#5b21b6', fontWeight: 800 }}
@@ -561,10 +785,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             </h3>
           </div>
         )}
-        <div className="section-body calendar-section-body">
+        <div className="section-body calendar-section-body" style={isKidsTheme ? { gap: '0.75rem' } : undefined}>
           <motion.div
             key={`${calendarGrid.year}-${calendarGrid.month}`}
             className="calendar-month-block"
+            style={isKidsTheme ? { gap: '2.2cqmin' } : undefined}
             initial={{ opacity: 0.7 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
@@ -640,7 +865,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
               </div>
             )}
             <div className="calendar-grid-wrap">
-              <div className="calendar-grid">
+              <div className="calendar-grid" style={isKidsTheme ? { gap: '1cqmin' } : undefined}>
                 {weekDays.map((day, i) => (
                   <div
                     key={i}
@@ -651,6 +876,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                           ? 'calendar-weekday--sat'
                           : 'calendar-weekday--mid'
                     }`}
+                    style={isKidsTheme ? { padding: '1.2cqmin 0' } : undefined}
                   >
                     {day}
                   </div>
@@ -741,6 +967,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                 justifyContent: 'center',
                 gap: '1.5cqmin',
                 boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
+                marginBottom: '0.75rem',
               }}
             >
               <Plus className="calendar-add-btn-icon" />

@@ -52,6 +52,7 @@ export function useFamilyCalendar({
     title: string;
     desc: string;
     event_date: string;
+    end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
   }) => {
     if (!payload || !payload.title) {
@@ -73,6 +74,7 @@ export function useFamilyCalendar({
       title: encryptedTitle,
       description: encryptedDesc,
       event_date: payload.event_date,
+      end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
       repeat_type: payload.repeat_type || 'none',
     };
 
@@ -198,6 +200,7 @@ export function useFamilyCalendar({
     title: string;
     desc: string;
     event_date: string;
+    end_date?: string;
     repeat_type?: 'none' | 'monthly' | 'yearly';
   }) => {
     if (!payload?.id || !payload.title) {
@@ -233,6 +236,7 @@ export function useFamilyCalendar({
         title: encryptedTitle,
         description: encryptedDesc,
         event_date: payload.event_date,
+        end_date: (payload.end_date && payload.end_date > payload.event_date) ? payload.end_date : null,
         repeat_type: payload.repeat_type || 'none',
       })
       .eq('id', eventIdStr)
@@ -328,6 +332,7 @@ export function useFamilyCalendar({
             title: decryptedTitle,
             desc: decryptedDesc,
             event_date: eventDateStr,
+            end_date: event.end_date || undefined,
             created_by: event.created_by,
             created_at: event.created_at,
             repeat_type: repeatType,
@@ -430,6 +435,7 @@ export function useFamilyCalendar({
                     title: decryptedTitle,
                     desc: decryptedDesc,
                     event_date: eventDateStr,
+                    end_date: updatedEvent.end_date || undefined,
                     repeat_type: repeatType,
                   }
                 : e
@@ -539,6 +545,7 @@ export function useFamilyCalendar({
                       title: decryptedTitle,
                       desc: decryptedDesc,
                       event_date: eventDateStr,
+                      end_date: newEvent.end_date || undefined,
                       created_by: newEvent.created_by,
                       created_at: newEvent.created_at,
                       repeat_type: repeatType,
@@ -565,6 +572,7 @@ export function useFamilyCalendar({
             title: decryptedTitle,
             desc: decryptedDesc,
             event_date: eventDateStr,
+            end_date: newEvent.end_date || undefined,
             created_by: newEvent.created_by,
             created_at: newEvent.created_at,
             repeat_type: repeatType,
