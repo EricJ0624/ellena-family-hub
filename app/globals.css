@@ -2971,17 +2971,24 @@ select:not(.chalkboard-form-input) {
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    justify-content: flex-start;
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-grid {
     display: grid;
-    flex: 1 1 0;
+    flex: 0 0 auto;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-template-rows: auto repeat(6, minmax(0, 1fr));
+    grid-template-rows: auto repeat(6, 8cqmin);
     gap: 0.65cqmin;
+    width: 100%;
+    height: auto;
     min-height: 0;
-    height: 100%;
+    align-content: start;
     text-align: center;
+  }
+
+  .widget-chrome[data-widget-key='calendar'] .calendar-widget-section--compact .calendar-grid {
+    grid-template-rows: auto repeat(6, 7cqmin);
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-weekday {
@@ -3015,8 +3022,9 @@ select:not(.chalkboard-form-input) {
 
   .widget-chrome[data-widget-key='calendar'] .calendar-day-cell {
     display: flex;
-    min-height: 0;
-    height: 100%;
+    height: 8cqmin;
+    min-height: 8cqmin;
+    max-height: 8cqmin;
     width: 100%;
     padding: 0.35cqmin;
     flex-direction: column;
@@ -3028,10 +3036,14 @@ select:not(.chalkboard-form-input) {
     line-height: 1.1;
     cursor: pointer;
     position: relative;
+    overflow: hidden;
     transition: all 0.15s ease;
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-widget-section--compact .calendar-day-cell {
+    height: 7cqmin;
+    min-height: 7cqmin;
+    max-height: 7cqmin;
     font-size: 4.2cqmin;
     padding: 0.25cqmin;
   }
@@ -3286,8 +3298,28 @@ select:not(.chalkboard-form-input) {
   }
 
   /* ── Kids Friendly 테마: 캘린더 위젯 여백 — 아래 간격은 TSX inline style로 직접 제어 ── */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--sun,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--sat,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--mid {
+    background: transparent;
+  }
+
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell {
+    height: 8cqmin;
+    min-height: 8cqmin;
+    max-height: 8cqmin;
     padding: 1cqmin 0.5cqmin;
+    overflow: hidden;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-kids-add-btn {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
   }
 
   .dashboard-widget-grid .editor-widget-preview-inner .calendar-widget-section {

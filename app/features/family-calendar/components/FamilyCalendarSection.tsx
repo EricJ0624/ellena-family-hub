@@ -765,10 +765,12 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         }`}
         style={isKidsTheme ? {
           background: 'linear-gradient(180deg, rgba(237,233,254,0.92) 0%, rgba(221,214,254,0.85) 30%, rgba(252,231,243,0.75) 70%, rgba(254,215,170,0.5) 100%)',
+          paddingBottom: '2cqmin',
+          paddingTop: '4.5cqmin',
         } : undefined}
       >
         {isKidsTheme ? (
-          <div className="section-header calendar-section-header" style={{ marginTop: 'min(0.75rem, 4cqmin)', marginBottom: '3cqmin' }}>
+          <div className="section-header calendar-section-header" style={{ marginBottom: '2.5cqmin' }}>
             <h3
               className="section-title m-0 flex items-center calendar-section-title"
               style={{ color: '#5b21b6', fontWeight: 800 }}
@@ -785,11 +787,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             </h3>
           </div>
         )}
-        <div className="section-body calendar-section-body" style={isKidsTheme ? { gap: 'min(0.75rem, 4cqmin)' } : undefined}>
+        <div className="section-body calendar-section-body" style={isKidsTheme ? { gap: '2.2cqmin' } : undefined}>
           <motion.div
             key={`${calendarGrid.year}-${calendarGrid.month}`}
-            className="calendar-month-block"
-            style={isKidsTheme ? { gap: '2.2cqmin' } : undefined}
+            className="calendar-month-block min-h-0"
+            style={isKidsTheme ? { gap: '2.2cqmin', flex: '1 1 0%', minHeight: 0 } : undefined}
             initial={{ opacity: 0.7 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
@@ -876,7 +878,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                           ? 'calendar-weekday--sat'
                           : 'calendar-weekday--mid'
                     }`}
-                    style={isKidsTheme ? { padding: '1.2cqmin 0' } : undefined}
+                    style={isKidsTheme ? { background: 'transparent' } : undefined}
                   >
                     {day}
                   </div>
@@ -952,7 +954,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             <button
               type="button"
               onClick={openEventModal}
-              className="w-full transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+              className="calendar-kids-add-btn w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
               style={{
                 padding: '2.8cqmin 3cqmin',
                 borderRadius: '999px',
@@ -961,13 +963,17 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                 fontWeight: 700,
                 fontSize: '4.2cqmin',
                 border: 'none',
+                outline: 'none',
+                boxShadow: 'none',
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                overflow: 'hidden',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '1.5cqmin',
-                boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
-                marginBottom: 'min(0.75rem, 4cqmin)',
               }}
             >
               <Plus className="calendar-add-btn-icon" />
