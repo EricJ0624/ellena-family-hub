@@ -458,13 +458,33 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         }`}
       >
       <div className="calendar-widget-cq-frame">
-      <section className="content-section calendar-widget-section calendar-widget-section--frame bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50">
-        <div className="section-header calendar-section-header">
-          <h3 className="section-title m-0 flex items-center calendar-section-title">
-            <Calendar className="calendar-section-title-icon" />
-            {t.section_title_calendar}
-          </h3>
-        </div>
+      {/* cqmin 기반 스케일·그라디언트 텍스트는 Tailwind arbitrary 처리가 불가하여 inline style 사용 */}
+      <section
+        className={`content-section calendar-widget-section calendar-widget-section--frame${
+          isKidsTheme ? '' : ' bg-gradient-to-br from-purple-50 via-slate-50 to-sky-50'
+        }`}
+        style={isKidsTheme ? {
+          background: 'linear-gradient(180deg, rgba(237,233,254,0.92) 0%, rgba(221,214,254,0.85) 30%, rgba(252,231,243,0.75) 70%, rgba(254,215,170,0.5) 100%)',
+        } : undefined}
+      >
+        {isKidsTheme ? (
+          <div className="section-header calendar-section-header">
+            <h3
+              className="section-title m-0 flex items-center calendar-section-title"
+              style={{ color: '#5b21b6', fontWeight: 800 }}
+            >
+              <span role="img" aria-label="calendar" style={{ fontSize: '1.05em' }}>📅</span>
+              FAMILY CALENDAR
+            </h3>
+          </div>
+        ) : (
+          <div className="section-header calendar-section-header">
+            <h3 className="section-title m-0 flex items-center calendar-section-title">
+              <Calendar className="calendar-section-title-icon" />
+              {t.section_title_calendar}
+            </h3>
+          </div>
+        )}
         <div className="section-body calendar-section-body">
           <motion.div
             key={`${calendarGrid.year}-${calendarGrid.month}`}
@@ -473,29 +493,76 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="calendar-month-nav">
-              <h4 className="calendar-month-title">
-                {formatMonthYear(calendarGrid.year, calendarGrid.month)}
-              </h4>
-              <div className="calendar-month-nav-btns">
+            {isKidsTheme ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.9)',
+                  borderRadius: '999px',
+                  padding: '1.4cqmin 1.8cqmin',
+                  boxShadow: '0 2px 10px rgba(180,160,220,0.18)',
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
-                  className="calendar-nav-btn transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  aria-label={t.calendar_prev_month}
+                  className="flex items-center justify-center rounded-full transition-colors hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', fontSize: '5.5cqmin', fontWeight: 800, padding: '0 1.5cqmin', lineHeight: 1 }}
                 >
-                  <ChevronLeft className="calendar-nav-btn-icon" />
-                  {t.calendar_prev_month}
+                  ‹
                 </button>
+                <h4
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    margin: 0,
+                    fontSize: '5.5cqmin',
+                    fontWeight: 800,
+                    background: 'linear-gradient(90deg, #7c3aed 0%, #db2777 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {formatMonthYear(calendarGrid.year, calendarGrid.month).toUpperCase()}
+                </h4>
                 <button
                   type="button"
                   onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
-                  className="calendar-nav-btn transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  aria-label={t.calendar_next_month}
+                  className="flex items-center justify-center rounded-full transition-colors hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', fontSize: '5.5cqmin', fontWeight: 800, padding: '0 1.5cqmin', lineHeight: 1 }}
                 >
-                  {t.calendar_next_month}
-                  <ChevronRight className="calendar-nav-btn-icon" />
+                  ›
                 </button>
               </div>
-            </div>
+            ) : (
+              <div className="calendar-month-nav">
+                <h4 className="calendar-month-title">
+                  {formatMonthYear(calendarGrid.year, calendarGrid.month)}
+                </h4>
+                <div className="calendar-month-nav-btns">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month - 1, 1))}
+                    className="calendar-nav-btn transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  >
+                    <ChevronLeft className="calendar-nav-btn-icon" />
+                    {t.calendar_prev_month}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth(new Date(calendarGrid.year, calendarGrid.month + 1, 1))}
+                    className="calendar-nav-btn transition-all duration-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                  >
+                    {t.calendar_next_month}
+                    <ChevronRight className="calendar-nav-btn-icon" />
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="calendar-grid-wrap">
               <div className="calendar-grid">
                 {weekDays.map((day, i) => (
@@ -530,8 +597,12 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                           : cell.isToday
                             ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
                             : cell.eventCount > 0
-                              ? 'linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%)'
-                              : '#fff',
+                              ? isKidsTheme
+                                ? 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%)'
+                                : 'linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%)'
+                              : isKidsTheme
+                                ? 'rgba(255,255,255,0.8)'
+                                : '#fff',
                         color: isSelected || cell.isToday ? '#fff' : cell.eventCount > 0 ? '#7c3aed' : '#1e293b',
                         fontWeight: cell.isToday || isSelected || cell.eventCount > 0 ? '700' : '500',
                         boxShadow: isSelected
@@ -540,7 +611,10 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                             ? '0 4px 12px rgba(245, 158, 11, 0.4), inset 0 -2px 4px rgba(0,0,0,0.15)'
                             : cell.eventCount > 0
                               ? '0 2px 6px rgba(124, 58, 237, 0.2)'
-                              : '0 1px 2px rgba(0,0,0,0.05)',
+                              : isKidsTheme
+                                ? '0 2px 8px rgba(180,160,220,0.2)'
+                                : '0 1px 2px rgba(0,0,0,0.05)',
+                        borderRadius: isKidsTheme ? '14px' : undefined,
                       }}
                       className="calendar-day-cell transition-transform duration-150 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                     >
@@ -561,14 +635,40 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             </div>
           </motion.div>
 
-          <button
-            type="button"
-            onClick={openEventModal}
-            className="calendar-add-btn transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-          >
-            <Plus className="calendar-add-btn-icon" />
-            {t.event_add_title}
-          </button>
+          {isKidsTheme ? (
+            <button
+              type="button"
+              onClick={openEventModal}
+              className="w-full transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+              style={{
+                padding: '2.8cqmin 3cqmin',
+                borderRadius: '999px',
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '4.2cqmin',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '1.5cqmin',
+                boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
+              }}
+            >
+              <Plus className="calendar-add-btn-icon" />
+              {t.event_add_title}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={openEventModal}
+              className="calendar-add-btn transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(124,58,237,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+            >
+              <Plus className="calendar-add-btn-icon" />
+              {t.event_add_title}
+            </button>
+          )}
         </div>
       </section>
       </div>
