@@ -124,7 +124,8 @@ export function FamilyCalendarSection({
     } else if (e.repeat_type === 'yearly') {
       const monthDay = dateKey.substring(5, 10);
       const [mm, dd] = monthDay.split('-');
-      const monthName = new Date(2000, parseInt(mm, 10) - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+      const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const monthName = MONTH_NAMES[parseInt(mm, 10) - 1] ?? '';
       return e.month === monthName && e.day === dd.replace(/^0/, '');
     } else {
       return e.event_date === dateKey;
