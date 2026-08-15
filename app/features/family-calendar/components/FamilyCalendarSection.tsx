@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -72,7 +72,7 @@ interface FamilyCalendarSectionProps {
   };
 }
 
-export function FamilyCalendarSection({
+export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   events,
   onEventsChange,
   userId,
@@ -515,13 +515,10 @@ export function FamilyCalendarSection({
                   const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
 
                   return (
-                    <motion.button
+                    <button
                       key={cell.day}
                       type="button"
                       onClick={() => setSelectedDate(cell.date)}
-                      initial={false}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
                       style={{
                         background: isSelected
                           ? 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)'
@@ -540,7 +537,7 @@ export function FamilyCalendarSection({
                               ? '0 2px 6px rgba(124, 58, 237, 0.2)'
                               : '0 1px 2px rgba(0,0,0,0.05)',
                       }}
-                      className="calendar-day-cell focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                      className="calendar-day-cell transition-transform duration-150 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                     >
                       <span>{cell.day}</span>
                       {cell.eventCount > 0 && (
@@ -552,7 +549,7 @@ export function FamilyCalendarSection({
                           {cell.eventCount}개
                         </span>
                       )}
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
@@ -674,4 +671,4 @@ export function FamilyCalendarSection({
       </div>
     </>
   );
-}
+});

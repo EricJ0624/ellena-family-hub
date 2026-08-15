@@ -330,6 +330,45 @@ export default function FamilyHub() {
   const titleFont = useMemo(() => getFontStyle(lang, 'title'), [lang]);
   const bodyFont = useMemo(() => getFontStyle(lang, 'body'), [lang]);
 
+  /** 캘린더 번역 객체 — lang이 바뀔 때만 새 참조 생성 (React.memo 안정성) */
+  const calendarTranslations = useMemo(() => ({
+    section_title_calendar: getDashboardTranslation(lang, 'section_title_calendar'),
+    calendar_prev_month: getDashboardTranslation(lang, 'calendar_prev_month'),
+    calendar_next_month: getDashboardTranslation(lang, 'calendar_next_month'),
+    calendar_sun: getDashboardTranslation(lang, 'calendar_weekday_0'),
+    calendar_mon: getDashboardTranslation(lang, 'calendar_weekday_1'),
+    calendar_tue: getDashboardTranslation(lang, 'calendar_weekday_2'),
+    calendar_wed: getDashboardTranslation(lang, 'calendar_weekday_3'),
+    calendar_thu: getDashboardTranslation(lang, 'calendar_weekday_4'),
+    calendar_fri: getDashboardTranslation(lang, 'calendar_weekday_5'),
+    calendar_sat: getDashboardTranslation(lang, 'calendar_weekday_6'),
+    calendar_day_events_title: getDashboardTranslation(lang, 'calendar_day_events_title'),
+    event_add_title: getDashboardTranslation(lang, 'event_add_title'),
+    event_title_label: getDashboardTranslation(lang, 'event_title_label'),
+    event_title_placeholder: getDashboardTranslation(lang, 'event_title_placeholder'),
+    event_desc_label: getDashboardTranslation(lang, 'event_desc_label'),
+    event_desc_placeholder: getDashboardTranslation(lang, 'event_desc_placeholder'),
+    event_repeat_label: getDashboardTranslation(lang, 'event_repeat_label'),
+    event_repeat_none: getDashboardTranslation(lang, 'event_repeat_none'),
+    event_repeat_monthly: getDashboardTranslation(lang, 'event_repeat_monthly'),
+    event_repeat_yearly: getDashboardTranslation(lang, 'event_repeat_yearly'),
+    event_submit_btn: getDashboardTranslation(lang, 'event_submit_btn'),
+    event_title_required: getDashboardTranslation(lang, 'event_title_required'),
+    event_date_invalid: getDashboardTranslation(lang, 'event_date_invalid'),
+    event_title_invalid: getDashboardTranslation(lang, 'event_title_invalid'),
+    event_author: getDashboardTranslation(lang, 'event_author'),
+    event_no_events: getDashboardTranslation(lang, 'event_no_events'),
+    event_add_hint: getDashboardTranslation(lang, 'event_add_hint'),
+    event_save_failed: getDashboardTranslation(lang, 'event_save_failed'),
+    delete_failed_retry: getDashboardTranslation(lang, 'delete_failed_retry'),
+    me: getCommonTranslation(lang, 'me'),
+    unknown: getCommonTranslation(lang, 'unknown'),
+    cancel: getCommonTranslation(lang, 'cancel'),
+    close: getCommonTranslation(lang, 'close'),
+    delete: getCommonTranslation(lang, 'delete'),
+    delete_confirm: getCommonTranslation(lang, 'delete_confirm'),
+  }), [lang]);
+
   /** 돋보기 모달 헤더에서 사용하는 위젯별 레이블 맵 */
   const widgetLabelMap = useMemo<Record<DashboardWidgetKey, string>>(
     () => ({
@@ -6102,43 +6141,7 @@ export default function FamilyHub() {
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
             lang={lang}
-            translations={{
-              section_title_calendar: dt('section_title_calendar'),
-              calendar_prev_month: dt('calendar_prev_month'),
-              calendar_next_month: dt('calendar_next_month'),
-              calendar_sun: dt('calendar_weekday_0'),
-              calendar_mon: dt('calendar_weekday_1'),
-              calendar_tue: dt('calendar_weekday_2'),
-              calendar_wed: dt('calendar_weekday_3'),
-              calendar_thu: dt('calendar_weekday_4'),
-              calendar_fri: dt('calendar_weekday_5'),
-              calendar_sat: dt('calendar_weekday_6'),
-              calendar_day_events_title: dt('calendar_day_events_title'),
-              event_add_title: dt('event_add_title'),
-              event_title_label: dt('event_title_label'),
-              event_title_placeholder: dt('event_title_placeholder'),
-              event_desc_label: dt('event_desc_label'),
-              event_desc_placeholder: dt('event_desc_placeholder'),
-              event_repeat_label: dt('event_repeat_label'),
-              event_repeat_none: dt('event_repeat_none'),
-              event_repeat_monthly: dt('event_repeat_monthly'),
-              event_repeat_yearly: dt('event_repeat_yearly'),
-              event_submit_btn: dt('event_submit_btn'),
-              event_title_required: dt('event_title_required'),
-              event_date_invalid: dt('event_date_invalid'),
-              event_title_invalid: dt('event_title_invalid'),
-              event_author: dt('event_author'),
-              event_no_events: dt('event_no_events'),
-              event_add_hint: dt('event_add_hint'),
-              event_save_failed: dt('event_save_failed'),
-              delete_failed_retry: dt('delete_failed_retry'),
-              me: ct('me'),
-              unknown: ct('unknown'),
-              cancel: ct('cancel'),
-              close: ct('close'),
-              delete: ct('delete'),
-              delete_confirm: ct('delete_confirm'),
-            }}
+            translations={calendarTranslations}
           />
         );
       case 'chat':
