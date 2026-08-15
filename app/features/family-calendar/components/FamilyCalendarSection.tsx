@@ -12,6 +12,8 @@ import type { FamilyEvent } from '../types';
 import { useFamilyCalendar } from '../hooks/useFamilyCalendar';
 import type { LangCode } from '@/lib/language-fonts';
 import { intlLocaleForLang } from '@/lib/language-fonts';
+import { useGroup } from '@/app/contexts/GroupContext';
+import { resolveUiTheme } from '@/lib/ui-theme';
 
 interface FamilyCalendarSectionProps {
   events: FamilyEvent[];
@@ -93,6 +95,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     new Date(y, mZeroBased, 1).toLocaleDateString(intlLocale, { year: 'numeric', month: 'long' });
   const formatLongDate = (d: Date) =>
     d.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const { currentGroup } = useGroup();
+  const isKidsTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
 
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
