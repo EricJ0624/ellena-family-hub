@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { memo, startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
@@ -102,7 +102,7 @@ function dedupeFamilyTasks(tasks: FamilyTask[]): FamilyTask[] {
   return out;
 }
 
-export function FamilyTasksSection({
+export const FamilyTasksSection = memo(function FamilyTasksSection({
   tasks,
   onTasksChange,
   userId,
@@ -656,4 +656,4 @@ export function FamilyTasksSection({
       </div>
     </>
   );
-}
+});

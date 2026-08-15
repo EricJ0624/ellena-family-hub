@@ -3,7 +3,7 @@
 // 동적 렌더링 강제 (GroupProvider 의존성 때문에)
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, startTransition } from 'react';
 import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -368,6 +368,37 @@ export default function FamilyHub() {
     delete: getCommonTranslation(lang, 'delete'),
     delete_confirm: getCommonTranslation(lang, 'delete_confirm'),
   }), [lang]);
+
+  /** 태스크 번역 객체 — lang이 바뀔 때만 새 참조 생성 (React.memo 안정성) */
+  const taskTranslations = useMemo(() => ({
+    todo_section_title: getDashboardTranslation(lang, 'todo_section_title'),
+    todo_add_btn: getDashboardTranslation(lang, 'todo_add_btn'),
+    todo_empty_state: getDashboardTranslation(lang, 'todo_empty_state'),
+    todo_modal_title: getDashboardTranslation(lang, 'todo_modal_title'),
+    todo_what_label: getDashboardTranslation(lang, 'todo_what_label'),
+    todo_what_placeholder: getDashboardTranslation(lang, 'todo_what_placeholder'),
+    todo_who_label: getDashboardTranslation(lang, 'todo_who_label'),
+    todo_who_placeholder: getDashboardTranslation(lang, 'todo_who_placeholder'),
+    todo_register_btn: getDashboardTranslation(lang, 'todo_register_btn'),
+    todo_required: getDashboardTranslation(lang, 'todo_required'),
+    invalid_input: getDashboardTranslation(lang, 'invalid_input'),
+    anyone: getCommonTranslation(lang, 'anyone'),
+    cancel: getCommonTranslation(lang, 'cancel'),
+    delete_confirm: getCommonTranslation(lang, 'delete_confirm'),
+  }), [lang]);
+
+  /** 태스크 drag 핸들러 — 안정적인 참조 유지 (React.memo 안정성) */
+  const handleTaskChatDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setChatDragOver(true);
+  }, []);
+  const handleTaskChatDragLeave = useCallback(() => setChatDragOver(false), []);
+  const handleTaskChatDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setChatDragOver(false);
+    const files = Array.from(e.dataTransfer.files || []).filter((f: File) => f.type.startsWith('image/'));
+    handleDropChatFiles(files);
+  }, [handleDropChatFiles]);
 
   /** 돋보기 모달 헤더에서 사용하는 위젯별 레이블 맵 */
   const widgetLabelMap = useMemo<Record<DashboardWidgetKey, string>>(
@@ -3075,7 +3106,11 @@ export default function FamilyHub() {
 
         const nextRealtimeId = Date.now();
         realtimeSubscriptionIdRef.current = nextRealtimeId;
-        setRealtimeSubscriptionEpoch(nextRealtimeId);
+        // startTransition: 대시보드 전체 re-render를 저우선순위로 처리
+        // 사용자 클릭(모달 오픈 등)이 이 re-render보다 먼저 처리됨
+        startTransition(() => {
+          setRealtimeSubscriptionEpoch(nextRealtimeId);
+        });
         familyChatDebug('새 Realtime 구독 epoch', nextRealtimeId);
 
         setupPresenceSubscription();
@@ -6094,35 +6129,12 @@ export default function FamilyHub() {
             getFamilyRoleLabel={getFamilyRoleLabel}
             lang={lang}
             taskMembers={familyTaskMembers}
-            translations={{
-              todo_section_title: dt('todo_section_title'),
-              todo_add_btn: dt('todo_add_btn'),
-              todo_empty_state: dt('todo_empty_state'),
-              todo_modal_title: dt('todo_modal_title'),
-              todo_what_label: dt('todo_what_label'),
-              todo_what_placeholder: dt('todo_what_placeholder'),
-              todo_who_label: dt('todo_who_label'),
-              todo_who_placeholder: dt('todo_who_placeholder'),
-              todo_register_btn: dt('todo_register_btn'),
-              todo_required: dt('todo_required'),
-              invalid_input: dt('invalid_input'),
-              anyone: ct('anyone'),
-              cancel: ct('cancel'),
-              delete_confirm: ct('delete_confirm'),
-            }}
+            translations={taskTranslations}
             chatDragOver={chatDragOver}
             chatDropRef={chatDropRef}
-            onChatDragOver={(e) => {
-              e.preventDefault();
-              setChatDragOver(true);
-            }}
-            onChatDragLeave={() => setChatDragOver(false)}
-            onChatDrop={(e) => {
-              e.preventDefault();
-              setChatDragOver(false);
-              const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith('image/'));
-              handleDropChatFiles(files);
-            }}
+            onChatDragOver={handleTaskChatDragOver}
+            onChatDragLeave={handleTaskChatDragLeave}
+            onChatDrop={handleTaskChatDrop}
           />
         );
       case 'calendar':
