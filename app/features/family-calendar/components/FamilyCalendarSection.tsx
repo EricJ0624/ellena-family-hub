@@ -99,6 +99,21 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   const { currentGroup } = useGroup();
   const isKidsTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
 
+  const getKidsEventEmoji = useCallback((titles: string[]): string => {
+    const text = titles.join(' ').toLowerCase();
+    if (/생일|birthday|cake|케이크/.test(text)) return '🎂';
+    if (/여행|travel|trip|vacation|비행|flight/.test(text)) return '✈️';
+    if (/학교|school|수업|class|학원/.test(text)) return '📚';
+    if (/병원|doctor|dentist|치과|의원/.test(text)) return '🏥';
+    if (/운동|gym|sport|축구|야구|수영/.test(text)) return '⚽';
+    if (/파티|party|festival|축제/.test(text)) return '🎉';
+    if (/결혼|wedding/.test(text)) return '💒';
+    if (/가족|family/.test(text)) return '👨‍👩‍👧‍👦';
+    if (/집|home|house|이사/.test(text)) return '🏠';
+    if (/음악|music|concert|콘서트/.test(text)) return '🎵';
+    return '⭐';
+  }, []);
+
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -626,6 +641,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                   }
 
                   const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
+                  const dateKey = cell.date.getFullYear() + '-' + String(cell.date.getMonth() + 1).padStart(2, '0') + '-' + String(cell.day).padStart(2, '0');
+                  const eventsOnDay = isKidsTheme && cell.eventCount > 0
+                    ? (events || []).filter((e) => eventMatchesDate(e, dateKey)).map((e) => e.title)
+                    : [];
+                  const kidsEmoji = isKidsTheme && eventsOnDay.length > 0 ? getKidsEventEmoji(eventsOnDay) : null;
 
                   return (
                     <button
@@ -660,14 +680,20 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                       className="calendar-day-cell transition-transform duration-150 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
                     >
                       <span>{cell.day}</span>
-                      {cell.eventCount > 0 && (
-                        <span
-                          className={`calendar-day-cell-count ${
-                            isSelected || cell.isToday ? 'text-white/90' : 'text-violet-600'
-                          }`}
-                        >
-                          {cell.eventCount}개
+                      {isKidsTheme && kidsEmoji ? (
+                        <span style={{ fontSize: '3.2cqmin', lineHeight: 1 }} aria-hidden>
+                          {kidsEmoji}
                         </span>
+                      ) : (
+                        cell.eventCount > 0 && (
+                          <span
+                            className={`calendar-day-cell-count ${
+                              isSelected || cell.isToday ? 'text-white/90' : 'text-violet-600'
+                            }`}
+                          >
+                            {cell.eventCount}개
+                          </span>
+                        )
                       )}
                     </button>
                   );
