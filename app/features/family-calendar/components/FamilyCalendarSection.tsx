@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useMemo, useCallback, memo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -112,6 +112,21 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     if (/집|home|house|이사/.test(text)) return '🏠';
     if (/음악|music|concert|콘서트/.test(text)) return '🎵';
     return '⭐';
+  }, []);
+
+  const isKidsThemeRef = useRef(isKidsTheme);
+  isKidsThemeRef.current = isKidsTheme;
+
+  const fireConfetti = useCallback(() => {
+    import('canvas-confetti').then(({ default: confetti }) => {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ['#7c3aed', '#db2777', '#fbbf24', '#34d399', '#60a5fa'],
+        ticks: 200,
+      });
+    });
   }, []);
 
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -313,6 +328,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 
     // 낙관적 업데이트
     onEventsChange([newEvent, ...events]);
+
+    // Kids 테마: 신규 일정 추가 성공 시 confetti (0.5초 지연)
+    if (isKidsThemeRef.current) {
+      setTimeout(fireConfetti, 500);
+    }
 
     // Supabase 추가
     addEvent(newEvent)
