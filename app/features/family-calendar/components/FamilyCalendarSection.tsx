@@ -406,6 +406,29 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
     });
   }, []);
 
+  const fireUpdateConfetti = useCallback(() => {
+    import('canvas-confetti').then(({ default: confetti }) => {
+      const colors = ['#7c3aed', '#db2777', '#fbbf24', '#34d399', '#60a5fa'];
+      const sparkle = (x: number, y: number) => {
+        confetti({
+          particleCount: 32,
+          spread: 360,
+          startVelocity: 22,
+          origin: { x, y },
+          colors,
+          ticks: 140,
+          gravity: 0.85,
+          scalar: 1.15,
+          shapes: ['star'],
+          zIndex: 10050,
+        });
+      };
+      sparkle(0.28, 0.22);
+      sparkle(0.72, 0.2);
+      setTimeout(() => sparkle(0.5, 0.16), 180);
+    });
+  }, []);
+
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const selectedDateRef = useRef(selectedDate);
@@ -547,6 +570,10 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
       startTransition(() => {
         onEventsChange(nextEvents);
       });
+      if (isKidsThemeRef.current) {
+        fireUpdateConfetti();
+      }
+
       updateEvent({
         id: payload.editingEventId,
         month: payload.month,
