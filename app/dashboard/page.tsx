@@ -388,6 +388,7 @@ export default function FamilyHub() {
   }), [lang]);
 
   /** 태스크 drag 핸들러 — 안정적인 참조 유지 (React.memo 안정성) */
+  const handleDropChatFilesRef = useRef<((files: File[]) => void) | null>(null);
   const handleTaskChatDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setChatDragOver(true);
@@ -397,8 +398,8 @@ export default function FamilyHub() {
     e.preventDefault();
     setChatDragOver(false);
     const files = Array.from(e.dataTransfer.files || []).filter((f: File) => f.type.startsWith('image/'));
-    handleDropChatFiles(files);
-  }, [handleDropChatFiles]);
+    handleDropChatFilesRef.current?.(files);
+  }, []);
 
   /** 돋보기 모달 헤더에서 사용하는 위젯별 레이블 맵 */
   const widgetLabelMap = useMemo<Record<DashboardWidgetKey, string>>(
@@ -5872,6 +5873,7 @@ export default function FamilyHub() {
     sanitizeInput,
     encrypt: CryptoService.encrypt,
   });
+  handleDropChatFilesRef.current = handleDropChatFiles;
 
   const { loadInitialChatMessages } = useFamilyChatInitialLoad({
     supabase,
