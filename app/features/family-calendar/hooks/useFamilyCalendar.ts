@@ -341,7 +341,7 @@ export function useFamilyCalendar({
     };
 
     loadEvents();
-  }, [currentGroupId, userId, getCurrentKey, CryptoService, onEventsChange]);
+  }, [currentGroupId, userId, onEventsChange]);
 
   // Realtime 구독
   useEffect(() => {

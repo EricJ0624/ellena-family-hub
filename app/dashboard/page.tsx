@@ -3072,8 +3072,8 @@ export default function FamilyHub() {
     };
 
     // Supabase 데이터 로드 및 Realtime 구독 설정
-    // currentGroupId 없을 때는 위치 로드 스킵 → 그룹 로드 후 effect 재실행 시 한 번만 로드
-    if (!currentGroupId) {
+    // isAuthenticated 또는 currentGroupId 없을 때는 구독 스킵 → 인증 완료 후 effect 재실행 시 한 번만 로드
+    if (!isAuthenticated || !currentGroupId) {
       return;
     }
     const runLocationLoad = () => {
