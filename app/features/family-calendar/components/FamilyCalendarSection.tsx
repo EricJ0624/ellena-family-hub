@@ -768,7 +768,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         } : undefined}
       >
         {isKidsTheme ? (
-          <div className="section-header calendar-section-header" style={{ marginTop: '0.75rem', marginBottom: '3cqmin' }}>
+          <div className="section-header calendar-section-header" style={{ marginTop: 'min(0.75rem, 4cqmin)', marginBottom: '3cqmin' }}>
             <h3
               className="section-title m-0 flex items-center calendar-section-title"
               style={{ color: '#5b21b6', fontWeight: 800 }}
@@ -785,7 +785,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
             </h3>
           </div>
         )}
-        <div className="section-body calendar-section-body" style={isKidsTheme ? { gap: '0.75rem' } : undefined}>
+        <div className="section-body calendar-section-body" style={isKidsTheme ? { gap: 'min(0.75rem, 4cqmin)' } : undefined}>
           <motion.div
             key={`${calendarGrid.year}-${calendarGrid.month}`}
             className="calendar-month-block"
@@ -967,7 +967,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                 justifyContent: 'center',
                 gap: '1.5cqmin',
                 boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
-                marginBottom: '0.75rem',
+                marginBottom: 'min(0.75rem, 4cqmin)',
               }}
             >
               <Plus className="calendar-add-btn-icon" />
