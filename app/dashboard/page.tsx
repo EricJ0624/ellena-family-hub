@@ -18,6 +18,7 @@ import {
 import TitlePage, { TitleStyle } from '@/app/components/TitlePage';
 import { AppTitleContent } from '@/app/components/AppTitleContent';
 import { useGroup } from '@/app/contexts/GroupContext';
+import { resolveUiTheme } from '@/lib/ui-theme';
 import { useAlbum } from '@/app/contexts/AlbumContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getFontStyle, intlLocaleForLang, LANG_OPTIONS, type LangCode } from '@/lib/language-fonts';
@@ -115,6 +116,7 @@ import {
 import { WIDGET_CONFIGS_UPDATED_EVENT } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -209,6 +211,14 @@ function tasksSignature(tasks: ReadonlyArray<FamilyTask>): string {
         `${t.id}:${t.done ? 1 : 0}:${t.text}:${t.assignee}:${t.assigned_to_user_id ?? ''}:${t.supabaseId ?? ''}`,
     )
     .join('|');
+}
+
+/** Presence 목록 동일 여부 — sync 하트비트마다 대시보드 전체 re-render 방지 */
+function onlineUsersSignature(
+  users: ReadonlyArray<{ id: string; name: string; isCurrentUser: boolean }>,
+): string {
+  if (!users.length) return '';
+  return users.map((u) => `${u.id}:${u.name}:${u.isCurrentUser ? 1 : 0}`).join('|');
 }
 
 /** events 동일 여부 — Realtime/초기 로드 시 불필요한 setState 방지 */
@@ -316,6 +326,8 @@ export default function FamilyHub() {
     }
   }
   const { lang, setLanguage } = useLanguage();
+  const uiTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
+  const isKidsTheme = uiTheme === 'kids_friendly';
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
     () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
@@ -385,6 +397,21 @@ export default function FamilyHub() {
     anyone: getCommonTranslation(lang, 'anyone'),
     cancel: getCommonTranslation(lang, 'cancel'),
     delete_confirm: getCommonTranslation(lang, 'delete_confirm'),
+  }), [lang]);
+
+  const chatTranslations = useMemo(() => ({
+    section_title_chat: getDashboardTranslation(lang, 'section_title_chat'),
+    section_chat_bubble_greeting: getDashboardTranslation(lang, 'section_chat_bubble_greeting'),
+    chat_placeholder: getDashboardTranslation(lang, 'chat_placeholder'),
+    chat_send: getDashboardTranslation(lang, 'chat_send'),
+    chat_load_older: getDashboardTranslation(lang, 'chat_load_older'),
+    chat_loading_older: getDashboardTranslation(lang, 'chat_loading_older'),
+    chat_album_btn: getDashboardTranslation(lang, 'chat_album_btn'),
+    chat_camera_btn: getDashboardTranslation(lang, 'chat_camera_btn'),
+    chat_attach_btn_aria: getDashboardTranslation(lang, 'chat_attach_btn_aria'),
+    chat_remove_attachment_aria: getDashboardTranslation(lang, 'chat_remove_attachment_aria'),
+    me: getCommonTranslation(lang, 'me'),
+    user: getCommonTranslation(lang, 'user'),
   }), [lang]);
 
   /** 태스크 drag 핸들러 — 안정적인 참조 유지 (React.memo 안정성) */
@@ -536,24 +563,20 @@ export default function FamilyHub() {
     startLng?: number;
   } | null>(null);
   const [expandedWidget, setExpandedWidget] = useState<DashboardWidgetKey | null>(null);
-  // 모달 닫힘 직후 구독 race condition 방지:
-  // tasks/calendar는 컴포넌트 내부에서 Supabase 구독을 관리하므로
-  // 모달 언마운트(구독 해제, 비동기)가 완료되기 전에 그리드에서 리마운트하면
-  // 동일 채널 이름으로 재구독 시도 → 에러 발생.
-  // 250ms 동안 그리드 플레이스홀더를 유지해 해제 완료 후 리마운트하도록 함.
-  const [recentlyClosedWidget, setRecentlyClosedWidget] = useState<DashboardWidgetKey | null>(null);
-  const recentlyClosedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleMagnifyClose = useCallback(() => {
-    if (expandedWidget) {
-      if (recentlyClosedTimerRef.current) clearTimeout(recentlyClosedTimerRef.current);
-      setRecentlyClosedWidget(expandedWidget);
-      recentlyClosedTimerRef.current = setTimeout(() => {
-        setRecentlyClosedWidget(null);
-        recentlyClosedTimerRef.current = null;
-      }, 250);
-    }
     setExpandedWidget(null);
-  }, [expandedWidget]);
+  }, []);
+  const handleExpandWidget = useCallback((key: DashboardWidgetKey) => {
+    setExpandedWidget(key);
+  }, []);
+  const handleOpenLocationWhere = useCallback(() => {
+    setLocationRequestModalMode('where');
+    setShowLocationRequestModal(true);
+  }, []);
+  const handleOpenLocationComeHere = useCallback(() => {
+    setLocationRequestModalMode('come_here');
+    setShowLocationRequestModal(true);
+  }, []);
   const [selectedUserForRequest, setSelectedUserForRequest] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
@@ -1580,7 +1603,10 @@ export default function FamilyHub() {
   const titleRowRef = useRef<HTMLDivElement>(null);
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const titleH1Ref = useRef<HTMLHeadingElement>(null);
+  const titleBoxWidthRef = useRef(-1);
   const [customTitleFontSize, setCustomTitleFontSize] = useState<number | null>(null);
+  const customTitleFontSizeRef = useRef(customTitleFontSize);
+  customTitleFontSizeRef.current = customTitleFontSize;
   const [frameIsPortrait, setFrameIsPortrait] = useState(false);
   const [portraitTitleMaxWidthPx, setPortraitTitleMaxWidthPx] = useState<number>(
     DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait,
@@ -1762,7 +1788,12 @@ export default function FamilyHub() {
     const container = titleContainerRef.current;
     // h1은 관찰하지 않음 — fontSize 변경으로 높이가 바뀌면 RO→setState 무한 루프(#185)
     if (!row && !container) return;
-    const ro = new ResizeObserver(() => measureCustomTitleFontSize());
+    const ro = new ResizeObserver((entries) => {
+      const w = Math.round(entries[0]?.contentRect.width ?? 0);
+      if (Math.abs(w - titleBoxWidthRef.current) < 2) return;
+      titleBoxWidthRef.current = w;
+      measureCustomTitleFontSize();
+    });
     if (row) ro.observe(row);
     if (container) ro.observe(container);
     const onFonts = () => measureCustomTitleFontSize();
@@ -1774,7 +1805,7 @@ export default function FamilyHub() {
     };
   }, [measureCustomTitleFontSize, dashboardTitleText, isDefaultDashboardTitle, frameIsPortrait, isAdminTitleContext]);
 
-  /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정) */
+  /** DOM 실측 — scrollWidth 초과 시 축소 (canvas 추정 보정). 결과 fontSize는 deps에 넣지 않음(자기 루프 #185). */
   useLayoutEffect(() => {
     const el = titleH1Ref.current;
     if (!el) return;
@@ -1784,7 +1815,7 @@ export default function FamilyHub() {
         customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
         DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
       );
-      const startPx = customTitleFontSize ?? estimatedCustomTitleFontSize ?? maxPx;
+      const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? maxPx;
       const fitted = shrinkFontSizeToElement(el, startPx, DEFAULT_APP_TITLE_MIN_PX_PORTRAIT);
       setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
       return;
@@ -1793,13 +1824,12 @@ export default function FamilyHub() {
     if (!frameIsPortrait && isDefaultDashboardTitle) return;
 
     const minPx = CUSTOM_TITLE_FONT_MIN_PX;
-    const startPx = customTitleFontSize ?? estimatedCustomTitleFontSize ?? titleFitMaxPx;
+    const startPx = customTitleFontSizeRef.current ?? estimatedCustomTitleFontSize ?? titleFitMaxPx;
     const fitted = shrinkFontSizeToElement(el, startPx, minPx);
     setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
   }, [
     frameIsPortrait,
     isDefaultDashboardTitle,
-    customTitleFontSize,
     estimatedCustomTitleFontSize,
     dashboardTitleText,
     titleFitMaxPx,
@@ -2725,19 +2755,25 @@ export default function FamilyHub() {
         const state = presenceSubscription.presenceState();
         const usersList = await buildOnlineUsersListFromPresence(state);
         console.log('현재 로그인 중인 사용자 목록 (Presence):', usersList);
-        setOnlineUsers(usersList);
+        setOnlineUsers((prev) =>
+          onlineUsersSignature(prev) === onlineUsersSignature(usersList) ? prev : usersList,
+        );
       })
       .on('presence', { event: 'join' }, async ({ key, newPresences }) => {
         console.log('사용자 접속:', key, newPresences);
         const state = presenceSubscription.presenceState();
         const usersList = await buildOnlineUsersListFromPresence(state);
-        setOnlineUsers(usersList);
+        setOnlineUsers((prev) =>
+          onlineUsersSignature(prev) === onlineUsersSignature(usersList) ? prev : usersList,
+        );
       })
       .on('presence', { event: 'leave' }, async ({ key, leftPresences }) => {
         console.log('사용자 접속 해제:', key, leftPresences);
         const state = presenceSubscription.presenceState();
         const usersList = await buildOnlineUsersListFromPresence(state);
-        setOnlineUsers(usersList);
+        setOnlineUsers((prev) =>
+          onlineUsersSignature(prev) === onlineUsersSignature(usersList) ? prev : usersList,
+        );
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -5900,6 +5936,16 @@ export default function FamilyHub() {
     setMessages,
   });
 
+  const handleDeleteChatAttachment = useCallback(async (attachmentId: string) => {
+    if (!currentGroupId) return;
+    try {
+      await deleteAttachment(currentGroupId, attachmentId);
+      await loadChatAttachments();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '첨부 삭제 실패');
+    }
+  }, [currentGroupId, loadChatAttachments]);
+
   // 일반 멤버 → 그룹 관리자 문의: 하단 FAB → /dashboard/member-support (미읽답 배지용 목록만 로드)
   // Rules of Hooks: 조기 return보다 위에 둠.
   const [memberSupportTickets, setMemberSupportTickets] = useState<MemberSupportTicketRow[]>([]);
@@ -6059,7 +6105,8 @@ export default function FamilyHub() {
       : BAROQUE_MAT_DASHBOARD_TITLE.fontFamily,
     ...(isDefaultDashboardTitle
       ? {
-          background: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
+          backgroundImage: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
+          backgroundColor: 'transparent',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -6125,11 +6172,11 @@ export default function FamilyHub() {
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
             sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
             lang={lang}
+            isKidsTheme={isKidsTheme}
             taskMembers={familyTaskMembers}
             translations={taskTranslations}
             chatDragOver={chatDragOver}
@@ -6149,12 +6196,12 @@ export default function FamilyHub() {
             getCurrentKey={getCurrentKey}
             CryptoService={CryptoService}
             sanitizeInput={sanitizeInput}
-            realtimeSubscriptionId={String(effectiveRealtimeEpochForChildren)}
             eventAuthorNames={eventAuthorNames}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
             lang={lang}
+            uiTheme={uiTheme}
             translations={calendarTranslations}
           />
         );
@@ -6176,34 +6223,13 @@ export default function FamilyHub() {
             onPickFiles={handlePickChatFiles}
             chatAttachmentsByMessage={chatAttachmentsByMessage}
             chatOutgoingPreviews={chatOutgoingPreviews}
-            onDeleteAttachment={async (attachmentId: string) => {
-              if (!currentGroupId) return;
-              try {
-                await deleteAttachment(currentGroupId, attachmentId);
-                await loadChatAttachments();
-              } catch (e) {
-                alert(e instanceof Error ? e.message : '첨부 삭제 실패');
-              }
-            }}
+            onDeleteAttachment={handleDeleteChatAttachment}
             familyRoleByUserId={familyRoleByUserId}
             getFamilyRoleEmoji={getFamilyRoleEmoji}
             getFamilyRoleLabel={getFamilyRoleLabel}
             eventAuthorNames={eventAuthorNames}
             lang={lang}
-            translations={{
-              section_title_chat: dt('section_title_chat'),
-              section_chat_bubble_greeting: dt('section_chat_bubble_greeting'),
-              chat_placeholder: dt('chat_placeholder'),
-              chat_send: dt('chat_send'),
-              chat_load_older: dt('chat_load_older'),
-              chat_loading_older: dt('chat_loading_older'),
-              chat_album_btn: dt('chat_album_btn'),
-              chat_camera_btn: dt('chat_camera_btn'),
-              chat_attach_btn_aria: dt('chat_attach_btn_aria'),
-              chat_remove_attachment_aria: dt('chat_remove_attachment_aria'),
-              me: ct('me'),
-              user: ct('user'),
-            }}
+            translations={chatTranslations}
           />
         );
       case 'travel':
@@ -6308,14 +6334,8 @@ export default function FamilyHub() {
       case 'location':
         return (
           <FamilyLocationSection
-            onOpenRequestModal={() => {
-              setLocationRequestModalMode('where');
-              setShowLocationRequestModal(true);
-            }}
-            onOpenComeHereModal={() => {
-              setLocationRequestModalMode('come_here');
-              setShowLocationRequestModal(true);
-            }}
+            onOpenRequestModal={handleOpenLocationWhere}
+            onOpenComeHereModal={handleOpenLocationComeHere}
             myLocation={state.location}
             extractLocationAddress={extractLocationAddress}
             isLocationSharing={isLocationSharing}
@@ -6612,7 +6632,7 @@ export default function FamilyHub() {
         {/* 타이틀 + 관리자 — 세로/가로 모두 좌측 타이틀 + 우측 admin flex */}
         <div
           ref={titleRowRef}
-          className="relative box-border min-h-12 w-full min-w-0 max-w-full px-1"
+          className="relative z-20 box-border min-h-12 w-full min-w-0 max-w-full px-1"
         >
           <div
             ref={titleContainerRef}
@@ -6635,9 +6655,10 @@ export default function FamilyHub() {
                 <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
               ) : showAdminButton ? (
                 <button
+                  type="button"
                   data-dashboard-admin-btn
                   onClick={() => router.push(adminPagePath)}
-                  className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                  className={`relative z-30 inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
                     isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
                   }`}
                   aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
@@ -6761,7 +6782,6 @@ export default function FamilyHub() {
               const placement = resolveWidgetGridPlacement(cfg, dashboardColumnCount, dashboardIsLandscapeGrid);
               const { colSpan, rowSpan } = placement;
               const isExpanded = expandedWidget === cfg.widget_key;
-              const isRecentlyClosed = recentlyClosedWidget === cfg.widget_key;
 
               // Phase E: S 사이즈 여부 — 실제 layout 너비가 portrait 6열(50%) 이하이면 S로 판단.
               // landscape: 12열(24열 기준 50%) 이하. 미설정(null)이면 size 프리셋으로 폴백.
@@ -6778,7 +6798,11 @@ export default function FamilyHub() {
                   key={cfg.widget_key}
                   // isolate: 각 위젯이 독립 stacking context를 가지도록 해
                   // kids 칠판은 CSS :has(.chalkboard-frame) 로 overflow visible 보정
-                  className="min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible"
+                  className={
+                    isExpanded
+                      ? 'min-w-0 max-w-full'
+                      : 'min-w-0 max-w-full isolate overflow-x-clip overflow-y-visible'
+                  }
                   data-widget-size={cfg.size}
                   style={buildWidgetGridItemStyle(
                     cfg.widget_key,
@@ -6794,27 +6818,49 @@ export default function FamilyHub() {
                     },
                   )}
                 >
-                  <WidgetChrome
-                    widgetKey={cfg.widget_key}
-                    layoutW={cfg.layoutW}
-                    layoutH={cfg.layoutH}
-                    colSpan={colSpan}
-                    rowSpan={rowSpan}
-                    onExpand={isSmallWidget ? () => setExpandedWidget(cfg.widget_key) : undefined}
-                    expandLabel={dt('widgets_magnify_open')}
+                  <div
+                    className={
+                      isExpanded
+                        ? [
+                            'fixed inset-x-0 z-[8001] mx-auto flex w-[min(32rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl',
+                            cfg.widget_key === 'chat'
+                              ? 'top-[4dvh] bottom-0 rounded-b-none pb-[env(safe-area-inset-bottom,0px)]'
+                              : 'top-[4dvh] max-h-[88dvh]',
+                          ].join(' ')
+                        : 'flex h-full min-h-0 flex-col'
+                    }
                   >
-                    {isExpanded || isRecentlyClosed ? (
-                      /* 팝업으로 열린 동안, 또는 닫힌 직후 250ms 동안 플레이스홀더 표시
-                         — 이중 렌더링(구독 중복) 방지
-                         — isRecentlyClosed: 모달 언마운트의 비동기 구독 해제 완료 후
-                           그리드 리마운트하도록 race condition 방지 */
-                      <div className="flex h-full min-h-[80px] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400">
-                        🔍
+                    {isExpanded ? (
+                      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
+                        <h2 className="text-sm font-semibold text-slate-800">
+                          {widgetLabelMap[cfg.widget_key] ?? ''}
+                        </h2>
+                        <button
+                          type="button"
+                          onClick={handleMagnifyClose}
+                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                          aria-label={dt('widgets_magnify_close')}
+                        >
+                          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                            <path d="M2 2l12 12M14 2L2 14" />
+                          </svg>
+                        </button>
                       </div>
-                    ) : (
-                      renderWidgetSection(cfg.widget_key, rowSpan)
-                    )}
-                  </WidgetChrome>
+                    ) : null}
+                    <div className={isExpanded ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-4' : 'min-h-0 flex-1'}>
+                      <WidgetChrome
+                        widgetKey={cfg.widget_key}
+                        layoutW={cfg.layoutW}
+                        layoutH={cfg.layoutH}
+                        colSpan={colSpan}
+                        rowSpan={rowSpan}
+                        onExpand={isSmallWidget && !isExpanded ? handleExpandWidget : undefined}
+                        expandLabel={dt('widgets_magnify_open')}
+                      >
+                        {renderWidgetSection(cfg.widget_key, rowSpan)}
+                      </WidgetChrome>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -6828,9 +6874,7 @@ export default function FamilyHub() {
             isChatWidget={expandedWidget === 'chat'}
             closeLabel={dt('widgets_magnify_close')}
             onClose={handleMagnifyClose}
-          >
-            {expandedWidget && renderWidgetSection(expandedWidget)}
-          </WidgetMagnifyModal>
+          />
 
           <FamilyLocationRequestModal
           open={showLocationRequestModal}
@@ -6903,14 +6947,13 @@ export default function FamilyHub() {
       `}</style>
 
       {/* 후임자 지정 모달 */}
-      {showSuccessorModal && (
-        <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50"
-          onClick={() => {
-            setShowSuccessorModal(false);
-            setSelectedSuccessor('');
-          }}
-        >
+      <TopLayerDialog
+        open={showSuccessorModal}
+        onClose={() => {
+          setShowSuccessorModal(false);
+          setSelectedSuccessor('');
+        }}
+      >
           <div
             className="max-h-[80vh] w-[90%] max-w-[500px] overflow-y-auto rounded-2xl bg-white p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             onClick={(e) => e.stopPropagation()}
@@ -6975,8 +7018,7 @@ export default function FamilyHub() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </TopLayerDialog>
 
       {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 (작게·간격 축소·모서리에 붙여 지도 가림 최소화) */}
       <div

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { ArrowLeft, ImageIcon, Search, Trash2, Upload, X } from 'lucide-react';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { buildPictureFindPuzzle } from '@/lib/picture-find/game-logic';
@@ -22,6 +21,7 @@ import { usePictureFindPuzzles } from '../hooks/usePictureFindPuzzles';
 import { usePictureFindScenes } from '../hooks/usePictureFindScenes';
 import { PictureFindGamePlay, PictureFindResultPanel } from './PictureFindGamePlay';
 import { PictureFindUploadPanel } from './PictureFindUploadPanel';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 
 export type PictureFindModalProps = {
   open: boolean;
@@ -88,19 +88,6 @@ export function PictureFindModal({
       setLeaderboard([]);
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handler);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handler);
-      document.body.style.overflow = '';
-    };
-  }, [open, onClose]);
 
   const systemScenes = useMemo(
     () =>
@@ -261,8 +248,6 @@ export function PictureFindModal({
     }
   };
 
-  if (!open || typeof document === 'undefined') return null;
-
   const headerTitle =
     step === 'mode'
       ? t.entry_title
@@ -282,12 +267,8 @@ export function PictureFindModal({
     else if (step === 'play' || step === 'result') setStep('scenes');
   };
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-2 sm:p-4"
-      onClick={onClose}
-      role="presentation"
-    >
+  return (
+    <TopLayerDialog open={open} onClose={onClose}>
       <div
         className="flex max-h-[96dvh] w-full max-w-[min(96vw,920px)] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         onClick={(e) => e.stopPropagation()}
@@ -505,8 +486,7 @@ export function PictureFindModal({
           )}
         </div>
       </div>
-    </div>,
-    document.body,
+    </TopLayerDialog>
   );
 }
 

@@ -5,6 +5,7 @@
 'use client';
 
 import React from 'react';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { DashboardLocationRequestRow, LocationModalOnlineUser, LocationModalUserRow } from '../types';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
 
@@ -73,17 +74,12 @@ export function FamilyLocationRequestModal({
   getFamilyRoleLabel,
   lang,
 }: Props) {
-  if (!open) return null;
-
   const isComeHere = mode === 'come_here';
   const modalTitle = isComeHere ? t.location_modal_come_title : t.location_modal_send_title;
   const sendLabel = isComeHere ? t.location_modal_btn_come_send : t.location_modal_btn_send;
 
   return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
-      onClick={onBackdropClose}
-    >
+    <TopLayerDialog open={open} onClose={onBackdropClose}>
       <div
         className="max-h-[80vh] w-[90%] max-w-[500px] overflow-auto rounded-xl bg-white p-6"
         onClick={(e) => e.stopPropagation()}
@@ -200,6 +196,6 @@ export function FamilyLocationRequestModal({
           {closeLabel}
         </button>
       </div>
-    </div>
+    </TopLayerDialog>
   );
 }

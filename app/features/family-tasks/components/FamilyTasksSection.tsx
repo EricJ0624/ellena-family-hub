@@ -7,12 +7,10 @@
 'use client';
 
 import React, { memo, startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyTask, FamilyTaskMemberOption } from '../types';
 import { useFamilyTasks } from '../hooks/useFamilyTasks';
 import { fitFontSizeToWidth, shrinkFontSizeToElement } from '@/lib/dashboard-title-fit';
-import { useGroup } from '@/app/contexts/GroupContext';
-import { resolveUiTheme } from '@/lib/ui-theme';
 
 /** chalkboard-empty-state — Caveat + Gaegu(Hangul), globals.css --chalk-font-body 와 동일 */
 const CHALK_EMPTY_FONT_FAMILY = "'Caveat', 'Gaegu', 'Patrick Hand', cursive";
@@ -36,7 +34,6 @@ interface FamilyTasksSectionProps {
     decrypt: (cipher: string, key: string) => any;
   };
   sanitizeInput: (input: string | null | undefined, maxLength?: number) => string;
-  realtimeSubscriptionId: string;
   familyRoleByUserId: Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>;
   getFamilyRoleEmoji: (role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
   getFamilyRoleLabel: (
@@ -44,6 +41,8 @@ interface FamilyTasksSectionProps {
     role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null
   ) => string;
   lang: any;
+  /** 대시보드에서 내려줌 — 내부 useGroup 금지(memo가 깨져 위젯 클릭 시 전체 재렌더됨) */
+  isKidsTheme: boolean;
   /** 현재 그룹 멤버(소유자·멤버십, 본인 포함) — 닉네임 표시용 */
   taskMembers: FamilyTaskMemberOption[];
   translations: {
@@ -110,11 +109,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   getCurrentKey,
   CryptoService,
   sanitizeInput,
-  realtimeSubscriptionId,
   familyRoleByUserId,
   getFamilyRoleEmoji,
   getFamilyRoleLabel,
   lang,
+  isKidsTheme,
   taskMembers,
   translations: t,
   chatDragOver,
@@ -123,10 +122,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   onChatDragLeave,
   onChatDrop,
 }: FamilyTasksSectionProps) {
-  const { currentGroup } = useGroup();
-  const isKidsTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
-
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
+  const [todoError, setTodoError] = useState<string | null>(null);
   const todoTextRef = useRef<HTMLInputElement>(null);
   const todoWhoRef = useRef<HTMLSelectElement>(null);
   const emptyStateRef = useRef<HTMLParagraphElement>(null);
@@ -170,7 +167,6 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     CryptoService,
     onTasksChange,
     currentTasks: tasks,
-    realtimeSubscriptionId,
     assigneeDisplayFromUserIdRef,
   });
 
@@ -226,6 +222,7 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   };
 
   const openTodoModal = () => {
+    setTodoError(null);
     setIsTodoModalOpen(true);
     requestAnimationFrame(() => {
       if (todoTextRef.current) todoTextRef.current.value = '';
@@ -235,10 +232,16 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
 
   const submitNewTodo = async () => {
     const text = todoTextRef.current?.value;
-    if (!text?.trim()) return alert(t.todo_required);
+    if (!text?.trim()) {
+      setTodoError(t.todo_required);
+      return;
+    }
 
     const sanitizedText = sanitizeInput(text, 100);
-    if (!sanitizedText) return alert(t.invalid_input);
+    if (!sanitizedText) {
+      setTodoError(t.invalid_input);
+      return;
+    }
 
     const selectedUserId = (todoWhoRef.current?.value ?? '').trim();
     const assignedToUserId = selectedUserId.length > 0 ? selectedUserId : null;
@@ -255,11 +258,13 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
     };
 
     const previousTasks = tasks;
-    onTasksChange([optimisticTask, ...tasks]);
-
     if (todoTextRef.current) todoTextRef.current.value = '';
     if (todoWhoRef.current) todoWhoRef.current.value = '';
+    setTodoError(null);
     setIsTodoModalOpen(false);
+    startTransition(() => {
+      onTasksChange([optimisticTask, ...tasks]);
+    });
 
     try {
       const inserted = await addTask({
@@ -307,10 +312,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       400,
     );
     const fitted = shrinkFontSizeToElement(el, estimated, CHALK_EMPTY_FONT_MIN_PX);
-    setEmptyStateFontPx(fitted);
+    setEmptyStateFontPx((prev) => (prev === fitted ? prev : fitted));
   }, [t.todo_empty_state]);
 
   useLayoutEffect(() => {
+    if (isTodoModalOpen) return;
     if (!isKidsTheme || visibleTasks.length > 0) {
       setEmptyStateFontPx(null);
       return;
@@ -327,12 +333,17 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       ro.disconnect();
       document.fonts?.removeEventListener?.('loadingdone', onFonts);
     };
-  }, [isKidsTheme, visibleTasks.length, fitEmptyStateFont]);
+  }, [isKidsTheme, visibleTasks.length, fitEmptyStateFont, isTodoModalOpen]);
 
-  const todoModal = isTodoModalOpen
-    ? createPortal(
-        isKidsTheme ? (
-          <div className="chalkboard-modal-overlay" onClick={() => setIsTodoModalOpen(false)}>
+  const todoModal = (
+    <TopLayerDialog
+      open={isTodoModalOpen}
+      onClose={() => {
+        setTodoError(null);
+        setIsTodoModalOpen(false);
+      }}
+    >
+      {isKidsTheme ? (
             <div className="chalkboard-modal-frame" onClick={(e) => e.stopPropagation()}>
               <div className="chalkboard-modal-container">
                 <h2 className="chalkboard-modal-heading">{t.todo_modal_title}</h2>
@@ -368,8 +379,11 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                     </select>
                   </div>
                 </div>
+                {todoError ? (
+                  <p className="mt-2 text-center text-sm font-medium text-red-200">{todoError}</p>
+                ) : null}
                 <div className="chalkboard-modal-actions">
-                  <button type="button" onClick={() => setIsTodoModalOpen(false)} className="chalkboard-btn-secondary">
+                  <button type="button" onClick={() => { setTodoError(null); setIsTodoModalOpen(false); }} className="chalkboard-btn-secondary">
                     {t.cancel}
                   </button>
                   <button type="button" onClick={submitNewTodo} className="chalkboard-btn-primary">
@@ -378,14 +392,9 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                 </div>
               </div>
             </div>
-          </div>
         ) : (
-          <div
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/45 p-4"
-            onClick={() => setIsTodoModalOpen(false)}
-          >
             <div
-              className="w-full max-w-md rounded-2xl border border-glass-medium bg-glass-strong p-5 shadow-glass-medium backdrop-blur-glass-medium"
+              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="m-0 text-lg font-semibold text-slate-800">{t.todo_modal_title}</h2>
@@ -416,10 +425,16 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                   </select>
                 </div>
               </div>
+              {todoError ? (
+                <p className="mt-3 text-sm font-medium text-red-600">{todoError}</p>
+              ) : null}
               <div className="mt-5 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsTodoModalOpen(false)}
+                  onClick={() => {
+                    setTodoError(null);
+                    setIsTodoModalOpen(false);
+                  }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
                   {t.cancel}
@@ -433,11 +448,9 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
                 </button>
               </div>
             </div>
-          </div>
-        ),
-        document.body
-      )
-    : null;
+      )}
+    </TopLayerDialog>
+  );
 
   if (!isKidsTheme) {
     return (

@@ -204,7 +204,7 @@ export function clampGridSpan(span: number, max: number): number {
  */
 export function getSquareCellRowHeight(contentWidth: number, columnCount: number): number {
   if (contentWidth <= 0 || columnCount <= 0) return 40; // fallback
-  return contentWidth / columnCount;
+  return Math.round(contentWidth / columnCount);
 }
 
 /**

@@ -29,7 +29,7 @@ export interface WidgetChromeProps {
    * Phase E: S 사이즈 위젯에서만 전달. 전달 시 위젯 전체가 탭-to-expand 영역이 된다.
    * undefined 또는 null이면 오버레이를 렌더하지 않는다 (M/L 위젯).
    */
-  onExpand?: (() => void) | null;
+  onExpand?: ((widgetKey: DashboardWidgetKey) => void) | null;
   /** 접근성용 aria-label */
   expandLabel?: string;
   children: React.ReactNode;
@@ -68,11 +68,11 @@ export function WidgetChrome({
           tabIndex={0}
           aria-label={expandLabel}
           className="absolute inset-0 z-10 cursor-zoom-in touch-pan-y"
-          onClick={onExpand}
+          onClick={() => onExpand(widgetKey)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              onExpand();
+              onExpand(widgetKey);
             }
           }}
         />

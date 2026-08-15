@@ -52,43 +52,53 @@ export function useDashboardGridLayout(
 
     const read = () => {
       const nextShell = detectDashboardShell();
-      const w = measureContentWidth(gridRef.current);
+      const w = Math.round(measureContentWidth(gridRef.current));
       const deviceLandscape = window.matchMedia(DEVICE_ORIENTATION_LANDSCAPE_MEDIA_QUERY).matches;
       const landscapeGrid = usesLandscapeWidgetGridLayout(
         nextShell,
         previewOrientation,
         deviceLandscape,
       );
-      setShell(nextShell);
-      setContentWidth(w);
-      setIsLandscapeGrid(landscapeGrid);
-      setColumnCount(
-        getDashboardColumnCount(
-          w,
-          nextShell,
-          previewOrientation,
-          deviceLandscape,
-          widgetConfigs,
-        ),
+      const nextColumns = getDashboardColumnCount(
+        w,
+        nextShell,
+        previewOrientation,
+        deviceLandscape,
+        widgetConfigs,
       );
+      // 너비 1px 출렁임 → cellRowH → 모든 위젯 --widget-scale-box-h → cqmin 전체 재계산
+      setShell((prev) => (prev === nextShell ? prev : nextShell));
+      setContentWidth((prev) => (Math.abs(prev - w) < 2 ? prev : w));
+      setIsLandscapeGrid((prev) => (prev === landscapeGrid ? prev : landscapeGrid));
+      setColumnCount((prev) => (prev === nextColumns ? prev : nextColumns));
     };
 
     read();
 
+    let raf = 0;
+    const scheduleRead = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        read();
+      });
+    };
+
     const el = gridRef.current;
-    const ro = el ? new ResizeObserver(() => read()) : null;
+    const ro = el ? new ResizeObserver(() => scheduleRead()) : null;
     if (el && ro) ro.observe(el);
 
     const mqWide = window.matchMedia(WIDE_VIEWPORT_MEDIA_QUERY);
     const mqTouchOnly = window.matchMedia(TOUCH_ONLY_DEVICE_MEDIA_QUERY);
     const mqLandscape = window.matchMedia(DEVICE_ORIENTATION_LANDSCAPE_MEDIA_QUERY);
-    const onMq = () => read();
+    const onMq = () => scheduleRead();
     mqWide.addEventListener('change', onMq);
     mqTouchOnly.addEventListener('change', onMq);
     mqLandscape.addEventListener('change', onMq);
     window.addEventListener('resize', onMq);
 
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       ro?.disconnect();
       mqWide.removeEventListener('change', onMq);
       mqTouchOnly.removeEventListener('change', onMq);

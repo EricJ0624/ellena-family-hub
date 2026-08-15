@@ -394,15 +394,13 @@ export function FamilyGamesSection({
       </section>
 
       <PictureFindErrorBoundary>
-        {pictureFindOpen ? (
-          <PictureFindModal
-            open={pictureFindOpen}
-            onClose={() => setPictureFindOpen(false)}
-            groupId={currentGroupId}
-            userId={userId}
-            canManageGroupScenes={canManageGroupScenes}
-          />
-        ) : null}
+        <PictureFindModal
+          open={pictureFindOpen}
+          onClose={() => setPictureFindOpen(false)}
+          groupId={currentGroupId}
+          userId={userId}
+          canManageGroupScenes={canManageGroupScenes}
+        />
       </PictureFindErrorBoundary>
 
       <GamePlayModal

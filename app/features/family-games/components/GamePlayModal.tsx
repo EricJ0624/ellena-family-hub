@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 
 export interface GamePlayModalProps {
   open: boolean;
@@ -12,32 +12,9 @@ export interface GamePlayModalProps {
   children: ReactNode;
 }
 
-/**
- * calendar/tasks 모달과 동일하게 createPortal로 widget-chrome containment 밖에 렌더링.
- * 게임 플레이 영역은 container-type:inline-size 로 cmin 단위 유지.
- */
 export function GamePlayModal({ open, title, closeLabel, onClose, children }: GamePlayModalProps) {
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handler);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handler);
-      document.body.style.overflow = '';
-    };
-  }, [open, onClose]);
-
-  if (!open || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-3 sm:p-4"
-      onClick={onClose}
-      role="presentation"
-    >
+  return (
+    <TopLayerDialog open={open} onClose={onClose}>
       <div
         className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         onClick={(e) => e.stopPropagation()}
@@ -63,7 +40,6 @@ export function GamePlayModal({ open, title, closeLabel, onClose, children }: Ga
           {children}
         </div>
       </div>
-    </div>,
-    document.body,
+    </TopLayerDialog>
   );
 }

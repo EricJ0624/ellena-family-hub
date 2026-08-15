@@ -3,6 +3,7 @@ import "./globals.css";
 import { GroupProviderWrapper } from "./providers/GroupProviderWrapper";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { ClientChunkRecovery } from "./components/ClientChunkRecovery";
+import { CalendarEventModalHost } from "./features/family-calendar/components/CalendarEventModalHost";
 
 export const metadata: Metadata = {
   title: "Hearth: Family Haven",
@@ -59,6 +60,7 @@ export default function RootLayout({
         <ClientChunkRecovery />
         <ThemeProvider>
           <GroupProviderWrapper>{children}</GroupProviderWrapper>
+          <CalendarEventModalHost />
         </ThemeProvider>
       </body>
     </html>

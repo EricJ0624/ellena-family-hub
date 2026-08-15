@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { NavMapApp } from '@/lib/nav-map-apps';
 import { getAvailableNavMapApps, getDefaultNavMapApp, saveNavMapAppPreference } from '@/lib/nav-map-apps';
 
@@ -47,13 +48,8 @@ export function FamilyLocationNavMapModal({
     }
   }, [open, lang, inKorea]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50"
-      onClick={onCancel}
-    >
+    <TopLayerDialog open={open} onClose={onCancel}>
       <div
         className="w-[90%] max-w-[400px] rounded-xl bg-white p-6"
         onClick={(e) => e.stopPropagation()}
@@ -101,6 +97,6 @@ export function FamilyLocationNavMapModal({
           </button>
         </div>
       </div>
-    </div>
+    </TopLayerDialog>
   );
 }

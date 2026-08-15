@@ -1,0 +1,28 @@
+---
+description: 대시보드 전체 재렌더·위젯 모달 멈춤 재발 방지 (setState 가드, cqmin, memo)
+alwaysApply: true
+---
+
+# 대시보드 재렌더 가드
+
+PC에서 위젯 모달이 멈추거나 `Rendering...`이 안 꺼지는 문제는 캘린더만이 아니다. `app/dashboard/page.tsx` 한 컴포넌트가 접속자·타이틀 크기·그리드 너비·위젯 데이터를 같이 들고, `setState` 한 번에 모든 `cqmin` 위젯이 다시 그려진다.
+
+## 금지 (승인 없이)
+
+- 메모된 위젯(`FamilyCalendarSection` 등) 안에 `useGroup()` / `useLanguage()` 넣기
+- `setOnlineUsers` / `setState`에 내용이 같은 새 배열·객체 넣기 (하트비트·Realtime)
+- 타이틀 폰트 `useLayoutEffect` deps에 **결과 state**(`customTitleFontSize`) 넣기
+- `ResizeObserver` 실측을 1px 차이에도 `setState` (너비는 2px 미만이면 유지)
+- 모달 열림용 `html`/`body` 클래스, `visibility:hidden`으로 대시보드 숨기기, `showModal()`+`inert`, `.app-container` overflow 잠금
+- 인증/가입/세션/라우팅/RLS/API 변경
+
+## 필수
+
+- 배열 state는 시그니처 비교 후 같을 때 `prev` 반환 (`onlineUsersSignature`, `eventsSignature`, `tasksSignature`와 동일 패턴)
+- 그리드 셀 높이 `getSquareCellRowHeight`는 정수 px
+- 위젯 모달은 해당 위젯 트리 밖(레이아웃 호스트 등)에서만 폼 state를 둘 것
+- 대시보드 상태 분리(접속자/타이틀/그리드 실측을 `page.tsx` 밖으로)는 **마크업·클래스·연동 동작을 복사 수준으로 유지**하고, 별도 승인 후 파일 2~4개 단위로만 한다. 위치 모달 `onlineUsers` 프롭·지도 표시명 연계를 깨지 말 것.
+
+## 검증
+
+로그인, 위젯 클릭, 일정/할 일 모달 입력·취소·저장, 뒤 대시보드가 보이는지, Presence 닉네임, 위치 요청 모달.

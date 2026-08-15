@@ -1,7 +1,7 @@
 'use client';
 
-import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
+import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 
 type GlassSafeModalProps = {
   open: boolean;
@@ -11,8 +11,8 @@ type GlassSafeModalProps = {
 };
 
 /**
- * glass-panel(backdrop-filter + overflow-hidden) 안에서 fixed 모달이 잘리는 문제를
- * document.body portal + 오버레이 스크롤로 해결합니다.
+ * glass-panel(backdrop-filter + overflow-hidden) 안에서 모달이 잘리거나
+ * PC Chrome이 멈추는 문제를 native dialog top-layer로 해결합니다.
  */
 export function GlassSafeModal({
   open,
@@ -20,25 +20,16 @@ export function GlassSafeModal({
   children,
   maxWidthClass = 'max-w-[600px]',
 }: GlassSafeModalProps) {
-  if (!open || typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] overflow-y-auto overscroll-contain bg-black/50 p-4 sm:p-6"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div className="flex min-h-full items-start justify-center py-2 sm:py-4">
-        <div
-          role="dialog"
-          aria-modal="true"
-          className={`w-[90%] ${maxWidthClass} rounded-xl bg-white p-6 shadow-xl`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {children}
-        </div>
+  return (
+    <TopLayerDialog open={open} onClose={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={`max-h-[90vh] w-[90%] ${maxWidthClass} overflow-y-auto overscroll-contain rounded-xl bg-white p-6 shadow-xl`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
       </div>
-    </div>,
-    document.body,
+    </TopLayerDialog>
   );
 }

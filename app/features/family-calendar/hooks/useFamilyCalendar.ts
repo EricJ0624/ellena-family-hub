@@ -5,11 +5,11 @@
  * - 암호화/복호화 처리
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseFamilyCalendarProps {
   currentGroupId: string | null;
@@ -21,8 +21,15 @@ interface UseFamilyCalendarProps {
   };
   onEventsChange: (events: FamilyEvent[]) => void;
   currentEvents: FamilyEvent[];
-  realtimeSubscriptionId: string;
 }
+
+/** 돋보기 리마운트 시 싱글톤 채널 핸들러가 언마운트된 인스턴스 ref를 보지 않도록 모듈에 둔다 */
+const calendarRt = {
+  events: { current: [] as FamilyEvent[] },
+  onEventsChange: { current: ((_events: FamilyEvent[]) => {}) as (events: FamilyEvent[]) => void },
+  getCurrentKey: { current: () => '' },
+  crypto: { current: null as UseFamilyCalendarProps['CryptoService'] | null },
+};
 
 export function useFamilyCalendar({
   currentGroupId,
@@ -31,18 +38,11 @@ export function useFamilyCalendar({
   CryptoService,
   onEventsChange,
   currentEvents,
-  realtimeSubscriptionId,
 }: UseFamilyCalendarProps) {
-  const subscriptionRef = useRef<RealtimeChannel | null>(null);
-  /** Realtime 콜백에서 최신 목록 사용 — effect 의존성에 currentEvents 넣으면 매 갱신마다 구독 해제/재연결됨 */
-  const currentEventsRef = useRef(currentEvents);
-  currentEventsRef.current = currentEvents;
-  /** masterKey 변경 시 구독 재연결 방지 — ref로 최신 키를 항상 참조 */
-  const getCurrentKeyRef = useRef(getCurrentKey);
-  getCurrentKeyRef.current = getCurrentKey;
-  /** CryptoService ref — 모듈레벨 상수지만 일관성을 위해 ref로 처리 */
-  const cryptoRef = useRef(CryptoService);
-  cryptoRef.current = CryptoService;
+  calendarRt.events.current = currentEvents;
+  calendarRt.onEventsChange.current = onEventsChange;
+  calendarRt.getCurrentKey.current = getCurrentKey;
+  calendarRt.crypto.current = CryptoService;
 
   // ADD EVENT
   const addEvent = async (payload: {
@@ -340,7 +340,9 @@ export function useFamilyCalendar({
         });
 
         if (formattedEvents.length > 0) {
-          onEventsChange(formattedEvents);
+          const nextSig = formattedEvents.map((e) => `${e.id}:${e.event_date}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}`).join('|');
+          const prevSig = calendarRt.events.current.map((e) => `${e.id}:${e.event_date}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}`).join('|');
+          if (nextSig !== prevSig) onEventsChange(formattedEvents);
         }
       }
     };
@@ -348,21 +350,18 @@ export function useFamilyCalendar({
     loadEvents();
   }, [currentGroupId, userId, onEventsChange]);
 
-  // Realtime 구독
+  // Realtime 구독 — 그룹당 채널 1개 재사용 (돋보기 리마운트의 CLOSED 레이스 방지)
   useEffect(() => {
     if (!currentGroupId) return;
-    if (!realtimeSubscriptionId) return;
-
-    console.log('📅 일정 subscription 설정 중...');
 
     const gid = currentGroupId;
-    const eventsSubscription = supabase
-      .channel(`family_events_changes:${gid}:${realtimeSubscriptionId}`)
-      .on(
+    const release = acquireRealtimeChannel(`family_events_changes:${gid}`, (channel) =>
+      channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'family_events', filter: `group_id=eq.${gid}` },
         (payload: any) => {
-        const latestEvents = currentEventsRef.current;
+        const latestEvents = calendarRt.events.current;
+        const onEventsChange = calendarRt.onEventsChange.current;
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
         if (ev === 'DELETE') {
@@ -397,19 +396,19 @@ export function useFamilyCalendar({
           const eventDescField = updatedEvent.description || '';
           let decryptedTitle = eventTitleField;
           let decryptedDesc = eventDescField;
-          const updateEventKey = getCurrentKeyRef.current();
+          const updateEventKey = calendarRt.getCurrentKey.current();
 
             if (updateEventKey && updateEventKey.length > 0) {
               if (eventTitleField && eventTitleField.length > 0 && eventTitleField.startsWith('U2FsdGVkX1')) {
                 try {
-                  const decryptedTitleData = cryptoRef.current.decrypt(eventTitleField, updateEventKey);
+                  const decryptedTitleData = calendarRt.crypto.current!.decrypt(eventTitleField, updateEventKey);
                 if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0)
                   decryptedTitle = decryptedTitleData;
               } catch (_) {}
             }
             if (eventDescField && eventDescField.length > 0 && eventDescField.startsWith('U2FsdGVkX1')) {
               try {
-                const decryptedDescData = cryptoRef.current.decrypt(eventDescField, updateEventKey);
+                const decryptedDescData = calendarRt.crypto.current!.decrypt(eventDescField, updateEventKey);
                 if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0)
                   decryptedDesc = decryptedDescData;
               } catch (_) {}
@@ -473,14 +472,14 @@ export function useFamilyCalendar({
         const eventDescField = newEvent.description || '';
         let decryptedTitle = eventTitleField;
         let decryptedDesc = eventDescField;
-        const eventKey = getCurrentKeyRef.current();
+        const eventKey = calendarRt.getCurrentKey.current();
 
         if (eventKey && eventKey.length > 0) {
           if (eventTitleField && eventTitleField.length > 0) {
             const isEncrypted = eventTitleField.startsWith('U2FsdGVkX1');
             if (isEncrypted) {
               try {
-                const decryptedTitleData = cryptoRef.current.decrypt(eventTitleField, eventKey);
+                const decryptedTitleData = calendarRt.crypto.current!.decrypt(eventTitleField, eventKey);
                 if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
                   decryptedTitle = decryptedTitleData;
                 } else {
@@ -498,7 +497,7 @@ export function useFamilyCalendar({
             const isEncrypted = eventDescField.startsWith('U2FsdGVkX1');
             if (isEncrypted) {
               try {
-                const decryptedDescData = cryptoRef.current.decrypt(eventDescField, eventKey);
+                const decryptedDescData = calendarRt.crypto.current!.decrypt(eventDescField, eventKey);
                 if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
                   decryptedDesc = decryptedDescData;
                 } else {
@@ -580,27 +579,10 @@ export function useFamilyCalendar({
           ...latestEvents,
         ]);
       })
-      .subscribe((status, err) => {
-        console.log('📅 Realtime 일정 subscription 상태:', status);
-        if (err) {
-          console.error('❌ Realtime 일정 subscription 오류:', err);
-        }
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Realtime 일정 subscription 연결 성공');
-          subscriptionRef.current = eventsSubscription;
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('⚠️ Realtime 일정 subscription 연결 실패:', status);
-        }
-      });
+    );
 
-    return () => {
-      if (subscriptionRef.current === eventsSubscription) {
-        subscriptionRef.current = null;
-      }
-      console.log('🔌 Realtime 일정 subscription 해제');
-      void supabase.removeChannel(eventsSubscription);
-    };
-  }, [currentGroupId, realtimeSubscriptionId, userId, onEventsChange]);
+    return release;
+  }, [currentGroupId]);
 
   return {
     addEvent,
