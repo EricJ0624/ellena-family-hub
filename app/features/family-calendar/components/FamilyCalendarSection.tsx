@@ -408,9 +408,15 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
 
   const fireUpdateConfetti = useCallback(() => {
     import('canvas-confetti').then(({ default: confetti }) => {
+      const canvas = document.createElement('canvas');
+      canvas.setAttribute('aria-hidden', 'true');
+      canvas.style.cssText =
+        'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10050';
+      document.body.appendChild(canvas);
+      const fire = confetti.create(canvas, { resize: true, useWorker: false });
       const colors = ['#7c3aed', '#db2777', '#fbbf24', '#34d399', '#60a5fa'];
       const sparkle = (x: number, y: number) => {
-        confetti({
+        fire({
           particleCount: 32,
           spread: 360,
           startVelocity: 22,
@@ -420,12 +426,15 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           gravity: 0.85,
           scalar: 1.15,
           shapes: ['star'],
-          zIndex: 10050,
         });
       };
       sparkle(0.28, 0.22);
       sparkle(0.72, 0.2);
       setTimeout(() => sparkle(0.5, 0.16), 180);
+      setTimeout(() => {
+        fire.reset();
+        canvas.remove();
+      }, 2500);
     });
   }, []);
 
