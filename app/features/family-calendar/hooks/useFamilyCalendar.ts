@@ -34,9 +34,15 @@ export function useFamilyCalendar({
   realtimeSubscriptionId,
 }: UseFamilyCalendarProps) {
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
-  /** Realtime 콜백에서 최신 목록 사용 — effect 의존성에 currentEvents 넣으면 매 갱신마다 구독 해제/재연결되어 모바일·불안정 네트워크에서 악화됨 */
+  /** Realtime 콜백에서 최신 목록 사용 — effect 의존성에 currentEvents 넣으면 매 갱신마다 구독 해제/재연결됨 */
   const currentEventsRef = useRef(currentEvents);
   currentEventsRef.current = currentEvents;
+  /** masterKey 변경 시 구독 재연결 방지 — ref로 최신 키를 항상 참조 */
+  const getCurrentKeyRef = useRef(getCurrentKey);
+  getCurrentKeyRef.current = getCurrentKey;
+  /** CryptoService ref — 모듈레벨 상수지만 일관성을 위해 ref로 처리 */
+  const cryptoRef = useRef(CryptoService);
+  cryptoRef.current = CryptoService;
 
   // ADD EVENT
   const addEvent = async (payload: {
@@ -386,19 +392,19 @@ export function useFamilyCalendar({
           const eventDescField = updatedEvent.description || '';
           let decryptedTitle = eventTitleField;
           let decryptedDesc = eventDescField;
-          const updateEventKey = getCurrentKey();
+          const updateEventKey = getCurrentKeyRef.current();
 
-          if (updateEventKey && updateEventKey.length > 0) {
-            if (eventTitleField && eventTitleField.length > 0 && eventTitleField.startsWith('U2FsdGVkX1')) {
-              try {
-                const decryptedTitleData = CryptoService.decrypt(eventTitleField, updateEventKey);
+            if (updateEventKey && updateEventKey.length > 0) {
+              if (eventTitleField && eventTitleField.length > 0 && eventTitleField.startsWith('U2FsdGVkX1')) {
+                try {
+                  const decryptedTitleData = cryptoRef.current.decrypt(eventTitleField, updateEventKey);
                 if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0)
                   decryptedTitle = decryptedTitleData;
               } catch (_) {}
             }
             if (eventDescField && eventDescField.length > 0 && eventDescField.startsWith('U2FsdGVkX1')) {
               try {
-                const decryptedDescData = CryptoService.decrypt(eventDescField, updateEventKey);
+                const decryptedDescData = cryptoRef.current.decrypt(eventDescField, updateEventKey);
                 if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0)
                   decryptedDesc = decryptedDescData;
               } catch (_) {}
@@ -461,14 +467,14 @@ export function useFamilyCalendar({
         const eventDescField = newEvent.description || '';
         let decryptedTitle = eventTitleField;
         let decryptedDesc = eventDescField;
-        const eventKey = getCurrentKey();
+        const eventKey = getCurrentKeyRef.current();
 
         if (eventKey && eventKey.length > 0) {
           if (eventTitleField && eventTitleField.length > 0) {
             const isEncrypted = eventTitleField.startsWith('U2FsdGVkX1');
             if (isEncrypted) {
               try {
-                const decryptedTitleData = CryptoService.decrypt(eventTitleField, eventKey);
+                const decryptedTitleData = cryptoRef.current.decrypt(eventTitleField, eventKey);
                 if (decryptedTitleData && typeof decryptedTitleData === 'string' && decryptedTitleData.length > 0) {
                   decryptedTitle = decryptedTitleData;
                 } else {
@@ -486,7 +492,7 @@ export function useFamilyCalendar({
             const isEncrypted = eventDescField.startsWith('U2FsdGVkX1');
             if (isEncrypted) {
               try {
-                const decryptedDescData = CryptoService.decrypt(eventDescField, eventKey);
+                const decryptedDescData = cryptoRef.current.decrypt(eventDescField, eventKey);
                 if (decryptedDescData && typeof decryptedDescData === 'string' && decryptedDescData.length > 0) {
                   decryptedDesc = decryptedDescData;
                 } else {
@@ -586,7 +592,7 @@ export function useFamilyCalendar({
       console.log('🔌 Realtime 일정 subscription 해제');
       void supabase.removeChannel(eventsSubscription);
     };
-  }, [currentGroupId, realtimeSubscriptionId, userId, getCurrentKey, CryptoService, onEventsChange]);
+  }, [currentGroupId, realtimeSubscriptionId, userId, onEventsChange]);
 
   return {
     addEvent,

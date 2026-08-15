@@ -47,6 +47,11 @@ export function useFamilyTasks({
   /** Realtime 콜백 전용 — effect에 currentTasks 넣으면 목록 갱신마다 구독이 재생성됨 */
   const currentTasksRef = useRef(currentTasks);
   currentTasksRef.current = currentTasks;
+  /** masterKey 변경 시 구독 재연결 방지 — ref로 최신 키를 항상 참조 */
+  const getCurrentKeyRef = useRef(getCurrentKey);
+  getCurrentKeyRef.current = getCurrentKey;
+  const cryptoRef = useRef(CryptoService);
+  cryptoRef.current = CryptoService;
 
   // ADD TODO — 성공 시 삽입된 행 반환, 실패 시 throw
   const addTask = async (payload: {
@@ -270,13 +275,13 @@ export function useFamilyTasks({
         const formattedTasks: FamilyTask[] = tasksData.map((task: any) => {
           const taskText = task.title || task.task_text || '';
           let decryptedText = taskText;
-          const currentKey = getCurrentKey();
+          const currentKey = getCurrentKeyRef.current();
 
           if (currentKey && currentKey.length > 0 && taskText && taskText.length > 0) {
             const isEncrypted = taskText.startsWith('U2FsdGVkX1');
             if (isEncrypted) {
               try {
-                const decrypted = CryptoService.decrypt(taskText, currentKey);
+                const decrypted = cryptoRef.current.decrypt(taskText, currentKey);
                 if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                   decryptedText = decrypted;
                 } else {
@@ -330,7 +335,7 @@ export function useFamilyTasks({
     };
 
     loadTasks();
-  }, [currentGroupId, userId, getCurrentKey, CryptoService, onTasksChange, assigneeDisplayFromUserIdRef]);
+  }, [currentGroupId, userId, onTasksChange, assigneeDisplayFromUserIdRef]);
 
   // Realtime 구독
   useEffect(() => {
@@ -369,7 +374,7 @@ export function useFamilyTasks({
           const updatedTask = payload.new;
           const taskText = updatedTask.title || updatedTask.task_text || '';
           let decryptedText = taskText;
-          const updateTaskKey = getCurrentKey();
+          const updateTaskKey = getCurrentKeyRef.current();
 
           if (
             updateTaskKey &&
@@ -379,7 +384,7 @@ export function useFamilyTasks({
             taskText.startsWith('U2FsdGVkX1')
           ) {
             try {
-              const decrypted = CryptoService.decrypt(taskText, updateTaskKey);
+              const decrypted = cryptoRef.current.decrypt(taskText, updateTaskKey);
               if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) decryptedText = decrypted;
             } catch (_) {}
           }
@@ -443,13 +448,13 @@ export function useFamilyTasks({
 
         const taskText = newTask.title || newTask.task_text || '';
         let decryptedText = taskText;
-        const taskKey = getCurrentKey();
+        const taskKey = getCurrentKeyRef.current();
 
         if (taskKey && taskKey.length > 0 && taskText && taskText.length > 0) {
           const isEncrypted = taskText.startsWith('U2FsdGVkX1');
           if (isEncrypted) {
             try {
-              const decrypted = CryptoService.decrypt(taskText, taskKey);
+              const decrypted = cryptoRef.current.decrypt(taskText, taskKey);
               if (decrypted && typeof decrypted === 'string' && decrypted.length > 0) {
                 decryptedText = decrypted;
               } else {
@@ -572,7 +577,7 @@ export function useFamilyTasks({
       console.log('🔌 Realtime 할일 subscription 해제');
       void supabase.removeChannel(tasksSubscription);
     };
-  }, [currentGroupId, realtimeSubscriptionId, userId, getCurrentKey, CryptoService, onTasksChange, assigneeDisplayFromUserIdRef]);
+  }, [currentGroupId, realtimeSubscriptionId, userId, onTasksChange, assigneeDisplayFromUserIdRef]);
 
   return {
     addTask,
