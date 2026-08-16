@@ -143,11 +143,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         className={`content-section calendar-widget-section calendar-widget-section--frame${
           isKidsTheme ? ' relative' : ''
         }`}
-        style={{
-          ...(skin.sectionBg !== 'transparent' ? { background: skin.sectionBg } : null),
-          paddingBottom: '2cqmin',
-          paddingTop: '4.5cqmin',
-        }}
+        style={
+          skin.sectionBg !== 'transparent' ? { background: skin.sectionBg } : undefined
+        }
       >
         {isKidsTheme ? <KidsIdleDecorations year={calendarGrid.year} month={calendarGrid.month} /> : null}
         <div className="section-header calendar-section-header" style={{ marginBottom: '2.5cqmin' }}>

@@ -2818,7 +2818,7 @@ select:not(.chalkboard-form-input) {
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    padding: 0.8cqmin 2cqmin 1.2cqmin;
+    padding: 5cqmin 6cqmin;
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-widget-section--frame {
@@ -2835,7 +2835,7 @@ select:not(.chalkboard-form-input) {
 
   .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title {
     gap: 1.2cqmin;
-    font-size: 3.8cqmin;
+    font-size: 4.6cqmin;
     line-height: 1.05;
     letter-spacing: 0.1em;
   }
@@ -3129,7 +3129,7 @@ select:not(.chalkboard-form-input) {
     color: rgb(var(--section-title-icon));
   }
 
-  /* ── Kids Friendly 테마: 캘린더 위젯 여백 — 아래 간격은 TSX inline style로 직접 제어 ── */
+  /* ── Kids Friendly 테마: 캘린더 위젯 여백 ── */
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--sun,
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--sat,
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--mid {
@@ -3145,15 +3145,17 @@ select:not(.chalkboard-form-input) {
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell--congrats {
-    padding: 0;
-    overflow: hidden;
+    overflow: visible;
+    z-index: 1;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell-congrats-frame {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    left: 50%;
+    top: 50%;
+    width: 2.5em;
+    height: 2.5em;
+    transform: translate(-50%, -50%);
     object-fit: contain;
     pointer-events: none;
     background: transparent;
@@ -3162,19 +3164,19 @@ select:not(.chalkboard-form-input) {
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell-congrats-num {
     position: relative;
     z-index: 1;
-    font-size: 3.2cqmin;
-    line-height: 1;
+    font-size: 4.8cqmin;
+    line-height: 1.1;
     text-shadow:
       0 0 0.35cqmin #fff,
       0 0 0.7cqmin #fff8;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell--congrats[data-congrats='2'] .calendar-day-cell-congrats-num {
-    transform: translateY(-0.55cqmin);
+    transform: translateY(-0.8cqmin);
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell--congrats[data-congrats='3'] .calendar-day-cell-congrats-num {
-    transform: translateY(0.15cqmin);
+    transform: translateY(0.22cqmin);
   }
 
   .calendar-kids-month-glow {
