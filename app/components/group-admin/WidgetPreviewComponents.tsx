@@ -216,11 +216,11 @@ function ChatPreview() {
     { user: ct('me'), time: '10:36', text: '👍', mine: true },
   ];
   return (
-    <section className="content-section h-full">
-      <div className="section-header">
+    <section className="content-section chat-widget-section h-full">
+      <div className="section-header chat-section-header">
         <h3 className="section-title">{dt('section_title_chat')}</h3>
       </div>
-      <div className="section-body">
+      <div className="section-body chat-section-body">
         <div className="chat-messages">
           {messages.map((m, i) => (
             <div key={i} className="message-item">

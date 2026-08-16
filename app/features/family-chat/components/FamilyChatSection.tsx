@@ -126,11 +126,11 @@ export function FamilyChatSection({
   };
 
   return (
-    <section className="content-section">
-      <div className="section-header">
+    <section className="content-section chat-widget-section">
+      <div className="section-header chat-section-header">
         <h3 className="section-title">{t.section_title_chat}</h3>
       </div>
-      <div className="section-body">
+      <div className="section-body chat-section-body">
         <div ref={chatBoxRef} className="chat-messages">
           {chatHasMoreOlder && (
             <div className="text-center" style={{ padding: '2cqmin 0 1cqmin' }}>
