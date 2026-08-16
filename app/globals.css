@@ -2722,6 +2722,146 @@ select:not(.chalkboard-form-input) {
   }
 
   /*
+   * Piggy Bank (kids):
+   *  - 빈 상태: 일러스트 원색 (::after)
+   *  - 저금통 있음: 뒤(::before)는 원색, 앞(::after)은 반투명 → 카드와 겹치는 부분이 보임
+   *  버튼은 z-index로 그 위. 클릭 로직은 그대로.
+   */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section {
+    position: relative;
+    background-color: #bae6fd;
+    background-image: linear-gradient(160deg, #bae6fd 0%, #f9a8d4 58%, #ffedd5 100%);
+    padding: var(--spacing-lg) calc(var(--spacing-lg) + 1cqmin) calc(var(--spacing-lg) + 1cqmin);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    --piggy-kids-art: url('/piggy/kids-widget-bg.webp?v=2') right center / auto 100% no-repeat;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::before,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::before,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::after,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::after {
+    content: '';
+    position: absolute;
+    inset: 1cqmin 2cqmin 2cqmin;
+    pointer-events: none;
+    background: var(--piggy-kids-art);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::before,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::before {
+    z-index: 0;
+    opacity: 1;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::after,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::after {
+    z-index: 2;
+    opacity: 1;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section[data-piggy-filled='false']::before,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section[data-piggy-filled='false']::before {
+    content: none;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section[data-piggy-filled='true']::after,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section[data-piggy-filled='true']::after {
+    opacity: 0.16;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-body,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-body {
+    position: relative;
+    z-index: 1;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-header,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-header,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-body button,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .section-body button {
+    position: relative;
+    z-index: 3;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-card,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-card {
+    background-color: transparent !important;
+    background-image: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(252, 231, 243, 0.68) 55%,
+      rgba(186, 230, 253, 0.6) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-remove-btn,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-remove-btn {
+    border-width: 2px;
+    border-color: #e11d48 !important;
+    background-color: rgba(255, 241, 242, 0.92) !important;
+    color: #be123c !important;
+    font-weight: 800;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet {
+    background-color: rgba(255, 228, 230, 0.82) !important;
+    border-width: 2px;
+    border-color: #fb7185 !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet *,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet * {
+    color: #be123c !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet > div:first-child,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--wallet > div:first-child,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank > div:first-child,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank > div:first-child {
+    font-weight: 800;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank {
+    background-color: rgba(255, 237, 213, 0.82) !important;
+    border-width: 2px;
+    border-color: #f97316 !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank *,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-metric--bank * {
+    color: #c2410c !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-empty-name,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-empty-name {
+    color: #0f172a !important;
+    font-weight: 800;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-empty-hint,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-empty-hint {
+    color: #334155 !important;
+    font-weight: 700;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-add-btn,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .piggy-widget-add-btn {
+    background-color: #16a34a !important;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+  }
+
+  /*
    * Family Chat: 테마 색/입력바 모양은 유지. 목록만 남은 높이를 씀.
    * 패딩·말풍선·입력 높이는 파일 하단 unlayered 크기 규칙이 담당.
    */

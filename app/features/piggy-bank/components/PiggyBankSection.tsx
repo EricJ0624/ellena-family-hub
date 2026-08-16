@@ -76,9 +76,12 @@ export function PiggyBankSection({
     : t.section_title_user.replace(/\{name\}/g, piggySummary?.ownerNickname?.trim() || 'Ellena');
 
   const buttonText = isAdmin ? t.manage_all : t.go;
+  const hasAnyAccount = Boolean(piggyMemberPiggies?.some((p) => !p.noAccount));
+  const hasMemberCards = Boolean(piggyMemberPiggies && piggyMemberPiggies.length > 0);
+  const hasPiggyFilled = isAdmin ? hasMemberCards : Boolean(piggySummary);
 
   return (
-    <section className="content-section">
+    <section className="content-section" data-piggy-filled={hasPiggyFilled ? 'true' : 'false'}>
       <div className="section-header">
         <h3 className="section-title">{sectionTitle}</h3>
         {currentGroupId && (
@@ -108,10 +111,7 @@ export function PiggyBankSection({
               <div style={{ fontSize: '5cqmin' }} className="text-[#64748b]">{t.loading}</div>
             ) : isAdmin && piggyMemberPiggies !== null ? (
               /* 관리자: 저금통 요청 리스트 + 멤버별 카드 */
-              (() => {
-                const hasAnyAccount = piggyMemberPiggies.some((p) => !p.noAccount);
-                return (
-                  <div className="grid" style={{ gap: '3cqmin' }}>
+              <div className="grid" style={{ gap: '3cqmin' }}>
                     {pendingAccountRequests.length > 0 && (
                       <div className="glass-panel-soft rounded-xl" style={{ padding: '3cqmin', marginBottom: '1cqmin' }}>
                         <div className="font-bold text-[#92400e]" style={{ fontSize: '5cqmin', marginBottom: '2cqmin' }}>
@@ -163,14 +163,14 @@ export function PiggyBankSection({
                       p.noAccount ? (
                         <div
                           key={p.user_id}
-                          className="flex flex-wrap items-center justify-between rounded-xl border border-slate-200 bg-white"
+                          className="piggy-widget-card flex flex-wrap items-center justify-between rounded-xl border border-slate-200 bg-white"
                           style={{ gap: '2.5cqmin', padding: '4cqmin' }}
                         >
                           <div>
-                            <div className="font-bold text-[#1f2937]" style={{ fontSize: '6cqmin' }}>
+                            <div className="piggy-widget-empty-name font-bold text-[#1f2937]" style={{ fontSize: '6cqmin' }}>
                               {p.ownerNickname || t.member}
                             </div>
-                            <div className="text-[#64748b]" style={{ marginTop: '1cqmin', fontSize: '5cqmin' }}>
+                            <div className="piggy-widget-empty-hint text-[#64748b]" style={{ marginTop: '1cqmin', fontSize: '5cqmin' }}>
                               {t.member_no_account_line}
                             </div>
                           </div>
@@ -180,7 +180,7 @@ export function PiggyBankSection({
                               e.stopPropagation();
                               onAddPiggy(p.user_id);
                             }}
-                            className="cursor-pointer rounded-lg border-0 bg-[#22c55e] font-semibold text-white"
+                            className="piggy-widget-add-btn cursor-pointer rounded-lg border-0 bg-[#22c55e] font-semibold text-white"
                             style={{ padding: '2cqmin 3.5cqmin', fontSize: '5cqmin' }}
                           >
                             {t.add_account_btn}
@@ -189,7 +189,7 @@ export function PiggyBankSection({
                       ) : (
                         <div
                           key={p.id}
-                          className="cursor-pointer rounded-xl border border-slate-200 bg-white"
+                          className="piggy-widget-card cursor-pointer rounded-xl border border-slate-200 bg-white"
                           style={{ padding: '4cqmin' }}
                           onClick={() => {
                             if (p.user_id) onMemberClick(p.user_id);
@@ -207,7 +207,7 @@ export function PiggyBankSection({
                               <button
                                 type="button"
                                 onClick={() => p.user_id && onDeletePiggy(p.user_id)}
-                                className="cursor-pointer rounded-md border border-solid border-[#fecaca] bg-[#fef2f2] font-semibold text-[#b91c1c]"
+                                className="piggy-widget-remove-btn cursor-pointer rounded-md border border-solid border-[#fecaca] bg-[#fef2f2] font-semibold text-[#b91c1c]"
                                 style={{ padding: '1cqmin 2cqmin', fontSize: '4cqmin' }}
                               >
                                 {t.delete_account_btn}
@@ -216,7 +216,7 @@ export function PiggyBankSection({
                             </div>
                           </div>
                           <div className="grid grid-cols-2" style={{ gap: '2.5cqmin' }}>
-                            <div className="rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: '2.5cqmin' }}>
+                            <div className="piggy-widget-metric piggy-widget-metric--wallet rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: '2.5cqmin' }}>
                               <div className="text-[#b91c1c]" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.wallet_balance_label}
                               </div>
@@ -224,7 +224,7 @@ export function PiggyBankSection({
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
                             </div>
-                            <div className="rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: '2.5cqmin' }}>
+                            <div className="piggy-widget-metric piggy-widget-metric--bank rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: '2.5cqmin' }}>
                               <div className="text-[#9a3412]" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.bank_balance_label}
                               </div>
@@ -237,12 +237,10 @@ export function PiggyBankSection({
                       )
                     )}
                   </div>
-                );
-              })()
             ) : piggySummary ? (
               /* 일반 사용자: 저금통 있음 — 잔고 표시 */
               <div className="grid" style={{ gap: '2.5cqmin' }}>
-                <div className="rounded-xl border border-slate-200 bg-white" style={{ padding: '3cqmin' }}>
+                <div className="piggy-widget-card rounded-xl border border-slate-200 bg-white" style={{ padding: '3cqmin' }}>
                   <div className="text-[#b91c1c]" style={{ fontSize: '4.5cqmin' }}>
                     {t.wallet_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
@@ -250,7 +248,7 @@ export function PiggyBankSection({
                     {formatAmount(piggySummary.walletBalance, piggySummary.currency)}
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white" style={{ padding: '3cqmin' }}>
+                <div className="piggy-widget-card rounded-xl border border-slate-200 bg-white" style={{ padding: '3cqmin' }}>
                   <div className="text-[#9a3412]" style={{ fontSize: '4.5cqmin' }}>
                     {t.bank_balance_for_name.replace(/\{name\}/g, piggyLabel)}
                   </div>
