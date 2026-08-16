@@ -46,6 +46,7 @@ import { getCountryDisplayName } from '@/lib/countries';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
+import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -1176,7 +1177,7 @@ export default function AdminPage() {
 
   return (
     <div
-      className="admin-page min-h-screen bg-[var(--surface-base)] p-5"
+      className="admin-page min-h-screen w-full max-w-full overflow-x-hidden bg-[var(--surface-base)] p-5"
     >
       {/* 헤더 */}
       <div
@@ -1235,7 +1236,7 @@ export default function AdminPage() {
 
         {/* 탭 메뉴 */}
         <div
-          className="admin-tabs flex gap-2 border-b-2 border-slate-200"
+          className="admin-tabs flex max-w-full flex-wrap gap-1 overflow-x-auto border-b-2 border-slate-200 sm:gap-2"
         >
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -1489,6 +1490,8 @@ export default function AdminPage() {
                     </ul>
                   </div>
                 </div>
+
+                <FeatureUsageSection lang={adminLang} />
 
                 {/* 최근 문의 위젯 */}
                 <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
@@ -2062,14 +2065,16 @@ export default function AdminPage() {
                 </div>
 
                 {selectedGroup && selectedGroupId && (
-                  <GroupAdminPanel
-                    variant="embedded"
-                    embeddedGroupId={selectedGroupId}
-                    embeddedGroupName={getGroupSelectorLabel(selectedGroup, ct('app_title'))}
-                    showPiggyArchivesTab
-                    adminLangForPiggy={adminLang}
-                    onEmbeddedClose={() => setActiveTab('dashboard')}
-                  />
+                  <div className="min-w-0 max-w-full overflow-x-hidden">
+                    <GroupAdminPanel
+                      variant="embedded"
+                      embeddedGroupId={selectedGroupId}
+                      embeddedGroupName={getGroupSelectorLabel(selectedGroup, ct('app_title'))}
+                      showPiggyArchivesTab
+                      adminLangForPiggy={adminLang}
+                      onEmbeddedClose={() => setActiveTab('dashboard')}
+                    />
+                  </div>
                 )}
 
                 {!selectedGroup && (

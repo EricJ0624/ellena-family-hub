@@ -331,7 +331,7 @@ select:not(.chalkboard-form-input) {
   .admin-tabs,
   .group-admin-tabs {
     overflow-x: auto;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
     padding-bottom: 8px;
     -webkit-overflow-scrolling: touch;
@@ -368,6 +368,11 @@ select:not(.chalkboard-form-input) {
     max-width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
+  }
+
+  .admin-page .group-admin-page {
+    padding: 0 !important;
+    min-height: 0 !important;
   }
 }
 

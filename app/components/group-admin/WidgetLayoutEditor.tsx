@@ -753,7 +753,7 @@ export function WidgetLayoutEditor({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 max-w-full overflow-x-hidden">
       {/* Toolbar: orientation toggle + restore-all */}
       <div className="flex flex-wrap items-center gap-2">
         {/* 라벨만 2/4열 — CSS·배치는 12/24열(대시보드와 동일) */}

@@ -895,7 +895,7 @@ export function GroupAdminPanel({
         : gat('theme_default_short');
   const canSwitchAdminGroups = adminGroups.length > 1 && !!setCurrentGroupId && !isEmbedded;
   const tabButtonClass = (tab: GroupAdminTabId) =>
-    `cursor-pointer border-b-[3px] border-x-0 border-t-0 bg-transparent px-6 py-3 text-base transition-all duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+    `cursor-pointer shrink-0 border-b-[3px] border-x-0 border-t-0 bg-transparent px-3 py-2 text-sm transition-all duration-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 sm:px-6 sm:py-3 sm:text-base ${
       activeTab === tab
         ? 'border-b-blue-500 font-semibold text-blue-500'
         : 'border-b-transparent font-medium text-slate-500'
@@ -903,11 +903,15 @@ export function GroupAdminPanel({
 
   return (
     <div
-      className="group-admin-page min-h-screen bg-[var(--surface-base)] p-5"
+      className={
+        isEmbedded
+          ? 'group-admin-page w-full min-w-0 max-w-full overflow-x-hidden bg-[var(--surface-base)]'
+          : 'group-admin-page min-h-screen w-full max-w-full overflow-x-hidden bg-[var(--surface-base)] p-5'
+      }
     >
       {/* ???�쎌???*/}
-      <div className="group-admin-header glass-panel mb-6 rounded-xl p-6">
-        <div className="group-admin-header-top mb-6 flex w-full min-w-0 items-center justify-between">
+      <div className="group-admin-header glass-panel mb-6 max-w-full min-w-0 overflow-x-hidden rounded-xl p-4 sm:p-6">
+        <div className="group-admin-header-top mb-6 flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
           <div className="flex w-full min-w-0 items-center gap-3 sm:flex-1">
             <div className="shrink-0 rounded-xl bg-blue-500 p-3 text-white">
               <Shield className="h-6 w-6" />
@@ -993,7 +997,7 @@ export function GroupAdminPanel({
         )}
 
         {/* ??筌롫?�??*/}
-        <div className="group-admin-tabs flex gap-2 border-b-2 border-slate-200">
+        <div className="group-admin-tabs flex max-w-full flex-wrap gap-1 overflow-x-auto border-b-2 border-slate-200 sm:gap-2">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={tabButtonClass('dashboard')}
@@ -1079,7 +1083,7 @@ export function GroupAdminPanel({
       </div>
 
       {/* ??�쎌�??�썲?????�쎌?�占?*/}
-      <div className="group-admin-content glass-panel rounded-xl p-6">
+      <div className="group-admin-content glass-panel max-w-full min-w-0 overflow-x-hidden rounded-xl p-4 sm:p-6">
         {error && (
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-red-800">
             <AlertCircle className="h-5 w-5 shrink-0" />
@@ -1137,7 +1141,7 @@ export function GroupAdminPanel({
                 >
                   {gat('stats_title')}
                 </h2>
-                <div className="group-admin-grid grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+                <div className="group-admin-grid grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-4">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1222,11 +1226,11 @@ export function GroupAdminPanel({
             {/* ??�쎌�??�썲????�승?????*/}
             {activeTab === 'content' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                     {gat('tab_content')}
                   </h2>
-                  <div className="group-admin-search relative w-[300px]">
+                  <div className="group-admin-search relative w-full max-w-sm">
                     <Search className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
@@ -1243,7 +1247,7 @@ export function GroupAdminPanel({
                   <h3 className="mb-4 text-lg font-semibold text-slate-800">
                     {withCount(gat('content_section_photos'), filteredPhotos.length)}
                   </h3>
-                  <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+                  <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-4">
                     {filteredPhotos.map((photo, index) => (
                       <motion.div
                         key={photo.id}
@@ -1289,7 +1293,7 @@ export function GroupAdminPanel({
                   <h3 className="mb-4 text-lg font-semibold text-slate-800">
                     {withCount(gat('content_section_locations'), locations.length)}
                   </h3>
-                  <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+                  <div className="group-admin-grid grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-4">
                     {locations.map((location, index) => (
                       <motion.div
                         key={location.user_id}
@@ -1416,7 +1420,7 @@ export function GroupAdminPanel({
             {/* ??�쎈�????�쎌?�占???*/}
             {activeTab === 'support-tickets' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                       {gat('support_section_title')}
@@ -1586,7 +1590,7 @@ export function GroupAdminPanel({
             {/* {gat('tab_member_support')} (일반멤버 <-> 그룹관리자) */}
             {activeTab === 'member-support-tickets' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                     {gat('member_support_section_title')}
                   </h2>
@@ -1709,7 +1713,7 @@ export function GroupAdminPanel({
 
             {activeTab === 'dashboard-access-requests' && (
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="m-0 text-[20px] font-semibold text-slate-800">
                     {gat('access_requests_title')}
                   </h2>

@@ -17,7 +17,7 @@ export function DashboardPreviewFrame({
   const shell = typeof window !== 'undefined' ? detectDashboardShell() : 'web-preview';
 
   if (shell === 'desktop') {
-    return <div className="mx-auto w-full max-w-6xl">{children}</div>;
+    return <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>;
   }
 
   if (shell === 'mobile') {
@@ -26,8 +26,8 @@ export function DashboardPreviewFrame({
 
   const frameWidthClass =
     previewOrientation === 'portrait'
-      ? 'w-[430px] max-w-[430px]'
-      : 'w-full max-w-[900px]';
+      ? 'w-full max-w-[430px]'
+      : 'w-full max-w-[min(100%,900px)]';
 
   return (
     <div
