@@ -3,6 +3,22 @@
 import { memo, useRef, useState } from 'react';
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyEvent } from '../types';
+import { KIDS_ADD_DECOS } from '../kids-add-decorations';
+
+const KidsAddDecorations = memo(function KidsAddDecorations() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden" aria-hidden>
+      {KIDS_ADD_DECOS.map((item) => (
+        <img
+          key={item.src}
+          src={item.src}
+          alt=""
+          className={`absolute bg-transparent object-contain ${item.className}`}
+        />
+      ))}
+    </div>
+  );
+});
 
 function shiftDateStr(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -14,9 +30,6 @@ function shiftDateStr(dateStr: string, days: number): string {
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-
-const PICKER_MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-const PICKER_WEEKS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export type CalendarEventSubmitPayload = {
   editingEventId: string | null;
@@ -31,7 +44,7 @@ export type CalendarEventSubmitPayload = {
 
 export type CalendarEventModalTranslations = {
   event_add_title: string;
-  event_edit_title?: string;
+  event_edit_title: string;
   event_title_label: string;
   event_title_placeholder: string;
   event_desc_label: string;
@@ -41,10 +54,24 @@ export type CalendarEventModalTranslations = {
   event_repeat_monthly: string;
   event_repeat_yearly: string;
   event_submit_btn: string;
-  event_update_btn?: string;
+  event_update_btn: string;
+  event_start_date: string;
+  event_end_date: string;
+  event_end_unset: string;
+  event_single_date: string;
+  event_picker_start: string;
+  event_picker_end: string;
+  event_picker_year_month: string;
   event_title_required: string;
   event_date_invalid: string;
   event_title_invalid: string;
+  calendar_sun: string;
+  calendar_mon: string;
+  calendar_tue: string;
+  calendar_wed: string;
+  calendar_thu: string;
+  calendar_fri: string;
+  calendar_sat: string;
   cancel: string;
 };
 
@@ -179,7 +206,9 @@ function CalendarEventForm({
 
   return (
       <div
-        className="relative w-[min(92vw,480px)] rounded-[28px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+        className={`relative w-[min(92vw,480px)] rounded-[28px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]${
+          isKidsTheme ? ' overflow-hidden' : ''
+        }`}
         style={
           isKidsTheme
             ? {
@@ -189,6 +218,7 @@ function CalendarEventForm({
             : { background: '#fff', borderRadius: '12px' }
         }
       >
+        {isKidsTheme ? <KidsAddDecorations /> : null}
         {isKidsTheme && (
           <p className="mb-0 mt-0 text-center text-xs font-bold uppercase tracking-widest text-violet-400">
             FAMILY CALENDAR
@@ -199,13 +229,13 @@ function CalendarEventForm({
             isKidsTheme ? 'mb-3 text-3xl text-violet-700' : 'mb-3 mt-0 text-xl font-semibold text-slate-800'
           }`}
         >
-          {editingEvent ? t.event_edit_title || '일정 수정' : t.event_add_title}
+          {editingEvent ? t.event_edit_title : t.event_add_title}
         </h3>
 
         <div ref={dateRowRef} className="relative mb-4">
           <div className="flex gap-3">
             <div className="min-w-0 flex-1">
-              <p className={labelCls}>시작 날짜</p>
+              <p className={labelCls}>{t.event_start_date}</p>
               <div className={fieldCls}>
                 <button type="button" onClick={() => shiftStart(-1)} className={btnCls}>
                   −
@@ -226,8 +256,8 @@ function CalendarEventForm({
             </div>
             <div className="min-w-0 flex-1">
               <p className={labelCls}>
-                종료 날짜
-                {!isRange && <span className="ml-1 font-normal text-slate-400">(미설정)</span>}
+                {t.event_end_date}
+                {!isRange && <span className="ml-1 font-normal text-slate-400">{t.event_end_unset}</span>}
               </p>
               <div className={fieldCls}>
                 <button type="button" onClick={() => shiftEnd(-1)} className={btnCls}>
@@ -258,7 +288,7 @@ function CalendarEventForm({
                   onClick={() => setEventForm((prev) => ({ ...prev, endDateStr: '' }))}
                   className="mt-0.5 text-[11px] text-slate-400 transition-colors hover:text-red-400"
                 >
-                  × 단일 날짜로
+                  {t.event_single_date}
                 </button>
               )}
             </div>
@@ -284,9 +314,9 @@ function CalendarEventForm({
                   ‹
                 </button>
                 <span className={`text-xs font-bold ${isKidsTheme ? 'text-violet-700' : 'text-slate-700'}`}>
-                  {pY}년 {PICKER_MONTHS[pM]}
+                  {t.event_picker_year_month.replace('{year}', String(pY)).replace('{month}', String(pM + 1))}
                   <span className={`ml-1.5 text-[10px] font-normal ${isKidsTheme ? 'text-violet-400' : 'text-slate-400'}`}>
-                    {datePickerOpen === 'start' ? '시작' : '종료'}
+                    {datePickerOpen === 'start' ? t.event_picker_start : t.event_picker_end}
                   </span>
                 </span>
                 <button
@@ -301,7 +331,7 @@ function CalendarEventForm({
                 </button>
               </div>
               <div className="grid grid-cols-7">
-                {PICKER_WEEKS.map((w) => (
+                {[t.calendar_sun, t.calendar_mon, t.calendar_tue, t.calendar_wed, t.calendar_thu, t.calendar_fri, t.calendar_sat].map((w) => (
                   <div
                     key={w}
                     className={`text-center text-[10px] font-semibold ${isKidsTheme ? 'text-violet-400' : 'text-slate-400'}`}
@@ -462,7 +492,7 @@ function CalendarEventForm({
                 : { background: '#6366f1' }
             }
           >
-            {editingEvent ? t.event_update_btn || '저장' : t.event_submit_btn}
+            {editingEvent ? t.event_update_btn : t.event_submit_btn}
           </button>
         </div>
       </div>

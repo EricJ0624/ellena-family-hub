@@ -405,6 +405,15 @@ interface FamilyCalendarSectionProps {
     calendar_sat: string;
     calendar_day_events_title: string;
     event_add_title: string;
+    event_edit_title: string;
+    event_update_btn: string;
+    event_start_date: string;
+    event_end_date: string;
+    event_end_unset: string;
+    event_single_date: string;
+    event_picker_start: string;
+    event_picker_end: string;
+    event_picker_year_month: string;
     event_title_label: string;
     event_title_placeholder: string;
     event_desc_label: string;
@@ -428,8 +437,6 @@ interface FamilyCalendarSectionProps {
     close: string;
     delete: string;
     delete_confirm: string;
-    event_edit_title?: string;
-    event_update_btn?: string;
     edit?: string;
   };
 }
