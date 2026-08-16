@@ -36,7 +36,6 @@ export type DashboardTranslations = {
   event_picker_start: string;
   event_picker_end: string;
   event_picker_year_month: string;
-  event_add_btn: string;
   event_title_label: string;
   event_title_placeholder: string;
   event_desc_label: string;
@@ -357,7 +356,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: '시작',
     event_picker_end: '종료',
     event_picker_year_month: '{year}년 {month}월',
-    event_add_btn: '일정 추가하기',
     event_title_label: '제목 *',
     event_title_placeholder: '일정 제목을 입력하세요',
     event_desc_label: '설명 (선택)',
@@ -654,7 +652,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: 'Start',
     event_picker_end: 'End',
     event_picker_year_month: '{month}/{year}',
-    event_add_btn: 'Add Event',
     event_title_label: 'Title *',
     event_title_placeholder: 'Enter event title',
     event_desc_label: 'Description (optional)',
@@ -951,7 +948,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: '開始',
     event_picker_end: '終了',
     event_picker_year_month: '{year}年{month}月',
-    event_add_btn: '予定を追加',
     event_title_label: 'タイトル *',
     event_title_placeholder: '予定のタイトルを入力',
     event_desc_label: '説明（任意）',
@@ -1248,7 +1244,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: '开始',
     event_picker_end: '结束',
     event_picker_year_month: '{year}年{month}月',
-    event_add_btn: '添加日程',
     event_title_label: '标题 *',
     event_title_placeholder: '输入日程标题',
     event_desc_label: '说明（选填）',
@@ -1542,7 +1537,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: '開始',
     event_picker_end: '結束',
     event_picker_year_month: '{year}年{month}月',
-    event_add_btn: '新增日程',
     event_title_label: '標題 *',
     event_title_placeholder: '輸入日程標題',
     event_desc_label: '說明（選填）',
@@ -1836,7 +1830,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: 'Inicio',
     event_picker_end: 'Fin',
     event_picker_year_month: '{month}/{year}',
-    event_add_btn: 'Agregar evento',
     event_title_label: 'Título *',
     event_title_placeholder: 'Ingrese el título del evento',
     event_desc_label: 'Descripción (opcional)',
@@ -2129,7 +2122,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: 'Début',
     event_picker_end: 'Fin',
     event_picker_year_month: '{month}/{year}',
-    event_add_btn: 'Ajouter un événement',
     event_title_label: 'Titre *',
     event_title_placeholder: 'Entrez le titre de l\'événement',
     event_desc_label: 'Description (facultatif)',
@@ -2422,7 +2414,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: 'Start',
     event_picker_end: 'Ende',
     event_picker_year_month: '{month}/{year}',
-    event_add_btn: 'Ereignis hinzufügen',
     event_title_label: 'Titel *',
     event_title_placeholder: 'Geben Sie den Veranstaltungstitel ein',
     event_desc_label: 'Beschreibung (optional)',
@@ -2715,7 +2706,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: 'Inizio',
     event_picker_end: 'Fine',
     event_picker_year_month: '{month}/{year}',
-    event_add_btn: 'Aggiungi evento',
     event_title_label: 'Titolo *',
     event_title_placeholder: 'Inserisci il titolo dell\'evento',
     event_desc_label: 'Descrizione (facoltativa)',
@@ -3008,7 +2998,6 @@ const dashboard: Record<LangCode, DashboardTranslations> = {
     event_picker_start: 'Início',
     event_picker_end: 'Fim',
     event_picker_year_month: '{month}/{year}',
-    event_add_btn: 'Adicionar evento',
     event_title_label: 'Título *',
     event_title_placeholder: 'Digite o título do evento',
     event_desc_label: 'Descrição (opcional)',

@@ -15,14 +15,3 @@ export type FamilyEvent = {
   supabaseId?: string | number;
   repeat_type?: 'none' | 'monthly' | 'yearly';
 };
-
-export type FamilyEventPayload = {
-  id: number;
-  month: string;
-  day: string;
-  title: string;
-  desc: string;
-  event_date: string;
-  end_date?: string;
-  repeat_type?: 'none' | 'monthly' | 'yearly';
-};

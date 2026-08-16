@@ -1,7 +1,6 @@
 /** Kids 캘린더 평상시 장식 자리 + 일정 칸 PNG 스티커. 스키마/권한과 무관. */
 
-export const KIDS_STICKER = {
-  cake: '/family-calendar/emojis/cake.png',
+const KIDS_STICKER = {
   book: '/family-calendar/emojis/book.png',
   mic: '/family-calendar/emojis/mic.png',
   stroller: '/family-calendar/emojis/stroller.png',

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useRef, useState } from 'react';
+import { memo, useState } from 'react';
 import { TopLayerDialog } from '@/app/components/TopLayerDialog';
 import type { FamilyEvent } from '../types';
 import { KIDS_ADD_DECOS } from '../kids-add-decorations';
@@ -113,7 +113,6 @@ function CalendarEventForm({
   onClose,
   onSubmit,
 }: Omit<CalendarEventModalProps, 'open'>) {
-  const dateRowRef = useRef<HTMLDivElement>(null);
   const startDate = editingEvent?.event_date
     ? new Date(editingEvent.event_date + 'T12:00:00')
     : initialDate;
@@ -232,7 +231,7 @@ function CalendarEventForm({
           {editingEvent ? t.event_edit_title : t.event_add_title}
         </h3>
 
-        <div ref={dateRowRef} className="relative mb-4">
+        <div className="relative mb-4">
           <div className="flex gap-3">
             <div className="min-w-0 flex-1">
               <p className={labelCls}>{t.event_start_date}</p>

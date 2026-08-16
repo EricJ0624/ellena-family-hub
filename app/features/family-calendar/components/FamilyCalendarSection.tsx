@@ -764,13 +764,12 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
   const monthTitle = formatMonthYear(calendarGrid.year, calendarGrid.month).toUpperCase();
 
   return (
-    <>
-      {/* Calendar Section — 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
       <div
         className={`calendar-widget-stack${
           hasSelection ? ' calendar-widget-stack--expanded' : ''
         }`}
       >
+        {/* 상세 패널은 프레임 밖(아래)으로 분리해 날짜 셀 CQ 스케일 유지 */}
         <CalendarMonthGrid
           calendarGrid={calendarGrid}
           selectedDate={selectedDate}
@@ -789,7 +788,6 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
           onAdd={openEventModal}
         />
 
-          <>
             {selectedDate && (
               <div className="calendar-detail-panel">
                 <div className="calendar-detail-header">
@@ -878,8 +876,6 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                 )}
               </div>
             )}
-          </>
       </div>
-    </>
   );
 });
