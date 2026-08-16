@@ -2735,7 +2735,7 @@ select:not(.chalkboard-form-input) {
     padding: var(--spacing-lg) calc(var(--spacing-lg) + 1cqmin) calc(var(--spacing-lg) + 1cqmin);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-    --piggy-kids-art: url('/piggy/kids-widget-bg.webp?v=2') right center / auto 100% no-repeat;
+    --piggy-kids-art: url('/piggy/kids-widget-bg.webp?v=5') right center / auto 100% no-repeat;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='piggy'] .content-section::before,
@@ -2859,6 +2859,33 @@ select:not(.chalkboard-form-input) {
     background-color: #16a34a !important;
     font-weight: 800;
     box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .piggy-page,
+  .dark[data-ui-theme='kids_friendly'] .piggy-page {
+    background-color: #bae6fd !important;
+    background-image: linear-gradient(160deg, #bae6fd 0%, #f9a8d4 58%, #ffedd5 100%) !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .piggy-page .glass-panel,
+  .dark[data-ui-theme='kids_friendly'] .piggy-page .glass-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(252, 231, 243, 0.68) 55%,
+      rgba(186, 230, 253, 0.6) 100%
+    ) !important;
+    border-color: rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .piggy-page-mark,
+  .dark[data-ui-theme='kids_friendly'] .piggy-page-mark {
+    width: auto !important;
+    max-width: 200px;
+    background: transparent !important;
   }
 
   /*

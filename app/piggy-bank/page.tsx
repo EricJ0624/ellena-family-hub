@@ -18,6 +18,7 @@ import { formatCurrencyOptionLabel, getTopCurrencyCodes } from '@/lib/currencies
 import { formatMoneyAmount } from '@/lib/format-currency';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import { GroupRequiredRouteGuard } from '@/app/components/GroupRequiredRouteGuard';
+import { resolveUiTheme } from '@/lib/ui-theme';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,6 +123,10 @@ function PiggyBankPageContent() {
   const [selectedChildIdForAdmin, setSelectedChildIdForAdmin] = useState('');
 
   const isAdmin = useMemo(() => userRole === 'ADMIN' || isOwner, [userRole, isOwner]);
+  const piggyMarkSrc =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly'
+      ? '/piggy/kids-piggy-icon.webp?v=5'
+      : '/piggy/ellena-piggy-red.svg';
 
   const [piggyName, setPiggyName] = useState('');
   const [allowanceAmount, setAllowanceAmount] = useState('');
@@ -528,9 +533,9 @@ function PiggyBankPageContent() {
     const membersWithoutPiggy = list.filter((p) => p.noAccount);
 
     return (
-      <div className="min-h-screen bg-[var(--surface-base)] p-5">
+      <div className="piggy-page min-h-screen bg-[var(--surface-base)] p-5">
         <div className="mb-5 flex items-center gap-4">
-          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-[90px] w-[90px]" />
+          <img src={piggyMarkSrc} alt="Ellena Piggy" className="piggy-page-mark h-[90px] w-[90px] bg-transparent object-contain" />
           <div>
             <h1 className="m-0 text-[22px] text-gray-800">{pt('management_title')}</h1>
             <p className="m-0 mt-1 text-slate-500">{currentGroup?.name || pt('group_label')} · {pt('piggy_per_child')}</p>
@@ -660,8 +665,8 @@ function PiggyBankPageContent() {
     if (summary !== null && summary.account == null && !isAdmin) {
       const pendingRequest = summary.pendingAccountRequest === true;
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--surface-base)] p-5">
-          <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-20 w-20" />
+        <div className="piggy-page flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--surface-base)] p-5">
+          <img src={piggyMarkSrc} alt="Ellena Piggy" className="piggy-page-mark h-20 w-20 bg-transparent object-contain" />
           {pendingRequest ? (
             <p className="m-0 text-center text-base font-semibold text-amber-800">
               {pt('approval_pending')}
@@ -692,9 +697,9 @@ function PiggyBankPageContent() {
     if (summary !== null && summary.account == null && isAdmin && selectedChildIdForAdmin) {
       const childName = members.find((m) => m.user_id === selectedChildIdForAdmin)?.nickname || pt('child_label');
       return (
-        <div className="min-h-screen bg-[var(--surface-base)] p-5">
+        <div className="piggy-page min-h-screen bg-[var(--surface-base)] p-5">
           <div className="mb-5 flex items-center gap-4">
-            <img src="/piggy/ellena-piggy-red.svg" alt="Ellena Piggy" className="h-[90px] w-[90px]" />
+            <img src={piggyMarkSrc} alt="Ellena Piggy" className="piggy-page-mark h-[90px] w-[90px] bg-transparent object-contain" />
             <div>
               <h1 className="m-0 text-[22px] text-gray-800">{pt('management_title')}</h1>
               <p className="m-0 mt-1 text-slate-500">{childName} · {pt('no_piggy')}</p>
@@ -736,12 +741,12 @@ function PiggyBankPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-base)] p-5">
+    <div className="piggy-page min-h-screen bg-[var(--surface-base)] p-5">
       <div className="mb-5 flex items-center gap-4">
         <img
-          src="/piggy/ellena-piggy-red.svg"
+          src={piggyMarkSrc}
           alt="Ellena Piggy"
-          className="h-[90px] w-[90px]"
+          className="piggy-page-mark h-[90px] w-[90px] bg-transparent object-contain"
         />
         <div className="flex-1">
           {isAdmin && (

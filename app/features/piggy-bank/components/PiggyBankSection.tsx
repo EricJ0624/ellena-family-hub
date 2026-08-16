@@ -76,9 +76,9 @@ export function PiggyBankSection({
     : t.section_title_user.replace(/\{name\}/g, piggySummary?.ownerNickname?.trim() || 'Ellena');
 
   const buttonText = isAdmin ? t.manage_all : t.go;
-  const hasAnyAccount = Boolean(piggyMemberPiggies?.some((p) => !p.noAccount));
-  const hasMemberCards = Boolean(piggyMemberPiggies && piggyMemberPiggies.length > 0);
-  const hasPiggyFilled = isAdmin ? hasMemberCards : Boolean(piggySummary);
+  const hasPiggyFilled = isAdmin
+    ? Boolean(piggyMemberPiggies && piggyMemberPiggies.length > 0)
+    : Boolean(piggySummary);
 
   return (
     <section className="content-section" data-piggy-filled={hasPiggyFilled ? 'true' : 'false'}>
@@ -154,7 +154,7 @@ export function PiggyBankSection({
                         ))}
                       </div>
                     )}
-                    {!hasAnyAccount && piggyMemberPiggies.length === 0 && (
+                    {piggyMemberPiggies.length === 0 && (
                       <div className="text-center text-[#64748b]" style={{ padding: '3cqmin', fontSize: '5cqmin' }}>
                         {t.no_account_holders}
                       </div>
@@ -216,7 +216,7 @@ export function PiggyBankSection({
                             </div>
                           </div>
                           <div className="grid grid-cols-2" style={{ gap: '2.5cqmin' }}>
-                            <div className="piggy-widget-metric piggy-widget-metric--wallet rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: '2.5cqmin' }}>
+                            <div className="piggy-widget-metric--wallet rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2]" style={{ padding: '2.5cqmin' }}>
                               <div className="text-[#b91c1c]" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.wallet_balance_label}
                               </div>
@@ -224,7 +224,7 @@ export function PiggyBankSection({
                                 {formatAmount(p.walletBalance ?? 0, p.currency)}
                               </div>
                             </div>
-                            <div className="piggy-widget-metric piggy-widget-metric--bank rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: '2.5cqmin' }}>
+                            <div className="piggy-widget-metric--bank rounded-lg border border-solid border-[#fed7aa] bg-[#fff7ed]" style={{ padding: '2.5cqmin' }}>
                               <div className="text-[#9a3412]" style={{ marginBottom: '1cqmin', fontSize: '4cqmin' }}>
                                 {t.bank_balance_label}
                               </div>
