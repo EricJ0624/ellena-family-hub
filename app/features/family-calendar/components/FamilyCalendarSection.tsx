@@ -21,7 +21,7 @@ const CALENDAR_SKINS = {
     titleColor: '#5b21b6',
     navBg: 'rgba(255,255,255,0.9)',
     navBtn: '#7c3aed',
-    navTitle: 'linear-gradient(90deg, #7c3aed 0%, #db2777 100%)',
+    navTitle: 'linear-gradient(90deg, #5b4b82 0%, #4a6d8c 28%, #4a7a6e 52%, #7a6a3d 76%, #7a5360 100%)',
     addBg: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
     cellIdle: 'rgba(255,255,255,0.8)',
     cellEvent: 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%)',
@@ -68,6 +68,41 @@ type CalendarSkin = (typeof CALENDAR_SKINS)[keyof typeof CALENDAR_SKINS];
 type CalendarGridCell =
   | { type: 'empty' }
   | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsEmoji: string | null };
+
+const KIDS_IDLE_DECO = {
+  rainbow: '/family-calendar/emojis/rainbow.png',
+  rainbow2: '/family-calendar/emojis/rainbow-2.png',
+  firework: '/family-calendar/emojis/firework.png',
+  firework2: '/family-calendar/emojis/firework-2.png',
+  shootingStar: '/family-calendar/emojis/shooting-star.png',
+  star: '/family-calendar/emojis/star.png',
+  earth: '/family-calendar/emojis/earth.png',
+  planet: '/family-calendar/emojis/planet.png',
+  dog: '/family-calendar/emojis/dog.png',
+  family: '/family-calendar/emojis/family.png',
+  stroller: '/family-calendar/emojis/stroller.png',
+} as const;
+
+/** Kids 평상시 장식. 클릭을 가리지 않고, 일정/폭죽 연출과는 분리한다. */
+function KidsIdleDecorations() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden bg-transparent" aria-hidden>
+      <img src={KIDS_IDLE_DECO.rainbow} alt="" className="absolute top-[1.2cqmin] right-[18cqmin] w-[14cqmin] rotate-[-12deg] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.firework} alt="" className="absolute top-[0.6cqmin] right-[30cqmin] w-[9cqmin] rotate-[8deg] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.family} alt="" className="absolute top-[1.4cqmin] right-[6cqmin] w-[11cqmin] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.dog} alt="" className="absolute top-[7.2cqmin] right-[20cqmin] w-[7.5cqmin] -rotate-6 bg-transparent" />
+      <img src={KIDS_IDLE_DECO.firework2} alt="" className="absolute top-[11cqmin] left-[38cqmin] w-[7.5cqmin] -rotate-12 bg-transparent" />
+      <img src={KIDS_IDLE_DECO.earth} alt="" className="absolute top-[15.5cqmin] left-[1cqmin] w-[7.5cqmin] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.stroller} alt="" className="absolute right-[16cqmin] bottom-[14cqmin] w-[8.5cqmin] rotate-6 bg-transparent" />
+      <img src={KIDS_IDLE_DECO.planet} alt="" className="absolute right-[3cqmin] bottom-[15cqmin] w-[8.5cqmin] rotate-[18deg] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.shootingStar} alt="" className="absolute top-[36cqmin] left-[4cqmin] w-[20cqmin] rotate-[18deg] bg-transparent opacity-90" />
+      <img src={KIDS_IDLE_DECO.shootingStar} alt="" className="absolute top-[54cqmin] right-[3cqmin] w-[16cqmin] -scale-x-100 rotate-[-8deg] bg-transparent opacity-80" />
+      <img src={KIDS_IDLE_DECO.star} alt="" className="absolute top-[40cqmin] right-[22cqmin] w-[4.5cqmin] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.star} alt="" className="absolute top-[62cqmin] left-[3cqmin] w-[3.8cqmin] bg-transparent" />
+      <img src={KIDS_IDLE_DECO.rainbow2} alt="" className="absolute bottom-[16cqmin] left-[1.5cqmin] w-[12cqmin] rotate-[-6deg] bg-transparent opacity-85" />
+    </div>
+  );
+}
 
 function kidsEmojiFromTitles(titles: string[]): string {
   const text = titles.join(' ').toLowerCase();
@@ -120,13 +155,16 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   return (
     <div className="calendar-widget-cq-frame">
       <section
-        className="content-section calendar-widget-section calendar-widget-section--frame"
+        className={`content-section calendar-widget-section calendar-widget-section--frame${
+          isKidsTheme ? ' relative' : ''
+        }`}
         style={{
           ...(skin.sectionBg !== 'transparent' ? { background: skin.sectionBg } : null),
           paddingBottom: '2cqmin',
           paddingTop: '4.5cqmin',
         }}
       >
+        {isKidsTheme ? <KidsIdleDecorations /> : null}
         <div className="section-header calendar-section-header" style={{ marginBottom: '2.5cqmin' }}>
           <h3
             className="section-title m-0 flex items-center calendar-section-title"
@@ -164,22 +202,28 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               >
                 ‹
               </button>
-              <h4
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  margin: 0,
-                  fontSize: '5.5cqmin',
-                  fontWeight: 800,
-                  backgroundImage: skin.navTitle,
-                  backgroundColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                {monthTitle}
-              </h4>
+              <div className="relative flex min-w-0 flex-1 items-center justify-center">
+                {isKidsTheme ? (
+                  <span className="calendar-kids-month-glow pointer-events-none absolute -inset-y-[55%] inset-x-[2%] rounded-full" aria-hidden />
+                ) : null}
+                <h4
+                  className="relative z-[1]"
+                  style={{
+                    flex: 1,
+                    textAlign: 'center',
+                    margin: 0,
+                    fontSize: '5.5cqmin',
+                    fontWeight: 800,
+                    backgroundImage: skin.navTitle,
+                    backgroundColor: 'transparent',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {monthTitle}
+                </h4>
+              </div>
               <button
                 type="button"
                 onClick={onNextMonth}

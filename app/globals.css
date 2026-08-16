@@ -3341,6 +3341,19 @@ select:not(.chalkboard-form-input) {
     overflow: hidden;
   }
 
+  .calendar-kids-month-glow {
+    background: linear-gradient(
+      90deg,
+      #ede4ff 0%,
+      #d6eeff 22%,
+      #d8f8ea 46%,
+      #fff4c4 70%,
+      #ffe4dc 100%
+    );
+    filter: blur(2.8cqmin);
+    opacity: 0.95;
+  }
+
   .widget-chrome[data-widget-key='calendar'] .calendar-kids-add-btn {
     border: none !important;
     outline: none !important;
