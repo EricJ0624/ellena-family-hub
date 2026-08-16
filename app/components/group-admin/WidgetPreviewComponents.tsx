@@ -6,8 +6,9 @@
  * 데이터/기능 없이 정적 마크업만 사용.
  */
 
-import { Camera, Paperclip } from 'lucide-react';
+import { Camera, Mic, Paperclip, Plus, Send } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { KidsChatDecorations } from '@/app/features/family-chat/components/FamilyChatSection';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
@@ -209,23 +210,54 @@ function CalendarPreview() {
 // ── Chat (메시지 스타일) ────────────────────────────────────────
 function ChatPreview() {
   const { dt, ct, familyRole, wp } = useWidgetPreviewCopy();
+  const { currentGroup } = useGroup();
+  const isKidsTheme =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
   const messages = [
     { user: `👩 ${familyRole('mom')}`, time: '10:30', text: wp('preview_chat_1'), mine: false },
     { user: ct('me'), time: '10:32', text: wp('preview_chat_2'), mine: true },
     { user: `👨 ${familyRole('dad')}`, time: '10:35', text: wp('preview_chat_3'), mine: false },
     { user: ct('me'), time: '10:36', text: '👍', mine: true },
   ];
+  const attachBtn = (
+    <div className="chat-attach-wrap">
+      <button type="button" tabIndex={-1} className="chat-attach-btn" aria-hidden>
+        <Camera className="chat-attach-icon" aria-hidden />
+        <Paperclip className="chat-attach-icon" aria-hidden />
+      </button>
+    </div>
+  );
+  const inputField = (
+    <input
+      type="text"
+      readOnly
+      tabIndex={-1}
+      className="chat-input min-w-0 flex-1"
+      placeholder={dt('chat_placeholder')}
+      aria-hidden
+    />
+  );
   return (
-    <section className="content-section chat-widget-section h-full">
-      <div className="section-header chat-section-header">
-        <h3 className="section-title">{dt('section_title_chat')}</h3>
+    <section
+      className={`content-section chat-widget-section h-full${isKidsTheme ? ' chat-widget-section--kids' : ''}`}
+    >
+      {isKidsTheme ? <KidsChatDecorations /> : null}
+      <div className="section-header chat-section-header relative z-[3]">
+        {isKidsTheme ? (
+          <>
+            <h3 className="sr-only">{dt('section_title_chat')}</h3>
+            <img src="/family-chat/title.png" alt="" className="chat-kids-title" />
+          </>
+        ) : (
+          <h3 className="section-title">{dt('section_title_chat')}</h3>
+        )}
       </div>
-      <div className="section-body chat-section-body">
+      <div className="section-body chat-section-body relative z-[3]">
         <div className="chat-messages">
           {messages.map((m, i) => (
             <div key={i} className="message-item">
               <div className="message-header">
-                <span className="message-user">{m.user}</span>
+                <span className={`message-user${isKidsTheme && m.mine ? ' chat-kids-me' : ''}`}>{m.user}</span>
                 <span className="message-time">{m.time}</span>
               </div>
               <div className="message-bubble">
@@ -235,23 +267,33 @@ function ChatPreview() {
           ))}
         </div>
         <div className="chat-input-wrapper" style={{ gap: '1.5cqmin' }}>
-          <input
-            type="text"
-            readOnly
-            tabIndex={-1}
-            className="chat-input min-w-0 flex-1"
-            placeholder={dt('chat_placeholder')}
-            aria-hidden
-          />
-          <div className="chat-attach-wrap">
-            <button type="button" tabIndex={-1} className="chat-attach-btn" aria-hidden>
-              <Camera className="chat-attach-icon" aria-hidden />
-              <Paperclip className="chat-attach-icon" aria-hidden />
+          {isKidsTheme ? (
+            <div className="chat-kids-composer">
+              <span className="chat-kids-mic" aria-hidden>
+                <Mic className="chat-kids-mic-icon" />
+              </span>
+              {inputField}
+              <span className="chat-kids-add" aria-hidden>
+                <Plus className="chat-kids-add-plus" />
+                <span className="chat-kids-add-label">Add</span>
+              </span>
+              {attachBtn}
+            </div>
+          ) : (
+            <>
+              {inputField}
+              {attachBtn}
+            </>
+          )}
+          <div className={isKidsTheme ? 'chat-kids-send-cluster' : undefined}>
+            <button type="button" tabIndex={-1} className="btn-send" aria-hidden>
+              {dt('chat_send')}
+              {isKidsTheme ? <Send className="chat-kids-send-icon" aria-hidden /> : null}
             </button>
+            {isKidsTheme ? (
+              <img src="/family-chat/emojis/rocket.png" alt="" className="chat-kids-rocket" aria-hidden />
+            ) : null}
           </div>
-          <button type="button" tabIndex={-1} className="btn-send" aria-hidden>
-            {dt('chat_send')}
-          </button>
         </div>
       </div>
     </section>

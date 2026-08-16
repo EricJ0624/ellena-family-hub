@@ -6281,6 +6281,7 @@ export default function FamilyHub() {
             getFamilyRoleLabel={getFamilyRoleLabel}
             eventAuthorNames={eventAuthorNames}
             lang={lang}
+            uiTheme={uiTheme}
             translations={chatTranslations}
           />
         );

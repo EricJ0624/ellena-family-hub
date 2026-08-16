@@ -2757,6 +2757,11 @@ select:not(.chalkboard-form-input) {
     align-items: center;
   }
 
+  .widget-chrome[data-widget-key='chat'] .chat-kids-composer {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   /*
    * Family Calendar: CQ(cqmin) + flex — 스크롤 없이 위젯 프레임 안에서 비율 스케일.
    * 달력 그리드는 남는 높이(1fr 행)에 맞춰 확대·축소.
@@ -3681,6 +3686,243 @@ select:not(.chalkboard-form-input) {
 
 .chat-widget-section .chat-attach-btn {
   height: 1.65rem;
+}
+
+/*
+ * Kids Family Chat — 표현만. 전송·첨부·크기 규칙은 위 공통 블록 유지.
+ * backdrop-filter 는 쓰지 않음 (반투명+inset shadow 로 글래스/뉴모픽).
+ */
+.chat-widget-section.chat-widget-section--kids {
+  position: relative;
+  /* 초안: 왼쪽 대각선 반은 라벤더, 오른쪽 아래는 피치 */
+  background: linear-gradient(
+    135deg,
+    #c4b0e8 0%,
+    #d3c0ea 34%,
+    #e6d2e4 54%,
+    #f3d6c6 78%,
+    #f0c4a4 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 0 28px rgba(255, 214, 170, 0.38),
+    var(--glass-medium-shadow);
+}
+
+.chat-widget-section--kids .chat-section-header {
+  justify-content: center;
+}
+
+.chat-kids-title {
+  display: block;
+  height: 1.35rem;
+  width: auto;
+  max-width: 88%;
+  margin-inline: auto;
+  object-fit: contain;
+  pointer-events: none;
+  background: transparent;
+}
+
+.chat-widget-section--kids .chat-kids-deco,
+.chat-widget-section--kids .chat-kids-rocket,
+.chat-widget-section--kids .chat-kids-title {
+  background: transparent;
+  background-color: transparent;
+}
+
+.chat-widget-section--kids .chat-kids-deco--over-chat {
+  opacity: 0.82;
+}
+
+.chat-widget-section--kids .chat-section-header,
+.chat-widget-section--kids .chat-section-body,
+.chat-widget-section--kids .chat-messages,
+.chat-widget-section--kids .message-item,
+.chat-widget-section--kids .message-bubble {
+  position: relative;
+  z-index: 3;
+}
+
+.chat-widget-section--kids .message-header,
+.chat-widget-section--kids .message-user,
+.chat-widget-section--kids .message-time,
+.chat-widget-section--kids .message-text {
+  position: relative;
+  z-index: 4;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-kids-title {
+  height: 6.5cqmin;
+}
+
+.chat-widget-section--kids .message-user {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.chat-widget-section--kids .chat-kids-me {
+  color: #5b21b6;
+  font-weight: 800;
+}
+
+.chat-widget-section--kids .message-time {
+  color: #94a3b8;
+}
+
+.chat-widget-section--kids .message-bubble {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 1px 2px 6px rgba(148, 163, 184, 0.22),
+    0 4px 14px rgba(255, 255, 255, 0.32);
+  padding: 0.18rem 0.75rem;
+}
+
+.chat-widget-section--kids .message-text {
+  color: #3f3a5a;
+}
+
+.chat-kids-composer {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0.2rem;
+  padding: 0 0.3rem 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow:
+    inset 2px 3px 8px rgba(148, 163, 184, 0.28),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.78);
+}
+
+.dashboard-widget-grid:not([data-columns='1']) .chat-widget-section--kids .chat-kids-composer {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.dashboard-widget-grid:not([data-columns='1']) .chat-widget-section--kids .chat-input-wrapper .chat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chat-widget-section--kids .chat-input {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding-left: 0.1rem;
+  padding-right: 0.1rem;
+}
+
+.chat-widget-section--kids .chat-input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+.chat-kids-mic,
+.chat-kids-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.chat-kids-mic-icon,
+.chat-kids-add-plus,
+.chat-kids-send-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-kids-mic-icon,
+.widget-chrome[data-widget-key='chat'] .chat-kids-add-plus,
+.widget-chrome[data-widget-key='chat'] .chat-kids-send-icon {
+  width: 4cqmin;
+  height: 4cqmin;
+}
+
+.chat-kids-add {
+  gap: 0.15rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #64748b;
+}
+
+.chat-kids-add-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-kids-add-label {
+  font-size: 3cqmin;
+}
+
+.chat-widget-section--kids .chat-attach-btn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #64748b;
+}
+
+.chat-widget-section--kids .chat-attach-btn:hover,
+.chat-widget-section--kids .chat-attach-btn:focus-visible {
+  color: #5b21b6;
+  border: none;
+  box-shadow: none;
+}
+
+.chat-widget-section--kids .btn-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  background: #4c1d95;
+  box-shadow: 0 4px 12px rgba(76, 29, 149, 0.35);
+}
+
+.chat-widget-section--kids .btn-send:hover {
+  background: #5b21b6;
+}
+
+.chat-kids-send-cluster {
+  position: relative;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.chat-widget-section--kids .chat-input-wrapper {
+  overflow: visible;
+}
+
+.chat-kids-rocket {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: calc(100% - 0.12rem);
+  width: 2.7rem;
+  height: auto;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 5;
+  object-fit: contain;
+  background: transparent;
+}
+
+.widget-chrome[data-widget-key='chat'] .chat-kids-rocket {
+  width: 14cqmin;
+  left: 50%;
+  right: auto;
+  bottom: calc(100% - 0.8cqmin);
+}
+
+.chat-widget-section--kids .chat-attach-menu {
+  z-index: 30;
 }
 
 /* Travel itinerary document — preview uses iframe (srcDoc); print via iframe.contentWindow.print() */

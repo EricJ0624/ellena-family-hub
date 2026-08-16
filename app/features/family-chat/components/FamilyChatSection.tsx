@@ -4,10 +4,11 @@
 
 'use client';
 
-import { Camera, ImageIcon, Paperclip } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { Camera, ImageIcon, Mic, Paperclip, Plus, Send } from 'lucide-react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
+import type { UiTheme } from '@/lib/ui-theme';
 import type { ChatUiMessage } from '../types';
 
 interface FamilyChatSectionProps {
@@ -33,6 +34,7 @@ interface FamilyChatSectionProps {
   getFamilyRoleLabel: (lang: any, role: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null) => string;
   eventAuthorNames: Record<string, string>;
   lang: any;
+  uiTheme?: UiTheme;
   translations: {
     section_title_chat: string;
     section_chat_bubble_greeting: string;
@@ -48,6 +50,46 @@ interface FamilyChatSectionProps {
     user: string;
   };
 }
+
+const KIDS_CHAT_DECOS: { src: string; className: string; overChat?: boolean }[] = [
+  { src: '/family-calendar/emojis/earth.png', className: 'top-[2%] left-[1.5%] w-[12%]' },
+  { src: '/family-calendar/emojis/planet.png', className: 'top-[2%] right-[3%] w-[13%]' },
+  { src: '/family-calendar/add-emojis/moon.png', className: 'top-[16%] right-[0.5%] w-[8%]' },
+  { src: '/family-calendar/emojis/star.png', className: 'top-[1%] left-[26%] w-[5%]' },
+  { src: '/family-calendar/emojis/star.png', className: 'top-[0.4%] left-[48%] w-[4.5%] rotate-12' },
+  { src: '/family-calendar/emojis/star.png', className: 'top-[1%] right-[28%] w-[5%] -rotate-6' },
+  { src: '/family-chat/emojis/shooting-star.png', className: 'top-[7%] left-[10%] w-[12%] -rotate-12' },
+  { src: '/family-calendar/emojis/firework.png', className: 'top-[5.5%] left-[20%] w-[8%]' },
+  { src: '/family-calendar/emojis/firework-2.png', className: 'top-[5.5%] right-[16%] w-[8%]' },
+  { src: '/family-chat/emojis/ghosts.png?v=3', className: 'top-[26%] left-[6%] w-[26%]', overChat: true },
+  { src: '/family-chat/emojis/cake.png', className: 'top-[30%] right-[16%] w-[8%]', overChat: true },
+  { src: '/family-chat/emojis/balloon.png', className: 'top-[38%] right-[2%] w-[8%]' },
+  { src: '/family-chat/emojis/book.png', className: 'top-[44%] left-[1.5%] w-[8%] -rotate-12', overChat: true },
+  { src: '/family-chat/emojis/dining-set.png', className: 'top-[68%] right-[2%] w-[7.5%]' },
+  { src: '/family-chat/emojis/pizza.png', className: 'top-[50%] right-[20%] w-[8%]', overChat: true },
+  { src: '/family-chat/emojis/broccoli.png', className: 'top-[52%] right-[10%] w-[7%]' },
+  { src: '/family-chat/emojis/bicycle.png', className: 'bottom-[16%] left-[18%] w-[10%]', overChat: true },
+  { src: '/family-chat/emojis/music.png', className: 'bottom-[13%] left-[6%] w-[7%]', overChat: true },
+  { src: '/family-calendar/emojis/palette.png', className: 'bottom-[11%] left-[30%] w-[7%]', overChat: true },
+  { src: '/family-calendar/emojis/stroller.png', className: 'bottom-[15%] right-[38%] w-[8%]', overChat: true },
+  { src: '/family-chat/emojis/dog.png', className: 'bottom-[1%] left-[0.5%] w-[12%]' },
+  { src: '/family-chat/emojis/smoke.png', className: 'bottom-[1.5%] right-[18%] w-[10%]' },
+];
+
+export const KidsChatDecorations = memo(function KidsChatDecorations() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-transparent" aria-hidden>
+      {KIDS_CHAT_DECOS.map((item, index) => (
+        <img
+          key={`${item.src}-${index}`}
+          src={item.src}
+          alt=""
+          className={`chat-kids-deco absolute bg-transparent object-contain${item.overChat ? ' chat-kids-deco--over-chat' : ''} ${item.className}`}
+        />
+      ))}
+    </div>
+  );
+});
 
 export function FamilyChatSection({
   messages,
@@ -71,10 +113,12 @@ export function FamilyChatSection({
   getFamilyRoleLabel,
   eventAuthorNames,
   lang,
+  uiTheme,
   translations: t,
 }: FamilyChatSectionProps) {
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const isKidsTheme = uiTheme === 'kids_friendly';
 
   useEffect(() => {
     if (!attachMenuOpen) return;
@@ -125,12 +169,71 @@ export function FamilyChatSection({
     handleSendClick();
   };
 
+  const attachControls = (
+    <div ref={attachMenuRef} className="chat-attach-wrap">
+      <button
+        type="button"
+        onClick={() => setAttachMenuOpen((open) => !open)}
+        className="chat-attach-btn"
+        aria-label={t.chat_attach_btn_aria}
+        aria-expanded={attachMenuOpen}
+        aria-haspopup="menu"
+      >
+        <Camera className="chat-attach-icon" aria-hidden />
+        <Paperclip className="chat-attach-icon" aria-hidden />
+      </button>
+      {attachMenuOpen && (
+        <div role="menu" className="chat-attach-menu">
+          <button
+            type="button"
+            role="menuitem"
+            className="chat-attach-menu-item"
+            onClick={openAlbumPicker}
+          >
+            <ImageIcon className="chat-attach-menu-icon" aria-hidden />
+            <span>{t.chat_album_btn}</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="chat-attach-menu-item"
+            onClick={openCameraPicker}
+          >
+            <Camera className="chat-attach-menu-icon" aria-hidden />
+            <span>{t.chat_camera_btn}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const inputField = (
+    <input
+      ref={chatInputRef}
+      type="text"
+      aria-busy={isSendingText}
+      onKeyDown={handleKeyDown}
+      className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
+      placeholder={t.chat_placeholder}
+    />
+  );
+
   return (
-    <section className="content-section chat-widget-section">
-      <div className="section-header chat-section-header">
-        <h3 className="section-title">{t.section_title_chat}</h3>
+    <section
+      className={`content-section chat-widget-section${isKidsTheme ? ' chat-widget-section--kids' : ''}`}
+    >
+      {isKidsTheme ? <KidsChatDecorations /> : null}
+      <div className="section-header chat-section-header relative z-[3]">
+        {isKidsTheme ? (
+          <>
+            <h3 className="sr-only">{t.section_title_chat}</h3>
+            <img src="/family-chat/title.png" alt="" className="chat-kids-title" />
+          </>
+        ) : (
+          <h3 className="section-title">{t.section_title_chat}</h3>
+        )}
       </div>
-      <div className="section-body chat-section-body">
+      <div className="section-body chat-section-body relative z-[3]">
         <div ref={chatBoxRef} className="chat-messages">
           {chatHasMoreOlder && (
             <div className="text-center" style={{ padding: '2cqmin 0 1cqmin' }}>
@@ -159,7 +262,7 @@ export function FamilyChatSection({
                       </span>
                     </>
                   )}
-                  <span>
+                  <span className={isKidsTheme && m.sender_id === userId ? 'chat-kids-me' : undefined}>
                     {m.sender_id === userId
                       ? m.user === '나'
                         ? m.user
@@ -233,57 +336,38 @@ export function FamilyChatSection({
           ))}
         </div>
         <div className="chat-input-wrapper" style={{ gap: '1.5cqmin' }}>
-          <input
-            ref={chatInputRef}
-            type="text"
-            aria-busy={isSendingText}
-            onKeyDown={handleKeyDown}
-            className={`chat-input min-w-0 flex-1 ${isSendingText ? 'opacity-[0.85]' : 'opacity-100'}`}
-            placeholder={t.chat_placeholder}
-          />
-          <div ref={attachMenuRef} className="chat-attach-wrap">
+          {isKidsTheme ? (
+            <div className="chat-kids-composer">
+              <span className="chat-kids-mic" aria-hidden>
+                <Mic className="chat-kids-mic-icon" />
+              </span>
+              {inputField}
+              <span className="chat-kids-add" aria-hidden>
+                <Plus className="chat-kids-add-plus" />
+                <span className="chat-kids-add-label">Add</span>
+              </span>
+              {attachControls}
+            </div>
+          ) : (
+            <>
+              {inputField}
+              {attachControls}
+            </>
+          )}
+          <div className={isKidsTheme ? 'chat-kids-send-cluster' : undefined}>
             <button
               type="button"
-              onClick={() => setAttachMenuOpen((open) => !open)}
-              className="chat-attach-btn"
-              aria-label={t.chat_attach_btn_aria}
-              aria-expanded={attachMenuOpen}
-              aria-haspopup="menu"
+              onClick={handleSendClick}
+              disabled={isSendingText}
+              className={`btn-send ${isSendingText ? 'opacity-70' : 'opacity-100'}`}
             >
-              <Camera className="chat-attach-icon" aria-hidden />
-              <Paperclip className="chat-attach-icon" aria-hidden />
+              {t.chat_send}
+              {isKidsTheme ? <Send className="chat-kids-send-icon" aria-hidden /> : null}
             </button>
-            {attachMenuOpen && (
-              <div role="menu" className="chat-attach-menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="chat-attach-menu-item"
-                  onClick={openAlbumPicker}
-                >
-                  <ImageIcon className="chat-attach-menu-icon" aria-hidden />
-                  <span>{t.chat_album_btn}</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="chat-attach-menu-item"
-                  onClick={openCameraPicker}
-                >
-                  <Camera className="chat-attach-menu-icon" aria-hidden />
-                  <span>{t.chat_camera_btn}</span>
-                </button>
-              </div>
-            )}
+            {isKidsTheme ? (
+              <img src="/family-chat/emojis/rocket.png" alt="" className="chat-kids-rocket" aria-hidden />
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={handleSendClick}
-            disabled={isSendingText}
-            className={`btn-send ${isSendingText ? 'opacity-70' : 'opacity-100'}`}
-          >
-            {t.chat_send}
-          </button>
           <input
             ref={chatFileInputRef}
             type="file"
