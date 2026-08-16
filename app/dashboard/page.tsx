@@ -227,7 +227,7 @@ function eventsSignature(events: ReadonlyArray<FamilyEvent>): string {
   return events
     .map(
       (e) =>
-        `${e.id}:${e.event_date}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.supabaseId ?? ''}`,
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}:${e.supabaseId ?? ''}`,
     )
     .join('|');
 }
@@ -1637,7 +1637,7 @@ export default function FamilyHub() {
     const notifEl = row.querySelector('[data-notification-center]') as HTMLElement | null;
     const btnWidth = (adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0)
       + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
-    return Math.max(120, row.clientWidth - btnWidth - 4);
+    return Math.max(120, row.clientWidth - btnWidth - 16);
   }, [frameIsPortrait, titleRole, isAdminTitleContext]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
@@ -1662,7 +1662,6 @@ export default function FamilyHub() {
 
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
-    if (!frameIsPortrait && isDefaultDashboardTitle) return null;
     const maxWidth = getTitleFitMaxWidth();
     const fontFamily = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1673,25 +1672,24 @@ export default function FamilyHub() {
     const letterSpacing = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
       : customTitleLetterSpacing;
-    if (frameIsPortrait && isDefaultDashboardTitle) {
+    if (isDefaultDashboardTitle) {
       return fitAppTitleFontSizeToWidth(
         dashboardTitleText,
-        maxWidth,
-        DEFAULT_APP_TITLE_MIN_PX_PORTRAIT,
-        Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT),
+        frameIsPortrait ? maxWidth : Math.max(120, maxWidth - 8),
+        frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin,
+        frameIsPortrait
+          ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+          : Math.min(customFontSizeCap ?? 68, 68),
         titleFont.fontFamily,
         titleFont.fontWeight,
         letterSpacing,
       );
     }
-    const maxPx = isDefaultDashboardTitle
-      ? Math.min(customFontSizeCap ?? 68, titleFontMin + 8)
-      : titleFitMaxPx;
     return fitFontSizeToWidth(
       dashboardTitleText,
       maxWidth,
       CUSTOM_TITLE_FONT_MIN_PX,
-      maxPx,
+      titleFitMaxPx,
       fontFamily,
       fontWeight,
       letterSpacing,
@@ -1713,12 +1711,18 @@ export default function FamilyHub() {
 
   const measureCustomTitleFontSize = useCallback(() => {
     if (!frameIsPortrait && isDefaultDashboardTitle) {
-      setCustomTitleFontSize((prev) => (prev === null ? prev : null));
-      setPortraitTitleMaxWidthPx((prev) =>
-        prev === DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait
-          ? prev
-          : DASHBOARD_PHOTO_FRAME_MAX_WIDTH_PX.portrait,
+      const maxWidth = Math.max(120, getTitleFitMaxWidth() - 8);
+      const letterSpacing = effectiveTitleStyle?.letterSpacing ?? -0.5;
+      const fitted = fitAppTitleFontSizeToWidth(
+        dashboardTitleText,
+        maxWidth,
+        titleFontMin,
+        Math.min(customFontSizeCap ?? 68, 68),
+        titleFont.fontFamily,
+        titleFont.fontWeight,
+        letterSpacing,
       );
+      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
       return;
     }
 
@@ -2669,12 +2673,6 @@ export default function FamilyHub() {
         return;
       }
 
-      // 기존 구독 정리
-      if (subscriptionsRef.current.presence) {
-        supabase.removeChannel(subscriptionsRef.current.presence);
-        subscriptionsRef.current.presence = null;
-      }
-
       if (!currentGroupId) {
         setOnlineUsers([]);
         return;
@@ -2749,8 +2747,28 @@ export default function FamilyHub() {
       };
 
       // Presence는 그룹당 하나의 채널만 사용해야 함(세션마다 다른 realtimeSubscriptionId를 넣으면 상대방과 방이 분리됨)
+      const presenceTopic = `online_users:${currentGroupId}`;
+      const isPresenceTopic = (ch: { topic?: string }) => {
+        const topic = ch.topic ?? '';
+        return topic === presenceTopic || topic === `realtime:${presenceTopic}`;
+      };
+      const leftoverPresence = supabase.getChannels().filter(isPresenceTopic);
+      const reusablePresence = leftoverPresence.find((ch) => ch.state === 'joined' || ch.state === 'joining');
+      if (reusablePresence) {
+        subscriptionsRef.current.presence = reusablePresence;
+        return;
+      }
+
+      const bindPresenceChannel = () => {
+      const alreadyBound = supabase.getChannels().find(
+        (ch) => isPresenceTopic(ch) && (ch.state === 'joined' || ch.state === 'joining'),
+      );
+      if (alreadyBound) {
+        subscriptionsRef.current.presence = alreadyBound;
+        return;
+      }
       const presenceSubscription = supabase
-      .channel(`online_users:${currentGroupId}`)
+      .channel(presenceTopic)
       .on('presence', { event: 'sync' }, async () => {
         const state = presenceSubscription.presenceState();
         const usersList = await buildOnlineUsersListFromPresence(state);
@@ -2795,6 +2813,22 @@ export default function FamilyHub() {
           // 네트워크 재연결이나 페이지 포커스 시 useEffect가 자동으로 재실행됨
         }
       });
+        subscriptionsRef.current.presence = presenceSubscription;
+      };
+
+      if (leftoverPresence.length > 0) {
+        void Promise.all(leftoverPresence.map((ch) => supabase.removeChannel(ch))).finally(() => {
+          const again = supabase.getChannels().filter(isPresenceTopic);
+          const joined = again.find((ch) => ch.state === 'joined' || ch.state === 'joining');
+          if (joined) {
+            subscriptionsRef.current.presence = joined;
+            return;
+          }
+          bindPresenceChannel();
+        });
+        return;
+      }
+      bindPresenceChannel();
     };
 
     // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
@@ -3337,7 +3371,13 @@ export default function FamilyHub() {
       (data || []).forEach((p: { id: string; nickname?: string | null; email?: string }) => {
         map[p.id] = p.nickname || p.email || p.id?.substring(0, 8) || '알 수 없음';
       });
-      setEventAuthorNames(map);
+      setEventAuthorNames((prev) => {
+        const keys = Object.keys(map);
+        if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === map[k])) {
+          return prev;
+        }
+        return map;
+      });
     })();
   }, [state.events, state.messages]);
 
@@ -6075,6 +6115,8 @@ export default function FamilyHub() {
     if (dashboardShell === 'web-preview' && previewOrientation === 'portrait') {
       return `${customFontSizeCap != null ? Math.min(customFontSizeCap, 42) : 42}px`;
     }
+    const px = customTitleFontSize ?? estimatedCustomTitleFontSize;
+    if (px) return `${px}px`;
     return `clamp(${titleFontMin}px, ${titleVw}vw, ${customFontSizeCap ?? 68}px)`;
   })();
   const dashboardTitleStyle: React.CSSProperties = {
@@ -6082,6 +6124,7 @@ export default function FamilyHub() {
     flex: '1 1 0%',
     minWidth: 0,
     maxWidth: '100%',
+    paddingRight: 12,
     lineHeight: frameIsPortrait ? 1.15 : undefined,
     textAlign: 'left',
     whiteSpace: 'nowrap' as const,

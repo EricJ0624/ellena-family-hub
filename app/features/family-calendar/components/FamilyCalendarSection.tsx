@@ -13,6 +13,12 @@ import type { CalendarEventSubmitPayload } from './CalendarEventModal';
 import type { LangCode } from '@/lib/language-fonts';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import type { UiTheme } from '@/lib/ui-theme';
+import {
+  isKidsCongratsFrame,
+  kidsCongratsVariant,
+  kidsStickerFromTitles,
+  layoutKidsIdleDecos,
+} from '../kids-decorations';
 
 /** 레이아웃은 공통, 색·그라데이션만 테마별 — 모듈 상수로 매 렌더 할당을 막음 */
 const CALENDAR_SKINS = {
@@ -67,57 +73,30 @@ function calendarSkin(theme: UiTheme) {
 type CalendarSkin = (typeof CALENDAR_SKINS)[keyof typeof CALENDAR_SKINS];
 type CalendarGridCell =
   | { type: 'empty' }
-  | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsEmoji: string | null };
+  | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsSticker: string | null };
 
-const KIDS_IDLE_DECO = {
-  rainbow: '/family-calendar/emojis/rainbow.png',
-  rainbow2: '/family-calendar/emojis/rainbow-2.png',
-  firework: '/family-calendar/emojis/firework.png',
-  firework2: '/family-calendar/emojis/firework-2.png',
-  shootingStar: '/family-calendar/emojis/shooting-star.png',
-  star: '/family-calendar/emojis/star.png',
-  earth: '/family-calendar/emojis/earth.png',
-  planet: '/family-calendar/emojis/planet.png',
-  dog: '/family-calendar/emojis/dog.png',
-  family: '/family-calendar/emojis/family.png',
-  stroller: '/family-calendar/emojis/stroller.png',
-} as const;
-
-/** Kids 평상시 장식. 클릭을 가리지 않고, 일정/폭죽 연출과는 분리한다. */
-function KidsIdleDecorations() {
+/** Kids 평상시 장식. 연월이 바뀌면 자리만 섞고, 글자·숫자·버튼은 피한다. */
+const KidsIdleDecorations = memo(function KidsIdleDecorations({
+  year,
+  month,
+}: {
+  year: number;
+  month: number;
+}) {
+  const items = useMemo(() => layoutKidsIdleDecos(year, month), [year, month]);
   return (
     <div className="pointer-events-none absolute inset-0 z-[2] overflow-hidden bg-transparent" aria-hidden>
-      <img src={KIDS_IDLE_DECO.rainbow} alt="" className="absolute top-[1.2cqmin] right-[18cqmin] w-[14cqmin] rotate-[-12deg] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.firework} alt="" className="absolute top-[0.6cqmin] right-[30cqmin] w-[9cqmin] rotate-[8deg] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.family} alt="" className="absolute top-[1.4cqmin] right-[6cqmin] w-[11cqmin] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.dog} alt="" className="absolute top-[7.2cqmin] right-[20cqmin] w-[7.5cqmin] -rotate-6 bg-transparent" />
-      <img src={KIDS_IDLE_DECO.firework2} alt="" className="absolute top-[11cqmin] left-[38cqmin] w-[7.5cqmin] -rotate-12 bg-transparent" />
-      <img src={KIDS_IDLE_DECO.earth} alt="" className="absolute top-[15.5cqmin] left-[1cqmin] w-[7.5cqmin] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.stroller} alt="" className="absolute right-[16cqmin] bottom-[14cqmin] w-[8.5cqmin] rotate-6 bg-transparent" />
-      <img src={KIDS_IDLE_DECO.planet} alt="" className="absolute right-[3cqmin] bottom-[15cqmin] w-[8.5cqmin] rotate-[18deg] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.shootingStar} alt="" className="absolute top-[36cqmin] left-[4cqmin] w-[20cqmin] rotate-[18deg] bg-transparent opacity-90" />
-      <img src={KIDS_IDLE_DECO.shootingStar} alt="" className="absolute top-[54cqmin] right-[3cqmin] w-[16cqmin] -scale-x-100 rotate-[-8deg] bg-transparent opacity-80" />
-      <img src={KIDS_IDLE_DECO.star} alt="" className="absolute top-[40cqmin] right-[22cqmin] w-[4.5cqmin] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.star} alt="" className="absolute top-[62cqmin] left-[3cqmin] w-[3.8cqmin] bg-transparent" />
-      <img src={KIDS_IDLE_DECO.rainbow2} alt="" className="absolute bottom-[16cqmin] left-[1.5cqmin] w-[12cqmin] rotate-[-6deg] bg-transparent opacity-85" />
+      {items.map((item, index) => (
+        <img
+          key={`${item.src}-${index}`}
+          src={item.src}
+          alt=""
+          className={`absolute bg-transparent ${item.className}`}
+        />
+      ))}
     </div>
   );
-}
-
-function kidsEmojiFromTitles(titles: string[]): string {
-  const text = titles.join(' ').toLowerCase();
-  if (/생일|birthday|cake|케이크/.test(text)) return '🎂';
-  if (/여행|travel|trip|vacation|비행|flight/.test(text)) return '✈️';
-  if (/학교|school|수업|class|학원/.test(text)) return '📚';
-  if (/병원|doctor|dentist|치과|의원/.test(text)) return '🏥';
-  if (/운동|gym|sport|축구|야구|수영/.test(text)) return '⚽';
-  if (/파티|party|festival|축제/.test(text)) return '🎉';
-  if (/결혼|wedding/.test(text)) return '💒';
-  if (/가족|family/.test(text)) return '👨‍👩‍👧‍👦';
-  if (/집|home|house|이사/.test(text)) return '🏠';
-  if (/음악|music|concert|콘서트/.test(text)) return '🎵';
-  return '⭐';
-}
+});
 
 const CalendarMonthGrid = memo(function CalendarMonthGrid({
   calendarGrid,
@@ -152,6 +131,12 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   onSelectDate: (date: Date) => void;
   onAdd: () => void;
 }) {
+  const [rocketTick, setRocketTick] = useState(0);
+  const handleAddClick = () => {
+    if (isKidsTheme) setRocketTick((tick) => tick + 1);
+    onAdd();
+  };
+
   return (
     <div className="calendar-widget-cq-frame">
       <section
@@ -164,7 +149,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
           paddingTop: '4.5cqmin',
         }}
       >
-        {isKidsTheme ? <KidsIdleDecorations /> : null}
+        {isKidsTheme ? <KidsIdleDecorations year={calendarGrid.year} month={calendarGrid.month} /> : null}
         <div className="section-header calendar-section-header" style={{ marginBottom: '2.5cqmin' }}>
           <h3
             className="section-title m-0 flex items-center calendar-section-title"
@@ -256,49 +241,87 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                     return <div key={`empty-${i}`} aria-hidden />;
                   }
                   const isSelected = selectedDate && selectedDate.getTime() === cell.date.getTime();
+                  const congratsFrame = isKidsTheme && isKidsCongratsFrame(cell.kidsSticker);
+                  const congratsVariant = congratsFrame && cell.kidsSticker
+                    ? kidsCongratsVariant(cell.kidsSticker)
+                    : null;
                   return (
                     <button
                       key={cell.day}
                       type="button"
                       onClick={() => onSelectDate(cell.date)}
+                      data-congrats={congratsVariant ?? undefined}
                       style={{
-                        background: isSelected
-                          ? skin.selectedBg
-                          : cell.isToday
-                            ? (uiTheme === 'highend_glass' ? 'rgba(251, 191, 36, 0.85)' : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)')
-                            : cell.eventCount > 0
-                              ? skin.cellEvent
-                              : skin.cellIdle,
-                        color: isSelected || cell.isToday ? '#fff' : cell.eventCount > 0 ? skin.cellEventText : skin.cellText,
-                        fontWeight: cell.isToday || isSelected || cell.eventCount > 0 ? '700' : '500',
-                        boxShadow: uiTheme === 'highend_glass'
-                          ? 'none'
-                          : isSelected
-                            ? '0 4px 12px rgba(124, 58, 237, 0.4), inset 0 -2px 4px rgba(0,0,0,0.15)'
+                        background: congratsFrame
+                          ? isSelected
+                            ? 'rgba(124,58,237,0.16)'
                             : cell.isToday
-                              ? '0 4px 12px rgba(245, 158, 11, 0.4), inset 0 -2px 4px rgba(0,0,0,0.15)'
+                              ? 'rgba(251,191,36,0.2)'
+                              : 'transparent'
+                          : isSelected
+                            ? skin.selectedBg
+                            : cell.isToday
+                              ? (uiTheme === 'highend_glass' ? 'rgba(251, 191, 36, 0.85)' : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)')
                               : cell.eventCount > 0
-                                ? '0 2px 6px rgba(124, 58, 237, 0.2)'
-                                : skin.cellIdleShadow,
+                                ? skin.cellEvent
+                                : skin.cellIdle,
+                        color: congratsFrame
+                          ? isSelected
+                            ? '#5b21b6'
+                            : '#1e293b'
+                          : isSelected || cell.isToday ? '#fff' : cell.eventCount > 0 ? skin.cellEventText : skin.cellText,
+                        fontWeight: cell.isToday || isSelected || cell.eventCount > 0 ? '700' : '500',
+                        boxShadow: congratsFrame
+                          ? isSelected
+                            ? '0 0 0 0.35cqmin #7c3aed'
+                            : 'none'
+                          : uiTheme === 'highend_glass'
+                            ? 'none'
+                            : isSelected
+                              ? '0 4px 12px rgba(124, 58, 237, 0.4), inset 0 -2px 4px rgba(0,0,0,0.15)'
+                              : cell.isToday
+                                ? '0 4px 12px rgba(245, 158, 11, 0.4), inset 0 -2px 4px rgba(0,0,0,0.15)'
+                                : cell.eventCount > 0
+                                  ? '0 2px 6px rgba(124, 58, 237, 0.2)'
+                                  : skin.cellIdleShadow,
                         borderRadius: '14px',
                       }}
-                      className="calendar-day-cell focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+                      className={`calendar-day-cell focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60${
+                        congratsFrame ? ' calendar-day-cell--congrats' : ''
+                      }`}
                     >
-                      <span>{cell.day}</span>
-                      {cell.kidsEmoji ? (
-                        <span style={{ fontSize: '3.2cqmin', lineHeight: 1 }} aria-hidden>
-                          {cell.kidsEmoji}
-                        </span>
+                      {congratsFrame && cell.kidsSticker ? (
+                        <>
+                          <img
+                            src={cell.kidsSticker}
+                            alt=""
+                            aria-hidden
+                            className="calendar-day-cell-congrats-frame"
+                          />
+                          <span className="calendar-day-cell-congrats-num">{cell.day}</span>
+                        </>
                       ) : (
-                        cell.eventCount > 0 && (
-                          <span
-                            className={`calendar-day-cell-count ${
-                              isSelected || cell.isToday ? 'text-white/90' : 'text-violet-600'
-                            }`}
-                          >
-                            {cell.eventCount}개
-                          </span>
-                        )
+                        <>
+                          <span>{cell.day}</span>
+                          {cell.kidsSticker ? (
+                            <img
+                              src={cell.kidsSticker}
+                              alt=""
+                              aria-hidden
+                              className="mt-[0.2cqmin] h-[3.2cqmin] w-[3.2cqmin] bg-transparent object-contain"
+                            />
+                          ) : (
+                            cell.eventCount > 0 && (
+                              <span
+                                className={`calendar-day-cell-count ${
+                                  isSelected || cell.isToday ? 'text-white/90' : 'text-violet-600'
+                                }`}
+                              >
+                                {cell.eventCount}개
+                              </span>
+                            )
+                          )}
+                        </>
                       )}
                     </button>
                   );
@@ -306,34 +329,45 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onAdd}
-            className="calendar-kids-add-btn w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
-            style={{
-              padding: '2.8cqmin 3cqmin',
-              borderRadius: '999px',
-              background: skin.addBg,
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: '4.2cqmin',
-              border: 'none',
-              outline: 'none',
-              boxShadow: 'none',
-              WebkitAppearance: 'none',
-              appearance: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '1.5cqmin',
-            }}
-          >
-            <Plus className="calendar-add-btn-icon" />
-            {addLabel}
-          </button>
+          <div className="relative w-full">
+            {isKidsTheme && rocketTick > 0 ? (
+              <img
+                key={rocketTick}
+                src="/family-calendar/emojis/rocket.png"
+                alt=""
+                aria-hidden
+                className="calendar-kids-rocket pointer-events-none absolute left-1/2 z-[3] w-[16cqmin] bg-transparent"
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={handleAddClick}
+              className="calendar-kids-add-btn w-full rounded-full border-0 outline-none appearance-none transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:outline-none"
+              style={{
+                padding: '2.8cqmin 3cqmin',
+                borderRadius: '999px',
+                background: skin.addBg,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '4.2cqmin',
+                border: 'none',
+                outline: 'none',
+                boxShadow: 'none',
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '1.5cqmin',
+              }}
+            >
+              <Plus className="calendar-add-btn-icon" />
+              {addLabel}
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -546,7 +580,7 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         day: d,
         isToday: key === todayKey,
         eventCount,
-        kidsEmoji: titles.length > 0 ? kidsEmojiFromTitles(titles) : null,
+        kidsSticker: titles.length > 0 ? kidsStickerFromTitles(titles, key) : null,
       });
     }
 
@@ -624,7 +658,9 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
         onEventsChange(nextEvents);
       });
       if (isKidsThemeRef.current) {
-        fireUpdateConfetti();
+        requestAnimationFrame(() => {
+          window.setTimeout(fireUpdateConfetti, 0);
+        });
       }
 
       updateEvent({

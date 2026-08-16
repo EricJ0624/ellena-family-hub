@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   closeCalendarEventModal,
   getCalendarEventModalSnapshot,
   subscribeCalendarEventModal,
 } from '../calendar-event-modal-store';
 import { CalendarEventModal } from './CalendarEventModal';
+import type { CalendarEventSubmitPayload } from './CalendarEventModal';
 
 /**
  * 루트 레이아웃에 마운트한다. 대시보드/캘린더 위젯과 형제라서
@@ -14,8 +15,16 @@ import { CalendarEventModal } from './CalendarEventModal';
  */
 export function CalendarEventModalHost() {
   const [snap, setSnap] = useState(getCalendarEventModalSnapshot);
+  const snapRef = useRef(snap);
+  snapRef.current = snap;
 
   useEffect(() => subscribeCalendarEventModal(() => setSnap(getCalendarEventModalSnapshot())), []);
+
+  const handleSubmit = useCallback((payload: CalendarEventSubmitPayload) => {
+    const submit = snapRef.current?.onSubmit;
+    closeCalendarEventModal();
+    submit?.(payload);
+  }, []);
 
   if (!snap) return null;
 
@@ -33,11 +42,7 @@ export function CalendarEventModalHost() {
       translations={snap.translations}
       sanitizeInput={snap.sanitizeInput}
       onClose={closeCalendarEventModal}
-      onSubmit={(payload) => {
-        const submit = snap.onSubmit;
-        closeCalendarEventModal();
-        submit(payload);
-      }}
+      onSubmit={handleSubmit}
     />
   );
 }

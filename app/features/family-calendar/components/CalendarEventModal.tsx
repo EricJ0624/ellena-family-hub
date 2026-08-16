@@ -60,12 +60,24 @@ type CalendarEventModalProps = {
 };
 
 /**
- * 폼 상태를 캘린더 그리드와 분리한다.
- * 모달 버튼 클릭이 FamilyCalendarSection(container-type:size + cqmin)을 다시 그리면
- * Windows Chrome 메인스레드가 멈춘다.
+ * 오버레이(TopLayerDialog)는 열림/닫힘만 다시 그린다.
+ * 제목·날짜 입력 state는 안쪽 폼에만 둔다. 키 입력마다 포탈 셸이 다시 그려지면
+ * Windows Chrome이 뒤 대시보드(cqmin)까지 다시 합성하며 멈춘다.
  */
 export const CalendarEventModal = memo(function CalendarEventModal({
   open,
+  onClose,
+  ...formProps
+}: CalendarEventModalProps) {
+  if (!open) return null;
+  return (
+    <TopLayerDialog open onClose={onClose}>
+      <CalendarEventForm {...formProps} onClose={onClose} />
+    </TopLayerDialog>
+  );
+});
+
+function CalendarEventForm({
   isKidsTheme,
   initialDate,
   editingEvent,
@@ -73,7 +85,7 @@ export const CalendarEventModal = memo(function CalendarEventModal({
   sanitizeInput,
   onClose,
   onSubmit,
-}: CalendarEventModalProps) {
+}: Omit<CalendarEventModalProps, 'open'>) {
   const dateRowRef = useRef<HTMLDivElement>(null);
   const startDate = editingEvent?.event_date
     ? new Date(editingEvent.event_date + 'T12:00:00')
@@ -126,8 +138,6 @@ export const CalendarEventModal = memo(function CalendarEventModal({
     });
   };
 
-  if (!open) return null;
-
   const startStr = toDateStr(eventFormDate);
   const isRange = !!(eventForm.endDateStr && eventForm.endDateStr > startStr);
 
@@ -168,7 +178,6 @@ export const CalendarEventModal = memo(function CalendarEventModal({
   const navBtnCls = `flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold transition-colors ${isKidsTheme ? 'text-violet-600 hover:bg-violet-100' : 'text-slate-500 hover:bg-slate-100'}`;
 
   return (
-    <TopLayerDialog open={open} onClose={onClose}>
       <div
         className="relative w-[min(92vw,480px)] rounded-[28px] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
         style={
@@ -457,6 +466,5 @@ export const CalendarEventModal = memo(function CalendarEventModal({
           </button>
         </div>
       </div>
-    </TopLayerDialog>
   );
-});
+}

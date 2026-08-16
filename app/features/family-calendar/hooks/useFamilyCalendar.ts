@@ -23,6 +23,16 @@ interface UseFamilyCalendarProps {
   currentEvents: FamilyEvent[];
 }
 
+function eventsContentSignature(events: ReadonlyArray<FamilyEvent>): string {
+  if (!events.length) return '';
+  return events
+    .map(
+      (e) =>
+        `${e.id}:${e.event_date}:${e.end_date ?? ''}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}`,
+    )
+    .join('|');
+}
+
 /** 돋보기 리마운트 시 싱글톤 채널 핸들러가 언마운트된 인스턴스 ref를 보지 않도록 모듈에 둔다 */
 const calendarRt = {
   events: { current: [] as FamilyEvent[] },
@@ -340,8 +350,8 @@ export function useFamilyCalendar({
         });
 
         if (formattedEvents.length > 0) {
-          const nextSig = formattedEvents.map((e) => `${e.id}:${e.event_date}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}`).join('|');
-          const prevSig = calendarRt.events.current.map((e) => `${e.id}:${e.event_date}:${e.title}:${e.desc}:${e.repeat_type ?? 'none'}`).join('|');
+          const nextSig = eventsContentSignature(formattedEvents);
+          const prevSig = eventsContentSignature(calendarRt.events.current);
           if (nextSig !== prevSig) onEventsChange(formattedEvents);
         }
       }
@@ -423,23 +433,24 @@ export function useFamilyCalendar({
               ? updatedEvent.repeat_type
               : 'none';
 
-          onEventsChange(
-            latestEvents.map((e) =>
-              e.id === updatedEvent.id
-                ? {
-                    ...e,
-                    id: updatedEvent.id,
-                    month: month,
-                    day: day,
-                    title: decryptedTitle,
-                    desc: decryptedDesc,
-                    event_date: eventDateStr,
-                    end_date: updatedEvent.end_date || undefined,
-                    repeat_type: repeatType,
-                  }
-                : e
-            )
+          const nextEvents = latestEvents.map((e) =>
+            String(e.id) === String(updatedEvent.id)
+              ? {
+                  ...e,
+                  id: updatedEvent.id,
+                  month: month,
+                  day: day,
+                  title: decryptedTitle,
+                  desc: decryptedDesc,
+                  event_date: eventDateStr,
+                  end_date: updatedEvent.end_date || undefined,
+                  repeat_type: repeatType,
+                }
+              : e,
           );
+          if (eventsContentSignature(nextEvents) !== eventsContentSignature(latestEvents)) {
+            onEventsChange(nextEvents);
+          }
           return;
         }
 

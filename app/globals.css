@@ -3341,6 +3341,39 @@ select:not(.chalkboard-form-input) {
     overflow: hidden;
   }
 
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell--congrats {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell-congrats-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    background: transparent;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell-congrats-num {
+    position: relative;
+    z-index: 1;
+    font-size: 3.2cqmin;
+    line-height: 1;
+    text-shadow:
+      0 0 0.35cqmin #fff,
+      0 0 0.7cqmin #fff8;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell--congrats[data-congrats='2'] .calendar-day-cell-congrats-num {
+    transform: translateY(-0.55cqmin);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-day-cell--congrats[data-congrats='3'] .calendar-day-cell-congrats-num {
+    transform: translateY(0.15cqmin);
+  }
+
   .calendar-kids-month-glow {
     background: linear-gradient(
       90deg,
@@ -3352,6 +3385,25 @@ select:not(.chalkboard-form-input) {
     );
     filter: blur(2.8cqmin);
     opacity: 0.95;
+  }
+
+  @keyframes calendar-kids-rocket-fly {
+    0% {
+      transform: translate(-50%, 0) scale(0.55);
+      opacity: 0;
+    }
+    18% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(-50%, -30cqmin) scale(1.05);
+      opacity: 0;
+    }
+  }
+
+  .calendar-kids-rocket {
+    bottom: 2cqmin;
+    animation: calendar-kids-rocket-fly 0.7s ease-out forwards;
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-kids-add-btn {
