@@ -1139,7 +1139,7 @@ select:not(.chalkboard-form-input) {
   letter-spacing: 0.04em;
 }
 
-/* Frame: 높이 = max(rowSpan 최소, 임무 내용). PNG는 frame 박스에 100% 100% — flex:1/100% 고정 금지 */
+/* Frame: 기본 = 그리드 칸(--tasks-min-h). 빈 화면·1줄은 칸 유지, 칸을 넘는 임무만 성장. */
 .chalkboard-frame {
   --cb-h: calc(100cqw * 716 / 1024);
   container-type: inline-size;
@@ -1180,6 +1180,10 @@ select:not(.chalkboard-form-input) {
     var(--chalkboard-inset-left);
   box-shadow: none;
   overflow: hidden;
+}
+
+.chalkboard-frame:has(.chalkboard-empty-state) {
+  height: var(--tasks-min-h, auto);
 }
 
 .chalkboard-frame:has(.chalkboard-empty-state) .chalkboard-container {
@@ -1271,6 +1275,12 @@ select:not(.chalkboard-form-input) {
   pointer-events: auto;
 }
 
+.chalkboard-top-bar .chalkboard-btn-add {
+  padding: 1.2cqw 2.7cqw;
+  min-height: 8.4cqw;
+  font-size: 4cqw;
+}
+
 /* Icons on background PNG; + ADD centered below house/sun/heart (CSS) */
 .chalkboard-top-actions {
   position: absolute;
@@ -1281,14 +1291,14 @@ select:not(.chalkboard-form-input) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* PNG(1024×716) icon row — button just under icons */
-  padding-top: max(calc(var(--cb-h) * 0.32 - 4cqw), 0px);
+  /* PNG(1024×716) icon row — slightly above previous rest position */
+  padding-top: max(calc(var(--cb-h) * 0.27 - 4cqw), 0px);
   gap: 1.5cqw;
 }
 
 @container chalkboard (max-width: 280px) {
   .chalkboard-top-actions {
-    padding-top: max(calc(var(--cb-h) * 0.30 - 3cqw), 0px);
+    padding-top: max(calc(var(--cb-h) * 0.25 - 3cqw), 0px);
   }
   .chalkboard-top-bar {
     min-height: calc(var(--cb-h) * 0.36);
@@ -1322,8 +1332,8 @@ select:not(.chalkboard-form-input) {
   min-height: 0;
   align-items: center;
   justify-content: center;
-  padding-top: 3cqw;
-  padding-bottom: 8cqw;
+  padding-top: 1.5cqw;
+  padding-bottom: 3cqw;
 }
 
 .chalkboard-task-area .todo-list {
@@ -1451,36 +1461,43 @@ select:not(.chalkboard-form-input) {
 }
 
 .todo-checkbox {
-  width: 7.5cqw;
-  height: 7.5cqw;
-  border-radius: 255px 6px 225px 6px / 6px 225px 6px 255px;
-  border: 0.16cqw solid rgba(255, 255, 255, 0.9);
+  width: 5.25cqw;
+  height: 5.25cqw;
+  border-radius: 1.2cqw 0.55cqw 1.35cqw 0.5cqw / 0.6cqw 1.25cqw 0.45cqw 1.1cqw;
+  border: 2px solid rgba(255, 248, 235, 0.72);
   background: transparent;
+  color: rgba(255, 248, 235, 0.86);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
-  box-shadow:
-    0 0 0.16cqw rgba(255, 255, 255, 0.3),
-    0 0.16cqw 0.32cqw rgba(0, 0, 0, 0.25);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease;
+  filter: url('#chalkboard-chalk-texture');
+  box-shadow: none;
 }
 
 .todo-checkbox:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 248, 235, 0.84);
+  filter: url('#chalkboard-chalk-texture') brightness(1.06);
 }
 
 .todo-checkbox-checked {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: #ffffff;
+  background-color: rgba(255, 248, 235, 0.12);
+  border-color: rgba(255, 248, 235, 0.86);
 }
 
 .todo-checkmark {
-  width: 5cqw;
-  height: 5cqw;
-  color: #ffffff;
-  stroke-width: 0.24cqw;
-  filter: drop-shadow(0 0.08cqw 0.16cqw rgba(0, 0, 0, 0.3));
+  width: 3.5cqw;
+  height: 3.5cqw;
+  color: rgba(255, 248, 235, 0.9);
+  stroke-width: 0.28cqw;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .todo-text-wrapper {
@@ -1516,43 +1533,46 @@ select:not(.chalkboard-form-input) {
   white-space: normal;
   overflow-wrap: anywhere;
   max-width: 100%;
-  padding: 1cqw 3cqw;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 255px 8px 225px 8px / 8px 225px 8px 255px;
-  border: 0.08cqw solid rgba(255, 255, 255, 0.25);
 }
 
 .chalkboard-btn-delete {
-  padding: 2cqw;
-  color: #ffffff;
+  padding: 0;
+  width: 5.25cqw;
+  height: 5.25cqw;
+  border-radius: 1.2cqw 0.55cqw 1.35cqw 0.5cqw / 0.6cqw 1.25cqw 0.45cqw 1.1cqw;
+  border: 2px solid rgba(255, 248, 235, 0.72);
   background: transparent;
-  border: 0.16cqw solid #ffffff;
-  border-radius: 0.32cqw;
+  color: rgba(255, 248, 235, 0.86);
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 11cqw;
-  height: 11cqw;
-  box-shadow: 0 0.16cqw 0.32cqw rgba(0, 0, 0, 0.2);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease;
+  filter: url('#chalkboard-chalk-texture');
+  box-shadow: none;
 }
 
 .chalkboard-btn-delete:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #ff6b6b;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 248, 235, 0.84);
+  filter: url('#chalkboard-chalk-texture') brightness(1.06);
 }
 
 .chalkboard-btn-delete:active {
-  transform: scale(0.9);
+  transform: scale(0.96);
 }
 
 .chalkboard-icon-delete {
-  width: 5.25cqw;
-  height: 5.25cqw;
-  stroke-width: 0.24cqw;
-  filter: drop-shadow(0 0.08cqw 0.16cqw rgba(0, 0, 0, 0.3));
+  width: 3.5cqw;
+  height: 3.5cqw;
+  stroke-width: 0.28cqw;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .chalkboard-empty-state {
