@@ -11,6 +11,7 @@ import {
   isValidInviteCodeFormat,
   resolveUserHasGroups,
 } from '@/lib/family-auth-routing';
+import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 
@@ -98,6 +99,18 @@ export default function AuthCallbackPage() {
           else if (fromStorage) invite = fromStorage;
         }
         const onboardingPath = buildOnboardingPath(invite);
+
+        if (hasGroups && !invite) {
+          const access = await loadUserGroupAccess(supabase, user.id);
+          if (access.lookupFailed) {
+            router.push('/access-unavailable');
+            return;
+          }
+          if (access.accessibleGroupIds.length === 0) {
+            router.push('/suspended');
+            return;
+          }
+        }
 
         if (isAdmin) {
           // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로

@@ -38,6 +38,8 @@ export type OnboardingTranslations = {
   error_invite_code_failed: string;
   error_invite_required: string;
   error_invalid_invite: string;
+  error_all_groups_suspended: string;
+  error_target_group_suspended: string;
   error_verify_failed: string;
   error_group_check: string;
   error_join_failed: string;
@@ -111,6 +113,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: '초대 코드 생성에 실패했습니다.',
     error_invite_required: '초대 코드를 입력해주세요.',
     error_invalid_invite: '올바른 초대 코드를 입력해주세요.',
+    error_all_groups_suspended: '가입한 그룹이 모두 정지되어 새 그룹을 만들 수 없습니다.',
+    error_target_group_suspended: '이 그룹은 현재 정지되어 가입할 수 없습니다.',
     error_verify_failed: '초대 코드 검증에 실패했습니다.',
     error_group_check: '그룹 정보를 확인해주세요.',
     error_join_failed: '그룹 가입에 실패했습니다.',
@@ -176,6 +180,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: 'Failed to generate invite code.',
     error_invite_required: 'Please enter the invite code.',
     error_invalid_invite: 'Please enter a valid invite code.',
+    error_all_groups_suspended: 'All of your groups are suspended, so you cannot create a new group.',
+    error_target_group_suspended: 'This group is suspended, so you cannot join.',
     error_verify_failed: 'Failed to verify invite code.',
     error_group_check: 'Please check the group info.',
     error_join_failed: 'Failed to join group.',
@@ -241,6 +247,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: '招待コードの生成に失敗しました。',
     error_invite_required: '招待コードを入力してください。',
     error_invalid_invite: '有効な招待コードを入力してください。',
+    error_all_groups_suspended: '所属グループがすべて停止中のため、新しいグループは作れません。',
+    error_target_group_suspended: 'このグループは停止中のため参加できません。',
     error_verify_failed: '招待コードの確認に失敗しました。',
     error_group_check: 'グループ情報を確認してください。',
     error_join_failed: 'グループの参加に失敗しました。',
@@ -306,6 +314,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: '邀请码生成失败。',
     error_invite_required: '请输入邀请码。',
     error_invalid_invite: '请输入有效的邀请码。',
+    error_all_groups_suspended: '您加入的群组均已停用，无法创建新群组。',
+    error_target_group_suspended: '该群组已停用，无法加入。',
     error_verify_failed: '邀请码验证失败。',
     error_group_check: '请确认群组信息。',
     error_join_failed: '加入群组失败。',
@@ -371,6 +381,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: '邀請碼產生失敗。',
     error_invite_required: '請輸入邀請碼。',
     error_invalid_invite: '請輸入有效的邀請碼。',
+    error_all_groups_suspended: '您加入的群組均已停用，無法建立新群組。',
+    error_target_group_suspended: '此群組已停用，無法加入。',
     error_verify_failed: '邀請碼驗證失敗。',
     error_group_check: '請確認群組資訊。',
     error_join_failed: '加入群組失敗。',
@@ -436,6 +448,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: 'No se pudo generar el código de invitación.',
     error_invite_required: 'Por favor ingrese el código de invitación.',
     error_invalid_invite: 'Ingrese un código de invitación válido.',
+    error_all_groups_suspended: 'Todos sus grupos están suspendidos; no puede crear uno nuevo.',
+    error_target_group_suspended: 'Este grupo está suspendido; no puede unirse.',
     error_verify_failed: 'No se pudo verificar el código de invitación.',
     error_group_check: 'Por favor revisa la información del grupo.',
     error_join_failed: 'No se pudo unir al grupo.',
@@ -501,6 +515,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: 'Échec de la génération du code d\'invitation.',
     error_invite_required: 'Veuillez saisir le code d\'invitation.',
     error_invalid_invite: 'Veuillez saisir un code d\'invitation valide.',
+    error_all_groups_suspended: 'Tous vos groupes sont suspendus ; vous ne pouvez pas en créer un nouveau.',
+    error_target_group_suspended: 'Ce groupe est suspendu ; vous ne pouvez pas le rejoindre.',
     error_verify_failed: 'Échec de la vérification du code d\'invitation.',
     error_group_check: 'Veuillez vérifier les informations du groupe.',
     error_join_failed: 'Impossible de rejoindre le groupe.',
@@ -566,6 +582,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: 'Der Einladungscode konnte nicht generiert werden.',
     error_invite_required: 'Bitte geben Sie den Einladungscode ein.',
     error_invalid_invite: 'Bitte geben Sie einen gültigen Einladungscode ein.',
+    error_all_groups_suspended: 'Alle Ihre Gruppen sind gesperrt; Sie können keine neue erstellen.',
+    error_target_group_suspended: 'Diese Gruppe ist gesperrt; Beitritt nicht möglich.',
     error_verify_failed: 'Der Einladungscode konnte nicht bestätigt werden.',
     error_group_check: 'Bitte überprüfen Sie die Gruppeninformationen.',
     error_join_failed: 'Der Beitritt zur Gruppe ist fehlgeschlagen.',
@@ -631,6 +649,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: 'Impossibile generare il codice di invito.',
     error_invite_required: 'Inserisci il codice di invito.',
     error_invalid_invite: 'Inserisci un codice invito valido.',
+    error_all_groups_suspended: 'Tutti i gruppi sono sospesi; non è possibile crearne uno nuovo.',
+    error_target_group_suspended: 'Questo gruppo è sospeso; non è possibile unirsi.',
     error_verify_failed: 'Impossibile verificare il codice di invito.',
     error_group_check: 'Si prega di controllare le informazioni del gruppo.',
     error_join_failed: 'Impossibile unirsi al gruppo.',
@@ -696,6 +716,8 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_invite_code_failed: 'Falha ao gerar o código de convite.',
     error_invite_required: 'Digite o código de convite.',
     error_invalid_invite: 'Digite um código de convite válido.',
+    error_all_groups_suspended: 'Todos os seus grupos estão suspensos; não é possível criar um novo.',
+    error_target_group_suspended: 'Este grupo está suspenso; não é possível entrar.',
     error_verify_failed: 'Falha ao verificar o código de convite.',
     error_group_check: 'Verifique as informações do grupo.',
     error_join_failed: 'Falha ao entrar no grupo.',

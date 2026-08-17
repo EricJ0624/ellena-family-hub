@@ -20,6 +20,8 @@ import {
   getSessionStoredInviteCode,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
+import { loadUserGroupAccess, messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +93,7 @@ export default function OnboardingPage() {
   // 사용자 그룹 목록 (로그인 시 선택용)
   const [userGroups, setUserGroups] = useState<UserGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [suspendedGroupIds, setSuspendedGroupIds] = useState<string[]>([]);
   
   // 에러 및 성공 메시지
   const [error, setError] = useState<string | null>(null);
@@ -204,8 +207,19 @@ export default function OnboardingPage() {
           });
         }
 
+        const access = await loadUserGroupAccess(supabase, user.id);
+        if (access.lookupFailed) {
+          router.push('/access-unavailable');
+          return;
+        }
+        setSuspendedGroupIds(access.suspendedGroupIds);
+
         // 이미 소속 그룹이 있어도 초대 링크로 들어온 경우에는 먼저 해당 그룹 가입 플로우(join)로 보냄
         if (allGroups.length > 0 && !fromAdminParam && !inviteParam) {
+          if (access.accessibleGroupIds.length === 0) {
+            router.push('/suspended');
+            return;
+          }
           // 그룹이 있으면 선택 화면 표시 (1개여도 선택 화면 표시)
           setUserGroups(allGroups);
           setStep('choose-group');
@@ -391,10 +405,13 @@ export default function OnboardingPage() {
       // 초대코드를 확인한 후에만 대시보드로 이동하도록 함
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
+      const suspendKind = messageFromSuspendRpcError(err?.message);
       setError(
-        isTransientAuthNetworkError(err)
-          ? ot('error_network_retry')
-          : err.message || ot('error_create_failed')
+        suspendKind === 'ALL_GROUPS_SUSPENDED'
+          ? ot('error_all_groups_suspended')
+          : isTransientAuthNetworkError(err)
+            ? ot('error_network_retry')
+            : err.message || ot('error_create_failed')
       );
     } finally {
       setCreating(false);
@@ -558,10 +575,15 @@ export default function OnboardingPage() {
       } else {
         console.error('그룹 가입 오류:', err);
         const raw = supabaseClientErrorText(err) || String(msg || '').trim();
-        const looksTransient =
-          isTransientAuthNetworkError(err) || isTransientAuthNetworkError(raw);
-        // 서버/DB 메시지(만료·무효 코드 등)가 있으면 네트워크 안내로 덮어쓰지 않음
-        setError(looksTransient && !raw ? ot('error_network_retry') : raw || ot('error_join_failed'));
+        const suspendKind = messageFromSuspendRpcError(raw);
+        if (suspendKind === 'GROUP_SUSPENDED') {
+          setError(ot('error_target_group_suspended'));
+        } else {
+          const looksTransient =
+            isTransientAuthNetworkError(err) || isTransientAuthNetworkError(raw);
+          // 서버/DB 메시지(만료·무효 코드 등)가 있으면 네트워크 안내로 덮어쓰지 않음
+          setError(looksTransient && !raw ? ot('error_network_retry') : raw || ot('error_join_failed'));
+        }
       }
     } finally {
       setJoining(false);
@@ -1171,8 +1193,13 @@ export default function OnboardingPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="mb-1 text-base font-semibold text-slate-800">
-                          {getGroupSelectorLabel(group, ct('app_title'))}
+                        <div className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-800">
+                          <span>{getGroupSelectorLabel(group, ct('app_title'))}</span>
+                          {suspendedGroupIds.includes(group.id) && (
+                            <span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-800">
+                              {getAdminSuspendTranslation(lang, 'badge_suspended')}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500">
                           <span>{group.is_owner ? ot('role_owner') : group.role === 'ADMIN' ? ot('role_admin') : ot('role_member')}</span>
@@ -1189,6 +1216,10 @@ export default function OnboardingPage() {
               <button
                 onClick={() => {
                   if (selectedGroupId) {
+                    if (suspendedGroupIds.includes(selectedGroupId)) {
+                      router.push(suspendedPath(selectedGroupId));
+                      return;
+                    }
                     // localStorage만 바꾸면 GroupContext의 currentGroupId는 refreshGroups가 고른 첫 그룹에 머물러
                     // 대시보드가 이전 그룹으로 열리는 버그가 난다. 컨텍스트와 동기화 필수.
                     setCurrentGroupId(selectedGroupId);

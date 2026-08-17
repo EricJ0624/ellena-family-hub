@@ -5,6 +5,7 @@ import { requireAuthUser } from '@/lib/api-guards';
 /**
  * 그룹 탈퇴 API
  * 특정 그룹에서만 나가기 (계정은 유지)
+ * 정지된 그룹에서도 본인 탈퇴는 허용한다.
  */
 export async function POST(request: NextRequest) {
   try {

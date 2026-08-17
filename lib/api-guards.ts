@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from './api-helpers';
 import { checkPermission, isSystemAdmin } from './permissions';
+import { GROUP_SUSPENDED_CODE } from './account-suspend-access';
 import type { MembershipRole } from '@/types/db';
 
 /**
@@ -50,6 +51,28 @@ export async function requireSystemAdmin(userId: string): Promise<void | NextRes
   }
 }
 
+async function rejectIfGroupSuspended(userId: string, groupId: string): Promise<NextResponse | null> {
+  const supabase = getSupabaseServerClient();
+  const { data: suspended, error: suspendError } = await supabase.rpc('is_user_suspended_in_group', {
+    p_user_id: userId,
+    p_group_id: groupId,
+  });
+  if (suspendError) {
+    console.error('그룹 정지 확인 오류:', suspendError);
+    return NextResponse.json(
+      { error: '이 그룹은 현재 이용할 수 없습니다.', code: GROUP_SUSPENDED_CODE },
+      { status: 403 }
+    );
+  }
+  if (suspended) {
+    return NextResponse.json(
+      { error: '이 그룹은 현재 이용할 수 없습니다.', code: GROUP_SUSPENDED_CODE },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
 /**
  * 그룹 관리자 필수 가드
  * 
@@ -76,6 +99,12 @@ export async function requireGroupAdmin(
       { error: '그룹 관리자 권한이 필요합니다.', details: permissionResult.error },
       { status: 403 }
     );
+  }
+
+  const sysAdmin = await isSystemAdmin(userId);
+  if (!sysAdmin) {
+    const blocked = await rejectIfGroupSuspended(userId, groupId);
+    if (blocked) return blocked;
   }
   
   return {
@@ -106,7 +135,13 @@ export async function requireGroupMember(
       { status: 403 }
     );
   }
-  
+
+  const sysAdmin = await isSystemAdmin(userId);
+  if (!sysAdmin) {
+    const blocked = await rejectIfGroupSuspended(userId, groupId);
+    if (blocked) return blocked;
+  }
+
   return {
     role: permissionResult.role,
     isOwner: permissionResult.isOwner,

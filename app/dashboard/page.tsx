@@ -8,6 +8,7 @@ import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
+import { checkUserSuspendedInGroup, loadUserGroupAccess, resolveSuspendRedirect, suspendedPath, ACCESS_UNAVAILABLE_PATH } from '@/lib/account-suspend-access';
 import { useRouter } from 'next/navigation';
 import { 
   getPushToken, 
@@ -116,7 +117,7 @@ import {
 import { WIDGET_CONFIGS_UPDATED_EVENT } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
-import { TopLayerDialog } from '@/app/components/TopLayerDialog';
+import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTransferModal';
 
 // --- [CONFIG & SERVICE] 원본 로직 유지 ---
 const CONFIG = { STORAGE: 'SFH_DATA_V5', AUTH: 'SFH_AUTH' };
@@ -480,7 +481,6 @@ export default function FamilyHub() {
   const [adminStatusResolved, setAdminStatusResolved] = useState(false);
   const [showSuccessorModal, setShowSuccessorModal] = useState(false);
   const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; nickname: string | null }>>([]);
-  const [selectedSuccessor, setSelectedSuccessor] = useState<string>('');
   const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
@@ -1139,12 +1139,31 @@ export default function FamilyHub() {
           isSystemAdmin: Boolean(isAdmin),
         });
 
+        const access = await loadUserGroupAccess(supabase, currentUserId);
+        let openGroup = '';
+        if (typeof window !== 'undefined') {
+          try {
+            const qs = new URLSearchParams(window.location.search);
+            openGroup = qs.get('openGroup')?.trim().toLowerCase() ?? '';
+          } catch {
+            openGroup = '';
+          }
+        }
+        const savedGroupId =
+          typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
+        const suspendRedirect = resolveSuspendRedirect(access, {
+          openGroup: openGroup && isValidUUID(openGroup) ? openGroup : null,
+          savedGroupId,
+        });
+        if (suspendRedirect) {
+          router.replace(suspendRedirect);
+          return;
+        }
+
         // 온보딩에서 ?openGroup= 으로 넘어온 경우: 사용자가 이미 다른 그룹을 가지고 있어도
         // 의도한 그룹으로 정확히 전환되도록 멤버십/소유 여부를 직접 확인해 우선 적용
         if (typeof window !== 'undefined') {
           try {
-            const qs = new URLSearchParams(window.location.search);
-            const openGroup = qs.get('openGroup')?.trim().toLowerCase() ?? '';
             if (openGroup && isValidUUID(openGroup)) {
               const [mRes, oRes] = await Promise.all([
                 supabase
@@ -1281,6 +1300,24 @@ export default function FamilyHub() {
     };
     // isAuthenticated는 제외: true가 되면 effect가 재실행되며 checkAuth가 중복 실행되어 세션/라우팅 경쟁이 날 수 있음
   }, [isMounted, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId || !currentGroupId) return;
+    let cancelled = false;
+    void (async () => {
+      const check = await checkUserSuspendedInGroup(supabase, userId, currentGroupId);
+      if (!cancelled && check.lookupFailed) {
+        router.replace(ACCESS_UNAVAILABLE_PATH);
+        return;
+      }
+      if (!cancelled && check.blocked) {
+        router.replace(suspendedPath(currentGroupId));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, userId, currentGroupId, router]);
 
   // Piggy Bank 요약 정보 로드 함수 (재사용 가능하도록 useCallback으로 분리)
   const loadPiggySummary = useCallback(async () => {
@@ -5524,13 +5561,8 @@ export default function FamilyHub() {
     }
   };
 
-  // 후임자 지정 후 회원탈퇴 처리
-  const handleTransferAndDelete = async () => {
-    if (!selectedSuccessor) {
-      alert(dt('delete_transfer_select_successor'));
-      return;
-    }
-
+  // 후임자 지정 성공 후 회원탈퇴 처리
+  const handleDeleteAfterAdminTransfer = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -5538,25 +5570,6 @@ export default function FamilyHub() {
         return;
       }
 
-      // 후임자 지정 API 호출
-      const transferResponse = await fetch('/api/admin/system-admins/transfer', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ successor_user_id: selectedSuccessor }),
-      });
-
-      const transferResult = await transferResponse.json();
-
-      if (!transferResponse.ok) {
-        throw new Error(transferResult.error || dt('delete_transfer_failed'));
-      }
-
-      alert(transferResult.message);
-
-      // 후임자 지정 성공 후 회원탈퇴 진행
       const deleteResponse = await fetch('/api/account/delete', {
         method: 'DELETE',
         headers: {
@@ -5571,7 +5584,6 @@ export default function FamilyHub() {
         throw new Error(deleteResult.error || '회원탈퇴에 실패했습니다.');
       }
 
-      // 성공 시 모든 데이터 정리 및 로그아웃
       alert(dt('delete_success'));
       
       localStorage.clear();
@@ -5579,7 +5591,7 @@ export default function FamilyHub() {
       await supabase.auth.signOut();
       router.push('/');
     } catch (error: any) {
-      console.error('후임자 지정 및 탈퇴 오류:', error);
+      console.error('후임자 지정 후 탈퇴 오류:', error);
       alert(error.message || '처리 중 오류가 발생했습니다.');
     }
   };
@@ -6999,79 +7011,17 @@ export default function FamilyHub() {
         }
       `}</style>
 
-      {/* 후임자 지정 모달 */}
-      <TopLayerDialog
+      <SystemAdminTransferModal
         open={showSuccessorModal}
-        onClose={() => {
+        lang={lang}
+        candidates={allUsers}
+        intent="delete_account"
+        onClose={() => setShowSuccessorModal(false)}
+        onTransferred={async () => {
           setShowSuccessorModal(false);
-          setSelectedSuccessor('');
+          await handleDeleteAfterAdminTransfer();
         }}
-      >
-          <div
-            className="max-h-[80vh] w-[90%] max-w-[500px] overflow-y-auto rounded-2xl bg-white p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              className="mb-4 flex items-center gap-3 text-2xl font-bold text-slate-800"
-            >
-              <Shield className="h-7 w-7 text-purple-700" />
-              후임 시스템 관리자 지정
-            </h2>
-            <p
-              className="mb-6 text-sm leading-relaxed text-slate-500"
-            >
-              {dt('delete_transfer_warning')}
-              <br />
-              아래 목록에서 후임 시스템 관리자를 선택해주세요.
-            </p>
-
-            <div className="mb-6">
-              <label
-                className="mb-3 block text-sm font-semibold text-slate-600"
-              >
-                후임자 선택
-              </label>
-              <select
-                value={selectedSuccessor}
-                onChange={(e) => setSelectedSuccessor(e.target.value)}
-                className="w-full cursor-pointer rounded-lg border-2 border-slate-200 bg-white p-3 text-sm text-slate-800 outline-none"
-              >
-                <option value="">후임자를 선택하세요</option>
-                {allUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.nickname || user.email}
-                    {user.nickname && ` (${user.email})`}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div
-              className="flex justify-end gap-3"
-            >
-              <button
-                onClick={() => {
-                  setShowSuccessorModal(false);
-                  setSelectedSuccessor('');
-                }}
-                className="cursor-pointer rounded-lg border-none bg-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition-all duration-200"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleTransferAndDelete}
-                disabled={!selectedSuccessor}
-                className={`rounded-lg border-none px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ${
-                  selectedSuccessor
-                    ? 'cursor-pointer bg-purple-700 opacity-100'
-                    : 'cursor-not-allowed bg-slate-400 opacity-60'
-                }`}
-              >
-                후임자 지정 및 탈퇴
-              </button>
-            </div>
-          </div>
-      </TopLayerDialog>
+      />
 
       {/* 하단 고정: 일반 멤버 문의 + 회원탈퇴 (작게·간격 축소·모서리에 붙여 지도 가림 최소화) */}
       <div

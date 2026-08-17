@@ -45,6 +45,7 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
   const [showGroupSettings, setShowGroupSettings] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
+  const [systemAdminMemberIds, setSystemAdminMemberIds] = useState<Set<string>>(new Set());
   const [checkingPermissions, setCheckingPermissions] = useState<boolean>(true);
 
   // ✅ SECURITY: 시스템 관리자 권한 확인 (시스템 관리자는 모든 그룹의 ADMIN 권한 자동 상속)
@@ -160,6 +161,14 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       }
 
       setMembers(memberList);
+
+      const adminFlags = await Promise.all(
+        userIds.map(async (id) => {
+          const { data } = await supabase.rpc('is_system_admin', { user_id_param: id });
+          return data === true ? String(id) : null;
+        }),
+      );
+      setSystemAdminMemberIds(new Set(adminFlags.filter((id): id is string => !!id)));
     } catch (err: any) {
       console.error('멤버 목록 로드 실패:', err);
       setError(err.message || mmt('load_failed'));
@@ -186,6 +195,16 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
       // 소유자는 추방 불가
       if (currentGroup?.owner_id === memberUserId) {
         alert(mmt('cannot_remove_owner'));
+        setRemovingUserId(null);
+        setShowConfirmRemove(null);
+        return;
+      }
+
+      const { data: targetIsSysAdmin } = await supabase.rpc('is_system_admin', {
+        user_id_param: memberUserId,
+      });
+      if (targetIsSysAdmin === true) {
+        alert(mmt('cannot_remove_sysadmin'));
         setRemovingUserId(null);
         setShowConfirmRemove(null);
         return;
@@ -461,7 +480,8 @@ const MemberManagement: React.FC<MemberManagementProps> = ({ onClose }) => {
               {filteredMembers.map((member, index) => {
                 const isCurrentUser = currentUserId === member.user_id;
                 const isOwnerMember = member.user_id === currentGroup?.owner_id;
-                const canRemove = isAdmin && !isCurrentUser && !isOwnerMember;
+                const isSysAdminMember = systemAdminMemberIds.has(member.user_id);
+                const canRemove = isAdmin && !isCurrentUser && !isOwnerMember && !isSysAdminMember;
                 const canChangeRole = isAdmin && !isCurrentUser && !isOwnerMember;
                 const isUpdatingRole = updatingRoleUserId === member.user_id;
                 const isUpdatingFamilyRole = updatingFamilyRoleUserId === member.user_id;

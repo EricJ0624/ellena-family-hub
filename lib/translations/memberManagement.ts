@@ -18,6 +18,7 @@ export type MemberManagementTranslations = {
   remove_confirm: string;
   cannot_remove_self: string;
   cannot_remove_owner: string;
+  cannot_remove_sysadmin: string;
   remove_failed: string;
   cannot_change_self_role: string;
   cannot_change_owner_role: string;
@@ -64,6 +65,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: '추방 확인',
     cannot_remove_self: '자신을 추방할 수 없습니다.',
     cannot_remove_owner: '그룹 소유자는 추방할 수 없습니다.',
+    cannot_remove_sysadmin: '시스템 관리자는 추방할 수 없습니다.',
     remove_failed: '멤버 추방에 실패했습니다.',
     cannot_change_self_role: '자기 자신의 역할은 변경할 수 없습니다.',
     cannot_change_owner_role: '그룹 소유자의 역할은 변경할 수 없습니다.',
@@ -108,6 +110,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: 'Confirm remove',
     cannot_remove_self: 'You cannot remove yourself.',
     cannot_remove_owner: 'Group owner cannot be removed.',
+    cannot_remove_sysadmin: 'System admins cannot be removed from the group.',
     remove_failed: 'Failed to remove member.',
     cannot_change_self_role: 'You cannot change your own role.',
     cannot_change_owner_role: 'Group owner role cannot be changed.',
@@ -152,6 +155,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: '削除確認',
     cannot_remove_self: '自分自身を削除することはできません。',
     cannot_remove_owner: 'グループオーナーは削除できません。',
+    cannot_remove_sysadmin: 'システム管理者はグループから削除できません。',
     remove_failed: 'メンバーの削除に失敗しました。',
     cannot_change_self_role: '自分の役割は変更できません。',
     cannot_change_owner_role: 'グループオーナーの役割は変更できません。',
@@ -196,6 +200,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: '确认移除',
     cannot_remove_self: '不能移除自己。',
     cannot_remove_owner: '不能移除群组所有者。',
+    cannot_remove_sysadmin: '无法将系统管理员移出群组。',
     remove_failed: '移除成员失败。',
     cannot_change_self_role: '不能更改自己的角色。',
     cannot_change_owner_role: '不能更改群组所有者的角色。',
@@ -240,6 +245,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: '確認移除',
     cannot_remove_self: '無法移除自己。',
     cannot_remove_owner: '無法移除群組擁有者。',
+    cannot_remove_sysadmin: '無法將系統管理員移出群組。',
     remove_failed: '移除成員失敗。',
     cannot_change_self_role: '無法變更自己的角色。',
     cannot_change_owner_role: '無法變更群組擁有者的角色。',
@@ -284,6 +290,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: 'Confirmar eliminación',
     cannot_remove_self: 'No puedes eliminarte.',
     cannot_remove_owner: 'El propietario del grupo no se puede eliminar.',
+    cannot_remove_sysadmin: 'No se puede expulsar a un administrador del sistema.',
     remove_failed: 'No se pudo eliminar el miembro.',
     cannot_change_self_role: 'No puedes cambiar tu propio rol.',
     cannot_change_owner_role: 'La función del propietario del grupo no se puede cambiar.',
@@ -328,6 +335,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: 'Confirmer la suppression',
     cannot_remove_self: 'Vous ne pouvez pas vous retirer.',
     cannot_remove_owner: 'Le propriétaire du groupe ne peut pas être supprimé.',
+    cannot_remove_sysadmin: 'Un administrateur système ne peut pas être expulsé.',
     remove_failed: 'Échec de la suppression du membre.',
     cannot_change_self_role: 'Vous ne pouvez pas changer votre propre rôle.',
     cannot_change_owner_role: 'Le rôle de propriétaire du groupe ne peut pas être modifié.',
@@ -372,6 +380,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: 'Bestätigen Sie das Entfernen',
     cannot_remove_self: 'Sie können sich nicht selbst entfernen.',
     cannot_remove_owner: 'Der Gruppeneigentümer kann nicht entfernt werden.',
+    cannot_remove_sysadmin: 'Systemadministratoren können nicht aus der Gruppe entfernt werden.',
     remove_failed: 'Mitglied konnte nicht entfernt werden.',
     cannot_change_self_role: 'Sie können Ihre eigene Rolle nicht ändern.',
     cannot_change_owner_role: 'Die Rolle des Gruppeneigentümers kann nicht geändert werden.',
@@ -416,6 +425,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: 'Conferma la rimozione',
     cannot_remove_self: 'Non puoi rimuoverti.',
     cannot_remove_owner: 'Il proprietario del gruppo non può essere rimosso.',
+    cannot_remove_sysadmin: 'Un amministratore di sistema non può essere rimosso dal gruppo.',
     remove_failed: 'Impossibile rimuovere il membro.',
     cannot_change_self_role: 'Non puoi cambiare il tuo ruolo.',
     cannot_change_owner_role: 'Il ruolo del proprietario del gruppo non può essere modificato.',
@@ -460,6 +470,7 @@ const memberManagement: Record<LangCode, MemberManagementTranslations> = {
     remove_confirm: 'Confirmar remoção',
     cannot_remove_self: 'Você não pode se remover.',
     cannot_remove_owner: 'O proprietário do grupo não pode ser removido.',
+    cannot_remove_sysadmin: 'Administradores do sistema não podem ser removidos do grupo.',
     remove_failed: 'Falha ao remover membro.',
     cannot_change_self_role: 'Você não pode alterar sua própria função.',
     cannot_change_owner_role: 'A função de proprietário do grupo não pode ser alterada.',

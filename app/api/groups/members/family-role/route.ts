@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
-import { checkPermission } from '@/lib/permissions';
+import { checkPermission, isSystemAdmin } from '@/lib/permissions';
+import { GROUP_SUSPENDED_CODE } from '@/lib/account-suspend-access';
 import type { FamilyRole } from '@/types/db';
 
 const VALID_FAMILY_ROLES: (FamilyRole | null)[] = [null, 'mom', 'dad', 'son', 'daughter', 'grandpa', 'grandma', 'other'];
@@ -42,6 +43,20 @@ export async function PATCH(request: NextRequest) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(targetUserId) || !uuidRegex.test(groupId)) {
       return NextResponse.json({ error: '유효하지 않은 ID 형식입니다.' }, { status: 400 });
+    }
+
+    if (!(await isSystemAdmin(user.id))) {
+      const supabaseForSuspend = getSupabaseServerClient();
+      const { data: suspended, error: suspendError } = await supabaseForSuspend.rpc(
+        'is_user_suspended_in_group',
+        { p_user_id: user.id, p_group_id: groupId },
+      );
+      if (suspendError || suspended) {
+        return NextResponse.json(
+          { error: '이 그룹은 현재 이용할 수 없습니다.', code: GROUP_SUSPENDED_CODE },
+          { status: 403 },
+        );
+      }
     }
 
     // 본인만 자신의 family_role 변경 가능 (또는 관리자만 변경 가능하도록 할 경우 checkPermission ADMIN)

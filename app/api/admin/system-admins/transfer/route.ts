@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { isAdminStepUpError, requireAdminStepUpPassword } from '@/lib/admin-stepup';
 
-/**
- * 후임자 지정 및 본인 권한 해제
- * 마지막 시스템 관리자가 탈퇴할 때 사용
- */
+function messageFromTransferError(raw: string | null | undefined): string {
+  const text = String(raw || '');
+  if (text.includes('CANNOT_TRANSFER_TO_SELF')) return '본인을 후임자로 지정할 수 없습니다.';
+  if (text.includes('NOT_SYSTEM_ADMIN')) return '시스템 관리자 권한이 필요합니다.';
+  if (text.includes('ALREADY_SYSTEM_ADMIN')) return '선택한 사용자는 이미 시스템 관리자입니다.';
+  if (text.includes('SUCCESSOR_NOT_FOUND')) return '후임자를 찾을 수 없습니다.';
+  if (text.includes('TRANSFER_FAILED') || text.includes('INVALID_USER')) return '권한 이양에 실패했습니다.';
+  return '권한 이양에 실패했습니다.';
+}
+
+/** 후임자 지정 및 본인 권한 해제. 비밀번호 확인 후 DB 한 트랜잭션으로 이양. */
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
@@ -17,7 +25,10 @@ export async function POST(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
-    const { successor_user_id } = body;
+    const { successor_user_id, password } = body as {
+      successor_user_id?: string;
+      password?: string;
+    };
 
     if (!successor_user_id) {
       return NextResponse.json(
@@ -33,9 +44,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseServerClient();
+    await requireAdminStepUpPassword({
+      userId: user.id,
+      email: user.email,
+      password,
+    });
 
-    // 1. 후임자가 유효한 사용자인지 확인
+    const supabase = getSupabaseServerClient();
     const { data: successorProfile } = await supabase
       .from('profiles')
       .select('id, email, nickname')
@@ -49,58 +64,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. 후임자가 이미 시스템 관리자인지 확인
-    const { data: existingAdmin } = await supabase
-      .from('system_admins')
-      .select('user_id')
-      .eq('user_id', successor_user_id)
-      .single();
-
-    if (existingAdmin) {
+    const { error: transferError } = await supabase.rpc('transfer_system_admin', {
+      p_from_user_id: user.id,
+      p_to_user_id: successor_user_id,
+    });
+    if (transferError) {
+      console.error('시스템 관리자 이양 RPC 오류:', transferError);
       return NextResponse.json(
-        { error: '선택한 사용자는 이미 시스템 관리자입니다.' },
+        { error: messageFromTransferError(transferError.message) },
         { status: 400 }
-      );
-    }
-
-    // 3. 후임자 지정은 탈퇴를 위한 것이므로 일시적으로 2명 허용
-    // (후임자 추가 후 즉시 본인 제거하므로 최종적으로 1명 유지)
-    
-    // 4. 트랜잭션: 후임자 추가 + 본인 제거
-    // 후임자 추가
-    const { error: insertError } = await supabase
-      .from('system_admins')
-      .insert({
-        user_id: successor_user_id,
-        granted_by: user.id,
-        created_at: new Date().toISOString(),
-      });
-
-    if (insertError) {
-      console.error('후임자 추가 오류:', insertError);
-      return NextResponse.json(
-        { error: '후임자 지정에 실패했습니다.' },
-        { status: 500 }
-      );
-    }
-
-    // 본인 권한 해제
-    const { error: deleteError } = await supabase
-      .from('system_admins')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (deleteError) {
-      console.error('본인 권한 해제 오류:', deleteError);
-      // 롤백: 후임자 제거
-      await supabase
-        .from('system_admins')
-        .delete()
-        .eq('user_id', successor_user_id);
-
-      return NextResponse.json(
-        { error: '권한 해제에 실패했습니다.' },
-        { status: 500 }
       );
     }
 
@@ -118,9 +90,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${successorProfile.nickname || successorProfile.email}님을 후임 시스템 관리자로 지정했습니다. 이제 회원탈퇴가 진행됩니다.`,
+      message: `${successorProfile.nickname || successorProfile.email}님에게 시스템 관리자 권한을 넘겼습니다.`,
     });
   } catch (error) {
+    if (isAdminStepUpError(error)) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     const errorMessage = error instanceof Error ? error.message : '후임자 지정 중 오류가 발생했습니다.';
     console.error('후임자 지정 오류:', error);
     return NextResponse.json(

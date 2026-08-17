@@ -19,6 +19,7 @@ import {
   resolveUserHasGroups,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
+import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 
 type Mode = 'login' | 'signup' | 'forgot';
@@ -146,6 +147,17 @@ export default function LoginPage() {
 
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const invite = resolveInviteFromUrlOrSession(params);
+        if (!invite) {
+          const access = await loadUserGroupAccess(supabase, user.id);
+          if (access.lookupFailed) {
+            router.push('/access-unavailable');
+            return;
+          }
+          if (access.groupIds.length > 0 && access.accessibleGroupIds.length === 0) {
+            router.push('/suspended');
+            return;
+          }
+        }
         router.push(buildOnboardingPath(invite));
       } catch {
         // ignore
@@ -208,6 +220,18 @@ export default function LoginPage() {
         flakyRetry: true,
         isSystemAdmin: Boolean(isAdmin),
       });
+
+      if (hasGroups) {
+        const access = await loadUserGroupAccess(supabase, session.user.id);
+        if (access.lookupFailed) {
+          router.push('/access-unavailable');
+          return;
+        }
+        if (access.accessibleGroupIds.length === 0) {
+          router.push('/suspended');
+          return;
+        }
+      }
 
       if (isAdmin) {
         router.push(hasGroups ? onboardingPath : '/admin');

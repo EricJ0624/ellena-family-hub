@@ -6,7 +6,7 @@ export { AUTH_PRESENCE_COOKIE };
 export const PUBLIC_EXACT_PATHS = ['/', '/reset-password', '/auth/callback'] as const;
 
 /** 세션 필요, 그룹 멤버십 불필요 (prefix) */
-export const AUTH_ONLY_PREFIXES = ['/onboarding', '/admin'] as const;
+export const AUTH_ONLY_PREFIXES = ['/onboarding', '/admin', '/suspended', '/access-unavailable'] as const;
 
 /** 세션 + 그룹(또는 sysadmin→/admin) 필요 (prefix) */
 export const GROUP_REQUIRED_PREFIXES = [

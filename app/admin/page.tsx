@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -33,7 +33,8 @@ import {
   Clock,
   FileText,
   Download,
-  PiggyBank
+  PiggyBank,
+  Ban
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GroupAdminPanel } from '@/app/components/group-admin/GroupAdminPanel';
@@ -45,8 +46,15 @@ import { LANG_CODES, LANG_OPTIONS, LANG_LABELS, ANNOUNCEMENT_PRIMARY_LANG_CODES,
 import { getCountryDisplayName } from '@/lib/countries';
 import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
-import { getGroupSelectorLabel } from '@/lib/group-display-name';
+import { getGroupSelectorLabel, getGroupDisplayNameRaw } from '@/lib/group-display-name';
 import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
+import { AdminModerationInbox } from '@/app/components/admin/AdminModerationInbox';
+import { AdminSuspendModals, type AdminSuspendTarget } from '@/app/components/admin/AdminSuspendModals';
+import { AdminForceLeaveModal, type AdminForceLeaveTarget } from '@/app/components/admin/AdminForceLeaveModal';
+import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTransferModal';
+import { getAdminTransferTranslation } from '@/lib/translations/adminTransfer';
+import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
+import { userSuspendBadgeKind, type SuspendSummary } from '@/lib/admin-suspend';
 
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -218,11 +226,16 @@ export default function AdminPage() {
   const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(adminLang, key);
   const gat = (key: keyof import('@/lib/translations/groupAdmin').GroupAdminTranslations) =>
     getGroupAdminTranslation(adminLang, key);
+  const st = (key: Parameters<typeof getAdminSuspendTranslation>[1]) =>
+    getAdminSuspendTranslation(adminLang, key);
+  const adminGroupLabel = (group: { name: string }) =>
+    getGroupDisplayNameRaw(group) ?? st('name_pending');
   const setAdminLang = useCallback((lang: LangCode) => {
     setAdminLangState(lang);
     if (typeof window !== 'undefined') localStorage.setItem(ADMIN_LANG_STORAGE_KEY, lang);
   }, []);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [currentAdminUserId, setCurrentAdminUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'groups' | 'group-admin' | 'announcements' | 'all-support-tickets' | 'member-inquiries' | 'support-tickets' | 'dashboard-access-requests' | 'audit-log'>('dashboard');
   const [users, setUsers] = useState<UserInfo[]>([]);
@@ -260,7 +273,6 @@ export default function AdminPage() {
   
   // 시스템 관리자 관리 관련 상태
   const [systemAdmins, setSystemAdmins] = useState<string[]>([]); // 시스템 관리자 user_id 목록
-  const [systemAdminCount, setSystemAdminCount] = useState(0);
 
   // 감사 로그 조회 상태
   const [auditLogs, setAuditLogs] = useState<Array<{
@@ -287,6 +299,14 @@ export default function AdminPage() {
     group_id: '',
   });
   const auditLogLimit = 50;
+  const [suspendSummary, setSuspendSummary] = useState<SuspendSummary>({
+    userGroupPairs: [],
+    groupIds: [],
+  });
+  const [suspendTarget, setSuspendTarget] = useState<AdminSuspendTarget | null>(null);
+  const [forceLeaveTarget, setForceLeaveTarget] = useState<AdminForceLeaveTarget | null>(null);
+  const [transferSuccessorId, setTransferSuccessorId] = useState<string | null>(null);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
 
   const resetAnnouncementForm = useCallback(() => {
     setAnnouncementTitleI18n(Object.fromEntries(LANG_CODES.map((l) => [l, ''])));
@@ -376,6 +396,7 @@ export default function AdminPage() {
           return;
         }
 
+        setCurrentAdminUserId(user.id);
         setIsAuthorized(true);
 
         // 관리자 접근 시간 업데이트
@@ -458,7 +479,6 @@ export default function AdminPage() {
       if (response.ok) {
         const result = await response.json();
         setSystemAdmins(result.data?.map((a: any) => a.user_id) || []);
-        setSystemAdminCount(result.count || 0);
       }
     } catch (error) {
       console.error('시스템 관리자 목록 로드 오류:', error);
@@ -765,6 +785,30 @@ export default function AdminPage() {
     }
   }, [activeTab, selectedGroupId, setCurrentGroupId]);
 
+  const loadSuspendSummary = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch('/api/admin/suspend', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.data) return;
+      setSuspendSummary({
+        userGroupPairs: Array.isArray(result.data.userGroupPairs) ? result.data.userGroupPairs : [],
+        groupIds: Array.isArray(result.data.groupIds) ? result.data.groupIds : [],
+      });
+    } catch (err) {
+      console.error('정지 현황 로드 오류:', err);
+    }
+  }, []);
+
+  const suspendedGroupIds = useMemo(() => new Set(suspendSummary.groupIds), [suspendSummary.groupIds]);
+
   // 탭 변경 시 데이터 로드
   useEffect(() => {
     if (!isAuthorized) return;
@@ -774,9 +818,11 @@ export default function AdminPage() {
       loadAllSupportTickets(); // 대시보드에서 최근 문의 표시용
     } else if (activeTab === 'users') {
       loadUsers();
+      loadSuspendSummary();
     } else if (activeTab === 'groups') {
       loadGroups(); // 모든 그룹 조회 (그룹 목록 탭용)
       loadManageableGroups(); // 관리 가능한 그룹 조회 (관리하기 버튼용)
+      loadSuspendSummary();
     } else if (activeTab === 'group-admin' && selectedGroupId) {
       /* GroupAdminPanel이 탭별 데이터를 자체 로드 */
     } else if (activeTab === 'announcements') {
@@ -1140,6 +1186,7 @@ export default function AdminPage() {
     const query = searchQuery.toLowerCase();
     return (
       group.name.toLowerCase().includes(query) ||
+      adminGroupLabel(group).toLowerCase().includes(query) ||
       group.owner_email?.toLowerCase().includes(query) ||
       group.id.toLowerCase().includes(query)
     );
@@ -1492,6 +1539,7 @@ export default function AdminPage() {
                 </div>
 
                 <FeatureUsageSection lang={adminLang} />
+                <AdminModerationInbox lang={adminLang} />
 
                 {/* 최근 문의 위젯 */}
                 <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6">
@@ -1635,7 +1683,28 @@ export default function AdminPage() {
                             {user.email || '-'}
                           </td>
                           <td className="p-3 text-sm text-slate-800">
-                            {user.nickname || '-'}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span>{user.nickname || '-'}</span>
+                              {(() => {
+                                const kind = userSuspendBadgeKind(
+                                  user.id,
+                                  user.groups_count,
+                                  suspendSummary.userGroupPairs,
+                                );
+                                if (kind === 'none') return null;
+                                return (
+                                  <span
+                                    className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                                      kind === 'all'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-amber-100 text-amber-800'
+                                    }`}
+                                  >
+                                    {kind === 'all' ? st('badge_suspended') : st('badge_partial')}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                           </td>
                           <td className="p-3 text-sm text-slate-500">
                             {user.preferred_language && isValidLang(user.preferred_language)
@@ -1654,7 +1723,7 @@ export default function AdminPage() {
                             {fat('count_suffix', { count: user.groups_count })}
                           </td>
                           <td className="p-3 text-center">
-                            {systemAdmins.includes(user.id) ? (
+                            {systemAdmins.includes(user.id) || user.id === currentAdminUserId ? (
                               <span className="rounded-xl bg-purple-700 px-3 py-1 text-xs font-semibold text-white">
                                 {at('role_system_admin_badge')}
                               </span>
@@ -1665,59 +1734,14 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td className="p-3 text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex flex-wrap justify-end gap-2">
                               {/* 시스템 관리자 승격/해제 버튼 */}
-                              {systemAdmins.includes(user.id) ? (
+                              {systemAdmins.includes(user.id) || user.id === currentAdminUserId ? (
                                 <button
                                   className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
-                                  onClick={async () => {
-                                    const { data: { user: currentUser } } = await supabase.auth.getUser();
-                                    
-                                    if (currentUser?.id === user.id) {
-                                      alert(at('no_self_revoke'));
-                                      return;
-                                    }
-
-                                    if (systemAdminCount <= 1) {
-                                      alert(at('no_last_admin_revoke'));
-                                      return;
-                                    }
-
-                                    const userDisplayName = user.nickname || user.email || at('user_fallback');
-                                    if (!confirm(at('confirm_revoke').replace(/\$\{name\}/g, userDisplayName))) {
-                                      return;
-                                    }
-
-                                    try {
-                                      setLoadingData(true);
-                                      const { data: { session } } = await supabase.auth.getSession();
-                                      if (!session?.access_token) {
-                                        alert(at('error_auth'));
-                                        return;
-                                      }
-
-                                      const response = await fetch(`/api/admin/system-admins?user_id=${user.id}`, {
-                                        method: 'DELETE',
-                                        headers: {
-                                          'Authorization': `Bearer ${session.access_token}`,
-                                          'Content-Type': 'application/json',
-                                        },
-                                      });
-
-                                      const result = await response.json();
-
-                                      if (!response.ok) {
-                                        throw new Error(result.error || at('error_revoke'));
-                                      }
-
-                                      alert(at('revoked').replace(/\$\{name\}/g, userDisplayName));
-                                      loadUsers();
-                                    } catch (error: any) {
-                                      console.error('권한 해제 오류:', error);
-                                      alert(error.message || at('error_revoke'));
-                                    } finally {
-                                      setLoadingData(false);
-                                    }
+                                  onClick={() => {
+                                    setTransferSuccessorId(null);
+                                    setTransferModalOpen(true);
                                   }}
                                 >
                                   <Shield className="h-4 w-4" />
@@ -1725,54 +1749,10 @@ export default function AdminPage() {
                                 </button>
                               ) : (
                                 <button
-                                  className={`inline-flex items-center gap-1.5 rounded-md border-none px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
-                                    systemAdminCount >= 1
-                                      ? 'cursor-not-allowed bg-slate-400 opacity-60'
-                                      : 'cursor-pointer bg-purple-700 opacity-100 hover:bg-purple-800'
-                                  }`}
-                                  disabled={systemAdminCount >= 1}
-                                  onClick={async () => {
-                                    if (systemAdminCount >= 1) {
-                                      alert(at('only_one_sys_admin'));
-                                      return;
-                                    }
-
-                                    const userDisplayName = user.nickname || user.email || at('user_fallback');
-                                    if (!confirm(at('confirm_promote').replace(/\$\{name\}/g, userDisplayName))) {
-                                      return;
-                                    }
-
-                                    try {
-                                      setLoadingData(true);
-                                      const { data: { session } } = await supabase.auth.getSession();
-                                      if (!session?.access_token) {
-                                        alert(at('error_auth'));
-                                        return;
-                                      }
-
-                                      const response = await fetch('/api/admin/system-admins', {
-                                        method: 'POST',
-                                        headers: {
-                                          'Authorization': `Bearer ${session.access_token}`,
-                                          'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({ user_id: user.id }),
-                                      });
-
-                                      const result = await response.json();
-
-                                      if (!response.ok) {
-                                        throw new Error(result.error || at('error_promote'));
-                                      }
-
-                                      alert(result.message || at('promoted').replace(/\$\{name\}/g, userDisplayName));
-                                      loadUsers();
-                                    } catch (error: any) {
-                                      console.error('관리자 승격 오류:', error);
-                                      alert(error.message || at('error_promote'));
-                                    } finally {
-                                      setLoadingData(false);
-                                    }
+                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-purple-700 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-purple-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+                                  onClick={() => {
+                                    setTransferSuccessorId(user.id);
+                                    setTransferModalOpen(true);
                                   }}
                                 >
                                   <Shield className="h-4 w-4" />
@@ -1781,61 +1761,51 @@ export default function AdminPage() {
                               )}
                               
                               {/* {at('force_leave_btn')} 버튼 */}
+                              {(() => {
+                                const isTargetSysAdmin =
+                                  systemAdmins.includes(user.id) || user.id === currentAdminUserId;
+                                const userSuspended =
+                                  userSuspendBadgeKind(
+                                    user.id,
+                                    user.groups_count,
+                                    suspendSummary.userGroupPairs,
+                                  ) !== 'none';
+                                if (isTargetSysAdmin && !userSuspended) return null;
+                                return (
+                              <button
+                              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 ${
+                                userSuspended
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-400/70'
+                                  : 'bg-orange-600 hover:bg-orange-700 focus-visible:ring-orange-400/70'
+                              } focus-visible:outline-none focus-visible:ring-2`}
+                              onClick={() => {
+                                setSuspendTarget({
+                                  kind: 'user',
+                                  userId: user.id,
+                                  displayName: user.nickname || user.email || at('user_fallback'),
+                                  currentlySuspended: userSuspended,
+                                });
+                              }}
+                              >
+                                <Ban className="h-[14px] w-[14px]" />
+                                {userSuspended ? st('unsuspend_btn') : st('suspend_btn')}
+                              </button>
+                                );
+                              })()}
+                              {!systemAdmins.includes(user.id) && user.id !== currentAdminUserId && (
                               <button
                               className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border-none bg-red-600 px-4 py-2 text-[13px] font-semibold text-white transition-all duration-200 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
-                              onClick={async () => {
-                                // 현재 로그인한 사용자 확인
-                                const { data: { user: currentUser } } = await supabase.auth.getUser();
-                                
-                                // 시스템 관리자 본인은 삭제 불가
-                                if (currentUser?.id === user.id) {
-                                  alert(at('no_self_delete'));
-                                  return;
-                                }
-
-                                const userDisplayName = user.email || user.nickname || at('user_fallback');
-                                const confirmMessage = at('confirm_force_leave_warning').replace(/\$\{name\}/g, userDisplayName);
-                                
-                                if (!confirm(confirmMessage)) {
-                                  return;
-                                }
-
-                                try {
-                                  setLoadingData(true);
-                                  const { data: { session } } = await supabase.auth.getSession();
-                                  if (!session?.access_token) {
-                                    alert(at('error_auth'));
-                                    return;
-                                  }
-
-                                  const response = await fetch('/api/admin/users/delete', {
-                                    method: 'DELETE',
-                                    headers: {
-                                      'Authorization': `Bearer ${session.access_token}`,
-                                      'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({ userId: user.id }),
-                                  });
-
-                                  const result = await response.json().catch(() => ({}));
-
-                                  if (!response.ok) {
-                                    throw new Error((result as { error?: string })?.error || at('error_force_leave'));
-                                  }
-
-                                  alert(at('force_leave_done').replace(/\$\{name\}/g, userDisplayName));
-                                  loadUsers(); // 목록 새로고침
-                                } catch (error: any) {
-                                  console.error(`${at('force_leave_btn')} 오류:`, error);
-                                  alert(error?.message || at('error_force_leave_msg'));
-                                } finally {
-                                  setLoadingData(false);
-                                }
+                              onClick={() => {
+                                setForceLeaveTarget({
+                                  userId: user.id,
+                                  displayName: user.email || user.nickname || at('user_fallback'),
+                                });
                               }}
                             >
                               <UserX className="h-[14px] w-[14px]" />
                               {at('force_leave_btn')}
                             </button>
+                              )}
                             </div>
                           </td>
                         </motion.tr>
@@ -1890,11 +1860,16 @@ export default function AdminPage() {
                       transition={{ delay: index * 0.05 }}
                       className="rounded-xl border border-slate-200 bg-slate-50 p-5 transition-all duration-200 hover:border-slate-300 hover:shadow-[0_4px_6px_rgba(0,0,0,0.1)]"
                     >
-                      <div className="mb-3 flex items-center justify-between">
-                        <h3 className="m-0 text-lg font-semibold text-slate-800">
-                          {group.name}
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="m-0 flex min-w-0 flex-wrap items-center gap-2 text-lg font-semibold text-slate-800">
+                          <span className="min-w-0 truncate">{adminGroupLabel(group)}</span>
+                          {suspendedGroupIds.has(group.id) && (
+                            <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold bg-red-100 text-red-800">
+                              {st('badge_suspended')}
+                            </span>
+                          )}
                         </h3>
-                        <Crown className="h-5 w-5 text-amber-500" />
+                        <Crown className="h-5 w-5 shrink-0 text-amber-500" />
                       </div>
                       <div className="mb-2 text-sm text-slate-500">
                         {at('owner')}: {group.owner_email || '-'}
@@ -1971,11 +1946,28 @@ export default function AdminPage() {
                             </button>
                         )}
                         <button
+                          className={`cursor-pointer rounded-lg border-none px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+                            suspendedGroupIds.has(group.id)
+                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 focus-visible:ring-emerald-400/70'
+                              : 'bg-orange-100 text-orange-800 hover:bg-orange-200 focus-visible:ring-orange-400/70'
+                          } ${manageableGroups.some(mg => mg.id === group.id) ? 'flex-1' : 'flex-[1_1_120px]'}`}
+                          onClick={() => {
+                            setSuspendTarget({
+                              kind: 'group',
+                              groupId: group.id,
+                              groupName: adminGroupLabel(group),
+                              currentlySuspended: suspendedGroupIds.has(group.id),
+                            });
+                          }}
+                        >
+                          {suspendedGroupIds.has(group.id) ? st('unsuspend_btn') : st('suspend_btn')}
+                        </button>
+                        <button
                           className={`cursor-pointer rounded-lg border-none bg-red-100 px-4 py-2 text-sm font-semibold text-red-800 transition-colors hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 ${
                             manageableGroups.some(mg => mg.id === group.id) ? 'flex-1' : 'w-full'
                           }`}
                           onClick={async () => {
-                            const msg = at('confirm_delete_group').replace(/\$\{groupName\}/g, group.name);
+                            const msg = at('confirm_delete_group').replace(/\$\{groupName\}/g, adminGroupLabel(group));
                             if (!confirm(msg)) {
                               return;
                             }
@@ -3039,6 +3031,39 @@ console.error(at('error_revoke_failed'), error);
       </div>
 
       {/* glass-panel 밖 portal 모달 — loadingData와 무관하게 유지 */}
+      <AdminSuspendModals
+        lang={adminLang}
+        target={suspendTarget}
+        onClose={() => setSuspendTarget(null)}
+        onApplied={() => {
+          void loadSuspendSummary();
+        }}
+      />
+      <AdminForceLeaveModal
+        lang={adminLang}
+        target={forceLeaveTarget}
+        onClose={() => setForceLeaveTarget(null)}
+        onApplied={() => {
+          void loadUsers();
+        }}
+      />
+      <SystemAdminTransferModal
+        open={transferModalOpen}
+        lang={adminLang}
+        candidates={users.filter((item) => item.id !== currentAdminUserId)}
+        preselectedUserId={transferSuccessorId}
+        intent="keep_account"
+        onClose={() => {
+          setTransferModalOpen(false);
+          setTransferSuccessorId(null);
+        }}
+        onTransferred={async () => {
+          setTransferModalOpen(false);
+          setTransferSuccessorId(null);
+          alert(getAdminTransferTranslation(adminLang, 'success_keep'));
+          router.replace('/dashboard');
+        }}
+      />
       <GlassSafeModal
         open={editingAnnouncement !== undefined}
         onClose={() => {
@@ -3428,7 +3453,7 @@ console.error(at('error_revoke_failed'), error);
             <option value="">{at('select_group_option')}</option>
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
-                {group.name}
+                {adminGroupLabel(group)}
               </option>
             ))}
           </select>

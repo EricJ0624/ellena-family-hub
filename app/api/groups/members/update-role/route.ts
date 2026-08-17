@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
-import { checkPermission } from '@/lib/permissions';
+import { checkPermission, isSystemAdmin } from '@/lib/permissions';
+import { GROUP_SUSPENDED_CODE } from '@/lib/account-suspend-access';
 import { createClient } from '@supabase/supabase-js';
 
 /**
@@ -40,6 +41,20 @@ export async function POST(request: NextRequest) {
         { error: '유효하지 않은 ID 형식입니다.' },
         { status: 400 }
       );
+    }
+
+    if (!(await isSystemAdmin(user.id))) {
+      const supabaseForSuspend = getSupabaseServerClient();
+      const { data: suspended, error: suspendError } = await supabaseForSuspend.rpc(
+        'is_user_suspended_in_group',
+        { p_user_id: user.id, p_group_id: groupId },
+      );
+      if (suspendError || suspended) {
+        return NextResponse.json(
+          { error: '이 그룹은 현재 이용할 수 없습니다.', code: GROUP_SUSPENDED_CODE },
+          { status: 403 },
+        );
+      }
     }
 
     // 권한 확인: 현재 사용자가 그룹 관리자(소유자 또는 ADMIN)인지 확인

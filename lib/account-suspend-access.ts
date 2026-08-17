@@ -1,0 +1,163 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export const GROUP_SUSPENDED_CODE = 'GROUP_SUSPENDED';
+export const ACCESS_UNAVAILABLE_PATH = '/access-unavailable';
+
+type SuspensionRow = {
+  group_id: string;
+  user_id: string | null;
+  scope: string;
+};
+
+export type UserGroupAccess = {
+  groupIds: string[];
+  accessibleGroupIds: string[];
+  suspendedGroupIds: string[];
+  lookupFailed: boolean;
+};
+
+export type SuspendCheckResult = {
+  blocked: boolean;
+  lookupFailed: boolean;
+};
+
+export function suspendedPath(groupId?: string | null): string {
+  const id = groupId?.trim();
+  if (id) return `/suspended?group=${encodeURIComponent(id)}`;
+  return '/suspended';
+}
+
+export function classifyGroupAccess(
+  groupIds: string[],
+  userId: string,
+  rows: SuspensionRow[],
+): UserGroupAccess {
+  const normalizedUserId = userId.toLowerCase();
+  const normalizedIds = groupIds.map((id) => id.toLowerCase());
+  const suspended = new Set<string>();
+  for (const row of rows) {
+    const groupId = String(row.group_id).toLowerCase();
+    if (row.scope === 'group') {
+      suspended.add(groupId);
+    } else if (row.scope === 'user_in_group' && String(row.user_id).toLowerCase() === normalizedUserId) {
+      suspended.add(groupId);
+    }
+  }
+  return {
+    groupIds: normalizedIds,
+    accessibleGroupIds: normalizedIds.filter((id) => !suspended.has(id)),
+    suspendedGroupIds: normalizedIds.filter((id) => suspended.has(id)),
+    lookupFailed: false,
+  };
+}
+
+export function resolveSuspendRedirect(
+  access: UserGroupAccess,
+  options?: { openGroup?: string | null; savedGroupId?: string | null },
+): string | null {
+  if (access.lookupFailed) return ACCESS_UNAVAILABLE_PATH;
+  if (access.groupIds.length === 0) return null;
+  const openGroup = options?.openGroup?.trim().toLowerCase() || null;
+  if (openGroup && access.suspendedGroupIds.includes(openGroup)) {
+    return suspendedPath(openGroup);
+  }
+  if (access.accessibleGroupIds.length === 0) {
+    return '/suspended';
+  }
+  const savedGroupId = options?.savedGroupId?.trim().toLowerCase() || null;
+  if (savedGroupId && access.suspendedGroupIds.includes(savedGroupId)) {
+    return suspendedPath(savedGroupId);
+  }
+  return null;
+}
+
+function untypedClient(supabase: SupabaseClient): SupabaseClient {
+  return supabase as SupabaseClient;
+}
+
+async function isSystemAdminUser(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await untypedClient(supabase).rpc('is_system_admin', {
+    user_id_param: userId,
+  });
+  if (error) {
+    console.error('is_system_admin 오류:', error);
+    return false;
+  }
+  return data === true;
+}
+
+export async function loadUserGroupAccess(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserGroupAccess> {
+  const client = untypedClient(supabase);
+  const [{ data: memberships, error: memError }, { data: owned, error: ownedError }] = await Promise.all([
+    client.from('memberships').select('group_id').eq('user_id', userId),
+    client.from('groups').select('id').eq('owner_id', userId),
+  ]);
+
+  if (memError || ownedError) {
+    console.error('그룹 목록 조회 오류:', memError || ownedError);
+    return { groupIds: [], accessibleGroupIds: [], suspendedGroupIds: [], lookupFailed: true };
+  }
+
+  const ids = new Set<string>();
+  for (const row of memberships || []) ids.add(String((row as { group_id: string }).group_id));
+  for (const row of owned || []) ids.add(String((row as { id: string }).id));
+  const groupIds = Array.from(ids);
+  if (groupIds.length === 0) {
+    return { groupIds: [], accessibleGroupIds: [], suspendedGroupIds: [], lookupFailed: false };
+  }
+
+  if (await isSystemAdminUser(client, userId)) {
+    return { groupIds, accessibleGroupIds: groupIds, suspendedGroupIds: [], lookupFailed: false };
+  }
+
+  const { data, error } = await client
+    .from('account_suspensions' as never)
+    .select('group_id, user_id, scope')
+    .eq('is_active', true)
+    .in('group_id', groupIds);
+  if (error) {
+    console.error('정지 상태 조회 오류:', error);
+    return { groupIds, accessibleGroupIds: [], suspendedGroupIds: [], lookupFailed: true };
+  }
+
+  return classifyGroupAccess(groupIds, userId, (data || []) as SuspensionRow[]);
+}
+
+export async function checkUserSuspendedInGroup(
+  supabase: SupabaseClient,
+  userId: string,
+  groupId: string,
+): Promise<SuspendCheckResult> {
+  if (await isSystemAdminUser(supabase, userId)) {
+    return { blocked: false, lookupFailed: false };
+  }
+  const { data, error } = await supabase.rpc('is_user_suspended_in_group', {
+    p_user_id: userId,
+    p_group_id: groupId,
+  });
+  if (error) {
+    console.error('is_user_suspended_in_group 오류:', error);
+    return { blocked: false, lookupFailed: true };
+  }
+  return { blocked: Boolean(data), lookupFailed: false };
+}
+
+/** @deprecated use checkUserSuspendedInGroup — lookup failure is treated as not blocked */
+export async function isUserSuspendedInGroup(
+  supabase: SupabaseClient,
+  userId: string,
+  groupId: string,
+): Promise<boolean> {
+  const result = await checkUserSuspendedInGroup(supabase, userId, groupId);
+  return result.blocked;
+}
+
+export function messageFromSuspendRpcError(raw: string | null | undefined): 'ALL_GROUPS_SUSPENDED' | 'GROUP_SUSPENDED' | null {
+  const text = String(raw || '');
+  if (text.includes('ALL_GROUPS_SUSPENDED')) return 'ALL_GROUPS_SUSPENDED';
+  if (text.includes('GROUP_SUSPENDED')) return 'GROUP_SUSPENDED';
+  return null;
+}

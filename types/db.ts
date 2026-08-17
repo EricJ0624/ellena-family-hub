@@ -433,6 +433,34 @@ export interface Database {
           }
         ]
       }
+      admin_stepup_attempts: {
+        Row: {
+          user_id: string
+          fail_count: number
+          locked_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          fail_count?: number
+          locked_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          fail_count?: number
+          locked_until?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_stepup_attempts_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           id: string
@@ -1211,6 +1239,19 @@ export interface Database {
         }
         Returns: boolean
       }
+      is_group_suspended: {
+        Args: {
+          p_group_id: string
+        }
+        Returns: boolean
+      }
+      is_user_suspended_in_group: {
+        Args: {
+          p_user_id: string
+          p_group_id: string
+        }
+        Returns: boolean
+      }
       get_system_admins: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1220,6 +1261,13 @@ export interface Database {
           last_access_at: string | null
           is_active: boolean
         }[]
+      }
+      transfer_system_admin: {
+        Args: {
+          p_from_user_id: string
+          p_to_user_id: string
+        }
+        Returns: void
       }
       add_system_admin: {
         Args: {

@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
-import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
 
-/**
- * 시스템 관리자 목록 조회
- */
+/** 시스템 관리자 목록 조회. 승격/해제는 /api/admin/system-admins/transfer 만 사용한다. */
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuthUser(request);
@@ -17,13 +14,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // 시스템 관리자 목록 조회 (사용자 정보 포함)
     const { data: admins, error } = await supabase
       .from('system_admins')
       .select(`
         user_id,
         created_at,
-        granted_by
+        created_by
       `)
       .order('created_at', { ascending: true });
 
@@ -35,8 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 사용자 정보 조회
-    const userIds = admins?.map(a => a.user_id) || [];
+    const userIds = admins?.map((a) => a.user_id) || [];
     let usersMap = new Map<string, { email: string; nickname: string | null }>();
 
     if (userIds.length > 0) {
@@ -46,7 +41,7 @@ export async function GET(request: NextRequest) {
         .in('id', userIds);
 
       if (profiles) {
-        profiles.forEach(profile => {
+        profiles.forEach((profile) => {
           usersMap.set(profile.id, {
             email: profile.email,
             nickname: profile.nickname,
@@ -55,7 +50,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const adminsWithUserInfo = admins?.map(admin => ({
+    const adminsWithUserInfo = admins?.map((admin) => ({
       ...admin,
       email: usersMap.get(admin.user_id)?.email || null,
       nickname: usersMap.get(admin.user_id)?.nickname || null,
@@ -69,191 +64,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '시스템 관리자 목록 조회 중 오류가 발생했습니다.';
     console.error('시스템 관리자 목록 조회 오류:', error);
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * 신규 시스템 관리자 추가
- * 1명 제한 (후임자 지정 시에만 일시적으로 2명 허용)
- */
-export async function POST(request: NextRequest) {
-  try {
-    const authResult = await requireAuthUser(request);
-    if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
-
-    const adminCheck = await requireSystemAdmin(user.id);
-    if (adminCheck instanceof NextResponse) return adminCheck;
-
-    const body = await request.json();
-    const { user_id } = body;
-
-    if (!user_id) {
-      return NextResponse.json(
-        { error: '사용자 ID가 필요합니다.' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = getSupabaseServerClient();
-
-    // 1. 현재 시스템 관리자 수 확인 (1명 제한)
-    const { count } = await supabase
-      .from('system_admins')
-      .select('*', { count: 'exact', head: true });
-
-    if (count && count >= 1) {
-      return NextResponse.json(
-        { error: '시스템 관리자는 1명만 지정할 수 있습니다. 기존 관리자의 권한을 먼저 해제해주세요.' },
-        { status: 400 }
-      );
-    }
-
-    // 2. 이미 시스템 관리자인지 확인
-    const { data: existingAdmin } = await supabase
-      .from('system_admins')
-      .select('user_id')
-      .eq('user_id', user_id)
-      .single();
-
-    if (existingAdmin) {
-      return NextResponse.json(
-        { error: '이미 시스템 관리자입니다.' },
-        { status: 400 }
-      );
-    }
-
-    // 3. 사용자 존재 여부 확인
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, email, nickname')
-      .eq('id', user_id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json(
-        { error: '사용자를 찾을 수 없습니다.' },
-        { status: 404 }
-      );
-    }
-
-    // 4. 시스템 관리자 추가
-    const { data: newAdmin, error } = await supabase
-      .from('system_admins')
-      .insert({
-        user_id: user_id,
-        granted_by: user.id,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('시스템 관리자 추가 오류:', error);
-      return NextResponse.json(
-        { error: '시스템 관리자 추가에 실패했습니다.' },
-        { status: 500 }
-      );
-    }
-
-    const { ipAddress, userAgent } = getAuditRequestMeta(request);
-    await writeAdminAuditLog(supabase, {
-      adminId: user.id,
-      action: 'GRANT',
-      resourceType: 'system_admin',
-      resourceId: user_id,
-      targetUserId: user_id,
-      ipAddress,
-      userAgent,
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: newAdmin,
-      message: `${profile.nickname || profile.email}님을 시스템 관리자로 지정했습니다. (활성 관리자: 1명)`,
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '시스템 관리자 추가 중 오류가 발생했습니다.';
-    console.error('시스템 관리자 추가 오류:', error);
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * 시스템 관리자 권한 해제
- */
-export async function DELETE(request: NextRequest) {
-  try {
-    const authResult = await requireAuthUser(request);
-    if (authResult instanceof NextResponse) return authResult;
-    const { user } = authResult;
-
-    const adminCheck = await requireSystemAdmin(user.id);
-    if (adminCheck instanceof NextResponse) return adminCheck;
-
-    const { searchParams } = new URL(request.url);
-    const target_user_id = searchParams.get('user_id');
-
-    if (!target_user_id) {
-      return NextResponse.json(
-        { error: '사용자 ID가 필요합니다.' },
-        { status: 400 }
-      );
-    }
-
-    const supabase = getSupabaseServerClient();
-
-    // 1. 전체 시스템 관리자 수 확인
-    const { count } = await supabase
-      .from('system_admins')
-      .select('*', { count: 'exact', head: true });
-
-    if (count && count <= 1) {
-      return NextResponse.json(
-        { error: '마지막 시스템 관리자는 권한을 해제할 수 없습니다.' },
-        { status: 400 }
-      );
-    }
-
-    // 2. 시스템 관리자 권한 해제
-    const { error } = await supabase
-      .from('system_admins')
-      .delete()
-      .eq('user_id', target_user_id);
-
-    if (error) {
-      console.error('시스템 관리자 권한 해제 오류:', error);
-      return NextResponse.json(
-        { error: '시스템 관리자 권한 해제에 실패했습니다.' },
-        { status: 500 }
-      );
-    }
-
-    const { ipAddress, userAgent } = getAuditRequestMeta(request);
-    await writeAdminAuditLog(supabase, {
-      adminId: user.id,
-      action: 'REVOKE',
-      resourceType: 'system_admin',
-      resourceId: target_user_id,
-      targetUserId: target_user_id,
-      ipAddress,
-      userAgent,
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: '시스템 관리자 권한이 해제되었습니다.',
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '시스템 관리자 권한 해제 중 오류가 발생했습니다.';
-    console.error('시스템 관리자 권한 해제 오류:', error);
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }

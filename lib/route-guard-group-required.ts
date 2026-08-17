@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
+import { loadUserGroupAccess, resolveSuspendRedirect } from '@/lib/account-suspend-access';
 import { AUTH_STORAGE_KEY, clearAuthStorage, supabase } from '@/lib/supabase';
 import { isValidUUID } from '@/lib/validation';
 
@@ -130,6 +131,18 @@ export async function runGroupRequiredRouteGuard(options?: {
     flakyRetry: true,
     isSystemAdmin: Boolean(isAdmin),
   });
+
+  const access = await loadUserGroupAccess(supabase, serverUser.id);
+  let openGroup: string | null = null;
+  if (typeof window !== 'undefined') {
+    openGroup = new URLSearchParams(window.location.search).get('openGroup')?.trim().toLowerCase() ?? null;
+  }
+  const savedGroupId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
+  const suspendRedirect = resolveSuspendRedirect(access, { openGroup, savedGroupId });
+  if (suspendRedirect) {
+    return { ok: false, redirectTo: suspendRedirect };
+  }
 
   hasGroups = await applyOpenGroupIfValid(
     supabase,

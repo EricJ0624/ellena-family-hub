@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser, requireSystemAdmin } from '@/lib/api-guards';
 import { writeAdminAuditLog, getAuditRequestMeta } from '@/lib/admin-audit';
+import { isSystemAdmin } from '@/lib/permissions';
+import { isAdminStepUpError, requireAdminStepUpPassword } from '@/lib/admin-stepup';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -13,7 +15,7 @@ export async function DELETE(request: NextRequest) {
     if (adminCheck instanceof NextResponse) return adminCheck;
 
     const body = await request.json();
-    const { userId } = body;
+    const { userId, password } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -22,11 +24,24 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    await requireAdminStepUpPassword({
+      userId: user.id,
+      email: user.email,
+      password,
+    });
+
     // 자신은 삭제 불가
     if (userId === user.id) {
       return NextResponse.json(
         { error: '자신의 계정은 삭제할 수 없습니다.' },
         { status: 400 }
+      );
+    }
+
+    if (await isSystemAdmin(userId)) {
+      return NextResponse.json(
+        { error: '시스템 관리자는 강제 탈퇴할 수 없습니다.' },
+        { status: 403 }
       );
     }
 
@@ -60,6 +75,9 @@ export async function DELETE(request: NextRequest) {
       message: '사용자가 삭제되었습니다.',
     });
   } catch (error) {
+    if (isAdminStepUpError(error)) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('사용자 삭제 오류:', error);
     const message = error instanceof Error ? error.message : '사용자 삭제 중 오류가 발생했습니다.';
     const status = (error as any)?.status >= 400 ? (error as any).status : 500;

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, ChevronDown, Loader2, Plus, UserPlus, X, AlertCircle, CheckCircle, Copy } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { useLanguage } from '@/app/contexts/LanguageContext';
@@ -11,8 +12,10 @@ import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
+import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath, ACCESS_UNAVAILABLE_PATH } from '@/lib/account-suspend-access';
 
 const GroupSelector: React.FC = () => {
+  const router = useRouter();
   const { groups, currentGroupId, currentGroup, loading, setCurrentGroupId, refreshGroups } = useGroup();
   const { lang } = useLanguage();
   const ot = (key: keyof OnboardingTranslations) => getOnboardingTranslation(lang, key);
@@ -118,7 +121,12 @@ const GroupSelector: React.FC = () => {
       }, 1500);
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
-      setError(err.message || ot('error_create_failed'));
+      const suspendKind = messageFromSuspendRpcError(err?.message);
+      setError(
+        suspendKind === 'ALL_GROUPS_SUSPENDED'
+          ? ot('error_all_groups_suspended')
+          : err.message || ot('error_create_failed'),
+      );
     } finally {
       setCreating(false);
     }
@@ -159,7 +167,12 @@ const GroupSelector: React.FC = () => {
       }
     } catch (err: any) {
       console.error('그룹 가입 오류:', err);
-      setError(err.message || ot('error_join_failed'));
+      const suspendKind = messageFromSuspendRpcError(err?.message);
+      setError(
+        suspendKind === 'GROUP_SUSPENDED'
+          ? ot('error_target_group_suspended')
+          : err.message || ot('error_join_failed'),
+      );
     } finally {
       setJoining(false);
     }
@@ -598,7 +611,21 @@ const GroupSelector: React.FC = () => {
               {groups.map((group) => (
                 <button
                   key={group.id}
-                  onClick={() => {
+                  onClick={async () => {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      const check = await checkUserSuspendedInGroup(supabase, user.id, group.id);
+                      if (check.lookupFailed) {
+                        setIsOpen(false);
+                        router.push(ACCESS_UNAVAILABLE_PATH);
+                        return;
+                      }
+                      if (check.blocked) {
+                        setIsOpen(false);
+                        router.push(suspendedPath(group.id));
+                        return;
+                      }
+                    }
                     setCurrentGroupId(group.id);
                     setIsOpen(false);
                   }}
