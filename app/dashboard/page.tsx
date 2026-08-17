@@ -2431,7 +2431,7 @@ export default function FamilyHub() {
               mapTypeControl: true,
               streetViewControl: true,
               fullscreenControl: true,
-              gestureHandling: 'greedy',
+              gestureHandling: 'cooperative',
             };
             
             // Map ID가 환경 변수로 설정되어 있으면 사용 (선택사항)

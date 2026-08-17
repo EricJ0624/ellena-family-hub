@@ -2575,7 +2575,8 @@ select:not(.chalkboard-form-input) {
     flex-direction: column;
     min-height: 0;
     width: 100%;
-    touch-action: none;
+    /* none이면 플레이스홀더에서도 대시보드 세로 스크롤이 가로채임 */
+    touch-action: pan-y;
   }
 
   .widget-chrome[data-widget-key='location'] .location-map-canvas,

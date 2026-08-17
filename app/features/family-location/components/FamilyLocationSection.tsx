@@ -152,7 +152,7 @@ export function FamilyLocationSection({
           </div>
         )}
 
-        <div className="location-map-slot min-h-0 flex-1">
+        <div className="location-map-slot min-h-0 flex-1 touch-pan-y">
         {!isLocationSharing ? (
           <div
             className="location-map-surface flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
