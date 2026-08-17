@@ -39,6 +39,12 @@ export type TravelDiaryTranslations = {
   map_label: string;
   map_add: string;
   map_remove: string;
+  hide: string;
+  restore: string;
+  hide_failed: string;
+  restore_failed: string;
+  hide_confirm: string;
+  hidden_section: string;
 };
 
 const td: Record<LangCode, TravelDiaryTranslations> = {
@@ -80,6 +86,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: '지도',
     map_add: '지도 넣기',
     map_remove: '지도 빼기',
+    hide: '삭제',
+    restore: '다시 가져오기',
+    hide_failed: '삭제에 실패했습니다.',
+    restore_failed: '복원에 실패했습니다.',
+    hide_confirm: '이 행사를 다이어리에서 뺄까요? 나중에 다시 가져올 수 있습니다.',
+    hidden_section: '다이어리에서 뺀 행사',
   },
   en: {
     section_title: 'Trip diary',
@@ -119,6 +131,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: 'Map',
     map_add: 'Add map',
     map_remove: 'Remove map',
+    hide: 'Remove',
+    restore: 'Restore',
+    hide_failed: 'Could not remove this item.',
+    restore_failed: 'Could not restore this item.',
+    hide_confirm: 'Remove this event from the diary? You can restore it later.',
+    hidden_section: 'Removed from diary',
   },
   ja: {
     section_title: '旅行ダイアリー',
@@ -158,6 +176,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: '地図',
     map_add: '地図を入れる',
     map_remove: '地図を外す',
+    hide: '削除',
+    restore: '元に戻す',
+    hide_failed: '削除に失敗しました。',
+    restore_failed: '復元に失敗しました。',
+    hide_confirm: 'この予定をダイアリーから外しますか？あとから戻せます。',
+    hidden_section: 'ダイアリーから外した予定',
   },
   'zh-CN': {
     section_title: '旅行日记',
@@ -197,6 +221,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: '地图',
     map_add: '加入地图',
     map_remove: '移除地图',
+    hide: '删除',
+    restore: '重新加入',
+    hide_failed: '无法删除。',
+    restore_failed: '无法恢复。',
+    hide_confirm: '要从日记中移除此行程吗？之后可以再加回来。',
+    hidden_section: '已从日记移除的行程',
   },
   'zh-TW': {
     section_title: '旅行日記',
@@ -236,6 +266,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: '地圖',
     map_add: '加入地圖',
     map_remove: '移除地圖',
+    hide: '刪除',
+    restore: '重新加入',
+    hide_failed: '無法刪除。',
+    restore_failed: '無法還原。',
+    hide_confirm: '要從日記移除此行程嗎？之後可以再加回來。',
+    hidden_section: '已從日記移除的行程',
   },
   es: {
     section_title: 'diario de viaje',
@@ -275,6 +311,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: 'Mapa',
     map_add: 'Añadir mapa',
     map_remove: 'Quitar mapa',
+    hide: 'Quitar',
+    restore: 'Restaurar',
+    hide_failed: 'No se pudo quitar.',
+    restore_failed: 'No se pudo restaurar.',
+    hide_confirm: '¿Quitar este evento del diario? Podrás restaurarlo después.',
+    hidden_section: 'Quitados del diario',
   },
   fr: {
     section_title: 'Carnet de voyage',
@@ -314,6 +356,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: 'Carte',
     map_add: 'Ajouter la carte',
     map_remove: 'Retirer la carte',
+    hide: 'Retirer',
+    restore: 'Restaurer',
+    hide_failed: 'Impossible de retirer.',
+    restore_failed: 'Impossible de restaurer.',
+    hide_confirm: 'Retirer cet événement du carnet ? Vous pourrez le restaurer plus tard.',
+    hidden_section: 'Retirés du carnet',
   },
   de: {
     section_title: 'Reisetagebuch',
@@ -353,6 +401,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: 'Karte',
     map_add: 'Karte hinzufügen',
     map_remove: 'Karte entfernen',
+    hide: 'Entfernen',
+    restore: 'Wiederherstellen',
+    hide_failed: 'Entfernen fehlgeschlagen.',
+    restore_failed: 'Wiederherstellen fehlgeschlagen.',
+    hide_confirm: 'Dieses Ereignis aus dem Tagebuch entfernen? Sie können es später wiederherstellen.',
+    hidden_section: 'Aus dem Tagebuch entfernt',
   },
   it: {
     section_title: 'Diario di viaggio',
@@ -392,6 +446,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: 'Mappa',
     map_add: 'Aggiungi mappa',
     map_remove: 'Rimuovi mappa',
+    hide: 'Rimuovi',
+    restore: 'Ripristina',
+    hide_failed: 'Impossibile rimuovere.',
+    restore_failed: 'Impossibile ripristinare.',
+    hide_confirm: 'Rimuovere questo evento dal diario? Potrai ripristinarlo in seguito.',
+    hidden_section: 'Rimossi dal diario',
   },
   pt: {
     section_title: 'Diário de viagem',
@@ -431,6 +491,12 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     map_label: 'Mapa',
     map_add: 'Adicionar mapa',
     map_remove: 'Remover mapa',
+    hide: 'Remover',
+    restore: 'Restaurar',
+    hide_failed: 'Não foi possível remover.',
+    restore_failed: 'Não foi possível restaurar.',
+    hide_confirm: 'Remover este evento do diário? Você poderá restaurá-lo depois.',
+    hidden_section: 'Removidos do diário',
   }
 };
 

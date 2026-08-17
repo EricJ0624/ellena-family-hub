@@ -20,9 +20,10 @@ import type {
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import type { TravelDiaryEntry } from '@/lib/modules/travel-planner/diary-types';
 import { buildUnifiedItineraries } from '@/lib/modules/travel-planner/unified-itinerary';
-import { buildDiaryTimelineSlots } from '@/lib/modules/travel-planner/diary-timeline';
+import { buildDiaryTimelineSlots, buildHiddenDiarySlots } from '@/lib/modules/travel-planner/diary-timeline';
 import { canWriteDiary } from '@/lib/modules/travel-planner/diary-eligibility';
 import { DiaryEntryCard } from '@/app/features/travel-diary/components/DiaryEntryCard';
+import { DiaryHiddenSlotList } from '@/app/features/travel-diary/components/DiaryHiddenSlotList';
 
 const API = '/api/v1/travel';
 
@@ -47,6 +48,7 @@ export function TravelDiaryPageContent() {
 
   const [trip, setTrip] = useState<TravelTrip | null>(null);
   const [entries, setEntries] = useState<TravelDiaryEntry[]>([]);
+  const [hiddenEntries, setHiddenEntries] = useState<TravelDiaryEntry[]>([]);
   const [feedback, setFeedback] = useState<TravelPlaceFeedback[]>([]);
   const [expenses, setExpenses] = useState<TravelExpense[]>([]);
   const [planner, setPlanner] = useState<PlannerBundle | null>(null);
@@ -57,6 +59,7 @@ export function TravelDiaryPageContent() {
     if (!currentGroupId || !tripIdParam) {
       setTrip(null);
       setEntries([]);
+      setHiddenEntries([]);
       setFeedback([]);
       setExpenses([]);
       setPlanner(null);
@@ -74,7 +77,7 @@ export function TravelDiaryPageContent() {
 
       const [tripRes, entRes, fbRes, expRes, accRes, dinRes, attRes, trRes, itRes] = await Promise.all([
         fetch(`${API}/trips/${tid}?groupId=${gid}`, { headers }),
-        fetch(`${API}/trips/${tid}/diary-entries?groupId=${gid}`, { headers }),
+        fetch(`${API}/trips/${tid}/diary-entries?groupId=${gid}&includeDeleted=1`, { headers }),
         fetch(`${API}/trips/${tid}/place-feedback?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/expenses?groupId=${gid}`, { headers }),
         fetch(`${API}/trips/${tid}/accommodations?groupId=${gid}`, { headers }),
@@ -92,6 +95,7 @@ export function TravelDiaryPageContent() {
 
       setTrip(tripJson.data);
       setEntries(Array.isArray(entJson.data) ? entJson.data : []);
+      setHiddenEntries(Array.isArray(entJson.hidden) ? entJson.hidden : []);
       setFeedback(Array.isArray(fbJson.data) ? fbJson.data : []);
       setExpenses(Array.isArray(expJson.data) ? (expJson.data as TravelExpense[]) : []);
       setPlanner({
@@ -138,14 +142,23 @@ export function TravelDiaryPageContent() {
     };
   }, [currentGroupId, loadAll]);
 
-  const timelineSlots = useMemo(() => {
+  const unifiedItems = useMemo(() => {
     if (!planner) return [];
-    const unified = buildUnifiedItineraries({
+    return buildUnifiedItineraries({
       ...planner,
       itineraryVisibleOnly: false,
     });
-    return buildDiaryTimelineSlots(unified, entries);
-  }, [planner, entries]);
+  }, [planner]);
+
+  const timelineSlots = useMemo(() => {
+    if (!planner) return [];
+    return buildDiaryTimelineSlots(unifiedItems, entries, hiddenEntries);
+  }, [planner, unifiedItems, entries, hiddenEntries]);
+
+  const hiddenSlots = useMemo(() => {
+    if (!planner) return [];
+    return buildHiddenDiarySlots(unifiedItems, hiddenEntries);
+  }, [planner, unifiedItems, hiddenEntries]);
 
   const feedbackBySource = useMemo(() => {
     const m = new Map<string, TravelPlaceFeedback>();
@@ -247,6 +260,49 @@ export function TravelDiaryPageContent() {
     }
   };
 
+  const hideSlot = async (slot: (typeof timelineSlots)[0]) => {
+    if (!currentGroupId || !tripIdParam) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) throw new Error('auth');
+    const res = await fetch(`${API}/trips/${tripIdParam}/diary-entries`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        groupId: currentGroupId,
+        hide: true,
+        id: slot.entry?.id,
+        source_kind: slot.source_kind,
+        source_id: slot.source_id,
+        day_date: slot.day_date,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+    await loadAll();
+  };
+
+  const restoreSlot = async (slot: (typeof hiddenSlots)[0]) => {
+    if (!currentGroupId || !slot.entry?.id) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) throw new Error('auth');
+    const res = await fetch(`${API}/diary-entries/${slot.entry.id}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ groupId: currentGroupId, restore: true }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+    await loadAll();
+  };
+
   if (!currentGroupId) {
     return (
       <div className="flex min-h-screen items-center justify-center p-6 text-slate-600">
@@ -286,9 +342,10 @@ export function TravelDiaryPageContent() {
           <p className="mt-8 text-sm text-slate-500">{t('loading')}</p>
         ) : !canWrite ? (
           <p className="mt-8 text-sm text-violet-700">{t('cannot_write')}</p>
-        ) : timelineSlots.length === 0 ? (
+        ) : timelineSlots.length === 0 && hiddenSlots.length === 0 ? (
           <p className="mt-8 text-sm text-slate-600">{t('no_slots')}</p>
         ) : (
+          <>
           <div className="mt-6 space-y-4">
             {timelineSlots.map((slot) => {
               const fb =
@@ -337,13 +394,27 @@ export function TravelDiaryPageContent() {
                     map_label: t('map_label'),
                     map_add: t('map_add'),
                     map_remove: t('map_remove'),
+                    hide: t('hide'),
+                    hide_failed: t('hide_failed'),
+                    hide_confirm: t('hide_confirm'),
                   }}
                   onSave={(p) => saveSlot(slot, p)}
                   onCollageSave={saveCollage}
+                  onHide={() => hideSlot(slot)}
                 />
               );
             })}
           </div>
+          {hiddenSlots.length > 0 ? (
+            <DiaryHiddenSlotList
+              slots={hiddenSlots}
+              sectionTitle={t('hidden_section')}
+              restoreLabel={t('restore')}
+              restoreFailedLabel={t('restore_failed')}
+              onRestore={restoreSlot}
+            />
+          ) : null}
+          </>
         )}
       </div>
     </div>

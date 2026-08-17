@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pencil, Star } from 'lucide-react';
+import { Pencil, Star, Trash2 } from 'lucide-react';
 import type { DiaryTimelineSlot } from '@/lib/modules/travel-planner/diary-timeline';
 import type { TravelExpense, TravelPlaceFeedback } from '@/lib/modules/travel-planner/types';
 import { formatMoneyAmount } from '@/lib/format-currency';
@@ -54,6 +54,9 @@ type Labels = {
   map_label: string;
   map_add: string;
   map_remove: string;
+  hide: string;
+  hide_failed: string;
+  hide_confirm: string;
 };
 
 type Props = {
@@ -78,6 +81,7 @@ type Props = {
     collage_attachment_ids?: CollageSlotIds;
     collage_style?: DiaryCollageStyle;
   }) => Promise<void>;
+  onHide?: () => Promise<void>;
 };
 
 function expenseInputValue(linkedExpense?: TravelExpense | null): string {
@@ -97,6 +101,7 @@ export function DiaryEntryCard({
   labels,
   onSave,
   onCollageSave,
+  onHide,
 }: Props) {
   const entry = slot.entry;
   const [note, setNote] = useState(entry?.note ?? '');
@@ -105,6 +110,7 @@ export function DiaryEntryCard({
   const [isRevisit, setIsRevisit] = useState(Boolean(feedback?.is_revisit));
   const [expense, setExpense] = useState(expenseInputValue(linkedExpense));
   const [saving, setSaving] = useState(false);
+  const [acting, setActing] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -252,6 +258,19 @@ export function DiaryEntryCard({
       return null;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleHide = async () => {
+    if (!onHide) return;
+    if (!window.confirm(labels.hide_confirm)) return;
+    setActing(true);
+    try {
+      await onHide();
+    } catch {
+      alert(labels.hide_failed);
+    } finally {
+      setActing(false);
     }
   };
 
@@ -443,14 +462,25 @@ export function DiaryEntryCard({
           ) : null}
 
           <div className="mt-3 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setMode('edit')}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              {labels.edit}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMode('edit')}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                {labels.edit}
+              </button>
+              <button
+                type="button"
+                disabled={acting}
+                onClick={() => void handleHide()}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {labels.hide}
+              </button>
+            </div>
             {expenseText ? (
               <span className="text-sm font-medium text-slate-700">{expenseText}</span>
             ) : null}
@@ -635,6 +665,15 @@ export function DiaryEntryCard({
                 {labels.cancel}
               </button>
             )}
+            <button
+              type="button"
+              disabled={acting}
+              onClick={() => void handleHide()}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {labels.hide}
+            </button>
             <input
               ref={fileRef}
               type="file"

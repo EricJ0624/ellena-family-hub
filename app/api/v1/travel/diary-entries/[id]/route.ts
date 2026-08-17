@@ -46,6 +46,75 @@ export async function PATCH(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    if (body.restore === true) {
+      const { data: hiddenRow, error: hiddenErr } = await supabase
+        .from('travel_diary_entries')
+        .select('id, trip_id, source_kind, source_id')
+        .eq('id', id)
+        .eq('group_id', groupId)
+        .not('deleted_at', 'is', null)
+        .maybeSingle();
+
+      if (hiddenErr || !hiddenRow) {
+        return NextResponse.json({ error: '숨긴 다이어리 항목을 찾을 수 없습니다.' }, { status: 404 });
+      }
+
+      const tripId = (hiddenRow as { trip_id: string }).trip_id;
+      const { data: tripRow } = await supabase
+        .from('travel_trips')
+        .select('diary_enabled')
+        .eq('id', tripId)
+        .eq('group_id', groupId)
+        .single();
+
+      if (!tripRow || !canWriteDiary(tripRow as { diary_enabled?: boolean })) {
+        return NextResponse.json({ error: '다이어리 작성 권한이 없습니다.' }, { status: 403 });
+      }
+
+      const kind = (hiddenRow as { source_kind?: string | null }).source_kind;
+      const sourceId = (hiddenRow as { source_id?: string | null }).source_id;
+      if (kind && sourceId) {
+        const { data: activeDup } = await supabase
+          .from('travel_diary_entries')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .eq('source_kind', kind)
+          .eq('source_id', sourceId)
+          .is('deleted_at', null)
+          .maybeSingle();
+        if (activeDup?.id) {
+          return NextResponse.json(
+            { error: '이미 같은 장소의 다이어리 항목이 있습니다.' },
+            { status: 409 },
+          );
+        }
+      }
+
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('travel_diary_entries')
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+          updated_at: now,
+          updated_by: user.id,
+        })
+        .eq('id', id)
+        .eq('group_id', groupId)
+        .select('*')
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: '다이어리 복원에 실패했습니다.' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: normalizeEntryRow(data as Record<string, unknown>),
+      });
+    }
+
     const { data: existing, error: exErr } = await supabase
       .from('travel_diary_entries')
       .select('trip_id')
@@ -135,6 +204,29 @@ export async function DELETE(
     if (memberCheck instanceof NextResponse) return memberCheck;
 
     const supabase = getSupabaseServerClient();
+    const { data: existing, error: exErr } = await supabase
+      .from('travel_diary_entries')
+      .select('trip_id')
+      .eq('id', id)
+      .eq('group_id', groupId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (exErr || !existing) {
+      return NextResponse.json({ error: '다이어리 항목을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const { data: tripRow } = await supabase
+      .from('travel_trips')
+      .select('diary_enabled')
+      .eq('id', (existing as { trip_id: string }).trip_id)
+      .eq('group_id', groupId)
+      .single();
+
+    if (!tripRow || !canWriteDiary(tripRow as { diary_enabled?: boolean })) {
+      return NextResponse.json({ error: '다이어리 작성 권한이 없습니다.' }, { status: 403 });
+    }
+
     const now = new Date().toISOString();
     const { error } = await supabase
       .from('travel_diary_entries')

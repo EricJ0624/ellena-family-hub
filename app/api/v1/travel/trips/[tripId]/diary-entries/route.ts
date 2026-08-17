@@ -31,6 +31,7 @@ function normalizeEntryRow(row: Record<string, unknown>) {
     collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
     collage_style: parseCollageStyle(row.collage_style),
     show_map: parseShowMap(row.show_map),
+    deleted_at: (row.deleted_at as string | null | undefined) ?? null,
   };
 }
 
@@ -55,25 +56,34 @@ export async function GET(
     const tripCheck = await assertTripInGroup(tripId, groupId);
     if (tripCheck instanceof NextResponse) return tripCheck;
 
+    const includeDeleted = request.nextUrl.searchParams.get('includeDeleted') === '1';
     const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('travel_diary_entries')
       .select('*')
       .eq('trip_id', tripId)
       .eq('group_id', groupId)
-      .is('deleted_at', null)
       .order('day_date', { ascending: true })
       .order('sort_order', { ascending: true });
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('travel_diary_entries GET:', error);
       return NextResponse.json({ error: '다이어리 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: (data ?? []).map((r) => normalizeEntryRow(r as Record<string, unknown>)),
-    });
+    const rows = (data ?? []).map((r) => normalizeEntryRow(r as Record<string, unknown>));
+    if (!includeDeleted) {
+      return NextResponse.json({ success: true, data: rows });
+    }
+
+    const active = rows.filter((r) => !r.deleted_at);
+    const hidden = rows.filter((r) => Boolean(r.deleted_at));
+    return NextResponse.json({ success: true, data: active, hidden });
   } catch (e: unknown) {
     console.error('GET diary-entries:', e);
     return NextResponse.json(
@@ -125,6 +135,107 @@ export async function POST(
         { error: '다이어리 작성 권한이 없습니다. 여행 다이어리를 먼저 시작해 주세요.' },
         { status: 403 },
       );
+    }
+
+    if (body.hide === true) {
+      const hideDay = body.day_date ? String(body.day_date).slice(0, 10) : '';
+      if (!hideDay) {
+        return NextResponse.json({ error: 'day_date가 필요합니다.' }, { status: 400 });
+      }
+      const hideKindRaw = body.source_kind;
+      const hideKind =
+        hideKindRaw == null || hideKindRaw === ''
+          ? null
+          : SOURCE_KINDS.has(String(hideKindRaw))
+            ? (String(hideKindRaw) as TravelPlaceSourceKind)
+            : null;
+      if (hideKindRaw != null && hideKindRaw !== '' && !hideKind) {
+        return NextResponse.json({ error: '유효하지 않은 source_kind입니다.' }, { status: 400 });
+      }
+      const hideSourceId = body.source_id ? String(body.source_id) : null;
+      const now = new Date().toISOString();
+
+      const applySoftDelete = async (id: string) => {
+        const { data, error } = await supabase
+          .from('travel_diary_entries')
+          .update({ deleted_at: now, deleted_by: user.id, updated_at: now, updated_by: user.id })
+          .eq('id', id)
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .is('deleted_at', null)
+          .select('*')
+          .maybeSingle();
+        if (error) throw error;
+        return data as Record<string, unknown> | null;
+      };
+
+      if (body.id) {
+        const deleted = await applySoftDelete(String(body.id));
+        return NextResponse.json({
+          success: true,
+          data: deleted ? normalizeEntryRow(deleted) : null,
+        });
+      }
+
+      if (hideKind && hideSourceId) {
+        const { data: active } = await supabase
+          .from('travel_diary_entries')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .eq('source_kind', hideKind)
+          .eq('source_id', hideSourceId)
+          .is('deleted_at', null)
+          .maybeSingle();
+        if (active?.id) {
+          const deleted = await applySoftDelete(active.id);
+          return NextResponse.json({
+            success: true,
+            data: deleted ? normalizeEntryRow(deleted) : null,
+          });
+        }
+        const { data: alreadyHidden } = await supabase
+          .from('travel_diary_entries')
+          .select('*')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .eq('source_kind', hideKind)
+          .eq('source_id', hideSourceId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (alreadyHidden?.id) {
+          return NextResponse.json({ success: true, data: normalizeEntryRow(alreadyHidden as Record<string, unknown>) });
+        }
+        const { data: inserted, error: insErr } = await supabase
+          .from('travel_diary_entries')
+          .insert({
+            group_id: groupId,
+            trip_id: tripId,
+            source_kind: hideKind,
+            source_id: hideSourceId,
+            day_date: hideDay,
+            note: null,
+            mood_tags: [],
+            sort_order: 0,
+            created_by: user.id,
+            created_at: now,
+            updated_at: now,
+            updated_by: user.id,
+            deleted_at: now,
+            deleted_by: user.id,
+          })
+          .select('*')
+          .single();
+        if (insErr) throw insErr;
+        return NextResponse.json({
+          success: true,
+          data: normalizeEntryRow(inserted as Record<string, unknown>),
+        });
+      }
+
+      return NextResponse.json({ error: '숨길 다이어리 항목이 없습니다.' }, { status: 400 });
     }
 
     const dayDate = body.day_date ? String(body.day_date).slice(0, 10) : '';
