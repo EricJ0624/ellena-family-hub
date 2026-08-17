@@ -63,6 +63,36 @@ export async function insertModerationMessage(params: {
   }
 
   const supabase = getSupabaseServerClient();
+  const recentSince = new Date(Date.now() - 8000).toISOString();
+  const { data: recentDup } = await supabase
+    .from('moderation_messages' as never)
+    .select('id, thread_id, author_id, author_kind, body, created_at')
+    .eq('thread_id', params.threadId)
+    .eq('author_id', params.authorId)
+    .eq('body', message)
+    .gte('created_at', recentSince)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (recentDup) {
+    const dup = recentDup as {
+      id: string;
+      thread_id: string;
+      author_id: string;
+      author_kind: string;
+      body: string;
+      created_at: string;
+    };
+    return {
+      id: String(dup.id),
+      threadId: String(dup.thread_id),
+      authorId: String(dup.author_id),
+      authorKind: dup.author_kind === 'system_admin' ? 'system_admin' : 'member',
+      body: String(dup.body),
+      createdAt: String(dup.created_at),
+    };
+  }
+
   if (params.authorKind === 'member') {
     const { data: active } = await supabase
       .from('account_suspensions' as never)

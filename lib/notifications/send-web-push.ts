@@ -41,6 +41,27 @@ export interface SendWebPushResult {
  * 사용자 active push_tokens(최대 5개)로 Web Push 발송.
  * APP_URL self-fetch 없이 서버에서 직접 호출한다.
  */
+function pushEndpointKey(token: string): string | null {
+  try {
+    const parsed = JSON.parse(token) as { endpoint?: unknown };
+    return typeof parsed.endpoint === 'string' && parsed.endpoint ? parsed.endpoint : null;
+  } catch {
+    return null;
+  }
+}
+
+function uniquePushTokens(rows: Array<{ token: string }>): Array<{ token: string }> {
+  const seen = new Set<string>();
+  const unique: Array<{ token: string }> = [];
+  for (const row of rows) {
+    const key = pushEndpointKey(row.token) || row.token;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(row);
+  }
+  return unique;
+}
+
 export async function sendWebPushToUser(
   userId: string,
   payload: WebPushPayload,
@@ -62,12 +83,14 @@ export async function sendWebPushToUser(
     .eq('user_id', userId)
     .eq('is_active', true)
     .order('updated_at', { ascending: false })
-    .limit(5);
+    .limit(20);
 
   if (tokenError || !tokens || tokens.length === 0) {
     console.warn('[sendWebPush] Push 토큰 없음:', userId, tokenError?.message);
     return { ok: true, reason: 'no_token', sent: 0, failed: 0, message: 'Push 토큰이 없습니다.' };
   }
+
+  const uniqueTokens = uniquePushTokens(tokens).slice(0, 10);
 
   const webpush = await getWebPush();
   webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
@@ -84,7 +107,7 @@ export async function sendWebPushToUser(
   let sent = 0;
   let failed = 0;
 
-  for (const row of tokens) {
+  for (const row of uniqueTokens) {
     try {
       const subscription = JSON.parse(row.token);
       await webpush.sendNotification(subscription, body);

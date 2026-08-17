@@ -264,17 +264,19 @@ function SuspendedNoticeContent() {
 
   const sendReply = async (threadId: string) => {
     const message = (drafts[threadId] || '').trim();
-    if (!message) return;
+    if (!message || sendingIdRef.current) return;
+    sendingIdRef.current = threadId;
+    setSendingId(threadId);
+    setReplyError(null);
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token) {
+      sendingIdRef.current = null;
+      setSendingId(null);
       setReplyError(t('reply_failed'));
       return;
     }
-    sendingIdRef.current = threadId;
-    setSendingId(threadId);
-    setReplyError(null);
     try {
       const response = await fetch('/api/moderation/messages', {
         method: 'POST',
