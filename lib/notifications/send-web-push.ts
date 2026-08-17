@@ -38,7 +38,7 @@ export interface SendWebPushResult {
 }
 
 /**
- * 사용자 active push_tokens(최대 5개)로 Web Push 발송.
+ * 사용자 active push_tokens(고유 endpoint 최대 10개)로 Web Push 발송.
  * APP_URL self-fetch 없이 서버에서 직접 호출한다.
  */
 function pushEndpointKey(token: string): string | null {
