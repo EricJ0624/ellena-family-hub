@@ -75,7 +75,7 @@ type CalendarGridCell =
   | { type: 'empty' }
   | { type: 'day'; date: Date; day: number; isToday: boolean; eventCount: number; kidsSticker: string | null };
 
-/** Kids 평상시 장식. 연월이 바뀌면 자리만 섞고, 글자·숫자·버튼은 피한다. */
+/** Kids 평상시 장식. 달력 칸이 아니라 위젯 가장자리만. */
 const KidsIdleDecorations = memo(function KidsIdleDecorations({
   year,
   month,
@@ -91,7 +91,7 @@ const KidsIdleDecorations = memo(function KidsIdleDecorations({
           key={`${item.src}-${index}`}
           src={item.src}
           alt=""
-          className={`absolute bg-transparent ${item.className}`}
+          className={`absolute bg-transparent object-contain ${item.className}`}
         />
       ))}
     </div>
@@ -167,6 +167,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
             style={{ gap: '2.2cqmin', flex: '1 1 0%', minHeight: 0 }}
           >
             <div
+              className="relative z-[3]"
               style={{
                 display: 'flex',
                 alignItems: 'center',
