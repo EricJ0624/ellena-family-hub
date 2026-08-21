@@ -21,6 +21,7 @@ import {
 } from '@/lib/family-auth-routing';
 import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
+import type { SignupBlockReason } from '@/lib/signup-settings';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -51,6 +52,8 @@ export default function LoginPage() {
   /** 이메일별 가입 쿨다운(전역이면 다른 이메일로 바꿔도 막히는 버그 방지) */
   const signupCooldownByEmailRef = useRef<Record<string, number>>({});
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
+  const [signupAllowed, setSignupAllowed] = useState(true);
+  const [signupBlockReason, setSignupBlockReason] = useState<SignupBlockReason>('ok');
   const countryOptions = getCountryOptions(intlLocaleForLang(displayLang));
 
   const handleSignupLangChange = (code: LangCode) => {
@@ -98,6 +101,32 @@ export default function LoginPage() {
       }
     }
   }, [isMounted]);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    let cancelled = false;
+    const loadSignupStatus = async () => {
+      try {
+        const response = await fetch('/api/signup-status', { cache: 'no-store' });
+        const result = await response.json().catch(() => null);
+        if (cancelled || !result || result.allowed !== false) return;
+        setSignupAllowed(false);
+        setSignupBlockReason(result.reason === 'cap_reached' ? 'cap_reached' : 'disabled');
+      } catch {
+        // 조회 실패 시 가입 탭은 열어 둔다. 실제 차단은 서버 트리거가 담당.
+      }
+    };
+    void loadSignupStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMounted]);
+
+  useEffect(() => {
+    if (!signupAllowed && mode === 'signup') {
+      setMode('login');
+    }
+  }, [signupAllowed, mode]);
 
   // 로그인 타이틀 한 줄 맞춤: 넘치면 폰트 자동 축소, 리사이즈 시 재계산 (대시보드와 동일 방식)
   useEffect(() => {
@@ -320,6 +349,14 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
+    const closedMessage =
+      signupBlockReason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled');
+    if (!signupAllowed) {
+      setErrorMsg(closedMessage);
+      setMode('login');
+      return;
+    }
+
     // 비밀번호 확인
     if (password !== confirmPassword) {
       setErrorMsg(t('error_password_mismatch'));
@@ -357,6 +394,22 @@ export default function LoginPage() {
         const sec = Math.ceil((cooldownUntil - Date.now()) / 1000);
         setErrorMsg(`같은 이메일로는 ${sec}초 후에 다시 시도할 수 있습니다.`);
         return;
+      }
+
+      try {
+        const statusRes = await fetch('/api/signup-status', { cache: 'no-store' });
+        const statusJson = await statusRes.json().catch(() => null);
+        if (statusJson?.allowed === false) {
+          const reason: SignupBlockReason =
+            statusJson.reason === 'cap_reached' ? 'cap_reached' : 'disabled';
+          setSignupAllowed(false);
+          setSignupBlockReason(reason);
+          setErrorMsg(reason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled'));
+          setMode('login');
+          return;
+        }
+      } catch {
+        // 상태 조회 실패 시 signUp을 시도한다. 트리거가 최종 차단한다.
       }
 
       // 다른 계정 세션이 남아 있을 때만 signOut (없을 때 불필요한 GoTrue 호출 제거 → rate limit 완화)
@@ -493,7 +546,23 @@ export default function LoginPage() {
         }
         setErrorMsg('잠시 후 다시 시도해 주세요. (요청이 많아 일시적으로 제한되었습니다.)');
       } else if (/signups not allowed|signup_disabled/i.test(message + ' ' + code)) {
-        setErrorMsg('현재 이메일 가입이 비활성화되어 있습니다. 관리자에게 문의해주세요.');
+        setErrorMsg(t('signup_closed_disabled'));
+      } else if (/database error saving new user/i.test(message)) {
+        try {
+          const statusRes = await fetch('/api/signup-status', { cache: 'no-store' });
+          const statusJson = await statusRes.json().catch(() => null);
+          if (statusJson?.allowed === false) {
+            setSignupAllowed(false);
+            setSignupBlockReason(statusJson.reason === 'cap_reached' ? 'cap_reached' : 'disabled');
+            setErrorMsg(t('signup_closed_disabled'));
+          } else {
+            const hint = code && !message.includes('@') ? ` (${code})` : '';
+            setErrorMsg(`${t('error_signup_failed')}${hint}`);
+          }
+        } catch {
+          const hint = code && !message.includes('@') ? ` (${code})` : '';
+          setErrorMsg(`${t('error_signup_failed')}${hint}`);
+        }
       } else {
         const hint = code && !message.includes('@') ? ` (${code})` : '';
         setErrorMsg(`${t('error_signup_failed')}${hint}`);
@@ -553,6 +622,7 @@ export default function LoginPage() {
   };
 
   const switchMode = (newMode: Mode) => {
+    if (newMode === 'signup' && !signupAllowed) return;
     setMode(newMode);
     setErrorMsg('');
     setSuccessMsg('');
@@ -652,11 +722,13 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => switchMode('signup')}
+            disabled={!signupAllowed}
             className={cn(
               'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
               mode === 'signup'
                 ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
+              !signupAllowed && 'cursor-not-allowed opacity-50',
             )}
           >
             {t('tab_signup')}
@@ -674,6 +746,12 @@ export default function LoginPage() {
             {t('tab_forgot')}
           </button>
         </div>
+
+        {!signupAllowed && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {signupBlockReason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled')}
+          </div>
+        )}
 
         {/* 입력 폼 영역 */}
         <form 

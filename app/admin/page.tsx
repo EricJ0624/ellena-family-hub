@@ -48,6 +48,7 @@ import { parseMessageThread } from '@/lib/support-ticket-thread';
 import { parseMemberSupportMessageThread } from '@/lib/member-support-ticket-thread';
 import { getGroupSelectorLabel, getGroupDisplayNameRaw } from '@/lib/group-display-name';
 import { FeatureUsageSection } from '@/app/components/admin/FeatureUsageSection';
+import { SignupSettingsSection } from '@/app/components/admin/SignupSettingsSection';
 import { AdminModerationInbox } from '@/app/components/admin/AdminModerationInbox';
 import { AdminSuspendModals, type AdminSuspendTarget } from '@/app/components/admin/AdminSuspendModals';
 import { AdminForceLeaveModal, type AdminForceLeaveTarget } from '@/app/components/admin/AdminForceLeaveModal';
@@ -1504,6 +1505,8 @@ export default function AdminPage() {
                     </div>
                   </motion.div>
                 </div>
+
+                <SignupSettingsSection lang={adminLang} />
 
                 <div className="mt-8 grid gap-6 md:grid-cols-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-6">

@@ -30,6 +30,8 @@ type LoginTranslations = {
   error_country_required: string;
   error_email_taken: string;
   error_signup_failed: string;
+  signup_closed_disabled: string;
+  signup_closed_cap: string;
   error_send_failed: string;
   success_signup_check_email: string;
   success_signup_done: string;
@@ -69,6 +71,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: '거주 국가를 선택해 주세요.',
     error_email_taken: '이미 등록된 이메일입니다.',
     error_signup_failed: '가입 실패: 정보를 확인해주세요.',
+    signup_closed_disabled:
+      '사용자 증가로 서비스 점검을 위해 신규 가입을 잠시 중단했습니다. 점검이 끝난 후 다시 가입해 주시기 바랍니다.',
+    signup_closed_cap:
+      '사용자 증가로 서비스 점검을 위해 신규 가입을 잠시 중단했습니다. 점검이 끝난 후 다시 가입해 주시기 바랍니다.',
     error_send_failed: '이메일 발송 실패: 이메일을 확인해주세요.',
     success_signup_check_email: '가입이 완료되었습니다! 이메일을 확인하고 인증을 완료해주세요.',
     success_signup_done: '가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)',
@@ -106,6 +112,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: 'Please select your country of residence.',
     error_email_taken: 'This email is already registered.',
     error_signup_failed: 'Sign up failed. Please check your information.',
+    signup_closed_disabled:
+      'We have temporarily paused new sign-ups to inspect the service as usage grows. Please try again after the inspection is complete.',
+    signup_closed_cap:
+      'We have temporarily paused new sign-ups to inspect the service as usage grows. Please try again after the inspection is complete.',
     error_send_failed: 'Failed to send email. Please check the address.',
     success_signup_check_email: 'Sign up complete! Please check your email and verify.',
     success_signup_done: 'Sign up complete! Please check your email. (if verification is enabled)',
@@ -143,6 +153,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: '居住国を選択してください。',
     error_email_taken: 'このメールアドレスは既に登録されています。',
     error_signup_failed: '登録に失敗しました。情報を確認してください。',
+    signup_closed_disabled:
+      '利用者の増加に伴い、サービス点検のため新規登録を一時停止しています。点検終了後に再度ご登録ください。',
+    signup_closed_cap:
+      '利用者の増加に伴い、サービス点検のため新規登録を一時停止しています。点検終了後に再度ご登録ください。',
     error_send_failed: '送信に失敗しました。メールアドレスを確認してください。',
     success_signup_check_email: '登録が完了しました！メールを確認して認証を完了してください。',
     success_signup_done: '登録が完了しました！メールを確認してください。（認証が有効な場合）',
@@ -180,6 +194,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: '请选择居住国家。',
     error_email_taken: '该邮箱已被注册。',
     error_signup_failed: '注册失败，请检查信息。',
+    signup_closed_disabled:
+      '因用户增加，我们正在进行服务检查，已暂停新用户注册。检查结束后请再来注册。',
+    signup_closed_cap:
+      '因用户增加，我们正在进行服务检查，已暂停新用户注册。检查结束后请再来注册。',
     error_send_failed: '发送失败，请检查邮箱地址。',
     success_signup_check_email: '注册完成！请查收邮件并完成验证。',
     success_signup_done: '注册完成！请查收邮件。（如已开启邮箱验证）',
@@ -217,6 +235,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: '請選擇居住國家。',
     error_email_taken: '該電子郵件已被註冊。',
     error_signup_failed: '註冊失敗，請檢查資訊。',
+    signup_closed_disabled:
+      '因用戶增加，我們正在進行服務檢查，已暫停新用戶註冊。檢查結束後請再來註冊。',
+    signup_closed_cap:
+      '因用戶增加，我們正在進行服務檢查，已暫停新用戶註冊。檢查結束後請再來註冊。',
     error_send_failed: '發送失敗，請檢查電子郵件地址。',
     success_signup_check_email: '註冊完成！請查收郵件並完成驗證。',
     success_signup_done: '註冊完成！請查收郵件。（如已開啟郵件驗證）',
@@ -254,6 +276,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: 'Selecciona tu país de residencia.',
     error_email_taken: 'Este correo ya está registrado.',
     error_signup_failed: 'Error al registrarse. Comprueba tus datos.',
+    signup_closed_disabled:
+      'Hemos pausado temporalmente los registros nuevos para revisar el servicio por el aumento de usuarios. Vuelva a registrarse cuando termine la revisión.',
+    signup_closed_cap:
+      'Hemos pausado temporalmente los registros nuevos para revisar el servicio por el aumento de usuarios. Vuelva a registrarse cuando termine la revisión.',
     error_send_failed: 'No se pudo enviar el correo. Comprueba la dirección.',
     success_signup_check_email: '¡Registro completado! Revisa tu correo y verifica tu cuenta.',
     success_signup_done: '¡Registro completado! Revisa tu correo. (si la verificación está activada)',
@@ -291,6 +317,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: 'Veuillez sélectionner votre pays de résidence.',
     error_email_taken: 'Cet e-mail est déjà enregistré.',
     error_signup_failed: 'Échec de l\'inscription. Vérifiez vos informations.',
+    signup_closed_disabled:
+      'Nous avons temporairement suspendu les inscriptions pour inspecter le service suite à la hausse d\'utilisateurs. Merci de vous inscrire à nouveau une fois l\'inspection terminée.',
+    signup_closed_cap:
+      'Nous avons temporairement suspendu les inscriptions pour inspecter le service suite à la hausse d\'utilisateurs. Merci de vous inscrire à nouveau une fois l\'inspection terminée.',
     error_send_failed: 'Échec de l\'envoi de l\'e-mail. Vérifiez l\'adresse.',
     success_signup_check_email: 'Inscription terminée ! Vérifiez votre e-mail et confirmez votre compte.',
     success_signup_done: 'Inscription terminée ! Vérifiez votre e-mail. (si la vérification est activée)',
@@ -328,6 +358,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: 'Bitte wählen Sie Ihr Wohnsitzland.',
     error_email_taken: 'Diese E-Mail ist bereits registriert.',
     error_signup_failed: 'Registrierung fehlgeschlagen. Bitte Angaben prüfen.',
+    signup_closed_disabled:
+      'Wegen steigender Nutzerzahlen haben wir neue Anmeldungen zur Serviceprüfung vorübergehend pausiert. Bitte registrieren Sie sich erneut, wenn die Prüfung abgeschlossen ist.',
+    signup_closed_cap:
+      'Wegen steigender Nutzerzahlen haben wir neue Anmeldungen zur Serviceprüfung vorübergehend pausiert. Bitte registrieren Sie sich erneut, wenn die Prüfung abgeschlossen ist.',
     error_send_failed: 'E-Mail konnte nicht gesendet werden. Bitte Adresse prüfen.',
     success_signup_check_email: 'Registrierung abgeschlossen! Bitte E-Mail prüfen und Konto bestätigen.',
     success_signup_done: 'Registrierung abgeschlossen! Bitte E-Mail prüfen. (falls Bestätigung aktiviert)',
@@ -365,6 +399,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: 'Seleziona il paese di residenza.',
     error_email_taken: 'Questa email è già registrata.',
     error_signup_failed: 'Registrazione non riuscita. Controlla i dati.',
+    signup_closed_disabled:
+      'Abbiamo temporaneamente sospeso le nuove registrazioni per un controllo del servizio a causa dell\'aumento degli utenti. Registrati di nuovo al termine del controllo.',
+    signup_closed_cap:
+      'Abbiamo temporaneamente sospeso le nuove registrazioni per un controllo del servizio a causa dell\'aumento degli utenti. Registrati di nuovo al termine del controllo.',
     error_send_failed: 'Invio email non riuscito. Controlla l\'indirizzo.',
     success_signup_check_email: 'Registrazione completata! Controlla l\'email e verifica l\'account.',
     success_signup_done: 'Registrazione completata! Controlla l\'email. (se la verifica è attiva)',
@@ -402,6 +440,10 @@ const login: Record<LangCode, LoginTranslations> = {
     error_country_required: 'Selecione seu país de residência.',
     error_email_taken: 'Este e-mail já está cadastrado.',
     error_signup_failed: 'Falha no cadastro. Verifique suas informações.',
+    signup_closed_disabled:
+      'Pausámos temporariamente novos cadastros para inspeção do serviço devido ao aumento de utilizadores. Volte a registar-se depois da inspeção.',
+    signup_closed_cap:
+      'Pausámos temporariamente novos cadastros para inspeção do serviço devido ao aumento de utilizadores. Volte a registar-se depois da inspeção.',
     error_send_failed: 'Falha ao enviar o e-mail. Verifique o endereço.',
     success_signup_check_email: 'Cadastro concluído! Verifique seu e-mail e confirme sua conta.',
     success_signup_done: 'Cadastro concluído! Verifique seu e-mail. (se a verificação estiver ativada)',

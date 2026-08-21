@@ -433,6 +433,37 @@ export interface Database {
           }
         ]
       }
+      system_settings: {
+        Row: {
+          id: number
+          signup_enabled: boolean
+          signup_max_users: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          signup_enabled?: boolean
+          signup_max_users?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          signup_enabled?: boolean
+          signup_max_users?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       admin_stepup_attempts: {
         Row: {
           user_id: string
@@ -1239,6 +1270,10 @@ export interface Database {
         }
         Returns: boolean
       }
+      get_signup_availability: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       is_group_suspended: {
         Args: {
           p_group_id: string
@@ -1401,4 +1436,6 @@ export type FamilyRole = Database["public"]["Enums"]["family_role"]
 export type SystemAdmin = Database["public"]["Tables"]["system_admins"]["Row"]
 export type SystemAdminInsert = Database["public"]["Tables"]["system_admins"]["Insert"]
 export type SystemAdminUpdate = Database["public"]["Tables"]["system_admins"]["Update"]
+
+export type SystemSettings = Database["public"]["Tables"]["system_settings"]["Row"]
 

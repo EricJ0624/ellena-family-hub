@@ -1,6 +1,6 @@
 /** 이용약관·개인정보 처리방침 본문 (ko / en) */
 
-export const LEGAL_LAST_UPDATED = '2026-06-20';
+export const LEGAL_LAST_UPDATED = '2026-08-21';
 
 export const TERMS_TITLE = { ko: '이용약관', en: 'Terms of Service' } as const;
 export const PRIVACY_TITLE = { ko: '개인정보 처리방침', en: 'Privacy Policy' } as const;
@@ -16,6 +16,7 @@ export const TERMS_BODY = {
 1. 이용자는 정확한 정보로 가입해야 합니다.
 2. 가입 시 표시 언어·거주 국가를 선택합니다. 이는 서비스 제공·운영 통계에 사용됩니다.
 3. 이메일 인증 등 본 서비스가 정한 절차를 따라야 합니다.
+4. 운영자는 서비스 운영상 필요에 따라 신규 회원 가입을 일시 중단하거나, 가입 인원을 제한할 수 있습니다.
 
 제4조 (이용자 의무)
 이용자는 타인의 권리를 침해하거나 불법·유해 콘텐츠를 게시해서는 안 됩니다.
@@ -38,6 +39,7 @@ Article 3 (Registration)
 1. You must register with accurate information.
 2. At sign-up you choose a display language and country of residence for service delivery and aggregated statistics.
 3. You must complete verification steps required by the Service.
+4. The operator may temporarily pause new registrations or limit the number of accounts when reasonably necessary for operating the Service.
 
 Article 4 (User obligations)
 You must not infringe others' rights or post illegal or harmful content.
