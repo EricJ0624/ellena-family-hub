@@ -3649,7 +3649,7 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src="/travel-planner/add-trip-modal.png?v=10"
+              src="/travel-planner/add-trip-modal.png?v=16"
               alt=""
               className="pointer-events-none absolute inset-0 z-0 h-full w-full object-fill"
             />
