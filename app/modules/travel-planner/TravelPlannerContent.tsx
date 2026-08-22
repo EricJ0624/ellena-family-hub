@@ -3649,9 +3649,9 @@ export function TravelPlannerContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src="/travel-planner/add-trip-modal.png?v=16"
+              src="/travel-planner/add-trip-modal.png?v=21"
               alt=""
-              className="pointer-events-none absolute inset-0 z-0 h-full w-full object-fill"
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover"
             />
             <p className="travel-kids-add-trip-kicker">{tt('title')}</p>
             <h3 className="travel-kids-add-trip-heading">{tt('add_trip')}</h3>
