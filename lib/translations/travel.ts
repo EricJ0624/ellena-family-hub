@@ -31,6 +31,7 @@ export type TravelTranslations = {
   dashboard_select_group: string;
   dashboard_trips_loading: string;
   add_trip: string;
+  add_trip_tagline: string;
   edit_trip: string;
   label_title: string;
   label_destination: string;
@@ -126,7 +127,8 @@ export type TravelTranslations = {
   no_transport: string;
   add_attraction: string;
   add_transport: string;
-  view_itinerary_pdf: string;  load_attraction_failed: string;
+  view_itinerary_pdf: string;
+  load_attraction_failed: string;
   load_transport_failed: string;
   edit_attraction: string;
   edit_transport: string;
@@ -294,6 +296,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: '여행 플래너를 보려면 그룹을 선택해 주세요.',
     dashboard_trips_loading: '여행 목록 불러오는 중...',
     add_trip: '여행 추가',
+    add_trip_tagline: '새로운 모험',
     edit_trip: '여행 수정',
     label_title: '제목 *',
     label_destination: '목적지',
@@ -555,6 +558,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: 'Select a group to use the travel planner.',
     dashboard_trips_loading: 'Loading trips…',
     add_trip: 'Add trip',
+    add_trip_tagline: 'New Adventure',
     edit_trip: 'Edit trip',
     label_title: 'Title *',
     label_destination: 'Destination',
@@ -816,6 +820,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: '旅行プランナーを使うにはグループを選択してください。',
     dashboard_trips_loading: '旅行一覧を読み込み中…',
     add_trip: '旅行を追加',
+    add_trip_tagline: '新しい冒険',
     edit_trip: '旅行を編集',
     label_title: 'タイトル *',
     label_destination: '目的地',
@@ -1077,6 +1082,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: '请选择群组以使用旅行计划。',
     dashboard_trips_loading: '正在加载旅行列表…',
     add_trip: '添加旅行',
+    add_trip_tagline: '新的冒险',
     edit_trip: '编辑旅行',
     label_title: '标题 *',
     label_destination: '目的地',
@@ -1338,6 +1344,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: '請選擇群組以使用旅行計畫。',
     dashboard_trips_loading: '正在載入旅行清單…',
     add_trip: '新增旅行',
+    add_trip_tagline: '新的冒險',
     edit_trip: '編輯旅行',
     label_title: '標題 *',
     label_destination: '目的地',
@@ -1599,6 +1606,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: 'Seleccione un grupo para utilizar el planificador de viajes.',
     dashboard_trips_loading: 'Cargando viajes…',
     add_trip: 'Añadir viaje',
+    add_trip_tagline: 'Nueva aventura',
     edit_trip: 'Editar viaje',
     label_title: 'Título *',
     label_destination: 'Destino',
@@ -1859,6 +1867,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: 'Sélectionnez un groupe pour utiliser le planificateur de voyage.',
     dashboard_trips_loading: 'Chargement des voyages…',
     add_trip: 'Ajouter un voyage',
+    add_trip_tagline: 'Nouvelle aventure',
     edit_trip: 'Modifier le voyage',
     label_title: 'Titre *',
     label_destination: 'Destination',
@@ -2119,6 +2128,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: 'Wählen Sie eine Gruppe aus, um den Reiseplaner zu verwenden.',
     dashboard_trips_loading: 'Fahrten werden geladen…',
     add_trip: 'Reise hinzufügen',
+    add_trip_tagline: 'Neues Abenteuer',
     edit_trip: 'Reise bearbeiten',
     label_title: 'Titel *',
     label_destination: 'Ziel',
@@ -2379,6 +2389,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: 'Seleziona un gruppo per utilizzare il pianificatore di viaggio.',
     dashboard_trips_loading: 'Caricamento viaggi...',
     add_trip: 'Aggiungi viaggio',
+    add_trip_tagline: 'Nuova avventura',
     edit_trip: 'Modifica viaggio',
     label_title: 'Titolo *',
     label_destination: 'Destinazione',
@@ -2639,6 +2650,7 @@ const travel: Record<LangCode, TravelTranslations> = {
     dashboard_select_group: 'Selecione um grupo para usar o planejador de viagens.',
     dashboard_trips_loading: 'Carregando viagens…',
     add_trip: 'Adicionar viagem',
+    add_trip_tagline: 'Nova aventura',
     edit_trip: 'Editar viagem',
     label_title: 'Título *',
     label_destination: 'Destino',

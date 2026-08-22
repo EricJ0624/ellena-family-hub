@@ -6,6 +6,261 @@
   z-index: 2147483646 !important;
 }
 
+/* Kids travel Add trip overlay. Unlayered so it is not dropped from @layer components. */
+.travel-kids-add-trip-frame {
+  position: relative;
+  isolation: isolate;
+  flex-shrink: 0;
+  width: min(92vw, 400px);
+  aspect-ratio: 762 / 1024;
+  overflow: hidden;
+  border: 0;
+  outline: none;
+  border-radius: 1.5rem;
+  background-color: #e8f0ff;
+  container-type: size;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+@media (orientation: landscape) and (max-height: 640px) {
+  .travel-kids-add-trip-frame {
+    width: auto;
+    height: min(90dvh, 560px);
+    max-width: min(92vw, 400px);
+  }
+}
+
+.travel-kids-add-trip-kicker {
+  position: absolute;
+  z-index: 2;
+  left: 36%;
+  right: 12%;
+  top: 7.2%;
+  margin: 0;
+  font-size: clamp(0.52rem, 2.5cqi, 0.68rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.travel-kids-add-trip-heading {
+  position: absolute;
+  z-index: 2;
+  left: 36%;
+  right: 10%;
+  top: 10.5%;
+  margin: 0;
+  font-size: clamp(1rem, 5.4cqi, 1.35rem);
+  font-weight: 700;
+  color: #1e293b;
+  pointer-events: none;
+}
+
+.travel-kids-add-trip-tagline {
+  position: absolute;
+  z-index: 2;
+  left: 36%;
+  right: 12%;
+  top: 16.6%;
+  margin: 0;
+  font-size: clamp(0.68rem, 3.2cqi, 0.88rem);
+  font-weight: 500;
+  color: #334155;
+  pointer-events: none;
+}
+
+.travel-kids-add-trip-close {
+  position: absolute;
+  z-index: 2;
+  top: 3.2%;
+  right: 4.2%;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  padding: 0.2em;
+  cursor: pointer;
+}
+
+.travel-kids-add-trip-form {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.travel-kids-add-trip-label {
+  position: absolute;
+  left: 8%;
+  margin: 0;
+  font-size: clamp(0.62rem, 2.9cqi, 0.78rem);
+  font-weight: 600;
+  color: #64748b;
+}
+
+.travel-kids-add-trip-label--title { top: 28.6%; }
+.travel-kids-add-trip-label--destination { top: 42.6%; }
+.travel-kids-add-trip-label--start { top: 56.6%; left: 8%; width: 36%; }
+.travel-kids-add-trip-label--end { top: 56.6%; left: 53%; width: 40%; }
+.travel-kids-add-trip-label--currency { top: 70%; }
+
+.travel-kids-add-trip-input {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  appearance: none;
+  border: 0;
+  border-radius: 0.9rem;
+  background-color: transparent;
+  background-image: none;
+  color: #1e293b;
+  font-size: clamp(0.72rem, 3.3cqi, 0.92rem);
+  padding: 0 3.2%;
+  outline: none;
+}
+
+.travel-kids-add-trip-input:focus-visible {
+  box-shadow: inset 0 0 0 2px rgb(139 92 246 / 0.55);
+}
+
+.travel-kids-add-trip-input:-webkit-autofill,
+.travel-kids-add-trip-input:-webkit-autofill:hover,
+.travel-kids-add-trip-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1e293b;
+  box-shadow: 0 0 0 1000px transparent inset;
+  transition: background-color 99999s ease-out;
+}
+
+.travel-kids-add-trip-input--title {
+  left: 7.8%;
+  right: 24%;
+  top: 33%;
+  height: 7.1%;
+}
+
+.travel-kids-add-trip-input--destination {
+  left: 7.8%;
+  right: 24%;
+  top: 47.2%;
+  height: 7.1%;
+}
+
+.travel-kids-add-trip-date-value {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 3.2%;
+  color: #1e293b;
+  font-size: clamp(0.72rem, 3.3cqi, 0.92rem);
+  font-weight: 500;
+  pointer-events: none;
+  background-color: #eaebf0;
+  border-radius: 0.45rem;
+}
+
+.travel-kids-add-trip-date-value--start {
+  left: 8.2%;
+  width: 24%;
+  top: 62.2%;
+  height: 5.5%;
+}
+
+.travel-kids-add-trip-date-value--end {
+  left: 54.8%;
+  width: 24%;
+  top: 62.2%;
+  height: 5.5%;
+}
+
+.travel-kids-add-trip-input--start {
+  left: 7.5%;
+  width: 34.8%;
+  top: 61.5%;
+  height: 6.9%;
+  z-index: 2;
+  opacity: 0;
+  appearance: none;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.travel-kids-add-trip-input--end {
+  left: 54%;
+  right: 7.3%;
+  width: auto;
+  top: 61.5%;
+  height: 6.9%;
+  z-index: 2;
+  opacity: 0;
+  appearance: none;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.travel-kids-add-trip-input--start::-webkit-calendar-picker-indicator,
+.travel-kids-add-trip-input--end::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.travel-kids-add-trip-input--start:focus-visible,
+.travel-kids-add-trip-input--end:focus-visible {
+  box-shadow: inset 0 0 0 2px rgb(139 92 246 / 0.55);
+}
+
+.travel-kids-add-trip-input--currency {
+  left: 7.8%;
+  right: 24%;
+  top: 74%;
+  height: 9.8%;
+}
+
+.travel-kids-add-trip-cancel {
+  position: absolute;
+  left: 56.6%;
+  width: 19.6%;
+  top: 88.1%;
+  height: 7.4%;
+  border: 0;
+  border-radius: 0.7rem;
+  background: #e8e8ee;
+  color: #334155;
+  font-size: clamp(0.7rem, 3.2cqi, 0.88rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.travel-kids-add-trip-submit {
+  position: absolute;
+  left: 78.74%;
+  width: 15.35%;
+  top: 88.18%;
+  height: 7.13%;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25em;
+  border: 0;
+  outline: none;
+  border-radius: 0.7rem;
+  background-color: #6210b0;
+  background-image: none;
+  box-shadow: none;
+  color: #fff;
+  font-size: clamp(0.7rem, 3.2cqi, 0.88rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* 공지 배너 마퀴 슬라이딩 (AnnouncementBanner에서 animation: marquee 참조) */
 @keyframes marquee {
   0% {

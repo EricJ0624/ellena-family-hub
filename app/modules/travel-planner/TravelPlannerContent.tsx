@@ -65,6 +65,7 @@ import {
   type UploadedAttachment,
 } from '@/lib/feature-attachments-client';
 import { intlLocaleForLang } from '@/lib/language-fonts';
+import { resolveUiTheme } from '@/lib/ui-theme';
 
 type WindowWithGoogleMaps = Window & {
   google?: { maps: typeof google.maps };
@@ -90,6 +91,20 @@ export function TravelPlannerContent() {
   ) => formatTravelTranslation(lang, key, vars);
   const { currentGroupId, currentGroup, userRole, isOwner } = useGroup();
   const isTripAdmin = userRole === 'ADMIN' || isOwner;
+  const isKidsTheme =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
+  const openDatePicker = (el: HTMLInputElement) => {
+    if (typeof el.showPicker !== 'function') return;
+    try {
+      el.showPicker();
+    } catch {
+      /* picker already open or not allowed */
+    }
+  };
+  const formatKidsDateOverlay = (iso: string) => {
+    const [year, month, day] = iso.split('-');
+    return year && month && day ? `${month}/${day}/${year}` : iso;
+  };
   const [loading, setLoading] = useState(true);
   const [trips, setTrips] = useState<TravelTrip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TravelTrip | null>(null);
@@ -3624,7 +3639,126 @@ export function TravelPlannerContent() {
           </div>
         )}
 
-      {showTripForm && (
+      {showTripForm && (isKidsTheme ? (
+        <div
+          className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !submitting && router.push('/dashboard')}
+        >
+          <div
+            className="travel-kids-add-trip-frame"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src="/travel-planner/add-trip-modal.png?v=10"
+              alt=""
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full object-fill"
+            />
+            <p className="travel-kids-add-trip-kicker">{tt('title')}</p>
+            <h3 className="travel-kids-add-trip-heading">{tt('add_trip')}</h3>
+            <p className="travel-kids-add-trip-tagline">{tt('add_trip_tagline')}</p>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => router.push('/dashboard')}
+              className="travel-kids-add-trip-close disabled:cursor-not-allowed"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <form onSubmit={handleCreateTrip} className="travel-kids-add-trip-form">
+              <label className="travel-kids-add-trip-label travel-kids-add-trip-label--title" htmlFor="travel-kids-trip-title">
+                {tt('label_title')}
+              </label>
+              <input
+                id="travel-kids-trip-title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                required
+                placeholder={tt('placeholder_trip_title')}
+                className="travel-kids-add-trip-input travel-kids-add-trip-input--title"
+              />
+              <label className="travel-kids-add-trip-label travel-kids-add-trip-label--destination" htmlFor="travel-kids-trip-destination">
+                {tt('label_destination')}
+              </label>
+              <input
+                id="travel-kids-trip-destination"
+                value={formDestination}
+                onChange={(e) => setFormDestination(e.target.value)}
+                placeholder={tt('placeholder_destination')}
+                className="travel-kids-add-trip-input travel-kids-add-trip-input--destination"
+              />
+              <label className="travel-kids-add-trip-label travel-kids-add-trip-label--start" htmlFor="travel-kids-trip-start">
+                {tt('label_start_date')}
+              </label>
+              {formStartDate ? (
+                <span className="travel-kids-add-trip-date-value travel-kids-add-trip-date-value--start" aria-hidden>
+                  {formatKidsDateOverlay(formStartDate)}
+                </span>
+              ) : null}
+              <input
+                id="travel-kids-trip-start"
+                type="date"
+                value={formStartDate}
+                onChange={(e) => setFormStartDate(e.target.value)}
+                onClick={(e) => openDatePicker(e.currentTarget)}
+                required
+                className="travel-kids-add-trip-input travel-kids-add-trip-input--start"
+              />
+              <label className="travel-kids-add-trip-label travel-kids-add-trip-label--end" htmlFor="travel-kids-trip-end">
+                {tt('label_end_date')}
+              </label>
+              {formEndDate ? (
+                <span className="travel-kids-add-trip-date-value travel-kids-add-trip-date-value--end" aria-hidden>
+                  {formatKidsDateOverlay(formEndDate)}
+                </span>
+              ) : null}
+              <input
+                id="travel-kids-trip-end"
+                type="date"
+                value={formEndDate}
+                onChange={(e) => setFormEndDate(e.target.value)}
+                onClick={(e) => openDatePicker(e.currentTarget)}
+                required
+                className="travel-kids-add-trip-input travel-kids-add-trip-input--end"
+              />
+              {isTripAdmin ? (
+                <>
+                  <label className="travel-kids-add-trip-label travel-kids-add-trip-label--currency" htmlFor="travel-kids-trip-currency">
+                    {tt('label_trip_currency')}
+                  </label>
+                  <select
+                    id="travel-kids-trip-currency"
+                    value={formTripCurrency}
+                    onChange={(e) => setFormTripCurrency(e.target.value)}
+                    className="travel-kids-add-trip-input travel-kids-add-trip-input--currency"
+                  >
+                    {TRIP_CURRENCY_OPTIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {formatCurrencyOptionLabel(c, localeForMoney)}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard')}
+                disabled={submitting}
+                className={`travel-kids-add-trip-cancel ${submitting ? 'cursor-not-allowed' : ''}`}
+              >
+                {tt('cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`travel-kids-add-trip-submit absolute top-[88.18%] left-[78.74%] z-[3] flex h-[7.13%] w-[15.35%] items-center justify-center rounded-[0.7rem] border-0 bg-[#6210b0] text-sm font-bold text-white ${submitting ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                {submitting && <Loader2 className="h-[0.9em] w-[0.9em] animate-spin" />}
+                {tt('add')}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : (
         <div
           className="fixed inset-0 z-50 box-border flex items-center justify-center bg-black/50 p-4"
           onClick={() => !submitting && router.push('/dashboard')}
@@ -3721,7 +3855,7 @@ export function TravelPlannerContent() {
             </form>
           </div>
         </div>
-      )}
+      ))}
 
       {showTripEditForm && selectedTrip && (
         <div
