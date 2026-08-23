@@ -18,11 +18,6 @@ const CHALK_EMPTY_FONT_MIN_PX = 10;
 /** 이전 7.5cqw 상한과 동일 비율 — 컨테이너 기준 최대 시작 크기 */
 const CHALK_EMPTY_FONT_MAX_CQW = 0.075;
 
-/** chalkboard-bg.png 에 섹션 타이틀(Family Tasks)이 항상 포함됨 — 모든 언어에서 HTML 타이틀은 sr-only */
-function usesBakedChalkboardTitle(_sectionTitle: string): boolean {
-  return true;
-}
-
 interface FamilyTasksSectionProps {
   tasks: FamilyTask[];
   onTasksChange: (tasks: FamilyTask[]) => void;
@@ -291,7 +286,6 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
   };
 
   const visibleTasks = dedupeFamilyTasks(tasks || []);
-  const hideHtmlTitle = isKidsTheme && usesBakedChalkboardTitle(t.todo_section_title);
 
   const fitEmptyStateFont = useCallback(() => {
     const el = emptyStateRef.current;
@@ -594,13 +588,8 @@ export const FamilyTasksSection = memo(function FamilyTasksSection({
       <div className="chalkboard-frame flex w-full min-w-0 flex-col">
         <section className="chalkboard-container flex flex-col">
           <div className="chalkboard-top-bar">
-            <h3
-              className={
-                hideHtmlTitle ? 'chalkboard-title chalkboard-title--sr-only' : 'chalkboard-title'
-              }
-            >
-              {t.todo_section_title}
-            </h3>
+            {/* chalkboard-bg.png 에 Family Tasks 타이틀이 포함됨 — HTML은 a11y용 sr-only */}
+            <h3 className="chalkboard-title chalkboard-title--sr-only">{t.todo_section_title}</h3>
             <div className="chalkboard-top-actions">
               <button type="button" onClick={openTodoModal} className="chalkboard-btn-add">
                 {t.todo_add_btn}
