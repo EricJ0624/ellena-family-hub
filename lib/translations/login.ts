@@ -60,7 +60,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: '이메일 인증이 필요합니다. 메일함에서 인증을 완료해주세요.',
     error_session_failed: '세션 저장에 실패했습니다. 다시 시도해주세요.',
     error_login_failed: '이메일 또는 비밀번호가 올바르지 않습니다. 계정이 없다면 가입해 주세요.',
-    error_login_temporary: '일시적으로 로그인에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+    error_login_temporary: '일시적으로 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
     error_password_mismatch: '비밀번호가 일치하지 않습니다.',
     error_password_min: '비밀번호는 최소 8자 이상이어야 합니다.',
     error_nickname_required: '별명을 입력해 주세요.',

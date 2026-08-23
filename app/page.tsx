@@ -20,6 +20,9 @@ import {
 } from '@/lib/family-auth-routing';
 import { fetchAuthBootstrapWithCache } from '@/lib/auth-bootstrap';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
+import {
+  signInWithPasswordResilient,
+} from '@/lib/auth-session-resilience';
 import type { SignupBlockReason } from '@/lib/signup-settings';
 
 type Mode = 'login' | 'signup' | 'forgot';
@@ -273,7 +276,8 @@ export default function LoginPage() {
         window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, keepLoggedIn ? '1' : '0');
       }
 
-      const { error, data } = await supabase.auth.signInWithPassword({
+      // iPhone에서 OPTIONS만 되고 POST가 끊기는 경우가 있어 일시 오류는 재시도한다.
+      const { error, data } = await signInWithPasswordResilient(supabase, {
         email: normalizedEmail,
         password,
       });
@@ -318,6 +322,7 @@ export default function LoginPage() {
       } else {
         // 서버는 성공했는데 클라이언트만 실패한 경우 세션이 남아 있을 수 있음 → 오류 문구 대신 라우팅
         try {
+          await new Promise((r) => setTimeout(r, 350));
           const {
             data: { session },
           } = await supabase.auth.getSession();
@@ -330,6 +335,7 @@ export default function LoginPage() {
         } catch {
           // fall through
         }
+        // Wi‑Fi와 무관한 iOS Auth fetch 끊김이 주원인. 재시도·세션 복구 후에도 실패했을 때.
         setErrorMsg(t('error_login_temporary'));
       }
     } finally {
