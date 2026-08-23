@@ -112,7 +112,7 @@ import {
   type DashboardWidgetKey,
   type WidgetConfigDraft,
 } from '@/lib/widgets/types';
-import { ensureWidgetConfigs } from '@/lib/widgets/widget-configs';
+import { ensureWidgetConfigs, readWidgetConfigCache } from '@/lib/widgets/widget-configs';
 import { useDashboardGridLayout } from '@/lib/widgets/use-dashboard-columns';
 import {
   resolveWidgetGridPlacement,
@@ -6167,6 +6167,11 @@ export default function FamilyHub() {
       return;
     }
 
+    const cached = readWidgetConfigCache(currentGroupId);
+    if (cached) {
+      setWidgetConfigs(cached);
+    }
+
     const run = async () => {
       try {
         const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
@@ -6184,7 +6189,7 @@ export default function FamilyHub() {
     return () => {
       cancelled = true;
     };
-  }, [currentGroupId, groupIsOwner]);
+  }, [currentGroupId, groupIsOwner, isAuthenticated]);
 
   useEffect(() => {
     if (!currentGroupId) return;
@@ -6210,7 +6215,7 @@ export default function FamilyHub() {
       document.removeEventListener('visibilitychange', onVisible);
       document.removeEventListener(WIDGET_CONFIGS_UPDATED_EVENT, reloadWidgetConfigs);
     };
-  }, [currentGroupId, groupIsOwner]);
+  }, [currentGroupId, groupIsOwner, isAuthenticated]);
 
   const [previewOrientation, setPreviewOrientation] = useState<AppPreviewOrientation>('portrait');
   useEffect(() => {

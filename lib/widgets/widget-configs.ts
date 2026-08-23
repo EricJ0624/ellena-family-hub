@@ -2,6 +2,7 @@
 
 import { compactDraftsLayoutCoordinates, layoutWHToLegacySpans } from './layout-presets';
 import { supabase } from '@/lib/supabase';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import {
   DASHBOARD_WIDGET_KEYS,
   DEFAULT_WIDGET_CONFIGS,
@@ -134,7 +135,35 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   return compactDraftsLayoutCoordinates(sorted);
 }
 
+const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_';
+
+export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(`${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WidgetConfigDraft[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeWidgetConfigCache(groupId: string, configs: WidgetConfigDraft[]): void {
+  if (typeof window === 'undefined' || configs.length === 0) return;
+  try {
+    sessionStorage.setItem(`${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`, JSON.stringify(configs));
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDraft[]> {
+  const session = await waitForSupabaseSession(supabase);
+  if (!session?.access_token) {
+    throw new Error('WIDGET_CONFIGS_NO_SESSION');
+  }
+
   const { data, error } = await supabase
     .from('widget_configs')
     .select(
@@ -145,7 +174,9 @@ export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDr
 
   if (error) throw error;
   const rows = (data ?? []) as WidgetConfigRow[];
-  return normalizeRows(rows);
+  const normalized = normalizeRows(rows);
+  writeWidgetConfigCache(groupId, normalized);
+  return normalized;
 }
 
 export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): Promise<WidgetConfigDraft[]> {

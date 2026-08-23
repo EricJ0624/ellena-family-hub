@@ -10,6 +10,7 @@ import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { ChatUiMessage } from '../types';
+import { getChatMessageDisplayText } from '@/lib/chat-messages';
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -330,7 +331,14 @@ export function FamilyChatSection({
                     </div>
                   );
                 })()}
-                {m.text && !String(m.text).startsWith('U2FsdGVkX1') && <p className="message-text">{m.text}</p>}
+                {m.text && (
+                  <p className="message-text">
+                    {getChatMessageDisplayText(
+                      String(m.text),
+                      lang === 'en' ? 'Unable to load message' : '메시지를 불러올 수 없습니다',
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           ))}

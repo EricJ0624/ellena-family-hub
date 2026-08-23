@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import type { TravelTrip } from '../types';
 
 interface UseTravelTripsProps {
@@ -30,7 +31,7 @@ export function useTravelTrips({
     
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await waitForSupabaseSession(supabase);
       if (!session?.access_token) {
         setTrips([]);
         return;

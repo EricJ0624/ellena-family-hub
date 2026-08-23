@@ -68,6 +68,20 @@ export function trimMessagesToMax(messages: ChatUiMessage[]): ChatUiMessage[] {
   return messages.slice(messages.length - CHAT_MAX_MESSAGES_IN_MEMORY);
 }
 
+export function isChatCipherText(text: string | null | undefined): boolean {
+  return Boolean(text && String(text).startsWith('U2FsdGVkX1'));
+}
+
+/** 복호화 실패로 암호문이 남은 경우 UI에 평문 대신 안내 문구를 표시한다. */
+export function getChatMessageDisplayText(
+  text: string,
+  unavailableLabel = '메시지를 불러올 수 없습니다',
+): string {
+  if (!text) return '';
+  if (isChatCipherText(text)) return unavailableLabel;
+  return text;
+}
+
 /**
  * Supabase에서 다시 불러온 목록으로 state를 덮을 때 사용.
  * - 진행 중이던 fetch가 insert보다 먼저 끝나면 스냅샷에 없는 행은 기존 state에서 유지

@@ -15,6 +15,7 @@ import {
 } from '@/lib/feature-attachments-client';
 import { familyChatDebug } from '@/lib/family-chat-debug';
 import { emitNotificationClient } from '@/lib/notifications/client';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 
 type PermissionCache = { key: string; expiresAt: number } | null;
 
@@ -99,9 +100,7 @@ export function useFamilyChatActions({
     }
 
     const req = (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const session = await waitForSupabaseSession(supabase);
       // 아주 짧은 TTL로 연속 전송/업로드 시 중복 /user 호출 완화
       sessionCacheRef.current = {
         session: session ?? null,
@@ -257,6 +256,9 @@ export function useFamilyChatActions({
     }
     setChatLoadingOlder(true);
     try {
+      const session = await waitForSupabaseSession(supabase);
+      if (!session?.access_token) return;
+
       const authKey = getAuthKey(userId);
       const currentKey =
         masterKey ||
