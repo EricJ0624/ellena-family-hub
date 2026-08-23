@@ -694,6 +694,7 @@ export default function FamilyHub() {
   const [chatTextSendingUi, setChatTextSendingUi] = useState(false);
   /** Realtime 첨부 핸들러가 항상 최신 loadChatAttachments를 호출하도록 */
   const loadChatAttachmentsRef = useRef<() => Promise<void>>(async () => {});
+  const loadInitialChatMessagesRef = useRef<(currentKey: string) => Promise<void>>(async () => {});
   const chatAttachmentsLoadGenRef = useRef(0);
   const chatAttachmentsDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 본인 업로드 중 로컬 미리보기(blob URL) */
@@ -830,7 +831,9 @@ export default function FamilyHub() {
         const stableAlbum = (Array.isArray(d.album))
           ? (d.album as Photo[]).filter((p: Photo) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy')))
           : [];
-        setState({
+        // messages는 Supabase(family_chat_messages)가 소스 — localStorage hydrate가
+        // SIGNED_IN/늦은 loadData로 빈 배열을 덮어쓰면 말풍선이 다시 사라진다.
+        setState((prev) => ({
           familyName: typeof d.familyName === 'string' ? d.familyName : INITIAL_STATE.familyName,
           location: d.location && typeof d.location === 'object' && d.location !== null && !Array.isArray(d.location)
             ? d.location as AppState['location']
@@ -839,11 +842,11 @@ export default function FamilyHub() {
           todos: Array.isArray(d.todos) ? d.todos as AppState['todos'] : INITIAL_STATE.todos,
           album: stableAlbum,
           events: Array.isArray(d.events) ? d.events as AppState['events'] : INITIAL_STATE.events,
-          messages: Array.isArray(d.messages) ? d.messages as AppState['messages'] : INITIAL_STATE.messages,
+          messages: prev.messages,
           titleStyle: d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null
             ? d.titleStyle as AppState['titleStyle']
             : INITIAL_STATE.titleStyle,
-        });
+        }));
         if (d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null) {
           setTitleStyle(d.titleStyle as Partial<TitleStyle>);
         }
@@ -1079,6 +1082,8 @@ export default function FamilyHub() {
         process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
         'ellena_family_shared_key_2024';
       void loadData(key, userId).catch(() => undefined);
+      // loadData는 messages를 건드리지 않음 — 세션 확정 후 채팅을 다시 당겨온다
+      void loadInitialChatMessagesRef.current(key).catch(() => undefined);
     });
 
     return () => {
@@ -3379,13 +3384,16 @@ export default function FamilyHub() {
         loadFamilyLocations();
       });
     };
-    // 리프레시/재로그인 시 세션 복원 후 로드 (500ms 고정 대신 세션 준비 대기 → 마커 유지)
+    // 리프레시/재로그인 시 세션 복원 후 로드 (고정 2초 강제 실행 대신 세션 준비 대기)
     const start = Date.now();
-    const MAX_SESSION_WAIT_MS = 2000;
+    const MAX_SESSION_WAIT_MS = 8000;
     const SESSION_POLL_MS = 100;
     const tryRunWhenSessionReady = async () => {
       if (locationLoadStartedRef.current) return true;
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await waitForSupabaseSession(supabase, {
+        maxWaitMs: Math.max(0, MAX_SESSION_WAIT_MS - (Date.now() - start)),
+        pollMs: SESSION_POLL_MS,
+      });
       if (session?.access_token) {
         if (sessionWaitIntervalRef.current) {
           clearInterval(sessionWaitIntervalRef.current);
@@ -3399,6 +3407,7 @@ export default function FamilyHub() {
           clearInterval(sessionWaitIntervalRef.current);
           sessionWaitIntervalRef.current = null;
         }
+        // 세션 없이도 1회 시도(내부 wait가 다시 잡음). 빈 결과면 SIGNED_IN 재로드가 보완.
         runLocationLoad();
         return true;
       }
@@ -3407,7 +3416,7 @@ export default function FamilyHub() {
     tryRunWhenSessionReady().then((done) => {
       if (done) return;
       sessionWaitIntervalRef.current = setInterval(() => {
-        tryRunWhenSessionReady();
+        void tryRunWhenSessionReady();
       }, SESSION_POLL_MS);
     });
     
@@ -6096,6 +6105,7 @@ export default function FamilyHub() {
     setChatHasMoreOlder,
     setMessages,
   });
+  loadInitialChatMessagesRef.current = loadInitialChatMessages;
 
   const {
     setupMessagesAndAttachmentsSubscription,
@@ -6175,9 +6185,16 @@ export default function FamilyHub() {
     const run = async () => {
       try {
         const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
-        if (!cancelled) {
-          setWidgetConfigs(configs);
+        if (cancelled) return;
+        // 실패 폴백(기본값)이 이미 보이는 캐시/실데이터를 덮어쓰지 않게 함
+        const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
+        const cacheHasTravelDiary = (cached ?? []).some(
+          (c) => c.widget_key === 'travel_diary' && c.is_enabled,
+        );
+        if (!hasTravelDiary && cacheHasTravelDiary) {
+          return;
         }
+        setWidgetConfigs(configs);
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('위젯 설정 로드 실패:', error);
@@ -6197,7 +6214,12 @@ export default function FamilyHub() {
     const reloadWidgetConfigs = async () => {
       try {
         const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
-        setWidgetConfigs(configs);
+        const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
+        setWidgetConfigs((prev) => {
+          const prevHas = prev.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
+          if (!hasTravelDiary && prevHas) return prev;
+          return configs;
+        });
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('위젯 설정 재로드 실패:', error);

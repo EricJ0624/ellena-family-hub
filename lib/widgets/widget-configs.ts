@@ -135,7 +135,7 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   return compactDraftsLayoutCoordinates(sorted);
 }
 
-const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_';
+const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v2_';
 
 export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | null {
   if (typeof window === 'undefined') return null;
@@ -174,9 +174,20 @@ export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDr
 
   if (error) throw error;
   const rows = (data ?? []) as WidgetConfigRow[];
+  // JWT/RLS 레이스로 0건이 오면 normalizeRows가 travel_diary=false 기본값을 만들고
+  // sessionStorage까지 오염시킨다. 빈 결과는 실패로 취급한다.
+  if (rows.length === 0) {
+    throw new Error('WIDGET_CONFIGS_EMPTY_ROWS');
+  }
   const normalized = normalizeRows(rows);
   writeWidgetConfigCache(groupId, normalized);
   return normalized;
+}
+
+function fallbackWidgetConfigs(groupId: string): WidgetConfigDraft[] {
+  const cached = readWidgetConfigCache(groupId);
+  if (cached) return cached;
+  return DEFAULT_WIDGET_CONFIGS.map((c) => ({ ...c }));
 }
 
 export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): Promise<WidgetConfigDraft[]> {
@@ -184,8 +195,8 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
   try {
     current = await loadWidgetConfigs(groupId);
   } catch (error) {
-    console.warn('[widget-configs] load failed, using defaults:', error);
-    return DEFAULT_WIDGET_CONFIGS.map((c) => ({ ...c }));
+    console.warn('[widget-configs] load failed, using cache/defaults:', error);
+    return fallbackWidgetConfigs(groupId);
   }
 
   const missing = DASHBOARD_WIDGET_KEYS.filter((k) => !current.some((c) => c.widget_key === k));
