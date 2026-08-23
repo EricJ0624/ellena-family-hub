@@ -12,7 +12,7 @@ import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
-import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath, ACCESS_UNAVAILABLE_PATH } from '@/lib/account-suspend-access';
+import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
 
 const GroupSelector: React.FC = () => {
   const router = useRouter();
@@ -617,7 +617,8 @@ const GroupSelector: React.FC = () => {
                       const check = await checkUserSuspendedInGroup(supabase, user.id, group.id);
                       if (check.lookupFailed) {
                         setIsOpen(false);
-                        router.push(ACCESS_UNAVAILABLE_PATH);
+                        console.warn('[GroupSelector] 정지 RPC 실패, 전환 유지');
+                        setCurrentGroupId(group.id);
                         return;
                       }
                       if (check.blocked) {

@@ -8,12 +8,14 @@ import CryptoJS from 'crypto-js';
 import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
-import { checkUserSuspendedInGroup, loadUserGroupAccess, resolveSuspendRedirect, suspendedPath, ACCESS_UNAVAILABLE_PATH } from '@/lib/account-suspend-access';
+import { checkUserSuspendedInGroup, loadUserGroupAccess, resolveSuspendRedirect, suspendedPath } from '@/lib/account-suspend-access';
 import {
   fetchAuthBootstrapWithCache,
   bootstrapConfirmsOpenGroup,
   resolveAuthBootstrapSuspendRedirect,
+  getCachedAuthBootstrap,
 } from '@/lib/auth-bootstrap';
+import { normalizeGroupId } from '@/lib/group-id-resolve';
 import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 import { useRouter } from 'next/navigation';
 import { 
@@ -1358,12 +1360,25 @@ export default function FamilyHub() {
     if (!isAuthenticated || !userId || !currentGroupId) return;
     let cancelled = false;
     void (async () => {
+      const normalized = normalizeGroupId(currentGroupId);
+      const cached = getCachedAuthBootstrap(userId);
+      if (cached && !cached.lookupFailed && normalized) {
+        if (cached.suspendedGroupIds.some((id) => id.toLowerCase() === normalized)) {
+          if (!cancelled) router.replace(suspendedPath(currentGroupId));
+          return;
+        }
+        if (cached.accessibleGroupIds.some((id) => id.toLowerCase() === normalized)) {
+          return;
+        }
+      }
+
       const check = await checkUserSuspendedInGroup(supabase, userId, currentGroupId);
-      if (!cancelled && check.lookupFailed) {
-        router.replace(ACCESS_UNAVAILABLE_PATH);
+      if (cancelled) return;
+      if (check.lookupFailed) {
+        console.warn('[Dashboard] 정지 RPC 실패, 진입 유지');
         return;
       }
-      if (!cancelled && check.blocked) {
+      if (check.blocked) {
         router.replace(suspendedPath(currentGroupId));
       }
     })();

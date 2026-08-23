@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { isValidUUID } from '@/lib/validation';
 import type { Group, Membership, MembershipRole } from '@/types/db';
 import { getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap-server';
+import { findGroupById, getPinnedGroupId, resolvePreferredGroupId } from '@/lib/group-id-resolve';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { resolveUiTheme } from '@/lib/ui-theme';
@@ -55,16 +55,7 @@ function seedFromBootstrapCache(
     };
   });
 
-  let preferredGroupId = currentGroupId;
-  if (typeof window !== 'undefined') {
-    const savedGroupId = localStorage.getItem('currentGroupId');
-    if (savedGroupId && groups.find((g) => g.id === savedGroupId)) {
-      preferredGroupId = savedGroupId;
-    }
-  }
-  if (!preferredGroupId || !groups.find((g) => g.id === preferredGroupId)) {
-    preferredGroupId = groups[0]?.id ?? null;
-  }
+  let preferredGroupId = resolvePreferredGroupId(groups, { currentGroupId });
 
   return { groups, memberships, preferredGroupId };
 }
@@ -158,13 +149,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       let allGroupIds = recomputeAllGroupIds();
 
-      const pinnedSaved =
-        typeof window !== 'undefined'
-          ? (() => {
-              const s = localStorage.getItem('currentGroupId')?.trim().toLowerCase() ?? '';
-              return s && isValidUUID(s) ? s : null;
-            })()
-          : null;
+      const pinnedSaved = getPinnedGroupId();
 
       // bootstrap이 그룹 있음을 알려주면 빈 결과 재시도 대기를 줄인다.
       if (allGroupIds.length === 0) {
@@ -230,8 +215,9 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       const ownedGroupIds = ownedGroupsData?.map((g) => g.id) || [];
 
       // 현재 선택된 그룹 정보를 새로 고친 목록과 동기화 (대시보드 타이틀/스타일 등 즉시 반영)
-      if (groupsData && currentGroupId) {
-        const updated = groupsData.find((g) => g.id === currentGroupId);
+      const activeId = resolvePreferredGroupId(groupsData || [], { currentGroupId, pinnedGroupId: pinnedSaved });
+      if (groupsData && activeId) {
+        const updated = findGroupById(groupsData, activeId);
         if (updated) setCurrentGroup(updated);
       }
 
@@ -248,31 +234,18 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         };
       }));
 
-      // 저장된 그룹 ID 우선 반영 (로그인 모달 선택 반영)
-      let preferredGroupId = currentGroupId;
-      if (typeof window !== 'undefined') {
-        const savedGroupId = localStorage.getItem('currentGroupId');
-        if (savedGroupId && groupsData?.find(g => g.id === savedGroupId)) {
-          preferredGroupId = savedGroupId;
-        }
-      }
+      const preferredGroupId = resolvePreferredGroupId(groupsData || [], {
+        currentGroupId,
+        pinnedGroupId: pinnedSaved,
+      });
 
-      // 현재 그룹이 없거나 삭제된 경우, 첫 번째 그룹으로 설정
-      if (!preferredGroupId || !groupsData?.find(g => g.id === preferredGroupId)) {
-        if (groupsData && groupsData.length > 0) {
-          const firstGroupId = groupsData[0].id;
-          setCurrentGroupIdState(firstGroupId);
-          // localStorage에도 저장
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('currentGroupId', firstGroupId);
-          }
-        }
-      } else if (preferredGroupId !== currentGroupId) {
+      if (preferredGroupId) {
         setCurrentGroupIdState(preferredGroupId);
-        // localStorage에도 저장
         if (typeof window !== 'undefined') {
           localStorage.setItem('currentGroupId', preferredGroupId);
         }
+        const selected = findGroupById(groupsData || [], preferredGroupId);
+        if (selected) setCurrentGroup(selected);
       }
     } catch (err: any) {
       console.error('그룹 목록 로드 실패:', err);
