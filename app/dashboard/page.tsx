@@ -6107,6 +6107,38 @@ export default function FamilyHub() {
   });
   loadInitialChatMessagesRef.current = loadInitialChatMessages;
 
+  // Realtime effect와 별도로 채팅을 로드 — 세션 레이스/한 번 실패해도 재시도
+  useEffect(() => {
+    if (!isAuthenticated || !currentGroupId || !userId) return;
+    let cancelled = false;
+
+    const run = async () => {
+      const authKey = getAuthKey(userId);
+      const key =
+        masterKey ||
+        sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+        'ellena_family_shared_key_2024';
+
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 600 * attempt));
+        }
+        try {
+          await loadInitialChatMessages(key);
+          if (!cancelled) return;
+        } catch (error) {
+          console.warn('[FamilyChat] 대시보드 채팅 로드 재시도:', attempt + 1, error);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, currentGroupId, userId, masterKey, loadInitialChatMessages]);
+
   const {
     setupMessagesAndAttachmentsSubscription,
     clearChatRuntimeState,
@@ -6183,21 +6215,27 @@ export default function FamilyHub() {
     }
 
     const run = async () => {
-      try {
-        const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
-        if (cancelled) return;
-        // 실패 폴백(기본값)이 이미 보이는 캐시/실데이터를 덮어쓰지 않게 함
-        const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
-        const cacheHasTravelDiary = (cached ?? []).some(
-          (c) => c.widget_key === 'travel_diary' && c.is_enabled,
-        );
-        if (!hasTravelDiary && cacheHasTravelDiary) {
-          return;
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
         }
-        setWidgetConfigs(configs);
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('위젯 설정 로드 실패:', error);
+        try {
+          const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
+          if (cancelled) return;
+          // DEFAULT 폴백(travel_diary off)이 실데이터/캐시를 덮지 않게
+          const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
+          const cacheHasTravelDiary = (cached ?? []).some(
+            (c) => c.widget_key === 'travel_diary' && c.is_enabled,
+          );
+          if (!hasTravelDiary && cacheHasTravelDiary) {
+            return;
+          }
+          setWidgetConfigs(configs);
+          return;
+        } catch (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('위젯 설정 로드 실패:', attempt + 1, error);
+          }
         }
       }
     };

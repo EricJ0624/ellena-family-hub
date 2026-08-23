@@ -18,6 +18,15 @@ interface UseFamilyChatInitialLoadParams {
   setMessages: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>;
 }
 
+async function fetchChatRows(supabase: any, groupId: string) {
+  return supabase
+    .from(DB_TABLES.FAMILY_MESSAGES)
+    .select('*')
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: false })
+    .limit(CHAT_PAGE_SIZE);
+}
+
 export function useFamilyChatInitialLoad({
   supabase,
   currentGroupId,
@@ -30,18 +39,23 @@ export function useFamilyChatInitialLoad({
 
       const session = await waitForSupabaseSession(supabase);
       if (!session?.access_token) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[FamilyChat] 초기 로드: Supabase 세션이 준비되지 않았습니다.');
-        }
+        console.warn('[FamilyChat] 초기 로드: Supabase 세션이 준비되지 않았습니다.');
         return;
       }
 
-      const { data: messagesDataRaw, error: messagesError } = await supabase
-        .from(DB_TABLES.FAMILY_MESSAGES)
-        .select('*')
-        .eq('group_id', currentGroupId)
-        .order('created_at', { ascending: false })
-        .limit(CHAT_PAGE_SIZE);
+      let messagesDataRaw: ChatMessageRow[] | null = null;
+      let messagesError: { message?: string } | null = null;
+
+      // 세션은 있는데 REST/RLS가 한 박자 늦는 경우 1회 재시도
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 450));
+        }
+        const res = await fetchChatRows(supabase, currentGroupId);
+        messagesError = res.error;
+        messagesDataRaw = (res.data as ChatMessageRow[] | null) ?? null;
+        if (!messagesError) break;
+      }
 
       if (messagesError) {
         console.error('[FamilyChat] 초기 메시지 로드 실패:', messagesError);
@@ -50,7 +64,7 @@ export function useFamilyChatInitialLoad({
 
       if (messagesDataRaw != null) {
         const chronological = messagesDataRaw.length > 0 ? [...messagesDataRaw].reverse() : [];
-        const formattedMessages = formatFamilyMessagesFromRows(chronological as ChatMessageRow[], currentKey);
+        const formattedMessages = formatFamilyMessagesFromRows(chronological, currentKey);
         setChatHasMoreOlder(messagesDataRaw.length >= CHAT_PAGE_SIZE);
         setMessages((prev) => mergeChatMessagesWithExisting(formattedMessages, prev));
       }

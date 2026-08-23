@@ -135,7 +135,7 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   return compactDraftsLayoutCoordinates(sorted);
 }
 
-const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v2_';
+const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v3_';
 
 export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | null {
   if (typeof window === 'undefined') return null;
@@ -164,30 +164,38 @@ export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDr
     throw new Error('WIDGET_CONFIGS_NO_SESSION');
   }
 
-  const { data, error } = await supabase
-    .from('widget_configs')
-    .select(
-      'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority,layout_x,layout_y,layout_w,layout_h,layout_version,layout_portrait_x,layout_portrait_y,layout_portrait_w,layout_portrait_h,layout_landscape_x,layout_landscape_y,layout_landscape_w,layout_landscape_h',
-    )
-    .eq('group_id', groupId)
-    .order('display_order', { ascending: true });
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 350 * attempt));
+    }
 
-  if (error) throw error;
-  const rows = (data ?? []) as WidgetConfigRow[];
-  // JWT/RLS 레이스로 0건이 오면 normalizeRows가 travel_diary=false 기본값을 만들고
-  // sessionStorage까지 오염시킨다. 빈 결과는 실패로 취급한다.
-  if (rows.length === 0) {
-    throw new Error('WIDGET_CONFIGS_EMPTY_ROWS');
+    const { data, error } = await supabase
+      .from('widget_configs')
+      .select(
+        'id,group_id,widget_key,is_enabled,display_order,size,col_span,row_span,min_w,min_h,priority,layout_x,layout_y,layout_w,layout_h,layout_version,layout_portrait_x,layout_portrait_y,layout_portrait_w,layout_portrait_h,layout_landscape_x,layout_landscape_y,layout_landscape_w,layout_landscape_h',
+      )
+      .eq('group_id', groupId)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      lastError = error;
+      continue;
+    }
+
+    const rows = (data ?? []) as WidgetConfigRow[];
+    // JWT/RLS 레이스로 0건 → DEFAULT(travel_diary=false)로 보이면 다른 위젯만 나오는 것처럼 보임
+    if (rows.length === 0) {
+      lastError = new Error('WIDGET_CONFIGS_EMPTY_ROWS');
+      continue;
+    }
+
+    const normalized = normalizeRows(rows);
+    writeWidgetConfigCache(groupId, normalized);
+    return normalized;
   }
-  const normalized = normalizeRows(rows);
-  writeWidgetConfigCache(groupId, normalized);
-  return normalized;
-}
 
-function fallbackWidgetConfigs(groupId: string): WidgetConfigDraft[] {
-  const cached = readWidgetConfigCache(groupId);
-  if (cached) return cached;
-  return DEFAULT_WIDGET_CONFIGS.map((c) => ({ ...c }));
+  throw lastError ?? new Error('WIDGET_CONFIGS_LOAD_FAILED');
 }
 
 export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): Promise<WidgetConfigDraft[]> {
@@ -195,8 +203,52 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
   try {
     current = await loadWidgetConfigs(groupId);
   } catch (error) {
-    console.warn('[widget-configs] load failed, using cache/defaults:', error);
-    return fallbackWidgetConfigs(groupId);
+    const cached = readWidgetConfigCache(groupId);
+    if (cached) {
+      console.warn('[widget-configs] load failed, using cache:', error);
+      return cached;
+    }
+
+    // 신규 그룹(행 없음) + owner만 시드. DEFAULT를 화면에 바로 쓰지 않는다(travel_diary 기본 off).
+    const isEmpty =
+      error instanceof Error &&
+      (error.message === 'WIDGET_CONFIGS_EMPTY_ROWS' || error.message.includes('EMPTY_ROWS'));
+    if (!canWrite || !isEmpty) {
+      console.warn('[widget-configs] load failed, no cache:', error);
+      throw error;
+    }
+
+    const seedRows = DEFAULT_WIDGET_CONFIGS.map((c) => ({
+      group_id: groupId,
+      widget_key: c.widget_key,
+      is_enabled: c.is_enabled,
+      display_order: c.display_order,
+      size: c.size,
+      col_span: c.colSpan,
+      row_span: c.rowSpan,
+      min_w: c.minW,
+      min_h: c.minH,
+      priority: c.priority,
+      layout_x: c.layoutX,
+      layout_y: c.layoutY,
+      layout_w: c.layoutW,
+      layout_h: c.layoutH,
+      layout_version: c.layoutVersion,
+      layout_portrait_x: c.layoutPortraitX,
+      layout_portrait_y: c.layoutPortraitY,
+      layout_portrait_w: c.layoutPortraitW,
+      layout_portrait_h: c.layoutPortraitH,
+      layout_landscape_x: c.layoutLandscapeX,
+      layout_landscape_y: c.layoutLandscapeY,
+      layout_landscape_w: c.layoutLandscapeW,
+      layout_landscape_h: c.layoutLandscapeH,
+    }));
+    const { error: seedError } = await supabase.from('widget_configs').upsert(seedRows, {
+      onConflict: 'group_id,widget_key',
+      ignoreDuplicates: true,
+    });
+    if (seedError) throw seedError;
+    current = await loadWidgetConfigs(groupId);
   }
 
   const missing = DASHBOARD_WIDGET_KEYS.filter((k) => !current.some((c) => c.widget_key === k));
@@ -235,7 +287,7 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
   });
 
   if (error) {
-    console.warn('[widget-configs] seed upsert failed, returning merged defaults:', error);
+    console.warn('[widget-configs] seed upsert failed, returning loaded rows:', error);
     return current;
   }
 

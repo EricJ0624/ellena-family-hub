@@ -5,7 +5,8 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
-import { getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAdminTranslation, getAdminAuditHeaders, formatAdminTranslation } from '@/lib/translations/admin';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -385,29 +386,39 @@ export default function AdminPage() {
     const checkAdmin = async () => {
       try {
         const session = await waitForSupabaseSession(supabase);
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        if (!session?.access_token) {
+          router.push('/dashboard');
+          return;
+        }
+
+        const { user } = await getValidatedUserWithSessionFallback(supabase, session);
         if (!user) {
           router.push('/dashboard');
           return;
         }
 
-        const cached = getCachedAuthBootstrap(user.id);
+        // bootstrap 캐시 TTL(8s) 만료 후에도 대시보드 버튼은 보이므로 API로 갱신
+        const bootstrap = await fetchAuthBootstrapWithCache(session.access_token, user.id);
+        const cachedAdmin = Boolean(bootstrap?.isSystemAdmin ?? getCachedAuthBootstrap(user.id)?.isSystemAdmin);
 
         let rpcAdmin = false;
-        if (session?.access_token) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 400 * attempt));
+          }
           const { data, error: adminError } = await supabase.rpc('is_system_admin', {
             user_id_param: user.id,
           });
+          if (!adminError && data === true) {
+            rpcAdmin = true;
+            break;
+          }
           if (adminError) {
             console.error('관리자 권한 확인 오류:', adminError);
-          } else {
-            rpcAdmin = data === true;
           }
         }
 
-        const isAdmin = rpcAdmin || Boolean(cached?.isSystemAdmin);
+        const isAdmin = rpcAdmin || cachedAdmin;
         if (!isAdmin) {
           router.push('/dashboard');
           return;
@@ -417,9 +428,7 @@ export default function AdminPage() {
         setIsAuthorized(true);
 
         // 관리자 접근 시간 업데이트
-        if (session?.access_token) {
-          await supabase.rpc('update_admin_last_access');
-        }
+        await supabase.rpc('update_admin_last_access');
       } catch (err) {
         console.error('관리자 권한 확인 오류:', err);
         router.push('/dashboard');

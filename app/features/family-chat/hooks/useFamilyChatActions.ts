@@ -101,11 +101,13 @@ export function useFamilyChatActions({
 
     const req = (async () => {
       const session = await waitForSupabaseSession(supabase);
-      // 아주 짧은 TTL로 연속 전송/업로드 시 중복 /user 호출 완화
-      sessionCacheRef.current = {
-        session: session ?? null,
-        expiresAt: Date.now() + 1500,
-      };
+      // null을 캐시하면 1.5초 동안 전송·권한이 전부 실패한다
+      if (session?.access_token) {
+        sessionCacheRef.current = {
+          session,
+          expiresAt: Date.now() + 1500,
+        };
+      }
       return session ?? null;
     })();
 
@@ -144,8 +146,33 @@ export function useFamilyChatActions({
         return;
       }
       if (memErr) {
+        // 일시 오류면 한 번 더
+        await new Promise((r) => setTimeout(r, 400));
+        const retry = await supabase
+          .from('memberships')
+          .select('group_id')
+          .eq('user_id', uid)
+          .eq('group_id', groupId)
+          .maybeSingle();
+        if (retry.data) {
+          markOk();
+          return;
+        }
         console.error('채팅 권한 확인 실패(memberships):', memErr);
         throw new Error('CHAT_PERMISSION_CHECK_MEMBERSHIPS_FAILED');
+      }
+
+      // RLS/레이스로 멤버십이 잠깐 0건일 수 있어 재조회
+      await new Promise((r) => setTimeout(r, 350));
+      const memRetry = await supabase
+        .from('memberships')
+        .select('group_id')
+        .eq('user_id', uid)
+        .eq('group_id', groupId)
+        .maybeSingle();
+      if (memRetry.data) {
+        markOk();
+        return;
       }
 
       const { data: own, error: ownErr } = await supabase
