@@ -22,7 +22,7 @@ export type SuspendCheckResult = {
   lookupFailed: boolean;
 };
 
-const ACCESS_LOOKUP_ATTEMPTS = 3;
+const ACCESS_LOOKUP_ATTEMPTS = 2;
 
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));

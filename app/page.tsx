@@ -21,7 +21,6 @@ import {
 } from '@/lib/family-auth-routing';
 import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
-import { isTransientClientError } from '@/lib/supabase-error';
 import type { SignupBlockReason } from '@/lib/signup-settings';
 
 type Mode = 'login' | 'signup' | 'forgot';
@@ -279,8 +278,9 @@ export default function LoginPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
-      const normalizedEmail = email.trim().toLowerCase();
       if (!normalizedEmail) {
         setErrorMsg(t('error_login_failed'));
         return;
@@ -331,10 +331,21 @@ export default function LoginPage() {
         code === 'email_not_confirmed'
       ) {
         setErrorMsg(t('error_email_verification'));
-      } else if (isTransientClientError(error)) {
-        setErrorMsg(t('error_login_temporary'));
       } else {
-        // 비밀번호 오류로 오인하지 않도록 일시 오류 문구 사용
+        // 서버는 성공했는데 클라이언트만 실패한 경우 세션이 남아 있을 수 있음 → 오류 문구 대신 라우팅
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session?.user?.email_confirmed_at) {
+            setErrorMsg('');
+            const emailForRoute = (session.user.email || normalizedEmail).trim().toLowerCase();
+            await completeAuthRoutingAfterConfirmedUser(emailForRoute);
+            return;
+          }
+        } catch {
+          // fall through
+        }
         setErrorMsg(t('error_login_temporary'));
       }
     } finally {

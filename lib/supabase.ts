@@ -13,6 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 /**
  * 동일 호스트로 수십 개의 REST 요청이 동시에 열리면 HTTP/2에서 ERR_HTTP2_SERVER_REFUSED_STREAM이 날 수 있음.
  * PostgREST 호출만 같은 호스트로 직렬화(동시 개수 상한)해 스트림 한도를 넘기지 않게 함.
+ * 모바일 대시보드·위젯은 요청이 많아 한도가 너무 낮으면 큐에 묶여 타임아웃·미로딩이 난다.
  */
 function createConcurrencyLimitedFetch(
   maxConcurrent: number,
@@ -20,7 +21,8 @@ function createConcurrencyLimitedFetch(
 ): typeof fetch {
   let active = 0;
   const queue: Array<() => void> = [];
-  const REQUEST_TIMEOUT_MS = 15000;
+  // 대기열 대기 시간은 제외하고, 실제 fetch 시작 후부터 측정
+  const REQUEST_TIMEOUT_MS = 30000;
 
   const drain = () => {
     while (active < maxConcurrent && queue.length > 0) {
@@ -100,10 +102,11 @@ function getSupabaseRestFetch(): typeof fetch | undefined {
   try {
     const base = new URL(supabaseUrl as string);
     const host = base.host;
-    return createConcurrencyLimitedFetch(6, (url) => {
+    // 6은 대시보드 위젯 병렬 로딩에 부족해 모바일에서 큐 적체·타임아웃이 난다.
+    return createConcurrencyLimitedFetch(12, (url) => {
       try {
         const target = new URL(url, base.origin);
-        // PostgREST 요청만 제한: Auth/Reatime/기타 경로는 대기열에서 제외해 초기 체감 지연 최소화
+        // PostgREST 요청만 제한: Auth/Realtime/기타 경로는 대기열에서 제외해 초기 체감 지연 최소화
         return target.host === host && target.pathname.startsWith('/rest/v1/');
       } catch {
         return false;
