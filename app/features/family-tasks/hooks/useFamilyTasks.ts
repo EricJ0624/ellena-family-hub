@@ -7,6 +7,7 @@
 
 import { useEffect, type MutableRefObject } from 'react';
 import { supabase } from '@/lib/supabase';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyTask } from '../types';
@@ -267,6 +268,9 @@ export function useFamilyTasks({
     if (!currentGroupId || !userId) return;
 
     const loadTasks = async () => {
+      const session = await waitForSupabaseSession(supabase);
+      if (!session?.access_token) return;
+
       const { data: tasksData, error: tasksError } = await supabase
         .from('family_tasks')
         .select('*')

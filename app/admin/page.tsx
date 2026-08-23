@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAdminTranslation, getAdminAuditHeaders, formatAdminTranslation } from '@/lib/translations/admin';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -427,7 +428,7 @@ export default function AdminPage() {
       setLoadingData(true);
       setError(null);
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await waitForSupabaseSession(supabase);
       if (!session?.access_token) {
         setError(at('error_auth'));
         setLoadingData(false);
@@ -816,7 +817,8 @@ export default function AdminPage() {
 
     if (activeTab === 'dashboard') {
       loadStats();
-      loadAllSupportTickets(); // 대시보드에서 최근 문의 표시용
+      // loadStats와 loadingData를 공유하면 먼저 끝난 쪽이 스피너를 끄고 stats=null인 빈 화면이 잠깐/계속 보일 수 있음
+      loadAllSupportTickets({ skipLoadingGate: true });
     } else if (activeTab === 'users') {
       loadUsers();
       loadSuspendSummary();
@@ -843,15 +845,20 @@ export default function AdminPage() {
   }, [activeTab, isAuthorized, selectedGroupId]);
 
   // 전체 문의 로드 (모든 그룹)
-  const loadAllSupportTickets = useCallback(async () => {
+  const loadAllSupportTickets = useCallback(async (options?: { skipLoadingGate?: boolean }) => {
+    const manageLoading = !options?.skipLoadingGate;
     try {
-      setLoadingData(true);
-      setError(null);
+      if (manageLoading) {
+        setLoadingData(true);
+        setError(null);
+      }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await waitForSupabaseSession(supabase);
       if (!session?.access_token) {
-        setError(at('error_session_expired'));
-        setLoadingData(false);
+        if (manageLoading) {
+          setError(at('error_session_expired'));
+          setLoadingData(false);
+        }
         return;
       }
 
@@ -876,9 +883,11 @@ export default function AdminPage() {
       setError(err.message || at('error_support'));
       setSupportTickets([]);
     } finally {
-      setLoadingData(false);
+      if (manageLoading) {
+        setLoadingData(false);
+      }
     }
-  }, []);
+  }, [at]);
 
   const loadMemberGroupInquiries = useCallback(async () => {
     try {

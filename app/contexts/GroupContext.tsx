@@ -14,6 +14,7 @@ import {
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
 import { normalizeGroupId } from '@/lib/validation';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { resolveUiTheme } from '@/lib/ui-theme';
@@ -131,6 +132,11 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         setLoading(true);
       }
       setError(null);
+
+      const session = await waitForSupabaseSession(supabase);
+      if (!session?.access_token) {
+        throw new Error('세션이 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+      }
 
       // 1. memberships 테이블에서 사용자가 속한 그룹 조회
       let { data: membershipData, error: membershipError } = await supabase
@@ -308,10 +314,9 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       if (groupInfo) {
         setCurrentGroup(groupInfo);
       } else if (typeof window !== 'undefined') {
-        // RLS/삭제로 조회 불가한 그룹 ID가 localStorage에 남은 경우
-        writeStoredGroupId(null);
-        setCurrentGroupIdState(null);
-        setCurrentGroup(null);
+        // 일시적 REST/RLS 실패로 groups 조회가 비어도 currentGroupId를 지우지 않는다.
+        // (지우면 위젯·앨범·loadData가 전부 skip되어 모든 계정에서 빈 대시보드가 됨)
+        console.warn('[GroupContext] group info empty for', currentGroupId);
       }
     } catch (err: any) {
       console.error('멤버십 정보 로드 실패:', err);

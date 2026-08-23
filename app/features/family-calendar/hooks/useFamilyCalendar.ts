@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { acquireRealtimeChannel } from '@/lib/realtime-channel-lease';
 import { emitNotificationClient } from '@/lib/notifications/client';
 import type { FamilyEvent } from '../types';
@@ -270,6 +271,9 @@ export function useFamilyCalendar({
     if (!currentGroupId || !userId) return;
 
     const loadEvents = async () => {
+      const session = await waitForSupabaseSession(supabase);
+      if (!session?.access_token) return;
+
       const { data: eventsData, error: eventsError } = await supabase
         .from('family_events')
         .select('*')

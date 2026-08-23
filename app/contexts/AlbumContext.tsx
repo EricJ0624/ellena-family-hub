@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { getStorageKey, getAuthKey, CryptoService } from '@/lib/dashboard-storage';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 
 export type Photo = {
   id: number | string;
@@ -110,6 +111,14 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     const groupIdForThisLoad = currentGroupId;
     const isStale = () => groupIdForThisLoad !== albumCurrentGroupIdRef.current;
 
+    const session = await waitForSupabaseSession(supabase);
+    if (!session?.access_token || isStale()) {
+      if (!session?.access_token) {
+        console.warn('[Album] session not ready, skip load');
+      }
+      return;
+    }
+
     // 그룹 전환 시 이전 그룹 앨범 즉시 제거 (blob/잘못된 데이터 노출·Hydration 에러 방지)
     setAlbum([]);
     const key =
@@ -198,6 +207,18 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadAlbum();
   }, [loadAlbum]);
+
+  useEffect(() => {
+    if (!userId || !currentGroupId) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.access_token) {
+        void loadAlbum();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [userId, currentGroupId, loadAlbum]);
 
   useEffect(() => {
     if (!currentGroupId || !userId) return;

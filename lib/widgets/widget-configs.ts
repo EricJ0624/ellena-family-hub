@@ -149,7 +149,14 @@ export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDr
 }
 
 export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): Promise<WidgetConfigDraft[]> {
-  const current = await loadWidgetConfigs(groupId);
+  let current: WidgetConfigDraft[];
+  try {
+    current = await loadWidgetConfigs(groupId);
+  } catch (error) {
+    console.warn('[widget-configs] load failed, using defaults:', error);
+    return DEFAULT_WIDGET_CONFIGS.map((c) => ({ ...c }));
+  }
+
   const missing = DASHBOARD_WIDGET_KEYS.filter((k) => !current.some((c) => c.widget_key === k));
 
   if (missing.length === 0 || !canWrite) return current;
@@ -185,8 +192,17 @@ export async function ensureWidgetConfigs(groupId: string, canWrite: boolean): P
     ignoreDuplicates: true,
   });
 
-  if (error) throw error;
-  return loadWidgetConfigs(groupId);
+  if (error) {
+    console.warn('[widget-configs] seed upsert failed, returning merged defaults:', error);
+    return current;
+  }
+
+  try {
+    return await loadWidgetConfigs(groupId);
+  } catch (reloadError) {
+    console.warn('[widget-configs] reload after seed failed:', reloadError);
+    return current;
+  }
 }
 
 export async function saveWidgetConfigs(groupId: string, drafts: WidgetConfigDraft[]): Promise<void> {

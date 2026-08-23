@@ -22,6 +22,7 @@ import {
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
 import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
+import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { useRouter } from 'next/navigation';
 import { 
   getPushToken, 
@@ -799,6 +800,12 @@ export default function FamilyHub() {
       return;
     }
 
+    const session = await waitForSupabaseSession(supabase);
+    if (!session?.access_token) {
+      console.warn('loadData: Supabase 세션이 준비되지 않았습니다.');
+      return;
+    }
+
     const isLoadStale = () => groupIdForThisLoad !== dashboardCurrentGroupIdRef.current;
 
     const storageKey = getStorageKey(userId, groupIdForThisLoad);
@@ -808,9 +815,13 @@ export default function FamilyHub() {
     if (saved) {
       const decrypted = CryptoService.decrypt(saved, key);
       if (!decrypted) {
-        alert(dt('auth_key_mismatch'));
-        return;
-      }
+        console.warn('loadData: localStorage 복호화 실패 — Supabase에서 계속 로드합니다.');
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {
+          // ignore
+        }
+      } else {
       localState = decrypted;
       // decrypted가 문자열 등이면 spread 시 state 오염 → .filter() 등에서 Cannot read 'filter' of undefined 발생 방지
       const isValidState = typeof decrypted === 'object' && decrypted !== null && !Array.isArray(decrypted);
@@ -836,6 +847,7 @@ export default function FamilyHub() {
         if (d.titleStyle && typeof d.titleStyle === 'object' && d.titleStyle !== null) {
           setTitleStyle(d.titleStyle as Partial<TitleStyle>);
         }
+      }
       }
     }
     // ✅ setState(INITIAL_STATE) 제거 - album을 빈 배열로 초기화하지 않음
@@ -1049,6 +1061,30 @@ export default function FamilyHub() {
       lastLoadedGroupIdRef.current = currentGroupId;
       loadData(key, userId).catch(() => undefined);
     }
+  }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
+
+  // 서버 로그인(setSession) 직후 REST JWT 레이스 — 세션 확정 후 그룹 데이터 1회 재로드
+  useEffect(() => {
+    if (!isAuthenticated || !userId || !currentGroupId) return;
+
+    let cancelled = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled || event !== 'SIGNED_IN' || !session?.access_token) return;
+      if (lastLoadedGroupIdRef.current !== currentGroupId) return;
+
+      const authKey = getAuthKey(userId);
+      const key =
+        masterKey ||
+        sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+        'ellena_family_shared_key_2024';
+      void loadData(key, userId).catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [isAuthenticated, userId, currentGroupId, masterKey, loadData]);
 
   // 닉네임 모달 열릴 때 가족 표시·언어·국가 값 초기화
