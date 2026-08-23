@@ -18,11 +18,9 @@ import {
   resolveInviteFromUrlOrSession,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-import { fetchAuthBootstrapWithCache } from '@/lib/auth-bootstrap';
+import { fetchAuthBootstrapWithCache, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
-import {
-  signInWithPasswordResilient,
-} from '@/lib/auth-session-resilience';
 import type { SignupBlockReason } from '@/lib/signup-settings';
 
 type Mode = 'login' | 'signup' | 'forgot';
@@ -213,10 +211,33 @@ export default function LoginPage() {
   }, [mode, isMounted]);
 
   /** 로그인/서버가입 후 이메일이 이미 확인된 사용자만 — 온보딩·관리자 라우팅 */
-  const completeAuthRoutingAfterConfirmedUser = async (emailForStorage: string) => {
+  const routeAfterLoginBootstrap = (
+    bootstrap: AuthBootstrapPayload | null | undefined,
+    emailForStorage: string,
+  ) => {
     if (emailForStorage && isMounted) {
       localStorage.setItem(LAST_EMAIL_KEY, emailForStorage);
       setLastEmailFromStorage(emailForStorage);
+    }
+
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const invite = resolveInviteFromUrlOrSession(params);
+    const onboardingPath = buildOnboardingPath(invite);
+
+    if (bootstrap?.isSystemAdmin) {
+      router.push(bootstrap.hasGroups ? onboardingPath : '/admin');
+      return;
+    }
+    router.push(onboardingPath);
+  };
+
+  const completeAuthRoutingAfterConfirmedUser = async (
+    emailForStorage: string,
+    bootstrapHint?: AuthBootstrapPayload | null,
+  ) => {
+    if (bootstrapHint) {
+      routeAfterLoginBootstrap(bootstrapHint, emailForStorage);
+      return;
     }
 
     const {
@@ -245,13 +266,7 @@ export default function LoginPage() {
         router.push(onboardingPath);
         return;
       }
-
-      if (bootstrap.isSystemAdmin) {
-        router.push(bootstrap.hasGroups ? onboardingPath : '/admin');
-        return;
-      }
-
-      router.push(onboardingPath);
+      routeAfterLoginBootstrap(bootstrap, emailForStorage);
     } catch (routingError) {
       console.warn('[Login] 후속 라우팅 판정 실패, 온보딩으로 폴백:', routingError);
       router.push(onboardingPath);
@@ -276,31 +291,46 @@ export default function LoginPage() {
         window.localStorage.setItem(PERSIST_SESSION_FLAG_KEY, keepLoggedIn ? '1' : '0');
       }
 
-      // iPhone에서 OPTIONS만 되고 POST가 끊기는 경우가 있어 일시 오류는 재시도한다.
-      const { error, data } = await signInWithPasswordResilient(supabase, {
-        email: normalizedEmail,
-        password,
+      // 같은 출처 1회: password grant + bootstrap (모바일→Supabase Auth 끊김·이중 대기 제거)
+      const loginResult = await loginViaServerApi(normalizedEmail, password);
+      if (!loginResult.ok) {
+        const message = loginResult.message.toLowerCase();
+        const code = String(loginResult.code || '').toLowerCase();
+        if (
+          message.includes('invalid login credentials') ||
+          code === 'invalid_credentials' ||
+          loginResult.status === 400
+        ) {
+          setErrorMsg(t('error_login_failed'));
+          return;
+        }
+        if (isSupabaseAuthRateLimitError({ status: loginResult.status, code, message })) {
+          setErrorMsg('요청이 많아 일시적으로 로그인 제한 중입니다. 1~2분 후 다시 시도해 주세요.');
+          return;
+        }
+        if (
+          message.includes('email not confirmed') ||
+          code === 'email_not_confirmed' ||
+          loginResult.status === 403
+        ) {
+          setErrorMsg(t('error_email_verification'));
+          return;
+        }
+        throw Object.assign(new Error(loginResult.message), {
+          status: loginResult.status,
+          code: loginResult.code,
+        });
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: loginResult.data.access_token,
+        refresh_token: loginResult.data.refresh_token,
       });
-      if (error) throw error;
+      if (sessionError) throw sessionError;
 
-      if (!data.user) {
-        setErrorMsg(t('error_login_failed'));
-        return;
-      }
-      if (!data.user.email_confirmed_at) {
-        await supabase.auth.signOut();
-        setErrorMsg(t('error_email_verification'));
-        return;
-      }
-
-      try {
-        await completeAuthRoutingAfterConfirmedUser(normalizedEmail);
-      } catch (routingError: any) {
-        console.warn('[Login] 인증 후 라우팅 처리 오류:', routingError);
-        setErrorMsg('로그인은 되었지만 후속 처리 중 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요.');
-      }
+      setCachedAuthBootstrap(loginResult.data.user.id, loginResult.data.bootstrap);
+      routeAfterLoginBootstrap(loginResult.data.bootstrap, normalizedEmail);
     } catch (error: any) {
-      // 보안: 프로덕션 환경에서는 상세 에러 정보 노출 방지
       if (process.env.NODE_ENV === 'development') {
         console.error('Login error:', error);
       }
@@ -320,9 +350,7 @@ export default function LoginPage() {
       ) {
         setErrorMsg(t('error_email_verification'));
       } else {
-        // 서버는 성공했는데 클라이언트만 실패한 경우 세션이 남아 있을 수 있음 → 오류 문구 대신 라우팅
         try {
-          await new Promise((r) => setTimeout(r, 350));
           const {
             data: { session },
           } = await supabase.auth.getSession();
@@ -335,7 +363,6 @@ export default function LoginPage() {
         } catch {
           // fall through
         }
-        // Wi‑Fi와 무관한 iOS Auth fetch 끊김이 주원인. 재시도·세션 복구 후에도 실패했을 때.
         setErrorMsg(t('error_login_temporary'));
       }
     } finally {

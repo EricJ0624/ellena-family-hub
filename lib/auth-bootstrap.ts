@@ -4,6 +4,19 @@ import { resolveSuspendRedirect } from '@/lib/account-suspend-access';
 export type { AuthBootstrapPayload };
 export type { BootstrapGroupSummary, BootstrapMembershipRole } from '@/lib/auth-bootstrap-server';
 
+export type AuthLoginSuccess = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at?: number;
+  user: {
+    id: string;
+    email: string | null;
+    email_confirmed_at: string | null;
+  };
+  bootstrap: AuthBootstrapPayload;
+};
+
 const CACHE_KEY_PREFIX = 'SFH_AUTH_BOOTSTRAP_';
 const CACHE_TTL_MS = 8000;
 
@@ -76,6 +89,48 @@ export async function fetchAuthBootstrapWithCache(
   const fresh = await fetchAuthBootstrap(accessToken);
   if (fresh) setCachedAuthBootstrap(userId, fresh);
   return fresh;
+}
+
+/**
+ * 같은 출처로 password grant + bootstrap을 한 번에 받는다.
+ * 모바일→Supabase Auth cross-origin 끊김·이중 round-trip을 제거한다.
+ */
+export async function loginViaServerApi(
+  email: string,
+  password: string,
+): Promise<
+  | { ok: true; data: AuthLoginSuccess }
+  | { ok: false; status: number; code?: string; message: string }
+> {
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      cache: 'no-store',
+    });
+    const json = (await response.json().catch(() => null)) as
+      | (AuthLoginSuccess & { error?: string; code?: string; message?: string })
+      | null;
+
+    if (!response.ok || !json?.access_token || !json?.refresh_token || !json?.bootstrap) {
+      return {
+        ok: false,
+        status: response.status,
+        code: json?.code || json?.error,
+        message: String(json?.message || json?.error || 'login_failed'),
+      };
+    }
+
+    setCachedAuthBootstrap(json.user.id, json.bootstrap);
+    return { ok: true, data: json };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: err instanceof Error ? err.message : 'login_failed',
+    };
+  }
 }
 
 /** bootstrap → 정지 리다이렉트. lookupFailed면 null(진입 차단 안 함). */
