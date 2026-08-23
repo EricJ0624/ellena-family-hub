@@ -475,6 +475,27 @@ button.travel-kids-add-trip-submit {
   color: #64748b;
 }
 
+/*
+ * Travel Diary — 핑크~보라 그라데이션 바탕 (유리 glass 덮개 무시).
+ */
+.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+.content-section.travel-diary-widget {
+  position: relative;
+  isolation: isolate;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(145deg, #d4c8fc 0%, #f3d0fe 48%, #fecdd3 100%) !important;
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+}
+
+.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-header,
+.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-body,
+.content-section.travel-diary-widget > .section-header,
+.content-section.travel-diary-widget > .section-body {
+  position: relative;
+  z-index: 1;
+}
+
 /* 공지 배너 마퀴 슬라이딩 (AnnouncementBanner에서 animation: marquee 참조) */
 @keyframes marquee {
   0% {
@@ -1373,27 +1394,22 @@ select:not(.chalkboard-form-input) {
   background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
-/*
- * Travel Diary — Travel Planner kids 톤(#edebf6)과 맞춤.
- * glass / highend shorthand 덮어쓰기용 widget-key + !important.
- */
-.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
-.content-section.travel-diary-widget {
-  position: relative;
-  isolation: isolate;
+/* Travel Diary — highend/kids glass shorthand 이후에도 바탕색 유지 */
+:root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+:root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+:root[data-ui-theme='highend_glass'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='highend_glass'] .content-section.travel-diary-widget,
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget,
+:root[data-ui-theme='default'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='default'] .content-section.travel-diary-widget {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  background-color: #edebf6 !important;
-  background-image: none !important;
-  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
-}
-
-.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-header,
-.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-body,
-.content-section.travel-diary-widget > .section-header,
-.content-section.travel-diary-widget > .section-body {
-  position: relative;
-  z-index: 1;
+  background: linear-gradient(145deg, #d4c8fc 0%, #f3d0fe 48%, #fecdd3 100%) !important;
 }
 
 /* Glass Panel Presets - Phase 1 */

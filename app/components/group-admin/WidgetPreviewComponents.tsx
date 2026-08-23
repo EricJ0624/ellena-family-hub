@@ -556,20 +556,24 @@ function GamesPreview() {
 function TravelDiaryPreview() {
   const { tdy, wp } = useWidgetPreviewCopy();
   return (
-    <section className="content-section travel-diary-widget relative isolate overflow-hidden bg-[#edebf6] [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+    <section className="content-section travel-diary-widget relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-gradient-to-br from-[#d4c8fc] via-[#f3d0fe] to-[#fecdd3]"
+      />
       <span
         aria-hidden
-        className="pointer-events-none absolute bottom-2 right-3 z-0 select-none text-[2rem] leading-none opacity-25"
+        className="pointer-events-none absolute bottom-2 right-3 z-[1] select-none text-[2rem] leading-none opacity-25"
       >
         🌴
       </span>
-      <div className="section-header relative z-[1]">
+      <div className="section-header relative z-[2]">
         <h3 className="section-title m-0 inline-flex items-center gap-1.5">
           <span aria-hidden>📔</span>
           {tdy('section_title')}
         </h3>
       </div>
-      <div className="section-body relative z-[1]">
+      <div className="section-body relative z-[2]">
         <div className="bg-transparent px-0 py-1.5">
           <div className="text-sm font-bold text-slate-800">{wp('preview_diary_sample_title')}</div>
           <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
