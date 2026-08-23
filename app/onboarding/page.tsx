@@ -1205,7 +1205,7 @@ export default function OnboardingPage() {
                       <div>
                         <div className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-800">
                           <span>{getGroupSelectorLabel(group, ct('app_title'))}</span>
-                          {suspendedGroupIds.includes(group.id) && (
+                          {suspendedGroupIds.some((id) => sameGroupId(id, group.id)) && (
                             <span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-800">
                               {getAdminSuspendTranslation(lang, 'badge_suspended')}
                             </span>
@@ -1226,7 +1226,7 @@ export default function OnboardingPage() {
               <button
                 onClick={() => {
                   if (selectedGroupId) {
-                    if (suspendedGroupIds.includes(selectedGroupId)) {
+                    if (suspendedGroupIds.some((id) => sameGroupId(id, selectedGroupId))) {
                       router.push(suspendedPath(selectedGroupId));
                       return;
                     }

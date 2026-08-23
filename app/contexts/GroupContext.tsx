@@ -228,11 +228,11 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       // 5. 멤버십 정보 매핑 (소유자인 경우 ADMIN 역할 부여)
       setMemberships(allGroupIds.map(groupId => {
-        const membership = membershipData?.find(m => m.group_id === groupId);
-        const isOwner = ownedGroupIds.includes(groupId);
+        const membership = membershipData?.find(m => sameGroupId(m.group_id, groupId));
+        const isOwner = ownedGroupIds.some((id) => sameGroupId(id, groupId));
         return {
           user_id: userId,
-          group_id: groupId,
+          group_id: normalizeGroupId(groupId) || groupId,
           role: isOwner ? 'ADMIN' : (membership?.role as MembershipRole || 'MEMBER'),
           joined_at: new Date().toISOString(),
           family_role: (membership as { family_role?: 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null })?.family_role ?? null,

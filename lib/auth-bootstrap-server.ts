@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { classifyGroupAccess } from '@/lib/account-suspend-access';
 import { isSystemAdmin } from '@/lib/permissions';
+import { normalizeGroupId } from '@/lib/validation';
 
 export type BootstrapGroupSummary = {
   id: string;
@@ -104,12 +105,14 @@ function buildGroupSummaries(
 } {
   const summaries: BootstrapGroupSummary[] = [];
   const membershipRoles: BootstrapMembershipRole[] = [];
-  const ownedGroupIds = (ownedGroups || []).map((g) => String(g.id));
+  const ownedGroupIds = (ownedGroups || [])
+    .map((g) => normalizeGroupId(String(g.id)))
+    .filter((id): id is string => Boolean(id));
   const seen = new Set<string>();
 
   for (const group of ownedGroups || []) {
-    const id = String(group.id);
-    if (seen.has(id)) continue;
+    const id = normalizeGroupId(String(group.id));
+    if (!id || seen.has(id)) continue;
     seen.add(id);
     summaries.push({
       id,
@@ -122,19 +125,23 @@ function buildGroupSummaries(
   }
 
   for (const row of memberships || []) {
-    membershipRoles.push({
-      group_id: String(row.group_id),
-      role: row.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
-      family_role: row.family_role ?? null,
-    });
+    const membershipGroupId = normalizeGroupId(String(row.group_id));
+    if (membershipGroupId) {
+      membershipRoles.push({
+        group_id: membershipGroupId,
+        role: row.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
+        family_role: row.family_role ?? null,
+      });
+    }
     const group = row.groups;
-    if (!group || seen.has(group.id)) continue;
-    seen.add(group.id);
+    const id = group ? normalizeGroupId(String(group.id)) : null;
+    if (!group || !id || seen.has(id)) continue;
+    seen.add(id);
     summaries.push({
-      id: String(group.id),
+      id,
       name: String(group.name ?? ''),
       invite_code: String(group.invite_code ?? ''),
-      is_owner: String(group.owner_id) === userId,
+      is_owner: String(group.owner_id).toLowerCase() === userId.toLowerCase(),
       role: row.role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
       display_name_pending: Boolean(group.display_name_pending),
     });
@@ -198,12 +205,17 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
     };
   }
 
+  const normalizedRows = ((groupRows || []) as Record<string, unknown>[]).map((row) => {
+    const id = normalizeGroupId(String(row.id ?? ''));
+    return id ? { ...row, id } : row;
+  });
+
   const base = {
     user: userMeta,
     hasGroups: true,
     groupIds,
     groups: summaries,
-    groupRows: (groupRows || []) as Record<string, unknown>[],
+    groupRows: normalizedRows,
     membershipRoles,
     ownedGroupIds,
   };

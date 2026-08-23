@@ -64,7 +64,8 @@ export function resolveSuspendRedirect(
   access: UserGroupAccess,
   options?: { openGroup?: string | null; savedGroupId?: string | null },
 ): string | null {
-  if (access.lookupFailed) return ACCESS_UNAVAILABLE_PATH;
+  // 조회 실패 ≠ 정지. UI 진입을 막지 않는다 (API/RPC는 별도로 fail-closed).
+  if (access.lookupFailed) return null;
   if (access.groupIds.length === 0) return null;
   const openGroup = normalizeGroupId(options?.openGroup);
   if (openGroup && access.suspendedGroupIds.some((id) => sameGroupId(id, openGroup))) {

@@ -13,6 +13,7 @@ import { getGroupSelectorLabel } from '@/lib/group-display-name';
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
 import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { sameGroupId } from '@/lib/group-id-resolve';
 
 const GroupSelector: React.FC = () => {
   const router = useRouter();
@@ -631,10 +632,10 @@ const GroupSelector: React.FC = () => {
                     setIsOpen(false);
                   }}
                   className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                    currentGroupId === group.id ? 'bg-purple-50 text-purple-900' : ''
+                    sameGroupId(currentGroupId, group.id) ? 'bg-purple-50 text-purple-900' : ''
                   }`}
                   role="option"
-                  aria-selected={currentGroupId === group.id}
+                  aria-selected={sameGroupId(currentGroupId, group.id)}
                 >
                   <div className="font-medium">{getGroupSelectorLabel(group, ct('app_title'))}</div>
                   <div className="flex items-center gap-2 mt-0.5">
