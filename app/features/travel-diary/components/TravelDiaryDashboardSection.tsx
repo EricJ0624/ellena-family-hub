@@ -32,34 +32,43 @@ export function TravelDiaryDashboardSection({
   const list = diaryTrips.length > 0 ? diaryTrips : trips;
 
   return (
-    <section className="content-section">
-      <div className="section-header">
-        <h3 className="section-title m-0">{t.section_title}</h3>
+    <section className="content-section travel-diary-widget relative isolate overflow-hidden bg-[#edebf6] shadow-[0_1px_0_rgb(15_23_42_/0.06),0_8px_24px_rgb(15_23_42_/0.08)] [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-2 right-3 z-0 select-none text-[2.2rem] leading-none opacity-25"
+      >
+        🌴
+      </span>
+      <div className="section-header relative z-[1]">
+        <h3 className="section-title m-0 inline-flex items-center gap-1.5">
+          <span aria-hidden>📔</span>
+          {t.section_title}
+        </h3>
       </div>
-      <div className="section-body">
+      <div className="section-body relative z-[1]">
         {!currentGroupId ? (
-          <p className="m-0 text-sm text-slate-500">{t.select_group}</p>
+          <p className="m-0 text-sm text-slate-600">{t.select_group}</p>
         ) : loading ? (
-          <p className="m-0 text-sm text-slate-500">{t.loading}</p>
+          <p className="m-0 text-sm text-slate-600">{t.loading}</p>
         ) : list.length === 0 ? (
-          <p className="m-0 text-sm text-slate-600">{t.empty_pick_trip}</p>
+          <p className="m-0 text-sm text-slate-700">{t.empty_pick_trip}</p>
         ) : (
           <ul className="m-0 list-none space-y-2 p-0">
             {list.map((trip) => (
-              <li
-                key={trip.id}
-                className="glass-panel-soft rounded-lg px-3 py-2.5"
-              >
-                <div className="font-semibold text-slate-800">{trip.title}</div>
-                <div className="mt-0.5 text-xs text-slate-500">
-                  {trip.start_date} ~ {trip.end_date}
+              <li key={trip.id} className="rounded-xl bg-transparent px-0 py-1.5">
+                <div className="break-words font-semibold text-slate-800">{trip.title}</div>
+                <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                  <span aria-hidden>📅</span>
+                  <span>
+                    {trip.start_date} ~ {trip.end_date}
+                  </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {trip.diary_enabled ? (
                     <button
                       type="button"
                       onClick={() => onOpenTrip(trip.id)}
-                      className="cursor-pointer rounded-lg border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
+                      className="cursor-pointer rounded-full border-0 bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
                     >
                       {t.open_diary}
                     </button>
@@ -67,7 +76,7 @@ export function TravelDiaryDashboardSection({
                     <button
                       type="button"
                       onClick={() => void onStartTrip(trip.id)}
-                      className="cursor-pointer rounded-lg border-0 bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-200"
+                      className="cursor-pointer rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-100"
                     >
                       {t.start_trip_diary}
                     </button>

@@ -1373,6 +1373,29 @@ select:not(.chalkboard-form-input) {
   background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
+/*
+ * Travel Diary — Travel Planner kids 톤(#edebf6)과 맞춤.
+ * glass / highend shorthand 덮어쓰기용 widget-key + !important.
+ */
+.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+.content-section.travel-diary-widget {
+  position: relative;
+  isolation: isolate;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-color: #edebf6 !important;
+  background-image: none !important;
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+}
+
+.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-header,
+.widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-body,
+.content-section.travel-diary-widget > .section-header,
+.content-section.travel-diary-widget > .section-body {
+  position: relative;
+  z-index: 1;
+}
+
 /* Glass Panel Presets - Phase 1 */
 .glass-panel {
   @apply relative isolate overflow-hidden border border-glass-medium shadow-glass-medium backdrop-blur-glass-medium;
