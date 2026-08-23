@@ -20,7 +20,8 @@ import {
   getSessionStoredInviteCode,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-import { loadUserGroupAccess, messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { fetchAuthBootstrapWithCache } from '@/lib/auth-bootstrap';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -151,78 +152,96 @@ export default function OnboardingPage() {
           return;
         }
 
-        // 시스템 관리자 확인
-        const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-          user_id_param: user.id,
-        });
+        // 서버 bootstrap 1회 — RPC·memberships·정지 조회를 PostgREST 큐 밖으로
+        const { data: { session: bootstrapSession } } = await supabase.auth.getSession();
+        const bootstrap =
+          bootstrapSession?.access_token
+            ? await fetchAuthBootstrapWithCache(bootstrapSession.access_token, user.id)
+            : null;
 
-        // 사용자의 모든 그룹 조회
-        const { data: memberships } = await supabase
-          .from('memberships')
-          .select('group_id, role, groups(id, name, invite_code, owner_id, display_name_pending)')
-          .eq('user_id', user.id);
+        let isAdmin = false;
+        let allGroups: UserGroup[] = [];
+        let accessLookupFailed = true;
+        let accessibleGroupIds: string[] = [];
 
-        // 그룹 소유자 확인
-        const { data: ownedGroups } = await supabase
-          .from('groups')
-          .select('id, name, invite_code, owner_id, display_name_pending')
-          .eq('owner_id', user.id);
-
-        // 모든 그룹 합치기 (중복 제거)
-        const allGroups: UserGroup[] = [];
-        const groupIds = new Set<string>();
-
-        // 소유한 그룹 추가
-        if (ownedGroups) {
-          ownedGroups.forEach((group: any) => {
-            if (!groupIds.has(group.id)) {
-              groupIds.add(group.id);
-              allGroups.push({
-                id: group.id,
-                name: group.name,
-                invite_code: group.invite_code,
-                is_owner: true,
-                role: 'ADMIN',
-                display_name_pending: group.display_name_pending ?? false,
-              });
-            }
-          });
-        }
-
-        // 멤버십 그룹 추가
-        if (memberships) {
-          memberships.forEach((membership: any) => {
-            const group = membership.groups;
-            if (group && !groupIds.has(group.id)) {
-              groupIds.add(group.id);
-              allGroups.push({
-                id: group.id,
-                name: group.name,
-                invite_code: group.invite_code,
-                is_owner: group.owner_id === user.id,
-                role: membership.role,
-                display_name_pending: group.display_name_pending ?? false,
-              });
-            }
-          });
-        }
-
-        const access = await loadUserGroupAccess(supabase, user.id);
-        if (access.lookupFailed) {
-          // 일시 조회 실패 시 빈 정지 목록으로 진행. 대시보드 진입 시 다시 확인한다.
-          console.warn('[Onboarding] 접근 조회 실패, 정지 목록 없이 계속');
-          setSuspendedGroupIds([]);
+        if (bootstrap) {
+          isAdmin = bootstrap.isSystemAdmin;
+          allGroups = bootstrap.groups.map((g) => ({
+            id: g.id,
+            name: g.name,
+            invite_code: g.invite_code,
+            is_owner: g.is_owner,
+            role: g.role,
+            display_name_pending: g.display_name_pending,
+          }));
+          accessLookupFailed = bootstrap.lookupFailed;
+          accessibleGroupIds = bootstrap.accessibleGroupIds;
+          if (bootstrap.lookupFailed) {
+            console.warn('[Onboarding] bootstrap 조회 실패, 정지 목록 없이 계속');
+            setSuspendedGroupIds([]);
+          } else {
+            setSuspendedGroupIds(bootstrap.suspendedGroupIds);
+          }
         } else {
-          setSuspendedGroupIds(access.suspendedGroupIds);
+          console.warn('[Onboarding] bootstrap 실패, 클라이언트 조회로 폴백');
+          const { data: adminData } = await supabase.rpc('is_system_admin', {
+            user_id_param: user.id,
+          });
+          isAdmin = Boolean(adminData);
+
+          const { data: memberships } = await supabase
+            .from('memberships')
+            .select('group_id, role, groups(id, name, invite_code, owner_id, display_name_pending)')
+            .eq('user_id', user.id);
+
+          const { data: ownedGroups } = await supabase
+            .from('groups')
+            .select('id, name, invite_code, owner_id, display_name_pending')
+            .eq('owner_id', user.id);
+
+          const groupIds = new Set<string>();
+          if (ownedGroups) {
+            ownedGroups.forEach((group: any) => {
+              if (!groupIds.has(group.id)) {
+                groupIds.add(group.id);
+                allGroups.push({
+                  id: group.id,
+                  name: group.name,
+                  invite_code: group.invite_code,
+                  is_owner: true,
+                  role: 'ADMIN',
+                  display_name_pending: group.display_name_pending ?? false,
+                });
+              }
+            });
+          }
+          if (memberships) {
+            memberships.forEach((membership: any) => {
+              const group = membership.groups;
+              if (group && !groupIds.has(group.id)) {
+                groupIds.add(group.id);
+                allGroups.push({
+                  id: group.id,
+                  name: group.name,
+                  invite_code: group.invite_code,
+                  is_owner: group.owner_id === user.id,
+                  role: membership.role,
+                  display_name_pending: group.display_name_pending ?? false,
+                });
+              }
+            });
+          }
+          accessLookupFailed = true;
+          accessibleGroupIds = allGroups.map((g) => g.id);
+          setSuspendedGroupIds([]);
         }
 
         // 이미 소속 그룹이 있어도 초대 링크로 들어온 경우에는 먼저 해당 그룹 가입 플로우(join)로 보냄
         if (allGroups.length > 0 && !fromAdminParam && !inviteParam) {
-          if (!access.lookupFailed && access.accessibleGroupIds.length === 0) {
+          if (!accessLookupFailed && accessibleGroupIds.length === 0) {
             router.push('/suspended');
             return;
           }
-          // 그룹이 있으면 선택 화면 표시 (1개여도 선택 화면 표시)
           setUserGroups(allGroups);
           setStep('choose-group');
           setLoading(false);
@@ -230,7 +249,6 @@ export default function OnboardingPage() {
         }
 
         // 시스템 관리자이고 그룹이 없으면 관리자 페이지로
-        // 단, 관리자 페이지에서 온보딩으로 들어온 경우·초대 링크 진입은 허용
         if (isAdmin && !fromAdminParam && !inviteParam) {
           router.push('/admin');
           return;

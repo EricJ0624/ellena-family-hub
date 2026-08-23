@@ -9,6 +9,11 @@ import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
 import { checkUserSuspendedInGroup, loadUserGroupAccess, resolveSuspendRedirect, suspendedPath, ACCESS_UNAVAILABLE_PATH } from '@/lib/account-suspend-access';
+import {
+  fetchAuthBootstrapWithCache,
+  bootstrapConfirmsOpenGroup,
+  resolveAuthBootstrapSuspendRedirect,
+} from '@/lib/auth-bootstrap';
 import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 import { useRouter } from 'next/navigation';
 import { 
@@ -1141,70 +1146,109 @@ export default function FamilyHub() {
         }
         const hasOpenGroup = Boolean(openGroup && isValidUUID(openGroup));
 
-        // 온보딩에서 그룹을 고르고 온 경우 재시도 루프를 줄여 진입을 빠르게 한다.
-        const [adminRes, groupsRes, access] = await Promise.all([
-          supabase.rpc('is_system_admin', { user_id_param: currentUserId }),
-          resolveUserHasGroups(supabase, currentUserId, {
-            flakyRetry: !hasOpenGroup,
-            isSystemAdmin: false,
-          }),
-          loadUserGroupAccess(supabase, currentUserId),
-        ]);
-        const isAdmin = Boolean(adminRes.data);
-        let { hasGroups } = groupsRes;
-
         const savedGroupId =
           typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
-        if (access.lookupFailed) {
-          // 일시 조회 실패로 진입을 막지 않는다. 정지 여부는 이후 그룹 effect에서 다시 본다.
-          console.warn('[Dashboard] 접근 조회 실패, 정지 확인 스킵하고 진입');
-        } else {
-          const suspendRedirect = resolveSuspendRedirect(access, {
-            openGroup: hasOpenGroup ? openGroup : null,
-            savedGroupId,
-          });
-          if (suspendRedirect) {
-            router.replace(suspendRedirect);
-            return;
-          }
-        }
 
-        // 온보딩에서 ?openGroup= 으로 넘어온 경우: 사용자가 이미 다른 그룹을 가지고 있어도
-        // 의도한 그룹으로 정확히 전환되도록 멤버십/소유 여부를 직접 확인해 우선 적용
-        if (typeof window !== 'undefined') {
-          try {
-            if (hasOpenGroup) {
-              const [mRes, oRes] = await Promise.all([
-                supabase
-                  .from('memberships')
-                  .select('group_id')
-                  .eq('user_id', currentUserId)
-                  .eq('group_id', openGroup)
-                  .maybeSingle(),
-                supabase
-                  .from('groups')
-                  .select('id')
-                  .eq('id', openGroup)
-                  .eq('owner_id', currentUserId)
-                  .maybeSingle(),
-              ]);
-              if ((!mRes.error && mRes.data) || (!oRes.error && oRes.data)) {
-                hasGroups = true;
-                try {
-                  setCurrentGroupId?.(openGroup);
-                } catch (_) {
-                  // ignore
-                }
-                try {
-                  localStorage.setItem('currentGroupId', openGroup);
-                } catch (_) {
-                  // ignore
-                }
-              }
+        let isAdmin = false;
+        let hasGroups = false;
+
+        const bootstrap =
+          session.access_token
+            ? await fetchAuthBootstrapWithCache(session.access_token, currentUserId)
+            : null;
+
+        if (bootstrap) {
+          isAdmin = bootstrap.isSystemAdmin;
+          hasGroups = bootstrap.hasGroups;
+          if (bootstrap.lookupFailed) {
+            console.warn('[Dashboard] bootstrap 조회 실패, 정지 확인 스킵하고 진입');
+          } else {
+            const suspendRedirect = resolveAuthBootstrapSuspendRedirect(bootstrap, {
+              openGroup: hasOpenGroup ? openGroup : null,
+              savedGroupId,
+            });
+            if (suspendRedirect) {
+              router.replace(suspendRedirect);
+              return;
+            }
+          }
+          if (hasOpenGroup && bootstrapConfirmsOpenGroup(bootstrap, openGroup)) {
+            hasGroups = true;
+            try {
+              setCurrentGroupId?.(openGroup);
+            } catch (_) {
+              // ignore
+            }
+            try {
+              localStorage.setItem('currentGroupId', openGroup);
+            } catch (_) {
+              // ignore
+            }
+            if (typeof window !== 'undefined') {
               window.history.replaceState({}, '', window.location.pathname);
             }
-          } catch (_) {
-            // ignore
+          }
+        } else {
+          console.warn('[Dashboard] bootstrap 실패, 클라이언트 조회로 폴백');
+          const [adminRes, groupsRes, access] = await Promise.all([
+            supabase.rpc('is_system_admin', { user_id_param: currentUserId }),
+            resolveUserHasGroups(supabase, currentUserId, {
+              flakyRetry: !hasOpenGroup,
+              isSystemAdmin: false,
+            }),
+            loadUserGroupAccess(supabase, currentUserId),
+          ]);
+          isAdmin = Boolean(adminRes.data);
+          hasGroups = groupsRes.hasGroups;
+
+          if (access.lookupFailed) {
+            console.warn('[Dashboard] 접근 조회 실패, 정지 확인 스킵하고 진입');
+          } else {
+            const suspendRedirect = resolveSuspendRedirect(access, {
+              openGroup: hasOpenGroup ? openGroup : null,
+              savedGroupId,
+            });
+            if (suspendRedirect) {
+              router.replace(suspendRedirect);
+              return;
+            }
+          }
+
+          if (typeof window !== 'undefined') {
+            try {
+              if (hasOpenGroup) {
+                const [mRes, oRes] = await Promise.all([
+                  supabase
+                    .from('memberships')
+                    .select('group_id')
+                    .eq('user_id', currentUserId)
+                    .eq('group_id', openGroup)
+                    .maybeSingle(),
+                  supabase
+                    .from('groups')
+                    .select('id')
+                    .eq('id', openGroup)
+                    .eq('owner_id', currentUserId)
+                    .maybeSingle(),
+                ]);
+                if ((!mRes.error && mRes.data) || (!oRes.error && oRes.data)) {
+                  hasGroups = true;
+                  try {
+                    setCurrentGroupId?.(openGroup);
+                  } catch (_) {
+                    // ignore
+                  }
+                  try {
+                    localStorage.setItem('currentGroupId', openGroup);
+                  } catch (_) {
+                    // ignore
+                  }
+                }
+                window.history.replaceState({}, '', window.location.pathname);
+              }
+            } catch (_) {
+              // ignore
+            }
           }
         }
 

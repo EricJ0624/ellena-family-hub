@@ -2,6 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
 import { loadUserGroupAccess, resolveSuspendRedirect } from '@/lib/account-suspend-access';
+import {
+  bootstrapConfirmsOpenGroup,
+  fetchAuthBootstrapWithCache,
+  resolveAuthBootstrapSuspendRedirect,
+} from '@/lib/auth-bootstrap';
 import { AUTH_STORAGE_KEY, clearAuthStorage, supabase } from '@/lib/supabase';
 import { isValidUUID } from '@/lib/validation';
 
@@ -123,6 +128,57 @@ export async function runGroupRequiredRouteGuard(options?: {
     return { ok: false, redirectTo: '/' };
   }
 
+  let openGroup: string | null = null;
+  if (typeof window !== 'undefined') {
+    openGroup = new URLSearchParams(window.location.search).get('openGroup')?.trim().toLowerCase() ?? null;
+  }
+  const savedGroupId =
+    typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
+
+  const bootstrap = session.access_token
+    ? await fetchAuthBootstrapWithCache(session.access_token, serverUser.id)
+    : null;
+
+  if (bootstrap) {
+    let hasGroups = bootstrap.hasGroups;
+    const suspendRedirect = resolveAuthBootstrapSuspendRedirect(bootstrap, { openGroup, savedGroupId });
+    if (suspendRedirect) {
+      return { ok: false, redirectTo: suspendRedirect };
+    }
+
+    if (openGroup && bootstrapConfirmsOpenGroup(bootstrap, openGroup)) {
+      try {
+        options?.setCurrentGroupId?.(openGroup);
+      } catch {
+        // ignore
+      }
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('currentGroupId', openGroup);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } catch {
+        // ignore
+      }
+      hasGroups = true;
+    } else {
+      hasGroups = await applyOpenGroupIfValid(
+        supabase,
+        serverUser.id,
+        hasGroups,
+        options?.setCurrentGroupId
+      );
+    }
+
+    if (bootstrap.isSystemAdmin && !hasGroups) {
+      return { ok: false, redirectTo: '/admin' };
+    }
+    if (!bootstrap.isSystemAdmin && !hasGroups) {
+      return { ok: false, redirectTo: '/onboarding' };
+    }
+    return { ok: true };
+  }
+
   const { data: isAdmin } = await supabase.rpc('is_system_admin', {
     user_id_param: serverUser.id,
   });
@@ -133,12 +189,6 @@ export async function runGroupRequiredRouteGuard(options?: {
   });
 
   const access = await loadUserGroupAccess(supabase, serverUser.id);
-  let openGroup: string | null = null;
-  if (typeof window !== 'undefined') {
-    openGroup = new URLSearchParams(window.location.search).get('openGroup')?.trim().toLowerCase() ?? null;
-  }
-  const savedGroupId =
-    typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
   const suspendRedirect = resolveSuspendRedirect(access, { openGroup, savedGroupId });
   if (suspendRedirect) {
     return { ok: false, redirectTo: suspendRedirect };

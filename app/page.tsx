@@ -16,10 +16,9 @@ import {
   getSessionStoredInviteCode,
   isValidInviteCodeFormat,
   resolveInviteFromUrlOrSession,
-  resolveUserHasGroups,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-import { loadUserGroupAccess } from '@/lib/account-suspend-access';
+import { fetchAuthBootstrapWithCache } from '@/lib/auth-bootstrap';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 import type { SignupBlockReason } from '@/lib/signup-settings';
 
@@ -171,13 +170,21 @@ export default function LoginPage() {
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const invite = resolveInviteFromUrlOrSession(params);
         if (!invite) {
-          const access = await loadUserGroupAccess(supabase, user.id);
-          if (access.lookupFailed) {
-            // 조회 실패는 정지 확정이 아님. 온보딩으로 넘기고 이후 화면에서 재확인.
-            console.warn('[Login] 기존 세션 접근 조회 실패, 온보딩으로 폴백');
-          } else if (access.groupIds.length > 0 && access.accessibleGroupIds.length === 0) {
-            router.push('/suspended');
-            return;
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const bootstrap = await fetchAuthBootstrapWithCache(session.access_token, user.id);
+            if (bootstrap?.lookupFailed) {
+              console.warn('[Login] 기존 세션 bootstrap 실패, 온보딩으로 폴백');
+            } else if (
+              bootstrap &&
+              bootstrap.groupIds.length > 0 &&
+              bootstrap.accessibleGroupIds.length === 0
+            ) {
+              router.push('/suspended');
+              return;
+            }
           }
         }
         router.push(buildOnboardingPath(invite));
@@ -209,9 +216,6 @@ export default function LoginPage() {
       setLastEmailFromStorage(emailForStorage);
     }
 
-    // JWT가 PostgREST에 붙을 짧은 여유. 500ms는 모바일 체감 로딩만 늘린다.
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -232,33 +236,20 @@ export default function LoginPage() {
     const onboardingPath = buildOnboardingPath(invite);
 
     try {
-      // 관리자 판정·그룹 유무를 병렬로. 정지는 온보딩/대시보드에서 다시 확인하므로
-      // 로그인 화면에서 loadUserGroupAccess까지 기다리지 않는다(모바일 로딩 주원인).
-      const [adminRes, groupsRes] = await Promise.all([
-        supabase.rpc('is_system_admin', { user_id_param: session.user.id }),
-        resolveUserHasGroups(supabase, session.user.id, { flakyRetry: false }),
-      ]);
-      if (adminRes.error) {
-        console.warn('[Login] 시스템 관리자 판정 실패, 일반 라우팅으로 폴백:', adminRes.error);
-      }
-      const isAdmin = Boolean(adminRes.data);
-      let hasGroups = groupsRes.hasGroups;
-
-      // 로그인 직후 빈 결과가 한 번 나올 때만 짧게 1회 재시도
-      if (!hasGroups) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        hasGroups = (await resolveUserHasGroups(supabase, session.user.id, { flakyRetry: false }))
-          .hasGroups;
+      const bootstrap = await fetchAuthBootstrapWithCache(session.access_token, session.user.id);
+      if (!bootstrap) {
+        console.warn('[Login] bootstrap 실패, 온보딩으로 폴백');
+        router.push(onboardingPath);
+        return;
       }
 
-      if (isAdmin) {
-        router.push(hasGroups ? onboardingPath : '/admin');
+      if (bootstrap.isSystemAdmin) {
+        router.push(bootstrap.hasGroups ? onboardingPath : '/admin');
         return;
       }
 
       router.push(onboardingPath);
     } catch (routingError) {
-      // 로그인은 성공했지만 후속 권한/그룹 판정이 일시 실패한 경우, 로그인 실패처럼 보이지 않도록 온보딩으로 폴백
       console.warn('[Login] 후속 라우팅 판정 실패, 온보딩으로 폴백:', routingError);
       router.push(onboardingPath);
     }

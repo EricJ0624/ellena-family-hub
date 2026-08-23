@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useLayoutEffect,
 import { supabase } from '@/lib/supabase';
 import { isValidUUID } from '@/lib/validation';
 import type { Group, Membership, MembershipRole } from '@/types/db';
+import { getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap-server';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { resolveUiTheme } from '@/lib/ui-theme';
@@ -23,6 +25,49 @@ interface GroupContextType {
 }
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
+
+function seedFromBootstrapCache(
+  userId: string,
+  bootstrap: AuthBootstrapPayload,
+  currentGroupId: string | null,
+): {
+  groups: Group[];
+  memberships: Membership[];
+  preferredGroupId: string | null;
+} | null {
+  if (!bootstrap.groupRows.length) return null;
+
+  const groups = bootstrap.groupRows as Group[];
+  const ownedSet = new Set(bootstrap.ownedGroupIds.map((id) => id.toLowerCase()));
+  const roleByGroup = new Map(
+    bootstrap.membershipRoles.map((row) => [row.group_id.toLowerCase(), row]),
+  );
+
+  const memberships: Membership[] = bootstrap.groupIds.map((groupId) => {
+    const roleRow = roleByGroup.get(groupId.toLowerCase());
+    const isOwner = ownedSet.has(groupId.toLowerCase());
+    return {
+      user_id: userId,
+      group_id: groupId,
+      role: (isOwner ? 'ADMIN' : roleRow?.role || 'MEMBER') as MembershipRole,
+      joined_at: new Date().toISOString(),
+      family_role: (roleRow?.family_role as Membership['family_role']) ?? null,
+    };
+  });
+
+  let preferredGroupId = currentGroupId;
+  if (typeof window !== 'undefined') {
+    const savedGroupId = localStorage.getItem('currentGroupId');
+    if (savedGroupId && groups.find((g) => g.id === savedGroupId)) {
+      preferredGroupId = savedGroupId;
+    }
+  }
+  if (!preferredGroupId || !groups.find((g) => g.id === preferredGroupId)) {
+    preferredGroupId = groups[0]?.id ?? null;
+  }
+
+  return { groups, memberships, preferredGroupId };
+}
 
 export function GroupProvider({ children, userId }: { children: ReactNode; userId: string | null }) {
   const [currentGroupId, setCurrentGroupIdState] = useState<string | null>(null);
@@ -65,8 +110,28 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       return;
     }
 
+    const bootstrapHint = getCachedAuthBootstrap(userId);
+    const bootstrapSeed = bootstrapHint ? seedFromBootstrapCache(userId, bootstrapHint, currentGroupId) : null;
+    const silentRefresh = Boolean(bootstrapSeed);
+
+    if (bootstrapSeed) {
+      setGroups(bootstrapSeed.groups);
+      setMemberships(bootstrapSeed.memberships);
+      if (bootstrapSeed.preferredGroupId) {
+        setCurrentGroupIdState(bootstrapSeed.preferredGroupId);
+        const selected = bootstrapSeed.groups.find((g) => g.id === bootstrapSeed.preferredGroupId);
+        if (selected) setCurrentGroup(selected);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('currentGroupId', bootstrapSeed.preferredGroupId);
+        }
+      }
+      setLoading(false);
+    }
+
     try {
-      setLoading(true);
+      if (!silentRefresh) {
+        setLoading(true);
+      }
       setError(null);
 
       // 1. memberships 테이블에서 사용자가 속한 그룹 조회
@@ -101,9 +166,9 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
             })()
           : null;
 
-      // 로그인 직후·라우트 전환 직후 PostgREST가 빈 배열을 줄 수 있음. 한 번 백오프 후 재조회.
+      // bootstrap이 그룹 있음을 알려주면 빈 결과 재시도 대기를 줄인다.
       if (allGroupIds.length === 0) {
-        await new Promise((r) => setTimeout(r, 450));
+        await new Promise((r) => setTimeout(r, bootstrapHint?.hasGroups ? 120 : 450));
         const rM = await supabase.from('memberships').select('group_id, role, family_role').eq('user_id', userId);
         const rO = await supabase.from('groups').select('id').eq('owner_id', userId);
         if (!rM.error && !rO.error) {
