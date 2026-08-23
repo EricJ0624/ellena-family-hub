@@ -32,7 +32,7 @@ export async function getValidatedUserWithSessionFallback(
   session: Session | null
 ): Promise<{ user: User | null; error: AuthError | null }> {
   let lastError: AuthError | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (user && !error) {
       return { user, error: null };
@@ -41,11 +41,8 @@ export async function getValidatedUserWithSessionFallback(
     if (error && !isTransientAuthNetworkError(error)) {
       return { user: null, error };
     }
-    if (attempt < 2) {
-      if (attempt === 1) {
-        await supabase.auth.refreshSession().catch(() => undefined);
-      }
-      await sleep(350 * (attempt + 1));
+    if (attempt < 1) {
+      await sleep(250);
     }
   }
   if (session?.user && lastError && isTransientAuthNetworkError(lastError)) {

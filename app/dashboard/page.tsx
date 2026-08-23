@@ -1130,17 +1130,6 @@ export default function FamilyHub() {
 
         const currentUserId = serverUser.id;
 
-        // 시스템 관리자 확인
-        const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-          user_id_param: currentUserId,
-        });
-
-        let { hasGroups } = await resolveUserHasGroups(supabase, currentUserId, {
-          flakyRetry: true,
-          isSystemAdmin: Boolean(isAdmin),
-        });
-
-        const access = await loadUserGroupAccess(supabase, currentUserId);
         let openGroup = '';
         if (typeof window !== 'undefined') {
           try {
@@ -1150,22 +1139,41 @@ export default function FamilyHub() {
             openGroup = '';
           }
         }
+        const hasOpenGroup = Boolean(openGroup && isValidUUID(openGroup));
+
+        // 온보딩에서 그룹을 고르고 온 경우 재시도 루프를 줄여 진입을 빠르게 한다.
+        const [adminRes, groupsRes, access] = await Promise.all([
+          supabase.rpc('is_system_admin', { user_id_param: currentUserId }),
+          resolveUserHasGroups(supabase, currentUserId, {
+            flakyRetry: !hasOpenGroup,
+            isSystemAdmin: false,
+          }),
+          loadUserGroupAccess(supabase, currentUserId),
+        ]);
+        const isAdmin = Boolean(adminRes.data);
+        let { hasGroups } = groupsRes;
+
         const savedGroupId =
           typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
-        const suspendRedirect = resolveSuspendRedirect(access, {
-          openGroup: openGroup && isValidUUID(openGroup) ? openGroup : null,
-          savedGroupId,
-        });
-        if (suspendRedirect) {
-          router.replace(suspendRedirect);
-          return;
+        if (access.lookupFailed) {
+          // 일시 조회 실패로 진입을 막지 않는다. 정지 여부는 이후 그룹 effect에서 다시 본다.
+          console.warn('[Dashboard] 접근 조회 실패, 정지 확인 스킵하고 진입');
+        } else {
+          const suspendRedirect = resolveSuspendRedirect(access, {
+            openGroup: hasOpenGroup ? openGroup : null,
+            savedGroupId,
+          });
+          if (suspendRedirect) {
+            router.replace(suspendRedirect);
+            return;
+          }
         }
 
         // 온보딩에서 ?openGroup= 으로 넘어온 경우: 사용자가 이미 다른 그룹을 가지고 있어도
         // 의도한 그룹으로 정확히 전환되도록 멤버십/소유 여부를 직접 확인해 우선 적용
         if (typeof window !== 'undefined') {
           try {
-            if (openGroup && isValidUUID(openGroup)) {
+            if (hasOpenGroup) {
               const [mRes, oRes] = await Promise.all([
                 supabase
                   .from('memberships')

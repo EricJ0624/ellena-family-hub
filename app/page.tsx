@@ -209,7 +209,8 @@ export default function LoginPage() {
       setLastEmailFromStorage(emailForStorage);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // JWT가 PostgREST에 붙을 짧은 여유. 500ms는 모바일 체감 로딩만 늘린다.
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     const {
       data: { session },
@@ -231,31 +232,23 @@ export default function LoginPage() {
     const onboardingPath = buildOnboardingPath(invite);
 
     try {
-      const { data: isAdmin, error: isAdminError } = await supabase.rpc('is_system_admin', {
-        user_id_param: session.user.id,
-      });
-      if (isAdminError) {
-        console.warn('[Login] 시스템 관리자 판정 실패, 일반 라우팅으로 폴백:', isAdminError);
+      // 관리자 판정·그룹 유무를 병렬로. 정지는 온보딩/대시보드에서 다시 확인하므로
+      // 로그인 화면에서 loadUserGroupAccess까지 기다리지 않는다(모바일 로딩 주원인).
+      const [adminRes, groupsRes] = await Promise.all([
+        supabase.rpc('is_system_admin', { user_id_param: session.user.id }),
+        resolveUserHasGroups(supabase, session.user.id, { flakyRetry: false }),
+      ]);
+      if (adminRes.error) {
+        console.warn('[Login] 시스템 관리자 판정 실패, 일반 라우팅으로 폴백:', adminRes.error);
       }
+      const isAdmin = Boolean(adminRes.data);
+      let hasGroups = groupsRes.hasGroups;
 
-      const { hasGroups } = await resolveUserHasGroups(supabase, session.user.id, {
-        flakyRetry: true,
-        isSystemAdmin: Boolean(isAdmin),
-      });
-
-      if (hasGroups) {
-        const access = await loadUserGroupAccess(supabase, session.user.id);
-        if (access.lookupFailed) {
-          // 정지 확정이 아니라 조회 실패. 로그인 자체는 성공했으므로 온보딩으로 넘기고
-          // 대시보드/온보딩에서 다시 정지 여부를 확인한다.
-          console.warn('[Login] 접근 조회 실패, 온보딩으로 폴백');
-          router.push(onboardingPath);
-          return;
-        }
-        if (access.accessibleGroupIds.length === 0) {
-          router.push('/suspended');
-          return;
-        }
+      // 로그인 직후 빈 결과가 한 번 나올 때만 짧게 1회 재시도
+      if (!hasGroups) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        hasGroups = (await resolveUserHasGroups(supabase, session.user.id, { flakyRetry: false }))
+          .hasGroups;
       }
 
       if (isAdmin) {
