@@ -9,6 +9,7 @@ import { supabase, clearAuthStorage, AUTH_STORAGE_KEY } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { resolveUserHasGroups } from '@/lib/family-auth-routing';
 import { checkUserSuspendedInGroup, loadUserGroupAccess, resolveSuspendRedirect, suspendedPath, ACCESS_UNAVAILABLE_PATH } from '@/lib/account-suspend-access';
+import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 import { useRouter } from 'next/navigation';
 import { 
   getPushToken, 
@@ -3500,7 +3501,9 @@ export default function FamilyHub() {
         });
 
         if (error) {
-          console.error('시스템 관리자 확인 오류:', error);
+          if (!isAbortLikeError(error)) {
+            console.error('시스템 관리자 확인 오류:', formatUnknownError(error));
+          }
           setIsSystemAdmin(false);
           setAdminStatusResolved(true);
           return;
@@ -3509,7 +3512,9 @@ export default function FamilyHub() {
         setIsSystemAdmin(data === true);
         setAdminStatusResolved(true);
       } catch (error) {
-        console.error('시스템 관리자 확인 중 오류:', error);
+        if (!isAbortLikeError(error)) {
+          console.error('시스템 관리자 확인 중 오류:', formatUnknownError(error));
+        }
         setIsSystemAdmin(false);
         setAdminStatusResolved(true);
       }

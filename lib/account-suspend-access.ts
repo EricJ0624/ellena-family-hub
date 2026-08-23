@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 
 export const GROUP_SUSPENDED_CODE = 'GROUP_SUSPENDED';
 export const ACCESS_UNAVAILABLE_PATH = '/access-unavailable';
@@ -80,7 +81,9 @@ async function isSystemAdminUser(supabase: SupabaseClient, userId: string): Prom
     user_id_param: userId,
   });
   if (error) {
-    console.error('is_system_admin 오류:', error);
+    if (!isAbortLikeError(error)) {
+      console.error('is_system_admin 오류:', formatUnknownError(error));
+    }
     return false;
   }
   return data === true;

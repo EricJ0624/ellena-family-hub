@@ -7,6 +7,7 @@
 
 import { getSupabaseServerClient } from './api-helpers';
 import { isValidUUID } from './validation';
+import { formatUnknownError, isAbortLikeError } from './supabase-error';
 import type { MembershipRole } from '@/types/db';
 
 async function hasActiveDashboardAccessRequest(
@@ -231,7 +232,9 @@ export async function isSystemAdmin(userId?: string): Promise<boolean> {
       // 서버 사이드에서는 직접 쿼리 가능
       const { data, error } = await supabase.rpc('is_system_admin');
       if (error) {
-        console.error('시스템 관리자 확인 오류:', error);
+        if (!isAbortLikeError(error)) {
+          console.error('시스템 관리자 확인 오류:', formatUnknownError(error));
+        }
         return false;
       }
       return data === true;
@@ -243,13 +246,17 @@ export async function isSystemAdmin(userId?: string): Promise<boolean> {
     });
     
     if (error) {
-      console.error('시스템 관리자 확인 오류:', error);
+      if (!isAbortLikeError(error)) {
+        console.error('시스템 관리자 확인 오류:', formatUnknownError(error));
+      }
       return false;
     }
     
     return data === true;
   } catch (error) {
-    console.error('시스템 관리자 확인 중 오류:', error);
+    if (!isAbortLikeError(error)) {
+      console.error('시스템 관리자 확인 중 오류:', formatUnknownError(error));
+    }
     return false;
   }
 }

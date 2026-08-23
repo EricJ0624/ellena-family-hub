@@ -122,12 +122,6 @@ export default function LoginPage() {
     };
   }, [isMounted]);
 
-  useEffect(() => {
-    if (!signupAllowed && mode === 'signup') {
-      setMode('login');
-    }
-  }, [signupAllowed, mode]);
-
   // 로그인 타이틀 한 줄 맞춤: 넘치면 폰트 자동 축소, 리사이즈 시 재계산 (대시보드와 동일 방식)
   useEffect(() => {
     if (!isMounted) return;
@@ -349,11 +343,10 @@ export default function LoginPage() {
     setSuccessMsg('');
 
     try {
-    const closedMessage =
-      signupBlockReason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled');
     if (!signupAllowed) {
-      setErrorMsg(closedMessage);
-      setMode('login');
+      setErrorMsg(
+        signupBlockReason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled'),
+      );
       return;
     }
 
@@ -405,7 +398,6 @@ export default function LoginPage() {
           setSignupAllowed(false);
           setSignupBlockReason(reason);
           setErrorMsg(reason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled'));
-          setMode('login');
           return;
         }
       } catch {
@@ -622,7 +614,6 @@ export default function LoginPage() {
   };
 
   const switchMode = (newMode: Mode) => {
-    if (newMode === 'signup' && !signupAllowed) return;
     setMode(newMode);
     setErrorMsg('');
     setSuccessMsg('');
@@ -674,14 +665,15 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative flex min-h-dvh flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
+      className="relative flex min-h-dvh flex-col items-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
       style={{ fontFamily: getFontStyle(displayLang, 'body').fontFamily }}
     >
       {/* 배경 장식 요소 */}
       <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
       <div className="absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]" />
 
-      <div className="relative z-[1] w-full max-w-[420px] text-center">
+      {/* my-auto: 짧을 때는 세로 중앙, 길 때(모바일)는 상단부터 스크롤되게 */}
+      <div className="relative z-[1] my-auto w-full max-w-[420px] text-center">
         {/* 로고 영역 */}
         <div className="mb-10 [animation:fadeInDown_0.6s_ease-out]">
           <div className="mb-5 text-[100px] [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.1))]">
@@ -722,13 +714,11 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => switchMode('signup')}
-            disabled={!signupAllowed}
             className={cn(
               'cursor-pointer rounded-xl border-none px-5 py-2.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
               mode === 'signup'
                 ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] text-white shadow-[0_4px_12px_rgba(102,126,234,0.3)]'
                 : 'bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
-              !signupAllowed && 'cursor-not-allowed opacity-50',
             )}
           >
             {t('tab_signup')}
@@ -747,13 +737,12 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {!signupAllowed && (
+        {mode === 'signup' && !signupAllowed ? (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {signupBlockReason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled')}
           </div>
-        )}
-
-        {/* 입력 폼 영역 */}
+        ) : (
+        /* 입력 폼 영역 */
         <form 
           onSubmit={handleSubmit} 
           className="fade-in flex flex-col gap-5 [animation:fadeInUp_0.6s_ease-out_0.2s_both]"
@@ -980,6 +969,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+        )}
         
         {/* 하단 여백 */}
         <div className="h-10" />
