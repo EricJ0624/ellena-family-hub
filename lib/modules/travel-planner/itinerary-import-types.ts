@@ -34,9 +34,17 @@ export interface ParsedTripMeta {
   budget?: number | null;
 }
 
+/** Day N 헤더에서 추출한 일차 제목 (travel_day_titles) */
+export interface ParsedDayTitle {
+  day_index?: number | null;
+  day_date?: string | null;
+  title: string;
+}
+
 export interface ParseItineraryImportResult {
   meta: ParsedTripMeta;
   items: ParsedImportItem[];
+  day_titles: ParsedDayTitle[];
 }
 
 export type ImportWizardStep = 'paste' | 'trip' | 'preview';

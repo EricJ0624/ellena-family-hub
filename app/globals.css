@@ -267,6 +267,214 @@ button.travel-kids-add-trip-submit {
   cursor: pointer;
 }
 
+/*
+ * Kids travel — 칠판과 동일: section height:auto + 배너 100% 100%, 버튼 아래 일정
+ */
+.widget-chrome[data-widget-key='travel']:has(.travel-kids-widget) {
+  height: auto;
+  min-height: var(--widget-scale-box-h, var(--widget-min-h, 0px));
+  max-height: none;
+  overflow: visible;
+}
+
+.widget-chrome[data-widget-key='travel']:has(.travel-kids-widget) > .widget-scale-root {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  height: auto;
+  min-height: var(--widget-scale-box-h, var(--widget-min-h, 0px));
+  max-height: none;
+  container-type: inline-size;
+}
+
+.content-section.travel-kids-widget {
+  --travel-kids-banner: url('/travel-planner/widget-banner.png?v=67');
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: var(--widget-scale-box-h, var(--widget-min-h, 0px));
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: #edebf6;
+  background-image: var(--travel-kids-banner);
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% 100%;
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+  container-type: inline-size;
+  border-radius: var(--border-radius-xl, 1rem);
+  box-sizing: border-box;
+}
+
+.content-section.travel-kids-widget::before,
+.content-section.travel-kids-widget::after {
+  content: none;
+}
+
+.content-section.travel-kids-widget > .travel-kids-widget-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  pointer-events: none;
+  background: transparent;
+}
+
+.travel-kids-widget-head {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2.2cqmin;
+  margin: 0;
+  padding: 6% 5% max(5%, 0.75rem) 36%;
+  pointer-events: none;
+  background: transparent;
+}
+
+.travel-kids-widget-title {
+  margin: 0;
+  max-width: 100%;
+  overflow: visible;
+  font-size: clamp(0.58rem, 3.8cqmin, 0.86rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-overflow: clip;
+  text-transform: uppercase;
+  color: #4b5563;
+  pointer-events: none;
+}
+
+.travel-kids-widget-actions {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1.6cqmin;
+}
+
+.travel-kids-widget-import,
+.travel-kids-widget-add {
+  display: inline-flex;
+  flex-shrink: 1;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  padding: 1.2cqmin 2.6cqmin;
+  font-size: clamp(0.48rem, 3cqmin, 0.72rem);
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.travel-kids-widget-import {
+  border: 1px solid #c4b5fd;
+  background: rgb(255 255 255 / 0.92);
+  color: #5b21b6;
+}
+
+.travel-kids-widget-add {
+  gap: 0.8cqmin;
+  border: 0;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.travel-kids-widget-add-icon {
+  width: 3.2cqmin;
+  height: 3.2cqmin;
+  flex-shrink: 0;
+}
+
+.travel-kids-widget-bottom {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 1.5cqmin;
+  padding: 0;
+  overflow: visible;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.travel-kids-widget-empty {
+  margin: 0;
+  font-size: clamp(0.58rem, 3.6cqmin, 0.82rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: #4b5563;
+  word-break: keep-all;
+}
+
+.travel-kids-widget-trips {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  list-style: none;
+  gap: 1.2cqmin;
+  overflow: visible;
+  padding: 0;
+}
+
+.travel-kids-widget-trip-item {
+  flex: none;
+  width: 100%;
+  max-width: 100%;
+}
+
+.travel-kids-widget-trip {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: transparent;
+  padding: 0.6cqmin 0;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.travel-kids-widget-trip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.62rem, 3.8cqmin, 0.88rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.travel-kids-widget-trip-dates {
+  margin-top: 0.15cqmin;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.52rem, 3.2cqmin, 0.74rem);
+  line-height: 1.2;
+  color: #64748b;
+}
+
 /* 공지 배너 마퀴 슬라이딩 (AnnouncementBanner에서 animation: marquee 참조) */
 @keyframes marquee {
   0% {
@@ -738,15 +946,20 @@ select:not(.chalkboard-form-input) {
     height: auto;
   }
 
-  /* portrait 다열: 같은 행에서 높이 다름 — 옆 위젯 높이에 stretch 되지 않음 (칠판 셀 제외) */
-  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) {
+  .dashboard-widget-grid[data-layout='landscape'] > *:has(.travel-kids-widget) {
+    align-self: start;
+    height: auto;
+  }
+
+  /* portrait 다열: 같은 행에서 높이 다름 — 옆 위젯 높이에 stretch 되지 않음 (칠판·travel kids 제외) */
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)):not(:has(.travel-kids-widget)) {
     align-self: start;
     height: auto;
     overflow: visible;
   }
 
   /* portrait: 크롬은 flex 껍데기, CQ는 .widget-scale-root(확정 높이) */
-  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome {
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)):not(:has(.travel-kids-widget)) > .widget-chrome {
     display: flex;
     flex-direction: column;
     height: auto;
@@ -754,7 +967,7 @@ select:not(.chalkboard-form-input) {
     overflow: visible;
   }
 
-  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)) > .widget-chrome > .widget-scale-root > .content-section {
+  .dashboard-widget-grid[data-layout='portrait']:not([data-columns='1']) > *:not(:has(.chalkboard-frame)):not(:has(.travel-kids-widget)) > .widget-chrome > .widget-scale-root > .content-section {
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
@@ -3909,7 +4122,7 @@ select:not(.chalkboard-form-input) {
     overflow: hidden;
   }
 
-  .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)) > .widget-chrome {
+  .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)):not(:has(.travel-kids-widget)) > .widget-chrome {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -3917,7 +4130,7 @@ select:not(.chalkboard-form-input) {
     overflow: hidden;
   }
 
-  .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)) > .widget-chrome > .widget-scale-root {
+  .dashboard-widget-grid[data-layout='landscape'] > *:not(:has(.chalkboard-frame)):not(:has(.travel-kids-widget)) > .widget-chrome > .widget-scale-root {
     flex: 1 1 auto;
     min-height: var(--widget-min-h, 0px);
     height: var(--widget-scale-box-h, 100%);
@@ -3951,6 +4164,33 @@ select:not(.chalkboard-form-input) {
   .dashboard-widget-grid > *:has(.chalkboard-frame) > .widget-chrome > .widget-scale-root {
     height: auto;
     min-height: var(--tasks-min-h, var(--widget-min-h, auto));
+    max-height: none;
+    overflow: visible;
+    container-type: inline-size;
+  }
+
+  .dashboard-widget-grid > *:has(.travel-kids-widget) {
+    align-self: start;
+    display: block;
+    height: auto;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  /* 그리드 아이템과 chrome 사이에 h-full 래퍼가 있어 자손 선택자 사용 */
+  .dashboard-widget-grid > *:has(.travel-kids-widget) .widget-chrome {
+    display: block;
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .dashboard-widget-grid > *:has(.travel-kids-widget) .widget-chrome > .widget-scale-root {
+    height: auto;
+    min-height: var(--widget-scale-box-h, var(--widget-min-h, auto));
     max-height: none;
     overflow: visible;
     container-type: inline-size;
@@ -4362,3 +4602,4 @@ select:not(.chalkboard-form-input) {
 }
 
 /* Travel itinerary document — preview uses iframe (srcDoc); print via iframe.contentWindow.print() */
+

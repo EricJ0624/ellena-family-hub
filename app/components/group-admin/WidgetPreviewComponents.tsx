@@ -380,11 +380,46 @@ function AlbumPreview() {
 // ── Travel (여행 플래너 스타일) ─────────────────────────────────
 function TravelPreview() {
   const { tt, wp } = useWidgetPreviewCopy();
+  const { currentGroup } = useGroup();
+  const isKidsTheme =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
   const trips = [
     { title: wp('preview_trip_1_title'), dates: wp('preview_trip_1_dates') },
     { title: wp('preview_trip_2_title'), dates: wp('preview_trip_2_dates') },
     { title: wp('preview_trip_3_title'), dates: wp('preview_trip_3_dates') },
   ];
+
+  if (isKidsTheme) {
+    return (
+      <section className="content-section travel-kids-widget">
+        <div className="travel-kids-widget-stage">
+          <div className="travel-kids-widget-head">
+            <h3 className="travel-kids-widget-title">{tt('title')}</h3>
+            <div className="travel-kids-widget-actions">
+              <div className="travel-kids-widget-import">{tt('import_open_button')}</div>
+              <div className="travel-kids-widget-add">
+                <Plus className="travel-kids-widget-add-icon" aria-hidden />
+                {tt('add_trip')}
+              </div>
+            </div>
+            <div className="travel-kids-widget-bottom">
+              <ul className="travel-kids-widget-trips">
+                {trips.map((trip, i) => (
+                  <li key={i} className="travel-kids-widget-trip-item">
+                    <div className="travel-kids-widget-trip">
+                      <div className="travel-kids-widget-trip-title">{trip.title}</div>
+                      <div className="travel-kids-widget-trip-dates">{trip.dates}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="content-section h-full">
       <div className="section-header">

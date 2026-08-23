@@ -6306,6 +6306,7 @@ export default function FamilyHub() {
             onTripClick={(tripId) => router.push(`/travel?tripId=${tripId}`)}
             onAddClick={() => router.push('/travel?openAdd=1')}
             onImportClick={() => router.push('/travel/import')}
+            uiTheme={uiTheme}
             translations={{
               section_title: tt('title'),
               add_trip: tt('add_trip'),
@@ -6858,6 +6859,11 @@ export default function FamilyHub() {
                 ? effectiveW <= sMaxUnits
                 : cfg.size === 'S';
 
+              // tasks·travel(kids): 내용이 칸보다 크면 세로 성장. h-full 래퍼는 행 높이에
+              // %로 묶여 성장이 막히므로 min-height만 유지하고 height는 auto.
+              const contentGrowsWithBody =
+                cfg.widget_key === 'tasks' || cfg.widget_key === 'travel';
+
               return (
                 <div
                   key={cfg.widget_key}
@@ -6892,7 +6898,9 @@ export default function FamilyHub() {
                               ? 'top-[4dvh] bottom-0 rounded-b-none pb-[env(safe-area-inset-bottom,0px)]'
                               : 'top-[4dvh] max-h-[88dvh]',
                           ].join(' ')
-                        : 'flex h-full min-h-0 flex-col'
+                        : contentGrowsWithBody
+                          ? 'flex min-h-[var(--widget-min-h,0px)] flex-col'
+                          : 'flex h-full min-h-0 flex-col'
                     }
                   >
                     {isExpanded ? (
@@ -6912,7 +6920,15 @@ export default function FamilyHub() {
                         </button>
                       </div>
                     ) : null}
-                    <div className={isExpanded ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-4' : 'min-h-0 flex-1'}>
+                    <div
+                      className={
+                        isExpanded
+                          ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-4'
+                          : contentGrowsWithBody
+                            ? 'min-h-[var(--widget-min-h,0px)]'
+                            : 'min-h-0 flex-1'
+                      }
+                    >
                       <WidgetChrome
                         widgetKey={cfg.widget_key}
                         layoutW={cfg.layoutW}

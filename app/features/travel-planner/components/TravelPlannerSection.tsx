@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { Plus } from 'lucide-react';
+import type { UiTheme } from '@/lib/ui-theme';
 import type { TravelTrip } from '../types';
 
 interface TravelPlannerSectionProps {
@@ -16,6 +17,7 @@ interface TravelPlannerSectionProps {
   onTripClick: (tripId: string) => void;
   onAddClick: () => void;
   onImportClick?: () => void;
+  uiTheme?: UiTheme;
   translations: {
     section_title: string;
     add_trip: string;
@@ -33,8 +35,70 @@ export function TravelPlannerSection({
   onTripClick,
   onAddClick,
   onImportClick,
+  uiTheme,
   translations: t,
 }: TravelPlannerSectionProps) {
+  const isKidsTheme = uiTheme === 'kids_friendly';
+
+  if (isKidsTheme) {
+    return (
+      <section className="content-section travel-kids-widget">
+        <div className="travel-kids-widget-stage">
+          <div className="travel-kids-widget-head">
+            <h3 className="travel-kids-widget-title">{t.section_title}</h3>
+            {currentGroupId ? (
+              <div className="travel-kids-widget-actions">
+                {onImportClick ? (
+                  <button
+                    type="button"
+                    onClick={onImportClick}
+                    className="travel-kids-widget-import"
+                  >
+                    {t.import_open_button}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onAddClick}
+                  className="travel-kids-widget-add"
+                >
+                  <Plus className="travel-kids-widget-add-icon" aria-hidden />
+                  {t.add_trip}
+                </button>
+              </div>
+            ) : null}
+            <div className="travel-kids-widget-bottom">
+              {!currentGroupId ? (
+                <p className="travel-kids-widget-empty">{t.select_group}</p>
+              ) : loading ? (
+                <p className="travel-kids-widget-empty">{t.trips_loading}</p>
+              ) : trips.length === 0 ? (
+                <p className="travel-kids-widget-empty">{t.empty_state}</p>
+              ) : (
+                <ul className="travel-kids-widget-trips">
+                  {trips.map((trip) => (
+                    <li key={trip.id} className="travel-kids-widget-trip-item">
+                      <button
+                        type="button"
+                        onClick={() => onTripClick(trip.id)}
+                        className="travel-kids-widget-trip w-full border-0 text-left"
+                      >
+                        <div className="travel-kids-widget-trip-title">{trip.title}</div>
+                        <div className="travel-kids-widget-trip-dates">
+                          {trip.start_date} ~ {trip.end_date}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="content-section">
       <div className="section-header flex-wrap" style={{ gap: '1.5cqmin 2.5cqmin' }}>

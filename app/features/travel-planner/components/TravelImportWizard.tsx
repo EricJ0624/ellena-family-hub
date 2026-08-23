@@ -16,11 +16,13 @@ import {
 } from '@/lib/modules/travel-planner/itinerary-import-apply';
 import {
   parseItineraryImportText,
+  resolveImportDayTitles,
   resolveImportItemDates,
 } from '@/lib/modules/travel-planner/itinerary-import-parser';
 import type {
   ImportItemKind,
   ImportWizardStep,
+  ParsedDayTitle,
   ParsedImportItem,
 } from '@/lib/modules/travel-planner/itinerary-import-types';
 
@@ -44,6 +46,7 @@ export function TravelImportWizard() {
   const [pasteText, setPasteText] = useState('');
   const [showPromptExample, setShowPromptExample] = useState(false);
   const [items, setItems] = useState<ParsedImportItem[]>([]);
+  const [dayTitles, setDayTitles] = useState<ParsedDayTitle[]>([]);
   const [formTitle, setFormTitle] = useState('');
   const [formDestination, setFormDestination] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
@@ -68,6 +71,11 @@ export function TravelImportWizard() {
     return resolveImportItemDates(items, formStartDate, formEndDate);
   }, [items, formStartDate, formEndDate]);
 
+  const resolvedDayTitles = useMemo(() => {
+    if (!formStartDate) return dayTitles;
+    return resolveImportDayTitles(dayTitles, formStartDate);
+  }, [dayTitles, formStartDate]);
+
   const handleClose = () => {
     router.push('/dashboard');
   };
@@ -87,12 +95,13 @@ export function TravelImportWizard() {
       alert(tt('import_no_text'));
       return;
     }
-    const { meta, items: parsed } = parseItineraryImportText(pasteText);
-    if (parsed.length === 0) {
+    const { meta, items: parsed, day_titles } = parseItineraryImportText(pasteText);
+    if (parsed.length === 0 && day_titles.length === 0) {
       alert(tt('import_parse_empty'));
       return;
     }
     setItems(parsed);
+    setDayTitles(day_titles);
     setFormTitle(meta.title?.trim() || '');
     setFormDestination(meta.destination?.trim() || '');
     setFormStartDate(meta.start_date || '');
@@ -149,7 +158,7 @@ export function TravelImportWizard() {
       }
       return Boolean(it.title.trim() && it.day_date);
     });
-    if (toApply.length === 0) {
+    if (toApply.length === 0 && resolvedDayTitles.length === 0) {
       alert(tt('import_parse_empty'));
       return;
     }
@@ -170,6 +179,7 @@ export function TravelImportWizard() {
         groupId: currentGroupId,
         tripId,
         items: toApply,
+        dayTitles: resolvedDayTitles,
         headers,
       });
       router.replace(`/travel?tripId=${tripId}`);

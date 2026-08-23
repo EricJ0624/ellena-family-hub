@@ -1,4 +1,4 @@
-import type { ParsedImportItem } from '@/lib/modules/travel-planner/itinerary-import-types';
+import type { ParsedDayTitle, ParsedImportItem } from '@/lib/modules/travel-planner/itinerary-import-types';
 
 const API_BASE = '/api/v1/travel';
 
@@ -8,9 +8,29 @@ export async function applyImportedItinerary(params: {
   groupId: string;
   tripId: string;
   items: ParsedImportItem[];
+  dayTitles?: ParsedDayTitle[];
   headers: AuthHeaders;
 }): Promise<void> {
-  const { groupId, tripId, items, headers } = params;
+  const { groupId, tripId, items, dayTitles = [], headers } = params;
+
+  for (const day of dayTitles) {
+    const dayDate = day.day_date;
+    const title = day.title.trim();
+    if (!dayDate || !title) continue;
+    const res = await fetch(`${API_BASE}/trips/${tripId}/day-titles`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        groupId,
+        day_date: dayDate,
+        title,
+      }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error((json as { error?: string }).error || 'day_title');
+    }
+  }
 
   for (const item of items) {
     if (item.kind === 'accommodation') {
@@ -178,6 +198,10 @@ export async function createTripFromImport(params: {
   return id;
 }
 
-export const IMPORT_PROMPT_TEMPLATE = `방콕 3박4일 4인 가족 일정 짜줘.
-각 날짜별로 시간, 장소, 식사, 이동을 bullet로 써줘.
-숙소는 날짜와 함께 따로 적어줘.`;
+export const IMPORT_PROMPT_TEMPLATE = `보홀 다이빙 여행 일정 짜줘.
+각 Day마다 아래 형식으로 써줘.
+Day 1 (2월 9일): 하루 요약 제목
+이동/오전/오후/종일: 활동 내용
+🏨 추천 호텔: 숙소 이름
+선정 이유: ...
+🍽️ 미슐랭 심사관의 미식 노트: 식사 추천`;

@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import {
   DASHBOARD_WIDGET_KEYS,
   DEFAULT_WIDGET_CONFIGS,
+  TRAVEL_M_LAYOUT_H,
+  WIDGET_LAYOUT_PRESETS,
   parseWidgetSize,
   type DashboardWidgetKey,
   type WidgetConfigDraft,
@@ -79,6 +81,11 @@ function sanitizeDraftLayoutForSave(d: WidgetConfigDraft): Pick<
   };
 }
 
+/** 예전 전역 M 높이(8)로 저장된 travel만 새 기본 높이로 맞춘다. 커스텀 높이는 유지. */
+function adoptTravelDefaultHeight(h: number | null): number | null {
+  return h === WIDGET_LAYOUT_PRESETS.M.h ? TRAVEL_M_LAYOUT_H : h;
+}
+
 function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const rowMap = new Map<DashboardWidgetKey, WidgetConfigRow>();
   for (const row of rows) rowMap.set(row.widget_key, row);
@@ -86,6 +93,7 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   const sorted = DEFAULT_WIDGET_CONFIGS.map((base) => {
     const found = rowMap.get(base.widget_key);
     if (!found) return { ...base };
+    const isTravel = found.widget_key === 'travel';
     return {
       widget_key: found.widget_key,
       is_enabled: found.is_enabled,
@@ -99,18 +107,24 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
       layoutX: clampNumeric(found.layout_x, 0, 12),
       layoutY: clampNumeric(found.layout_y, 0, 9999),
       layoutW: clampNumeric(found.layout_w, 0.001, 12),
-      layoutH: clampNumeric(found.layout_h, 0.001, 9999),
+      layoutH: isTravel
+        ? adoptTravelDefaultHeight(clampNumeric(found.layout_h, 0.001, 9999))
+        : clampNumeric(found.layout_h, 0.001, 9999),
       layoutVersion: clampInt(found.layout_version ?? 1, 1, 9999),
       // portrait (12열 × 24행)
       layoutPortraitX: clampNumeric(found.layout_portrait_x, 0, 12),
       layoutPortraitY: clampNumeric(found.layout_portrait_y, 0, 9999),
       layoutPortraitW: clampNumeric(found.layout_portrait_w, 0.001, 12),
-      layoutPortraitH: clampNumeric(found.layout_portrait_h, 0.001, 9999),
+      layoutPortraitH: isTravel
+        ? adoptTravelDefaultHeight(clampNumeric(found.layout_portrait_h, 0.001, 9999))
+        : clampNumeric(found.layout_portrait_h, 0.001, 9999),
       // landscape (24열 × 12행)
       layoutLandscapeX: clampNumeric(found.layout_landscape_x, 0, 24),
       layoutLandscapeY: clampNumeric(found.layout_landscape_y, 0, 9999),
       layoutLandscapeW: clampNumeric(found.layout_landscape_w, 0.001, 24),
-      layoutLandscapeH: clampNumeric(found.layout_landscape_h, 0.001, 9999),
+      layoutLandscapeH: isTravel
+        ? adoptTravelDefaultHeight(clampNumeric(found.layout_landscape_h, 0.001, 9999))
+        : clampNumeric(found.layout_landscape_h, 0.001, 9999),
     };
   }).sort((a, b) => {
     if (a.display_order !== b.display_order) return a.display_order - b.display_order;

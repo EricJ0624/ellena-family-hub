@@ -28,6 +28,9 @@ export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }>
   XL: { w: 12, h: 12 }, // @deprecated — L 과 동일
 };
 
+/** Travel planner M 기본 높이. 전역 M(8)보다 낮고 너비(12)는 유지. */
+export const TRAVEL_M_LAYOUT_H = 6;
+
 /** layout_w/h(12열) → DB col_span/row_span (CHECK 1~4, 1~6). layout-presets.layoutWHToLegacySpans 와 동일 */
 function legacySpanFromLayoutWH(w: number, h: number): { colSpan: number; rowSpan: number } {
   return {
@@ -178,12 +181,19 @@ const _layoutM = {
 
 const _spanM = WIDGET_SIZE_PRESETS.M;
 
+const _layoutTravel = {
+  ..._layoutM,
+  layoutH: TRAVEL_M_LAYOUT_H,
+  layoutPortraitH: TRAVEL_M_LAYOUT_H,
+  layoutLandscapeH: TRAVEL_M_LAYOUT_H,
+} as const;
+
 export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'calendar', is_enabled: true, display_order: 20, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'chat',     is_enabled: true, display_order: 30, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'piggy',    is_enabled: true, display_order: 40, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutTravel },
   { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'games',        is_enabled: true,  display_order: 80, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
