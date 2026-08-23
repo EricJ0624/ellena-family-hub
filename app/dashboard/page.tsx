@@ -15,7 +15,12 @@ import {
   resolveAuthBootstrapSuspendRedirect,
   getCachedAuthBootstrap,
 } from '@/lib/auth-bootstrap';
-import { normalizeGroupId } from '@/lib/group-id-resolve';
+import { normalizeGroupId } from '@/lib/validation';
+import {
+  parseOpenGroupParam,
+  readStoredGroupId,
+  writeStoredGroupId,
+} from '@/lib/group-id-resolve';
 import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 import { useRouter } from 'next/navigation';
 import { 
@@ -68,7 +73,6 @@ import { getAnnouncementTexts, isAnnouncementVisibleForLang } from '@/lib/announ
 import { Shield, Calendar, ChevronLeft, ChevronRight, CalendarDays, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { readSeenMemberTicketIds, type MemberSupportTicketRow } from '@/lib/member-support';
-import { isValidUUID } from '@/lib/validation';
 import {
   type ChatUiMessage,
 } from '@/lib/chat-messages';
@@ -1137,19 +1141,10 @@ export default function FamilyHub() {
 
         const currentUserId = serverUser.id;
 
-        let openGroup = '';
-        if (typeof window !== 'undefined') {
-          try {
-            const qs = new URLSearchParams(window.location.search);
-            openGroup = qs.get('openGroup')?.trim().toLowerCase() ?? '';
-          } catch {
-            openGroup = '';
-          }
-        }
-        const hasOpenGroup = Boolean(openGroup && isValidUUID(openGroup));
+        const openGroup = parseOpenGroupParam() ?? '';
+        const hasOpenGroup = Boolean(openGroup);
 
-        const savedGroupId =
-          typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
+        const savedGroupId = readStoredGroupId();
 
         let isAdmin = false;
         let hasGroups = false;
@@ -1181,11 +1176,7 @@ export default function FamilyHub() {
             } catch (_) {
               // ignore
             }
-            try {
-              localStorage.setItem('currentGroupId', openGroup);
-            } catch (_) {
-              // ignore
-            }
+            writeStoredGroupId(openGroup);
             if (typeof window !== 'undefined') {
               window.history.replaceState({}, '', window.location.pathname);
             }
@@ -1240,11 +1231,7 @@ export default function FamilyHub() {
                   } catch (_) {
                     // ignore
                   }
-                  try {
-                    localStorage.setItem('currentGroupId', openGroup);
-                  } catch (_) {
-                    // ignore
-                  }
+                  writeStoredGroupId(openGroup);
                 }
                 window.history.replaceState({}, '', window.location.pathname);
               }

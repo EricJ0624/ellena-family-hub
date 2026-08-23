@@ -13,7 +13,8 @@ import { getOnboardingTranslation, type OnboardingTranslations } from '@/lib/tra
 import { getMemberManagementTranslation } from '@/lib/translations/memberManagement';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { getGroupSelectorLabel } from '@/lib/group-display-name';
-import { normalizeGroupIdFromRpc, isValidUUID } from '@/lib/validation';
+import { normalizeGroupId, normalizeGroupIdFromRpc } from '@/lib/validation';
+import { dashboardHrefWithOpenGroup, sameGroupId } from '@/lib/group-id-resolve';
 import {
   clearSessionStoredInviteCode,
   getInviteCodeFromSearchParams,
@@ -32,13 +33,6 @@ function supabaseClientErrorText(err: unknown): string {
   if (typeof err === 'string') return err.trim();
   const o = err as { message?: string; details?: string; hint?: string };
   return (o.message || o.details || o.hint || '').trim();
-}
-
-/** 온보딩 → 대시보드: 선택/가입 그룹을 URL에 실어 checkAuth가 멤버십을 확정(스토리지·JWT 레이스 완화) */
-function dashboardHrefWithOpenGroup(groupId: string | null | undefined): string {
-  const g = groupId?.trim().toLowerCase() ?? '';
-  if (!g || !isValidUUID(g)) return '/dashboard';
-  return `/dashboard?openGroup=${encodeURIComponent(g)}`;
 }
 
 interface GroupPreview {
@@ -558,10 +552,7 @@ export default function OnboardingPage() {
 
       setSuccess(ot('success_joined'));
       const fromRpc = normalizeGroupIdFromRpc(joinedGroupIdData);
-      const previewNorm =
-        groupPreview?.id && isValidUUID(groupPreview.id.trim().toLowerCase())
-          ? groupPreview.id.trim().toLowerCase()
-          : null;
+      const previewNorm = normalizeGroupId(groupPreview?.id);
       const groupId = fromRpc ?? previewNorm;
 
       if (groupId) {
@@ -670,9 +661,8 @@ export default function OnboardingPage() {
 
   const joinFlowReady =
     !!joinedGroupId &&
-    !!groupPreview?.id &&
-    isValidUUID(groupPreview.id.trim().toLowerCase()) &&
-    joinedGroupId === groupPreview.id.trim().toLowerCase();
+    !!normalizeGroupId(groupPreview?.id) &&
+    sameGroupId(joinedGroupId, groupPreview?.id);
 
   if (loading) {
     return (

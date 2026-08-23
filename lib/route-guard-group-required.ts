@@ -7,8 +7,12 @@ import {
   fetchAuthBootstrapWithCache,
   resolveAuthBootstrapSuspendRedirect,
 } from '@/lib/auth-bootstrap';
+import {
+  parseOpenGroupParam,
+  readStoredGroupId,
+  writeStoredGroupId,
+} from '@/lib/group-id-resolve';
 import { AUTH_STORAGE_KEY, clearAuthStorage, supabase } from '@/lib/supabase';
-import { isValidUUID } from '@/lib/validation';
 
 export type GroupRequiredGuardResult =
   | { ok: true }
@@ -41,9 +45,8 @@ async function applyOpenGroupIfValid(
   if (typeof window === 'undefined') return hasGroups;
 
   try {
-    const qs = new URLSearchParams(window.location.search);
-    const openGroup = qs.get('openGroup')?.trim().toLowerCase() ?? '';
-    if (!openGroup || !isValidUUID(openGroup)) return hasGroups;
+    const openGroup = parseOpenGroupParam();
+    if (!openGroup) return hasGroups;
 
     const [mRes, oRes] = await Promise.all([
       client
@@ -66,11 +69,7 @@ async function applyOpenGroupIfValid(
       } catch {
         // ignore
       }
-      try {
-        localStorage.setItem('currentGroupId', openGroup);
-      } catch {
-        // ignore
-      }
+      writeStoredGroupId(openGroup);
       window.history.replaceState({}, '', window.location.pathname);
       return true;
     }
@@ -128,12 +127,8 @@ export async function runGroupRequiredRouteGuard(options?: {
     return { ok: false, redirectTo: '/' };
   }
 
-  let openGroup: string | null = null;
-  if (typeof window !== 'undefined') {
-    openGroup = new URLSearchParams(window.location.search).get('openGroup')?.trim().toLowerCase() ?? null;
-  }
-  const savedGroupId =
-    typeof window !== 'undefined' ? window.localStorage.getItem('currentGroupId') : null;
+  const openGroup = parseOpenGroupParam();
+  const savedGroupId = readStoredGroupId();
 
   const bootstrap = session.access_token
     ? await fetchAuthBootstrapWithCache(session.access_token, serverUser.id)
@@ -152,13 +147,9 @@ export async function runGroupRequiredRouteGuard(options?: {
       } catch {
         // ignore
       }
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('currentGroupId', openGroup);
-          window.history.replaceState({}, '', window.location.pathname);
-        }
-      } catch {
-        // ignore
+      writeStoredGroupId(openGroup);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.pathname);
       }
       hasGroups = true;
     } else {

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatUnknownError, isAbortLikeError, isTransientClientError } from '@/lib/supabase-error';
+import { normalizeGroupId } from '@/lib/validation';
+import { sameGroupId } from '@/lib/group-id-resolve';
 
 export const GROUP_SUSPENDED_CODE = 'GROUP_SUSPENDED';
 export const ACCESS_UNAVAILABLE_PATH = '/access-unavailable';
@@ -64,15 +66,15 @@ export function resolveSuspendRedirect(
 ): string | null {
   if (access.lookupFailed) return ACCESS_UNAVAILABLE_PATH;
   if (access.groupIds.length === 0) return null;
-  const openGroup = options?.openGroup?.trim().toLowerCase() || null;
-  if (openGroup && access.suspendedGroupIds.includes(openGroup)) {
+  const openGroup = normalizeGroupId(options?.openGroup);
+  if (openGroup && access.suspendedGroupIds.some((id) => sameGroupId(id, openGroup))) {
     return suspendedPath(openGroup);
   }
   if (access.accessibleGroupIds.length === 0) {
     return '/suspended';
   }
-  const savedGroupId = options?.savedGroupId?.trim().toLowerCase() || null;
-  if (savedGroupId && access.suspendedGroupIds.includes(savedGroupId)) {
+  const savedGroupId = normalizeGroupId(options?.savedGroupId);
+  if (savedGroupId && access.suspendedGroupIds.some((id) => sameGroupId(id, savedGroupId))) {
     return suspendedPath(savedGroupId);
   }
   return null;

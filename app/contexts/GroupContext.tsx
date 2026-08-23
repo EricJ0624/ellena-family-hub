@@ -5,7 +5,15 @@ import { supabase } from '@/lib/supabase';
 import type { Group, Membership, MembershipRole } from '@/types/db';
 import { getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap-server';
-import { findGroupById, getPinnedGroupId, resolvePreferredGroupId } from '@/lib/group-id-resolve';
+import {
+  findGroupById,
+  getPinnedGroupId,
+  readStoredGroupId,
+  resolvePreferredGroupId,
+  sameGroupId,
+  writeStoredGroupId,
+} from '@/lib/group-id-resolve';
+import { normalizeGroupId } from '@/lib/validation';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { resolveUiTheme } from '@/lib/ui-theme';
@@ -109,12 +117,11 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setGroups(bootstrapSeed.groups);
       setMemberships(bootstrapSeed.memberships);
       if (bootstrapSeed.preferredGroupId) {
-        setCurrentGroupIdState(bootstrapSeed.preferredGroupId);
-        const selected = bootstrapSeed.groups.find((g) => g.id === bootstrapSeed.preferredGroupId);
+        const preferred = normalizeGroupId(bootstrapSeed.preferredGroupId);
+        setCurrentGroupIdState(preferred);
+        const selected = findGroupById(bootstrapSeed.groups, preferred);
         if (selected) setCurrentGroup(selected);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('currentGroupId', bootstrapSeed.preferredGroupId);
-        }
+        writeStoredGroupId(preferred);
       }
       setLoading(false);
     }
@@ -194,9 +201,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         setCurrentGroup(null);
         setUserRole(null);
         setIsOwner(false);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('currentGroupId');
-        }
+        writeStoredGroupId(null);
         setLoading(false);
         return;
       }
@@ -241,9 +246,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       if (preferredGroupId) {
         setCurrentGroupIdState(preferredGroupId);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('currentGroupId', preferredGroupId);
-        }
+        writeStoredGroupId(preferredGroupId);
         const selected = findGroupById(groupsData || [], preferredGroupId);
         if (selected) setCurrentGroup(selected);
       }
@@ -306,7 +309,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         setCurrentGroup(groupInfo);
       } else if (typeof window !== 'undefined') {
         // RLS/삭제로 조회 불가한 그룹 ID가 localStorage에 남은 경우
-        localStorage.removeItem('currentGroupId');
+        writeStoredGroupId(null);
         setCurrentGroupIdState(null);
         setCurrentGroup(null);
       }
@@ -315,40 +318,28 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     }
   }, [userId, currentGroupId]);
 
-  // 그룹 ID 변경 핸들러 (✅ SECURITY: 그룹 전환 시 완전한 상태 초기화)
+  // 그룹 ID 변경 핸들러 — 항상 lowercase UUID로 정규화
   const setCurrentGroupId = useCallback((groupId: string | null) => {
-    // 이전 그룹 ID 저장
+    const nextId = normalizeGroupId(groupId);
     const previousGroupId = currentGroupId;
-    
-    // 그룹이 변경되는 경우에만 상태 초기화
-    if (previousGroupId !== groupId) {
-      // 1. 현재 그룹 정보 초기화
-      setCurrentGroup(null);
-      setUserRole(null);
-      setIsOwner(false);
-      
-      // 2. 새 그룹 ID 설정
-      setCurrentGroupIdState(groupId);
-      
-      // 3. localStorage 동기화 (브라우저 환경에서만)
-      if (typeof window !== 'undefined') {
-        if (groupId) {
-          localStorage.setItem('currentGroupId', groupId);
-          console.log('✅ 그룹 전환:', { from: previousGroupId, to: groupId });
-        } else {
-          localStorage.removeItem('currentGroupId');
-          console.log('✅ 그룹 해제');
-        }
+
+    if (sameGroupId(previousGroupId, nextId)) {
+      // 대소문자만 다른 경우 스토리지만 정규화
+      if (nextId && previousGroupId !== nextId) {
+        setCurrentGroupIdState(nextId);
+        writeStoredGroupId(nextId);
       }
-      
-      // 4. 개발 환경에서 디버깅 정보 출력
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔄 그룹 전환 완료:', {
-          previousGroupId,
-          newGroupId: groupId,
-          timestamp: new Date().toISOString(),
-        });
-      }
+      return;
+    }
+
+    setCurrentGroup(null);
+    setUserRole(null);
+    setIsOwner(false);
+    setCurrentGroupIdState(nextId);
+    writeStoredGroupId(nextId);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 그룹 전환:', { from: previousGroupId, to: nextId });
     }
   }, [currentGroupId]);
 
@@ -369,15 +360,12 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       setCurrentGroupIdState(null);
       setUserRole(null);
       setIsOwner(false);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('currentGroupId');
-      }
+      writeStoredGroupId(null);
     }
     prevUserIdRef.current = userId;
 
     if (userId) {
-      // localStorage에서 저장된 그룹 ID 복원
-      const savedGroupId = localStorage.getItem('currentGroupId');
+      const savedGroupId = readStoredGroupId();
       if (savedGroupId) {
         setCurrentGroupIdState(savedGroupId);
       }

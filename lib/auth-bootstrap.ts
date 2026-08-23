@@ -1,5 +1,7 @@
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap-server';
 import { resolveSuspendRedirect } from '@/lib/account-suspend-access';
+import { normalizeGroupId } from '@/lib/validation';
+import { sameGroupId } from '@/lib/group-id-resolve';
 
 export type { AuthBootstrapPayload };
 export type { BootstrapGroupSummary, BootstrapMembershipRole } from '@/lib/auth-bootstrap-server';
@@ -155,7 +157,7 @@ export function bootstrapConfirmsOpenGroup(
   bootstrap: AuthBootstrapPayload,
   openGroup: string,
 ): boolean {
-  const normalized = openGroup.trim().toLowerCase();
+  const normalized = normalizeGroupId(openGroup);
   if (!normalized) return false;
-  return bootstrap.groupIds.some((id) => id.toLowerCase() === normalized);
+  return bootstrap.groupIds.some((id) => sameGroupId(id, normalized));
 }

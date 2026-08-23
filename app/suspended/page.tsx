@@ -11,6 +11,7 @@ import { intlLocaleForLang } from '@/lib/language-fonts';
 import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { MESSAGE_MAX_LENGTH } from '@/lib/admin-suspend';
 import { isValidUUID } from '@/lib/validation';
+import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
 
 type NoticeMessage = {
   id: string;
@@ -96,9 +97,9 @@ function SuspendedNoticeContent() {
       const targetGroupIds = focusGroupId ? [focusGroupId.toLowerCase()] : access.suspendedGroupIds;
       if (focusGroupId && !access.suspendedGroupIds.includes(focusGroupId.toLowerCase())) {
         if (access.accessibleGroupIds.includes(focusGroupId.toLowerCase())) {
-          router.replace(`/dashboard?openGroup=${encodeURIComponent(focusGroupId)}`);
+          router.replace(dashboardHrefWithOpenGroup(focusGroupId));
         } else if (access.accessibleGroupIds[0]) {
-          router.replace(`/dashboard?openGroup=${encodeURIComponent(access.accessibleGroupIds[0])}`);
+          router.replace(dashboardHrefWithOpenGroup(access.accessibleGroupIds[0]));
         } else {
           router.replace('/suspended');
         }
@@ -106,7 +107,7 @@ function SuspendedNoticeContent() {
       }
       if (targetGroupIds.length === 0) {
         if (access.accessibleGroupIds[0]) {
-          router.replace(`/dashboard?openGroup=${encodeURIComponent(access.accessibleGroupIds[0])}`);
+          router.replace(dashboardHrefWithOpenGroup(access.accessibleGroupIds[0]));
         } else if (Boolean(adminFlag) && access.groupIds.length === 0) {
           router.replace('/admin');
         } else if (access.groupIds.length === 0) {
@@ -405,7 +406,7 @@ function SuspendedNoticeContent() {
           {accessibleGroupId && (
             <button
               type="button"
-              onClick={() => router.push(`/dashboard?openGroup=${encodeURIComponent(accessibleGroupId)}`)}
+              onClick={() => router.push(dashboardHrefWithOpenGroup(accessibleGroupId))}
               className="cursor-pointer rounded-lg border-none bg-indigo-600 px-4 py-2 text-sm font-semibold text-white"
             >
               {t('other_group')}
