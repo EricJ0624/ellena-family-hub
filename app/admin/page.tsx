@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
+import { getCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAdminTranslation, getAdminAuditHeaders, formatAdminTranslation } from '@/lib/translations/admin';
 import { getCommonTranslation } from '@/lib/translations/common';
@@ -383,17 +384,31 @@ export default function AdminPage() {
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const session = await waitForSupabaseSession(supabase);
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           router.push('/dashboard');
           return;
         }
 
-        const { data, error: adminError } = await supabase.rpc('is_system_admin', {
-          user_id_param: user.id,
-        });
+        const cached = getCachedAuthBootstrap(user.id);
 
-        if (adminError || !data) {
+        let rpcAdmin = false;
+        if (session?.access_token) {
+          const { data, error: adminError } = await supabase.rpc('is_system_admin', {
+            user_id_param: user.id,
+          });
+          if (adminError) {
+            console.error('관리자 권한 확인 오류:', adminError);
+          } else {
+            rpcAdmin = data === true;
+          }
+        }
+
+        const isAdmin = rpcAdmin || Boolean(cached?.isSystemAdmin);
+        if (!isAdmin) {
           router.push('/dashboard');
           return;
         }
@@ -402,7 +417,9 @@ export default function AdminPage() {
         setIsAuthorized(true);
 
         // 관리자 접근 시간 업데이트
-        await supabase.rpc('update_admin_last_access');
+        if (session?.access_token) {
+          await supabase.rpc('update_admin_last_access');
+        }
       } catch (err) {
         console.error('관리자 권한 확인 오류:', err);
         router.push('/dashboard');

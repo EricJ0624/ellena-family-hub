@@ -1289,6 +1289,10 @@ export default function FamilyHub() {
           return;
         }
 
+        // bootstrap/폴백 RPC에서 확정한 시스템 관리자 여부를 state에 반영 (별도 RPC effect가 false로 덮어쓰지 않도록)
+        setIsSystemAdmin(isAdmin);
+        setAdminStatusResolved(true);
+
         // 그룹·역할 라우팅이 끝난 뒤에만 대시보드 본문을 표시(잠깐 보였다가 온보딩으로 튀는 현상 방지)
         setIsAuthenticated(true);
         setUserId(currentUserId);
@@ -3576,12 +3580,27 @@ export default function FamilyHub() {
     };
   }, [currentGroupId, userName]);
 
-  // 시스템 관리자 권한 확인
+  // 시스템 관리자 권한 확인 (bootstrap seed 후 REST RPC로 검증)
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!isAuthenticated || !userId) {
         setIsSystemAdmin(false);
         setAdminStatusResolved(true);
+        return;
+      }
+
+      const cached = getCachedAuthBootstrap(userId);
+      if (cached) {
+        setIsSystemAdmin(cached.isSystemAdmin);
+        setAdminStatusResolved(true);
+      }
+
+      const session = await waitForSupabaseSession(supabase);
+      if (!session?.access_token) {
+        if (!cached) {
+          setIsSystemAdmin(false);
+          setAdminStatusResolved(true);
+        }
         return;
       }
 
@@ -3594,8 +3613,10 @@ export default function FamilyHub() {
           if (!isAbortLikeError(error)) {
             console.error('시스템 관리자 확인 오류:', formatUnknownError(error));
           }
-          setIsSystemAdmin(false);
-          setAdminStatusResolved(true);
+          if (!cached) {
+            setIsSystemAdmin(false);
+            setAdminStatusResolved(true);
+          }
           return;
         }
 
@@ -3605,8 +3626,10 @@ export default function FamilyHub() {
         if (!isAbortLikeError(error)) {
           console.error('시스템 관리자 확인 중 오류:', formatUnknownError(error));
         }
-        setIsSystemAdmin(false);
-        setAdminStatusResolved(true);
+        if (!cached) {
+          setIsSystemAdmin(false);
+          setAdminStatusResolved(true);
+        }
       }
     };
 
