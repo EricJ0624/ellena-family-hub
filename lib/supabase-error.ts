@@ -21,6 +21,26 @@ export function isAbortLikeError(error: unknown): boolean {
   );
 }
 
+/** 모바일·동시요청 제한·일시 네트워크에서 흔한 재시도 가능 오류 */
+export function isTransientClientError(error: unknown): boolean {
+  if (isAbortLikeError(error)) return true;
+  const e = error as { message?: string; code?: string; status?: number };
+  const status = typeof e.status === 'number' ? e.status : Number(e.code);
+  if (status === 408 || status === 425 || status === 429 || status === 502 || status === 503 || status === 504) {
+    return true;
+  }
+  const msg = String(e.message ?? error ?? '').toLowerCase();
+  return (
+    msg.includes('supabase request timeout') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('network request failed') ||
+    msg.includes('load failed') ||
+    msg.includes('timeout') ||
+    msg.includes('fetch failed')
+  );
+}
+
 /** PostgrestError / Error / 빈 객체가 오버레이에 `{}`로만 보이지 않게 메시지 추출 */
 export function formatUnknownError(error: unknown): string {
   if (error == null) return '';

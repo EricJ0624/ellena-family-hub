@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
+import { formatUnknownError, isAbortLikeError, isTransientClientError } from '@/lib/supabase-error';
 
 export const GROUP_SUSPENDED_CODE = 'GROUP_SUSPENDED';
 export const ACCESS_UNAVAILABLE_PATH = '/access-unavailable';
@@ -21,6 +21,12 @@ export type SuspendCheckResult = {
   blocked: boolean;
   lookupFailed: boolean;
 };
+
+const ACCESS_LOOKUP_ATTEMPTS = 3;
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export function suspendedPath(groupId?: string | null): string {
   const id = groupId?.trim();
@@ -89,7 +95,7 @@ async function isSystemAdminUser(supabase: SupabaseClient, userId: string): Prom
   return data === true;
 }
 
-export async function loadUserGroupAccess(
+async function loadUserGroupAccessOnce(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserGroupAccess> {
@@ -100,7 +106,10 @@ export async function loadUserGroupAccess(
   ]);
 
   if (memError || ownedError) {
-    console.error('그룹 목록 조회 오류:', memError || ownedError);
+    const err = memError || ownedError;
+    if (!isTransientClientError(err)) {
+      console.error('그룹 목록 조회 오류:', formatUnknownError(err));
+    }
     return { groupIds: [], accessibleGroupIds: [], suspendedGroupIds: [], lookupFailed: true };
   }
 
@@ -122,11 +131,29 @@ export async function loadUserGroupAccess(
     .eq('is_active', true)
     .in('group_id', groupIds);
   if (error) {
-    console.error('정지 상태 조회 오류:', error);
+    if (!isTransientClientError(error)) {
+      console.error('정지 상태 조회 오류:', formatUnknownError(error));
+    }
     return { groupIds, accessibleGroupIds: [], suspendedGroupIds: [], lookupFailed: true };
   }
 
   return classifyGroupAccess(groupIds, userId, (data || []) as SuspensionRow[]);
+}
+
+/**
+ * 그룹/정지 접근 조회. 로그인 직후 모바일에서 REST가 끊기면 일시적으로 lookupFailed가 나므로
+ * 짧은 백오프로 재시도한다. 정지 판정 자체(RLS·정책)는 바꾸지 않는다.
+ */
+export async function loadUserGroupAccess(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserGroupAccess> {
+  let last = await loadUserGroupAccessOnce(supabase, userId);
+  for (let attempt = 1; attempt < ACCESS_LOOKUP_ATTEMPTS && last.lookupFailed; attempt++) {
+    await sleep(280 + (attempt - 1) * 220);
+    last = await loadUserGroupAccessOnce(supabase, userId);
+  }
+  return last;
 }
 
 export async function checkUserSuspendedInGroup(

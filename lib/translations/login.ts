@@ -19,6 +19,7 @@ type LoginTranslations = {
   error_email_verification: string;
   error_session_failed: string;
   error_login_failed: string;
+  error_login_temporary: string;
   error_password_mismatch: string;
   error_password_min: string;
   error_nickname_required: string;
@@ -59,6 +60,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: '이메일 인증이 필요합니다. 메일함에서 인증을 완료해주세요.',
     error_session_failed: '세션 저장에 실패했습니다. 다시 시도해주세요.',
     error_login_failed: '이메일 또는 비밀번호가 올바르지 않습니다. 계정이 없다면 가입해 주세요.',
+    error_login_temporary: '일시적으로 로그인에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
     error_password_mismatch: '비밀번호가 일치하지 않습니다.',
     error_password_min: '비밀번호는 최소 8자 이상이어야 합니다.',
     error_nickname_required: '별명을 입력해 주세요.',
@@ -100,6 +102,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'Email verification required. Please verify in your inbox.',
     error_session_failed: 'Failed to save session. Please try again.',
     error_login_failed: 'The email or password is incorrect. If you do not have an account, please sign up.',
+    error_login_temporary: 'Sign-in failed temporarily. Check your connection and try again.',
     error_password_mismatch: 'Passwords do not match.',
     error_password_min: 'Password must be at least 8 characters.',
     error_nickname_required: 'Please enter a nickname.',
@@ -141,6 +144,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'メール認証が必要です。受信トレイで認証を完了してください。',
     error_session_failed: 'セッションの保存に失敗しました。もう一度お試しください。',
     error_login_failed: 'メールアドレスまたはパスワードが正しくありません。アカウントがない場合は新規登録してください。',
+    error_login_temporary: '一時的にログインできませんでした。通信環境を確認して再度お試しください。',
     error_password_mismatch: 'パスワードが一致しません。',
     error_password_min: 'パスワードは8文字以上で入力してください。',
     error_nickname_required: 'ニックネームを入力してください。',
@@ -182,6 +186,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: '请先完成邮箱验证。请在收件箱中完成验证。',
     error_session_failed: '会话保存失败，请重试。',
     error_login_failed: '邮箱或密码不正确。如果没有账户，请先注册。',
+    error_login_temporary: '登录暂时失败。请检查网络后重试。',
     error_password_mismatch: '两次输入的密码不一致。',
     error_password_min: '密码至少需要8个字符。',
     error_nickname_required: '请输入昵称。',
@@ -223,6 +228,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: '請先完成電子郵件驗證。請在收件匣中完成驗證。',
     error_session_failed: '工作階段儲存失敗，請重試。',
     error_login_failed: '電子郵件或密碼不正確。若您尚未有帳號，請先註冊。',
+    error_login_temporary: '登入暫時失敗。請檢查網路後再試。',
     error_password_mismatch: '兩次輸入的密碼不一致。',
     error_password_min: '密碼至少需要8個字元。',
     error_nickname_required: '請輸入暱稱。',
@@ -264,6 +270,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'Se requiere verificación de correo. Complétala en tu bandeja de entrada.',
     error_session_failed: 'No se pudo guardar la sesión. Inténtalo de nuevo.',
     error_login_failed: 'El correo o la contraseña no son correctos. Si no tienes cuenta, regístrate.',
+    error_login_temporary: 'El inicio de sesión falló temporalmente. Comprueba la conexión e inténtalo de nuevo.',
     error_password_mismatch: 'Las contraseñas no coinciden.',
     error_password_min: 'La contraseña debe tener al menos 8 caracteres.',
     error_nickname_required: 'Introduce un apodo.',
@@ -305,6 +312,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'Vérification de l\'e-mail requise. Veuillez vérifier dans votre boîte de réception.',
     error_session_failed: 'Échec de l\'enregistrement de la session. Veuillez réessayer.',
     error_login_failed: 'E-mail ou mot de passe incorrect. Si vous n\'avez pas de compte, inscrivez-vous.',
+    error_login_temporary: 'La connexion a échoué temporairement. Vérifiez votre connexion et réessayez.',
     error_password_mismatch: 'Les mots de passe ne correspondent pas.',
     error_password_min: 'Le mot de passe doit contenir au moins 8 caractères.',
     error_nickname_required: 'Veuillez saisir un pseudo.',
@@ -346,6 +354,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'E-Mail-Bestätigung erforderlich. Bitte in Ihrem Posteingang bestätigen.',
     error_session_failed: 'Sitzung konnte nicht gespeichert werden. Bitte erneut versuchen.',
     error_login_failed: 'E-Mail oder Passwort ist falsch. Wenn Sie kein Konto haben, registrieren Sie sich.',
+    error_login_temporary: 'Anmeldung vorübergehend fehlgeschlagen. Bitte Verbindung prüfen und erneut versuchen.',
     error_password_mismatch: 'Passwörter stimmen nicht überein.',
     error_password_min: 'Das Passwort muss mindestens 8 Zeichen lang sein.',
     error_nickname_required: 'Bitte geben Sie einen Spitznamen ein.',
@@ -387,6 +396,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'Verifica email richiesta. Controlla la posta in arrivo.',
     error_session_failed: 'Impossibile salvare la sessione. Riprova.',
     error_login_failed: 'Email o password non corretti. Se non hai un account, registrati.',
+    error_login_temporary: 'Accesso temporaneamente non riuscito. Controlla la connessione e riprova.',
     error_password_mismatch: 'Le password non corrispondono.',
     error_password_min: 'La password deve avere almeno 8 caratteri.',
     error_nickname_required: 'Inserisci un nickname.',
@@ -428,6 +438,7 @@ const login: Record<LangCode, LoginTranslations> = {
     error_email_verification: 'Verificação de e-mail necessária. Confirme na sua caixa de entrada.',
     error_session_failed: 'Falha ao salvar a sessão. Tente novamente.',
     error_login_failed: 'E-mail ou senha incorretos. Se você não tem uma conta, cadastre-se.',
+    error_login_temporary: 'Falha temporária no login. Verifique a conexão e tente novamente.',
     error_password_mismatch: 'As senhas não coincidem.',
     error_password_min: 'A senha deve ter pelo menos 8 caracteres.',
     error_nickname_required: 'Digite um apelido.',

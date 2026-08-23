@@ -21,6 +21,7 @@ import {
 } from '@/lib/family-auth-routing';
 import { loadUserGroupAccess } from '@/lib/account-suspend-access';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
+import { isTransientClientError } from '@/lib/supabase-error';
 import type { SignupBlockReason } from '@/lib/signup-settings';
 
 type Mode = 'login' | 'signup' | 'forgot';
@@ -173,10 +174,9 @@ export default function LoginPage() {
         if (!invite) {
           const access = await loadUserGroupAccess(supabase, user.id);
           if (access.lookupFailed) {
-            router.push('/access-unavailable');
-            return;
-          }
-          if (access.groupIds.length > 0 && access.accessibleGroupIds.length === 0) {
+            // 조회 실패는 정지 확정이 아님. 온보딩으로 넘기고 이후 화면에서 재확인.
+            console.warn('[Login] 기존 세션 접근 조회 실패, 온보딩으로 폴백');
+          } else if (access.groupIds.length > 0 && access.accessibleGroupIds.length === 0) {
             router.push('/suspended');
             return;
           }
@@ -247,7 +247,10 @@ export default function LoginPage() {
       if (hasGroups) {
         const access = await loadUserGroupAccess(supabase, session.user.id);
         if (access.lookupFailed) {
-          router.push('/access-unavailable');
+          // 정지 확정이 아니라 조회 실패. 로그인 자체는 성공했으므로 온보딩으로 넘기고
+          // 대시보드/온보딩에서 다시 정지 여부를 확인한다.
+          console.warn('[Login] 접근 조회 실패, 온보딩으로 폴백');
+          router.push(onboardingPath);
           return;
         }
         if (access.accessibleGroupIds.length === 0) {
@@ -317,16 +320,22 @@ export default function LoginPage() {
       const code = String(error?.code || '').toLowerCase();
       if (
         message.includes('invalid login credentials') ||
-        code === 'invalid_credentials' ||
-        code === 'email_not_confirmed'
+        code === 'invalid_credentials'
       ) {
         setErrorMsg(t('error_login_failed'));
       } else if (isSupabaseAuthRateLimitError(error)) {
         setErrorMsg('요청이 많아 일시적으로 로그인 제한 중입니다. 1~2분 후 다시 시도해 주세요.');
-      } else if (message.includes('email not confirmed') || message.includes('email_not_confirmed')) {
+      } else if (
+        message.includes('email not confirmed') ||
+        message.includes('email_not_confirmed') ||
+        code === 'email_not_confirmed'
+      ) {
         setErrorMsg(t('error_email_verification'));
+      } else if (isTransientClientError(error)) {
+        setErrorMsg(t('error_login_temporary'));
       } else {
-        setErrorMsg(t('error_login_failed'));
+        // 비밀번호 오류로 오인하지 않도록 일시 오류 문구 사용
+        setErrorMsg(t('error_login_temporary'));
       }
     } finally {
       setLoading(false);

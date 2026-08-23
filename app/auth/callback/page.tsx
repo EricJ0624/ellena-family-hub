@@ -103,10 +103,8 @@ export default function AuthCallbackPage() {
         if (hasGroups && !invite) {
           const access = await loadUserGroupAccess(supabase, user.id);
           if (access.lookupFailed) {
-            router.push('/access-unavailable');
-            return;
-          }
-          if (access.accessibleGroupIds.length === 0) {
+            console.warn('[AuthCallback] 접근 조회 실패, 온보딩으로 폴백');
+          } else if (access.accessibleGroupIds.length === 0) {
             router.push('/suspended');
             return;
           }

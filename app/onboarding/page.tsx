@@ -209,14 +209,16 @@ export default function OnboardingPage() {
 
         const access = await loadUserGroupAccess(supabase, user.id);
         if (access.lookupFailed) {
-          router.push('/access-unavailable');
-          return;
+          // 일시 조회 실패 시 빈 정지 목록으로 진행. 대시보드 진입 시 다시 확인한다.
+          console.warn('[Onboarding] 접근 조회 실패, 정지 목록 없이 계속');
+          setSuspendedGroupIds([]);
+        } else {
+          setSuspendedGroupIds(access.suspendedGroupIds);
         }
-        setSuspendedGroupIds(access.suspendedGroupIds);
 
         // 이미 소속 그룹이 있어도 초대 링크로 들어온 경우에는 먼저 해당 그룹 가입 플로우(join)로 보냄
         if (allGroups.length > 0 && !fromAdminParam && !inviteParam) {
-          if (access.accessibleGroupIds.length === 0) {
+          if (!access.lookupFailed && access.accessibleGroupIds.length === 0) {
             router.push('/suspended');
             return;
           }
