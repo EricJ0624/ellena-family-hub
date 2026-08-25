@@ -20,7 +20,10 @@ export type AuthLoginSuccess = {
 };
 
 const CACHE_KEY_PREFIX = 'SFH_AUTH_BOOTSTRAP_';
+/** 탭 내 짧은 캐시 */
 const CACHE_TTL_MS = 60_000;
+/** 로그인 유지 재진입용(localStorage) — 권한 변경은 백그라운드 갱신으로 맞춤 */
+const RESTORE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 type CachedBootstrap = {
   savedAt: number;
@@ -31,14 +34,17 @@ function cacheKey(userId: string): string {
   return `${CACHE_KEY_PREFIX}${userId}`;
 }
 
-export function getCachedAuthBootstrap(userId: string): AuthBootstrapPayload | null {
-  if (typeof window === 'undefined') return null;
+function readBootstrapFromStorage(
+  storage: Storage,
+  userId: string,
+  maxAgeMs: number,
+): AuthBootstrapPayload | null {
   try {
-    const raw = sessionStorage.getItem(cacheKey(userId));
+    const raw = storage.getItem(cacheKey(userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedBootstrap;
-    if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
-      sessionStorage.removeItem(cacheKey(userId));
+    if (Date.now() - parsed.savedAt > maxAgeMs) {
+      storage.removeItem(cacheKey(userId));
       return null;
     }
     return parsed.payload;
@@ -47,11 +53,21 @@ export function getCachedAuthBootstrap(userId: string): AuthBootstrapPayload | n
   }
 }
 
+export function getCachedAuthBootstrap(userId: string): AuthBootstrapPayload | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    readBootstrapFromStorage(sessionStorage, userId, CACHE_TTL_MS) ||
+    readBootstrapFromStorage(localStorage, userId, RESTORE_CACHE_TTL_MS)
+  );
+}
+
 export function setCachedAuthBootstrap(userId: string, payload: AuthBootstrapPayload): void {
   if (typeof window === 'undefined') return;
   try {
     const entry: CachedBootstrap = { savedAt: Date.now(), payload };
-    sessionStorage.setItem(cacheKey(userId), JSON.stringify(entry));
+    const raw = JSON.stringify(entry);
+    sessionStorage.setItem(cacheKey(userId), raw);
+    localStorage.setItem(cacheKey(userId), raw);
   } catch {
     // ignore quota / private mode
   }

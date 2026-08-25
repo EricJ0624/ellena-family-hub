@@ -129,7 +129,27 @@ export default function OnboardingPage() {
         // getSession()만 보면 로컬에 남은 만료·무효 JWT로도 user가 있어 보여 join 단계로 들어갈 수 있음.
         // getUser 재시도·일시 네트워크 실패 시 session 완화 포함(getValidated…).
         const { data: { session: initSession } } = await supabase.auth.getSession();
-        const { user, error: authUserError } = await getValidatedUserWithSessionFallback(supabase, initSession);
+        if (!initSession?.access_token) {
+          try {
+            await supabase.auth.signOut();
+          } catch (_) {}
+          if (inviteParam) {
+            try {
+              setSessionStoredInviteCode(inviteParam);
+            } catch (_) {}
+            router.push(`/?invite=${encodeURIComponent(inviteParam)}`);
+          } else {
+            router.push('/');
+          }
+          return;
+        }
+
+        // getUser + bootstrap 병렬 — 순차 대기(특히 WiFi)를 줄임
+        const [userResult, bootstrapResult] = await Promise.all([
+          getValidatedUserWithSessionFallback(supabase, initSession),
+          fetchAuthBootstrapWithCache(initSession.access_token, initSession.user.id),
+        ]);
+        const { user, error: authUserError } = userResult;
         if (authUserError || !user) {
           try {
             await supabase.auth.signOut();
@@ -147,11 +167,7 @@ export default function OnboardingPage() {
         }
 
         // 서버 bootstrap 1회 — RPC·memberships·정지 조회를 PostgREST 큐 밖으로
-        const { data: { session: bootstrapSession } } = await supabase.auth.getSession();
-        const bootstrap =
-          bootstrapSession?.access_token
-            ? await fetchAuthBootstrapWithCache(bootstrapSession.access_token, user.id)
-            : null;
+        const bootstrap = bootstrapResult;
 
         let isAdmin = false;
         let allGroups: UserGroup[] = [];

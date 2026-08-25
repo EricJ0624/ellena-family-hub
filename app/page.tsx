@@ -18,8 +18,10 @@ import {
   resolveInviteFromUrlOrSession,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-import { fetchAuthBootstrapWithCache, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
+import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap';
+import { dashboardHrefWithOpenGroup, readStoredGroupId, sameGroupId } from '@/lib/group-id-resolve';
+import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 import type { SignupBlockReason } from '@/lib/signup-settings';
 
@@ -46,6 +48,8 @@ export default function LoginPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [lastEmailFromStorage, setLastEmailFromStorage] = useState<string | null>(null);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true); // 로그인 상태 유지 (기본 체크)
+  /** 로그인 유지 세션 복원 중 — 폼만 보이면 “멈춘 것”처럼 느껴짐 */
+  const [restoringSession, setRestoringSession] = useState(false);
   const loginTitleRef = useRef<HTMLHeadingElement>(null);
   /** 가입 처리 중 이중 submit 방지 */
   const signupSubmitLockRef = useRef(false);
@@ -157,44 +161,108 @@ export default function LoginPage() {
     };
   }, [lang, isMounted]);
 
-  // 이미 로그인되어 있으면 자동 리다이렉트
+  // 이미 로그인되어 있으면 자동 리다이렉트 (로그인 유지 재진입)
   useEffect(() => {
     if (!isMounted) return;
-    
+    let cancelled = false;
+
+    const routeFromBootstrap = (bootstrap: AuthBootstrapPayload | null | undefined, invite: string | null) => {
+      const onboardingPath = buildOnboardingPath(invite);
+      if (invite) {
+        router.push(onboardingPath);
+        return;
+      }
+      if (bootstrap?.lookupFailed) {
+        router.push(onboardingPath);
+        return;
+      }
+      if (
+        bootstrap &&
+        bootstrap.groupIds.length > 0 &&
+        bootstrap.accessibleGroupIds.length === 0
+      ) {
+        router.push('/suspended');
+        return;
+      }
+      if (bootstrap?.isSystemAdmin && !bootstrap.hasGroups) {
+        router.push('/admin');
+        return;
+      }
+      // 이전에 쓰던 그룹이 접근 가능하면 온보딩 선택 화면을 건너뛰고 대시보드로
+      const stored = readStoredGroupId();
+      if (
+        stored &&
+        bootstrap?.accessibleGroupIds?.some((id) => sameGroupId(id, stored))
+      ) {
+        router.push(dashboardHrefWithOpenGroup(stored));
+        return;
+      }
+      if (bootstrap?.accessibleGroupIds?.length === 1) {
+        router.push(dashboardHrefWithOpenGroup(bootstrap.accessibleGroupIds[0]));
+        return;
+      }
+      router.push(onboardingPath);
+    };
+
     const checkExistingSession = async () => {
       try {
-        // 자동 이동은 "서버에서 검증된 로그인"일 때만. getSession+세션 완화(getValidated…)를 쓰면
-        // 만료·유령 세션으로도 user가 있어 보여 가입(/) 화면에서 /onboarding 으로 빼앗길 수 있음 → 가입 불가 체감.
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) return;
+        // 로컬 세션만 먼저 확인 (원격 getUser 대기 없이). 없으면 로그인 폼 유지.
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token || !session.user) return;
+
+        if (!cancelled) setRestoringSession(true);
 
         const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const invite = resolveInviteFromUrlOrSession(params);
-        if (!invite) {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          if (session?.access_token) {
-            const bootstrap = await fetchAuthBootstrapWithCache(session.access_token, user.id);
-            if (bootstrap?.lookupFailed) {
-              console.warn('[Login] 기존 세션 bootstrap 실패, 온보딩으로 폴백');
-            } else if (
-              bootstrap &&
-              bootstrap.groupIds.length > 0 &&
-              bootstrap.accessibleGroupIds.length === 0
-            ) {
-              router.push('/suspended');
-              return;
-            }
-          }
+
+        const cached = getCachedAuthBootstrap(session.user.id);
+        const bootstrapPromise = fetchAuthBootstrapWithCache(session.access_token, session.user.id);
+        // getUser는 WiFi에서 느릴 수 있어 bootstrap과 병렬. 캐시가 있으면 라우팅을 막지 않음.
+        const userPromise = getValidatedUserWithSessionFallback(supabase, session);
+
+        let bootstrap = cached;
+        if (!bootstrap) {
+          bootstrap = await bootstrapPromise;
+        } else {
+          void bootstrapPromise.catch(() => null);
         }
-        router.push(buildOnboardingPath(invite));
+
+        if (cancelled) return;
+
+        // 캐시로 바로 이동 가능하면 getUser 완료를 기다리지 않음 (백그라운드 검증)
+        if (cached && !invite) {
+          routeFromBootstrap(cached, invite);
+          void userPromise.then(({ user, error }) => {
+            if (error || !user) {
+              void supabase.auth.signOut().catch(() => undefined);
+            }
+          });
+          return;
+        }
+
+        const { user, error } = await userPromise;
+        if (cancelled) return;
+        if (error || !user) {
+          setRestoringSession(false);
+          return;
+        }
+
+        if (!bootstrap) {
+          bootstrap = await bootstrapPromise;
+        }
+        if (cancelled) return;
+        routeFromBootstrap(bootstrap, invite);
       } catch {
-        // ignore
+        if (!cancelled) setRestoringSession(false);
       }
     };
-    
-    checkExistingSession();
+
+    void checkExistingSession();
+    return () => {
+      cancelled = true;
+    };
   }, [isMounted, router]);
 
   // 이전 이메일 불러오기
@@ -705,6 +773,16 @@ export default function LoginPage() {
       className="relative flex min-h-dvh flex-col items-center overflow-x-hidden overflow-y-auto bg-[linear-gradient(135deg,#f5f7fa_0%,#c3cfe2_100%)] p-5"
       style={{ fontFamily: getFontStyle(displayLang, 'body').fontFamily }}
     >
+      {restoringSession ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/25 backdrop-blur-[2px]">
+          <div className="rounded-2xl bg-white px-6 py-5 text-center shadow-lg">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+            <p className="text-sm font-semibold text-slate-700">
+              {displayLang === 'ko' ? '로그인 상태 확인 중…' : 'Restoring session…'}
+            </p>
+          </div>
+        </div>
+      ) : null}
       {/* 배경 장식 요소 */}
       <div className="absolute -right-[20%] -top-1/2 z-0 h-[500px] w-[500px] rounded-full bg-[linear-gradient(135deg,rgba(102,126,234,0.1)_0%,rgba(118,75,162,0.1)_100%)]" />
       <div className="absolute -bottom-[30%] -left-[15%] z-0 h-[400px] w-[400px] rounded-full bg-[linear-gradient(135deg,rgba(118,75,162,0.1)_0%,rgba(102,126,234,0.1)_100%)]" />
