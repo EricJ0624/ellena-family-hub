@@ -606,6 +606,9 @@ export default function FamilyHub() {
   const loadingUsersRef = useRef(false); // 중복 호출 방지용 ref
   const modalOpenedRef = useRef(false); // 모달이 이미 열렸는지 추적
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigDraft[]>([]);
+  /** idle | loading | ready | error — WiFi에서 그리드가 통째로 안 뜨는 경우 재시도용 */
+  const [widgetConfigsStatus, setWidgetConfigsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [widgetConfigsReloadToken, setWidgetConfigsReloadToken] = useState(0);
 
   // 공지사항 관련 state
   const [announcements, setAnnouncements] = useState<Array<{
@@ -6206,50 +6209,66 @@ export default function FamilyHub() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!currentGroupId) {
-      setWidgetConfigs([]);
+    if (!currentGroupId || !isAuthenticated) {
+      if (!currentGroupId) {
+        setWidgetConfigs([]);
+        setWidgetConfigsStatus('idle');
+      }
       return;
     }
 
+    // 캐시가 있으면 즉시 그리드 표시(WiFi에서도 빈 화면·미표시를 줄임)
     const cached = readWidgetConfigCache(currentGroupId);
     if (cached) {
       setWidgetConfigs(cached);
+      setWidgetConfigsStatus('ready');
+    } else {
+      setWidgetConfigsStatus('loading');
     }
 
+    const applyConfigs = (configs: WidgetConfigDraft[], baseline: WidgetConfigDraft[] | null) => {
+      const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
+      const baselineHas = (baseline ?? []).some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
+      if (!hasTravelDiary && baselineHas) return false;
+      setWidgetConfigs(configs);
+      setWidgetConfigsStatus('ready');
+      return true;
+    };
+
     const run = async () => {
-      for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+      // 대시보드에서 위젯 설정을 다른 데이터보다 먼저·여러 번 시도
+      for (let attempt = 0; attempt < 4 && !cancelled; attempt++) {
         if (attempt > 0) {
-          await new Promise((r) => setTimeout(r, 500 * attempt));
+          await new Promise((r) => setTimeout(r, 600 * attempt));
         }
         try {
           const configs = await ensureWidgetConfigs(currentGroupId, groupIsOwner);
           if (cancelled) return;
-          // DEFAULT 폴백(travel_diary off)이 실데이터/캐시를 덮지 않게
-          const hasTravelDiary = configs.some((c) => c.widget_key === 'travel_diary' && c.is_enabled);
-          const cacheHasTravelDiary = (cached ?? []).some(
-            (c) => c.widget_key === 'travel_diary' && c.is_enabled,
-          );
-          if (!hasTravelDiary && cacheHasTravelDiary) {
-            return;
-          }
-          setWidgetConfigs(configs);
+          if (applyConfigs(configs, cached)) return;
           return;
         } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('위젯 설정 로드 실패:', attempt + 1, error);
-          }
+          console.warn('[dashboard] 위젯 설정 로드 실패:', attempt + 1, error);
         }
       }
+
+      if (cancelled) return;
+      const fallback = readWidgetConfigCache(currentGroupId);
+      if (fallback) {
+        setWidgetConfigs(fallback);
+        setWidgetConfigsStatus('ready');
+        return;
+      }
+      setWidgetConfigsStatus('error');
     };
 
     void run();
     return () => {
       cancelled = true;
     };
-  }, [currentGroupId, groupIsOwner, isAuthenticated]);
+  }, [currentGroupId, groupIsOwner, isAuthenticated, widgetConfigsReloadToken]);
 
   useEffect(() => {
-    if (!currentGroupId) return;
+    if (!currentGroupId || !isAuthenticated) return;
 
     const reloadWidgetConfigs = async () => {
       try {
@@ -6260,6 +6279,7 @@ export default function FamilyHub() {
           if (!hasTravelDiary && prevHas) return prev;
           return configs;
         });
+        setWidgetConfigsStatus('ready');
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('위젯 설정 재로드 실패:', error);
@@ -7028,6 +7048,30 @@ export default function FamilyHub() {
 
         {/* Content Sections Container */}
         <div ref={dashboardGridRef} className="sections-container min-w-0 w-full">
+          {widgetConfigsStatus === 'loading' && orderedWidgets.length === 0 ? (
+            <div className="mb-3 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-center text-xs font-medium text-slate-500">
+              {lang === 'en' ? 'Loading widgets…' : '위젯을 불러오는 중…'}
+            </div>
+          ) : null}
+          {widgetConfigsStatus === 'error' && orderedWidgets.length === 0 ? (
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-900">
+              <span>
+                {lang === 'en'
+                  ? 'Widgets could not be loaded. Check your connection and try again.'
+                  : '위젯을 불러오지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.'}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setWidgetConfigsStatus('loading');
+                  setWidgetConfigsReloadToken((n) => n + 1);
+                }}
+                className="cursor-pointer rounded-lg border-none bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white"
+              >
+                {lang === 'en' ? 'Retry' : '다시 시도'}
+              </button>
+            </div>
+          ) : null}
           <DiaryCompletionInviteModal
             open={showDiaryInviteModal}
             trip={diaryInviteTrip}

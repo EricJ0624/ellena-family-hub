@@ -135,15 +135,23 @@ function normalizeRows(rows: WidgetConfigRow[]): WidgetConfigDraft[] {
   return compactDraftsLayoutCoordinates(sorted);
 }
 
-const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v3_';
+const WIDGET_CONFIG_CACHE_PREFIX = 'SFH_WIDGET_CONFIGS_v4_';
+
+function cacheKey(groupId: string): string {
+  return `${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`;
+}
 
 export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(`${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as WidgetConfigDraft[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    // localStorage 우선(탭 새로고침·재방문), sessionStorage는 이전 버전 호환
+    for (const storage of [localStorage, sessionStorage]) {
+      const raw = storage.getItem(cacheKey(groupId));
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as WidgetConfigDraft[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -151,23 +159,30 @@ export function readWidgetConfigCache(groupId: string): WidgetConfigDraft[] | nu
 
 export function writeWidgetConfigCache(groupId: string, configs: WidgetConfigDraft[]): void {
   if (typeof window === 'undefined' || configs.length === 0) return;
+  const raw = JSON.stringify(configs);
   try {
-    sessionStorage.setItem(`${WIDGET_CONFIG_CACHE_PREFIX}${groupId}`, JSON.stringify(configs));
+    localStorage.setItem(cacheKey(groupId), raw);
   } catch {
     // ignore quota / private mode
+  }
+  try {
+    sessionStorage.setItem(cacheKey(groupId), raw);
+  } catch {
+    // ignore
   }
 }
 
 export async function loadWidgetConfigs(groupId: string): Promise<WidgetConfigDraft[]> {
-  const session = await waitForSupabaseSession(supabase);
+  const session = await waitForSupabaseSession(supabase, { maxWaitMs: 10000 });
   if (!session?.access_token) {
     throw new Error('WIDGET_CONFIGS_NO_SESSION');
   }
 
   let lastError: unknown = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // WiFi RTT·RLS 레이스 대비 — 짧게 여러 번
+  for (let attempt = 0; attempt < 5; attempt++) {
     if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 350 * attempt));
+      await new Promise((r) => setTimeout(r, 400 * attempt));
     }
 
     const { data, error } = await supabase

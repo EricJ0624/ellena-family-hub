@@ -72,7 +72,10 @@ function getSupabaseRestFetch(): typeof fetch | undefined {
       try {
         const target = new URL(url, base.origin);
         // PostgREST 요청만 제한: Auth/Realtime/기타 경로는 대기열에서 제외
-        return target.host === host && target.pathname.startsWith('/rest/v1/');
+        if (target.host !== host || !target.pathname.startsWith('/rest/v1/')) return false;
+        // 대시보드 그리드 골격(widget_configs)은 큐 뒤쪽이 되면 WiFi에서 "위젯 안 뜸" → 우선 통과
+        if (target.pathname.includes('/widget_configs')) return false;
+        return true;
       } catch {
         return false;
       }
