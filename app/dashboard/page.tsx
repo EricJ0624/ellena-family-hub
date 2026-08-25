@@ -24,6 +24,7 @@ import {
 import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   getPushToken, 
   registerServiceWorker,
@@ -480,6 +481,7 @@ export default function FamilyHub() {
   dashboardCurrentGroupIdRef.current = currentGroupId;
   const [familyId, setFamilyId] = useState<string>(''); // 가족 ID 저장 (가족 단위 필터링용)
   const [isMounted, setIsMounted] = useState(false);
+  const [adminNavPending, setAdminNavPending] = useState(false);
   const [userName, setUserName] = useState<string>('');
   /** Presence track·목록에서 표시명이 클로저와 어긋나지 않도록 */
   const dashboardUserNameRef = useRef('');
@@ -6903,18 +6905,42 @@ export default function FamilyHub() {
               {isGroupLoading ? (
                 <div className="h-7 w-20 shrink-0 animate-pulse rounded-lg bg-slate-200" />
               ) : showAdminButton ? (
-                <button
-                  type="button"
+                <Link
+                  href={adminPagePath}
                   data-dashboard-admin-btn
-                  onClick={() => router.push(adminPagePath)}
-                  className={`relative z-30 inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
-                    isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'
-                  }`}
+                  prefetch
+                  aria-busy={adminNavPending}
+                  aria-disabled={adminNavPending}
+                  onClick={(e) => {
+                    if (adminNavPending) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setAdminNavPending(true);
+                    // /admin 진입 전 bootstrap 캐시를 백그라운드로 데워 권한 스피너를 줄임
+                    if (isSystemAdmin && userId) {
+                      void (async () => {
+                        try {
+                          const {
+                            data: { session },
+                          } = await supabase.auth.getSession();
+                          if (session?.access_token) {
+                            await fetchAuthBootstrapWithCache(session.access_token, userId);
+                          }
+                        } catch {
+                          // ignore — 관리자 페이지에서 재확인
+                        }
+                      })();
+                    }
+                  }}
+                  className={`relative z-30 inline-flex shrink-0 items-center gap-1.5 rounded-lg border-none px-2.5 py-1.5 text-xs font-semibold text-white no-underline transition-all duration-200 hover:-translate-y-0.5 hover:shadow ${
+                    adminNavPending ? 'pointer-events-none opacity-80' : 'cursor-pointer'
+                  } ${isSystemAdmin ? 'bg-purple-700' : 'bg-blue-600'}`}
                   aria-label={isSystemAdmin ? dt('aria_system_admin') : dt('aria_group_admin')}
                 >
                   <span className="text-sm">⚙️</span>
-                  {ct('admin')}
-                </button>
+                  {adminNavPending ? '…' : ct('admin')}
+                </Link>
               ) : null}
             </div>
           </div>

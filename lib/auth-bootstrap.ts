@@ -20,7 +20,7 @@ export type AuthLoginSuccess = {
 };
 
 const CACHE_KEY_PREFIX = 'SFH_AUTH_BOOTSTRAP_';
-const CACHE_TTL_MS = 8000;
+const CACHE_TTL_MS = 60_000;
 
 type CachedBootstrap = {
   savedAt: number;

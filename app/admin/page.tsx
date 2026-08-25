@@ -381,31 +381,76 @@ export default function AdminPage() {
     return Math.min((used / quota) * 100, 100);
   };
 
-  // 관리자 권한 확인 및 초기 데이터 로드
+  // 관리자 권한 확인 — bootstrap으로 이미 관리자면 즉시 진입, RPC는 백그라운드 검증
   useEffect(() => {
+    let cancelled = false;
+
+    const authorize = (userId: string) => {
+      if (cancelled) return;
+      setCurrentAdminUserId(userId);
+      setIsAuthorized(true);
+      setLoading(false);
+    };
+
+    const deny = () => {
+      if (cancelled) return;
+      setLoading(false);
+      router.replace('/dashboard');
+    };
+
     const checkAdmin = async () => {
       try {
-        const session = await waitForSupabaseSession(supabase);
+        const session = await waitForSupabaseSession(supabase, { maxWaitMs: 4000 });
         if (!session?.access_token) {
-          router.push('/dashboard');
+          deny();
           return;
         }
 
         const { user } = await getValidatedUserWithSessionFallback(supabase, session);
         if (!user) {
-          router.push('/dashboard');
+          deny();
           return;
         }
 
-        // bootstrap 캐시 TTL(8s) 만료 후에도 대시보드 버튼은 보이므로 API로 갱신
-        const bootstrap = await fetchAuthBootstrapWithCache(session.access_token, user.id);
-        const cachedAdmin = Boolean(bootstrap?.isSystemAdmin ?? getCachedAuthBootstrap(user.id)?.isSystemAdmin);
+        // 1) 캐시/bootstrap이 관리자면 즉시 UI 진입 (RPC 대기하지 않음)
+        const cached = getCachedAuthBootstrap(user.id);
+        if (cached?.isSystemAdmin) {
+          authorize(user.id);
+          void (async () => {
+            try {
+              await supabase.rpc('update_admin_last_access');
+            } catch {
+              // ignore
+            }
+          })();
+          // 백그라운드 확인 — 실패해도 캐시 신뢰 유지(대시보드와 동일 소스)
+          void supabase.rpc('is_system_admin', { user_id_param: user.id }).then(({ data, error }) => {
+            if (error || cancelled) return;
+            if (data !== true) {
+              console.warn('[admin] RPC가 관리자 아님을 반환 — bootstrap 캐시와 불일치');
+            }
+          });
+          return;
+        }
 
+        const bootstrap = await fetchAuthBootstrapWithCache(session.access_token, user.id);
+        if (cancelled) return;
+        if (bootstrap?.isSystemAdmin) {
+          authorize(user.id);
+          void (async () => {
+            try {
+              await supabase.rpc('update_admin_last_access');
+            } catch {
+              // ignore
+            }
+          })();
+          return;
+        }
+
+        // 2) 캐시 없을 때만 RPC로 판정 (짧게 1~2회)
         let rpcAdmin = false;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 400 * attempt));
-          }
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 300));
           const { data, error: adminError } = await supabase.rpc('is_system_admin', {
             user_id_param: user.id,
           });
@@ -418,26 +463,30 @@ export default function AdminPage() {
           }
         }
 
-        const isAdmin = rpcAdmin || cachedAdmin;
-        if (!isAdmin) {
-          router.push('/dashboard');
+        if (cancelled) return;
+        if (!rpcAdmin) {
+          deny();
           return;
         }
 
-        setCurrentAdminUserId(user.id);
-        setIsAuthorized(true);
-
-        // 관리자 접근 시간 업데이트
-        await supabase.rpc('update_admin_last_access');
+        authorize(user.id);
+        void (async () => {
+          try {
+            await supabase.rpc('update_admin_last_access');
+          } catch {
+            // ignore
+          }
+        })();
       } catch (err) {
         console.error('관리자 권한 확인 오류:', err);
-        router.push('/dashboard');
-      } finally {
-        setLoading(false);
+        deny();
       }
     };
 
-    checkAdmin();
+    void checkAdmin();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   // 초기 로드 시 관리 가능한 그룹 로드
