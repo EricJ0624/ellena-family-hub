@@ -20,7 +20,7 @@ import {
 } from '@/lib/family-auth-routing';
 import { fetchAuthBootstrapWithCache, getCachedAuthBootstrap, loginViaServerApi, setCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap';
-import { dashboardHrefWithOpenGroup, readStoredGroupId, sameGroupId } from '@/lib/group-id-resolve';
+import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 import type { SignupBlockReason } from '@/lib/signup-settings';
@@ -188,15 +188,7 @@ export default function LoginPage() {
         router.push('/admin');
         return;
       }
-      // 이전에 쓰던 그룹이 접근 가능하면 온보딩 선택 화면을 건너뛰고 대시보드로
-      const stored = readStoredGroupId();
-      if (
-        stored &&
-        bootstrap?.accessibleGroupIds?.some((id) => sameGroupId(id, stored))
-      ) {
-        router.push(dashboardHrefWithOpenGroup(stored));
-        return;
-      }
+      // 접근 가능 그룹 1개만 대시보드 직행. 2개 이상은 항상 그룹 선택(온보딩).
       if (bootstrap?.accessibleGroupIds?.length === 1) {
         router.push(dashboardHrefWithOpenGroup(bootstrap.accessibleGroupIds[0]));
         return;

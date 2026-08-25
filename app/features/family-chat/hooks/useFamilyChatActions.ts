@@ -162,19 +162,6 @@ export function useFamilyChatActions({
         throw new Error('CHAT_PERMISSION_CHECK_MEMBERSHIPS_FAILED');
       }
 
-      // RLS/레이스로 멤버십이 잠깐 0건일 수 있어 재조회
-      await new Promise((r) => setTimeout(r, 350));
-      const memRetry = await supabase
-        .from('memberships')
-        .select('group_id')
-        .eq('user_id', uid)
-        .eq('group_id', groupId)
-        .maybeSingle();
-      if (memRetry.data) {
-        markOk();
-        return;
-      }
-
       const { data: own, error: ownErr } = await supabase
         .from('groups')
         .select('id')

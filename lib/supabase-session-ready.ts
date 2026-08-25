@@ -28,12 +28,6 @@ function storeCachedSession(session: Session | null): Session | null {
   return null;
 }
 
-/** 로그아웃 등 세션 무효화 시 호출(선택). TTL 만료만으로도 대부분 충분하다. */
-export function invalidateSupabaseSessionCache(): void {
-  cachedSession = null;
-  cachedUntil = 0;
-}
-
 /**
  * PostgREST(RLS) 조회 전에 access_token이 붙은 세션이 준비됐는지 확인한다.
  * 동시에 여러 훅/로더가 호출해도 in-flight 1회 + 짧은 캐시로 폴링 중복을 줄인다.

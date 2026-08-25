@@ -68,7 +68,7 @@ export function trimMessagesToMax(messages: ChatUiMessage[]): ChatUiMessage[] {
   return messages.slice(messages.length - CHAT_MAX_MESSAGES_IN_MEMORY);
 }
 
-export function isChatCipherText(text: string | null | undefined): boolean {
+function isChatCipherText(text: string | null | undefined): boolean {
   return Boolean(text && String(text).startsWith('U2FsdGVkX1'));
 }
 

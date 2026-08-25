@@ -2982,99 +2982,7 @@ export default function FamilyHub() {
       bindPresenceChannel();
     };
 
-    // Supabase에서 초기 데이터 로드 (암호화된 데이터 복호화)
-    // localStorage 데이터를 덮어쓰지 않고, Supabase 데이터가 있을 때만 업데이트
-    // localStorage가 비어있어도 Supabase 데이터를 로드하여 복구
-    const loadSupabaseData = async () => {
-      try {
-        // family_id 확인 (없으면 기본값 사용)
-        const currentFamilyId = familyId || 'ellena_family';
-        
-        // 가족 공유 키를 sessionStorage에서 직접 가져오기 (상태 업데이트 지연 문제 해결)
-        const authKey = getAuthKey(userId);
-        const currentKey = masterKey || sessionStorage.getItem(authKey) || 
-          process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY || 'ellena_family_shared_key_2024';
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('loadSupabaseData - userId:', userId);
-          console.log('loadSupabaseData - masterKey from state:', masterKey);
-          console.log('loadSupabaseData - currentKey from sessionStorage:', sessionStorage.getItem(authKey));
-          console.log('loadSupabaseData - final currentKey:', currentKey ? '있음' : '없음');
-        }
-        
-        if (!currentKey) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('masterKey가 없어 복호화 불가 - 원본 텍스트 사용');
-          }
-        }
-        
-        // localStorage 데이터가 먼저 로드되었는지 확인
-        // state가 초기 상태가 아니면 localStorage 데이터가 로드된 것으로 간주
-        const hasLocalStorageData = (state.messages || []).length > 0 ||
-                                    (state.todos || []).length > 0 ||
-                                    (state.events || []).length > 0 ||
-                                    (state.album || []).length > 0;
-        
-        // localStorage에서 직접 사진 데이터 확인 (state 업데이트 지연 문제 해결)
-        const storageKey = getStorageKey(userId, currentGroupId);
-        const saved = localStorage.getItem(storageKey);
-        let localStoragePhotos: Photo[] = [];
-        if (saved && currentKey) {
-          try {
-            const decrypted = CryptoService.decrypt(saved, currentKey);
-            if (decrypted && decrypted.album && Array.isArray(decrypted.album)) {
-              localStoragePhotos = decrypted.album;
-            }
-          } catch (e: any) {
-            // UTF-8 인코딩 오류 처리
-            if (e.message?.includes('Malformed UTF-8') || e.message?.includes('UTF-8')) {
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('localStorage 사진 로드 중 UTF-8 오류, 건너뜀');
-              }
-              localStoragePhotos = [];
-            } else {
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('localStorage 사진 로드 실패:', e);
-              }
-            }
-          }
-        }
-
-        // localStoragePhotos를 상위 스코프에 저장 (에러 처리에서 사용)
-        const savedLocalStoragePhotos = localStoragePhotos;
-
-        // 메시지 로드 (그룹별: currentGroupId 있을 때만 해당 그룹 메시지만 로드)
-        await loadInitialChatMessages(currentKey);
-
-        // 할일 로드는 FamilyTasksSection에서 처리됨
-
-        // 일정 로드는 FamilyCalendarSection에서 처리됨
-
-        // ✅ 사진 로드는 loadData 함수에서만 처리 (중복 방지)
-        // loadData가 먼저 실행되어 사진을 로드하므로, 여기서는 사진 로드를 건너뜀
-        if (process.env.NODE_ENV === 'development') {
-          console.log('loadSupabaseData: 사진 로드는 loadData에서 처리되므로 건너뜀');
-            }
-      } catch (error) {
-        console.error('Supabase 데이터 로드 오류:', error);
-        // ✅ 에러 발생 시에도 album은 업데이트하지 않음 (loadData에서 처리)
-        // album은 loadData에서만 관리하므로 여기서는 건너뜀
-        // 메시지, 할일, 일정만 에러 처리 (사진은 loadData에서 처리됨)
-                if (process.env.NODE_ENV === 'development') {
-          console.warn('loadSupabaseData 에러: album은 loadData에서 관리되므로 건너뜀');
-        }
-      }
-    };
-
-
-    // 3. 할일 구독은 FamilyTasksSection에서 처리됨
-
-    // 4. 일정 구독은 FamilyCalendarSection에서 처리됨
-
-    // 5. 사진 구독 설정 (AlbumContext에서 처리하므로 no-op)
-    const setupPhotosSubscription = () => {};
-
-    // 6. 위치 구독 설정
+    // 채팅 초기 로드는 전용 effect(재시도 포함). Realtime·위치 구독은 아래 runLocationLoad에서 담당.
     const setupLocationsSubscription = () => {
       // 클라이언트에서만 실행되도록 보호
       if (typeof window === 'undefined') {
@@ -3367,27 +3275,18 @@ export default function FamilyHub() {
       }
     };
 
-    // Supabase 데이터 로드 및 Realtime 구독 설정
-    // isAuthenticated 또는 currentGroupId 없을 때는 구독 스킵 → 인증 완료 후 effect 재실행 시 한 번만 로드
+    // 채팅 초기 로드는 전용 effect(재시도 포함). 여기는 Realtime·위치만 담당.
     if (!isAuthenticated || !currentGroupId) {
       return;
     }
     const runLocationLoad = () => {
       if (locationLoadStartedRef.current) return;
       locationLoadStartedRef.current = true;
-      loadSupabaseData().then(async () => {
-        familyChatDebug('Supabase 데이터 로드 완료 → Realtime 구독');
-        setupRealtimeSubscriptions();
-        loadMyLocation();
-        await loadLocationRequests();
-        loadFamilyLocations();
-      }).catch(async (error) => {
-        console.error('❌ Supabase 데이터 로드 실패:', error);
-        setupRealtimeSubscriptions();
-        loadMyLocation();
-        await loadLocationRequests().catch(() => {});
-        loadFamilyLocations();
-      });
+      familyChatDebug('세션 준비됨 → Realtime 구독');
+      setupRealtimeSubscriptions();
+      loadMyLocation();
+      void loadLocationRequests().catch(() => {});
+      loadFamilyLocations();
     };
     // 리프레시/재로그인 시 세션 복원 후 로드 (고정 2초 강제 실행 대신 세션 준비 대기)
     const start = Date.now();
@@ -3433,8 +3332,16 @@ export default function FamilyHub() {
       const now = Date.now();
       if (now - lastFocusDataSync < FOCUS_SYNC_MIN_INTERVAL_MS) return;
       lastFocusDataSync = now;
-      console.log(`🔄 ${reason} — Supabase 데이터 재동기화 (채팅·할일·일정)`);
-      void loadSupabaseData().catch((err) => console.warn('포그라운드 동기화 실패:', err));
+      console.log(`🔄 ${reason} — Supabase 데이터 재동기화 (채팅)`);
+      const authKey = getAuthKey(userId);
+      const key =
+        masterKey ||
+        sessionStorage.getItem(authKey) ||
+        process.env.NEXT_PUBLIC_FAMILY_SHARED_KEY ||
+        'ellena_family_shared_key_2024';
+      void loadInitialChatMessagesRef.current(key).catch((err) =>
+        console.warn('포그라운드 채팅 동기화 실패:', err),
+      );
     };
 
     const handleVisibilityChange = () => {
