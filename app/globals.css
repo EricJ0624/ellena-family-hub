@@ -1402,6 +1402,15 @@ select:not(.chalkboard-form-input) {
     background-clip: text;
   }
 
+  /* kids: 어두운 셸에서 닉네임 가독성 — 오프화이트 */
+  :root[data-ui-theme='kids_friendly'] .user-name {
+    color: #f8fafc;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    -webkit-text-fill-color: #f8fafc;
+  }
+
   /* ============================================
      Sections Container - Grid 기반 ?�이?�웃
      ============================================ */

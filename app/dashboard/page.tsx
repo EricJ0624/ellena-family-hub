@@ -6269,7 +6269,9 @@ export default function FamilyHub() {
     minWidth: 0,
     maxWidth: '100%',
     paddingRight: 12,
-    lineHeight: frameIsPortrait ? 1.15 : undefined,
+    lineHeight: isKidsTheme
+      ? (frameIsPortrait ? 1.2 : 1.25)
+      : (frameIsPortrait ? 1.15 : undefined),
     textAlign: 'left',
     whiteSpace: 'nowrap' as const,
     overflowX: 'hidden',
@@ -6300,12 +6302,6 @@ export default function FamilyHub() {
           WebkitTextFillColor: '#f8fafc',
           backgroundClip: 'unset',
           textShadow: '0 0 10px rgba(255, 255, 255, 0.28), 0 1px 2px rgba(15, 23, 42, 0.4)',
-          /* 관리자/알림 열과 겹치지 않도록 잔여 폭만 사용. 세로 잘림 방지 */
-          flex: '1 1 0%',
-          minWidth: 0,
-          overflowX: 'hidden',
-          overflowY: 'visible',
-          lineHeight: frameIsPortrait ? 1.2 : 1.25,
         }
       : isDefaultDashboardTitle
         ? {
