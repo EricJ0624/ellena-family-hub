@@ -43,15 +43,3 @@ export function showDiaryCompletedInviteHint(trip: DiaryEligibleTrip): boolean {
     normalizeTripStatus(trip.status ?? undefined) === 'completed' && trip.diary_enabled !== true
   );
 }
-
-/** @deprecated Use canUserOptInDiaryForTrip — planning-only start button */
-export function canStartDiaryFromPlanning(trip: DiaryEligibleTrip): boolean {
-  return (
-    normalizeTripStatus(trip.status ?? undefined) === 'planning' && trip.diary_enabled !== true
-  );
-}
-
-/** @deprecated Use showDiaryCompletedInviteHint */
-export function showDiaryAvailableHint(trip: DiaryEligibleTrip): boolean {
-  return showDiaryCompletedInviteHint(trip);
-}

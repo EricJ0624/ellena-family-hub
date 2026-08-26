@@ -1,5 +1,6 @@
 import type { TravelDiaryEntry } from '@/lib/modules/travel-planner/diary-types';
 import type { UnifiedItineraryItem } from '@/lib/modules/travel-planner/unified-itinerary';
+import { isDiaryPurgedEntry } from '@/lib/modules/travel-planner/diary-purge';
 
 export type DiaryTimelineSlot = {
   key: string;
@@ -87,7 +88,9 @@ export function buildDiaryTimelineSlots(
   return slots;
 }
 
-/** Hidden diary cards for restore list (planner place title preferred). */
+/** Hidden diary cards for restore list (planner place title preferred).
+ * 전체삭제(purge)된 항목은 복구 목록에서 제외 — 타임라인 제외용 hiddenKeys에는 그대로 쓰임.
+ */
 export function buildHiddenDiarySlots(
   unified: UnifiedItineraryItem[],
   hiddenEntries: TravelDiaryEntry[],
@@ -102,6 +105,7 @@ export function buildHiddenDiarySlots(
 
   for (const e of hiddenEntries) {
     if (!e.deleted_at) continue;
+    if (isDiaryPurgedEntry(e)) continue;
     const k = sourceKey(e.source_kind, e.source_id) ?? `entry:${e.id}`;
     if (seen.has(k)) continue;
     seen.add(k);

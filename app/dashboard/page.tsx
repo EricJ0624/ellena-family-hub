@@ -6295,7 +6295,7 @@ export default function FamilyHub() {
       [...widgetConfigs]
         .filter((cfg) => {
           if (cfg.widget_key === 'travel_diary') {
-            return shouldShowTravelDiaryDashboardWidget(widgetConfigs, travelTrips);
+            return shouldShowTravelDiaryDashboardWidget(widgetConfigs);
           }
           return cfg.is_enabled;
         })
@@ -6303,7 +6303,7 @@ export default function FamilyHub() {
           if (a.display_order !== b.display_order) return a.display_order - b.display_order;
           return b.priority - a.priority;
         }),
-    [widgetConfigs, travelTrips],
+    [widgetConfigs],
   );
 
   // 개발 모드 전용: 위젯 그리드 배치 충돌 감지 (명시적 gridColumnStart/gridRowStart 기준)

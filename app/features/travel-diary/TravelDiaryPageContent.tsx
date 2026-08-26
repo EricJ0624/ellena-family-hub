@@ -53,6 +53,7 @@ export function TravelDiaryPageContent() {
   const [expenses, setExpenses] = useState<TravelExpense[]>([]);
   const [planner, setPlanner] = useState<PlannerBundle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hidingAll, setHidingAll] = useState(false);
   const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
 
   const loadAll = useCallback(async () => {
@@ -285,6 +286,37 @@ export function TravelDiaryPageContent() {
     await loadAll();
   };
 
+  /** 다이어리에서만 전체삭제(복구 불가). 플래너 일정·여행은 유지, 위젯 목록에서는 제거. */
+  const hideAllSlots = async () => {
+    if (!canWrite || hidingAll || !currentGroupId || !tripIdParam) {
+      return;
+    }
+    if (!window.confirm(t('hide_all_confirm'))) return;
+    setHidingAll(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error('auth');
+      const res = await fetch(`${API}/trips/${tripIdParam}/diary-entries`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ groupId: currentGroupId, hideAll: true }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || t('hide_all_failed'));
+      router.push('/dashboard');
+    } catch (e) {
+      console.error(e);
+      alert(t('hide_all_failed'));
+      await loadAll();
+    } finally {
+      setHidingAll(false);
+    }
+  };
+
   const restoreSlot = async (slot: (typeof hiddenSlots)[0]) => {
     if (!currentGroupId || !slot.entry?.id) return;
     const { data: session } = await supabase.auth.getSession();
@@ -331,7 +363,19 @@ export function TravelDiaryPageContent() {
           {t('back')}
         </button>
 
-        <h1 className="m-0 text-xl font-bold text-slate-800">{t('diary_page_title')}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="m-0 text-xl font-bold text-slate-800">{t('diary_page_title')}</h1>
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={() => void hideAllSlots()}
+              disabled={hidingAll}
+              className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 transition-colors hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {hidingAll ? t('loading') : t('hide_all')}
+            </button>
+          ) : null}
+        </div>
         {trip && (
           <p className="mt-1 text-sm text-slate-500">
             {trip.title} · {currentGroup?.name}

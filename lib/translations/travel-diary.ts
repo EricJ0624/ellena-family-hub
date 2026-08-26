@@ -44,6 +44,9 @@ export type TravelDiaryTranslations = {
   hide_failed: string;
   restore_failed: string;
   hide_confirm: string;
+  hide_all: string;
+  hide_all_confirm: string;
+  hide_all_failed: string;
   hidden_section: string;
 };
 
@@ -91,6 +94,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: '삭제에 실패했습니다.',
     restore_failed: '복원에 실패했습니다.',
     hide_confirm: '이 행사를 다이어리에서 뺄까요? 나중에 다시 가져올 수 있습니다.',
+    hide_all: '전체 삭제',
+    hide_all_confirm:
+      '이 여행을 다이어리에서 삭제할까요?\n\n삭제하면 복구할 수 없고, 다이어리 위젯 목록에서도 사라집니다.\n여행 플래너의 일정·여행은 그대로 유지되며, 플래너에서 「다이어리 작성 시작」을 눌러 일정을 다시 보낼 수 있습니다.',
+    hide_all_failed: '전체 삭제에 실패했습니다.',
     hidden_section: '다이어리에서 뺀 행사',
   },
   en: {
@@ -136,6 +143,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: 'Could not remove this item.',
     restore_failed: 'Could not restore this item.',
     hide_confirm: 'Remove this event from the diary? You can restore it later.',
+    hide_all: 'Remove all',
+    hide_all_confirm:
+      'Remove this trip from the diary?\n\nThis cannot be undone, and it will leave the diary widget list.\nPlanner trips and schedules are kept, and you can send them again by tapping 「Start trip diary」 in the planner.',
+    hide_all_failed: 'Could not remove all events.',
     hidden_section: 'Removed from diary',
   },
   ja: {
@@ -181,6 +192,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: '削除に失敗しました。',
     restore_failed: '復元に失敗しました。',
     hide_confirm: 'この予定をダイアリーから外しますか？あとから戻せます。',
+    hide_all: 'すべて削除',
+    hide_all_confirm: 'ダイアリーの予定をすべて削除しますか？\n\n削除後は元に戻せません。\nプランナーの日程はそのままです。',
+    hide_all_failed: '一括削除に失敗しました。',
     hidden_section: 'ダイアリーから外した予定',
   },
   'zh-CN': {
@@ -226,6 +240,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: '无法删除。',
     restore_failed: '无法恢复。',
     hide_confirm: '要从日记中移除此行程吗？之后可以再加回来。',
+    hide_all: '全部删除',
+    hide_all_confirm: '要从日记删除全部行程吗？\n\n删除后无法恢复。\n旅行规划日程会保留。',
+    hide_all_failed: '全部删除失败。',
     hidden_section: '已从日记移除的行程',
   },
   'zh-TW': {
@@ -271,6 +288,9 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: '無法刪除。',
     restore_failed: '無法還原。',
     hide_confirm: '要從日記移除此行程嗎？之後可以再加回來。',
+    hide_all: '全部刪除',
+    hide_all_confirm: '要從日記刪除全部行程嗎？\n\n刪除後無法復原。\n旅行規劃日程會保留。',
+    hide_all_failed: '全部刪除失敗。',
     hidden_section: '已從日記移除的行程',
   },
   es: {
@@ -316,6 +336,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: 'No se pudo quitar.',
     restore_failed: 'No se pudo restaurar.',
     hide_confirm: '¿Quitar este evento del diario? Podrás restaurarlo después.',
+    hide_all: 'Quitar todo',
+    hide_all_confirm:
+      '¿Eliminar todos los eventos del diario?\n\nNo se puede deshacer.\nEl planificador no cambia.',
+    hide_all_failed: 'No se pudo quitar todo.',
     hidden_section: 'Quitados del diario',
   },
   fr: {
@@ -361,6 +385,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: 'Impossible de retirer.',
     restore_failed: 'Impossible de restaurer.',
     hide_confirm: 'Retirer cet événement du carnet ? Vous pourrez le restaurer plus tard.',
+    hide_all: 'Tout retirer',
+    hide_all_confirm:
+      'Supprimer tous les événements du carnet ?\n\nAction irréversible.\nLe planificateur reste inchangé.',
+    hide_all_failed: 'Impossible de tout retirer.',
     hidden_section: 'Retirés du carnet',
   },
   de: {
@@ -406,6 +434,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: 'Entfernen fehlgeschlagen.',
     restore_failed: 'Wiederherstellen fehlgeschlagen.',
     hide_confirm: 'Dieses Ereignis aus dem Tagebuch entfernen? Sie können es später wiederherstellen.',
+    hide_all: 'Alle entfernen',
+    hide_all_confirm:
+      'Alle Ereignisse aus dem Tagebuch löschen?\n\nDies kann nicht rückgängig gemacht werden.\nDer Planer bleibt erhalten.',
+    hide_all_failed: 'Alle entfernen fehlgeschlagen.',
     hidden_section: 'Aus dem Tagebuch entfernt',
   },
   it: {
@@ -451,6 +483,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: 'Impossibile rimuovere.',
     restore_failed: 'Impossibile ripristinare.',
     hide_confirm: 'Rimuovere questo evento dal diario? Potrai ripristinarlo in seguito.',
+    hide_all: 'Rimuovi tutto',
+    hide_all_confirm:
+      'Eliminare tutti gli eventi dal diario?\n\nNon si può annullare.\nIl planner resta invariato.',
+    hide_all_failed: 'Impossibile rimuovere tutto.',
     hidden_section: 'Rimossi dal diario',
   },
   pt: {
@@ -496,6 +532,10 @@ const td: Record<LangCode, TravelDiaryTranslations> = {
     hide_failed: 'Não foi possível remover.',
     restore_failed: 'Não foi possível restaurar.',
     hide_confirm: 'Remover este evento do diário? Você poderá restaurá-lo depois.',
+    hide_all: 'Remover tudo',
+    hide_all_confirm:
+      'Excluir todos os eventos do diário?\n\nNão é possível desfazer.\nO planejador permanece.',
+    hide_all_failed: 'Não foi possível remover tudo.',
     hidden_section: 'Removidos do diário',
   }
 };

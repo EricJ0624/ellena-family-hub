@@ -10,6 +10,7 @@ import {
 } from '@/lib/modules/travel-planner/diary-invite';
 import { enrichTripWithAutoStatus } from '@/lib/modules/travel-planner/trip-enrich';
 import { computeAutoTripStatus, normalizeTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import { DIARY_PURGE_TAG } from '@/lib/modules/travel-planner/diary-purge';
 
 /** GET: 단일 여행 조회 (tenant 일치 검증) */
 export async function GET(
@@ -233,6 +234,36 @@ export async function PATCH(
         supabase,
         data as Parameters<typeof enrichTripWithAutoStatus>[1],
       );
+    }
+
+    // 플래너「다이어리 작성 시작」으로 다시 보낼 때: 전체삭제(purge) 스텁 제거 → 일정이 다시 보임
+    if (data && body.diary_enabled === true) {
+      const { data: hiddenRows, error: hiddenErr } = await supabase
+        .from('travel_diary_entries')
+        .select('id, mood_tags')
+        .eq('trip_id', tripId)
+        .eq('group_id', groupId)
+        .not('deleted_at', 'is', null);
+      if (hiddenErr) {
+        console.error('travel_diary_entries purge clear select:', hiddenErr);
+      } else {
+        const purgeIds = (hiddenRows ?? [])
+          .filter(
+            (row) =>
+              Array.isArray(row.mood_tags) &&
+              (row.mood_tags as unknown[]).map(String).includes(DIARY_PURGE_TAG),
+          )
+          .map((row) => String(row.id));
+        if (purgeIds.length > 0) {
+          const { error: delErr } = await supabase
+            .from('travel_diary_entries')
+            .delete()
+            .in('id', purgeIds)
+            .eq('group_id', groupId)
+            .eq('trip_id', tripId);
+          if (delErr) console.error('travel_diary_entries purge clear delete:', delErr);
+        }
+      }
     }
 
     if (data && newTripCurrency) {

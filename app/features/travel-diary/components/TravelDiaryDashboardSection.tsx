@@ -150,8 +150,8 @@ export function TravelDiaryDashboardSection({
   translations: t,
 }: Props) {
   const isKidsTheme = uiTheme === 'kids_friendly';
-  const diaryTrips = trips.filter((x) => x.diary_enabled === true);
-  const list = diaryTrips.length > 0 ? diaryTrips : trips;
+  /** 다이어리 켠 여행만 — 없으면 전체 trips로 폴백하지 않음(전체삭제 후 잔상 방지) */
+  const list = trips.filter((x) => x.diary_enabled === true);
 
   const handleTripActivate = (trip: TravelTrip) => {
     if (trip.diary_enabled) {

@@ -9,6 +9,7 @@ import {
   parseCollageAttachmentIds,
   parseCollageStyle,
 } from '@/lib/modules/travel-planner/diary-collage';
+import { DIARY_PURGE_TAG } from '@/lib/modules/travel-planner/diary-purge';
 
 const SOURCE_KINDS = new Set([
   'attraction',
@@ -135,6 +136,152 @@ export async function POST(
         { error: '다이어리 작성 권한이 없습니다. 여행 다이어리를 먼저 시작해 주세요.' },
         { status: 403 },
       );
+    }
+
+    /** 다이어리 전체삭제(복구 불가). 플래너 원본 일정은 삭제하지 않음. */
+    if (body.hideAll === true) {
+      const now = new Date().toISOString();
+      const purgeTags = [DIARY_PURGE_TAG];
+
+      const { error: softAllErr } = await supabase
+        .from('travel_diary_entries')
+        .update({
+          deleted_at: now,
+          deleted_by: user.id,
+          updated_at: now,
+          updated_by: user.id,
+          mood_tags: purgeTags,
+        })
+        .eq('group_id', groupId)
+        .eq('trip_id', tripId)
+        .is('deleted_at', null);
+      if (softAllErr) throw softAllErr;
+
+      const { error: markHiddenErr } = await supabase
+        .from('travel_diary_entries')
+        .update({
+          mood_tags: purgeTags,
+          updated_at: now,
+          updated_by: user.id,
+        })
+        .eq('group_id', groupId)
+        .eq('trip_id', tripId)
+        .not('deleted_at', 'is', null);
+      if (markHiddenErr) throw markHiddenErr;
+
+      type PlaceStub = {
+        source_kind: TravelPlaceSourceKind;
+        source_id: string;
+        day_date: string;
+      };
+      const stubs: PlaceStub[] = [];
+
+      const pushRows = (
+        kind: TravelPlaceSourceKind,
+        rows: { id?: string; day_date?: string; check_in_date?: string }[] | null,
+        dayKey: 'day_date' | 'check_in_date',
+      ) => {
+        for (const row of rows ?? []) {
+          const id = row.id ? String(row.id) : '';
+          const day = String(row[dayKey] || '').slice(0, 10);
+          if (!id || !day) continue;
+          stubs.push({ source_kind: kind, source_id: id, day_date: day });
+        }
+      };
+
+      const [accRes, dinRes, attRes, trRes, itRes] = await Promise.all([
+        supabase
+          .from('travel_accommodations')
+          .select('id, check_in_date')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .is('deleted_at', null),
+        supabase
+          .from('travel_dining')
+          .select('id, day_date')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .is('deleted_at', null),
+        supabase
+          .from('travel_attractions')
+          .select('id, day_date')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .is('deleted_at', null),
+        supabase
+          .from('travel_transports')
+          .select('id, day_date')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .is('deleted_at', null),
+        supabase
+          .from('travel_itineraries')
+          .select('id, day_date')
+          .eq('group_id', groupId)
+          .eq('trip_id', tripId)
+          .is('deleted_at', null),
+      ]);
+
+      if (accRes.error) throw accRes.error;
+      if (dinRes.error) throw dinRes.error;
+      if (attRes.error) throw attRes.error;
+      if (trRes.error) throw trRes.error;
+      if (itRes.error) throw itRes.error;
+
+      pushRows('accommodation', accRes.data as { id?: string; check_in_date?: string }[], 'check_in_date');
+      pushRows('dining', dinRes.data as { id?: string; day_date?: string }[], 'day_date');
+      pushRows('attraction', attRes.data as { id?: string; day_date?: string }[], 'day_date');
+      pushRows('transport', trRes.data as { id?: string; day_date?: string }[], 'day_date');
+      pushRows('itinerary', itRes.data as { id?: string; day_date?: string }[], 'day_date');
+
+      const { data: existingRows, error: existingErr } = await supabase
+        .from('travel_diary_entries')
+        .select('id, source_kind, source_id')
+        .eq('group_id', groupId)
+        .eq('trip_id', tripId);
+      if (existingErr) throw existingErr;
+
+      const existingKeys = new Set(
+        (existingRows ?? [])
+          .map((r) =>
+            r.source_kind && r.source_id ? `${r.source_kind}:${r.source_id}` : '',
+          )
+          .filter(Boolean),
+      );
+
+      const toInsert = stubs
+        .filter((s) => !existingKeys.has(`${s.source_kind}:${s.source_id}`))
+        .map((s) => ({
+          group_id: groupId,
+          trip_id: tripId,
+          source_kind: s.source_kind,
+          source_id: s.source_id,
+          day_date: s.day_date,
+          note: null,
+          mood_tags: purgeTags,
+          sort_order: 0,
+          created_by: user.id,
+          created_at: now,
+          updated_at: now,
+          updated_by: user.id,
+          deleted_at: now,
+          deleted_by: user.id,
+        }));
+
+      if (toInsert.length > 0) {
+        const { error: insErr } = await supabase.from('travel_diary_entries').insert(toInsert);
+        if (insErr) throw insErr;
+      }
+
+      // 다이어리 위젯 목록에서 이 여행 제거 (플래너 여행 자체는 유지)
+      const { error: disableErr } = await supabase
+        .from('travel_trips')
+        .update({ diary_enabled: false, updated_at: now })
+        .eq('id', tripId)
+        .eq('group_id', groupId);
+      if (disableErr) throw disableErr;
+
+      return NextResponse.json({ success: true, purged: stubs.length, diary_enabled: false });
     }
 
     if (body.hide === true) {
