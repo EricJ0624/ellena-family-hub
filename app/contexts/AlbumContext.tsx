@@ -7,6 +7,7 @@ import { useGroup } from '@/app/contexts/GroupContext';
 import { DB_TABLES } from '@/lib/db-table-names';
 import { getStorageKey, getAuthKey, CryptoService } from '@/lib/dashboard-storage';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
+import { clearViewedAlbumPhotoUrls } from '@/lib/album-viewed-photo-urls';
 
 export type Photo = {
   id: number | string;
@@ -104,6 +105,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
 
   const loadAlbum = useCallback(async () => {
     if (!userId || !currentGroupId) {
+      clearViewedAlbumPhotoUrls();
       setAlbum([]);
       return;
     }
@@ -120,6 +122,7 @@ export function AlbumProvider({ children }: { children: ReactNode }) {
     }
 
     // 그룹 전환 시 이전 그룹 앨범 즉시 제거 (blob/잘못된 데이터 노출·Hydration 에러 방지)
+    clearViewedAlbumPhotoUrls();
     setAlbum([]);
     const key =
       sessionStorage.getItem(getAuthKey(userId)) ||

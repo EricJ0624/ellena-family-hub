@@ -9,6 +9,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { markAlbumPhotoUrlViewed } from '@/lib/album-viewed-photo-urls';
 import type { Photo } from '../types';
 
 interface FamilyAlbumSectionProps {
@@ -120,6 +121,7 @@ export function FamilyAlbumSection({
                     alt={photo.description || ''}
                     loading="lazy"
                     draggable={false}
+                    onLoad={() => markAlbumPhotoUrlViewed(photo.data)}
                   />
                 </div>
                 {photo.isUploading && (

@@ -6437,6 +6437,7 @@ export default function FamilyHub() {
             currentGroupId={currentGroupId}
             onOpenTrip={(tripId) => router.push(`/travel/diary?tripId=${tripId}`)}
             onStartTrip={handleStartTripDiary}
+            uiTheme={uiTheme}
             translations={{
               section_title: tdy('section_title'),
               select_group: tdy('select_group'),

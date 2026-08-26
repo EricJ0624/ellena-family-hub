@@ -352,7 +352,8 @@ button.travel-kids-add-trip-submit {
   margin: 0;
   max-width: 100%;
   overflow: visible;
-  font-size: clamp(0.58rem, 3.8cqmin, 0.86rem);
+  /* rem/vw: 위젯 칸 크기와 무관하게 플래너·다이어리 동일 */
+  font-size: clamp(0.72rem, 0.62rem + 0.55vw, 0.9rem);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: 0.02em;
@@ -434,7 +435,7 @@ button.travel-kids-add-trip-submit {
   flex-direction: column;
   margin: 0;
   list-style: none;
-  gap: 1.2cqmin;
+  gap: 0.3rem;
   overflow: visible;
   padding: 0;
 }
@@ -451,7 +452,7 @@ button.travel-kids-add-trip-submit {
   overflow: hidden;
   border-radius: 0.7rem;
   background: transparent;
-  padding: 0.6cqmin 0;
+  padding: 0.15rem 0;
   color: #1e293b;
   cursor: pointer;
 }
@@ -460,23 +461,24 @@ button.travel-kids-add-trip-submit {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(0.62rem, 3.8cqmin, 0.88rem);
+  font-size: clamp(0.74rem, 0.64rem + 0.5vw, 0.92rem);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .travel-kids-widget-trip-dates {
-  margin-top: 0.15cqmin;
+  margin-top: 0.1rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(0.52rem, 3.2cqmin, 0.74rem);
+  font-size: clamp(0.62rem, 0.54rem + 0.4vw, 0.78rem);
   line-height: 1.2;
   color: #64748b;
 }
 
 /*
- * Travel Diary — 핑크~보라 그라데이션 바탕 (유리 glass 덮개 무시).
+ * Travel Diary — 기본: 핑크~보라 그라데이션.
+ * kids: Travel Diary BG.png (종이 투명 처리 + 중간 농도) — 아래 kids 블록.
  */
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 .content-section.travel-diary-widget {
@@ -486,6 +488,8 @@ button.travel-kids-add-trip-submit {
   backdrop-filter: none !important;
   background: linear-gradient(145deg, #d4c8fc 0%, #f3d0fe 48%, #fecdd3 100%) !important;
   box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+  padding: clamp(0.65rem, 4.5cqmin, 0.95rem) clamp(0.7rem, 5cqmin, 1.05rem) !important;
+  box-sizing: border-box;
 }
 
 .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget > .section-header,
@@ -493,7 +497,86 @@ button.travel-kids-add-trip-submit {
 .content-section.travel-diary-widget > .section-header,
 .content-section.travel-diary-widget > .section-body {
   position: relative;
+  z-index: 2;
+}
+
+/* kids only — scrapbook BG, 일정 가독성 우선 */
+:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget,
+html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
+html[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget {
+  /* shorthand로 핑크 gradient !important 잔상까지 제거 */
+  --travel-diary-kids-bg: url('/travel-diary/widget-bg.png?v=8');
+  background: #ffffff !important;
+}
+
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget::before,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget::before,
+html[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* 폴라로이드 사진(z-0) 위에 스크랩북 프레임이 올라오도록 */
   z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: var(--travel-diary-kids-bg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-polaroid-photo,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-polaroid-photo,
+html[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-polaroid-photo {
+  /* BG(::before z-1) 아래 — 투명 구멍으로만 보이고 흰 프레임이 가장자리 마스킹 */
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 1px;
+}
+
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-widget-gradient,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-widget-gradient,
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-widget-deco,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-widget-deco,
+html[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-widget-gradient,
+html[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-diary-widget-deco,
+:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .travel-diary-widget-gradient,
+:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .travel-diary-widget-deco,
+html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .travel-diary-widget-gradient,
+html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .travel-diary-widget-deco {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-kids-widget-trip-title,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-kids-widget-trip-title,
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-kids-widget-title,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-kids-widget-title {
+  text-shadow: 0 0 8px rgb(255 255 255 / 0.95), 0 1px 0 rgb(255 255 255 / 0.85);
+}
+
+:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-kids-widget-trip-dates,
+.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget .travel-kids-widget-trip-dates {
+  text-shadow: 0 0 6px rgb(255 255 255 / 0.9);
+}
+
+/* 가족 여행 플래너(.travel-kids-widget-title)와 동일 — 같은 클래스 재사용 */
+.content-section.travel-diary-widget .travel-kids-widget-title {
+  pointer-events: none;
+}
+
+.content-section.travel-diary-widget .travel-diary-widget-hint {
+  font-size: clamp(0.62rem, 0.54rem + 0.4vw, 0.82rem);
+  line-height: 1.35;
+  color: #4b5563;
+}
+
+.content-section.travel-diary-widget > .section-header {
+  margin-bottom: 0.4rem;
 }
 
 /* 공지 배너 마퀴 슬라이딩 (AnnouncementBanner에서 animation: marquee 참조) */
@@ -1394,17 +1477,13 @@ select:not(.chalkboard-form-input) {
   background-color: rgba(255, 255, 255, 0.14) !important;
 }
 
-/* Travel Diary — highend/kids glass shorthand 이후에도 바탕색 유지 */
+/* Travel Diary — highend/default: 그라데이션 유지 (kids는 상단 kids 블록) */
 :root[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 .dark[data-ui-theme='highend_glass'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
-:root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
-.dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 :root[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 .dark[data-ui-theme='default'] .widget-chrome[data-widget-key='travel_diary'] .content-section.travel-diary-widget,
 :root[data-ui-theme='highend_glass'] .content-section.travel-diary-widget,
 .dark[data-ui-theme='highend_glass'] .content-section.travel-diary-widget,
-:root[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget,
-.dark[data-ui-theme='kids_friendly'] .content-section.travel-diary-widget,
 :root[data-ui-theme='default'] .content-section.travel-diary-widget,
 .dark[data-ui-theme='default'] .content-section.travel-diary-widget {
   -webkit-backdrop-filter: none !important;
