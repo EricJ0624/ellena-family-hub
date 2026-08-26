@@ -50,6 +50,7 @@ import {
 import {
   fitFontSizeToWidth,
   fitAppTitleFontSizeToWidth,
+  fitKidsGlassTitleFontSize,
   shrinkFontSizeToElement,
   CUSTOM_TITLE_FONT_MIN_PX,
   DEFAULT_APP_TITLE_MAX_PX_PORTRAIT,
@@ -1764,8 +1765,8 @@ export default function FamilyHub() {
   );
 
   const getTitleFitMaxWidth = useCallback(() => {
-    /** kids: 패딩·하트 여유 (글자는 titleFitMaxPx로 키움) */
-    const kidsGlassInsetPx = isKidsTheme ? 60 : 0;
+    /** kids: 하트·패딩은 em이라 fitKidsGlassTitleFontSize가 글자 크기와 함께 계산. 관리자 버튼은 h1 폭에서 이미 제외 */
+    const kidsGlassInsetPx = 0;
     if (frameIsPortrait) {
       const h1 = titleH1Ref.current;
       // 레이아웃 확정 후 실측 폭이 최우선 (추정치/ellipsis 불일치 방지)
@@ -1818,7 +1819,7 @@ export default function FamilyHub() {
       ? portraitCustomTitleMaxPx
       : customTitleMaxPx;
     if (!isKidsTheme) return base;
-    /* kids 글래스 타이틀: 박스·하트와 함께 한 단계 더 크게 */
+    /* kids 글래스 타이틀: 박스·하트와 함께 한 단계 더 크게 (관리자 버튼 왼쪽 폭에 fit) */
     return Math.min(frameIsPortrait ? 44 : 48, base + 10);
   })();
 
@@ -1834,6 +1835,24 @@ export default function FamilyHub() {
     const letterSpacing = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
       : customTitleLetterSpacing;
+    if (isKidsTheme) {
+      return fitKidsGlassTitleFontSize(
+        dashboardTitleText,
+        maxWidth,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
+          : CUSTOM_TITLE_FONT_MIN_PX,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+            : Math.min(customFontSizeCap ?? 68, 68))
+          : titleFitMaxPx,
+        isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
+        isDefaultDashboardTitle ? titleFont.fontWeight : fontWeight,
+        letterSpacing,
+        isDefaultDashboardTitle,
+      );
+    }
     if (isDefaultDashboardTitle) {
       return fitAppTitleFontSizeToWidth(
         dashboardTitleText,
@@ -1869,6 +1888,7 @@ export default function FamilyHub() {
     titleFontMin,
     customFontSizeCap,
     getTitleFitMaxWidth,
+    isKidsTheme,
   ]);
 
   const measureCustomTitleFontSize = useCallback(() => {
@@ -1902,6 +1922,27 @@ export default function FamilyHub() {
     const letterSpacing = isDefaultDashboardTitle
       ? (effectiveTitleStyle?.letterSpacing ?? -0.5)
       : customTitleLetterSpacing;
+
+    if (isKidsTheme) {
+      const fitted = fitKidsGlassTitleFontSize(
+        dashboardTitleText,
+        maxWidth,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait ? DEFAULT_APP_TITLE_MIN_PX_PORTRAIT : titleFontMin)
+          : CUSTOM_TITLE_FONT_MIN_PX,
+        isDefaultDashboardTitle
+          ? (frameIsPortrait
+            ? Math.min(customFontSizeCap ?? DEFAULT_APP_TITLE_MAX_PX_PORTRAIT, DEFAULT_APP_TITLE_MAX_PX_PORTRAIT)
+            : Math.min(customFontSizeCap ?? 68, 68))
+          : titleFitMaxPx,
+        isDefaultDashboardTitle ? titleFont.fontFamily : fontFamily,
+        isDefaultDashboardTitle ? titleFont.fontWeight : fontWeight,
+        letterSpacing,
+        isDefaultDashboardTitle,
+      );
+      setCustomTitleFontSize((prev) => (prev === fitted ? prev : fitted));
+      return;
+    }
 
     if (frameIsPortrait && isDefaultDashboardTitle) {
       const fitted = fitAppTitleFontSizeToWidth(
@@ -1946,6 +1987,7 @@ export default function FamilyHub() {
     titleFontMin,
     customFontSizeCap,
     getTitleFitMaxWidth,
+    isKidsTheme,
   ]);
 
   useLayoutEffect(() => {

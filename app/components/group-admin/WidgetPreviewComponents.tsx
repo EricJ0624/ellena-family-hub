@@ -354,12 +354,9 @@ const PHOTO_COLORS = [
 function AlbumPreview() {
   const { dt } = useWidgetPreviewCopy();
   return (
-    <section className="content-section h-full">
+    <section className="content-section album-widget-section h-full">
       <div className="section-header">
-        <h3 className="section-title">{dt('section_title_memories')}</h3>
-        <div className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white">
-          📸 {dt('album_view_all')}
-        </div>
+        <h3 className="section-title album-widget-title">{dt('section_title_memories')}</h3>
       </div>
       <div className="section-body">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-1.5 p-0.5">
@@ -372,6 +369,9 @@ function AlbumPreview() {
             </div>
           ))}
         </div>
+      </div>
+      <div className="album-widget-view-all inline-flex items-center justify-center py-1.5 text-xs font-bold text-white">
+        📸 {dt('album_view_all')}
       </div>
     </section>
   );

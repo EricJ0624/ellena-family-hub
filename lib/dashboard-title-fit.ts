@@ -59,6 +59,37 @@ export function customTitleMaxFontSize(
   return baseCap;
 }
 
+/** Kids 글래스 타이틀 — padding/gap/하트가 em이라 글자와 박스가 같이 커지거나 줄어듦 */
+const KIDS_GLASS_PAD_X_EM = 0.72 * 2;
+const KIDS_GLASS_GAP_EM = 0.4 * 2;
+const KIDS_GLASS_HEART_EM = 0.72 * 2;
+const KIDS_GLASS_CHROME_EM = KIDS_GLASS_PAD_X_EM + KIDS_GLASS_GAP_EM + KIDS_GLASS_HEART_EM;
+
+/**
+ * h1 가용 폭(관리자 버튼 제외) 안에 글자+하트+글래스 패딩이 들어가게 font-size를 고른다.
+ */
+export function fitKidsGlassTitleFontSize(
+  text: string,
+  boxWidthPx: number,
+  minPx: number,
+  maxPx: number,
+  fontFamily: string,
+  fontWeight: string | number,
+  letterSpacingPx = 0,
+  useAppTitleMeasure = false,
+): number {
+  if (!text || boxWidthPx <= 0) return maxPx;
+  for (let size = maxPx; size >= minPx; size -= 1) {
+    const avail = boxWidthPx - KIDS_GLASS_CHROME_EM * size;
+    if (avail <= 8) continue;
+    const width = useAppTitleMeasure
+      ? measureAppTitleWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx)
+      : measureTextWidthPx(text, size, fontFamily, fontWeight, letterSpacingPx);
+    if (width <= avail) return size;
+  }
+  return minPx;
+}
+
 export function fitFontSizeToWidth(
   text: string,
   maxWidthPx: number,

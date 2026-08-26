@@ -2621,11 +2621,10 @@ select:not(.chalkboard-form-input) {
    - border-radius로 사진 모서리만 둥글게 (회색 여백 프레임 없음)
    ============================================ */
 .album-photo-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  align-items: flex-start;
-  justify-content: flex-start;
+  display: grid;
+  align-content: start;
+  justify-content: center;
+  justify-items: stretch;
   overflow: hidden; /* 스크롤 없음 */
   flex: 1;
   min-height: 0;
@@ -2666,6 +2665,82 @@ select:not(.chalkboard-form-input) {
   object-fit: cover; /* 여백 없이 칸을 사진으로 채움 */
   object-position: center;
   pointer-events: none;
+}
+
+/*
+ * 가족 앨범 위젯 — 장식 프레임 배경 + HTML 타이틀/전체보기.
+ * 사진 개수 그리드(열×행·썸네일 px)는 FamilyAlbumSection 로직 그대로.
+ * 배경 PNG 595×318 기준 여백: 타이틀 y≈15%, 슬롯 밴드 제거 후 본문, 보라 바 y≈87%.
+ */
+.content-section.album-widget-section {
+  --album-widget-bg: url('/family-album/widget-bg.png?v=2');
+  position: relative;
+  isolation: isolate;
+  padding: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: #e8e4f2;
+  background-image: var(--album-widget-bg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+}
+
+:root[data-ui-theme='highend_glass'] .content-section.album-widget-section,
+.dark[data-ui-theme='highend_glass'] .content-section.album-widget-section {
+  background-color: #e8e4f2;
+  background-image: var(--album-widget-bg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.album-widget-section > .section-header,
+.album-widget-section > .section-body,
+.album-widget-section > .album-widget-view-all {
+  position: relative;
+  z-index: 2;
+}
+
+.album-widget-section > .section-header {
+  justify-content: center;
+  margin: 0;
+  /* 달력 아래, 좌우 새/동물 아이콘 사이 */
+  padding: 5% 14% 0;
+  background: transparent;
+}
+
+.album-widget-section .album-widget-title {
+  flex: 0 1 auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.12rem, 7.6cqmin, 1.55rem);
+  letter-spacing: 0.1em;
+  color: #4b5563;
+}
+
+.album-widget-section > .section-body {
+  /* 장식과 겹치지 않는 최소 여백 — 사진을 칸에 채움 */
+  padding: 2% 8% 1%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.album-widget-section .album-widget-view-all {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-self: center;
+  width: calc(100% - 15.4%);
+  margin: 0 0 5.6%;
+  min-height: 7.2%;
+  border-radius: 0.55rem;
+  background-color: #56447a;
 }
 
 .message-item {
