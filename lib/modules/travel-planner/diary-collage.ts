@@ -3,6 +3,9 @@ export const COLLAGE_SLOT_COUNT = 6;
 export type DiaryCollageStyle = 'film' | 'postal';
 export type CollageSlotIds = (string | null)[];
 
+/** Vertical object-position % (0 = top, 100 = bottom) per attachment */
+export type PhotoFocusMap = Record<string, { y: number }>;
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -26,6 +29,40 @@ export function parseCollageAttachmentIds(raw: unknown): CollageSlotIds | null {
     }
   }
   return next;
+}
+
+export function parsePhotoFocus(raw: unknown): PhotoFocusMap {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: PhotoFocusMap = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!UUID_RE.test(key)) continue;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const yRaw = (value as { y?: unknown }).y;
+    if (typeof yRaw !== 'number' || !Number.isFinite(yRaw)) continue;
+    out[key] = { y: Math.min(100, Math.max(0, yRaw)) };
+  }
+  return out;
+}
+
+export function clampPhotoFocusY(y: number): number {
+  if (!Number.isFinite(y)) return 50;
+  return Math.min(100, Math.max(0, y));
+}
+
+export function mergePhotoFocus(
+  prev: PhotoFocusMap,
+  attachmentId: string,
+  y: number,
+): PhotoFocusMap {
+  return { ...prev, [attachmentId]: { y: clampPhotoFocusY(y) } };
+}
+
+export function isPortraitDimensions(width: number, height: number): boolean {
+  return height > width;
+}
+
+export function objectPositionCss(focus: { y: number } | undefined): string {
+  return `50% ${clampPhotoFocusY(focus?.y ?? 50)}%`;
 }
 
 function defaultCollageSlots(attachmentIds: string[]): CollageSlotIds {
@@ -65,4 +102,13 @@ export function clearCollageSlot(slots: CollageSlotIds, slotIndex: number): Coll
   const next = [...slots];
   next[slotIndex] = null;
   return next;
+}
+
+export function loadImageNaturalSize(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = src;
+  });
 }

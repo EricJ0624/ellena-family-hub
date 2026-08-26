@@ -1764,11 +1764,13 @@ export default function FamilyHub() {
   );
 
   const getTitleFitMaxWidth = useCallback(() => {
+    /** kids: 패딩·하트 여유 (글자는 titleFitMaxPx로 키움) */
+    const kidsGlassInsetPx = isKidsTheme ? 60 : 0;
     if (frameIsPortrait) {
       const h1 = titleH1Ref.current;
       // 레이아웃 확정 후 실측 폭이 최우선 (추정치/ellipsis 불일치 방지)
       if (h1 && h1.clientWidth > 0) {
-        return h1.clientWidth;
+        return Math.max(80, h1.clientWidth - kidsGlassInsetPx);
       }
       const row = titleRowRef.current;
       const rowWidth = row?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 430);
@@ -1780,16 +1782,20 @@ export default function FamilyHub() {
         : (hasAdminButton ? DASHBOARD_TITLE_ADMIN_RESERVE_PX : 0))
         + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 430;
-      return getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton || !!notifEl);
+      return Math.max(
+        80,
+        getDashboardPortraitTitleFitMaxWidth(rowWidth, adminWidth, viewportWidth, hasAdminButton || !!notifEl)
+          - kidsGlassInsetPx,
+      );
     }
     const row = titleRowRef.current;
-    if (!row) return DASHBOARD_TITLE_MAX_WIDTH[titleRole];
+    if (!row) return Math.max(80, DASHBOARD_TITLE_MAX_WIDTH[titleRole] - kidsGlassInsetPx);
     const adminBtn = row.querySelector('[data-dashboard-admin-btn]') as HTMLElement | null;
     const notifEl = row.querySelector('[data-notification-center]') as HTMLElement | null;
     const btnWidth = (adminBtn ? adminBtn.getBoundingClientRect().width + 12 : 0)
       + (notifEl ? notifEl.getBoundingClientRect().width + 8 : 0);
-    return Math.max(120, row.clientWidth - btnWidth - 16);
-  }, [frameIsPortrait, titleRole, isAdminTitleContext]);
+    return Math.max(120, row.clientWidth - btnWidth - 16 - kidsGlassInsetPx);
+  }, [frameIsPortrait, titleRole, isAdminTitleContext, isKidsTheme]);
 
   const customTitleFontFamily = isDefaultDashboardTitle
     ? (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily)
@@ -1807,9 +1813,14 @@ export default function FamilyHub() {
   );
   // 세로 커스텀 타이틀 — 좌측 정렬 가용 폭이 넓어져도 상한이 28이면 여전히 작아 보임
   const portraitCustomTitleMaxPx = Math.min(38, Math.max(customTitleMaxPx, 34));
-  const titleFitMaxPx = frameIsPortrait && !isDefaultDashboardTitle
-    ? portraitCustomTitleMaxPx
-    : customTitleMaxPx;
+  const titleFitMaxPx = (() => {
+    const base = frameIsPortrait && !isDefaultDashboardTitle
+      ? portraitCustomTitleMaxPx
+      : customTitleMaxPx;
+    if (!isKidsTheme) return base;
+    /* kids 글래스 타이틀: 박스·하트와 함께 한 단계 더 크게 */
+    return Math.min(frameIsPortrait ? 44 : 48, base + 10);
+  })();
 
   /** 첫 페인트용 — vw clamp 대신 DOM probe fit (letterSpacing 포함) */
   const estimatedCustomTitleFontSize = useMemo(() => {
@@ -6279,15 +6290,32 @@ export default function FamilyHub() {
         ? titleFont.fontFamily
         : (effectiveTitleStyle?.fontFamily ?? titleFont.fontFamily))
       : BAROQUE_MAT_DASHBOARD_TITLE.fontFamily,
-    ...(isDefaultDashboardTitle
+    ...(isKidsTheme
       ? {
-          backgroundImage: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
+          /* 어두운 셸 대비: 밝은 글자 + 약한 후광 (글래스 띠는 자식 span CSS) */
+          color: '#f8fafc',
+          backgroundImage: 'none',
           backgroundColor: 'transparent',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
+          WebkitBackgroundClip: 'unset',
+          WebkitTextFillColor: '#f8fafc',
+          backgroundClip: 'unset',
+          textShadow: '0 0 10px rgba(255, 255, 255, 0.28), 0 1px 2px rgba(15, 23, 42, 0.4)',
+          /* 관리자/알림 열과 겹치지 않도록 잔여 폭만 사용. 세로 잘림 방지 */
+          flex: '1 1 0%',
+          minWidth: 0,
+          overflowX: 'hidden',
+          overflowY: 'visible',
+          lineHeight: frameIsPortrait ? 1.2 : 1.25,
         }
-      : { color: effectiveTitleStyle?.color || '#1e293b' }),
+      : isDefaultDashboardTitle
+        ? {
+            backgroundImage: 'linear-gradient(135deg, rgb(var(--brand-primary)) 0%, rgb(var(--brand-secondary)) 100%)',
+            backgroundColor: 'transparent',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }
+        : { color: effectiveTitleStyle?.color || '#1e293b' }),
   };
 
   const orderedWidgets = useMemo(
@@ -6822,7 +6850,23 @@ export default function FamilyHub() {
               style={dashboardTitleStyle}
               className={frameIsPortrait ? 'leading-[1.15]' : undefined}
             >
-              {isDefaultDashboardTitle ? (
+              {isKidsTheme ? (
+                <span className="dashboard-family-title-glass">
+                  <span className="dashboard-family-title-deco" aria-hidden="true">
+                    ♥
+                  </span>
+                  <span className="dashboard-family-title-text">
+                    {isDefaultDashboardTitle ? (
+                      <AppTitleContent title={dashboardTitleText} />
+                    ) : (
+                      dashboardTitleText
+                    )}
+                  </span>
+                  <span className="dashboard-family-title-deco" aria-hidden="true">
+                    ♥
+                  </span>
+                </span>
+              ) : isDefaultDashboardTitle ? (
                 <AppTitleContent title={dashboardTitleText} />
               ) : (
                 dashboardTitleText

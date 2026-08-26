@@ -18,8 +18,10 @@ import type { UploadedAttachment } from '@/lib/feature-attachments-client';
 import {
   COLLAGE_SLOT_COUNT,
   clearCollageSlot,
+  objectPositionCss,
   placePhotoInSlot,
   type CollageSlotIds,
+  type PhotoFocusMap,
 } from '@/lib/modules/travel-planner/diary-collage';
 
 type GalleryLabels = {
@@ -39,6 +41,7 @@ function SlotDrop({
   photo,
   picked,
   removeLabel,
+  objectPosition,
   onTap,
   onClear,
 }: {
@@ -46,6 +49,7 @@ function SlotDrop({
   photo: UploadedAttachment | null;
   picked: boolean;
   removeLabel: string;
+  objectPosition: string;
   onTap: () => void;
   onClear: () => void;
 }) {
@@ -67,7 +71,12 @@ function SlotDrop({
         aria-label={`${index + 1}`}
       >
         {photo ? (
-          <img src={photoSrc(photo)} alt="" className="h-full w-full object-cover" />
+          <img
+            src={photoSrc(photo)}
+            alt=""
+            className="h-full w-full object-cover"
+            style={{ objectPosition }}
+          />
         ) : (
           <span className="flex h-full items-center justify-center text-lg font-semibold text-violet-400">
             {index + 1}
@@ -95,11 +104,13 @@ function GalleryPhoto({
   attachment,
   slotNumber,
   selected,
+  objectPosition,
   onTap,
 }: {
   attachment: UploadedAttachment;
   slotNumber: number | null;
   selected: boolean;
+  objectPosition: string;
   onTap: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -120,7 +131,12 @@ function GalleryPhoto({
         isDragging ? 'opacity-40' : '',
       ].join(' ')}
     >
-      <img src={photoSrc(attachment)} alt="" className="aspect-[4/3] h-auto w-full object-cover" />
+      <img
+        src={photoSrc(attachment)}
+        alt=""
+        className="aspect-[4/3] h-auto w-full object-cover"
+        style={{ objectPosition }}
+      />
       {slotNumber != null ? (
         <span className="absolute left-1 top-1 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
           {slotNumber}
@@ -136,6 +152,7 @@ export function DiaryPhotoGalleryModal({
   attachments,
   slotIds,
   labels,
+  photoFocus,
   onSlotIdsChange,
 }: {
   open: boolean;
@@ -143,6 +160,7 @@ export function DiaryPhotoGalleryModal({
   attachments: UploadedAttachment[];
   slotIds: CollageSlotIds;
   labels: GalleryLabels;
+  photoFocus?: PhotoFocusMap;
   onSlotIdsChange: (next: CollageSlotIds) => void;
 }) {
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -237,6 +255,7 @@ export function DiaryPhotoGalleryModal({
                   photo={photo}
                   picked={Boolean(pickedId && id === pickedId)}
                   removeLabel={labels.slotRemove}
+                  objectPosition={objectPositionCss(photo ? photoFocus?.[photo.id] : undefined)}
                   onTap={() => tapSlot(index)}
                   onClear={() => onSlotIdsChange(clearCollageSlot(slotIds, index))}
                 />
@@ -255,6 +274,7 @@ export function DiaryPhotoGalleryModal({
                   attachment={attachment}
                   slotNumber={slotIndex >= 0 ? slotIndex + 1 : null}
                   selected={pickedId === attachment.id}
+                  objectPosition={objectPositionCss(photoFocus?.[attachment.id])}
                   onTap={() =>
                     setPickedId((prev) => (prev === attachment.id ? null : attachment.id))
                   }

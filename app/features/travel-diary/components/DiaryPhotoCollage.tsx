@@ -1,8 +1,8 @@
 'use client';
 
 import type { UploadedAttachment } from '@/lib/feature-attachments-client';
-import type { DiaryCollageStyle } from '@/lib/modules/travel-planner/diary-collage';
-import { COLLAGE_SLOT_COUNT } from '@/lib/modules/travel-planner/diary-collage';
+import type { DiaryCollageStyle, PhotoFocusMap } from '@/lib/modules/travel-planner/diary-collage';
+import { COLLAGE_SLOT_COUNT, objectPositionCss } from '@/lib/modules/travel-planner/diary-collage';
 
 const FILM_SLOTS: Record<1 | 2 | 3 | 4 | 5 | 6, string[]> = {
   1: ['left-[6%] top-[7%] z-[1] h-[86%] w-[88%] rotate-[-1deg]'],
@@ -87,11 +87,13 @@ export function DiaryPhotoCollage({
   style,
   photosLabel,
   onOpen,
+  photoFocus,
 }: {
   photos: UploadedAttachment[];
   style: DiaryCollageStyle;
   photosLabel: string;
   onOpen: () => void;
+  photoFocus?: PhotoFocusMap;
 }) {
   const count = Math.min(Math.max(photos.length, 0), COLLAGE_SLOT_COUNT) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   if (count === 0) {
@@ -133,11 +135,21 @@ export function DiaryPhotoCollage({
         >
           {isPostal ? (
             <div className="h-full w-full bg-white p-[4px] pb-5 shadow-[0_8px_18px_rgba(120,53,15,0.18)]">
-              <img src={photoSrc(attachment)} alt="" className="h-full w-full object-cover" />
+              <img
+                src={photoSrc(attachment)}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
+              />
             </div>
           ) : (
             <div className="h-full w-full overflow-hidden rounded-[2px] bg-zinc-950 p-[3px] shadow-[0_10px_22px_rgba(15,23,42,0.28)]">
-              <img src={photoSrc(attachment)} alt="" className="h-full w-full object-cover" />
+              <img
+                src={photoSrc(attachment)}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ objectPosition: objectPositionCss(photoFocus?.[attachment.id]) }}
+              />
             </div>
           )}
         </div>

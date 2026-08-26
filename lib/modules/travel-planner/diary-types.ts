@@ -11,6 +11,7 @@ export interface TravelDiaryEntry {
   mood_tags: string[];
   collage_attachment_ids: (string | null)[] | null;
   collage_style: 'film' | 'postal';
+  photo_focus?: Record<string, { y: number }>;
   show_map: boolean;
   sort_order: number;
   created_by: string | null;

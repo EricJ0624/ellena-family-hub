@@ -6,6 +6,7 @@ import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import {
   parseCollageAttachmentIds,
   parseCollageStyle,
+  parsePhotoFocus,
 } from '@/lib/modules/travel-planner/diary-collage';
 
 function parseMoodTags(raw: unknown): string[] | undefined {
@@ -21,6 +22,7 @@ function normalizeEntryRow(row: Record<string, unknown>) {
     mood_tags: Array.isArray(moods) ? moods.map(String) : [],
     collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
     collage_style: parseCollageStyle(row.collage_style),
+    photo_focus: parsePhotoFocus(row.photo_focus),
     show_map: parseShowMap(row.show_map),
   };
 }
@@ -156,6 +158,9 @@ export async function PATCH(
     }
     if (body.show_map !== undefined) {
       updatePayload.show_map = parseShowMap(body.show_map);
+    }
+    if (body.photo_focus !== undefined) {
+      updatePayload.photo_focus = parsePhotoFocus(body.photo_focus);
     }
 
     const { data, error } = await supabase

@@ -13,15 +13,21 @@ import {
 } from '@/lib/feature-attachments-client';
 import {
   emptyCollageSlots,
+  isPortraitDimensions,
+  loadImageNaturalSize,
+  mergePhotoFocus,
   parseCollageStyle,
+  parsePhotoFocus,
   resolveCollageSlots,
   type CollageSlotIds,
   type DiaryCollageStyle,
+  type PhotoFocusMap,
 } from '@/lib/modules/travel-planner/diary-collage';
 import { supabase } from '@/lib/supabase';
 import { parseShowMap } from '@/lib/modules/travel-planner/diary-types';
 import { canShowDiaryPlaceMap } from '@/lib/modules/travel-planner/google-maps-embed';
 import { DiaryPhotoCollage } from './DiaryPhotoCollage';
+import { DiaryPhotoFocusModal } from './DiaryPhotoFocusModal';
 import { DiaryPhotoGalleryModal } from './DiaryPhotoGalleryModal';
 import { DiaryPlaceMapPreview } from './DiaryPlaceMapPreview';
 import { FamilyAlbumPickerModal } from './FamilyAlbumPickerModal';
@@ -51,6 +57,10 @@ type Labels = {
   photos_album: string;
   photos_album_empty: string;
   photos_album_add: string;
+  photo_focus_title: string;
+  photo_focus_hint: string;
+  photo_focus_confirm: string;
+  photo_focus_skip: string;
   map_label: string;
   map_add: string;
   map_remove: string;
@@ -80,6 +90,7 @@ type Props = {
     entryId: string;
     collage_attachment_ids?: CollageSlotIds;
     collage_style?: DiaryCollageStyle;
+    photo_focus?: PhotoFocusMap;
   }) => Promise<void>;
   onHide?: () => Promise<void>;
 };
@@ -122,10 +133,18 @@ export function DiaryEntryCard({
   const [slotIds, setSlotIds] = useState<CollageSlotIds>(() => emptyCollageSlots());
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [albumOpen, setAlbumOpen] = useState(false);
+  const [photoFocus, setPhotoFocus] = useState<PhotoFocusMap>(() =>
+    parsePhotoFocus(entry?.photo_focus),
+  );
+  const [focusQueue, setFocusQueue] = useState<UploadedAttachment[]>([]);
+  const [focusSaving, setFocusSaving] = useState(false);
   const slotsCustomized = useRef(entry?.collage_attachment_ids != null);
   const slotIdsRef = useRef<CollageSlotIds>(emptyCollageSlots());
+  const photoFocusRef = useRef<PhotoFocusMap>(parsePhotoFocus(entry?.photo_focus));
   const fileRef = useRef<HTMLInputElement>(null);
   const entryId = entry?.id ?? null;
+
+  const focusCurrent = focusQueue[0] ?? null;
 
   useEffect(() => {
     setNote(entry?.note ?? '');
@@ -148,8 +167,15 @@ export function DiaryEntryCard({
   useEffect(() => {
     setCollageStyle(parseCollageStyle(entry?.collage_style));
     setShowMapPref(parseShowMap(entry?.show_map));
+    const nextFocus = parsePhotoFocus(entry?.photo_focus);
+    setPhotoFocus(nextFocus);
+    photoFocusRef.current = nextFocus;
     slotsCustomized.current = entry?.collage_attachment_ids != null;
-  }, [entry?.id, entry?.collage_style, entry?.collage_attachment_ids, entry?.show_map]);
+  }, [entry?.id, entry?.collage_style, entry?.collage_attachment_ids, entry?.show_map, entry?.photo_focus]);
+
+  useEffect(() => {
+    photoFocusRef.current = photoFocus;
+  }, [photoFocus]);
 
   useEffect(() => {
     if (!entryId) {
@@ -274,13 +300,71 @@ export function DiaryEntryCard({
     }
   };
 
-  const refreshAttachments = async (targetId: string) => {
+  const enqueuePortraitFocus = async (
+    rows: UploadedAttachment[],
+    previousIds: Set<string>,
+  ) => {
+    const knownFocus = photoFocusRef.current;
+    const candidates = rows.filter((row) => !previousIds.has(row.id) && !knownFocus[row.id]);
+    if (candidates.length === 0) return;
+    const portraits: UploadedAttachment[] = [];
+    for (const row of candidates) {
+      const src = row.image_url || row.thumbnail_url;
+      if (!src) continue;
+      try {
+        const size = await loadImageNaturalSize(src);
+        if (isPortraitDimensions(size.width, size.height)) portraits.push(row);
+      } catch {
+        /* ignore load errors */
+      }
+    }
+    if (portraits.length === 0) return;
+    setFocusQueue((prev) => {
+      const seen = new Set(prev.map((item) => item.id));
+      const next = [...prev];
+      for (const item of portraits) {
+        if (!seen.has(item.id)) next.push(item);
+      }
+      return next;
+    });
+  };
+
+  const refreshAttachments = async (targetId: string, previousIds?: Set<string>) => {
+    const before = previousIds ?? new Set(attachments.map((item) => item.id));
     const rows = await getAttachmentsForEntity({
       groupId,
       entityType: 'travel_diary_entry',
       entityId: targetId,
     });
     setAttachments(rows);
+    void enqueuePortraitFocus(rows, before);
+  };
+
+  const persistPhotoFocus = async (nextFocus: PhotoFocusMap, targetId: string) => {
+    setPhotoFocus(nextFocus);
+    photoFocusRef.current = nextFocus;
+    setFocusSaving(true);
+    try {
+      await onCollageSave({ entryId: targetId, photo_focus: nextFocus });
+    } catch {
+      alert(labels.save_failed);
+    } finally {
+      setFocusSaving(false);
+    }
+  };
+
+  const finishFocusCurrent = () => {
+    setFocusQueue((prev) => prev.slice(1));
+  };
+
+  const onFocusConfirm = async (y: number) => {
+    if (!focusCurrent || !entryId) {
+      finishFocusCurrent();
+      return;
+    }
+    const nextFocus = mergePhotoFocus(photoFocusRef.current, focusCurrent.id, y);
+    await persistPhotoFocus(nextFocus, entryId);
+    finishFocusCurrent();
   };
 
   const ensureEntryId = async () => {
@@ -303,6 +387,7 @@ export function DiaryEntryCard({
         alert(labels.upload_failed);
         return;
       }
+      const before = new Set(attachments.map((item) => item.id));
       await uploadFeatureAttachments({
         groupId,
         featureType: 'travel',
@@ -310,7 +395,7 @@ export function DiaryEntryCard({
         entityId: targetId,
         files: toUpload,
       });
-      await refreshAttachments(targetId);
+      await refreshAttachments(targetId, before);
     } catch {
       alert(labels.upload_failed);
     } finally {
@@ -336,7 +421,8 @@ export function DiaryEntryCard({
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error);
-      await refreshAttachments(targetId);
+      const before = new Set(attachments.map((item) => item.id));
+      await refreshAttachments(targetId, before);
     } catch {
       alert(labels.upload_failed);
     } finally {
@@ -371,6 +457,7 @@ export function DiaryEntryCard({
           photos={visiblePhotos}
           style={collageStyle}
           photosLabel={labels.photos_label}
+          photoFocus={photoFocus}
           onOpen={() => setGalleryOpen(true)}
         />
       ) : null}
@@ -691,6 +778,7 @@ export function DiaryEntryCard({
         onClose={() => setGalleryOpen(false)}
         attachments={attachments}
         slotIds={slotIds}
+        photoFocus={photoFocus}
         labels={{
           photosLabel: labels.photos_label,
           closeLabel: labels.photos_close,
@@ -699,6 +787,18 @@ export function DiaryEntryCard({
           slotRemove: labels.photos_slot_remove,
         }}
         onSlotIdsChange={handleSlotIdsChange}
+      />
+
+      <DiaryPhotoFocusModal
+        open={Boolean(focusCurrent) && !focusSaving}
+        imageUrl={focusCurrent?.image_url || focusCurrent?.thumbnail_url || ''}
+        initialY={focusCurrent ? photoFocus[focusCurrent.id]?.y ?? 50 : 50}
+        title={labels.photo_focus_title}
+        hint={labels.photo_focus_hint}
+        confirmLabel={labels.photo_focus_confirm}
+        skipLabel={labels.photo_focus_skip}
+        onConfirm={(y) => void onFocusConfirm(y)}
+        onSkip={finishFocusCurrent}
       />
 
       <FamilyAlbumPickerModal

@@ -397,113 +397,111 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         {polaroidMatDisplayName ? (
           <PolaroidMatCaptionOverlay displayName={groupCaptionName ?? ''} />
         ) : null}
-
-        {/* 버튼 그룹 (우측 하단) - 클릭 시 액자 클릭(이동) 방지 */}
-        <div
-          className="absolute bottom-2.5 right-2.5 z-40 flex gap-2"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          {/* 프레임 선택 버튼 */}
-          <motion.button
-            ref={frameButtonRef}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowFrameSelector(!showFrameSelector)}
-            className={cn(
-              'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
-              showFrameSelector
-                ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)]'
-                : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]',
-            )}
-            aria-label={tp('frame_change')}
-            title={tp('frame_change')}
-          >
-            <FrameIcon 
-              className={cn('h-5 w-5', showFrameSelector ? 'text-white' : 'text-[#8B4513]')}
-              strokeWidth={2.5} 
-            />
-          </motion.button>
-
-          {/* 사진 새로고침 버튼 */}
-          {selectedPhoto && (
-            <motion.button
-              whileHover={{ scale: 1.15, rotate: 180 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleShuffle}
-              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[3px] border-[#8B4513] bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)] shadow-[0_6px_20px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
-              aria-label={tp('photo_refresh')}
-              title={tp('photo_refresh')}
-            >
-              <RefreshCw className="w-5 h-5 text-[#8B4513]" strokeWidth={2.5} />
-            </motion.button>
-          )}
-        </div>
-
-        {/* 프레임 선택 패널 — body 포탈 + 버튼 위 여유 공간 기준 maxHeight (.app-header overflow 클리핑 회피) */}
-        {typeof document !== 'undefined' &&
-          showFrameSelector &&
-          framePanelLayout &&
-          createPortal(
-            <AnimatePresence>
-              <motion.div
-                key="frame-selector-panel"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2 }}
-                style={{
-                  position: 'fixed',
-                  right: framePanelLayout.right,
-                  maxHeight: framePanelLayout.maxHeight,
-                  ...(framePanelLayout.bottom != null
-                    ? { bottom: framePanelLayout.bottom }
-                    : { top: framePanelLayout.top }),
-                }}
-                className="z-[120] min-w-[220px] max-w-[min(92vw,320px)] overflow-y-auto overscroll-contain rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px] [touch-action:pan-y]"
-              >
-                <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
-                  {tp('frame_style_select')}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {FRAME_CONFIGS.map((frame) => (
-                    <motion.button
-                      key={frame.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        if (onFrameChange) {
-                          onFrameChange(frame.id);
-                        }
-                        setShowFrameSelector(false);
-                      }}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
-                        frameStyle === frame.id
-                          ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
-                          : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
-                      )}
-                    >
-                      <div
-                        className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
-                        style={{ background: frame.color }}
-                      />
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold">{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
-                        <div className="mt-0.5 text-[10px] opacity-80">
-                          {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
-                        </div>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
-            </AnimatePresence>,
-            document.body,
-          )}
       </div>
+
+      {/* 버튼 그룹 — 액자 아래, 작게 */}
+      <div
+        className="relative z-40 mt-2 flex justify-end gap-1.5"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <motion.button
+          ref={frameButtonRef}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          onClick={() => setShowFrameSelector(!showFrameSelector)}
+          className={cn(
+            'flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-[#8B4513] shadow-[0_3px_10px_rgba(0,0,0,0.28),inset_0_1px_2px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
+            showFrameSelector
+              ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)]'
+              : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]',
+          )}
+          aria-label={tp('frame_change')}
+          title={tp('frame_change')}
+        >
+          <FrameIcon
+            className={cn('h-3.5 w-3.5', showFrameSelector ? 'text-white' : 'text-[#8B4513]')}
+            strokeWidth={2.5}
+          />
+        </motion.button>
+
+        {selectedPhoto && (
+          <motion.button
+            whileHover={{ scale: 1.08, rotate: 180 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={handleShuffle}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-[#8B4513] bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)] shadow-[0_3px_10px_rgba(0,0,0,0.28),inset_0_1px_2px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
+            aria-label={tp('photo_refresh')}
+            title={tp('photo_refresh')}
+          >
+            <RefreshCw className="h-3.5 w-3.5 text-[#8B4513]" strokeWidth={2.5} />
+          </motion.button>
+        )}
+      </div>
+
+      {/* 프레임 선택 패널 — body 포탈 + 버튼 위 여유 공간 기준 maxHeight (.app-header overflow 클리핑 회피) */}
+      {typeof document !== 'undefined' &&
+        showFrameSelector &&
+        framePanelLayout &&
+        createPortal(
+          <AnimatePresence>
+            <motion.div
+              key="frame-selector-panel"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                position: 'fixed',
+                right: framePanelLayout.right,
+                maxHeight: framePanelLayout.maxHeight,
+                ...(framePanelLayout.bottom != null
+                  ? { bottom: framePanelLayout.bottom }
+                  : { top: framePanelLayout.top }),
+              }}
+              className="z-[120] min-w-[220px] max-w-[min(92vw,320px)] overflow-y-auto overscroll-contain rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px] [touch-action:pan-y]"
+            >
+              <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
+                {tp('frame_style_select')}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {FRAME_CONFIGS.map((frame) => (
+                  <motion.button
+                    key={frame.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      if (onFrameChange) {
+                        onFrameChange(frame.id);
+                      }
+                      setShowFrameSelector(false);
+                    }}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
+                      frameStyle === frame.id
+                        ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
+                        : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
+                    )}
+                  >
+                    <div
+                      className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
+                      style={{ background: frame.color }}
+                    />
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold">{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
+                      <div className="mt-0.5 text-[10px] opacity-80">
+                        {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body,
+        )}
     </motion.div>
   );
 };

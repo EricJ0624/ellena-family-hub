@@ -233,6 +233,7 @@ export function TravelDiaryPageContent() {
     entryId: string;
     collage_attachment_ids?: (string | null)[];
     collage_style?: 'film' | 'postal';
+    photo_focus?: Record<string, { y: number }>;
   }) => {
     if (!currentGroupId) return;
     const { data: session } = await supabase.auth.getSession();
@@ -244,6 +245,9 @@ export function TravelDiaryPageContent() {
     }
     if (payload.collage_style !== undefined) {
       body.collage_style = payload.collage_style;
+    }
+    if (payload.photo_focus !== undefined) {
+      body.photo_focus = payload.photo_focus;
     }
     const res = await fetch(`${API}/diary-entries/${payload.entryId}`, {
       method: 'PATCH',
@@ -435,6 +439,10 @@ export function TravelDiaryPageContent() {
                     photos_album: t('photos_album'),
                     photos_album_empty: t('photos_album_empty'),
                     photos_album_add: t('photos_album_add'),
+                    photo_focus_title: t('photo_focus_title'),
+                    photo_focus_hint: t('photo_focus_hint'),
+                    photo_focus_confirm: t('photo_focus_confirm'),
+                    photo_focus_skip: t('photo_focus_skip'),
                     map_label: t('map_label'),
                     map_add: t('map_add'),
                     map_remove: t('map_remove'),

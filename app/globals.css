@@ -774,10 +774,74 @@ html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='travel_diary
   --glass-strong-shadow: 0 34px 80px rgba(2, 6, 23, 0.65);
 }
 
+/*
+ * Kids 대시보드 패밀리 타이틀: 글래스 띠 + 양옆 하트 (한 단계 크게).
+ * 폭은 h1 잔여 영역, 글자 크기는 kidsGlassInsetPx + titleFitMaxPx 로 fit.
+ */
+:root[data-ui-theme='kids_friendly'] .dashboard-family-title-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4em;
+  max-width: 100%;
+  width: max-content;
+  box-sizing: border-box;
+  padding: 0.4em 0.72em;
+  border-radius: 0.65rem;
+  line-height: 1.3;
+  vertical-align: middle;
+  overflow: visible;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 22px rgba(2, 6, 23, 0.18);
+}
+
+:root[data-ui-theme='kids_friendly'] .dashboard-family-title-text {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: visible;
+}
+
+:root[data-ui-theme='kids_friendly'] .dashboard-family-title-deco {
+  flex: 0 0 auto;
+  font-size: 0.72em;
+  line-height: 1;
+  opacity: 0.95;
+  transform: translateY(0.02em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* 왼쪽: 코랄 → 핑크 → 노랑 */
+:root[data-ui-theme='kids_friendly'] .dashboard-family-title-deco:first-child {
+  background-image: linear-gradient(135deg, #fb7185 0%, #f472b6 40%, #fbbf24 100%);
+  filter: drop-shadow(0 0 6px rgba(251, 113, 133, 0.55));
+}
+
+/* 오른쪽: 핑크 → 보라 → 하늘 */
+:root[data-ui-theme='kids_friendly'] .dashboard-family-title-deco:last-child {
+  background-image: linear-gradient(135deg, #f472b6 0%, #a78bfa 45%, #38bdf8 100%);
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.55));
+}
+
 :root[data-ui-theme='kids_friendly'] {
-  /* 키즈/일러스트 셸 — 글래스 아님. 모서리는 옅은 보더+그림자로 부드럽게 */
-  --app-shell-inner-bg: linear-gradient(135deg, #fff7ed 0%, #fef9c3 30%, #e0f2fe 68%, #fce7f3 100%);
-  --app-shell-outer-bg: radial-gradient(circle at 16% 10%, #fdba74 0%, #7dd3fc 38%, #f9a8d4 72%, #94a3b8 100%);
+  /* 셸 바탕만 highend_glass와 동일. 위젯 패널은 키즈용 불투명 카드 유지 */
+  --app-shell-inner-bg:
+    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(34, 211, 238, 0.55) 0%, transparent 58%),
+    radial-gradient(ellipse 80% 60% at 92% 8%, rgba(244, 114, 182, 0.5) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(251, 146, 60, 0.42) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 45% at 30% 75%, rgba(167, 139, 250, 0.45) 0%, transparent 50%),
+    linear-gradient(160deg, #312e81 0%, #1e1b4b 38%, #0f172a 72%, #164e63 100%);
+  --app-shell-outer-bg:
+    radial-gradient(circle at 12% 10%, #22d3ee 0%, transparent 40%),
+    radial-gradient(circle at 88% 16%, #f472b6 0%, transparent 38%),
+    radial-gradient(circle at 70% 90%, #fb923c 0%, transparent 42%),
+    linear-gradient(165deg, #1e1b4b 0%, #0f172a 50%, #083344 100%);
   --glass-bg: rgba(255, 255, 255, 0.96);
   --glass-soft-bg: rgba(255, 251, 235, 0.97);
   --glass-medium-bg: rgba(255, 255, 255, 0.98);
@@ -961,11 +1025,12 @@ select:not(.chalkboard-form-input) {
   }
 
   /*
-   * High-end only: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ambient 레이어.
-   * Kids/Original 은 기존 bg-app-shell-inner 만 사용.
+   * High-end + Kids: orb 배경이 스크롤해도 위젯 뒤로 남도록 고정 + ambient 레이어.
+   * Original 은 기존 bg-app-shell-inner 만 사용.
    */
   :root[data-ui-theme='highend_glass'] .app-container,
-  .dark[data-ui-theme='highend_glass'] .app-container {
+  .dark[data-ui-theme='highend_glass'] .app-container,
+  :root[data-ui-theme='kids_friendly'] .app-container {
     position: relative;
     isolation: isolate;
     background-image: var(--app-shell-inner-bg);
@@ -975,7 +1040,8 @@ select:not(.chalkboard-form-input) {
   }
 
   :root[data-ui-theme='highend_glass'] .app-container::before,
-  .dark[data-ui-theme='highend_glass'] .app-container::before {
+  .dark[data-ui-theme='highend_glass'] .app-container::before,
+  :root[data-ui-theme='kids_friendly'] .app-container::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -989,7 +1055,8 @@ select:not(.chalkboard-form-input) {
   }
 
   :root[data-ui-theme='highend_glass'] .app-container > *,
-  .dark[data-ui-theme='highend_glass'] .app-container > * {
+  .dark[data-ui-theme='highend_glass'] .app-container > *,
+  :root[data-ui-theme='kids_friendly'] .app-container > * {
     position: relative;
     z-index: 1;
   }

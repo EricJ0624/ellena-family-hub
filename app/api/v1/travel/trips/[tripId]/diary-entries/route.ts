@@ -8,6 +8,7 @@ import type { TravelPlaceSourceKind } from '@/lib/modules/travel-planner/unified
 import {
   parseCollageAttachmentIds,
   parseCollageStyle,
+  parsePhotoFocus,
 } from '@/lib/modules/travel-planner/diary-collage';
 import { DIARY_PURGE_TAG } from '@/lib/modules/travel-planner/diary-purge';
 
@@ -31,6 +32,7 @@ function normalizeEntryRow(row: Record<string, unknown>) {
     mood_tags: Array.isArray(moods) ? moods.map(String) : [],
     collage_attachment_ids: parseCollageAttachmentIds(row.collage_attachment_ids),
     collage_style: parseCollageStyle(row.collage_style),
+    photo_focus: parsePhotoFocus(row.photo_focus),
     show_map: parseShowMap(row.show_map),
     deleted_at: (row.deleted_at as string | null | undefined) ?? null,
   };
