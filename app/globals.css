@@ -3466,6 +3466,197 @@ select:not(.chalkboard-form-input) {
   }
 
   /*
+   * Family Location (kids): 세로 나무 프레임 배경.
+   * 992×1070 widget-bg 기준 — 제목 패널 y≈13% x≈10–50%, 지도 창 y≈30–83% x≈10–90%,
+   * 버튼·공유 띠는 지도 창 하단. 타원 사진·하단 선반은 장식만.
+   * 지도·요청·모달 로직은 그대로.
+   */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section {
+    --location-kids-bg: url('/family-location/widget-bg.webp?v=9');
+    position: relative;
+    isolation: isolate;
+    padding: 0 !important;
+    overflow: hidden;
+    /* 유리 카드 필이 투명 모서리 뒤로 비치지 않게 배경을 이미지로만 */
+    background: none !important;
+    background-image: var(--location-kids-bg) !important;
+    background-repeat: no-repeat !important;
+    background-position: top left !important;
+    background-size: 100% 100% !important;
+    background-color: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Baked table shadow was messy — one even drop-shadow on the gadget silhouette. */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'],
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'],
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] {
+    filter: drop-shadow(0 10px 16px rgb(28 18 10 / 0.38));
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-header,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .section-header,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--compact .section-header {
+    display: contents;
+    margin: 0;
+    gap: 0;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title {
+    position: absolute;
+    z-index: 3;
+    top: 13%;
+    left: 10%;
+    width: 40%;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: none;
+    font-size: 5.6cqmin;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1.15;
+    color: #1e3a5f;
+    text-shadow: 0 1px 0 rgba(255, 248, 235, 0.4);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions {
+    position: absolute;
+    z-index: 4;
+    right: 11%;
+    bottom: 19%;
+    left: 11%;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 2cqmin;
+    width: auto;
+    pointer-events: auto;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn {
+    box-shadow: 0 2px 8px rgb(15 23 42 / 0.28);
+    font-weight: 800;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body {
+    /* widget-bg.webp 투명 구멍(992×1070: 91–909 × 315–881). width:100%면 left+right가 무시됨 */
+    position: absolute;
+    z-index: 2;
+    top: 29.5%;
+    right: 8.3%;
+    bottom: 17.6%;
+    left: 9.2%;
+    display: flex;
+    width: auto;
+    max-width: none;
+    min-height: 0;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row .location-text,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row .location-text,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row .location-text {
+    margin-bottom: 1cqmin;
+    padding: 0.6cqmin 2.2cqmin;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgb(255 248 235 / 0.9);
+    color: #3b2414;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 3.3cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-canvas,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-surface,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-canvas,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-surface,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-canvas,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-surface {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    border-width: 0;
+    border-radius: 4cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-map-slot {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: auto;
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 4cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-requests-panel,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-requests-panel,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-requests-panel {
+    position: absolute;
+    z-index: 3;
+    right: 2%;
+    bottom: 16%;
+    left: 2%;
+    width: auto;
+    max-height: 36%;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-radius: 3cqmin;
+    background: rgb(59 36 20 / 0.42);
+    padding: 1cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-requests-heading,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-requests-heading,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-requests-heading {
+    margin-bottom: 0.8cqmin;
+    color: #fff8eb;
+    text-shadow: 0 1px 2px rgb(15 23 42 / 0.45);
+    font-size: 3.4cqmin;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-request-card,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-request-card,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-request-card {
+    border-color: rgb(255 248 235 / 0.55);
+    background-color: rgb(255 248 235 / 0.92);
+  }
+
+  /*
    * Piggy Bank (kids):
    *  - 빈 상태: 일러스트 원색 (::after)
    *  - 저금통 있음: 뒤(::before)는 원색, 앞(::after)은 반투명 → 카드와 겹치는 부분이 보임

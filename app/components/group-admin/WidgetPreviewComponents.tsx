@@ -311,12 +311,16 @@ function LocationPreview() {
   return (
     <section className="content-section location-widget-section h-full min-h-0">
       <div className="section-header shrink-0">
-        <h3 className="section-title flex items-center gap-2">
-          <span>📍</span>
-          {dt('section_title_location')}
-        </h3>
-        <div className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white">
-          📍 {dt('location_where_btn')}
+        <h3 className="section-title">{dt('section_title_location')}</h3>
+        <div className="location-header-actions">
+          <button type="button" tabIndex={-1} className="location-action-btn bg-emerald-500 text-white">
+            <span>📍</span>
+            <span>{dt('location_where_btn')}</span>
+          </button>
+          <button type="button" tabIndex={-1} className="location-action-btn bg-blue-500 text-white">
+            <span>🚶</span>
+            <span>{dt('location_come_btn')}</span>
+          </button>
         </div>
       </div>
       <div className="section-body location-section-body min-h-0">
