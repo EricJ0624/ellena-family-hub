@@ -10,6 +10,7 @@ import type { FamilyEvent } from '../types';
 import { useFamilyCalendar } from '../hooks/useFamilyCalendar';
 import { openCalendarEventModal } from '../calendar-event-modal-store';
 import type { CalendarEventSubmitPayload } from './CalendarEventModal';
+import { getCommonTranslation } from '@/lib/translations/common';
 import type { LangCode } from '@/lib/language-fonts';
 import { intlLocaleForLang } from '@/lib/language-fonts';
 import type { UiTheme } from '@/lib/ui-theme';
@@ -818,7 +819,11 @@ export const FamilyCalendarSection = memo(function FamilyCalendarSection({
                                 {e.repeat_type === 'monthly' ? t.event_repeat_monthly : t.event_repeat_yearly}
                               </p>
                             )}
-                            {e.created_by != null && (
+                            {e.created_by == null ? (
+                              <p className="calendar-event-card-meta text-slate-500">
+                                {t.event_author}: {getCommonTranslation(lang, 'former_member')}
+                              </p>
+                            ) : (
                               <p className="calendar-event-card-meta text-slate-500">
                                 {t.event_author}:{' '}
                                 {e.created_by === userId ? t.me : eventAuthorNames[e.created_by] ?? t.unknown}

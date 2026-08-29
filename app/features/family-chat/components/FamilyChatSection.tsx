@@ -11,6 +11,8 @@ import { familyChatDebug } from '@/lib/family-chat-debug';
 import type { UiTheme } from '@/lib/ui-theme';
 import type { ChatUiMessage } from '../types';
 import { getChatMessageDisplayText } from '@/lib/chat-messages';
+import { getCommonTranslation } from '@/lib/translations/common';
+import { isValidLang } from '@/lib/language-fonts';
 
 interface FamilyChatSectionProps {
   messages: ChatUiMessage[];
@@ -264,11 +266,13 @@ export function FamilyChatSection({
                     </>
                   )}
                   <span className={isKidsTheme && m.sender_id === userId ? 'chat-kids-me' : undefined}>
-                    {m.sender_id === userId
+                    {!m.sender_id
+                      ? getCommonTranslation(isValidLang(lang) ? lang : 'en', 'former_member')
+                      : m.sender_id === userId
                       ? m.user === '나'
                         ? m.user
                         : t.me
-                      : eventAuthorNames[m.sender_id!] ?? (m.user === '사용자' ? t.user : m.user)}
+                      : eventAuthorNames[m.sender_id] ?? (m.user === '사용자' ? t.user : m.user)}
                   </span>
                 </span>
                 <span className="message-time">{m.time}</span>

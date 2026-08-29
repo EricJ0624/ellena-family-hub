@@ -9,6 +9,7 @@ export type CommonTranslations = {
   anyone: string;
   unknown: string;
   member: string;
+  former_member: string; // 탈퇴한 작성자 표시
   delete: string;
   cancel: string;
   confirm: string;
@@ -32,6 +33,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: '누구나',
     unknown: '알 수 없음',
     member: '멤버',
+    former_member: '탈퇴한 멤버',
     delete: '삭제',
     cancel: '취소',
     confirm: '확인',
@@ -53,6 +55,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: 'Anyone',
     unknown: 'Unknown',
     member: 'Member',
+    former_member: 'Former member',
     delete: 'Delete',
     cancel: 'Cancel',
     confirm: 'Confirm',
@@ -74,6 +77,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: '誰でも',
     unknown: '不明',
     member: 'メンバー',
+    former_member: '退会したメンバー',
     delete: '削除',
     cancel: 'キャンセル',
     confirm: '確認',
@@ -95,6 +99,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: '任何人',
     unknown: '未知',
     member: '成员',
+    former_member: '已退出的成员',
     delete: '删除',
     cancel: '取消',
     confirm: '确认',
@@ -116,6 +121,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: '任何人',
     unknown: '未知',
     member: '成員',
+    former_member: '已退出的成員',
     delete: '刪除',
     cancel: '取消',
     confirm: '確認',
@@ -137,6 +143,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: 'Cualquiera',
     unknown: 'Desconocido',
     member: 'Miembro',
+    former_member: 'Miembro que se fue',
     delete: 'Eliminar',
     cancel: 'Cancelar',
     confirm: 'Confirmar',
@@ -158,6 +165,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: 'N\'importe qui',
     unknown: 'Inconnu',
     member: 'Membre',
+    former_member: 'Ancien membre',
     delete: 'Supprimer',
     cancel: 'Annuler',
     confirm: 'Confirmer',
@@ -179,6 +187,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: 'Jeder',
     unknown: 'Unbekannt',
     member: 'Mitglied',
+    former_member: 'Ehemaliges Mitglied',
     delete: 'Löschen',
     cancel: 'Abbrechen',
     confirm: 'Bestätigen',
@@ -200,6 +209,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: 'Chiunque',
     unknown: 'Sconosciuto',
     member: 'Membro',
+    former_member: 'Ex membro',
     delete: 'Elimina',
     cancel: 'Annulla',
     confirm: 'Conferma',
@@ -221,6 +231,7 @@ const common: Record<LangCode, CommonTranslations> = {
     anyone: 'Qualquer pessoa',
     unknown: 'Desconhecido',
     member: 'Membro',
+    former_member: 'Ex-membro',
     delete: 'Excluir',
     cancel: 'Cancelar',
     confirm: 'Confirmar',

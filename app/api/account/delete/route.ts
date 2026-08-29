@@ -9,10 +9,10 @@ import { DB_TABLES } from '@/lib/db-table-names';
 /**
  * 회원탈퇴 API
  * 
- * 사용자 계정 및 관련 데이터를 완전히 삭제합니다.
- * - auth.users 삭제 (CASCADE로 관련 데이터 자동 삭제)
- * - Push 토큰 삭제
- * - 그룹 소유자인 경우 그룹 삭제 또는 경고
+ * 사용자 계정 및 개인 데이터를 삭제합니다.
+ * - 가족 채팅·일정·할 일·앨범·여행은 남기고 작성자만 비움 (FK SET NULL)
+ * - 프로필·위치·푸시 등 개인 데이터는 CASCADE 삭제
+ * - 그룹 소유자인 경우 그룹 삭제 확인 후 그룹 삭제
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -154,34 +154,7 @@ export async function DELETE(request: NextRequest) {
       console.warn('위치 요청 데이터 삭제 실패 (무시):', requestError);
     }
 
-    // 6. 메모리 볼트 데이터 삭제 (S3 파일 삭제 후 DB 삭제, Cloudinary 제거)
-    try {
-      const { data: photos } = await supabaseServer
-        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
-        .select('id, s3_key')
-        .eq('uploader_id', user.id);
-
-      if (photos && photos.length > 0) {
-        const deletePromises: Promise<boolean>[] = [];
-        for (const photo of photos) {
-          if (photo.s3_key) {
-            deletePromises.push(deleteFromS3(photo.s3_key));
-          }
-        }
-        await Promise.all(deletePromises);
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`사용자 파일 삭제 완료: ${photos.length}개 파일 (S3)`);
-        }
-      }
-
-      // Supabase에서 레코드 삭제
-      await supabaseServer
-        .from(DB_TABLES.FAMILY_ALBUM_ITEMS)
-        .delete()
-        .eq('uploader_id', user.id);
-    } catch (memoryError) {
-      console.warn('메모리 볼트 데이터 삭제 실패 (무시):', memoryError);
-    }
+    // 6. 가족 앨범·채팅 첨부·일정 등은 남김 (작성자 FK SET NULL). 그룹 소유 확인 삭제 시에만 위에서 그룹 파일을 지움.
 
     // 7. 공지 읽음 기록 명시 삭제 (FK CASCADE가 있어도 이중 안전, 누락된 FK 환경 대비)
     try {

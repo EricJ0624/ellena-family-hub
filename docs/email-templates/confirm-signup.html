@@ -1,0 +1,157 @@
+<!--
+  붙여넣기: Supabase Dashboard → Authentication → Email Templates → Confirm signup
+  Subject: Hearth: Family Haven — Confirm your email / 이메일 인증
+  인증 링크는 {{ .ConfirmationURL }} 그대로 유지. 앱 signUp /auth/callback 변경 없음.
+  로고: 로그인 페이지와 동일하게 🏠. 이미지 URL로 바꾸려면 아래 이모지 셀만 교체.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Hearth: Family Haven</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#e8eef5;background-image:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#e8eef5;background-image:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+            <tr>
+              <td style="background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 8px 32px rgba(102,126,234,0.18);">
+                <!-- Header -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="padding:36px 28px 28px;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
+                      <div style="font-size:56px;line-height:1;margin:0 0 12px;">🏠</div>
+                      <h1 style="margin:0;font-size:24px;line-height:1.3;font-weight:700;color:#ffffff;">
+                        Hearth: Family Haven
+                      </h1>
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">
+                        우리가족 추억의 공간
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Intro -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:28px 28px 8px;color:#334155;font-size:14px;line-height:1.65;">
+                      <p style="margin:0 0 10px;">가입을 완료하려면 아래 버튼을 눌러 이메일을 인증해 주세요.</p>
+                      <p style="margin:0 0 10px;">To finish signing up, tap a button below to confirm your email.</p>
+                      <p style="margin:0 0 10px;">登録を完了するには、下のボタンを押してメールを認証してください。</p>
+                      <p style="margin:0 0 10px;">请点击下方按钮验证邮箱以完成注册。</p>
+                      <p style="margin:0 0 10px;">請點下方按鈕驗證電子郵件以完成註冊。</p>
+                      <p style="margin:0 0 10px;">Pulsa un botón para confirmar tu correo y completar el registro.</p>
+                      <p style="margin:0 0 10px;">Appuyez sur un bouton pour confirmer votre e-mail et terminer l’inscription.</p>
+                      <p style="margin:0 0 10px;">Tippen Sie auf eine Schaltfläche, um Ihre E-Mail zu bestätigen.</p>
+                      <p style="margin:0 0 10px;">Tocca un pulsante per confermare l’e-mail e completare la registrazione.</p>
+                      <p style="margin:0;">Toque um botão para confirmar seu e-mail e concluir o cadastro.</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Language buttons (all use the same ConfirmationURL) -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:16px 28px 8px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="8" border="0">
+                        <tr>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              한국어<br /><span style="font-weight:600;font-size:13px;">이메일 인증하기</span>
+                            </a>
+                          </td>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              English<br /><span style="font-weight:600;font-size:13px;">Confirm email</span>
+                            </a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              日本語<br /><span style="font-weight:600;font-size:13px;">メールを認証する</span>
+                            </a>
+                          </td>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              简体中文<br /><span style="font-weight:600;font-size:13px;">验证邮箱</span>
+                            </a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              繁體中文<br /><span style="font-weight:600;font-size:13px;">驗證電子郵件</span>
+                            </a>
+                          </td>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              Español<br /><span style="font-weight:600;font-size:13px;">Confirmar correo</span>
+                            </a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              Français<br /><span style="font-weight:600;font-size:13px;">Confirmer l’e-mail</span>
+                            </a>
+                          </td>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              Deutsch<br /><span style="font-weight:600;font-size:13px;">E-Mail bestätigen</span>
+                            </a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              Italiano<br /><span style="font-weight:600;font-size:13px;">Conferma e-mail</span>
+                            </a>
+                          </td>
+                          <td width="50%" valign="top" style="padding:4px;">
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
+                              Português<br /><span style="font-weight:600;font-size:13px;">Confirmar e-mail</span>
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Fallback URL -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:12px 28px 8px;color:#64748b;font-size:12px;line-height:1.6;">
+                      <p style="margin:0 0 8px;">버튼이 보이지 않으면 이 링크를 브라우저에 붙여넣으세요 / If the buttons do not work, paste this link into your browser:</p>
+                      <p style="margin:0;word-break:break-all;">
+                        <a href="{{ .ConfirmationURL }}" style="color:#667eea;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Footer -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:20px 28px 28px;color:#94a3b8;font-size:12px;line-height:1.6;border-top:1px solid #e2e8f0;">
+                      <p style="margin:0 0 8px;">가입하지 않으셨다면 이 메일은 무시하셔도 됩니다.</p>
+                      <p style="margin:0 0 8px;">If you did not create an account, you can ignore this email.</p>
+                      <p style="margin:0;">
+                        <a href="{{ .SiteURL }}" style="color:#667eea;text-decoration:none;font-weight:600;">Hearth: Family Haven</a>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
