@@ -1263,7 +1263,7 @@ export default function FamilyHub() {
               supabase,
               currentUserId,
               hasGroups,
-              setCurrentGroupId,
+              setCurrentGroupId ? (groupId) => setCurrentGroupId(groupId) : undefined,
             );
           }
         } else {
