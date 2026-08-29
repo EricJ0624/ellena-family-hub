@@ -3705,7 +3705,7 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section {
-    --location-kids-bg: url('/family-location/widget-bg.webp?v=9');
+    --location-kids-bg: url('/family-location/widget-bg.webp?v=19');
     position: relative;
     isolation: isolate;
     padding: 0 !important;
@@ -3744,20 +3744,33 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .section-title {
     position: absolute;
     z-index: 3;
-    top: 13%;
-    left: 10%;
-    width: 40%;
+    top: 11.4%;
+    left: 9.2%;
+    display: flex;
+    width: 42%;
+    height: 16.2%;
+    max-height: none;
     margin: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     flex: none;
-    font-size: 5.6cqmin;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    line-height: 1.15;
-    color: #1e3a5f;
-    text-shadow: 0 1px 0 rgba(255, 248, 235, 0.4);
+    align-items: center;
+    justify-content: center;
+    font-family: 'Black Ops One', Montserrat, Pretendard, 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', sans-serif;
+    font-size: 6.8cqmin;
+    font-weight: 900;
+    font-style: normal;
+    letter-spacing: -0.02em;
+    line-height: 0.92;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: none;
+    color: #c4a05c;
+    text-shadow:
+      0 1px 0 rgb(42 22 10 / 0.45),
+      0 0 2px rgb(42 22 10 / 0.28);
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions,
@@ -3765,12 +3778,13 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-header-actions {
     position: absolute;
     z-index: 4;
-    right: 11%;
-    bottom: 19%;
-    left: 11%;
+    right: 12%;
+    bottom: 21.2%;
+    left: 12%;
     justify-content: center;
+    align-items: center;
     flex-wrap: nowrap;
-    gap: 2cqmin;
+    gap: 1.4cqmin;
     width: auto;
     pointer-events: auto;
   }
@@ -3778,8 +3792,24 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn {
-    box-shadow: 0 2px 8px rgb(15 23 42 / 0.28);
-    font-weight: 800;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: calc(50% - 0.7cqmin);
+    box-shadow: 0 2px 6px rgb(15 23 42 / 0.24);
+    gap: 0.6cqmin;
+    padding: 0.85cqmin 1.7cqmin;
+    font-size: 2.7cqmin;
+    font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn > span:last-child,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn > span:last-child,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-action-btn > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-section-body,
@@ -3788,9 +3818,9 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
     /* widget-bg.webp 투명 구멍(992×1070: 91–909 × 315–881). width:100%면 left+right가 무시됨 */
     position: absolute;
     z-index: 2;
-    top: 29.5%;
+    top: 31.2%;
     right: 8.3%;
-    bottom: 17.6%;
+    bottom: 20.2%;
     left: 9.2%;
     display: flex;
     width: auto;
