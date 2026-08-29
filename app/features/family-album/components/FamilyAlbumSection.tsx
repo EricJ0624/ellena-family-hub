@@ -1,19 +1,21 @@
 /**
- * 가족 앨범 위젯 — 펼친 스크랩북 + 쪽 넘김
- * 사진은 프레임리스 라운드 그리드. 한 쪽 9장(3×3), 한 펼침 18장.
- * 표지는 빈 스크랩북 PNG, 사진은 속지 칸 위에 올린다.
+ * 가족 앨범 위젯
+ * - kids_friendly: 펼친 스크랩북 + 쪽 넘김
+ * - default / highend_glass: 썸네일 그리드(기본 위젯 UI)
  */
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { markAlbumPhotoUrlViewed } from '@/lib/album-viewed-photo-urls';
+import type { UiTheme } from '@/lib/ui-theme';
 import type { Photo } from '../types';
 
 interface FamilyAlbumSectionProps {
   photos: Photo[];
   onPhotoClick?: (photo: Photo) => void;
   onViewAllClick: () => void;
+  uiTheme?: UiTheme;
   translations: {
     section_title: string;
     view_all: string;
@@ -23,6 +25,22 @@ interface FamilyAlbumSectionProps {
 
 const PHOTOS_PER_PAGE = 9;
 const PHOTOS_PER_SPREAD = PHOTOS_PER_PAGE * 2;
+const ALBUM_GAP_PX = 6;
+const ALBUM_THUMB_MIN_PX = 28;
+
+function getAlbumGridLayout(count: number): { cols: number; rows: number } {
+  if (count <= 10) return { cols: 5, rows: 2 };
+  const cols = Math.max(4, Math.ceil(Math.sqrt(count)));
+  const rows = Math.max(1, Math.ceil(count / cols));
+  return { cols, rows };
+}
+
+function computeThumbSize(width: number, height: number, cols: number, rows: number): number {
+  if (width <= 0 || height <= 0 || cols <= 0 || rows <= 0) return ALBUM_THUMB_MIN_PX;
+  const byW = (width - ALBUM_GAP_PX * (cols - 1)) / cols;
+  const byH = (height - ALBUM_GAP_PX * (rows - 1)) / rows;
+  return Math.max(ALBUM_THUMB_MIN_PX, Math.floor(Math.min(byW, byH)));
+}
 
 export function AlbumPageDoodles() {
   return (
@@ -97,12 +115,104 @@ function AlbumPageGrid({
   );
 }
 
-export function FamilyAlbumSection({
+function FamilyAlbumClassicSection({
   photos,
   onPhotoClick,
   onViewAllClick,
   translations: t,
-}: FamilyAlbumSectionProps) {
+}: Omit<FamilyAlbumSectionProps, 'uiTheme'>) {
+  const { cols, rows } = getAlbumGridLayout(photos.length);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [thumbPx, setThumbPx] = useState(ALBUM_THUMB_MIN_PX);
+
+  useEffect(() => {
+    const el = measureRef.current;
+    if (!el || photos.length === 0) return;
+
+    let rafId = 0;
+    const update = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const next = computeThumbSize(el.clientWidth, el.clientHeight, cols, rows);
+        setThumbPx((prev) => (prev === next ? prev : next));
+      });
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
+  }, [cols, rows, photos.length]);
+
+  return (
+    <section className="content-section">
+      <div className="section-header">
+        <h3 className="section-title">{t.section_title}</h3>
+        <button
+          type="button"
+          onClick={onViewAllClick}
+          className="inline-flex cursor-pointer items-center rounded-lg border-0 bg-[#8b5cf6] font-bold text-white transition-colors hover:bg-[#7c3aed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
+          style={{ gap: '1.5cqmin', padding: '2cqmin 3cqmin', fontSize: '4cqmin' }}
+        >
+          📸 {t.view_all}
+          {photos.length > 0 && ` (${photos.length})`}
+        </button>
+      </div>
+      <div ref={measureRef} className="section-body">
+        {photos.length === 0 ? (
+          <p className="text-center text-[#64748b]" style={{ padding: '8cqmin 4cqmin', fontSize: '5cqmin' }}>
+            {t.empty_state}
+          </p>
+        ) : (
+          <div className="album-photo-grid" style={{ gap: ALBUM_GAP_PX }}>
+            {photos.map((photo) => (
+              <div
+                key={photo.id}
+                onClick={() => {
+                  if (onPhotoClick) onPhotoClick(photo);
+                  else onViewAllClick();
+                }}
+                className="album-photo-cell cursor-pointer transition-[filter] duration-200 ease-in-out hover:brightness-105"
+                style={{
+                  width: thumbPx,
+                  flex: `0 0 ${thumbPx}px`,
+                }}
+              >
+                <div className="album-photo-frame">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.data}
+                    alt={photo.description || ''}
+                    loading="lazy"
+                    draggable={false}
+                  />
+                </div>
+                {photo.isUploading ? (
+                  <div
+                    className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 font-semibold text-white"
+                    style={{ fontSize: '4cqmin' }}
+                  >
+                    업로드 중...
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FamilyAlbumScrapbookSection({
+  photos,
+  onPhotoClick,
+  onViewAllClick,
+  translations: t,
+}: Omit<FamilyAlbumSectionProps, 'uiTheme'>) {
   const spreadCount = Math.max(1, Math.ceil(photos.length / PHOTOS_PER_SPREAD));
   const [page, setPage] = useState(0);
   const [flipDir, setFlipDir] = useState<'next' | 'prev'>('next');
@@ -197,5 +307,35 @@ export function FamilyAlbumSection({
         </button>
       </div>
     </section>
+  );
+}
+
+export function FamilyAlbumSection({
+  photos,
+  onPhotoClick,
+  onViewAllClick,
+  uiTheme,
+  translations,
+}: FamilyAlbumSectionProps) {
+  const isKidsTheme = uiTheme === 'kids_friendly';
+
+  if (isKidsTheme) {
+    return (
+      <FamilyAlbumScrapbookSection
+        photos={photos}
+        onPhotoClick={onPhotoClick}
+        onViewAllClick={onViewAllClick}
+        translations={translations}
+      />
+    );
+  }
+
+  return (
+    <FamilyAlbumClassicSection
+      photos={photos}
+      onPhotoClick={onPhotoClick}
+      onViewAllClick={onViewAllClick}
+      translations={translations}
+    />
   );
 }

@@ -351,9 +351,39 @@ function LocationPreview() {
   );
 }
 
-// ── Album (사진첩 스타일) ──────────────────────────────────────
+// ── Album (kids=스크랩북 / 그 외=썸네일 그리드) ─────────────────
 function AlbumPreview() {
   const { dt } = useWidgetPreviewCopy();
+  const { currentGroup } = useGroup();
+  const isKidsTheme =
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme) === 'kids_friendly';
+
+  if (!isKidsTheme) {
+    return (
+      <section className="content-section h-full">
+        <div className="section-header">
+          <h3 className="section-title">{dt('section_title_memories')}</h3>
+          <div className="rounded-lg bg-[#8b5cf6] px-3 py-1.5 text-xs font-bold text-white">
+            📸 {dt('album_view_all')}
+          </div>
+        </div>
+        <div className="section-body">
+          <div className="album-photo-grid" style={{ gap: 6 }}>
+            {['🏖️', '🎂', '⛰️', '🎈', '🌸', '⛺', '🎄', '🏡', '🚗', '🍎'].map((emoji) => (
+              <div
+                key={emoji}
+                className="album-photo-cell flex items-center justify-center bg-slate-100 text-sm"
+                style={{ width: 44, flex: '0 0 44px' }}
+              >
+                {emoji}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const left = ['🏖️', '🎂', '⛰️', '🎈', '🌸', '⛺', '🎄', '🏡', '🚗'];
   const right = ['🍎', '🎵', '📚', '🌙', '⭐', '🍀', '🎀', '🧁', '🧸'];
   return (
@@ -578,9 +608,75 @@ function GamesPreview() {
   );
 }
 
-// ── Travel diary ───────────────────────────────────────────────────
+// ── Travel diary (kids=스크랩북 / 그 외=기본 그라데이션) ───────
 function TravelDiaryPreview() {
   const { tdy, wp } = useWidgetPreviewCopy();
+  const { currentGroup } = useGroup();
+  const uiTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
+  const isKidsTheme = uiTheme === 'kids_friendly';
+  const isGlassTheme = uiTheme === 'highend_glass';
+
+  if (isGlassTheme) {
+    return (
+      <section className="content-section h-full">
+        <div className="section-header">
+          <h3 className="section-title m-0 inline-flex items-center gap-1.5">
+            <span aria-hidden>📔</span>
+            {tdy('section_title')}
+          </h3>
+        </div>
+        <div className="section-body">
+          <ul className="m-0 list-none p-0">
+            <li className="glass-panel-soft glass-panel-interactive cursor-pointer rounded-lg px-3 py-2.5 transition-colors hover:bg-white/50">
+              <div className="text-[13px] font-semibold text-slate-800">
+                {wp('preview_diary_sample_title')}
+              </div>
+              <div className="mt-0.5 text-xs text-slate-500">{wp('preview_diary_sample_dates')}</div>
+            </li>
+          </ul>
+        </div>
+      </section>
+    );
+  }
+
+  if (!isKidsTheme) {
+    return (
+      <section className="content-section travel-diary-widget relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-gradient-to-br from-[#d4c8fc] via-[#f3d0fe] to-[#fecdd3]"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-2 right-3 z-[1] select-none text-[2rem] leading-none opacity-25"
+        >
+          🌴
+        </span>
+        <div className="section-header relative z-[2]">
+          <h3 className="section-title m-0 inline-flex items-center gap-1.5">
+            <span aria-hidden>📔</span>
+            {tdy('section_title')}
+          </h3>
+        </div>
+        <div className="section-body relative z-[2]">
+          <ul className="m-0 list-none space-y-2 p-0">
+            <li className="rounded-xl bg-transparent px-0 py-1.5">
+              <div className="text-[13px] font-semibold text-slate-800">
+                {wp('preview_diary_sample_title')}
+              </div>
+              <div className="mt-0.5 text-xs text-slate-500">{wp('preview_diary_sample_dates')}</div>
+              <div className="mt-2">
+                <div className="inline-flex rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white">
+                  {tdy('open_diary')}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="content-section travel-diary-widget relative isolate overflow-hidden [backdrop-filter:none] [-webkit-backdrop-filter:none]">
       <div

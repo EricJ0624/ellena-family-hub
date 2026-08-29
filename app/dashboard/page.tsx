@@ -6597,6 +6597,7 @@ export default function FamilyHub() {
               router.push(`/memories?photo=${encodeURIComponent(String(photo.id))}`)
             }
             onViewAllClick={() => router.push('/memories')}
+            uiTheme={uiTheme}
             translations={{
               section_title: dt('section_title_memories'),
               view_all: dt('album_view_all'),
