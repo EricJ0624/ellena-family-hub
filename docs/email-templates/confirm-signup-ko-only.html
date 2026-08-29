@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hearth: Family Haven</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#e8eef5;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#e8eef5;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+            <tr>
+              <td style="background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 8px 32px rgba(102,126,234,0.18);">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="padding:36px 28px 28px;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
+                      <div style="font-size:56px;line-height:1;margin:0 0 12px;">🏠</div>
+                      <h1 style="margin:0;font-size:24px;line-height:1.3;font-weight:700;color:#ffffff;">Hearth: Family Haven</h1>
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">우리가족 추억의 공간</p>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:28px 28px 8px;color:#334155;font-size:14px;line-height:1.65;">
+                      <p style="margin:0;">가입을 완료하려면 아래 버튼을 눌러 이메일을 인증해 주세요.</p>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" style="padding:16px 28px 8px;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 28px;border-radius:14px;">이메일 인증하기</a>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:12px 28px 8px;color:#64748b;font-size:12px;line-height:1.6;">
+                      <p style="margin:0 0 8px;">버튼이 보이지 않으면 이 링크를 브라우저에 붙여넣으세요:</p>
+                      <p style="margin:0;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#667eea;text-decoration:underline;">{{ .ConfirmationURL }}</a></p>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding:20px 28px 28px;color:#94a3b8;font-size:12px;line-height:1.6;border-top:1px solid #e2e8f0;">
+                      <p style="margin:0 0 8px;">가입하지 않으셨다면 이 메일은 무시하셔도 됩니다.</p>
+                      <p style="margin:0;"><a href="{{ .SiteURL }}" style="color:#667eea;text-decoration:none;font-weight:600;">Hearth: Family Haven</a></p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

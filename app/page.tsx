@@ -532,6 +532,7 @@ export default function LoginPage() {
           data: {
             nickname: signupNickname,
             full_name: signupNickname,
+            language: signupLang,
             preferred_language: signupLang,
             country_code: signupCountry.toUpperCase(),
           },
