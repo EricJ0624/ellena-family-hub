@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, RefreshCw, Palette, X, Frame as FrameIcon } from 'lucide-react';
+import { Heart, Palette, X } from 'lucide-react';
+import FrameGestureHintOverlay, { type FrameGestureHintPhase } from './FrameGestureHintOverlay';
 import Image from 'next/image';
 import {
   PhotoFrameSVG,
@@ -29,6 +29,14 @@ import { getTitlePageTranslation } from '@/lib/translations/titlePage';
 import { getCommonTranslation } from '@/lib/translations/common';
 import { cn } from '@/lib/ui/cn';
 import { readStoredFrameStyle, writeStoredFrameStyle } from '@/lib/preferences/photo-frame-style';
+import {
+  readPhotoFrameGestureHintSeen,
+  writePhotoFrameGestureHintSeen,
+} from '@/lib/preferences/photo-frame-gesture-hint';
+
+const SWIPE_THRESHOLD_PX = 48;
+const SLIDE_OFFSET_PX = 28;
+const SLIDE_DURATION_SEC = 0.32;
 
 
 // 날짜 기반 해시 시드 생성 함수
@@ -54,17 +62,12 @@ const seededRandom = (seed: string): number => {
 const isStablePhotoUrl = (url: string): boolean =>
   !!url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/api/photo/proxy'));
 
-// 오늘의 무작위 사진 선택 함수
-const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>, manualSeed?: number): number | null => {
+// 오늘의 무작위 사진 선택 함수 (날짜 시드 — 같은 날·같은 앨범이면 동일 인덱스)
+const getTodayRandomPhoto = (photos: Array<{ id: number | string; data: string }>): number | null => {
   if (!photos || photos.length === 0) return null;
-  
-  const today = new Date();
-  const dateSeed = getDateHashSeed(today);
-  const seed = manualSeed !== undefined ? `manual_${manualSeed}` : dateSeed;
-  const random = seededRandom(seed);
-  
-  const index = Math.floor(random * photos.length);
-  return index;
+  const dateSeed = getDateHashSeed(new Date());
+  const random = seededRandom(dateSeed);
+  return Math.floor(random * photos.length);
 };
 
 // 타이틀 스타일 타입 정의
@@ -80,7 +83,6 @@ interface TitleStyle {
 // 오늘의 무작위 사진 액자 컴포넌트
 interface DailyPhotoFrameProps {
   photos: Array<{ id: number | string; data: string }>;
-  onShuffle?: () => void;
   frameStyle?: FrameStyle;
   onFrameChange?: (style: FrameStyle) => void;
   onFrameClick?: () => void;
@@ -92,7 +94,6 @@ interface DailyPhotoFrameProps {
 
 const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
   photos,
-  onShuffle,
   frameStyle = 'no_frame',
   onFrameChange,
   onFrameClick,
@@ -101,62 +102,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
 }) => {
   const { lang } = useLanguage();
   const tp = (key: keyof import('@/lib/translations/titlePage').TitlePageTranslations) => getTitlePageTranslation(lang, key);
-  const ct = (key: keyof import('@/lib/translations/common').CommonTranslations) => getCommonTranslation(lang, key);
-  const [manualSeed, setManualSeed] = useState<number | undefined>(undefined);
-  const [showFrameSelector, setShowFrameSelector] = useState(false);
-  const frameButtonRef = useRef<HTMLButtonElement>(null);
-  const [framePanelLayout, setFramePanelLayout] = useState<{
-    bottom?: number;
-    top?: number;
-    right: number;
-    maxHeight: number;
-  } | null>(null);
   // Hydration 불일치 방지: 날짜/시드 기반 선택은 클라이언트 마운트 후에만 수행 (React #418)
   const [mounted, setMounted] = useState(false);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | number | null>(null);
+  const [slideAxis, setSlideAxis] = useState<'x' | 'y'>('x');
+  const [slideDir, setSlideDir] = useState(0);
+  const [photoMotionNonce, setPhotoMotionNonce] = useState(0);
+  const [hintPhase, setHintPhase] = useState<FrameGestureHintPhase | null>(null);
+  const didSwipeRef = useRef(false);
+  const pointerStartRef = useRef<{ id: number; x: number; y: number } | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const updateFramePanelLayout = useCallback(() => {
-    const el = frameButtonRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const margin = 8;
-    const gap = 8;
-    const maxCap = 420;
-    const vhCap = window.innerHeight * 0.55;
-    const spaceAbove = rect.top - margin;
-    const spaceBelow = window.innerHeight - rect.bottom - margin;
-    const preferAbove = spaceAbove >= spaceBelow || spaceAbove >= 140;
-
-    if (preferAbove) {
-      setFramePanelLayout({
-        bottom: window.innerHeight - rect.top + gap,
-        right: Math.max(margin, window.innerWidth - rect.right),
-        maxHeight: Math.max(120, Math.min(maxCap, vhCap, spaceAbove - gap)),
-      });
-    } else {
-      setFramePanelLayout({
-        top: rect.bottom + gap,
-        right: Math.max(margin, window.innerWidth - rect.right),
-        maxHeight: Math.max(120, Math.min(maxCap, vhCap, spaceBelow - gap)),
-      });
-    }
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!showFrameSelector) {
-      setFramePanelLayout(null);
-      return;
-    }
-    updateFramePanelLayout();
-    window.addEventListener('resize', updateFramePanelLayout);
-    window.addEventListener('scroll', updateFramePanelLayout, true);
-    return () => {
-      window.removeEventListener('resize', updateFramePanelLayout);
-      window.removeEventListener('scroll', updateFramePanelLayout, true);
-    };
-  }, [showFrameSelector, updateFramePanelLayout]);
 
   // blob/data URL 제외 → 업로드 직후 뒤로가기 시 Hydration/렌더 에러 근본 방지
   const stablePhotos = useMemo(
@@ -164,24 +122,24 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     [photos]
   );
 
-  // 오늘의 사진 인덱스 계산 (클라이언트 마운트 후에만, 안정 URL만 후보)
-  const photoIndex = useMemo(() => {
+  const selectedPhoto = useMemo(() => {
     if (!mounted || stablePhotos.length === 0) return null;
-    return getTodayRandomPhoto(stablePhotos, manualSeed);
-  }, [mounted, stablePhotos, manualSeed]);
-
-  const selectedPhoto = photoIndex !== null && stablePhotos[photoIndex] ? stablePhotos[photoIndex] : null;
+    if (selectedPhotoId != null) {
+      const found = stablePhotos.find((p) => String(p.id) === String(selectedPhotoId));
+      if (found) return found;
+    }
+    const idx = getTodayRandomPhoto(stablePhotos);
+    return idx == null ? null : stablePhotos[idx];
+  }, [mounted, stablePhotos, selectedPhotoId]);
 
   // 세로/가로 자동 맞춤 복구: 사진 비율 캐시로 재진입 시 리플로우 최소화
   const imageAspectRatioCacheRef = useRef<Record<string, number>>({});
-  const lastReportedPortraitRef = useRef<boolean | null>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [imageLoadError, setImageLoadError] = useState(false);
 
   const reportPhotoOrientation = useCallback(
     (isPortrait: boolean) => {
       // 동일 값이어도 부모와 동기화 (부모 remount/state reset 후 미통지 방지)
-      lastReportedPortraitRef.current = isPortrait;
       onPhotoOrientationChange?.(isPortrait);
     },
     [onPhotoOrientationChange],
@@ -208,17 +166,13 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     const cacheKey = String(selectedPhoto.id);
     const cachedRatio = imageAspectRatioCacheRef.current[cacheKey];
     const ratio = typeof cachedRatio === 'number' ? cachedRatio : null;
+    setImageLoadError(false);
     setImageAspectRatio(ratio);
     // 캐시 hit 시에만 즉시 보고. null(=미확정)일 때 landscape(false)로 강제하지 않음
     if (ratio !== null) {
       reportPhotoOrientation(ratio < 1);
     }
   }, [selectedPhoto, reportPhotoOrientation]);
-
-  // 수동 셔플 핸들러 (부드러운 페이드 효과)
-  const handleShuffle = useCallback(() => {
-    setManualSeed(Date.now());
-  }, []);
 
   const isPortraitPhoto = imageAspectRatio !== null && imageAspectRatio < 1;
   useEffect(() => {
@@ -227,6 +181,131 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     if (imageAspectRatio === null) return;
     reportPhotoOrientation(imageAspectRatio < 1);
   }, [selectedPhoto, imageAspectRatio, reportPhotoOrientation]);
+
+  const completeHint = useCallback(() => {
+    setHintPhase(null);
+    writePhotoFrameGestureHintSeen();
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (readPhotoFrameGestureHintSeen()) return;
+    const showTimer = setTimeout(() => setHintPhase('h'), 0);
+    return () => clearTimeout(showTimer);
+  }, [mounted]);
+
+  const photoUndoRef = useRef<{ fromId: string | number; dir: number } | null>(null);
+
+  const applyHorizontalSwipe = useCallback(
+    (dir: number) => {
+      setSlideAxis('x');
+      setSlideDir(dir);
+      setPhotoMotionNonce((n) => n + 1);
+
+      const currentId = selectedPhoto?.id;
+      const others = stablePhotos.filter((p) => String(p.id) !== String(currentId));
+      if (others.length === 0) {
+        photoUndoRef.current = null;
+        return;
+      }
+
+      const undo = photoUndoRef.current;
+      if (undo && undo.dir === -dir) {
+        const prev = stablePhotos.find((p) => String(p.id) === String(undo.fromId));
+        photoUndoRef.current = null;
+        if (prev && String(prev.id) !== String(currentId)) {
+          setSelectedPhotoId(prev.id);
+          return;
+        }
+      }
+
+      const next = others[Math.floor(Math.random() * others.length)];
+      photoUndoRef.current = currentId != null ? { fromId: currentId, dir } : null;
+      setSelectedPhotoId(next.id);
+    },
+    [stablePhotos, selectedPhoto],
+  );
+
+  const cycleFrame = useCallback(
+    (indexDelta: number, animDir: number) => {
+      if (!onFrameChange) return;
+      const i = FRAME_CONFIGS.findIndex((f) => f.id === frameStyle);
+      const idx = i < 0 ? 0 : i;
+      const next = FRAME_CONFIGS[(idx + indexDelta + FRAME_CONFIGS.length) % FRAME_CONFIGS.length];
+      if (next.id === frameStyle) return;
+      setSlideAxis('y');
+      setSlideDir(animDir);
+      onFrameChange(next.id);
+    },
+    [frameStyle, onFrameChange],
+  );
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    didSwipeRef.current = false;
+    pointerStartRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const start = pointerStartRef.current;
+      pointerStartRef.current = null;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // already released
+      }
+      if (!start || start.id !== e.pointerId) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.hypot(dx, dy) < SWIPE_THRESHOLD_PX) {
+        if (hintPhase === 'h' || hintPhase === 'v') {
+          didSwipeRef.current = true;
+        }
+        return;
+      }
+      didSwipeRef.current = true;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        applyHorizontalSwipe(dx < 0 ? -1 : 1);
+        if (hintPhase === 'h') setHintPhase('v');
+      } else {
+        cycleFrame(dy < 0 ? 1 : -1, dy < 0 ? -1 : 1);
+        if (hintPhase === 'v') setHintPhase('tap');
+      }
+    },
+    [applyHorizontalSwipe, cycleFrame, hintPhase],
+  );
+
+  const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    pointerStartRef.current = null;
+    didSwipeRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // already released
+    }
+  }, []);
+
+  const handleFrameClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (didSwipeRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        didSwipeRef.current = false;
+        return;
+      }
+      if (hintPhase === 'h' || hintPhase === 'v') {
+        e.preventDefault();
+        return;
+      }
+      if (hintPhase === 'tap') {
+        completeHint();
+      }
+      onFrameClick?.();
+    },
+    [completeHint, hintPhase, onFrameClick],
+  );
 
   const frameAspectClass = isPortraitPhoto ? 'aspect-[3/4]' : 'aspect-[4/3]';
   const frameInsetClass: Record<FrameStyle, string> = {
@@ -274,11 +353,10 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
     const name = formatPolaroidMatName(groupCaptionName ?? '');
     return name || null;
   }, [frameStyle, groupCaptionName]);
-  
-  useEffect(() => {
-    if (onShuffle) onShuffle();
-  }, [manualSeed, onShuffle]);
-  
+
+  const slideEnterOffset = -slideDir * SLIDE_OFFSET_PX;
+  const slideExitOffset = slideDir * SLIDE_OFFSET_PX;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -291,14 +369,25 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         <div className="pointer-events-none absolute -inset-x-6 -inset-y-5 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.22)_0%,rgba(148,163,184,0.12)_45%,rgba(148,163,184,0)_75%)] blur-lg" />
       )}
 
-      {/* SVG 프레임 컨테이너 (클릭 시 가족 추억 페이지로 이동) */}
+      {/* SVG 프레임 컨테이너 (탭 → 사진첩, 좌우 셔플, 위아래 액자) */}
       <div
         role={onFrameClick ? 'button' : undefined}
         tabIndex={onFrameClick ? 0 : undefined}
-        onClick={onFrameClick}
-        onKeyDown={onFrameClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFrameClick(); } } : undefined}
+        onClick={handleFrameClick}
+        onKeyDown={onFrameClick ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (hintPhase === 'h' || hintPhase === 'v') return;
+            if (hintPhase === 'tap') completeHint();
+            onFrameClick();
+          }
+        } : undefined}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        aria-label={`${tp('gesture_hint_photo')}. ${tp('gesture_hint_frame')}. ${tp('gesture_hint_tap')}`}
         className={cn(
-          'relative isolate w-full overflow-visible',
+          'relative isolate w-full touch-none overflow-visible select-none',
           frameAspectClass,
           onFrameClick && 'cursor-pointer',
         )}
@@ -308,7 +397,18 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         )}
         {/* PNG 프레임 오버레이 — 투명 개구부, 사진 위에 프레임(z-15) */}
         <div className="absolute left-0 top-0 z-[15] h-full w-full">
-          <PhotoFrameSVG frameStyle={frameStyle} />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={frameStyle}
+              initial={slideAxis === 'y' ? { opacity: 0, y: slideEnterOffset } : { opacity: 1 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={slideAxis === 'y' ? { opacity: 0, y: slideExitOffset } : { opacity: 1 }}
+              transition={{ duration: SLIDE_DURATION_SEC, ease: 'easeOut' }}
+              className="absolute inset-0"
+            >
+              <PhotoFrameSVG frameStyle={frameStyle} />
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* 내부 사진 영역 */}
@@ -332,11 +432,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
             <AnimatePresence mode="wait">
               {selectedPhoto && isStablePhotoUrl(selectedPhoto.data) && !imageLoadError ? (
                 <motion.div
-                  key={String(selectedPhoto.id)}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  key={`${String(selectedPhoto.id)}-${photoMotionNonce}`}
+                  initial={{
+                    opacity: 0,
+                    x: slideAxis === 'x' ? slideEnterOffset : 0,
+                    y: slideAxis === 'y' ? slideEnterOffset : 0,
+                  }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  exit={{
+                    opacity: 0,
+                    x: slideAxis === 'x' ? slideExitOffset : 0,
+                    y: slideAxis === 'y' ? slideExitOffset : 0,
+                  }}
+                  transition={{ duration: SLIDE_DURATION_SEC, ease: 'easeOut' }}
                   className="absolute inset-0 overflow-hidden"
                 >
                   <Image
@@ -372,11 +480,19 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
                 </motion.div>
               ) : (
                 <motion.div
-                  key="fallback"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  key={`fallback-${photoMotionNonce}`}
+                  initial={{
+                    opacity: 0,
+                    x: slideAxis === 'x' ? slideEnterOffset : 0,
+                    y: slideAxis === 'y' ? slideEnterOffset : 0,
+                  }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  exit={{
+                    opacity: 0,
+                    x: slideAxis === 'x' ? slideExitOffset : 0,
+                    y: slideAxis === 'y' ? slideExitOffset : 0,
+                  }}
+                  transition={{ duration: SLIDE_DURATION_SEC, ease: 'easeOut' }}
                   className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a]"
                 >
                   <img
@@ -397,111 +513,16 @@ const DailyPhotoFrame: React.FC<DailyPhotoFrameProps> = ({
         {polaroidMatDisplayName ? (
           <PolaroidMatCaptionOverlay displayName={groupCaptionName ?? ''} />
         ) : null}
-      </div>
 
-      {/* 버튼 그룹 — 액자 아래, 작게 */}
-      <div
-        className="relative z-40 mt-2 flex justify-end gap-1.5"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        <motion.button
-          ref={frameButtonRef}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          onClick={() => setShowFrameSelector(!showFrameSelector)}
-          className={cn(
-            'flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-[#8B4513] shadow-[0_3px_10px_rgba(0,0,0,0.28),inset_0_1px_2px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
-            showFrameSelector
-              ? 'bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)]'
-              : 'bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)]',
-          )}
-          aria-label={tp('frame_change')}
-          title={tp('frame_change')}
-        >
-          <FrameIcon
-            className={cn('h-3.5 w-3.5', showFrameSelector ? 'text-white' : 'text-[#8B4513]')}
-            strokeWidth={2.5}
+        {hintPhase ? (
+          <FrameGestureHintOverlay
+            phase={hintPhase}
+            photoLabel={tp('gesture_hint_photo')}
+            frameLabel={tp('gesture_hint_frame')}
+            tapLabel={tp('gesture_hint_tap')}
           />
-        </motion.button>
-
-        {selectedPhoto && (
-          <motion.button
-            whileHover={{ scale: 1.08, rotate: 180 }}
-            whileTap={{ scale: 0.92 }}
-            onClick={handleShuffle}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-[#8B4513] bg-[linear-gradient(135deg,#ffffff_0%,#f8f9fa_100%)] shadow-[0_3px_10px_rgba(0,0,0,0.28),inset_0_1px_2px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
-            aria-label={tp('photo_refresh')}
-            title={tp('photo_refresh')}
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-[#8B4513]" strokeWidth={2.5} />
-          </motion.button>
-        )}
+        ) : null}
       </div>
-
-      {/* 프레임 선택 패널 — body 포탈 + 버튼 위 여유 공간 기준 maxHeight (.app-header overflow 클리핑 회피) */}
-      {typeof document !== 'undefined' &&
-        showFrameSelector &&
-        framePanelLayout &&
-        createPortal(
-          <AnimatePresence>
-            <motion.div
-              key="frame-selector-panel"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              style={{
-                position: 'fixed',
-                right: framePanelLayout.right,
-                maxHeight: framePanelLayout.maxHeight,
-                ...(framePanelLayout.bottom != null
-                  ? { bottom: framePanelLayout.bottom }
-                  : { top: framePanelLayout.top }),
-              }}
-              className="z-[120] min-w-[220px] max-w-[min(92vw,320px)] overflow-y-auto overscroll-contain rounded-xl border-2 border-[rgba(139,69,19,0.3)] bg-[rgba(255,255,255,0.98)] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-[10px] [touch-action:pan-y]"
-            >
-              <div className="mb-2 border-b border-[rgba(139,69,19,0.2)] pb-2 text-xs font-semibold text-[#5d2a1f]">
-                {tp('frame_style_select')}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {FRAME_CONFIGS.map((frame) => (
-                  <motion.button
-                    key={frame.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      if (onFrameChange) {
-                        onFrameChange(frame.id);
-                      }
-                      setShowFrameSelector(false);
-                    }}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70',
-                      frameStyle === frame.id
-                        ? 'border-[rgb(var(--brand-primary))] bg-[linear-gradient(135deg,rgb(var(--brand-primary))_0%,rgb(var(--brand-secondary))_100%)] font-semibold text-white'
-                        : 'border-[rgba(139,69,19,0.2)] bg-transparent font-medium text-[#333]',
-                    )}
-                  >
-                    <div
-                      className="h-5 w-5 shrink-0 rounded border border-[rgba(0,0,0,0.2)]"
-                      style={{ background: frame.color }}
-                    />
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold">{tp(`frame_${frame.id}` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}</div>
-                      <div className="mt-0.5 text-[10px] opacity-80">
-                        {tp(`frame_${frame.id}_desc` as keyof import('@/lib/translations/titlePage').TitlePageTranslations)}
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          </AnimatePresence>,
-          document.body,
-        )}
     </motion.div>
   );
 };
