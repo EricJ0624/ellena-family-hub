@@ -4492,7 +4492,7 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
     color: rgb(var(--section-title-icon));
   }
 
-  /* ── Kids Friendly 테마: 캘린더 위젯 여백 ── */
+  /* ── Family Friendly 테마: 캘린더 위젯 여백 ── */
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--sun,
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--sat,
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='calendar'] .calendar-weekday--mid {
@@ -4814,6 +4814,61 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
     max-height: var(--widget-scale-box-h, var(--games-min-h, none));
     min-height: var(--games-min-h, var(--widget-min-h, 0px));
     overflow: hidden;
+  }
+
+  /*
+   * Family Games (kids): 보드게임 테이블 사진 바탕.
+   * 탭·로비·모달 로직은 그대로. 가독성은 얇은 스크림 + 기존 패널.
+   */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .content-section.games-widget-section,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .content-section.games-widget-section,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .content-section.games-widget-section,
+  :root[data-ui-theme='kids_friendly'] .content-section.games-widget-section,
+  .dark[data-ui-theme='kids_friendly'] .content-section.games-widget-section,
+  html[data-ui-theme='kids_friendly'] .content-section.games-widget-section {
+    --games-kids-bg: url('/family-games/widget-bg.webp?v=1');
+    isolation: isolate;
+    background: none !important;
+    background-color: #c4a574 !important;
+    background-image:
+      linear-gradient(180deg, rgb(255 248 235 / 0.38) 0%, rgb(255 248 235 / 0.22) 45%, rgb(255 237 213 / 0.32) 100%),
+      var(--games-kids-bg) !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: cover !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-section-body,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-section-body,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-section-body {
+    position: relative;
+    z-index: 2;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title {
+    text-shadow: 0 1px 8px rgb(255 248 235 / 0.92), 0 0 12px rgb(255 248 235 / 0.75);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-bar,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-bar,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-bar {
+    background: rgb(255 255 255 / 0.82);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-body,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-body,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-body,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-actions p,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-actions p,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-actions p {
+    text-shadow: 0 1px 2px rgb(255 248 235 / 0.9);
   }
 
   .dashboard-widget-grid .editor-widget-preview-inner .location-widget-section {

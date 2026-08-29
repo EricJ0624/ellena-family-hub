@@ -1,7 +1,7 @@
 /**
  * 그룹 대시보드 UI 테마.
  * - default: Original (기본 위젯 UI)
- * - kids_friendly: 키즈/일러스트형 디자인 시스템
+ * - kids_friendly: Family Friendly (패밀리/일러스트형 디자인 시스템)
  * - highend_glass: Original 베이스 + 글래스모피즘
  */
 export type UiTheme = 'default' | 'kids_friendly' | 'highend_glass';
