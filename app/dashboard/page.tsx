@@ -129,7 +129,7 @@ import {
   togglePreviewOrientation,
   type AppPreviewOrientation,
 } from '@/lib/widgets/preview-orientation';
-import { WIDGET_CONFIGS_UPDATED_EVENT } from '@/lib/widgets/widget-config-events';
+import { WIDGET_CONFIGS_UPDATED_EVENT, dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import { WidgetChrome } from '@/app/components/dashboard/WidgetChrome';
 import { WidgetMagnifyModal } from '@/app/components/dashboard/WidgetMagnifyModal';
 import { SystemAdminTransferModal } from '@/app/components/admin/SystemAdminTransferModal';
@@ -526,35 +526,65 @@ export default function FamilyHub() {
     showModal: showDiaryInviteModal,
   } = useDiaryInvite(travelTrips, currentGroupId);
   const handleAcceptDiaryInvite = useCallback(async () => {
-    await acceptDiaryInvite();
-    await reloadTravelTrips();
-  }, [acceptDiaryInvite, reloadTravelTrips]);
+    const tripId = diaryInviteTrip?.id;
+    try {
+      const updated = await acceptDiaryInvite();
+      const openId = updated?.id ?? tripId;
+      if (openId) {
+        router.push(`/travel/diary?tripId=${encodeURIComponent(openId)}`);
+      }
+      void reloadTravelTrips();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : tdy('start_trip_failed'));
+    }
+  }, [acceptDiaryInvite, diaryInviteTrip?.id, reloadTravelTrips, router, tdy]);
   const handleStartTripDiary = useCallback(
     async (tripId: string) => {
       if (!currentGroupId) return;
       const { data: session } = await supabase.auth.getSession();
       const token = session.session?.access_token;
       if (!token) return;
-      const res = await fetch(`/api/v1/travel/trips/${tripId}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          groupId: currentGroupId,
-          diary_enabled: true,
-          diary_invite_status: 'accepted',
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        alert(json.error || tdy('start_trip_failed'));
-        return;
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+      try {
+        const [enableRes, res] = await Promise.all([
+          fetch('/api/v1/travel/widgets/enable-travel-diary', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ groupId: currentGroupId }),
+          }),
+          fetch(`/api/v1/travel/trips/${tripId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              groupId: currentGroupId,
+              diary_enabled: true,
+              diary_invite_status: 'accepted',
+            }),
+          }),
+        ]);
+        const [enableJson, json] = await Promise.all([
+          enableRes.json().catch(() => ({})),
+          res.json().catch(() => ({})),
+        ]);
+        if (!enableRes.ok) {
+          throw new Error(
+            (enableJson as { error?: string }).error || tdy('start_trip_failed'),
+          );
+        }
+        if (!res.ok) {
+          throw new Error((json as { error?: string }).error || tdy('start_trip_failed'));
+        }
+        dispatchWidgetConfigsUpdated();
+        router.push(`/travel/diary?tripId=${encodeURIComponent(tripId)}`);
+        void reloadTravelTrips();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : tdy('start_trip_failed'));
       }
-      await reloadTravelTrips();
     },
-    [currentGroupId, reloadTravelTrips, tdy],
+    [currentGroupId, reloadTravelTrips, router, tdy],
   );
   const { piggyLabel, formatAmount: formatDashboardPiggy } = usePiggyDisplay({
     piggySummary,

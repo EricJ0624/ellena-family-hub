@@ -27,6 +27,7 @@ import {
   showDiaryCompletedInviteHint,
 } from '@/lib/modules/travel-planner/diary-eligibility';
 import { normalizeTripStatus, type TravelTripStatus } from '@/lib/modules/travel-planner/trip-status';
+import { dispatchWidgetConfigsUpdated } from '@/lib/widgets/widget-config-events';
 import {
   buildExpandedPlannerItinerary,
   enumerateTripDays,
@@ -1446,21 +1447,43 @@ export function TravelPlannerContent() {
 
   const handleEnableDiary = async () => {
     if (!currentGroupId || !selectedTrip || selectedTrip.diary_enabled) return;
+    const tripId = selectedTrip.id;
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE}/trips/${selectedTrip.id}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({
-          groupId: currentGroupId,
-          diary_enabled: true,
-          diary_invite_status: 'accepted',
+      const [enableRes, res] = await Promise.all([
+        fetch(`${API_BASE}/widgets/enable-travel-diary`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId }),
         }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || tt('diary_enable_failed'));
-      if (json.data) setSelectedTrip(json.data);
-      await fetchTrips();
+        fetch(`${API_BASE}/trips/${tripId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            groupId: currentGroupId,
+            diary_enabled: true,
+            diary_invite_status: 'accepted',
+          }),
+        }),
+      ]);
+      const [enableJson, json] = await Promise.all([
+        enableRes.json().catch(() => ({})),
+        res.json().catch(() => ({})),
+      ]);
+      if (!enableRes.ok) {
+        throw new Error(
+          (enableJson as { error?: string }).error || tt('diary_enable_failed'),
+        );
+      }
+      if (!res.ok) {
+        throw new Error((json as { error?: string }).error || tt('diary_enable_failed'));
+      }
+      if ((json as { data?: TravelTrip }).data) {
+        setSelectedTrip((json as { data: TravelTrip }).data);
+      }
+      dispatchWidgetConfigsUpdated();
+      router.push(`/travel/diary?tripId=${encodeURIComponent(tripId)}`);
+      void fetchTrips();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : tt('diary_enable_failed'));
     }

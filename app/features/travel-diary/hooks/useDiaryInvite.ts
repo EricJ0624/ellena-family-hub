@@ -28,30 +28,41 @@ export function useDiaryInvite(trips: TravelTrip[], currentGroupId: string | nul
     );
   }, [trips, dismissedTripIds]);
 
-  const acceptInvite = useCallback(async () => {
+  const acceptInvite = useCallback(async (): Promise<TravelTrip | undefined> => {
     if (!currentGroupId || !pendingTrip) return;
     setActing(true);
     try {
       const headers = await authHeaders();
-      await fetch('/api/v1/travel/widgets/enable-travel-diary', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ groupId: currentGroupId }),
-      });
-      const res = await fetch(`/api/v1/travel/trips/${pendingTrip.id}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({
-          groupId: currentGroupId,
-          diary_enabled: true,
-          diary_invite_status: 'accepted',
+      const tripId = pendingTrip.id;
+      const [enableRes, res] = await Promise.all([
+        fetch('/api/v1/travel/widgets/enable-travel-diary', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ groupId: currentGroupId }),
         }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'FAILED');
+        fetch(`/api/v1/travel/trips/${tripId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            groupId: currentGroupId,
+            diary_enabled: true,
+            diary_invite_status: 'accepted',
+          }),
+        }),
+      ]);
+      const [enableJson, json] = await Promise.all([
+        enableRes.json().catch(() => ({})),
+        res.json().catch(() => ({})),
+      ]);
+      if (!enableRes.ok) {
+        throw new Error(
+          (enableJson as { error?: string }).error || 'FAILED_ENABLE_DIARY_WIDGET',
+        );
+      }
+      if (!res.ok) throw new Error((json as { error?: string }).error || 'FAILED');
       dispatchWidgetConfigsUpdated();
-      setDismissedTripIds((prev) => new Set(prev).add(pendingTrip.id));
-      return json.data as TravelTrip;
+      setDismissedTripIds((prev) => new Set(prev).add(tripId));
+      return ((json as { data?: TravelTrip }).data as TravelTrip | undefined) ?? pendingTrip;
     } finally {
       setActing(false);
     }
