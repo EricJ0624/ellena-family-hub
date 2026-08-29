@@ -73,6 +73,28 @@ export function setCachedAuthBootstrap(userId: string, payload: AuthBootstrapPay
   }
 }
 
+/** 그룹 생성·가입 등 멤버십 변경 후 stale bootstrap 제거 */
+export function invalidateCachedAuthBootstrap(userId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(cacheKey(userId));
+    localStorage.removeItem(cacheKey(userId));
+  } catch {
+    // ignore
+  }
+}
+
+/** 캐시 무효화 후 API에서 최신 bootstrap을 받아 저장 */
+export async function refreshAuthBootstrapCache(
+  accessToken: string,
+  userId: string,
+): Promise<AuthBootstrapPayload | null> {
+  invalidateCachedAuthBootstrap(userId);
+  const fresh = await fetchAuthBootstrap(accessToken);
+  if (fresh) setCachedAuthBootstrap(userId, fresh);
+  return fresh;
+}
+
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }

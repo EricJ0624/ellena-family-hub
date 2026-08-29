@@ -1,8 +1,8 @@
 <!--
   붙여넣기: Supabase Dashboard → Authentication → Email Templates → Confirm signup
-  Subject: Hearth: Family Haven — Confirm your email / 이메일 인증
+  Subject (예): Hearth: Family Haven — Confirm your email / 이메일 인증
+  가입 시 signUp options.data.preferred_language 값으로 해당 언어만 표시.
   인증 링크는 {{ .ConfirmationURL }} 그대로 유지. 앱 signUp /auth/callback 변경 없음.
-  로고: 로그인 페이지와 동일하게 🏠. 이미지 URL로 바꾸려면 아래 이모지 셀만 교체.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -28,9 +28,27 @@
                       <h1 style="margin:0;font-size:24px;line-height:1.3;font-weight:700;color:#ffffff;">
                         Hearth: Family Haven
                       </h1>
-                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">
-                        우리가족 추억의 공간
-                      </p>
+                      {{ if eq .Data.preferred_language "ko" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">우리가족 추억의 공간</p>
+                      {{ else if eq .Data.preferred_language "ja" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">家族の思い出の場所</p>
+                      {{ else if eq .Data.preferred_language "zh-CN" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">家庭回忆的空间</p>
+                      {{ else if eq .Data.preferred_language "zh-TW" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">家庭回憶的空間</p>
+                      {{ else if eq .Data.preferred_language "es" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">Un espacio para los recuerdos familiares</p>
+                      {{ else if eq .Data.preferred_language "fr" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">Un espace pour les souvenirs de famille</p>
+                      {{ else if eq .Data.preferred_language "de" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">Ein Ort für Familienerinnerungen</p>
+                      {{ else if eq .Data.preferred_language "it" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">Uno spazio per i ricordi di famiglia</p>
+                      {{ else if eq .Data.preferred_language "pt" }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">Um espaço para memórias em família</p>
+                      {{ else }}
+                      <p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(255,255,255,0.92);">A space for family memories</p>
+                      {{ end }}
                     </td>
                   </tr>
                 </table>
@@ -39,83 +57,59 @@
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="padding:28px 28px 8px;color:#334155;font-size:14px;line-height:1.65;">
-                      <p style="margin:0 0 10px;">가입을 완료하려면 아래 버튼을 눌러 이메일을 인증해 주세요.</p>
-                      <p style="margin:0 0 10px;">To finish signing up, tap a button below to confirm your email.</p>
-                      <p style="margin:0 0 10px;">登録を完了するには、下のボタンを押してメールを認証してください。</p>
-                      <p style="margin:0 0 10px;">请点击下方按钮验证邮箱以完成注册。</p>
-                      <p style="margin:0 0 10px;">請點下方按鈕驗證電子郵件以完成註冊。</p>
-                      <p style="margin:0 0 10px;">Pulsa un botón para confirmar tu correo y completar el registro.</p>
-                      <p style="margin:0 0 10px;">Appuyez sur un bouton pour confirmer votre e-mail et terminer l’inscription.</p>
-                      <p style="margin:0 0 10px;">Tippen Sie auf eine Schaltfläche, um Ihre E-Mail zu bestätigen.</p>
-                      <p style="margin:0 0 10px;">Tocca un pulsante per confermare l’e-mail e completare la registrazione.</p>
-                      <p style="margin:0;">Toque um botão para confirmar seu e-mail e concluir o cadastro.</p>
+                      {{ if eq .Data.preferred_language "ko" }}
+                      <p style="margin:0;">가입을 완료하려면 아래 버튼을 눌러 이메일을 인증해 주세요.</p>
+                      {{ else if eq .Data.preferred_language "ja" }}
+                      <p style="margin:0;">登録を完了するには、下のボタンを押してメールを認証してください。</p>
+                      {{ else if eq .Data.preferred_language "zh-CN" }}
+                      <p style="margin:0;">请点击下方按钮验证邮箱以完成注册。</p>
+                      {{ else if eq .Data.preferred_language "zh-TW" }}
+                      <p style="margin:0;">請點下方按鈕驗證電子郵件以完成註冊。</p>
+                      {{ else if eq .Data.preferred_language "es" }}
+                      <p style="margin:0;">Pulsa el botón para confirmar tu correo y completar el registro.</p>
+                      {{ else if eq .Data.preferred_language "fr" }}
+                      <p style="margin:0;">Appuyez sur le bouton pour confirmer votre e-mail et terminer l'inscription.</p>
+                      {{ else if eq .Data.preferred_language "de" }}
+                      <p style="margin:0;">Tippen Sie auf die Schaltfläche, um Ihre E-Mail zu bestätigen und die Registrierung abzuschließen.</p>
+                      {{ else if eq .Data.preferred_language "it" }}
+                      <p style="margin:0;">Tocca il pulsante per confermare l'e-mail e completare la registrazione.</p>
+                      {{ else if eq .Data.preferred_language "pt" }}
+                      <p style="margin:0;">Toque no botão para confirmar seu e-mail e concluir o cadastro.</p>
+                      {{ else }}
+                      <p style="margin:0;">To finish signing up, tap the button below to confirm your email.</p>
+                      {{ end }}
                     </td>
                   </tr>
                 </table>
 
-                <!-- Language buttons (all use the same ConfirmationURL) -->
+                <!-- Confirm button -->
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="padding:16px 28px 8px;">
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="8" border="0">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                         <tr>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              한국어<br /><span style="font-weight:600;font-size:13px;">이메일 인증하기</span>
-                            </a>
-                          </td>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              English<br /><span style="font-weight:600;font-size:13px;">Confirm email</span>
-                            </a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              日本語<br /><span style="font-weight:600;font-size:13px;">メールを認証する</span>
-                            </a>
-                          </td>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              简体中文<br /><span style="font-weight:600;font-size:13px;">验证邮箱</span>
-                            </a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              繁體中文<br /><span style="font-weight:600;font-size:13px;">驗證電子郵件</span>
-                            </a>
-                          </td>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              Español<br /><span style="font-weight:600;font-size:13px;">Confirmar correo</span>
-                            </a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              Français<br /><span style="font-weight:600;font-size:13px;">Confirmer l’e-mail</span>
-                            </a>
-                          </td>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              Deutsch<br /><span style="font-weight:600;font-size:13px;">E-Mail bestätigen</span>
-                            </a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              Italiano<br /><span style="font-weight:600;font-size:13px;">Conferma e-mail</span>
-                            </a>
-                          </td>
-                          <td width="50%" valign="top" style="padding:4px;">
-                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:14px;font-weight:700;line-height:1.3;padding:14px 10px;border-radius:14px;">
-                              Português<br /><span style="font-weight:600;font-size:13px;">Confirmar e-mail</span>
-                            </a>
+                          <td align="center" style="padding:4px;">
+                            {{ if eq .Data.preferred_language "ko" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">이메일 인증하기</a>
+                            {{ else if eq .Data.preferred_language "ja" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">メールを認証する</a>
+                            {{ else if eq .Data.preferred_language "zh-CN" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">验证邮箱</a>
+                            {{ else if eq .Data.preferred_language "zh-TW" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">驗證電子郵件</a>
+                            {{ else if eq .Data.preferred_language "es" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">Confirmar correo</a>
+                            {{ else if eq .Data.preferred_language "fr" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">Confirmer l'e-mail</a>
+                            {{ else if eq .Data.preferred_language "de" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">E-Mail bestätigen</a>
+                            {{ else if eq .Data.preferred_language "it" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">Conferma e-mail</a>
+                            {{ else if eq .Data.preferred_language "pt" }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">Confirmar e-mail</a>
+                            {{ else }}
+                            <a href="{{ .ConfirmationURL }}" style="display:block;background-color:#667eea;background-image:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;text-decoration:none;text-align:center;font-size:16px;font-weight:700;line-height:1.3;padding:16px 20px;border-radius:14px;">Confirm email</a>
+                            {{ end }}
                           </td>
                         </tr>
                       </table>
@@ -127,7 +121,27 @@
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="padding:12px 28px 8px;color:#64748b;font-size:12px;line-height:1.6;">
-                      <p style="margin:0 0 8px;">버튼이 보이지 않으면 이 링크를 브라우저에 붙여넣으세요 / If the buttons do not work, paste this link into your browser:</p>
+                      {{ if eq .Data.preferred_language "ko" }}
+                      <p style="margin:0 0 8px;">버튼이 보이지 않으면 이 링크를 브라우저에 붙여넣으세요:</p>
+                      {{ else if eq .Data.preferred_language "ja" }}
+                      <p style="margin:0 0 8px;">ボタンが表示されない場合は、このリンクをブラウザに貼り付けてください:</p>
+                      {{ else if eq .Data.preferred_language "zh-CN" }}
+                      <p style="margin:0 0 8px;">如果按钮无法使用，请将此链接粘贴到浏览器中:</p>
+                      {{ else if eq .Data.preferred_language "zh-TW" }}
+                      <p style="margin:0 0 8px;">若按鈕無法使用，請將此連結貼到瀏覽器:</p>
+                      {{ else if eq .Data.preferred_language "es" }}
+                      <p style="margin:0 0 8px;">Si el botón no funciona, pega este enlace en tu navegador:</p>
+                      {{ else if eq .Data.preferred_language "fr" }}
+                      <p style="margin:0 0 8px;">Si le bouton ne fonctionne pas, collez ce lien dans votre navigateur :</p>
+                      {{ else if eq .Data.preferred_language "de" }}
+                      <p style="margin:0 0 8px;">Wenn die Schaltfläche nicht funktioniert, fügen Sie diesen Link in Ihren Browser ein:</p>
+                      {{ else if eq .Data.preferred_language "it" }}
+                      <p style="margin:0 0 8px;">Se il pulsante non funziona, incolla questo link nel browser:</p>
+                      {{ else if eq .Data.preferred_language "pt" }}
+                      <p style="margin:0 0 8px;">Se o botão não funcionar, cole este link no navegador:</p>
+                      {{ else }}
+                      <p style="margin:0 0 8px;">If the button does not work, paste this link into your browser:</p>
+                      {{ end }}
                       <p style="margin:0;word-break:break-all;">
                         <a href="{{ .ConfirmationURL }}" style="color:#667eea;text-decoration:underline;">{{ .ConfirmationURL }}</a>
                       </p>
@@ -139,8 +153,27 @@
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td style="padding:20px 28px 28px;color:#94a3b8;font-size:12px;line-height:1.6;border-top:1px solid #e2e8f0;">
+                      {{ if eq .Data.preferred_language "ko" }}
                       <p style="margin:0 0 8px;">가입하지 않으셨다면 이 메일은 무시하셔도 됩니다.</p>
+                      {{ else if eq .Data.preferred_language "ja" }}
+                      <p style="margin:0 0 8px;">登録していない場合は、このメールを無視してください。</p>
+                      {{ else if eq .Data.preferred_language "zh-CN" }}
+                      <p style="margin:0 0 8px;">如果您没有注册账户，可以忽略此邮件。</p>
+                      {{ else if eq .Data.preferred_language "zh-TW" }}
+                      <p style="margin:0 0 8px;">若您未註冊帳戶，可忽略此郵件。</p>
+                      {{ else if eq .Data.preferred_language "es" }}
+                      <p style="margin:0 0 8px;">Si no creaste una cuenta, puedes ignorar este correo.</p>
+                      {{ else if eq .Data.preferred_language "fr" }}
+                      <p style="margin:0 0 8px;">Si vous n'avez pas créé de compte, vous pouvez ignorer cet e-mail.</p>
+                      {{ else if eq .Data.preferred_language "de" }}
+                      <p style="margin:0 0 8px;">Wenn Sie kein Konto erstellt haben, können Sie diese E-Mail ignorieren.</p>
+                      {{ else if eq .Data.preferred_language "it" }}
+                      <p style="margin:0 0 8px;">Se non hai creato un account, puoi ignorare questa e-mail.</p>
+                      {{ else if eq .Data.preferred_language "pt" }}
+                      <p style="margin:0 0 8px;">Se você não criou uma conta, pode ignorar este e-mail.</p>
+                      {{ else }}
                       <p style="margin:0 0 8px;">If you did not create an account, you can ignore this email.</p>
+                      {{ end }}
                       <p style="margin:0;">
                         <a href="{{ .SiteURL }}" style="color:#667eea;text-decoration:none;font-weight:600;">Hearth: Family Haven</a>
                       </p>

@@ -36,7 +36,7 @@ function sanitizeAuthStorage(): void {
   }
 }
 
-async function applyOpenGroupIfValid(
+export async function applyOpenGroupIfValid(
   client: SupabaseClient,
   userId: string,
   hasGroups: boolean,

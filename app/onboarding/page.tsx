@@ -22,7 +22,7 @@ import {
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
 import { messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
-import { fetchAuthBootstrapWithCache } from '@/lib/auth-bootstrap';
+import { fetchAuthBootstrapWithCache, refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -431,6 +431,12 @@ export default function OnboardingPage() {
       setCreatedInviteCode(inviteCode); // 생성된 초대 코드 사용
       setSuccess(ot('success_created'));
       setCreateFamilyRole('');
+
+      // 온보딩 진입 시 hasGroups:false로 고정된 bootstrap 캐시 갱신
+      const { data: { session: postCreateSession } } = await supabase.auth.getSession();
+      if (postCreateSession?.access_token) {
+        void refreshAuthBootstrapCache(postCreateSession.access_token, user.id);
+      }
       
       // 초대코드를 확인한 후에만 대시보드로 이동하도록 함
     } catch (err: any) {
@@ -578,6 +584,10 @@ export default function OnboardingPage() {
         try {
           clearSessionStoredInviteCode();
         } catch (_) {}
+        const { data: { session: postJoinSession } } = await supabase.auth.getSession();
+        if (postJoinSession?.access_token) {
+          void refreshAuthBootstrapCache(postJoinSession.access_token, postJoinSession.user.id);
+        }
       } else if (groupPreview?.id) {
         setJoinedGroupId(groupPreview.id);
         setCurrentGroupId(groupPreview.id);

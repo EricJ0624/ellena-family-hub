@@ -21,6 +21,7 @@ import {
   readStoredGroupId,
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
+import { applyOpenGroupIfValid } from '@/lib/route-guard-group-required';
 import { formatUnknownError, isAbortLikeError } from '@/lib/supabase-error';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { useRouter } from 'next/navigation';
@@ -1257,6 +1258,13 @@ export default function FamilyHub() {
             if (typeof window !== 'undefined') {
               window.history.replaceState({}, '', window.location.pathname);
             }
+          } else if (hasOpenGroup) {
+            hasGroups = await applyOpenGroupIfValid(
+              supabase,
+              currentUserId,
+              hasGroups,
+              setCurrentGroupId,
+            );
           }
         } else {
           console.warn('[Dashboard] bootstrap 실패, 클라이언트 조회로 폴백');
