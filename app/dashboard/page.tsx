@@ -6567,12 +6567,10 @@ export default function FamilyHub() {
               router.push(`/memories?photo=${encodeURIComponent(String(photo.id))}`)
             }
             onViewAllClick={() => router.push('/memories')}
-            rowSpan={widgetRowSpan}
             translations={{
               section_title: dt('section_title_memories'),
               view_all: dt('album_view_all'),
               empty_state: dt('photo_upload_prompt'),
-              photos_count: dt('album_more_photos'),
             }}
           />
         );

@@ -9,6 +9,7 @@
 import { Camera, Mic, Paperclip, Plus, Send } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { KidsChatDecorations } from '@/app/features/family-chat/components/FamilyChatSection';
+import { AlbumPageDoodles } from '@/app/features/family-album/components/FamilyAlbumSection';
 import type { DashboardWidgetKey } from '@/lib/widgets/types';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getDashboardTranslation } from '@/lib/translations/dashboard';
@@ -351,31 +352,52 @@ function LocationPreview() {
 }
 
 // ── Album (사진첩 스타일) ──────────────────────────────────────
-const PHOTO_COLORS = [
-  'bg-rose-200', 'bg-sky-200', 'bg-amber-200',
-  'bg-emerald-200', 'bg-violet-200', 'bg-orange-200',
-];
 function AlbumPreview() {
   const { dt } = useWidgetPreviewCopy();
+  const left = ['🏖️', '🎂', '⛰️', '🎈', '🌸', '⛺', '🎄', '🏡', '🚗'];
+  const right = ['🍎', '🎵', '📚', '🌙', '⭐', '🍀', '🎀', '🧁', '🧸'];
   return (
     <section className="content-section album-widget-section h-full">
-      <div className="section-header">
-        <h3 className="section-title album-widget-title">{dt('section_title_memories')}</h3>
-      </div>
-      <div className="section-body">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-1.5 p-0.5">
-          {PHOTO_COLORS.map((color, i) => (
-            <div
-              key={i}
-              className={`aspect-square rounded-lg ${color} flex items-center justify-center text-xl`}
-            >
-              {['🏖️', '🎂', '🌸', '⛺', '🎡', '🌅'][i]}
+      <div className="album-book-stage">
+        <div className="album-book-cover">
+          <div className="album-book-fit">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="album-book-art"
+              src="/family-album/spread-frame.png?v=2"
+              alt=""
+              draggable={false}
+            />
+            <h3 className="album-book-title">{dt('section_title_memories')}</h3>
+            <div className="album-book-spread">
+              <div className="album-book-page album-book-page--left">
+                <div className="album-book-grid">
+                  {left.map((emoji) => (
+                    <div key={emoji} className="album-tile flex items-center justify-center text-sm">
+                      {emoji}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="album-book-page album-book-page--right">
+                <div className="album-book-grid">
+                  {right.map((emoji) => (
+                    <div key={emoji} className="album-tile flex items-center justify-center text-sm">
+                      {emoji}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          ))}
+            <AlbumPageDoodles />
+          </div>
         </div>
       </div>
-      <div className="album-widget-view-all inline-flex items-center justify-center py-1.5 text-xs font-bold text-white">
-        📸 {dt('album_view_all')}
+      <div className="album-book-footer">
+        <span className="album-book-pager">1 / 1</span>
+        <div className="album-widget-view-all inline-flex items-center justify-center font-bold text-white">
+          📸 {dt('album_view_all')}
+        </div>
       </div>
     </section>
   );

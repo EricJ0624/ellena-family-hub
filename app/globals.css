@@ -2615,132 +2615,363 @@ select:not(.chalkboard-form-input) {
   border-radius: 999px;
 }
 
-/* ============================================
-   앨범 위챗식 썸네일 그리드 (위젯 맞춤, 스크롤 없음)
-   - 정사각 통일 + cover로 여백 없이 채움
-   - border-radius로 사진 모서리만 둥글게 (회색 여백 프레임 없음)
-   ============================================ */
-.album-photo-grid {
-  display: grid;
-  align-content: start;
-  justify-content: center;
-  justify-items: stretch;
-  overflow: hidden; /* 스크롤 없음 */
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.album-photo-cell {
-  position: relative;
-  box-sizing: border-box;
-  flex-shrink: 0;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  background: transparent;
-  /* 사진 모서리를 부드럽게 (여백 박스가 아님) */
-  border-radius: 18%;
-}
-
-/* 정사각: 높이는 항상 너비와 같음 */
-.album-photo-frame {
-  position: relative;
-  width: 100%;
-  height: 0;
-  padding-bottom: 100%;
-  overflow: hidden;
-  border-radius: inherit;
-}
-
-.album-photo-frame > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  max-height: none;
-  object-fit: cover; /* 여백 없이 칸을 사진으로 채움 */
-  object-position: center;
-  pointer-events: none;
-}
-
 /*
- * 가족 앨범 위젯 — 장식 프레임 배경 + HTML 타이틀/전체보기.
- * 사진 개수 그리드(열×행·썸네일 px)는 FamilyAlbumSection 로직 그대로.
- * 배경 PNG 595×318 기준 여백: 타이틀 y≈15%, 슬롯 밴드 제거 후 본문, 보라 바 y≈87%.
+ * 가족 앨범 위젯 — 시안형 펼친 스크랩북.
+ * 제목/전체보기는 HTML(i18n). 사진은 프레임리스 라운드. 한 쪽 9장, 한 펼침 18장.
+ * 위젯 카드는 투명. 표지는 첨부1에서 속지 사진(첨부2·3)을 뺀 PNG.
  */
 .content-section.album-widget-section {
-  --album-widget-bg: url('/family-album/widget-bg.png?v=2');
+  --album-paper: #f6efe0;
+  --album-ink: #5c3d24;
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
   padding: 0;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  background-color: #e8e4f2;
-  background-image: var(--album-widget-bg);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  box-shadow: 0 1px 0 rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+  overflow: visible;
+  border: 0;
+  border-radius: 0 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  clip-path: none !important;
 }
 
 :root[data-ui-theme='highend_glass'] .content-section.album-widget-section,
-.dark[data-ui-theme='highend_glass'] .content-section.album-widget-section {
-  background-color: #e8e4f2;
-  background-image: var(--album-widget-bg);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+.dark[data-ui-theme='highend_glass'] .content-section.album-widget-section,
+:root[data-ui-theme='kids_friendly'] .content-section.album-widget-section,
+.dark[data-ui-theme='kids_friendly'] .content-section.album-widget-section,
+:root[data-ui-theme='default'] .content-section.album-widget-section,
+.dark[data-ui-theme='default'] .content-section.album-widget-section,
+html[data-ui-theme='highend_glass'] .content-section.album-widget-section,
+html[data-ui-theme='kids_friendly'] .content-section.album-widget-section,
+html[data-ui-theme='default'] .content-section.album-widget-section {
+  overflow: visible;
+  border-radius: 0 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  clip-path: none !important;
 }
 
-.album-widget-section > .section-header,
-.album-widget-section > .section-body,
-.album-widget-section > .album-widget-view-all {
-  position: relative;
-  z-index: 2;
+.widget-chrome[data-widget-key='album'],
+.widget-chrome[data-widget-key='album'] > .widget-scale-root {
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.album-widget-section > .section-header {
-  justify-content: center;
-  margin: 0;
-  /* 달력 아래, 좌우 새/동물 아이콘 사이 */
-  padding: 5% 14% 0;
+.dashboard-widget-grid > *:has(.album-widget-section) .widget-chrome,
+.dashboard-widget-grid > *:has(.album-widget-section) .widget-chrome > .widget-scale-root {
+  overflow: visible;
+  border-radius: 0;
   background: transparent;
 }
 
-.album-widget-section .album-widget-title {
-  flex: 0 1 auto;
-  max-width: 100%;
+.album-book-title {
+  position: absolute;
+  top: 5.2%;
+  left: 16%;
+  right: 16%;
+  z-index: 6;
+  margin: 0;
+  flex: none;
   overflow: hidden;
+  pointer-events: none;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(1.12rem, 7.6cqmin, 1.55rem);
-  letter-spacing: 0.1em;
-  color: #4b5563;
+  font-family: 'Caveat', 'Gaegu', 'Patrick Hand', cursive;
+  font-size: clamp(0.95rem, 6.6cqmin, 1.42rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--album-ink);
+  text-shadow:
+    0 1px 0 rgba(255, 248, 235, 0.85),
+    0 0 8px rgba(255, 248, 235, 0.7);
 }
 
-.album-widget-section > .section-body {
-  /* 장식과 겹치지 않는 최소 여백 — 사진을 칸에 채움 */
-  padding: 2% 8% 1%;
+.album-book-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  justify-content: stretch;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  perspective: 1100px;
+  container-type: size;
+}
+
+.album-book-empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  margin: 0;
+  padding: 6%;
+  font-family: 'Caveat', 'Gaegu', 'Patrick Hand', cursive;
+  font-size: clamp(0.82rem, 5.2cqmin, 1.12rem);
+  color: #7a624c;
+  text-align: center;
+}
+
+.album-book-cover {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+
+/* 칸 대비 아주 조금만 확대 (108%는 컸고 100%는 작았음) */
+.album-book-fit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 104%;
+  height: 104%;
+  transform: translate(-50%, -50%);
+}
+
+.album-book-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.album-book-doodles {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.album-book-doodles path {
+  fill: none;
+  stroke: #6b4423;
+  stroke-width: 4.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.album-book-doodles circle {
+  fill: #6b4423;
+  stroke: none;
+}
+
+.album-book-spread {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  background: none;
+  box-shadow: none;
+  transform-origin: center;
+}
+
+.album-book-spread--next {
+  animation: album-spread-next 0.42s ease-out;
+}
+
+.album-book-spread--prev {
+  animation: album-spread-prev 0.42s ease-out;
+}
+
+@keyframes album-spread-next {
+  from {
+    opacity: 0.45;
+    transform: rotateY(-16deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes album-spread-prev {
+  from {
+    opacity: 0.45;
+    transform: rotateY(16deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-book-spread--next,
+  .album-book-spread--prev {
+    animation: none;
+  }
+}
+
+.album-book-page {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 2.2%;
+  background: none;
+}
+
+.album-book-page--left {
+  top: 16.5%;
+  left: 10.8%;
+  width: 35.6%;
+  height: 61%;
+}
+
+.album-book-page--right {
+  top: 16.5%;
+  left: 53.6%;
+  width: 35.6%;
+  height: 61%;
+}
+
+.album-book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 5.5%;
+}
+
+.album-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  background: transparent;
+  border: 0;
+  border-radius: 22%;
+  background: #d4c6ae;
+  cursor: pointer;
+}
+
+.album-tile > img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.album-tile-uploading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.45);
+  font-size: 3.2cqmin;
+  font-weight: 700;
+  color: #fff;
+}
+
+.album-book-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 8;
+  width: 1.35rem;
+  height: 1.85rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(91, 58, 32, 0.88);
+  color: #f8efd8;
+  font-size: 1.05rem;
+  line-height: 1;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.album-book-nav--prev {
+  left: 0.4%;
+}
+
+.album-book-nav--next {
+  right: 0.4%;
+}
+
+.album-book-nav:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.album-book-nav:not(:disabled):hover {
+  background: #5c3d24;
+}
+
+.album-book-footer {
+  position: absolute;
+  right: 3%;
+  bottom: 1.2%;
+  left: 3%;
+  z-index: 6;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2%;
+  margin: 0;
+}
+
+.album-book-pager {
+  font-family: 'Caveat', 'Gaegu', 'Patrick Hand', cursive;
+  font-size: clamp(0.72rem, 4.4cqmin, 0.95rem);
+  font-weight: 700;
+  color: var(--album-ink);
 }
 
 .album-widget-section .album-widget-view-all {
   box-sizing: border-box;
   flex: 0 0 auto;
-  align-self: center;
-  width: calc(100% - 15.4%);
-  margin: 0 0 5.6%;
-  min-height: 7.2%;
-  border-radius: 0.55rem;
-  background-color: #56447a;
+  margin-left: auto;
+  padding: 1.6% 3.5%;
+  border-radius: 0.45rem;
+  background-color: #6b4226;
+  font-size: clamp(0.62rem, 4cqmin, 0.82rem);
 }
 
 .message-item {
