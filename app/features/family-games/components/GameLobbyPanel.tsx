@@ -147,7 +147,7 @@ export function GameLobbyPanel({
           <ul className="m-0 list-none p-0" style={{ display: 'grid', gap: '0.8cqw' }}>
             {participants.length === 0 ? (
               <li
-                className="rounded-md border border-dashed border-slate-200 px-2 py-1 text-[#94a3b8]"
+                className="games-lobby-slot-empty rounded-md border border-dashed border-slate-200 px-2 py-1 text-[#94a3b8]"
                 style={{ fontSize: '3.4cqw' }}
               >
                 —

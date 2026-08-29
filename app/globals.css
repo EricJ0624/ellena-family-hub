@@ -4841,8 +4841,8 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
   }
 
   /*
-   * Family Games (kids): 보드게임 테이블 사진 바탕.
-   * 탭·로비·모달 로직은 그대로. 가독성은 얇은 스크림 + 기존 패널.
+   * Family Games (kids): 보드게임 사진+크림 스크림 바탕(원본).
+   * UI 칸(탭·로비·그림찾기)만 반투명 — 선택 탭만 더 진하게.
    */
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .content-section.games-widget-section,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .content-section.games-widget-section,
@@ -4851,6 +4851,8 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
   .dark[data-ui-theme='kids_friendly'] .content-section.games-widget-section,
   html[data-ui-theme='kids_friendly'] .content-section.games-widget-section {
     --games-kids-bg: url('/family-games/widget-bg.webp?v=1');
+    --games-kids-glass: rgb(255 255 255 / 0.46);
+    --games-kids-glass-strong: rgb(255 255 255 / 0.86);
     isolation: isolate;
     background: none !important;
     background-color: #c4a574 !important;
@@ -4862,11 +4864,17 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
     background-size: cover !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
+    box-shadow: none !important;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header,
-  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-header {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0.55em;
+  }
+
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-section-body,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-section-body,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-section-body {
@@ -4876,14 +4884,89 @@ html[data-ui-theme='default'] .content-section.album-widget-section {
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title,
-  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title {
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .section-title,
+  :root[data-ui-theme='kids_friendly'] .content-section.games-widget-section .section-title,
+  .dark[data-ui-theme='kids_friendly'] .content-section.games-widget-section .section-title,
+  html[data-ui-theme='kids_friendly'] .content-section.games-widget-section .section-title {
+    font-family: 'Black Ops One', Montserrat, Pretendard, 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', sans-serif;
+    font-size: clamp(1.15rem, 7.2cqmin, 1.85rem);
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    line-height: 1.05;
+    color: #1e293b;
+    margin-inline-start: 0.35em;
     text-shadow: 0 1px 8px rgb(255 248 235 / 0.92), 0 0 12px rgb(255 248 235 / 0.75);
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-bar,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-bar,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-bar {
-    background: rgb(255 255 255 / 0.82);
+    background: transparent !important;
+  }
+
+  /* 사다리·가위바위보·룰렛 — 미선택은 투명, 선택만 반투명 */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: #334155 !important;
+    box-shadow: none !important;
+    --tw-ring-offset-color: transparent;
+    text-shadow: 0 1px 3px rgb(255 248 235 / 0.88);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn[aria-selected='true'],
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn[aria-selected='true'],
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn[aria-selected='true'] {
+    background-color: var(--games-kids-glass-strong) !important;
+    color: #312e81 !important;
+    box-shadow: 0 1px 5px rgb(15 23 42 / 0.14) !important;
+    text-shadow: none;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn:hover:not([aria-selected='true']),
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn:hover:not([aria-selected='true']),
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-tab-btn:hover:not([aria-selected='true']) {
+    background-color: rgb(255 255 255 / 0.32) !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-participants .games-lobby-slot-empty,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-participants .games-lobby-slot-empty,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-participants .games-lobby-slot-empty {
+    background-color: transparent !important;
+    border-color: rgb(255 255 255 / 0.38) !important;
+    text-shadow: 0 1px 3px rgb(255 248 235 / 0.88);
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-toolbar,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-toolbar,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-toolbar,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-participants li:not(.games-lobby-slot-empty),
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-participants li:not(.games-lobby-slot-empty),
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-participants li:not(.games-lobby-slot-empty),
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-widget-content > .mb-2.rounded-xl,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-widget-content > .mb-2.rounded-xl,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-widget-content > .mb-2.rounded-xl,
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-widget-content > .rounded-lg.bg-amber-50,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-widget-content > .rounded-lg.bg-amber-50,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-widget-content > .rounded-lg.bg-amber-50 {
+    background-color: var(--games-kids-glass) !important;
+    background-image: none !important;
+    border-color: rgb(255 255 255 / 0.42) !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-picture-find-entry,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-picture-find-entry,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-picture-find-entry {
+    border-color: rgb(255 255 255 / 0.32) !important;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-picture-find-entry button,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-picture-find-entry button,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-picture-find-entry button {
+    background-image: none !important;
+    background-color: var(--games-kids-glass) !important;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='games'] .games-lobby-body,
