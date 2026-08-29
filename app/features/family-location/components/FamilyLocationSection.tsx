@@ -116,7 +116,7 @@ export function FamilyLocationSection({
     <section
       className={`content-section location-widget-section h-full min-h-0${
         hasRequestUi ? ' location-widget-section--compact' : ''
-      }`}
+      }${isLocationSharing ? ' location-widget-section--sharing' : ''}`}
     >
       <div className="section-header shrink-0">
         <h3 className="section-title">{t.section_title_location}</h3>
@@ -142,7 +142,7 @@ export function FamilyLocationSection({
       <div
         className={`section-body location-section-body min-h-0${
           hasRequestUi ? ' location-section-body--has-requests' : ''
-        }`}
+        }${isLocationSharing ? ' location-section-body--sharing' : ''}`}
       >
         {myLocation.address && (lat !== 0 || lng !== 0) && (
           <div className="location-address-row shrink-0">

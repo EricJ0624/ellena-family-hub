@@ -3760,6 +3760,55 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   }
 
   /*
+   * 위치 공유 ON: 지도만 확대. 플레이스홀더(공유 OFF) 크기는 기존 inset 유지.
+   * 주소·요청 패널은 지도 위 오버레이로 빼서 map-slot이 전체 높이를 쓰게 함.
+   */
+  .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-section-body {
+    position: relative;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-map-slot {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-address-row {
+    position: absolute;
+    z-index: 4;
+    top: 0.6cqmin;
+    right: 0.6cqmin;
+    left: 0.6cqmin;
+    pointer-events: none;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-address-row .location-text {
+    display: inline-block;
+    max-width: 100%;
+    margin-bottom: 0;
+    pointer-events: auto;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-requests-panel {
+    position: absolute;
+    z-index: 4;
+    top: 0.6cqmin;
+    right: 0.6cqmin;
+    left: auto;
+    width: min(92%, 52cqmin);
+    max-width: none;
+    max-height: 38%;
+    margin-top: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .widget-chrome[data-widget-key='location'] .location-widget-section--sharing.location-widget-section--compact .location-requests-panel {
+    top: 0.4cqmin;
+    right: 0.4cqmin;
+    max-height: 34%;
+  }
+
+  /*
    * Family Location (kids): 세로 나무 프레임 배경.
    * 992×1070 widget-bg 기준 — 제목 패널 y≈13% x≈10–50%, 지도 창 y≈30–83% x≈10–90%,
    * 버튼·공유 띠는 지도 창 하단. 타원 사진·하단 선반은 장식만.
@@ -3936,6 +3985,39 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     margin: 0;
     overflow: hidden;
     border-radius: 4cqmin;
+  }
+
+  /* 공유 ON: 나무 프레임 안 지도 창을 더 크게 (플레이스홀더 inset은 위 규칙 그대로) */
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-section-body,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-section-body,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-section-body {
+    top: 26.8%;
+    right: 5.8%;
+    bottom: 17.2%;
+    left: 5.8%;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-address-row,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-address-row,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-address-row {
+    position: absolute;
+    z-index: 5;
+    top: 0.5cqmin;
+    right: 0.5cqmin;
+    left: 0.5cqmin;
+    flex: none;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-requests-panel,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-requests-panel,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-widget-section--sharing .location-requests-panel {
+    top: auto;
+    right: 3%;
+    bottom: 2%;
+    left: auto;
+    width: min(94%, 54cqmin);
+    max-height: 30%;
+    margin: 0;
   }
 
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-address-row,
