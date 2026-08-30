@@ -31,6 +31,12 @@ export const WIDGET_LAYOUT_PRESETS: Record<WidgetSize, { w: number; h: number }>
 /** Travel planner M 기본 높이. 전역 M(8)보다 낮고 너비(12)는 유지. */
 export const TRAVEL_M_LAYOUT_H = 6;
 
+/**
+ * Family Location M 기본 높이. 전역 M(8)보다 높여 세로 나무 프레임(992×1070)에 맞춤.
+ * 12열 풀폭 기준 약 정사각보다 약간 김 (L=12보다 +1).
+ */
+export const LOCATION_M_LAYOUT_H = 13;
+
 /** layout_w/h(12열) → DB col_span/row_span (CHECK 1~4, 1~6). layout-presets.layoutWHToLegacySpans 와 동일 */
 function legacySpanFromLayoutWH(w: number, h: number): { colSpan: number; rowSpan: number } {
   return {
@@ -145,7 +151,7 @@ export const WIDGET_GOLDEN_RATIOS: Record<DashboardWidgetKey, { w: number; h: nu
   tasks:    { w: 1, h: 2 },  // 세로형: 할 일 목록
   calendar: { w: 1, h: 1 },  // 정사각형: 달력
   chat:     { w: 1, h: 2 },  // 세로형: 채팅 흐름
-  location: { w: 4, h: 3 },  // 가로형: 지도
+  location: { w: 12, h: 13 },  // 세로형: 나무 프레임 지도
   album:    { w: 1, h: 1 },  // 정사각형: 사진 그리드
   travel:   { w: 4, h: 3 },  // 가로형: 여행 일정
   piggy:    { w: 1, h: 1 },  // 정사각형: 저금통
@@ -188,6 +194,13 @@ const _layoutTravel = {
   layoutLandscapeH: TRAVEL_M_LAYOUT_H,
 } as const;
 
+const _layoutLocation = {
+  ..._layoutM,
+  layoutH: LOCATION_M_LAYOUT_H,
+  layoutPortraitH: LOCATION_M_LAYOUT_H,
+  layoutLandscapeH: LOCATION_M_LAYOUT_H,
+} as const;
+
 export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'tasks',    is_enabled: true, display_order: 10, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'calendar', is_enabled: true, display_order: 20, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
@@ -195,7 +208,7 @@ export const DEFAULT_WIDGET_CONFIGS: WidgetConfigDraft[] = [
   { widget_key: 'piggy',    is_enabled: true, display_order: 40, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'travel',   is_enabled: true, display_order: 50, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutTravel },
   { widget_key: 'album',    is_enabled: true, display_order: 60, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
-  { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
+  { widget_key: 'location', is_enabled: true, display_order: 70, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutLocation },
   { widget_key: 'games',        is_enabled: true,  display_order: 80, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
   { widget_key: 'travel_diary', is_enabled: false, display_order: 85, size: 'M', colSpan: _spanM.colSpan, rowSpan: _spanM.rowSpan, minW: null, minH: null, priority: 0, ..._layoutM },
 ];

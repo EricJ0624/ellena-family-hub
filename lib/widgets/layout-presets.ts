@@ -14,6 +14,7 @@
 import {
   WIDGET_LAYOUT_PRESETS,
   TRAVEL_M_LAYOUT_H,
+  LOCATION_M_LAYOUT_H,
   WIDGET_DEFAULT_SIZE,
   WIDGET_DEFAULT_ORDER,
   WIDGET_SIZE_PRESETS,
@@ -55,7 +56,7 @@ export interface LayoutCoords {
 
 /**
  * size → 12열 기준 w/h 반환.
- * travel M만 전역 M보다 낮은 TRAVEL_M_LAYOUT_H 를 쓴다.
+ * travel M은 전역 M보다 낮고, location M은 세로 프레임에 맞춰 더 높다.
  */
 export function getPresetLayout(
   key: DashboardWidgetKey,
@@ -64,6 +65,9 @@ export function getPresetLayout(
   const preset = { ...WIDGET_LAYOUT_PRESETS[size] };
   if (key === 'travel' && size === 'M') {
     preset.h = TRAVEL_M_LAYOUT_H;
+  }
+  if (key === 'location' && size === 'M') {
+    preset.h = LOCATION_M_LAYOUT_H;
   }
   return preset;
 }

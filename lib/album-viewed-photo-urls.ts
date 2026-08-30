@@ -70,3 +70,13 @@ export const TRAVEL_DIARY_POLAROID_INNER = {
   /** 폴라로이드 프레임이 반시계 방향이라 음수 — 첨부 기준 아주 살짝 더 */
   rotateDeg: -6,
 } as const;
+
+/** Family Location kids BG (992×1070) — 오른쪽 위 타원 안쪽. 배경이 100% 100%라 CSS %와 동일 */
+export const LOCATION_WIDGET_BG_SIZE = { width: 992, height: 1070 } as const;
+
+export const LOCATION_OVAL_INNER = {
+  left: 0.552,
+  top: 0.076,
+  width: 0.395,
+  height: 0.23,
+} as const;

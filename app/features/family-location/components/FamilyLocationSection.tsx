@@ -7,6 +7,7 @@
 import React from 'react';
 import type { DashboardLocationRequestRow } from '../types';
 import type { DashboardTranslations } from '@/lib/translations/dashboard';
+import { LocationOvalFromViewedAlbum } from './LocationOvalFromViewedAlbum';
 
 export type FamilyLocationSectionTranslations = Pick<
   DashboardTranslations,
@@ -118,6 +119,7 @@ export function FamilyLocationSection({
         hasRequestUi ? ' location-widget-section--compact' : ''
       }${isLocationSharing ? ' location-widget-section--sharing' : ''}`}
     >
+      <LocationOvalFromViewedAlbum />
       <div className="section-header shrink-0">
         <h3 className="section-title">{t.section_title_location}</h3>
         <div className="location-header-actions">

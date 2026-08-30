@@ -3817,7 +3817,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
   .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section,
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .content-section.location-widget-section {
-    --location-kids-bg: url('/family-location/widget-bg.webp?v=19');
+    --location-kids-bg: url('/family-location/widget-bg.webp?v=26');
     position: relative;
     isolation: isolate;
     padding: 0 !important;
@@ -3832,6 +3832,27 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     box-shadow: none !important;
+  }
+
+  /* 기본: 숨김. Kids에서만 타원 슬롯 표시 (다른 테마 위치 위젯에 사진이 뜨지 않게) */
+  .location-oval-from-album {
+    display: none;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    /* 992×1070 타원 — wood rim 안쪽 */
+    left: 55.2%;
+    top: 7.6%;
+    width: 39.5%;
+    height: 23%;
+    overflow: hidden;
+    border-radius: 50%;
+    pointer-events: none;
   }
 
   /* Baked table shadow was messy — one even drop-shadow on the gadget silhouette. */
