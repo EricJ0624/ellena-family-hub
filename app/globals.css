@@ -3844,9 +3844,18 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album {
     display: block;
     position: absolute;
+    inset: 0;
     z-index: 3;
-    /* 992×1070 타원 — wood rim 안쪽 */
-    left: 55.2%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  :root[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album-slot,
+  .dark[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album-slot,
+  html[data-ui-theme='kids_friendly'] .widget-chrome[data-widget-key='location'] .location-oval-from-album-slot {
+    position: absolute;
+    /* 992×1070 타원 — wood rim 안쪽 (공유 ON/OFF 동일, 지도 inset과 무관) */
+    left: 54.3%;
     top: 7.6%;
     width: 39.5%;
     height: 23%;

@@ -1,7 +1,7 @@
 /**
  * Kids 위치 위젯 오른쪽 위 타원: 앨범에서 이미 로드된 URL만 랜덤 표시.
  * FamilyLocationSection에 useGroup/useLanguage를 넣지 않기 위해 분리.
- * 슬롯 크기는 CSS % (배경 100% 100%) — 위젯 리사이즈 시 setState 없음.
+ * 호스트(inset-0)와 슬롯(% 타원)을 분리 — img가 지도/위젯 전체로 커지지 않게.
  */
 
 'use client';
@@ -39,14 +39,16 @@ export function LocationOvalFromViewedAlbum() {
 
   return (
     <span className="location-oval-from-album pointer-events-none" aria-hidden>
-      {/* 앨범에서 이미 onLoad 된 URL — 브라우저 캐시 재사용 */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={photoUrl}
-        alt=""
-        draggable={false}
-        className="h-full w-full object-cover object-center"
-      />
+      <span className="location-oval-from-album-slot">
+        {/* 앨범에서 이미 onLoad 된 URL — 브라우저 캐시 재사용 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={photoUrl}
+          alt=""
+          draggable={false}
+          className="block h-full w-full object-cover object-center"
+        />
+      </span>
     </span>
   );
 }
