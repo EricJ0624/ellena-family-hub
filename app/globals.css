@@ -4103,7 +4103,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     position: relative;
     background-color: #bae6fd;
     background-image: linear-gradient(160deg, #bae6fd 0%, #f9a8d4 58%, #ffedd5 100%);
-    padding: var(--spacing-lg) calc(var(--spacing-lg) + 1cqmin) calc(var(--spacing-lg) + 1cqmin);
+    padding: 4cqmin 4.5cqmin 4.5cqmin;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     --piggy-kids-art: url('/piggy/kids-widget-bg.webp?v=5') right center / auto 100% no-repeat;
@@ -5282,6 +5282,17 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
     .section-title {
       font-size: 4.5cqmin;
       letter-spacing: 0.12em;
+    }
+    .widget-chrome[data-widget-key='piggy'] .content-section {
+      padding: 4cqmin 4.5cqmin 4.5cqmin;
+    }
+    .widget-chrome[data-widget-key='piggy'] .section-header {
+      margin-top: 0;
+      margin-bottom: 2.5cqmin;
+    }
+    .widget-chrome[data-widget-key='piggy'] .section-title {
+      font-size: 5.5cqmin;
+      padding-left: 1.25cqmin;
     }
     .section-header {
       margin-bottom: 3cqmin;

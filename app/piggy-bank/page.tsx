@@ -537,7 +537,7 @@ function PiggyBankPageContent() {
         <div className="mb-5 flex items-center gap-4">
           <img src={piggyMarkSrc} alt="Ellena Piggy" className="piggy-page-mark h-[90px] w-[90px] bg-transparent object-contain" />
           <div>
-            <h1 className="m-0 text-[22px] text-gray-800">{pt('management_title')}</h1>
+            <h1 className="-mt-1 m-0 text-[26px] text-gray-800">{pt('management_title')}</h1>
             <p className="m-0 mt-1 text-slate-500">{currentGroup?.name || pt('group_label')} · {pt('piggy_per_child')}</p>
           </div>
         </div>
@@ -701,7 +701,7 @@ function PiggyBankPageContent() {
           <div className="mb-5 flex items-center gap-4">
             <img src={piggyMarkSrc} alt="Ellena Piggy" className="piggy-page-mark h-[90px] w-[90px] bg-transparent object-contain" />
             <div>
-              <h1 className="m-0 text-[22px] text-gray-800">{pt('management_title')}</h1>
+              <h1 className="-mt-1 m-0 text-[26px] text-gray-800">{pt('management_title')}</h1>
               <p className="m-0 mt-1 text-slate-500">{childName} · {pt('no_piggy')}</p>
             </div>
           </div>
