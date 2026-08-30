@@ -4373,7 +4373,7 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
 
   .widget-chrome[data-widget-key='calendar'] .calendar-section-header .section-title {
     gap: 1.2cqmin;
-    font-size: 4.6cqmin;
+    font-size: 5.25cqmin;
     line-height: 1.05;
     letter-spacing: 0.1em;
   }
@@ -4661,8 +4661,8 @@ html[data-ui-theme='kids_friendly'] .content-section.album-widget-section {
   }
 
   .widget-chrome[data-widget-key='calendar'] .calendar-section-title-icon {
-    width: 5cqmin;
-    height: 5cqmin;
+    width: 5.5cqmin;
+    height: 5.5cqmin;
     flex-shrink: 0;
     color: rgb(var(--section-title-icon));
   }
