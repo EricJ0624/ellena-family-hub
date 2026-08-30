@@ -566,20 +566,45 @@ export default function LoginPage() {
         }
 
         const isEmailConfirmed = data.user.email_confirmed_at !== null;
+        const createdAtMs = new Date(data.user.created_at).getTime();
+        const isExistingUnconfirmed =
+          !isEmailConfirmed && Date.now() - createdAtMs > 15_000;
 
-        try {
-          await supabase.from('profiles').upsert(
-            {
-              id: data.user.id,
-              email: normalizedEmail,
-              nickname: signupNickname,
-              preferred_language: signupLang,
-              country_code: signupCountry.toUpperCase(),
-            },
-            { onConflict: 'id' }
-          );
-        } catch (profileError) {
-          console.warn('profiles 테이블 업데이트 실패 (무시):', profileError);
+        if (typeof window !== 'undefined') {
+          try {
+            const syncRes = await fetch(`${window.location.origin}/api/auth/sync-signup-metadata`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: data.user.id,
+                email: normalizedEmail,
+                language: signupLang,
+                nickname: signupNickname,
+                country_code: signupCountry.toUpperCase(),
+              }),
+            });
+            if (!syncRes.ok) {
+              console.warn('[Sign up] metadata sync failed:', syncRes.status);
+            }
+          } catch (syncErr) {
+            console.warn('[Sign up] metadata sync failed (ignored):', syncErr);
+          }
+
+          // 미인증 재가입: signUp이 예전 metadata로 메일을 보낼 수 있어 갱신 후 resend
+          if (isExistingUnconfirmed) {
+            try {
+              const { error: resendErr } = await supabase.auth.resend({
+                type: 'signup',
+                email: normalizedEmail,
+                options: { emailRedirectTo: redirectTo },
+              });
+              if (resendErr) {
+                console.warn('[Sign up] confirmation resend failed:', resendErr.message);
+              }
+            } catch (resendErr) {
+              console.warn('[Sign up] confirmation resend failed (ignored):', resendErr);
+            }
+          }
         }
 
         void setLanguage(signupLang);
