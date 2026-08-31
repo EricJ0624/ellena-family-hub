@@ -148,7 +148,6 @@ export type GroupAdminTranslations = {
   tx_col_actor: string;
   label_none: string;
   amount_currency_suffix: string;
-  language_select_label: string;
   widgets_reorder_aria: string;
   widgets_toggle_on: string;
   widgets_toggle_off: string;
@@ -306,7 +305,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: '행위자',
     label_none: '없음',
     amount_currency_suffix: '원',
-    language_select_label: '언어',
     widgets_reorder_aria: '위젯 순서 변경',
     widgets_toggle_on: '켜짐',
     widgets_toggle_off: '꺼짐',
@@ -462,7 +460,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: 'Actor',
     label_none: 'None',
     amount_currency_suffix: '',
-    language_select_label: 'Language',
     widgets_reorder_aria: 'Reorder widget',
     widgets_toggle_on: 'ON',
     widgets_toggle_off: 'OFF',
@@ -618,7 +615,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: '実行者',
     label_none: 'なし',
     amount_currency_suffix: '円',
-    language_select_label: '言語',
     widgets_reorder_aria: 'ウィジェットの並べ替え',
     widgets_toggle_on: 'ON',
     widgets_toggle_off: 'OFF',
@@ -771,7 +767,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: '操作者',
     label_none: '无',
     amount_currency_suffix: '元',
-    language_select_label: '语言',
     widgets_reorder_aria: '调整小组件顺序',
     widgets_toggle_on: '开',
     widgets_toggle_off: '关',
@@ -924,7 +919,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: '操作者',
     label_none: '無',
     amount_currency_suffix: '元',
-    language_select_label: '語言',
     widgets_reorder_aria: '調整小工具順序',
     widgets_toggle_on: '開',
     widgets_toggle_off: '關',
@@ -1077,7 +1071,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: 'Usuario',
     label_none: 'Ninguno',
     amount_currency_suffix: '',
-    language_select_label: 'Idioma',
     widgets_reorder_aria: 'Reordenar widget',
     widgets_toggle_on: 'ON',
     widgets_toggle_off: 'OFF',
@@ -1230,7 +1223,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: 'Acteur',
     label_none: 'Aucun',
     amount_currency_suffix: '',
-    language_select_label: 'Langue',
     widgets_reorder_aria: 'Réorganiser le widget',
     widgets_toggle_on: 'ON',
     widgets_toggle_off: 'OFF',
@@ -1383,7 +1375,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: 'Schauspieler',
     label_none: 'Keiner',
     amount_currency_suffix: '',
-    language_select_label: 'Sprache',
     widgets_reorder_aria: 'Widget neu anordnen',
     widgets_toggle_on: 'AN',
     widgets_toggle_off: 'AUS',
@@ -1536,7 +1527,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: 'Attore',
     label_none: 'Nessuno',
     amount_currency_suffix: '',
-    language_select_label: 'Lingua',
     widgets_reorder_aria: 'Riordina widget',
     widgets_toggle_on: 'ON',
     widgets_toggle_off: 'OFF',
@@ -1692,7 +1682,6 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
     tx_col_actor: 'Responsável',
     label_none: 'Nenhum',
     amount_currency_suffix: '',
-    language_select_label: 'Idioma',
     widgets_reorder_aria: 'Reordenar widget',
     widgets_toggle_on: 'ON',
     widgets_toggle_off: 'OFF',
@@ -1703,3 +1692,4 @@ const groupAdmin: Record<LangCode, GroupAdminTranslations> = {
 export function getGroupAdminTranslation(lang: LangCode, key: keyof GroupAdminTranslations): string {
   return groupAdmin[lang]?.[key] ?? groupAdmin.en[key] ?? (groupAdmin.ko[key] as string) ?? key;
 }
+
