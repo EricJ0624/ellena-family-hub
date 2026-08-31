@@ -17,6 +17,7 @@ import { normalizeGroupId } from '@/lib/validation';
 import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
+import { GroupEmailInviteHost } from '@/app/components/GroupEmailInviteHost';
 import { resolveUiTheme } from '@/lib/ui-theme';
 
 interface GroupContextType {
@@ -414,6 +415,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     <GroupContext.Provider value={value}>
       <LanguageProvider>
         <DocumentTitle />
+        <GroupEmailInviteHost userId={userId} />
         {children}
       </LanguageProvider>
     </GroupContext.Provider>

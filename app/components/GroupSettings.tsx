@@ -9,6 +9,7 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  Mail,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useGroup } from '@/app/contexts/GroupContext';
@@ -23,6 +24,7 @@ import {
 } from '@/lib/group-display-name';
 import type { TitleStyle } from '@/app/components/TitlePage';
 import { resolveUiTheme, type UiTheme } from '@/lib/ui-theme';
+import { GROUP_EMAIL_INVITE_ERROR } from '@/lib/group-email-invite';
 
 interface GroupSettingsProps {
   onClose: () => void;
@@ -76,6 +78,8 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
   const [copiedLink, setCopiedLink] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSystemAdmin, setIsSystemAdmin] = useState<boolean>(false);
@@ -270,6 +274,60 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
       setError(err.message || gst('refresh_failed'));
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleEmailInvite = async () => {
+    if (!currentGroupId || !isAdmin || inviting) return;
+    const email = inviteEmail.trim();
+    if (!email) {
+      setError(gst('email_invite_invalid_email'));
+      return;
+    }
+
+    setInviting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setError(gst('session_error'));
+        return;
+      }
+
+      const res = await fetch('/api/group/email-invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ group_id: currentGroupId, email }),
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const code = typeof json.code === 'string' ? json.code : '';
+        if (code === GROUP_EMAIL_INVITE_ERROR.USER_NOT_REGISTERED) {
+          setError(gst('email_invite_user_not_registered'));
+        } else if (code === GROUP_EMAIL_INVITE_ERROR.ALREADY_MEMBER) {
+          setError(gst('email_invite_already_member'));
+        } else if (code === GROUP_EMAIL_INVITE_ERROR.INVALID_EMAIL) {
+          setError(gst('email_invite_invalid_email'));
+        } else {
+          setError(typeof json.error === 'string' ? json.error : gst('email_invite_failed'));
+        }
+        return;
+      }
+
+      setSuccess(typeof json.message === 'string' ? json.message : gst('email_invite_success'));
+      setInviteEmail('');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('이메일 초대 오류:', err);
+      setError(gst('email_invite_failed'));
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -513,6 +571,45 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
                         {gst('invite_refresh_hint')}
                       </p>
                     </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th
+                  className="bg-slate-50 p-3 text-left text-sm font-semibold text-slate-600 align-top"
+                >
+                  {gst('email_invite_label')}
+                </th>
+                <td className="p-3">
+                  <div className="flex flex-col gap-2 max-w-md">
+                    <div className="flex flex-wrap items-stretch gap-2">
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => {
+                          setInviteEmail(e.target.value);
+                          setError(null);
+                        }}
+                        placeholder={gst('email_invite_placeholder')}
+                        disabled={inviting}
+                        className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+                        autoComplete="email"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handleEmailInvite()}
+                        disabled={inviting || !inviteEmail.trim()}
+                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-none bg-indigo-600 px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {inviting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <Mail className="h-4 w-4" aria-hidden />
+                        )}
+                        {inviting ? gst('email_invite_sending') : gst('email_invite_btn')}
+                      </button>
+                    </div>
+                    <p className="m-0 text-xs text-slate-500">{gst('email_invite_hint')}</p>
                   </div>
                 </td>
               </tr>
