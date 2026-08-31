@@ -26,6 +26,19 @@ export function getSupabaseServerClient() {
   });
 }
 
+/** JWT access token으로 RLS·RPC(auth.uid())용 사용자 컨텍스트 클라이언트 */
+export function getSupabaseClientForAccessToken(accessToken: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) {
+    throw new Error('Supabase 설정이 누락되었습니다. NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 확인해주세요.');
+  }
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 // --- [UTILITY] 환경 변수 체크 함수 ---
 export function checkS3Config(): { available: boolean; missing: string[] } {
   const missing: string[] = [];

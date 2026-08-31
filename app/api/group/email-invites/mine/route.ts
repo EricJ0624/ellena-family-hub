@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const { data: rows, error } = await supabase
       .from('group_email_invites')
-      .select('id, group_id, invited_by, created_at, expires_at')
+      .select('id, group_id, invited_by')
       .eq('invitee_user_id', user.id)
       .eq('status', 'pending')
       .gt('expires_at', nowIso)
@@ -62,8 +62,6 @@ export async function GET(request: NextRequest) {
         group_id: row.group_id,
         group_name: getGroupDisplayNameRaw(group) || group?.name || '',
         invited_by_name: inviterNameById.get(row.invited_by) ?? null,
-        created_at: row.created_at,
-        expires_at: row.expires_at,
       };
     });
 

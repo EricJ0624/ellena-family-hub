@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClientForAccessToken } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
 import { GROUP_SUSPENDED_CODE } from '@/lib/account-suspend-access';
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
-
-function getUserSupabase(accessToken: string) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !anonKey) {
-    throw new Error('Supabase client config missing');
-  }
-  return createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -38,7 +26,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: '인증 토큰이 필요합니다.' }, { status: 401 });
     }
 
-    const supabase = getUserSupabase(token);
+    const supabase = getSupabaseClientForAccessToken(token);
     const { data: groupIdRaw, error } = await supabase.rpc('accept_group_email_invite', {
       p_invite_id: inviteId,
     });
