@@ -72,12 +72,11 @@ export type ResolveUserHasGroupsResult = {
 /**
  * 멤버십 또는 소유 그룹 존재 여부.
  * `flakyRetry`: 쿼리 오류이거나 그룹이 없을 때 짧은 백오프로 재조회(로그인 직후 JWT 반영 지연 대비).
- * `isSystemAdmin`은 호환용으로 유지되며, 재시도 정책에는 더 이상 사용하지 않는다.
  */
 export async function resolveUserHasGroups(
   supabase: SupabaseClient,
   userId: string,
-  options?: { flakyRetry?: boolean; isSystemAdmin?: boolean }
+  options?: { flakyRetry?: boolean }
 ): Promise<ResolveUserHasGroupsResult> {
   const flakyRetry = options?.flakyRetry ?? false;
 

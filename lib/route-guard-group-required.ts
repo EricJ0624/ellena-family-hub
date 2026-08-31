@@ -176,7 +176,6 @@ export async function runGroupRequiredRouteGuard(options?: {
 
   let { hasGroups } = await resolveUserHasGroups(supabase, serverUser.id, {
     flakyRetry: true,
-    isSystemAdmin: Boolean(isAdmin),
   });
 
   const access = await loadUserGroupAccess(supabase, serverUser.id);

@@ -1272,7 +1272,6 @@ export default function FamilyHub() {
             supabase.rpc('is_system_admin', { user_id_param: currentUserId }),
             resolveUserHasGroups(supabase, currentUserId, {
               flakyRetry: !hasOpenGroup,
-              isSystemAdmin: false,
             }),
             loadUserGroupAccess(supabase, currentUserId),
           ]);

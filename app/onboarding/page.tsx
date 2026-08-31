@@ -21,7 +21,9 @@ import {
   getSessionStoredInviteCode,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-import { messageFromSuspendRpcError, messageFromGroupCreateRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { messageFromGroupCreateRpcError } from '@/lib/group-create-rpc';
+import type { BootstrapGroupSummary } from '@/lib/auth-bootstrap-server';
 import { refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 // 동적 렌더링 강제
@@ -49,6 +51,27 @@ interface UserGroup {
   is_owner: boolean;
   role: 'ADMIN' | 'MEMBER';
   display_name_pending?: boolean;
+}
+
+function bootstrapGroupsToUserGroups(groups: BootstrapGroupSummary[]): UserGroup[] {
+  return groups.map((g) => ({
+    id: g.id,
+    name: g.name,
+    invite_code: g.invite_code,
+    is_owner: g.is_owner,
+    role: g.role,
+    display_name_pending: g.display_name_pending,
+  }));
+}
+
+async function redirectCreateFlowToChooseGroup(
+  accessToken: string,
+  userId: string,
+  ownedFallback: UserGroup[],
+  apply: (groups: UserGroup[]) => void,
+): Promise<void> {
+  const refreshed = await refreshAuthBootstrapCache(accessToken, userId);
+  apply(refreshed?.groups.length ? bootstrapGroupsToUserGroups(refreshed.groups) : ownedFallback);
 }
 
 export default function OnboardingPage() {
@@ -178,14 +201,7 @@ export default function OnboardingPage() {
 
         if (bootstrap) {
           isAdmin = bootstrap.isSystemAdmin;
-          allGroups = bootstrap.groups.map((g) => ({
-            id: g.id,
-            name: g.name,
-            invite_code: g.invite_code,
-            is_owner: g.is_owner,
-            role: g.role,
-            display_name_pending: g.display_name_pending,
-          }));
+          allGroups = bootstrapGroupsToUserGroups(bootstrap.groups);
           accessLookupFailed = bootstrap.lookupFailed;
           accessibleGroupIds = bootstrap.accessibleGroupIds;
           if (bootstrap.lookupFailed) {
@@ -378,16 +394,9 @@ export default function OnboardingPage() {
           .select('id, name, invite_code, owner_id, display_name_pending')
           .eq('owner_id', user.id);
         if (!ownedError && ownedGroups && ownedGroups.length > 0) {
-          const refreshed = await refreshAuthBootstrapCache(session.access_token, user.id);
-          const groupsFromBootstrap =
-            refreshed?.groups.map((g) => ({
-              id: g.id,
-              name: g.name,
-              invite_code: g.invite_code,
-              is_owner: g.is_owner,
-              role: g.role,
-              display_name_pending: g.display_name_pending,
-            })) ??
+          await redirectCreateFlowToChooseGroup(
+            session.access_token,
+            user.id,
             ownedGroups.map((group) => ({
               id: group.id,
               name: group.name,
@@ -395,23 +404,14 @@ export default function OnboardingPage() {
               is_owner: true,
               role: 'ADMIN' as const,
               display_name_pending: group.display_name_pending ?? false,
-            }));
-          setUserGroups(groupsFromBootstrap);
-          setStep('choose-group');
-          setLoading(false);
+            })),
+            (groups) => {
+              setUserGroups(groups);
+              setStep('choose-group');
+            },
+          );
           return;
         }
-      }
-
-      // 디버깅: PostgreSQL 세션에서 auth.uid() 값 확인
-      const { data: debugUid, error: debugError } = await supabase.rpc('debug_get_auth_uid');
-      console.log('🔍 [DEBUG] PostgreSQL 세션에서 auth.uid():', debugUid);
-      console.log('🔍 [DEBUG] 클라이언트에서 user.id:', user.id);
-      if (debugError) {
-        console.error('🔍 [DEBUG] auth.uid() 조회 오류:', debugError);
-      }
-      if (!debugUid) {
-        console.error('🔍 [DEBUG] ⚠️ auth.uid()가 NULL입니다! 이것이 RLS 실패의 원인일 수 있습니다.');
       }
 
       // 초대 코드 생성 (RPC 함수 호출)
@@ -435,22 +435,13 @@ export default function OnboardingPage() {
       });
 
       if (createError) {
-        const burstKind = messageFromGroupCreateRpcError(createError.message);
-        if (burstKind === 'GROUP_CREATE_BURST') {
-          const refreshed = await refreshAuthBootstrapCache(session.access_token, user.id);
-          if (refreshed?.groups.length) {
-            setUserGroups(
-              refreshed.groups.map((g) => ({
-                id: g.id,
-                name: g.name,
-                invite_code: g.invite_code,
-                is_owner: g.is_owner,
-                role: g.role,
-                display_name_pending: g.display_name_pending,
-              })),
-            );
-            setStep('choose-group');
-          }
+        if (messageFromGroupCreateRpcError(createError.message) === 'GROUP_CREATE_BURST') {
+          await redirectCreateFlowToChooseGroup(session.access_token, user.id, [], (groups) => {
+            if (groups.length) {
+              setUserGroups(groups);
+              setStep('choose-group');
+            }
+          });
           setError(ot('error_create_burst'));
           return;
         }
@@ -511,11 +502,8 @@ export default function OnboardingPage() {
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
       const suspendKind = messageFromSuspendRpcError(err?.message);
-      const burstKind = messageFromGroupCreateRpcError(err?.message);
       setError(
-        burstKind === 'GROUP_CREATE_BURST'
-          ? ot('error_create_burst')
-          : suspendKind === 'ALL_GROUPS_SUSPENDED'
+        suspendKind === 'ALL_GROUPS_SUSPENDED'
           ? ot('error_all_groups_suspended')
           : isTransientAuthNetworkError(err)
             ? ot('error_network_retry')
