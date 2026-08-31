@@ -21,8 +21,8 @@ import {
   getSessionStoredInviteCode,
   setSessionStoredInviteCode,
 } from '@/lib/family-auth-routing';
-import { messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
-import { fetchAuthBootstrapWithCache, refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
+import { messageFromSuspendRpcError, messageFromGroupCreateRpcError, suspendedPath } from '@/lib/account-suspend-access';
+import { refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
@@ -96,6 +96,8 @@ export default function OnboardingPage() {
 
   // 가입 버튼 연타 방지 (가입 성공 후 두 번째 요청이 'Already a member'로 에러 뜨는 것 방지)
   const joinInProgressRef = useRef(false);
+  // 그룹 생성 연타·인증 링크 재진입 시 중복 생성 방지
+  const createInProgressRef = useRef(false);
 
   // 초기화: 사용자 정보 및 그룹 확인
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function OnboardingPage() {
         // getUser + bootstrap 병렬 — 순차 대기(특히 WiFi)를 줄임
         const [userResult, bootstrapResult] = await Promise.all([
           getValidatedUserWithSessionFallback(supabase, initSession),
-          fetchAuthBootstrapWithCache(initSession.access_token, initSession.user.id),
+          refreshAuthBootstrapCache(initSession.access_token, initSession.user.id),
         ]);
         const { user, error: authUserError } = userResult;
         if (authUserError || !user) {
@@ -346,11 +348,13 @@ export default function OnboardingPage() {
 
   // 그룹 생성
   const handleCreateGroup = async (decideLater = false) => {
+    if (createInProgressRef.current) return;
     if (!decideLater && !groupName.trim()) {
       setError(ot('error_group_name_required'));
       return;
     }
 
+    createInProgressRef.current = true;
     setCreating(true);
     setError(null);
     setSuccess(null);
@@ -365,6 +369,38 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error(ot('error_login_required'));
+      }
+
+      // 초기 온보딩(그룹 선택 화면 아님): DB에 이미 소유 그룹이 있으면 create 대신 선택 화면으로
+      if (userGroups.length === 0) {
+        const { data: ownedGroups, error: ownedError } = await supabase
+          .from('groups')
+          .select('id, name, invite_code, owner_id, display_name_pending')
+          .eq('owner_id', user.id);
+        if (!ownedError && ownedGroups && ownedGroups.length > 0) {
+          const refreshed = await refreshAuthBootstrapCache(session.access_token, user.id);
+          const groupsFromBootstrap =
+            refreshed?.groups.map((g) => ({
+              id: g.id,
+              name: g.name,
+              invite_code: g.invite_code,
+              is_owner: g.is_owner,
+              role: g.role,
+              display_name_pending: g.display_name_pending,
+            })) ??
+            ownedGroups.map((group) => ({
+              id: group.id,
+              name: group.name,
+              invite_code: group.invite_code,
+              is_owner: true,
+              role: 'ADMIN' as const,
+              display_name_pending: group.display_name_pending ?? false,
+            }));
+          setUserGroups(groupsFromBootstrap);
+          setStep('choose-group');
+          setLoading(false);
+          return;
+        }
       }
 
       // 디버깅: PostgreSQL 세션에서 auth.uid() 값 확인
@@ -398,7 +434,28 @@ export default function OnboardingPage() {
         display_name_pending_param: decideLater,
       });
 
-      if (createError) throw createError;
+      if (createError) {
+        const burstKind = messageFromGroupCreateRpcError(createError.message);
+        if (burstKind === 'GROUP_CREATE_BURST') {
+          const refreshed = await refreshAuthBootstrapCache(session.access_token, user.id);
+          if (refreshed?.groups.length) {
+            setUserGroups(
+              refreshed.groups.map((g) => ({
+                id: g.id,
+                name: g.name,
+                invite_code: g.invite_code,
+                is_owner: g.is_owner,
+                role: g.role,
+                display_name_pending: g.display_name_pending,
+              })),
+            );
+            setStep('choose-group');
+          }
+          setError(ot('error_create_burst'));
+          return;
+        }
+        throw createError;
+      }
 
       // 생성된 그룹 정보 조회
       const { data, error: fetchError } = await supabase
@@ -431,19 +488,34 @@ export default function OnboardingPage() {
       setCreatedInviteCode(inviteCode); // 생성된 초대 코드 사용
       setSuccess(ot('success_created'));
       setCreateFamilyRole('');
+      if (userGroups.length === 0) {
+        setUserGroups([
+          {
+            id: data.id,
+            name: data.name,
+            invite_code: inviteCode,
+            is_owner: true,
+            role: 'ADMIN',
+            display_name_pending: Boolean(data.display_name_pending),
+          },
+        ]);
+      }
 
       // 온보딩 진입 시 hasGroups:false로 고정된 bootstrap 캐시 갱신
       const { data: { session: postCreateSession } } = await supabase.auth.getSession();
       if (postCreateSession?.access_token) {
-        void refreshAuthBootstrapCache(postCreateSession.access_token, user.id);
+        await refreshAuthBootstrapCache(postCreateSession.access_token, user.id);
       }
       
       // 초대코드를 확인한 후에만 대시보드로 이동하도록 함
     } catch (err: any) {
       console.error('그룹 생성 오류:', err);
       const suspendKind = messageFromSuspendRpcError(err?.message);
+      const burstKind = messageFromGroupCreateRpcError(err?.message);
       setError(
-        suspendKind === 'ALL_GROUPS_SUSPENDED'
+        burstKind === 'GROUP_CREATE_BURST'
+          ? ot('error_create_burst')
+          : suspendKind === 'ALL_GROUPS_SUSPENDED'
           ? ot('error_all_groups_suspended')
           : isTransientAuthNetworkError(err)
             ? ot('error_network_retry')
@@ -451,7 +523,24 @@ export default function OnboardingPage() {
       );
     } finally {
       setCreating(false);
+      createInProgressRef.current = false;
     }
+  };
+
+  const handleBackFromCreate = () => {
+    if (userGroups.length > 0) {
+      setStep('choose-group');
+      setError(null);
+      setSuccess(null);
+      setCreatedGroupId(null);
+      setCreatedInviteCode(null);
+      return;
+    }
+    setStep('select');
+    setError(null);
+    setSuccess(null);
+    setCreatedGroupId(null);
+    setCreatedInviteCode(null);
   };
 
   // 초대 코드 검증 (비멤버는 groups RLS로 읽을 수 없으므로 서버 API 사용, service role로 RLS 우회)
@@ -787,13 +876,7 @@ export default function OnboardingPage() {
                 {/* 헤더 */}
                 <div className="mb-6">
                   <button
-                    onClick={() => {
-                      setStep('select');
-                      setError(null);
-                      setSuccess(null);
-                      setCreatedGroupId(null);
-                      setCreatedInviteCode(null);
-                    }}
+                    onClick={handleBackFromCreate}
                     className="mb-4 flex cursor-pointer items-center gap-2 rounded-lg border-none bg-transparent p-2 text-sm text-slate-500 hover:bg-slate-100"
                   >
                     <ArrowRight className="h-4 w-4 rotate-180" />

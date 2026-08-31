@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
@@ -9,9 +9,12 @@ import {
   buildOnboardingPath,
   getSessionStoredInviteCode,
   isValidInviteCodeFormat,
-  resolveUserHasGroups,
 } from '@/lib/family-auth-routing';
-import { loadUserGroupAccess } from '@/lib/account-suspend-access';
+import {
+  fetchAuthBootstrap,
+  invalidateCachedAuthBootstrap,
+} from '@/lib/auth-bootstrap';
+import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
 
@@ -21,9 +24,12 @@ export default function AuthCallbackPage() {
   const act = (key: keyof import('@/lib/translations/authCallback').AuthCallbackTranslations) => getAuthCallbackTranslation(lang, key);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const callbackStartedRef = useRef(false);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      if (callbackStartedRef.current) return;
+      callbackStartedRef.current = true;
       try {
         // SSR 안전성: 클라이언트 사이드에서만 실행
         if (typeof window === 'undefined') return;
@@ -54,8 +60,15 @@ export default function AuthCallbackPage() {
             type: otpType,
             token_hash: tokenHash,
           });
-          if (verifyError) throw verifyError;
+          if (verifyError) {
+            const { data: { session: sessionAfterVerifyError } } = await supabase.auth.getSession();
+            if (!sessionAfterVerifyError?.access_token) throw verifyError;
+          }
         }
+
+        try {
+          window.history.replaceState({}, '', '/auth/callback');
+        } catch (_) {}
 
         // 실제로 요청에 붙을 세션(access_token)이 있는지 확인 후 리다이렉트
         const { data: { session } } = await supabase.auth.getSession();
@@ -71,15 +84,12 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // 시스템 관리자 확인
-        const { data: isAdmin } = await supabase.rpc('is_system_admin', {
-          user_id_param: user.id,
-        });
+        // 시스템 관리자·그룹 여부는 bootstrap 1회 조회로 판정 (인증 링크 재클릭 시 stale 캐시 방지)
+        invalidateCachedAuthBootstrap(user.id);
+        const bootstrap = await fetchAuthBootstrap(session.access_token);
+        const hasGroups = Boolean(bootstrap?.hasGroups);
+        const isAdmin = Boolean(bootstrap?.isSystemAdmin);
 
-        const { hasGroups } = await resolveUserHasGroups(supabase, user.id, {
-          flakyRetry: true,
-          isSystemAdmin: Boolean(isAdmin),
-        });
         // 초대 링크로 가입한 경우: API에 임시 저장된 코드 우선 사용 (다른 탭/기기에서 인증해도 동작)
         let invite: string | null = null;
         try {
@@ -100,23 +110,36 @@ export default function AuthCallbackPage() {
         }
         const onboardingPath = buildOnboardingPath(invite);
 
-        if (hasGroups && !invite) {
-          const access = await loadUserGroupAccess(supabase, user.id);
-          if (access.lookupFailed) {
-            console.warn('[AuthCallback] 접근 조회 실패, 온보딩으로 폴백');
-          } else if (access.accessibleGroupIds.length === 0) {
-            router.push('/suspended');
-            return;
-          }
+        if (invite) {
+          router.push(onboardingPath);
+          return;
         }
 
-        if (isAdmin) {
-          // 시스템 관리자: 그룹이 있으면 온보딩(그룹 선택)으로, 없으면 관리자 페이지로
-          router.push(hasGroups ? onboardingPath : '/admin');
-        } else {
-          // 일반 사용자: 그룹이 있든 없든 항상 온보딩으로 (온보딩에서 그룹 선택/생성/가입 처리)
+        if (bootstrap?.lookupFailed) {
           router.push(onboardingPath);
+          return;
         }
+
+        if (
+          bootstrap &&
+          bootstrap.groupIds.length > 0 &&
+          bootstrap.accessibleGroupIds.length === 0
+        ) {
+          router.push('/suspended');
+          return;
+        }
+
+        if (isAdmin && !hasGroups) {
+          router.push('/admin');
+          return;
+        }
+
+        if (bootstrap?.accessibleGroupIds?.length === 1) {
+          router.push(dashboardHrefWithOpenGroup(bootstrap.accessibleGroupIds[0]));
+          return;
+        }
+
+        router.push(onboardingPath);
       } catch (err: any) {
         console.error('Auth callback error:', err);
         setError(err.message || act('error_message'));

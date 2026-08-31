@@ -45,6 +45,8 @@ export type OnboardingTranslations = {
   error_join_failed: string;
   error_copy_failed: string;
   error_create_failed: string;
+  /** create_group GROUP_CREATE_BURST — 연속 생성 차단 (en/ko 외 locale은 en 폴백) */
+  error_create_burst?: string;
   /** 네트워크·일시 연결 실패 시 가입/검증 재시도 안내 */
   error_network_retry: string;
   success_created: string;
@@ -120,6 +122,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: '그룹 가입에 실패했습니다.',
     error_copy_failed: '복사에 실패했습니다.',
     error_create_failed: '그룹 생성에 실패했습니다.',
+    error_create_burst: '방금 그룹을 만들었습니다. 잠시 후 다시 시도하거나 그룹 선택 화면에서 진행해 주세요.',
     error_network_retry: '연결이 불안정합니다. 잠시 후 다시 시도하거나 Wi‑Fi/데이터를 확인해 주세요.',
     success_created: '그룹이 생성되었습니다!',
     success_found: '그룹을 찾았습니다!',
@@ -187,6 +190,7 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     error_join_failed: 'Failed to join group.',
     error_copy_failed: 'Copy failed.',
     error_create_failed: 'Failed to create group.',
+    error_create_burst: 'You just created a group. Please wait a moment or continue from the group selection screen.',
     error_network_retry: 'The connection is unstable. Please try again in a moment or check your network.',
     success_created: 'Group created!',
     success_found: 'Group found!',
