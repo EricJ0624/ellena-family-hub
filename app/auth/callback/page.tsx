@@ -17,10 +17,12 @@ import {
 import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
 import { useLanguage } from '@/app/contexts/LanguageContext';
 import { getAuthCallbackTranslation } from '@/lib/translations/authCallback';
+import { takePendingGoogleSignupMeta } from '@/lib/google-oauth-signup';
+import { isValidLang } from '@/lib/language-fonts';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const { lang } = useLanguage();
+  const { lang, setLanguage } = useLanguage();
   const act = (key: keyof import('@/lib/translations/authCallback').AuthCallbackTranslations) => getAuthCallbackTranslation(lang, key);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +78,47 @@ export default function AuthCallbackPage() {
         if (!session?.access_token || !user) {
           router.push('/');
           return;
+        }
+
+        // Google 가입 탭에서 저장한 별명·언어·국가 반영 (있을 때만). 기존 이메일 콜백 분기는 유지.
+        const pendingGoogleMeta = takePendingGoogleSignupMeta();
+        if (pendingGoogleMeta) {
+          try {
+            const syncRes = await fetch(`${window.location.origin}/api/auth/complete-oauth-signup`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                nickname: pendingGoogleMeta.nickname,
+                language: pendingGoogleMeta.language,
+                country_code: pendingGoogleMeta.country_code,
+              }),
+            });
+            if (!syncRes.ok) {
+              console.warn('[Auth callback] complete-oauth-signup failed:', syncRes.status);
+            } else if (isValidLang(pendingGoogleMeta.language)) {
+              void setLanguage(pendingGoogleMeta.language);
+            }
+          } catch (syncErr) {
+            console.warn('[Auth callback] complete-oauth-signup failed (ignored):', syncErr);
+          }
+
+          // 초대 코드가 있으면 이메일 가입과 같이 pending 저장 (다른 기기 인증 대비)
+          const inviteForStore = getSessionStoredInviteCode();
+          if (inviteForStore && user.email) {
+            try {
+              await fetch(`${window.location.origin}/api/invite/store-pending`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email: user.email.trim().toLowerCase(),
+                  invite_code: inviteForStore,
+                }),
+              });
+            } catch (_) {}
+          }
         }
 
         // 비밀번호 재설정: onboarding/admin 분기 전에 reset-password로만 보냄

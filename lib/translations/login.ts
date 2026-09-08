@@ -38,6 +38,10 @@ type LoginTranslations = {
   success_signup_done: string;
   success_signup_optional: string;
   success_reset_sent: string;
+  google_or: string;
+  btn_google_continue: string;
+  btn_loading_google: string;
+  error_google_failed: string;
 };
 
 const login: Record<LangCode, LoginTranslations> = {
@@ -82,6 +86,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: '가입이 완료되었습니다! 이메일을 확인해주세요. (이메일 인증이 설정된 경우)',
     success_signup_optional: '가입이 완료되었습니다! 이메일을 확인해주세요.',
     success_reset_sent: '비밀번호 재설정 링크를 이메일로 발송했습니다. 이메일을 확인해주세요.',
+    google_or: '또는',
+    btn_google_continue: 'Google로 계속하기',
+    btn_loading_google: 'Google 연결 중',
+    error_google_failed: 'Google 로그인에 실패했습니다. 다시 시도해 주세요.',
   },
   en: {
     subtitle: "A space for our family",
@@ -124,6 +132,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: 'Sign up complete! Please check your email. (if verification is enabled)',
     success_signup_optional: 'Sign up complete! Please check your email.',
     success_reset_sent: 'Password reset link has been sent. Please check your email.',
+    google_or: 'or',
+    btn_google_continue: 'Continue with Google',
+    btn_loading_google: 'Connecting Google...',
+    error_google_failed: 'Google sign-in failed. Please try again.',
   },
   ja: {
     subtitle: '家族の思い出の場所',
@@ -166,6 +178,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: '登録が完了しました！メールを確認してください。（認証が有効な場合）',
     success_signup_optional: '登録が完了しました！メールを確認してください。',
     success_reset_sent: 'パスワードリセットリンクを送信しました。メールを確認してください。',
+    google_or: 'または',
+    btn_google_continue: 'Googleで続行',
+    btn_loading_google: 'Googleに接続中...',
+    error_google_failed: 'Googleログインに失敗しました。もう一度お試しください。',
   },
   'zh-CN': {
     subtitle: '我们家的回忆角落',
@@ -208,6 +224,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: '注册完成！请查收邮件。（如已开启邮箱验证）',
     success_signup_optional: '注册完成！请查收邮件。',
     success_reset_sent: '已发送密码重置链接，请查收邮件。',
+    google_or: '或',
+    btn_google_continue: '使用 Google 继续',
+    btn_loading_google: '正在连接 Google...',
+    error_google_failed: 'Google 登录失败，请重试。',
   },
   'zh-TW': {
     subtitle: '我們家的回憶角落',
@@ -250,6 +270,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: '註冊完成！請查收郵件。（如已開啟郵件驗證）',
     success_signup_optional: '註冊完成！請查收郵件。',
     success_reset_sent: '已發送密碼重設連結，請查收郵件。',
+    google_or: '或',
+    btn_google_continue: '使用 Google 繼續',
+    btn_loading_google: '正在連接 Google...',
+    error_google_failed: 'Google 登入失敗，請再試一次。',
   },
   es: {
     subtitle: 'Un espacio para nuestra familia',
@@ -292,6 +316,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: '¡Registro completado! Revisa tu correo. (si la verificación está activada)',
     success_signup_optional: '¡Registro completado! Revisa tu correo.',
     success_reset_sent: 'Se ha enviado el enlace para restablecer la contraseña. Revisa tu correo.',
+    google_or: 'o',
+    btn_google_continue: 'Continuar con Google',
+    btn_loading_google: 'Conectando con Google...',
+    error_google_failed: 'Error al iniciar sesión con Google. Inténtalo de nuevo.',
   },
   fr: {
     subtitle: 'Un espace pour notre famille',
@@ -334,6 +362,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: 'Inscription terminée ! Vérifiez votre e-mail. (si la vérification est activée)',
     success_signup_optional: 'Inscription terminée ! Vérifiez votre e-mail.',
     success_reset_sent: 'Le lien de réinitialisation a été envoyé. Vérifiez votre e-mail.',
+    google_or: 'ou',
+    btn_google_continue: 'Continuer avec Google',
+    btn_loading_google: 'Connexion à Google...',
+    error_google_failed: 'Échec de la connexion Google. Réessayez.',
   },
   de: {
     subtitle: 'Ein Ort für unsere Familie',
@@ -376,6 +408,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: 'Registrierung abgeschlossen! Bitte E-Mail prüfen. (falls Bestätigung aktiviert)',
     success_signup_optional: 'Registrierung abgeschlossen! Bitte E-Mail prüfen.',
     success_reset_sent: 'Link zum Zurücksetzen des Passworts wurde gesendet. Bitte E-Mail prüfen.',
+    google_or: 'oder',
+    btn_google_continue: 'Mit Google fortfahren',
+    btn_loading_google: 'Google wird verbunden...',
+    error_google_failed: 'Google-Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
   },
   it: {
     subtitle: 'Uno spazio per la nostra famiglia',
@@ -418,6 +454,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: 'Registrazione completata! Controlla l\'email. (se la verifica è attiva)',
     success_signup_optional: 'Registrazione completata! Controlla l\'email.',
     success_reset_sent: 'Il link per reimpostare la password è stato inviato. Controlla l\'email.',
+    google_or: 'oppure',
+    btn_google_continue: 'Continua con Google',
+    btn_loading_google: 'Connessione a Google...',
+    error_google_failed: 'Accesso con Google non riuscito. Riprova.',
   },
   pt: {
     subtitle: 'Um espaço para a nossa família',
@@ -460,6 +500,10 @@ const login: Record<LangCode, LoginTranslations> = {
     success_signup_done: 'Cadastro concluído! Verifique seu e-mail. (se a verificação estiver ativada)',
     success_signup_optional: 'Cadastro concluído! Verifique seu e-mail.',
     success_reset_sent: 'O link para redefinir a senha foi enviado. Verifique seu e-mail.',
+    google_or: 'ou',
+    btn_google_continue: 'Continuar com o Google',
+    btn_loading_google: 'Conectando ao Google...',
+    error_google_failed: 'Falha ao entrar com o Google. Tente novamente.',
   },
 };
 

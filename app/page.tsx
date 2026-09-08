@@ -24,6 +24,10 @@ import { dashboardHrefWithOpenGroup } from '@/lib/group-id-resolve';
 import { getValidatedUserWithSessionFallback } from '@/lib/auth-session-resilience';
 import { formatSupabaseAuthErrorForLog, isSupabaseAuthRateLimitError } from '@/lib/auth-signup-errors';
 import type { SignupBlockReason } from '@/lib/signup-settings';
+import {
+  clearPendingGoogleSignupMeta,
+  setPendingGoogleSignupMeta,
+} from '@/lib/google-oauth-signup';
 
 type Mode = 'login' | 'signup' | 'forgot';
 
@@ -726,6 +730,100 @@ export default function LoginPage() {
     }
   };
 
+  /** Google OAuth 전용 — 기존 handleLogin / handleSignup 본문은 수정하지 않음 */
+  const handleGoogleAuth = async () => {
+    if (loading) return;
+    if (mode !== 'login' && mode !== 'signup') return;
+
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (mode === 'signup') {
+      if (!signupAllowed) {
+        setErrorMsg(
+          signupBlockReason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled'),
+        );
+        return;
+      }
+
+      const trimmedNickname = nickname.trim();
+      if (!trimmedNickname) {
+        setErrorMsg(t('error_nickname_required'));
+        return;
+      }
+      if (trimmedNickname.length < 2 || trimmedNickname.length > 20) {
+        setErrorMsg(t('error_nickname_length'));
+        return;
+      }
+      if (!signupCountry || !isValidCountryCode(signupCountry)) {
+        setErrorMsg(t('error_country_required'));
+        return;
+      }
+
+      try {
+        const statusRes = await fetch('/api/signup-status', { cache: 'no-store' });
+        const statusJson = await statusRes.json().catch(() => null);
+        if (statusJson?.allowed === false) {
+          const reason: SignupBlockReason =
+            statusJson.reason === 'cap_reached' ? 'cap_reached' : 'disabled';
+          setSignupAllowed(false);
+          setSignupBlockReason(reason);
+          setErrorMsg(reason === 'cap_reached' ? t('signup_closed_cap') : t('signup_closed_disabled'));
+          return;
+        }
+      } catch {
+        // 상태 조회 실패 시 OAuth를 시도한다. DB enforce_signup_policy가 최종 차단한다.
+      }
+
+      setPendingGoogleSignupMeta({
+        nickname: trimmedNickname,
+        language: signupLang,
+        country_code: signupCountry.toUpperCase(),
+      });
+      void setLanguage(signupLang);
+    } else {
+      clearPendingGoogleSignupMeta();
+    }
+
+    setLoading(true);
+    try {
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback`
+          : '/auth/callback';
+
+      const oauthData =
+        mode === 'signup'
+          ? {
+              nickname: nickname.trim(),
+              full_name: nickname.trim(),
+              language: signupLang,
+              preferred_language: signupLang,
+              country_code: signupCountry.toUpperCase(),
+            }
+          : undefined;
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: { prompt: 'select_account' },
+          ...(oauthData ? { data: oauthData } : {}),
+        },
+      });
+
+      if (error) throw error;
+      // 성공 시 브라우저가 Google로 이동 — loading 유지
+    } catch (error: unknown) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Google auth] failed:', formatSupabaseAuthErrorForLog(error));
+      }
+      clearPendingGoogleSignupMeta();
+      setErrorMsg(t('error_google_failed'));
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     if (mode === 'login') {
       handleLogin(e);
@@ -1101,6 +1199,47 @@ export default function LoginPage() {
               mode === 'login' ? t('btn_submit_login') : mode === 'signup' ? t('btn_submit_signup') : t('btn_submit_reset')
             )}
           </button>
+
+          {(mode === 'login' || mode === 'signup') && (
+            <>
+              <div className="relative my-0.5 flex items-center gap-3" aria-hidden>
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-xs font-medium text-slate-400">{t('google_or')}</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+              <button
+                type="button"
+                disabled={loading || (mode === 'signup' && !signupAllowed)}
+                onClick={() => void handleGoogleAuth()}
+                className={cn(
+                  'box-border flex h-[60px] w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-200 bg-white text-base font-semibold text-slate-700 shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
+                  loading || (mode === 'signup' && !signupAllowed)
+                    ? 'cursor-not-allowed opacity-60'
+                    : 'cursor-pointer hover:border-slate-300 active:scale-[0.98]',
+                )}
+              >
+                <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden>
+                  <path
+                    fill="#EA4335"
+                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+                  />
+                </svg>
+                {loading ? t('btn_loading_google') : t('btn_google_continue')}
+              </button>
+            </>
+          )}
         </form>
         )}
         
