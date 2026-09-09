@@ -14,6 +14,8 @@ export async function GET() {
       {
         allowed: availability.allowed,
         reason: availability.reason,
+        // 베타 배너 표시 여부 판정용 (null=무제한, 100 이하=베타 페이즈)
+        signupMaxUsers: availability.signupMaxUsers ?? null,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );

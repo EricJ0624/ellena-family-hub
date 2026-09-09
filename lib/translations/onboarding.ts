@@ -75,6 +75,12 @@ export type OnboardingTranslations = {
   decide_later_btn: string;
   /** 그룹 생성 완료 (이름 미정) */
   group_created_heading_pending: string;
+  /** 베타 축하 메시지 제목 (그룹 합류 직후, 베타 자격자 100명 이내일 때만 표시) */
+  beta_welcome_title: string;
+  /** 베타 축하 메시지 본문 */
+  beta_welcome_body: string;
+  /** 베타 버그 제보 안내 */
+  beta_welcome_report: string;
 };
 
 const onboarding: Record<LangCode, OnboardingTranslations> = {
@@ -145,6 +151,11 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: '다시 입력',
     decide_later_btn: '나중에 정하기',
     group_created_heading_pending: '그룹이 생성되었습니다! 가족 이름은 그룹 설정에서 언제든 정할 수 있어요.',
+    beta_welcome_title: 'Hearth Family 공식 베타 테스터로 등록되었습니다! 🎉',
+    beta_welcome_body:
+      '정식 출시 전까지 무료로 이용하실 수 있으며, 출시 후 정식 요금 기준 평생 50% 할인 쿠폰을 드립니다.',
+    beta_welcome_report:
+      "사용 중 버그나 개선점이 있으면 '관리자에게 문의'로 알려 주세요.",
   },
   en: {
     loading: 'Loading...',
@@ -213,6 +224,10 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: 'Re-enter',
     decide_later_btn: 'Decide later',
     group_created_heading_pending: 'Your group is ready! You can set your family name anytime in group settings.',
+    beta_welcome_title: "You're now a Hearth Family official beta tester! 🎉",
+    beta_welcome_body:
+      'Use it free until the official launch. After launch, enjoy a lifetime 50% discount on the official pricing.',
+    beta_welcome_report: "Found a bug or have feedback? Use 'Contact admin' to let us know.",
   },
   ja: {
     loading: '読み込み中...',
@@ -280,6 +295,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: '再入力',
     decide_later_btn: '後で決める',
     group_created_heading_pending: 'グループが作成されました！ファミリー名はグループ設定でいつでも設定できます。',
+    beta_welcome_title: 'Hearth Family 公式ベータテスターに登録されました！ 🎉',
+    beta_welcome_body: '正式リリースまで無料でご利用いただけます。リリース後は正式料金の永久50%割引クーポンを提供します。',
+    beta_welcome_report: 'バグや改善点は「管理者に問い合わせる」からお知らせください。',
   },
   'zh-CN': {
     loading: '加载中...',
@@ -347,6 +365,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: '重新输入',
     decide_later_btn: '稍后决定',
     group_created_heading_pending: '群组已创建！您可随时在群组设置中填写家庭名称。',
+    beta_welcome_title: '您已成为 Hearth Family 正式公测用户！ 🎉',
+    beta_welcome_body: '正式上线前免费使用，上线后享受正式定价永久5折优惠券。',
+    beta_welcome_report: '发现 Bug 或有改进意见？请使用「联系管理员」告知我们。',
   },
   'zh-TW': {
     loading: '載入中...',
@@ -414,6 +435,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: '重新輸入',
     decide_later_btn: '稍後決定',
     group_created_heading_pending: '群組已建立！您可隨時在群組設定中填寫家庭名稱。',
+    beta_welcome_title: '您已成為 Hearth Family 正式公測用戶！ 🎉',
+    beta_welcome_body: '正式上線前免費使用，上線後享受正式定價終身5折優惠券。',
+    beta_welcome_report: '發現 Bug 或有改進意見？請使用「聯絡管理員」告知我們。',
   },
   es: {
     loading: 'Cargando...',
@@ -481,6 +505,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: 'Volver a entrar en',
     decide_later_btn: 'decidir más tarde',
     group_created_heading_pending: '¡Tu grupo está listo! Puede configurar su apellido en cualquier momento en la configuración del grupo.',
+    beta_welcome_title: '¡Ya eres beta tester oficial de Hearth Family! 🎉',
+    beta_welcome_body: 'Úsalo gratis hasta el lanzamiento oficial. Tras el lanzamiento, obtén un cupón de descuento permanente del 50% sobre el precio oficial.',
+    beta_welcome_report: '¿Encontraste un error o tienes comentarios? Usa "Contactar al administrador" para avisarnos.',
   },
   fr: {
     loading: 'Chargement...',
@@ -548,6 +575,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: 'Entrez à nouveau',
     decide_later_btn: 'Décidez plus tard',
     group_created_heading_pending: 'Votre groupe est prêt ! Vous pouvez définir votre nom de famille à tout moment dans les paramètres du groupe.',
+    beta_welcome_title: 'Vous êtes maintenant bêta-testeur officiel de Hearth Family ! 🎉',
+    beta_welcome_body: "Utilisez-le gratuitement jusqu'au lancement officiel. Après le lancement, bénéficiez d'un coupon de réduction permanente de 50 % sur le tarif officiel.",
+    beta_welcome_report: "Un bug ou une suggestion ? Utilisez « Contacter l'administrateur » pour nous le signaler.",
   },
   de: {
     loading: 'Laden...',
@@ -615,6 +645,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: 'Wieder eintreten',
     decide_later_btn: 'Entscheide später',
     group_created_heading_pending: 'Ihre Gruppe ist bereit! Sie können Ihren Familiennamen jederzeit in den Gruppeneinstellungen festlegen.',
+    beta_welcome_title: 'Sie sind jetzt offizieller Beta-Tester von Hearth Family! 🎉',
+    beta_welcome_body: 'Nutze es kostenlos bis zum offiziellen Launch. Nach dem Launch erhältst du einen lebenslangen 50%-Rabattgutschein auf den offiziellen Preis.',
+    beta_welcome_report: 'Einen Fehler gefunden? Nutze "Kontakt zum Administrator".',
   },
   it: {
     loading: 'Caricamento...',
@@ -682,6 +715,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: 'Rientra',
     decide_later_btn: 'Decidi dopo',
     group_created_heading_pending: 'Il tuo gruppo è pronto! Puoi impostare il tuo cognome in qualsiasi momento nelle impostazioni del gruppo.',
+    beta_welcome_title: 'Sei ora un beta tester ufficiale di Hearth Family! 🎉',
+    beta_welcome_body: 'Usalo gratuitamente fino al lancio ufficiale. Dopo il lancio, ricevi un coupon di sconto permanente del 50% sul prezzo ufficiale.',
+    beta_welcome_report: "Trovato un bug? Usa 'Contatta l'amministratore' per farcelo sapere.",
   },
   pt: {
     loading: 'Carregando...',
@@ -749,6 +785,9 @@ const onboarding: Record<LangCode, OnboardingTranslations> = {
     re_enter: 'Entrar novamente',
     decide_later_btn: 'Decidir depois',
     group_created_heading_pending: 'Seu grupo está pronto! Você pode definir o nome da família a qualquer momento nas configurações do grupo.',
+    beta_welcome_title: 'Você agora é um beta tester oficial do Hearth Family! 🎉',
+    beta_welcome_body: 'Use gratuitamente até o lançamento oficial. Após o lançamento, ganhe um cupom de desconto permanente de 50% sobre o preço oficial.',
+    beta_welcome_report: "Encontrou um bug ou tem uma sugestão? Use 'Contatar administrador' para nos avisar.",
   }
 };
 

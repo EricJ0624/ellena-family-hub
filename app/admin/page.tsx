@@ -70,9 +70,22 @@ interface UserInfo {
   preferred_language: string | null;
   country_code: string | null;
   created_at: string;
+  last_sign_in_at: string | null;
   groups_count: number;
   is_active: boolean;
+  recent_30day_login: boolean;
+  beta_rank: number | null;
+  is_beta_qualified: boolean;
 }
+
+type UserSortField =
+  | 'created_at_desc'
+  | 'created_at_asc'
+  | 'last_sign_in_at'
+  | 'country_code'
+  | 'preferred_language'
+  | 'recent_30day'
+  | 'beta_rank';
 
 interface GroupInfo {
   id: string;
@@ -247,6 +260,8 @@ export default function AdminPage() {
   const [manageableGroups, setManageableGroups] = useState<GroupInfo[]>([]); // 관리 가능한 그룹만 (소유자 또는 ADMIN인 그룹)
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userSortField, setUserSortField] = useState<UserSortField>('created_at_desc');
+  const [showBetaOnly, setShowBetaOnly] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -608,16 +623,13 @@ export default function AdminPage() {
         preferred_language: user.preferred_language ?? null,
         country_code: user.country_code ?? null,
         created_at: user.created_at || new Date().toISOString(),
+        last_sign_in_at: user.last_sign_in_at ?? null,
         groups_count: user.groups_count || 0,
         is_active: user.is_active !== false,
+        recent_30day_login: user.recent_30day_login === true,
+        beta_rank: user.beta_rank ?? null,
+        is_beta_qualified: user.is_beta_qualified === true,
       }));
-
-      // 최신 가입일 기준으로 정렬
-      usersWithGroups.sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateB - dateA;
-      });
 
       setUsers(usersWithGroups);
     } catch (err: any) {
@@ -1253,18 +1265,56 @@ export default function AdminPage() {
     }
   }, [auditLogFilters]);
 
-  // 검색 필터링
-  const filteredUsers = users.filter((user) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      user.email?.toLowerCase().includes(query) ||
-      user.nickname?.toLowerCase().includes(query) ||
-      user.id.toLowerCase().includes(query) ||
-      user.preferred_language?.toLowerCase().includes(query) ||
-      user.country_code?.toLowerCase().includes(query)
-    );
-  });
+  // 검색 필터링 + 정렬
+  const filteredUsers = useMemo(() => {
+    let list = users.filter((user) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (
+          !user.email?.toLowerCase().includes(q) &&
+          !user.nickname?.toLowerCase().includes(q) &&
+          !user.id.toLowerCase().includes(q) &&
+          !user.preferred_language?.toLowerCase().includes(q) &&
+          !user.country_code?.toLowerCase().includes(q)
+        ) {
+          return false;
+        }
+      }
+      if (showBetaOnly && !user.is_beta_qualified) return false;
+      return true;
+    });
+
+    list = [...list].sort((a, b) => {
+      switch (userSortField) {
+        case 'created_at_asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'created_at_desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'last_sign_in_at': {
+          if (!a.last_sign_in_at && !b.last_sign_in_at) return 0;
+          if (!a.last_sign_in_at) return 1;
+          if (!b.last_sign_in_at) return -1;
+          return new Date(b.last_sign_in_at).getTime() - new Date(a.last_sign_in_at).getTime();
+        }
+        case 'country_code':
+          return (a.country_code ?? '').localeCompare(b.country_code ?? '');
+        case 'preferred_language':
+          return (a.preferred_language ?? '').localeCompare(b.preferred_language ?? '');
+        case 'recent_30day':
+          return (b.recent_30day_login ? 1 : 0) - (a.recent_30day_login ? 1 : 0);
+        case 'beta_rank': {
+          if (a.beta_rank === null && b.beta_rank === null) return 0;
+          if (a.beta_rank === null) return 1;
+          if (b.beta_rank === null) return -1;
+          return a.beta_rank - b.beta_rank;
+        }
+        default:
+          return 0;
+      }
+    });
+
+    return list;
+  }, [users, searchQuery, showBetaOnly, userSortField]);
 
   const filteredGroups = groups.filter((group) => {
     if (!searchQuery) return true;
@@ -1727,10 +1777,50 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* 정렬 컨트롤 + 베타 필터 */}
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
+                    {adminLang === 'ko' ? '정렬:' : 'Sort:'}
+                    <select
+                      value={userSortField}
+                      onChange={(e) => setUserSortField(e.target.value as UserSortField)}
+                      className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
+                    >
+                      <option value="created_at_desc">{adminLang === 'ko' ? '가입일 최신순' : 'Newest signup'}</option>
+                      <option value="created_at_asc">{adminLang === 'ko' ? '가입일 오래된순' : 'Oldest signup'}</option>
+                      <option value="last_sign_in_at">{adminLang === 'ko' ? '최근 로그인' : 'Last login'}</option>
+                      <option value="country_code">{adminLang === 'ko' ? '거주지' : 'Country'}</option>
+                      <option value="preferred_language">{adminLang === 'ko' ? '언어' : 'Language'}</option>
+                      <option value="recent_30day">{adminLang === 'ko' ? '최근 30일 접속' : 'Active (30d)'}</option>
+                      <option value="beta_rank">{adminLang === 'ko' ? '베타 순번' : 'Beta rank'}</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowBetaOnly((v) => !v)}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70 ${
+                      showBetaOnly
+                        ? 'border-purple-600 bg-purple-600 text-white'
+                        : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    🎯 {adminLang === 'ko' ? '베타 자격자만' : 'Beta only'}
+                    {showBetaOnly && (
+                      <span className="ml-1 rounded bg-white/30 px-1 text-[11px]">
+                        {filteredUsers.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b-2 border-slate-200 bg-slate-50">
+                        <th className="p-3 text-left text-sm font-semibold text-slate-600">
+                          {adminLang === 'ko' ? '베타' : 'Beta'}
+                        </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
                           {at('email')}
                         </th>
@@ -1745,6 +1835,9 @@ export default function AdminPage() {
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
                           {at('joined_at')}
+                        </th>
+                        <th className="p-3 text-left text-sm font-semibold text-slate-600">
+                          {adminLang === 'ko' ? '최근 로그인' : 'Last login'}
                         </th>
                         <th className="p-3 text-left text-sm font-semibold text-slate-600">
                           {at('groups_count_header')}
@@ -1766,6 +1859,18 @@ export default function AdminPage() {
                           transition={{ delay: index * 0.05 }}
                           className="border-b border-slate-200 transition-colors duration-200 hover:bg-slate-50"
                         >
+                          {/* 베타 순번 셀 */}
+                          <td className="p-3">
+                            {user.beta_rank !== null && user.beta_rank <= 100 ? (
+                              <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[12px] font-bold text-purple-700">
+                                #{user.beta_rank}
+                              </span>
+                            ) : user.beta_rank !== null ? (
+                              <span className="text-[12px] text-slate-400">#{user.beta_rank}</span>
+                            ) : (
+                              <span className="text-[12px] text-slate-300">-</span>
+                            )}
+                          </td>
                           <td className="p-3 text-sm text-slate-800">
                             {user.email || '-'}
                           </td>
@@ -1805,6 +1910,21 @@ export default function AdminPage() {
                           </td>
                           <td className="p-3 text-sm text-slate-500">
                             {new Date(user.created_at).toLocaleDateString(adminLocale)}
+                          </td>
+                          {/* 최근 로그인 */}
+                          <td className="p-3 text-sm text-slate-500">
+                            <div className="flex flex-col gap-0.5">
+                              <span>
+                                {user.last_sign_in_at
+                                  ? new Date(user.last_sign_in_at).toLocaleDateString(adminLocale)
+                                  : '-'}
+                              </span>
+                              {user.recent_30day_login && (
+                                <span className="w-fit rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                  {adminLang === 'ko' ? '30일 이내' : '30d active'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-3 text-sm text-slate-500">
                             {fat('count_suffix', { count: user.groups_count })}

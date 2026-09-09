@@ -116,11 +116,25 @@ export default function OnboardingPage() {
   // 에러 및 성공 메시지
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  /** 베타 페이즈 여부 (가입 한도 1~100일 때 true, 그룹 합류 후 축하 배너 표시용) */
+  const [isBetaPhase, setIsBetaPhase] = useState(false);
 
   // 가입 버튼 연타 방지 (가입 성공 후 두 번째 요청이 'Already a member'로 에러 뜨는 것 방지)
   const joinInProgressRef = useRef(false);
   // 그룹 생성 연타·인증 링크 재진입 시 중복 생성 방지
   const createInProgressRef = useRef(false);
+
+  // 베타 페이즈 확인 (가입 한도 1~100일 때)
+  useEffect(() => {
+    fetch('/api/signup-status', { cache: 'no-store' })
+      .then((r) => r.json())
+      .catch(() => null)
+      .then((result) => {
+        if (result && typeof result.signupMaxUsers === 'number' && result.signupMaxUsers <= 100) {
+          setIsBetaPhase(true);
+        }
+      });
+  }, []);
 
   // 초기화: 사용자 정보 및 그룹 확인
   useEffect(() => {
@@ -922,6 +936,21 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
+                    {/* 베타 축하 배너: 그룹 생성 완료 + 베타 페이즈일 때 */}
+                    {isBetaPhase && (
+                      <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-4 text-left">
+                        <p className="mb-1 text-[13px] font-bold text-purple-800">
+                          {ot('beta_welcome_title')}
+                        </p>
+                        <p className="mb-1 text-[13px] leading-5 text-purple-700">
+                          {ot('beta_welcome_body')}
+                        </p>
+                        <p className="text-[12px] leading-5 text-purple-600">
+                          {ot('beta_welcome_report')}
+                        </p>
+                      </div>
+                    )}
+
                     {/* 초대코드를 확인한 경우에만 대시보드로 이동 버튼 표시 */}
                     {inviteCodeConfirmed && (
                       <button
@@ -1219,6 +1248,21 @@ export default function OnboardingPage() {
                       <div className="mt-4 flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-600">
                         <CheckCircle className="h-4 w-4 shrink-0" />
                         <span>{success}</span>
+                      </div>
+                    )}
+
+                    {/* 베타 축하 배너: 그룹 합류 성공 + 베타 페이즈일 때 */}
+                    {joinedGroupId && isBetaPhase && (
+                      <div className="mt-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-4">
+                        <p className="mb-1 text-[13px] font-bold text-purple-800">
+                          {ot('beta_welcome_title')}
+                        </p>
+                        <p className="mb-1 text-[13px] leading-5 text-purple-700">
+                          {ot('beta_welcome_body')}
+                        </p>
+                        <p className="text-[12px] leading-5 text-purple-600">
+                          {ot('beta_welcome_report')}
+                        </p>
                       </div>
                     )}
 

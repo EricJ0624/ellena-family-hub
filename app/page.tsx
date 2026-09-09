@@ -62,6 +62,8 @@ export default function LoginPage() {
   const [loginTitleFontSize, setLoginTitleFontSize] = useState<number | null>(null);
   const [signupAllowed, setSignupAllowed] = useState(true);
   const [signupBlockReason, setSignupBlockReason] = useState<SignupBlockReason>('ok');
+  /** 가입 한도(null=무제한). 100 이하일 때 베타 배너 표시 */
+  const [signupMaxUsers, setSignupMaxUsers] = useState<number | null>(null);
   const countryOptions = getCountryOptions(intlLocaleForLang(displayLang));
 
   const handleSignupLangChange = (code: LangCode) => {
@@ -117,6 +119,10 @@ export default function LoginPage() {
       try {
         const response = await fetch('/api/signup-status', { cache: 'no-store' });
         const result = await response.json().catch(() => null);
+        // 한도값은 항상 저장 (베타 배너 표시 여부 판정)
+        if (!cancelled && result && typeof result.signupMaxUsers === 'number') {
+          setSignupMaxUsers(result.signupMaxUsers);
+        }
         if (cancelled || !result || result.allowed !== false) return;
         setSignupAllowed(false);
         setSignupBlockReason(result.reason === 'cap_reached' ? 'cap_reached' : 'disabled');
@@ -967,6 +973,14 @@ export default function LoginPage() {
             {t('tab_forgot')}
           </button>
         </div>
+
+        {/* 베타 모집 배너: 한도 1~100이고 가입 가능할 때만 표시 */}
+        {mode === 'signup' && signupAllowed && signupMaxUsers !== null && signupMaxUsers <= 100 && (
+          <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3">
+            <p className="mb-1 text-[13px] font-bold text-purple-800">{t('beta_banner_title')}</p>
+            <p className="text-[13px] leading-5 text-purple-700">{t('beta_banner_body')}</p>
+          </div>
+        )}
 
         {mode === 'signup' && !signupAllowed ? (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
