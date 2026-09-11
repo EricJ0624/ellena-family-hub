@@ -7,7 +7,7 @@ export const PRIVACY_TITLE = { ko: '개인정보 처리방침', en: 'Privacy Pol
 
 export const TERMS_BODY = {
   ko: `제1조 (목적)
-본 약관은 Hearth: Family Haven(이하 "서비스")의 이용 조건과 절차를 정합니다.
+본 약관은 Hearth: Family(이하 "서비스")의 이용 조건과 절차를 정합니다.
 
 제2조 (서비스)
 서비스는 가족·그룹 단위의 일정, 앨범, 채팅 등 협업 기능을 제공합니다.
@@ -30,7 +30,7 @@ export const TERMS_BODY = {
 제7조 (문의)
 서비스 관련 문의는 앱 내 고객 지원·문의 기능을 이용해 주세요.`,
   en: `Article 1 (Purpose)
-These Terms govern your use of Hearth: Family Haven (the "Service").
+These Terms govern your use of Hearth: Family (the "Service").
 
 Article 2 (Service)
 The Service provides family/group collaboration features such as calendar, albums, and chat.

@@ -14,6 +14,7 @@ import { getMemberManagementTranslation } from '@/lib/translations/memberManagem
 import { normalizeGroupIdFromRpc } from '@/lib/validation';
 import { checkUserSuspendedInGroup, messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
 import { sameGroupId } from '@/lib/group-id-resolve';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 const GroupSelector: React.FC = () => {
   const router = useRouter();
@@ -73,6 +74,7 @@ const GroupSelector: React.FC = () => {
         invite_code_param: inviteCodeData,
         owner_id_param: user.id,
         display_name_pending_param: decideLater,
+        app_id_param: CURRENT_APP_ID,
       });
 
       if (createError) throw createError;

@@ -80,6 +80,13 @@ export default function AuthCallbackPage() {
           return;
         }
 
+        // 이후 로그인 탭에 이전 계정이 뜨지 않도록 방금 인증한 이메일 기억
+        if (user.email) {
+          try {
+            window.localStorage.setItem('SFH_LAST_EMAIL', user.email.trim().toLowerCase());
+          } catch (_) {}
+        }
+
         // Google 가입 탭에서 저장한 별명·언어·국가 반영 (있을 때만). 기존 이메일 콜백 분기는 유지.
         const pendingGoogleMeta = takePendingGoogleSignupMeta();
         if (pendingGoogleMeta) {

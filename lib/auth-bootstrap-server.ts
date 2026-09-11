@@ -2,6 +2,7 @@ import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { classifyGroupAccess } from '@/lib/account-suspend-access';
 import { isSystemAdmin } from '@/lib/permissions';
 import { normalizeGroupId } from '@/lib/validation';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 export type BootstrapGroupSummary = {
   id: string;
@@ -24,6 +25,8 @@ export type AuthBootstrapPayload = {
     email: string | null;
     emailConfirmed: boolean;
   };
+  /** 이 bootstrap이 계산된 앱 — 클라에서 CURRENT_APP_ID와 불일치 시 폐기 */
+  appId: string;
   isSystemAdmin: boolean;
   hasGroups: boolean;
   groupIds: string[];
@@ -54,6 +57,7 @@ type MembershipJoinRow = {
     invite_code: string;
     owner_id: string;
     display_name_pending: boolean | null;
+    app_id?: string | null;
   } | null;
 };
 
@@ -81,6 +85,7 @@ function emptyPayload(
   const userMeta = toUserMeta(user);
   return {
     user: userMeta,
+    appId: CURRENT_APP_ID,
     isSystemAdmin: adminFlag,
     hasGroups: false,
     groupIds: [],
@@ -126,6 +131,11 @@ function buildGroupSummaries(
 
   for (const row of memberships || []) {
     const membershipGroupId = normalizeGroupId(String(row.group_id));
+    const group = row.groups;
+    // 임베드 groups.app_id가 있으면 현재 앱만 허용 (멤버십 app_id 불일치·누락 방어)
+    if (group?.app_id != null && group.app_id !== CURRENT_APP_ID) {
+      continue;
+    }
     if (membershipGroupId) {
       membershipRoles.push({
         group_id: membershipGroupId,
@@ -133,7 +143,6 @@ function buildGroupSummaries(
         family_role: row.family_role ?? null,
       });
     }
-    const group = row.groups;
     const id = group ? normalizeGroupId(String(group.id)) : null;
     if (!group || !id || seen.has(id)) continue;
     seen.add(id);
@@ -160,11 +169,15 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
 
   const [adminFlag, membershipsRes, ownedRes] = await Promise.all([
     isSystemAdmin(userId),
+    // groups!inner + groups.app_id: 멤버십 app_id 누락/불일치여도 타 앱 그룹 차단
     supabase
       .from('memberships')
-      .select('group_id, role, family_role, groups(id, name, invite_code, owner_id, display_name_pending)')
-      .eq('user_id', userId),
-    supabase.from('groups').select('*').eq('owner_id', userId),
+      .select(
+        'group_id, role, family_role, groups!inner(id, name, invite_code, owner_id, display_name_pending, app_id)',
+      )
+      .eq('user_id', userId)
+      .eq('groups.app_id', CURRENT_APP_ID),
+    supabase.from('groups').select('*').eq('owner_id', userId).eq('app_id', CURRENT_APP_ID),
   ]);
 
   if (membershipsRes.error || ownedRes.error) {
@@ -190,6 +203,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
     .from('groups')
     .select('*')
     .in('id', groupIds)
+    .eq('app_id', CURRENT_APP_ID)
     .order('created_at', { ascending: false });
 
   if (groupRowsError) {
@@ -212,6 +226,7 @@ export async function computeAuthBootstrap(user: BootstrapUserInput): Promise<Au
 
   const base = {
     user: userMeta,
+    appId: CURRENT_APP_ID,
     hasGroups: true,
     groupIds,
     groups: summaries,

@@ -3,7 +3,7 @@
 import React from 'react';
 
 /**
- * 앱 타이틀 통합 렌더링: "(허쓰)" 등 괄호 발음은 0.65em, ": " 뒤 부제는 0.333em (의도된 시각 계층).
+ * 앱 타이틀 통합 렌더링: "(허쓰)" 등 괄호 발음은 0.65em, ": " 뒤 부제는 0.42em (의도된 시각 계층).
  * 로그인·대시보드 등 동일한 타이틀 표시에 사용.
  */
 export function AppTitleContent({ title }: { title: string }): React.ReactNode {
@@ -25,7 +25,7 @@ export function AppTitleContent({ title }: { title: string }): React.ReactNode {
   return (
     <>
       {main}
-      <span className="align-baseline text-[0.333em]">{sub}</span>
+      <span className="align-baseline text-[0.42em]">{sub}</span>
     </>
   );
 }

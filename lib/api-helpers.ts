@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import { CURRENT_APP_ID } from './apps';
 
 // 서버 사이드용 Supabase 클라이언트 (DB 작업용)
 // Service Role Key 사용: RLS 정책 우회하여 서버 사이드에서 모든 작업 수행 가능
@@ -291,10 +292,11 @@ export function generateS3KeyWithGroup(
   const fileType = mimeType.startsWith('image/') ? 'photos' : 'videos';
   const fileExtension = fileName.split('.').pop() || 'jpg';
   const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-  
-  // 그룹 ID가 있으면 경로에 포함
+
+  // Phase C-1: 신규 업로드만 apps/{appId}/… (기존 키는 읽기 유지)
+  const appSegment = `apps/${CURRENT_APP_ID}/`;
   const groupPath = groupId ? `groups/${groupId}/` : '';
-  return `originals/${groupPath}${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
+  return `originals/${appSegment}${groupPath}${fileType}/${year}/${month}/${userId}/${uniqueId}.${fileExtension}`;
 }
 
 /**

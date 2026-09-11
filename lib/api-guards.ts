@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateUser, getSupabaseServerClient } from './api-helpers';
 import { checkPermission, isSystemAdmin } from './permissions';
 import { GROUP_SUSPENDED_CODE } from './account-suspend-access';
+import { CURRENT_APP_ID } from './apps';
 import type { MembershipRole } from '@/types/db';
 
 /**
@@ -74,6 +75,37 @@ async function rejectIfGroupSuspended(userId: string, groupId: string): Promise<
 }
 
 /**
+ * 그룹이 현재 배포 앱(CURRENT_APP_ID)에 속하는지 확인.
+ * 타 앱 group_id 추측 접근 방지 (Phase C).
+ */
+export async function assertGroupBelongsToCurrentApp(
+  groupId: string
+): Promise<NextResponse | null> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('groups')
+    .select('app_id')
+    .eq('id', groupId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return NextResponse.json(
+      { error: '그룹을 찾을 수 없습니다.' },
+      { status: 404 }
+    );
+  }
+
+  if (data.app_id !== CURRENT_APP_ID) {
+    return NextResponse.json(
+      { error: '이 앱에서 접근할 수 없는 그룹입니다.' },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
+
+/**
  * 그룹 관리자 필수 가드
  * 
  * @param userId - 검증할 사용자 ID
@@ -92,6 +124,9 @@ export async function requireGroupAdmin(
   | { role: MembershipRole; isOwner: boolean }
   | NextResponse
 > {
+  const appCheck = await assertGroupBelongsToCurrentApp(groupId);
+  if (appCheck) return appCheck;
+
   const permissionResult = await checkPermission(userId, groupId, 'ADMIN', userId);
   
   if (!permissionResult.success) {
@@ -127,6 +162,9 @@ export async function requireGroupMember(
   | { role: MembershipRole; isOwner: boolean }
   | NextResponse
 > {
+  const appCheck = await assertGroupBelongsToCurrentApp(groupId);
+  if (appCheck) return appCheck;
+
   const permissionResult = await checkPermission(userId, groupId, null, userId);
   
   if (!permissionResult.success) {

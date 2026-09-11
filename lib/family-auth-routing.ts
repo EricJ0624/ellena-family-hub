@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { readStoredGroupId } from '@/lib/group-id-resolve';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 /** sessionStorage 키: 초대 코드 (로그인·콜백·온보딩 공통) */
 export const INVITE_CODE_SESSION_STORAGE_KEY = 'SFH_INVITE_CODE';
@@ -82,8 +83,18 @@ export async function resolveUserHasGroups(
 
   const fetchPair = async () => {
     const [mRes, oRes] = await Promise.all([
-      supabase.from('memberships').select('group_id').eq('user_id', userId).limit(1),
-      supabase.from('groups').select('id').eq('owner_id', userId).limit(1),
+      supabase
+        .from('memberships')
+        .select('group_id')
+        .eq('user_id', userId)
+        .eq('app_id', CURRENT_APP_ID)
+        .limit(1),
+      supabase
+        .from('groups')
+        .select('id')
+        .eq('owner_id', userId)
+        .eq('app_id', CURRENT_APP_ID)
+        .limit(1),
     ]);
     const hasGroups =
       Boolean(mRes.data && mRes.data.length > 0) || Boolean(oRes.data && oRes.data.length > 0);
@@ -123,8 +134,20 @@ export async function resolveUserHasGroups(
     if (saved) {
       await new Promise((resolve) => setTimeout(resolve, 400));
       const [mRow, oRow] = await Promise.all([
-        supabase.from('memberships').select('group_id').eq('user_id', userId).eq('group_id', saved).maybeSingle(),
-        supabase.from('groups').select('id').eq('id', saved).eq('owner_id', userId).maybeSingle(),
+        supabase
+          .from('memberships')
+          .select('group_id')
+          .eq('user_id', userId)
+          .eq('group_id', saved)
+          .eq('app_id', CURRENT_APP_ID)
+          .maybeSingle(),
+        supabase
+          .from('groups')
+          .select('id')
+          .eq('id', saved)
+          .eq('owner_id', userId)
+          .eq('app_id', CURRENT_APP_ID)
+          .maybeSingle(),
       ]);
       if (!mRow.error && mRow.data) {
         return { hasGroups: true };

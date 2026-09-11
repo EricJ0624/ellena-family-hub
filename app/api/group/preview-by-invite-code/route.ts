@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/api-helpers';
 import { requireAuthUser } from '@/lib/api-guards';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 /** 초대 코드 형식: 영숫자 1~20자 (DB는 12자 생성) */
 const INVITE_CODE_REGEX = /^[0-9A-Za-z]{1,20}$/;
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       .from('groups')
       .select('id, name, invite_code, invite_code_expires_at')
       .eq('invite_code', inviteCode)
+      .eq('app_id', CURRENT_APP_ID)
       .maybeSingle();
 
     if (groupError || !group) {

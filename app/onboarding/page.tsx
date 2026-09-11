@@ -24,8 +24,9 @@ import {
 import { messageFromSuspendRpcError, suspendedPath } from '@/lib/account-suspend-access';
 import { messageFromGroupCreateRpcError } from '@/lib/group-create-rpc';
 import type { BootstrapGroupSummary } from '@/lib/auth-bootstrap-server';
-import { refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
+import { refreshAuthBootstrapCache, invalidateCachedAuthBootstrap } from '@/lib/auth-bootstrap';
 import { getAdminSuspendTranslation } from '@/lib/translations/adminSuspend';
+import { CURRENT_APP_ID } from '@/lib/apps';
 // 동적 렌더링 강제
 export const dynamic = 'force-dynamic';
 
@@ -213,7 +214,7 @@ export default function OnboardingPage() {
         let accessLookupFailed = true;
         let accessibleGroupIds: string[] = [];
 
-        if (bootstrap) {
+        if (bootstrap && (!bootstrap.appId || bootstrap.appId === CURRENT_APP_ID)) {
           isAdmin = bootstrap.isSystemAdmin;
           allGroups = bootstrapGroupsToUserGroups(bootstrap.groups);
           accessLookupFailed = bootstrap.lookupFailed;
@@ -225,7 +226,15 @@ export default function OnboardingPage() {
             setSuspendedGroupIds(bootstrap.suspendedGroupIds);
           }
         } else {
-          console.warn('[Onboarding] bootstrap 실패, 클라이언트 조회로 폴백');
+          if (bootstrap?.appId && bootstrap.appId !== CURRENT_APP_ID) {
+            console.warn('[Onboarding] bootstrap appId mismatch, client fallback', {
+              bootstrapAppId: bootstrap.appId,
+              current: CURRENT_APP_ID,
+            });
+            invalidateCachedAuthBootstrap(user.id);
+          } else {
+            console.warn('[Onboarding] bootstrap 실패, 클라이언트 조회로 폴백');
+          }
           const { data: adminData } = await supabase.rpc('is_system_admin', {
             user_id_param: user.id,
           });
@@ -233,15 +242,20 @@ export default function OnboardingPage() {
 
           const { data: memberships } = await supabase
             .from('memberships')
-            .select('group_id, role, groups(id, name, invite_code, owner_id, display_name_pending)')
-            .eq('user_id', user.id);
+            .select(
+              'group_id, role, groups!inner(id, name, invite_code, owner_id, display_name_pending, app_id)',
+            )
+            .eq('user_id', user.id)
+            .eq('groups.app_id', CURRENT_APP_ID);
 
           const { data: ownedGroups } = await supabase
             .from('groups')
             .select('id, name, invite_code, owner_id, display_name_pending')
-            .eq('owner_id', user.id);
+            .eq('owner_id', user.id)
+            .eq('app_id', CURRENT_APP_ID);
 
           const groupIds = new Set<string>();
+          allGroups = [];
           if (ownedGroups) {
             ownedGroups.forEach((group: any) => {
               if (!groupIds.has(group.id)) {
@@ -406,7 +420,8 @@ export default function OnboardingPage() {
         const { data: ownedGroups, error: ownedError } = await supabase
           .from('groups')
           .select('id, name, invite_code, owner_id, display_name_pending')
-          .eq('owner_id', user.id);
+          .eq('owner_id', user.id)
+          .eq('app_id', CURRENT_APP_ID);
         if (!ownedError && ownedGroups && ownedGroups.length > 0) {
           await redirectCreateFlowToChooseGroup(
             session.access_token,
@@ -446,6 +461,7 @@ export default function OnboardingPage() {
         invite_code_param: inviteCode,
         owner_id_param: user.id,
         display_name_pending_param: decideLater,
+        app_id_param: CURRENT_APP_ID,
       });
 
       if (createError) {

@@ -113,6 +113,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 이미 cancelled/rejected면 cancel은 성공으로 처리 (UI 정리만 하면 됨)
+    if (
+      action === 'cancel' &&
+      (locationRequest.status === 'cancelled' || locationRequest.status === 'rejected')
+    ) {
+      return NextResponse.json({ success: true, data: locationRequest }, { status: 200 });
+    }
+
     // silent 모드이고 이미 cancelled/rejected 상태면 성공으로 처리
     if (silent && (locationRequest.status === 'cancelled' || locationRequest.status === 'rejected')) {
       return NextResponse.json({ success: true, data: locationRequest }, { status: 200 });

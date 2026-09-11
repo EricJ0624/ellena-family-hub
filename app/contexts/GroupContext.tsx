@@ -19,6 +19,7 @@ import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { GroupEmailInviteHost } from '@/app/components/GroupEmailInviteHost';
 import { resolveUiTheme } from '@/lib/ui-theme';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 interface GroupContextType {
   currentGroupId: string | null;
@@ -143,7 +144,8 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       let { data: membershipData, error: membershipError } = await supabase
         .from('memberships')
         .select('group_id, role, family_role')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('app_id', CURRENT_APP_ID);
 
       if (membershipError) throw membershipError;
 
@@ -151,7 +153,8 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       let { data: ownedGroupsData, error: ownedGroupsError } = await supabase
         .from('groups')
         .select('id')
-        .eq('owner_id', userId);
+        .eq('owner_id', userId)
+        .eq('app_id', CURRENT_APP_ID);
 
       if (ownedGroupsError) throw ownedGroupsError;
 
@@ -168,8 +171,16 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
       // bootstrap이 그룹 있음을 알려주면 빈 결과 재시도 대기를 줄인다.
       if (allGroupIds.length === 0) {
         await new Promise((r) => setTimeout(r, bootstrapHint?.hasGroups ? 120 : 450));
-        const rM = await supabase.from('memberships').select('group_id, role, family_role').eq('user_id', userId);
-        const rO = await supabase.from('groups').select('id').eq('owner_id', userId);
+        const rM = await supabase
+          .from('memberships')
+          .select('group_id, role, family_role')
+          .eq('user_id', userId)
+          .eq('app_id', CURRENT_APP_ID);
+        const rO = await supabase
+          .from('groups')
+          .select('id')
+          .eq('owner_id', userId)
+          .eq('app_id', CURRENT_APP_ID);
         if (!rM.error && !rO.error) {
           membershipData = rM.data;
           ownedGroupsData = rO.data;
@@ -184,12 +195,14 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
           .select('group_id, role, family_role')
           .eq('user_id', userId)
           .eq('group_id', pinnedSaved)
+          .eq('app_id', CURRENT_APP_ID)
           .maybeSingle();
         const { data: po } = await supabase
           .from('groups')
           .select('id')
           .eq('id', pinnedSaved)
           .eq('owner_id', userId)
+          .eq('app_id', CURRENT_APP_ID)
           .maybeSingle();
         if (pm) {
           membershipData = [pm];
@@ -218,6 +231,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         .from('groups')
         .select('*')
         .in('id', allGroupIds)
+        .eq('app_id', CURRENT_APP_ID)
         .order('created_at', { ascending: false });
 
       if (groupsError) throw groupsError;
@@ -280,6 +294,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         .from('groups')
         .select('owner_id')
         .eq('id', currentGroupId)
+        .eq('app_id', CURRENT_APP_ID)
         .maybeSingle();
 
       if (groupData) {
@@ -295,6 +310,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
             .select('role')
             .eq('user_id', userId)
             .eq('group_id', currentGroupId)
+            .eq('app_id', CURRENT_APP_ID)
             .maybeSingle();
 
           if (membershipData) {
@@ -310,6 +326,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         .from('groups')
         .select('*')
         .eq('id', currentGroupId)
+        .eq('app_id', CURRENT_APP_ID)
         .maybeSingle();
 
       if (groupInfo) {

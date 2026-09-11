@@ -501,10 +501,6 @@ export default function FamilyHub() {
   const [eventAuthorNames, setEventAuthorNames] = useState<Record<string, string>>({});
   const [familyRoleByUserId, setFamilyRoleByUserId] = useState<Record<string, 'mom' | 'dad' | 'son' | 'daughter' | 'grandpa' | 'grandma' | 'other' | null>>({});
   const [familyTaskMembers, setFamilyTaskMembers] = useState<FamilyTaskMemberOption[]>([]);
-  const [isLocationSharing, setIsLocationSharing] = useState(false);
-  /** saveLocationToSupabase 스로틀에서 클로저 없이 공유 중 여부 참조 */
-  const isLocationSharingRef = useRef(false);
-  isLocationSharingRef.current = isLocationSharing;
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [piggySummary, setPiggySummary] = useState<PiggySummary | null>(null);
@@ -607,6 +603,11 @@ export default function FamilyHub() {
   }>>([]);
   const locationRequestsRef = useRef(locationRequests);
   locationRequestsRef.current = locationRequests;
+  /** 맵 표시·GPS 동기화의 단일 진실: accepted 공유 여부 */
+  const hasAcceptedShare = locationRequests.some((r) => r.status === 'accepted');
+  /** saveLocationToSupabase 스로틀 등 비동기에서 공유 중 여부 참조 */
+  const isLocationSharingRef = useRef(false);
+  isLocationSharingRef.current = hasAcceptedShare;
   const [showLocationRequestModal, setShowLocationRequestModal] = useState(false);
   const [locationRequestModalMode, setLocationRequestModalMode] = useState<'where' | 'come_here'>('where');
   const [showNavMapModal, setShowNavMapModal] = useState(false);
@@ -2163,7 +2164,7 @@ export default function FamilyHub() {
         }
 
         // 위치 공유가 활성화되어 있으면 백그라운드 위치 추적 시작
-        if (isLocationSharing) {
+        if (hasAcceptedShare) {
           startBackgroundLocationTracking();
         }
       } catch (error) {
@@ -2180,7 +2181,7 @@ export default function FamilyHub() {
         stopBackgroundLocationTracking();
       }
     };
-  }, [isMounted, isAuthenticated, userId, isLocationSharing]);
+  }, [isMounted, isAuthenticated, userId, hasAcceptedShare]);
 
   // Service Worker에서 받은 위치 업데이트 처리 함수
   const updateLocationFromServiceWorker = async (latitude: number, longitude: number, accuracy: number) => {
@@ -2519,13 +2520,26 @@ export default function FamilyHub() {
   // 4. Google Maps 지도 초기화 및 실시간 마커 업데이트 (승인된 사용자만 표시)
   // ✅ 위치 공유 OFF일 때는 지도를 로드하지 않음 → Google Map load 비용 0
   useEffect(() => {
-    if (!isLocationSharing) {
-      if (mapRef.current) {
-        mapRef.current = null;
+    if (!hasAcceptedShare) {
+      // 임베드 맵·마커 잔상 제거 (accepted 없어지면 플레이스홀더로 전환)
+      if (updateMapMarkersDebounceRef.current) {
+        clearTimeout(updateMapMarkersDebounceRef.current);
+        updateMapMarkersDebounceRef.current = null;
       }
+      markersRef.current.forEach((marker) => {
+        try {
+          if (marker?.map != null) marker.map = null;
+          else if (typeof marker?.setMap === 'function') marker.setMap(null);
+        } catch (_) {}
+      });
+      markersRef.current.clear();
+      mapRef.current = null;
       setMapLoaded(false);
       return;
     }
+
+    // 공유 ON 시 이전 에러 화면이 #map 마운트를 막지 않도록 초기화
+    setMapError(null);
 
     const googleMapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY;
     if (!googleMapApiKey) {
@@ -2540,12 +2554,15 @@ export default function FamilyHub() {
       console.log('Google Maps API 키 로드됨:', googleMapApiKey ? '설정됨' : '설정 안됨');
     }
 
-    const initializeMap = () => {
-      if (typeof window === 'undefined' || !(window as any).google) return;
+    const initializeMap = (): boolean => {
+      if (typeof window === 'undefined' || !(window as any).google) return false;
 
       try {
         const mapElement = document.getElementById('map');
-        if (!mapElement) return;
+        if (!mapElement) {
+          // #map이 아직 없으면 짧게 재시도 (공유 ON 직후 첫 paint 레이스)
+          return false;
+        }
 
         // 기본 중심 위치 (Kuala Lumpur Twin Tower) - 위치가 없을 때 사용
         const defaultCenter = { lat: 3.1390, lng: 101.6869 };
@@ -2608,13 +2625,26 @@ export default function FamilyHub() {
         }
 
         // 지도가 이미 초기화되어 있으면 업데이트만 수행
+        // 공유 OFF→ON 또는 에러→복구로 #map이 새로 마운트되면 기존 mapRef는 폐기
+        if (mapRef.current) {
+          try {
+            const boundDiv =
+              typeof mapRef.current.getDiv === 'function' ? mapRef.current.getDiv() : null;
+            if (boundDiv && boundDiv !== mapElement) {
+              mapRef.current = null;
+            }
+          } catch (_) {
+            mapRef.current = null;
+          }
+        }
+
         if (!mapRef.current) {
           // google.maps.Map이 사용 가능한지 다시 한 번 확인
           if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.Map) {
             console.error('Google Maps API가 아직 준비되지 않았습니다.');
             setMapError('Google Maps API를 초기화하는데 실패했습니다. 페이지를 새로고침해주세요.');
             setMapLoaded(false);
-            return;
+            return false;
           }
 
           try {
@@ -2712,7 +2742,7 @@ export default function FamilyHub() {
               setMapError(dt('map_error_load_failed'));
             }
             setMapLoaded(false);
-            return;
+            return false;
           }
         } else {
           // 지도 중심 업데이트
@@ -2735,6 +2765,7 @@ export default function FamilyHub() {
 
         // ✅ 마커 업데이트 (본인 위치 + 상대방 위치)
         updateMapMarkers();
+        return true;
       } catch (error: any) {
         console.error('지도 초기화 오류:', error);
         googleMapsScriptLoadedRef.current = false; // 실패 시 다시 시도 가능하도록
@@ -2754,18 +2785,30 @@ export default function FamilyHub() {
           setMapError(dt('map_error_load_failed'));
         }
         setMapLoaded(false);
+        return false;
       }
+    };
+
+    const scheduleInitializeMap = (delayMs: number) => {
+      if (updateMapMarkersDebounceRef.current) clearTimeout(updateMapMarkersDebounceRef.current);
+      updateMapMarkersDebounceRef.current = setTimeout(() => {
+        updateMapMarkersDebounceRef.current = null;
+        if (!initializeMap()) {
+          // #map 미마운트 시 한 번 더 대기 후 재시도
+          updateMapMarkersDebounceRef.current = setTimeout(() => {
+            updateMapMarkersDebounceRef.current = null;
+            initializeMap();
+          }, 250);
+        }
+      }, delayMs);
     };
 
     // Google Maps API 스크립트 로드 (중복 방지)
     // google.maps.Map이 사용 가능한지 확인 (완전히 로드되었는지 확인)
+    let mapsReadyPoll: ReturnType<typeof setInterval> | null = null;
     if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
       // 이미 로드되어 있으면 디바운스 후 초기화 → familyLocations/locationRequests 연속 변경 시 마지막 상태로 한 번만 마커 갱신
-      if (updateMapMarkersDebounceRef.current) clearTimeout(updateMapMarkersDebounceRef.current);
-      updateMapMarkersDebounceRef.current = setTimeout(() => {
-        updateMapMarkersDebounceRef.current = null;
-        initializeMap();
-      }, 500);
+      scheduleInitializeMap(150);
     } else if (!googleMapsScriptLoadedRef.current) {
       // 스크립트가 이미 DOM에 있는지 확인
       const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
@@ -2775,13 +2818,15 @@ export default function FamilyHub() {
         googleMapsScriptLoadedRef.current = true;
         let checkCount = 0;
         const maxChecks = 100; // 최대 10초 (100ms * 100)
-        const checkGoogleMaps = setInterval(() => {
+        mapsReadyPoll = setInterval(() => {
           checkCount++;
           if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-            clearInterval(checkGoogleMaps);
-            initializeMap();
+            if (mapsReadyPoll) clearInterval(mapsReadyPoll);
+            mapsReadyPoll = null;
+            scheduleInitializeMap(100);
           } else if (checkCount >= maxChecks) {
-          clearInterval(checkGoogleMaps);
+            if (mapsReadyPoll) clearInterval(mapsReadyPoll);
+            mapsReadyPoll = null;
             console.warn('Google Maps API 로드 타임아웃');
             setMapError(dt('map_error_script_timeout'));
             setMapLoaded(false);
@@ -2801,16 +2846,15 @@ export default function FamilyHub() {
           // 스크립트 로드 후 google.maps.Map이 사용 가능할 때까지 대기
           let checkCount = 0;
           const maxChecks = 100; // 최대 10초 (100ms * 100)
-          const checkGoogleMapsReady = setInterval(() => {
+          mapsReadyPoll = setInterval(() => {
             checkCount++;
             if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
-              clearInterval(checkGoogleMapsReady);
-              // 약간의 지연을 두고 초기화 (API가 완전히 준비되도록)
-          setTimeout(() => {
-            initializeMap();
-              }, 200);
+              if (mapsReadyPoll) clearInterval(mapsReadyPoll);
+              mapsReadyPoll = null;
+              scheduleInitializeMap(200);
             } else if (checkCount >= maxChecks) {
-              clearInterval(checkGoogleMapsReady);
+              if (mapsReadyPoll) clearInterval(mapsReadyPoll);
+              mapsReadyPoll = null;
               console.error('Google Maps API 초기화 실패 - google.maps.Map을 찾을 수 없습니다.');
               setMapError(dt('map_error_init_failed'));
               setMapLoaded(false);
@@ -2837,18 +2881,40 @@ export default function FamilyHub() {
         
         document.head.appendChild(script);
       }
+    } else {
+      // 스크립트 로드 플래그만 있고 API 미준비 — 폴링 후 초기화 (재공유 시 지도 안 뜨는 경우 방지)
+      let checkCount = 0;
+      const maxChecks = 100;
+      mapsReadyPoll = setInterval(() => {
+        checkCount++;
+        if ((window as any).google && (window as any).google.maps && (window as any).google.maps.Map) {
+          if (mapsReadyPoll) clearInterval(mapsReadyPoll);
+          mapsReadyPoll = null;
+          scheduleInitializeMap(100);
+        } else if (checkCount >= maxChecks) {
+          if (mapsReadyPoll) clearInterval(mapsReadyPoll);
+          mapsReadyPoll = null;
+          googleMapsScriptLoadedRef.current = false;
+          setMapError(dt('map_error_script_timeout'));
+          setMapLoaded(false);
+        }
+      }, 100);
     }
     return () => {
       if (updateMapMarkersDebounceRef.current) {
         clearTimeout(updateMapMarkersDebounceRef.current);
         updateMapMarkersDebounceRef.current = null;
       }
+      if (mapsReadyPoll) {
+        clearInterval(mapsReadyPoll);
+        mapsReadyPoll = null;
+      }
     };
-  }, [isLocationSharing, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, updateMapMarkers]);
+  }, [hasAcceptedShare, state.location.latitude, state.location.longitude, state.familyLocations, locationRequests, userId, updateMapMarkers]);
 
-  // 위젯 CQ/그리드 리사이즈 시 Google Maps 캔버스 크기 동기화
+  // 위젯 CQ/그리드 리사이즈·구글맵 전체화면 종료 시 캔버스 크기 동기화
   useEffect(() => {
-    if (!isLocationSharing || !mapLoaded || !mapRef.current) return;
+    if (!hasAcceptedShare || !mapLoaded || !mapRef.current) return;
     if (typeof window === 'undefined') return;
 
     let resizeRaf = 0;
@@ -2867,6 +2933,13 @@ export default function FamilyHub() {
       });
     };
 
+    const onFullscreenChange = () => {
+      // 전체화면 종료 직후 타일/오버레이 레이아웃 재동기화 (종료 버튼 클릭 막힘 완화)
+      triggerMapResize();
+      window.setTimeout(triggerMapResize, 100);
+      window.setTimeout(triggerMapResize, 300);
+    };
+
     const slot = document.querySelector(
       '.widget-chrome[data-widget-key="location"] .location-map-slot',
     );
@@ -2877,12 +2950,16 @@ export default function FamilyHub() {
     });
     ro.observe(slot);
     triggerMapResize();
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange as EventListener);
 
     return () => {
       if (resizeRaf) cancelAnimationFrame(resizeRaf);
       ro.disconnect();
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange as EventListener);
     };
-  }, [isLocationSharing, mapLoaded]);
+  }, [hasAcceptedShare, mapLoaded]);
 
   // 최신 키를 항상 가져오는 헬퍼 함수 (클로저 문제 해결)
   const getCurrentKey = useCallback(() => {
@@ -3090,7 +3167,12 @@ export default function FamilyHub() {
       const locationsSubscription = supabase
         .channel(`user_locations_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'user_locations' },
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_locations',
+            ...(currentGroupId ? { filter: `group_id=eq.${currentGroupId}` } : {}),
+          },
           async (payload: any) => {
             const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new && payload.old ? 'UPDATE' : 'INSERT');
             if (ev === 'DELETE') {
@@ -3129,7 +3211,12 @@ export default function FamilyHub() {
       const locationRequestsSubscription = supabase
         .channel(`location_requests_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
         .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'location_requests' },
+          {
+            event: '*',
+            schema: 'public',
+            table: 'location_requests',
+            ...(currentGroupId ? { filter: `group_id=eq.${currentGroupId}` } : {}),
+          },
           async (payload: any) => {
             const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new && payload.old ? 'UPDATE' : 'INSERT');
             if (ev === 'INSERT') {
@@ -3210,7 +3297,7 @@ export default function FamilyHub() {
                       }
                     }));
                     // 위치 추적이 아직 시작되지 않았다면 시작
-                    if (!isLocationSharing) {
+                    if (geolocationWatchIdRef.current === null) {
                       console.log('🎯 [Realtime] 위치 추적 시작');
                       updateLocation();
                     }
@@ -3224,7 +3311,14 @@ export default function FamilyHub() {
               }
             }
             if (updatedRequest && updatedRequest.status === 'cancelled') {
+              const latest = await loadLocationRequests();
               await loadFamilyLocations();
+              const stillAccepted = (latest ?? locationRequestsRef.current).some(
+                (r) => r.status === 'accepted',
+              );
+              if (!stillAccepted) {
+                stopLocationTracking();
+              }
             }
             await new Promise(resolve => setTimeout(resolve, 1000));
             await loadFamilyLocations();
@@ -4232,7 +4326,7 @@ export default function FamilyHub() {
     }
   };
 
-  // 위치 추적 중지
+  // 위치 추적 중지 (GPS만 — 맵 표시는 hasAcceptedShare가 담당)
   const stopLocationTracking = () => {
     if (geolocationWatchIdRef.current !== null) {
       navigator.geolocation.clearWatch(geolocationWatchIdRef.current);
@@ -4245,12 +4339,10 @@ export default function FamilyHub() {
       clearInterval(locationUpdateIntervalRef.current);
       locationUpdateIntervalRef.current = null;
     }
-    
-    setIsLocationSharing(false);
-    
+
     // 백그라운드 위치 추적 중지
     stopBackgroundLocationTracking();
-    
+
     // ✅ 위치 추적 중지 시 state.location 초기화
     setState(prev => ({
       ...prev,
@@ -4265,7 +4357,7 @@ export default function FamilyHub() {
   };
 
   // 위치 공유 기능 (스트림 방식 - watchPosition 사용)
-  const updateLocation = async (options?: { embedMap?: boolean }) => {
+  const updateLocation = async (_options?: { embedMap?: boolean }) => {
     if (!userId || !isAuthenticated) {
       alert(dt('login_required'));
       return;
@@ -4276,17 +4368,12 @@ export default function FamilyHub() {
       return;
     }
 
-    // 이미 추적 중이면 중지
+    // 이미 추적 중이면 no-op (토글 금지 — accept 경로와 effect가 동시에 호출될 수 있음)
     if (geolocationWatchIdRef.current !== null) {
-      stopLocationTracking();
-      alert(dt('location_tracking_stopped'));
       return;
     }
 
-    const embedMap = options?.embedMap !== false;
-    if (embedMap) {
-      setIsLocationSharing(true);
-    }
+    setMapError(null);
 
     // 백그라운드 위치 추적 시작
     startBackgroundLocationTracking();
@@ -4296,9 +4383,6 @@ export default function FamilyHub() {
       const permissionResult = await navigator.permissions?.query({ name: 'geolocation' }).catch(() => null);
       if (permissionResult?.state === 'denied') {
         alert(dt('location_permission_denied'));
-        if (embedMap) {
-          setIsLocationSharing(false);
-        }
         return;
       }
 
@@ -4475,12 +4559,15 @@ export default function FamilyHub() {
       } else {
         console.warn('위치 추적 시작 실패 (조용히 처리):', errorMessage);
       }
-
-      if (embedMap) {
-        setIsLocationSharing(false);
-      }
     }
   };
+
+  // accepted 공유가 없으면 GPS 중지 (맵은 hasAcceptedShare로 자동 숨김)
+  useEffect(() => {
+    if (!hasAcceptedShare) {
+      stopLocationTracking();
+    }
+  }, [hasAcceptedShare]);
 
   // 컴포넌트 언마운트 시 위치 추적 정리
   useEffect(() => {
@@ -4765,13 +4852,18 @@ export default function FamilyHub() {
         const newLocationsByUser = new Map(locations.map((l: any) => [l.userId, l]));
         
         // ✅ CRITICAL FIX: acceptedUserIdsRef 동기화 (updateMapMarkers가 최신 승인 관계 인식하도록)
-        expectedUserIds.forEach(uid => {
-          acceptedUserIdsRef.current.add(uid);
-          console.log('📍 [loadFamilyLocations] acceptedUserIdsRef에 추가:', uid);
-        });
+        // 승인 목록에 없는 ID는 제거해야 취소 후 마커가 남지 않음
+        const nextAccepted = new Set(expectedUserIds);
+        acceptedUserIdsRef.current = nextAccepted;
         console.log('📍 [loadFamilyLocations] acceptedUserIdsRef 전체:', Array.from(acceptedUserIdsRef.current));
         
         setState(prev => {
+          // 승인된 공유가 없으면 지도 상대 위치는 비움 (취소 직후 prev 유지 버그 방지)
+          if (expectedUserIds.size === 0) {
+            console.log('📍 [loadFamilyLocations] expectedUserIds 비어 있음 - familyLocations 비움');
+            return { ...prev, familyLocations: [] };
+          }
+
           const prevList = prev.familyLocations || [];
           const merged = [...expectedUserIds].map((uid) => {
             const fromNew = newLocationsByUser.get(uid);
@@ -4781,45 +4873,28 @@ export default function FamilyHub() {
           console.log('📍 [loadFamilyLocations] merged 개수:', merged.length);
           console.log('📍 [loadFamilyLocations] merged:', JSON.stringify(merged, null, 2));
           // 승인된 상대는 있는데 아직 user_locations 행이 없거나(RLS/지연) merged만 비면 []로 덮어써 마커가 사라짐
-          if (expectedUserIds.size > 0 && merged.length === 0) {
+          if (merged.length === 0) {
             console.log('📍 [loadFamilyLocations] expectedUserIds는 있으나 merged 비어 있음 - prev 유지');
-            return prev;
-          }
-          // expectedUserIds가 비어있을 때는 API stale 가능성 → []로 덮어쓰지 않음 (prev 유지, 취소/거절 시에만 else 쪽에서 비움)
-          if (expectedUserIds.size === 0 && merged.length === 0) {
-            console.log('📍 [loadFamilyLocations] expectedUserIds 비어있고 merged도 비어있음 - prev 유지');
             return prev;
           }
           console.log('✅ [loadFamilyLocations] setState 호출 - familyLocations 업데이트');
           return { ...prev, familyLocations: merged };
         });
       } else {
-        // 데이터가 없을 때: 승인된 관계 있으면 prev 유지. expectedUserIds 비어있으면 stale 가능성 → []로 덮어쓰지 않음
+        // 데이터가 없을 때: 승인된 관계 있으면 prev 유지. 승인 없으면 비움.
         console.log('❌ [loadFamilyLocations] user_locations 데이터 없음');
         
-        // ✅ CRITICAL FIX: acceptedUserIdsRef 동기화 (취소/거부된 사용자 제거)
-        expectedUserIds.forEach(uid => acceptedUserIdsRef.current.add(uid));
+        acceptedUserIdsRef.current = new Set(expectedUserIds);
         
         setState(prev => {
-          if (expectedUserIds.size > 0 && prev.familyLocations?.length) {
+          if (expectedUserIds.size === 0) {
+            console.log('❌ [loadFamilyLocations] 승인 없음 - familyLocations 비움');
+            return { ...prev, familyLocations: [] };
+          }
+          if (prev.familyLocations?.length) {
             console.log('📍 [loadFamilyLocations] expectedUserIds 있고 prev.familyLocations 있음 - prev 유지');
             return prev;
           }
-          const hasCancelledOrRejected = (currentLocationRequests || []).some((r: any) => r.status === 'cancelled' || r.status === 'rejected');
-          if (expectedUserIds.size === 0 && !hasCancelledOrRejected) {
-            console.log('📍 [loadFamilyLocations] expectedUserIds 없고 취소/거부 없음 - prev 유지');
-            return prev;
-          }
-          
-          if (!prev.familyLocations?.length) {
-            console.log('📍 [loadFamilyLocations] familyLocations 이미 비어 있음 - prev 유지');
-            return prev;
-          }
-          console.log('❌ [loadFamilyLocations] familyLocations 비우기');
-          // familyLocations를 비울 때 ref도 정리
-          const removedUserIds = new Set((prev.familyLocations || []).map((loc: any) => loc.userId));
-          removedUserIds.forEach(uid => acceptedUserIdsRef.current.delete(uid));
-          
           return { ...prev, familyLocations: [] };
         });
       }
@@ -4873,18 +4948,32 @@ export default function FamilyHub() {
   };
 
   // 위치 요청 목록 로드 (만료된 pending 요청은 사용자가 직접 삭제)
-  const loadLocationRequests = async () => {
-    if (!userId || !isAuthenticated) return;
+  // 반환: 최신 목록(성공 시). 실패/스킵 시 null
+  const loadLocationRequests = async (): Promise<Array<{
+    id: string;
+    requester_id: string;
+    target_id: string;
+    status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+    created_at: string;
+    updated_at?: string;
+    expires_at?: string;
+    request_type?: 'where' | 'come_here';
+    destination_lat?: number | null;
+    destination_lng?: number | null;
+    requester?: { id: string; email: string; nickname: string | null };
+    target?: { id: string; email: string; nickname: string | null };
+  }> | null> => {
+    if (!userId || !isAuthenticated) return null;
     if (!currentGroupId) {
       console.warn('loadLocationRequests: currentGroupId가 없습니다. groupId가 필요합니다.');
-      return;
+      return null;
     }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         console.warn('loadLocationRequests: 인증 세션이 없습니다.');
-        return;
+        return null;
       }
 
       const response = await fetch(`/api/location-request?userId=${userId}&type=all&groupId=${currentGroupId}`, {
@@ -4918,28 +5007,31 @@ export default function FamilyHub() {
           if (locationRequestsSignature(prev) === locationRequestsSignature(processedRequests)) return prev;
           return processedRequests;
         });
+        locationRequestsRef.current = processedRequests;
         
         // 만료된 accepted 요청들을 silent 모드로 자동 종료 (무한 루프 방지를 위해 상태 업데이트 후 처리)
         if (expiredAcceptedRequests.length > 0) {
           expiredAcceptedRequests.forEach((requestId) => {
-            // 비동기로 처리하되, loadLocationRequests 재호출 방지를 위해 silent 모드 사용
-            endLocationSharing(requestId, true).catch((error) => {
+            // skipReload=true: loadLocationRequests ↔ endLocationSharing 재진입 루프 방지
+            endLocationSharing(requestId, true, true).catch((error) => {
               console.warn('만료된 요청 자동 종료 실패:', requestId, error);
             });
           });
         }
+        return processedRequests;
       }
+      return null;
     } catch (error) {
       console.error('위치 요청 목록 로드 오류:', error);
+      return null;
     }
   };
 
   // 위치 공유 종료 (accepted 요청 취소)
+  // 맵 ON/OFF는 locationRequests → hasAcceptedShare 가 담당. 여기서는 요청 상태·GPS만 정리.
   const endLocationSharing = async (requestId: string, silent: boolean = false, skipReload: boolean = false) => {
     if (!userId || !isAuthenticated) {
-      if (!silent) {
-        alert(dt('login_required'));
-      }
+      if (!silent) alert(dt('login_required'));
       return;
     }
     if (!currentGroupId) {
@@ -4947,17 +5039,46 @@ export default function FamilyHub() {
       return;
     }
 
-    // silent 모드가 아닐 때만 확인 창 표시
     if (!silent && !confirm(dt('location_share_stop_confirm'))) {
       return;
     }
 
+    const lockKey = `end-${requestId}`;
+    if (processingRequestsRef.current.has(lockKey)) {
+      return;
+    }
+    processingRequestsRef.current.add(lockKey);
+
     try {
+      const currentReq =
+        locationRequestsRef.current.find((r) => r.id === requestId) ||
+        locationRequests.find((r) => r.id === requestId);
+      const otherId = currentReq
+        ? currentReq.requester_id === userId
+          ? currentReq.target_id
+          : currentReq.requester_id
+        : null;
+
+      const nextRequests = locationRequestsRef.current.map((r) =>
+        r.id === requestId ? { ...r, status: 'cancelled' as const } : r,
+      );
+      locationRequestsRef.current = nextRequests;
+      setLocationRequests(nextRequests);
+      if (otherId) acceptedUserIdsRef.current.delete(otherId);
+      setState((prev) => ({
+        ...prev,
+        familyLocations: otherId
+          ? (prev.familyLocations || []).filter((loc: any) => loc.userId !== otherId)
+          : [],
+        location: { address: '', latitude: 0, longitude: 0, userId: '', updatedAt: '' },
+      }));
+      if (!nextRequests.some((r) => r.status === 'accepted')) {
+        stopLocationTracking();
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        if (!silent) {
-          alert(dt('auth_session_expired'));
-        }
+        if (!silent) alert(dt('auth_session_expired'));
         return;
       }
 
@@ -4965,62 +5086,57 @@ export default function FamilyHub() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requestId,
           userId,
           groupId: currentGroupId,
           action: 'cancel',
-          silent, // silent 플래그 전달
+          silent,
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
-      if (result.success) {
-        // ✅ 위치 공유 종료 시 state.location 초기화
-        setState(prev => ({
-          ...prev,
-          location: {
-            address: '',
-            latitude: 0,
-            longitude: 0,
-            userId: '',
-            updatedAt: ''
-          }
-        }));
-        
-        if (!silent) {
-          alert(dt('location_share_stopped'));
-        }
-        
-        // skipReload가 false일 때만 재로드 (무한 루프 방지)
+      if (!result.success) {
+        if (!silent) alert(result.error || '위치 공유 종료에 실패했습니다.');
+        else console.warn('위치 공유 자동 종료 실패:', result.error);
         if (!skipReload) {
-          // 위치 요청 목록 다시 로드
           await loadLocationRequests();
           await loadFamilyLocations();
         }
-      } else {
-        if (!silent) {
-          alert(result.error || '위치 공유 종료에 실패했습니다.');
-        } else {
-          // silent 모드에서는 에러만 로그로 기록
-          console.warn('위치 공유 자동 종료 실패:', result.error);
-        }
+        return;
+      }
+
+      if (!silent) {
+        alert(dt('location_share_stopped'));
+      }
+
+      if (!skipReload) {
+        await loadLocationRequests();
+        await loadFamilyLocations();
       }
     } catch (error) {
       console.error('위치 공유 종료 오류:', error);
-      if (!silent) {
-        alert(dt('location_share_stop_error'));
-      }
+      if (!silent) alert(dt('location_share_stop_error'));
+    } finally {
+      processingRequestsRef.current.delete(lockKey);
     }
   };
 
-  // 모든 사용자 목록 로드 (로그인한/안한 모두) - profiles 테이블에서 직접 조회
-  // options.groupId 있으면 해당 그룹 멤버만 조회 (위치 요청 모달용)
+  // 현재 그룹 멤버 목록 로드 (groupId 필수 — 전역 유저 디렉터리 금지)
   const loadAllUsers = useCallback(async (retryCount = 0, options?: { groupId?: string }) => {
     if (!userId || !isAuthenticated) {
+      setAllUsers([]);
+      setLoadingUsers(false);
+      loadingUsersRef.current = false;
+      return;
+    }
+
+    const groupId = options?.groupId;
+    if (!groupId) {
+      console.warn('📋 loadAllUsers: groupId 없음 — 호출 생략');
       setAllUsers([]);
       setLoadingUsers(false);
       loadingUsersRef.current = false;
@@ -5038,15 +5154,15 @@ export default function FamilyHub() {
     const retryDelay = 1000; // 1초
 
     try {
-      const listUrl = `/api/users/list?currentUserId=${userId}${options?.groupId ? `&groupId=${options.groupId}` : ''}`;
-      console.log('📋 사용자 목록 로드 시작 - API 호출:', { userId, retryCount, groupId: options?.groupId });
+      const listUrl = `/api/users/list?currentUserId=${userId}&groupId=${groupId}`;
+      console.log('📋 사용자 목록 로드 시작 - API 호출:', { userId, retryCount, groupId });
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error(dt('auth_session_expired'));
       }
 
-      // API를 통해 서버 사이드에서 조회 (groupId 있으면 해당 그룹 멤버만)
+      // API를 통해 서버 사이드에서 조회 (해당 그룹 멤버만)
       const response = await fetch(listUrl, {
         method: 'GET',
         headers: {
@@ -5072,7 +5188,7 @@ export default function FamilyHub() {
         setAllUsers(result.data);
         
         if (result.data.length === 0) {
-          console.warn('⚠️ 사용자 목록이 비어있습니다. auth.users에 다른 사용자가 있는지 확인하세요.');
+          console.warn('⚠️ 현재 그룹에 본인 외 멤버가 없습니다.');
         }
       } else {
         console.warn('⚠️ 사용자 목록 로드 실패 - 응답 형식 오류:', result);
@@ -5432,7 +5548,7 @@ export default function FamilyHub() {
               }));
 
               // 위치 추적 시작 (실시간 업데이트)
-              if (!isLocationSharing) {
+              if (geolocationWatchIdRef.current === null) {
                 updateLocation();
               }
               
@@ -6027,8 +6143,10 @@ export default function FamilyHub() {
         }
       }
 
-      // 5. 사용자 목록 새로고침 (다른 사용자에게 변경사항 반영)
-      await loadAllUsers();
+      // 5. 사용자 목록 새로고침 (현재 그룹 멤버만)
+      if (currentGroupId) {
+        await loadAllUsers(0, { groupId: currentGroupId });
+      }
 
       // 6. Piggy Bank 요약 정보 새로고침 (별명 변경 반영)
       if (currentGroupId) {
@@ -6619,7 +6737,7 @@ export default function FamilyHub() {
             onOpenComeHereModal={handleOpenLocationComeHere}
             myLocation={state.location}
             extractLocationAddress={extractLocationAddress}
-            isLocationSharing={isLocationSharing}
+            showMap={hasAcceptedShare}
             mapError={mapError}
             hasGoogleMapsApiKey={Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAP_API_KEY)}
             locationRequests={locationRequests}

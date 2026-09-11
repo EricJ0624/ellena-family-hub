@@ -619,11 +619,20 @@ export default function LoginPage() {
 
         void setLanguage(signupLang);
 
+        // 로그인 탭 전환 시 LAST_EMAIL(이전 계정)로 덮어쓰지 않도록 방금 가입한 이메일을 저장
+        const rememberSignupEmail = () => {
+          if (typeof window !== 'undefined' && normalizedEmail) {
+            localStorage.setItem(LAST_EMAIL_KEY, normalizedEmail);
+            setLastEmailFromStorage(normalizedEmail);
+          }
+        };
+
         if (!isEmailConfirmed) {
           setSuccessMsg(t('success_signup_check_email'));
+          rememberSignupEmail();
           setTimeout(() => {
             setMode('login');
-            setEmail('');
+            setEmail(normalizedEmail);
             setPassword('');
             setConfirmPassword('');
             setNickname('');
@@ -635,6 +644,7 @@ export default function LoginPage() {
         const session = data.session;
         const isNewUserSession = session?.user?.id === data.user?.id;
         if (session && isNewUserSession) {
+          rememberSignupEmail();
           await new Promise((resolve) => setTimeout(resolve, 100));
           const params =
             typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -642,9 +652,10 @@ export default function LoginPage() {
           router.push(buildOnboardingPath(invite));
         } else {
           setSuccessMsg(t('success_signup_done'));
+          rememberSignupEmail();
           setTimeout(() => {
             setMode('login');
-            setEmail('');
+            setEmail(normalizedEmail);
             setPassword('');
             setConfirmPassword('');
             setNickname('');

@@ -13,6 +13,7 @@ import {
   writeStoredGroupId,
 } from '@/lib/group-id-resolve';
 import { AUTH_STORAGE_KEY, clearAuthStorage, supabase } from '@/lib/supabase';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 export type GroupRequiredGuardResult =
   | { ok: true }
@@ -54,12 +55,14 @@ export async function applyOpenGroupIfValid(
         .select('group_id')
         .eq('user_id', userId)
         .eq('group_id', openGroup)
+        .eq('app_id', CURRENT_APP_ID)
         .maybeSingle(),
       client
         .from('groups')
         .select('id')
         .eq('id', openGroup)
         .eq('owner_id', userId)
+        .eq('app_id', CURRENT_APP_ID)
         .maybeSingle(),
     ]);
 

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatUnknownError, isAbortLikeError, isTransientClientError } from '@/lib/supabase-error';
 import { normalizeGroupId } from '@/lib/validation';
 import { sameGroupId } from '@/lib/group-id-resolve';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 export const GROUP_SUSPENDED_CODE = 'GROUP_SUSPENDED';
 export const ACCESS_UNAVAILABLE_PATH = '/access-unavailable';
@@ -104,8 +105,8 @@ async function loadUserGroupAccessOnce(
 ): Promise<UserGroupAccess> {
   const client = untypedClient(supabase);
   const [{ data: memberships, error: memError }, { data: owned, error: ownedError }] = await Promise.all([
-    client.from('memberships').select('group_id').eq('user_id', userId),
-    client.from('groups').select('id').eq('owner_id', userId),
+    client.from('memberships').select('group_id').eq('user_id', userId).eq('app_id', CURRENT_APP_ID),
+    client.from('groups').select('id').eq('owner_id', userId).eq('app_id', CURRENT_APP_ID),
   ]);
 
   if (memError || ownedError) {

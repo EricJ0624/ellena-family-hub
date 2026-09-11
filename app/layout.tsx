@@ -6,7 +6,7 @@ import { ClientChunkRecovery } from "./components/ClientChunkRecovery";
 import { CalendarEventModalHost } from "./features/family-calendar/components/CalendarEventModalHost";
 
 export const metadata: Metadata = {
-  title: "Hearth: Family Haven",
+  title: "Hearth: Family",
   description: "우리가족 추억의 공간",
 };
 

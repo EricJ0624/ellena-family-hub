@@ -164,7 +164,10 @@ export function useFamilyLocation({
     console.log('📍 위치 subscription 설정 중...');
     const locationsSubscription = supabase
       .channel(`user_locations_changes:${currentGroupId}:${realtimeSubscriptionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_locations' }, (payload: any) => {
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_locations', filter: `group_id=eq.${currentGroupId}` },
+        (payload: any) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
         if (ev === 'DELETE') {
@@ -231,7 +234,10 @@ export function useFamilyLocation({
     console.log('📍 위치 요청 subscription 설정 중...');
     const requestsSubscription = supabase
       .channel(`location_requests_changes:${currentGroupId}:${realtimeSubscriptionId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'location_requests' }, (payload: any) => {
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'location_requests', filter: `group_id=eq.${currentGroupId}` },
+        (payload: any) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
 
         if (ev === 'DELETE') {

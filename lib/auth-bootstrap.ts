@@ -2,6 +2,7 @@ import type { AuthBootstrapPayload } from '@/lib/auth-bootstrap-server';
 import { resolveSuspendRedirect } from '@/lib/account-suspend-access';
 import { normalizeGroupId } from '@/lib/validation';
 import { sameGroupId } from '@/lib/group-id-resolve';
+import { CURRENT_APP_ID } from '@/lib/apps';
 
 export type { AuthBootstrapPayload };
 export type { BootstrapGroupSummary, BootstrapMembershipRole } from '@/lib/auth-bootstrap-server';
@@ -31,7 +32,7 @@ type CachedBootstrap = {
 };
 
 function cacheKey(userId: string): string {
-  return `${CACHE_KEY_PREFIX}${userId}`;
+  return `${CACHE_KEY_PREFIX}${CURRENT_APP_ID}:${userId}`;
 }
 
 function readBootstrapFromStorage(
@@ -44,6 +45,11 @@ function readBootstrapFromStorage(
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedBootstrap;
     if (Date.now() - parsed.savedAt > maxAgeMs) {
+      storage.removeItem(cacheKey(userId));
+      return null;
+    }
+    // 타 앱/구버전 캐시 폐기
+    if (parsed.payload?.appId && parsed.payload.appId !== CURRENT_APP_ID) {
       storage.removeItem(cacheKey(userId));
       return null;
     }

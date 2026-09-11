@@ -26,7 +26,7 @@ export type CommonTranslations = {
 
 const common: Record<LangCode, CommonTranslations> = {
   ko: {
-    app_title: 'Hearth (허쓰): 패밀리 헤이븐',
+    app_title: 'Hearth (허쓰): 패밀리',
     user: '사용자',
     me: '나',
     me_suffix: ' (나)',
@@ -48,7 +48,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: '건너뛰기',
   },
   en: {
-    app_title: 'Hearth: Family Haven',
+    app_title: 'Hearth: Family',
     user: 'User',
     me: 'Me',
     me_suffix: ' (me)',
@@ -70,7 +70,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'Skip',
   },
   ja: {
-    app_title: 'Hearth (ハース): ファミリーヘイブン',
+    app_title: 'Hearth (ハース): ファミリー',
     user: 'ユーザー',
     me: '自分',
     me_suffix: ' (自分)',
@@ -92,7 +92,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'スキップ',
   },
   'zh-CN': {
-    app_title: 'Hearth (赫斯): 法米利·黑文',
+    app_title: 'Hearth (赫斯): 法米利',
     user: '用户',
     me: '我',
     me_suffix: ' (我)',
@@ -114,7 +114,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: '跳过',
   },
   'zh-TW': {
-    app_title: 'Hearth (赫斯): 法米利·黑文',
+    app_title: 'Hearth (赫斯): 法米利',
     user: '使用者',
     me: '我',
     me_suffix: ' (我)',
@@ -136,7 +136,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: '略過',
   },
   es: {
-    app_title: 'Hearth: Family Haven',
+    app_title: 'Hearth: Family',
     user: 'Usuario',
     me: 'Yo',
     me_suffix: ' (yo)',
@@ -158,7 +158,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'Omitir',
   },
   fr: {
-    app_title: 'Hearth : Family Haven',
+    app_title: 'Hearth : Family',
     user: 'Utilisateur',
     me: 'Moi',
     me_suffix: ' (moi)',
@@ -180,7 +180,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'Passer',
   },
   de: {
-    app_title: 'Hearth: Family Haven',
+    app_title: 'Hearth: Family',
     user: 'Benutzer',
     me: 'Ich',
     me_suffix: ' (ich)',
@@ -202,7 +202,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'Überspringen',
   },
   it: {
-    app_title: 'Hearth: Family Haven',
+    app_title: 'Hearth: Family',
     user: 'Utente',
     me: 'Io',
     me_suffix: ' (io)',
@@ -224,7 +224,7 @@ const common: Record<LangCode, CommonTranslations> = {
     skip: 'Salta',
   },
   pt: {
-    app_title: 'Hearth: Family Haven',
+    app_title: 'Hearth: Family',
     user: 'Usuário',
     me: 'Eu',
     me_suffix: ' (eu)',
@@ -250,7 +250,8 @@ const common: Record<LangCode, CommonTranslations> = {
 /** DB·그룹 설정에 저장될 수 있는 기본 앱 타이틀 문자열(모든 UI 언어 + 레거시 영문 기본값) */
 const DEFAULT_APP_TITLE_VARIANTS: ReadonlySet<string> = new Set([
   ...LANG_CODES.map((l) => common[l].app_title),
-  'Hearth: Family Haven', // GroupSettings·온보딩 등에서 쓰던 영문 기본
+  'Hearth: Family',
+  'Hearth: Family Haven', // 레거시 저장값
 ]);
 
 /** 저장된 문구가 기본 앱 타이틀인지 — 언어와 무관히 동일 취급 */

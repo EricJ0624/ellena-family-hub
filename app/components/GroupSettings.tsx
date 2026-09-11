@@ -32,7 +32,7 @@ interface GroupSettingsProps {
 }
 
 const DEFAULT_TITLE_STYLE: TitleStyle = {
-  content: 'Hearth: Family Haven',
+  content: 'Hearth: Family',
   color: '#9333ea',
   fontSize: 48,
   fontWeight: '700',

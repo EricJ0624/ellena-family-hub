@@ -110,7 +110,7 @@ export function fitFontSizeToWidth(
   return minPx;
 }
 
-/** AppTitleContent — main 1em, 괄호 0.65em, 부제 0.333em */
+/** AppTitleContent — main 1em, 괄호 0.65em, 부제 0.42em */
 export function measureAppTitleWidthPx(
   title: string,
   baseFontSizePx: number,
@@ -143,7 +143,7 @@ export function measureAppTitleWidthPx(
     mainWidth
     + measureTextWidthPx(
       sub,
-      baseFontSizePx * 0.333,
+      baseFontSizePx * 0.42,
       fontFamily,
       fontWeight,
       letterSpacingPx,

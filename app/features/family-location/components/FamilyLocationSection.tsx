@@ -1,5 +1,8 @@
 /**
  * 가족 위치 섹션 UI — 지도는 `#map` div만 제공하고 초기화·마커 로직은 대시보드에 유지
+ *
+ * 레이아웃 원칙: 요청/종료 UI는 맵과 겹치지 않는다 (맵 위 absolute 오버레이 금지).
+ * showMap = 부모의 accepted 공유 여부(단일 진실).
  */
 
 'use client';
@@ -61,7 +64,8 @@ type Props = {
     longitude?: number;
   };
   extractLocationAddress: (address: string) => string;
-  isLocationSharing: boolean;
+  /** accepted 공유가 있을 때만 true — 맵 표시 단일 진실 */
+  showMap: boolean;
   mapError: string | null;
   hasGoogleMapsApiKey: boolean;
   locationRequests: DashboardLocationRequestRow[];
@@ -91,7 +95,7 @@ export function FamilyLocationSection({
   onOpenComeHereModal,
   myLocation,
   extractLocationAddress,
-  isLocationSharing,
+  showMap,
   mapError,
   hasGoogleMapsApiKey,
   locationRequests,
@@ -109,15 +113,15 @@ export function FamilyLocationSection({
 }: Props) {
   const lat = myLocation.latitude ?? 0;
   const lng = myLocation.longitude ?? 0;
-  const hasRequestUi = locationRequests.some(
-    (req) => req.status === 'pending' || req.status === 'accepted',
-  );
+  const pendingRequests = locationRequests.filter((req) => req.status === 'pending');
+  const acceptedRequests = locationRequests.filter((req) => req.status === 'accepted');
+  const hasRequestUi = pendingRequests.length > 0 || acceptedRequests.length > 0;
 
   return (
     <section
       className={`content-section location-widget-section h-full min-h-0${
         hasRequestUi ? ' location-widget-section--compact' : ''
-      }${isLocationSharing ? ' location-widget-section--sharing' : ''}`}
+      }${showMap ? ' location-widget-section--sharing' : ''}`}
     >
       <LocationOvalFromViewedAlbum />
       <div className="section-header shrink-0">
@@ -144,7 +148,7 @@ export function FamilyLocationSection({
       <div
         className={`section-body location-section-body min-h-0${
           hasRequestUi ? ' location-section-body--has-requests' : ''
-        }${isLocationSharing ? ' location-section-body--sharing' : ''}`}
+        }${showMap ? ' location-section-body--sharing' : ''}`}
       >
         {myLocation.address && (lat !== 0 || lng !== 0) && (
           <div className="location-address-row shrink-0">
@@ -154,295 +158,324 @@ export function FamilyLocationSection({
           </div>
         )}
 
-        <div className="location-map-slot min-h-0 flex-1 touch-pan-y">
-        {!isLocationSharing ? (
-          <div
-            className="location-map-surface flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
-            style={{ padding: hasRequestUi ? '2cqmin' : '5cqmin' }}
-          >
-            <p className="location-map-placeholder-title font-semibold text-slate-600">
-              {t.location_ui_map_title}
-            </p>
-            <p className="location-map-placeholder-hint text-slate-500">
-              {t.location_ui_map_hint_off}
-            </p>
-          </div>
-        ) : hasGoogleMapsApiKey ? (
-          mapError ? (
-            <div
-              className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-800"
-              style={{ padding: '5cqmin' }}
-            >
-              <div className="text-center" style={{ maxWidth: '80cqmin' }}>
-                <p className="font-semibold text-red-600" style={{ marginBottom: '3cqmin', fontSize: '7cqmin' }}>
-                  {t.location_ui_gmaps_error_title}
-                </p>
-                <p style={{ marginBottom: '4cqmin', fontSize: '5cqmin', lineHeight: 1.6 }}>{mapError}</p>
-                <div
-                  className="rounded-lg bg-red-100"
-                  style={{ marginBottom: '4cqmin', padding: '3cqmin', fontSize: '4.5cqmin', lineHeight: 1.6 }}
-                >
-                  <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>{t.location_ui_troubleshoot_title}</p>
-                  <ol className="ml-5" style={{ lineHeight: 1.8 }}>
-                    <li>
-                      <a
-                        href="https://console.cloud.google.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-red-600 underline"
-                      >
-                        {t.location_ui_troubleshoot_1}
-                      </a>
-                    </li>
-                    <li>{t.location_ui_troubleshoot_2}</li>
-                    <li>{t.location_ui_troubleshoot_3}</li>
-                    <li>{t.location_ui_troubleshoot_4}</li>
-                  </ol>
-                  <p className="text-red-800" style={{ marginTop: '2cqmin', fontSize: '3.5cqmin' }}>{t.location_ui_troubleshoot_note}</p>
-                </div>
-                {(lat !== 0 || lng !== 0) && (
-                  <a
-                    href={`https://www.google.com/maps?q=${lat},${lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-red-600 underline"
-                    style={{ fontSize: '5cqmin' }}
-                  >
-                    {t.location_ui_open_in_gmaps}
-                  </a>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div
-              id="map"
-              className="location-map-canvas h-full min-h-0 w-full flex-1 rounded-xl border border-slate-200"
-            />
-          )
-        ) : (
-          <div
-            className="location-map-surface flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-            style={{ padding: '5cqmin' }}
-          >
-            <div className="text-center" style={{ maxWidth: '80cqmin' }}>
-              <p className="font-semibold text-slate-800" style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}>
-                {t.location_ui_api_key_title}
-              </p>
-              <div
-                className="rounded-lg border border-slate-200 bg-white text-left"
-                style={{ marginBottom: '3cqmin', padding: '4cqmin', fontSize: '4.5cqmin' }}
-              >
-                <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>{t.location_ui_api_setup_title}</p>
-                <ol className="ml-5" style={{ lineHeight: 1.8 }}>
-                  <li>
-                    {t.location_ui_api_li1_before}
-                    <code
-                      className="rounded bg-slate-100"
-                      style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
-                    >
-                      .env.local
-                    </code>
-                    {t.location_ui_api_li1_after}
-                  </li>
-                  <li>
-                    {t.location_ui_api_li2_intro}
-                    <br />
-                    <code
-                      className="mt-1 inline-block rounded bg-slate-100"
-                      style={{ padding: '1cqmin 2cqmin', fontSize: '3.5cqmin' }}
-                    >
-                      {t.location_ui_api_env_example}
-                    </code>
-                  </li>
-                  <li>
-                    {t.location_ui_api_li3_before}
-                    <code
-                      className="rounded bg-slate-100"
-                      style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
-                    >
-                      npm run dev
-                    </code>
-                    {t.location_ui_api_li3_after}
-                  </li>
-                </ol>
-                <p className="text-slate-500" style={{ marginTop: '3cqmin', fontSize: '3.5cqmin' }}>
-                  {t.location_ui_api_hint_before}
-                  <a
-                    href="https://console.cloud.google.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500"
-                  >
-                    Google Cloud Console
-                  </a>
-                  {t.location_ui_api_hint_after}
-                </p>
-              </div>
-              {(lat !== 0 || lng !== 0) && (
-                <p style={{ marginTop: '2cqmin', fontSize: '4cqmin' }}>
-                  {t.location_ui_or_maps_before}
-                  <a
-                    href={`https://www.google.com/maps?q=${lat},${lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 underline"
-                  >
-                    {t.location_ui_or_maps_link}
-                  </a>
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        </div>
-
-        {locationRequests.length > 0 && (
+        {hasRequestUi && (
           <div className="location-requests-panel shrink-0">
             <h4 className="location-requests-heading">{t.location_ui_requests_heading}</h4>
             <div className="location-requests-list">
-              {locationRequests
-                .filter((req) => req.status === 'pending')
-                .map((req) => {
-                  const isRequester = req.requester_id === userId;
-                  const otherUser = isRequester ? req.target : req.requester;
-                  const otherUserName =
-                    otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
-                  const otherUserId = otherUser?.id;
-                  const otherUserRole = otherUserId && familyRoleByUserId[otherUserId];
-                  const roleDisplay = otherUserRole ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}` : '';
-                  const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
-                  const now = new Date();
-                  const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
-                  const isExpired = expiresAt ? expiresAt < now : false;
-                  const isComeHere = req.request_type === 'come_here';
-                  const destLat = req.destination_lat;
-                  const destLng = req.destination_lng;
+              {pendingRequests.map((req) => {
+                const isRequester = req.requester_id === userId;
+                const otherUser = isRequester ? req.target : req.requester;
+                const otherUserName =
+                  otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
+                const otherUserId = otherUser?.id;
+                const otherUserRole = otherUserId && familyRoleByUserId[otherUserId];
+                const roleDisplay = otherUserRole
+                  ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}`
+                  : '';
+                const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
+                const now = new Date();
+                const timeLeft = expiresAt
+                  ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60))
+                  : 0;
+                const isExpired = expiresAt ? expiresAt < now : false;
+                const isComeHere = req.request_type === 'come_here';
+                const destLat = req.destination_lat;
+                const destLng = req.destination_lng;
 
-                  return (
-                    <div
-                      key={req.id}
-                      className={`location-request-card rounded-lg border ${
-                        isExpired ? 'border-red-300 bg-red-100' : 'border-slate-200 bg-slate-50'
-                      }`}
-                    >
-                      <div className="location-request-card-body">
-                        <div className="location-request-card-name">
-                          {isRequester ? `→ ${otherUserName}${roleDisplay}` : `← ${otherUserName}${roleDisplay}`}
-                        </div>
-                        <div className="location-request-card-meta">
-                          {isRequester ? t.piggy_request_sent : t.piggy_request_received}
-                          {isComeHere && (
-                            <span className="text-blue-600" style={{ marginLeft: '1cqmin' }}>
-                              ({t.location_request_come_label})
-                            </span>
-                          )}
-                          {!isExpired && timeLeft > 0 && (
-                            <span style={{ marginLeft: '1cqmin' }}>
-                              {fillHm(t.location_ui_dot_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
-                            </span>
-                          )}
-                          {isExpired && (
-                            <span className="text-red-500" style={{ marginLeft: '1cqmin' }}>{t.location_ui_expired_suffix}</span>
-                          )}
-                        </div>
+                return (
+                  <div
+                    key={req.id}
+                    className={`location-request-card rounded-lg border ${
+                      isExpired ? 'border-red-300 bg-red-100' : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="location-request-card-body">
+                      <div className="location-request-card-name">
+                        {isRequester ? `→ ${otherUserName}${roleDisplay}` : `← ${otherUserName}${roleDisplay}`}
                       </div>
-                      <div className="location-request-card-actions">
-                        {isRequester ? (
-                          <button
-                            type="button"
-                            onClick={() => onLocationRequestAction(req.id, 'cancel')}
-                            className="location-request-btn location-request-btn--sm bg-red-500 text-white"
-                          >
-                            {cancelLabel}
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (
-                                  isComeHere &&
-                                  destLat != null &&
-                                  destLng != null &&
-                                  Number.isFinite(destLat) &&
-                                  Number.isFinite(destLng)
-                                ) {
-                                  onAcceptComeHereRequest(req.id, destLat, destLng);
-                                } else {
-                                  onLocationRequestAction(req.id, 'accept');
-                                }
-                              }}
-                              disabled={isExpired}
-                              className={`location-request-btn disabled:cursor-not-allowed disabled:opacity-60 ${
-                                isExpired ? 'bg-slate-300 text-white' : isComeHere ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'
-                              }`}
-                            >
-                              <span>{isComeHere ? '🚶' : '📍'}</span>
-                              <span>{isComeHere ? t.location_got_it_btn : t.location_share_btn}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onLocationRequestAction(req.id, 'reject')}
-                              className="location-request-btn location-request-btn--sm bg-red-500 text-white"
-                            >
-                              {rejectLabel}
-                            </button>
-                          </>
+                      <div className="location-request-card-meta">
+                        {isRequester ? t.piggy_request_sent : t.piggy_request_received}
+                        {isComeHere && (
+                          <span className="text-blue-600" style={{ marginLeft: '1cqmin' }}>
+                            ({t.location_request_come_label})
+                          </span>
+                        )}
+                        {!isExpired && timeLeft > 0 && (
+                          <span style={{ marginLeft: '1cqmin' }}>
+                            {fillHm(t.location_ui_dot_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
+                          </span>
+                        )}
+                        {isExpired && (
+                          <span className="text-red-500" style={{ marginLeft: '1cqmin' }}>
+                            {t.location_ui_expired_suffix}
+                          </span>
                         )}
                       </div>
                     </div>
-                  );
-                })}
-
-              {locationRequests
-                .filter((req) => req.status === 'accepted')
-                .map((req) => {
-                  const isRequester = req.requester_id === userId;
-                  const otherUser = isRequester ? req.target : req.requester;
-                  const otherUserName =
-                    otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
-                  const otherUserId = otherUser?.id;
-                  const otherUserRole = otherUserId && familyRoleByUserId[otherUserId];
-                  const roleDisplay = otherUserRole ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}` : '';
-                  const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
-                  const now = new Date();
-                  const timeLeft = expiresAt ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60)) : 0;
-                  const isExpired = expiresAt ? expiresAt < now : false;
-
-                  return (
-                    <div
-                      key={req.id}
-                      className={`location-request-card rounded-lg border ${
-                        isExpired ? 'border-red-300 bg-red-100' : 'border-emerald-500 bg-emerald-100'
-                      }`}
-                    >
-                      <div className="location-request-card-body">
-                        <div className="location-request-card-name text-emerald-600">
-                          {fillName(t.location_ui_sharing_with, otherUserName + roleDisplay)}
-                        </div>
-                        <div className="location-request-card-meta">
-                          {!isExpired && timeLeft > 0 ? (
-                            <span>
-                              {fillHm(t.location_ui_pin_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
-                            </span>
-                          ) : (
-                            <span className="text-red-500">{t.location_ui_pin_expired}</span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onEndLocationSharing(req.id)}
-                        className="location-request-btn location-request-btn--sm bg-red-500 text-white"
-                      >
-                        {t.location_ui_end_sharing}
-                      </button>
+                    <div className="location-request-card-actions">
+                      {isRequester ? (
+                        <button
+                          type="button"
+                          onClick={() => onLocationRequestAction(req.id, 'cancel')}
+                          className="location-request-btn location-request-btn--sm bg-red-500 text-white"
+                        >
+                          {cancelLabel}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                isComeHere &&
+                                destLat != null &&
+                                destLng != null &&
+                                Number.isFinite(destLat) &&
+                                Number.isFinite(destLng)
+                              ) {
+                                onAcceptComeHereRequest(req.id, destLat, destLng);
+                              } else {
+                                onLocationRequestAction(req.id, 'accept');
+                              }
+                            }}
+                            disabled={isExpired}
+                            className={`location-request-btn disabled:cursor-not-allowed disabled:opacity-60 ${
+                              isExpired
+                                ? 'bg-slate-300 text-white'
+                                : isComeHere
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-emerald-500 text-white'
+                            }`}
+                          >
+                            <span>{isComeHere ? '🚶' : '📍'}</span>
+                            <span>{isComeHere ? t.location_got_it_btn : t.location_share_btn}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onLocationRequestAction(req.id, 'reject')}
+                            className="location-request-btn location-request-btn--sm bg-red-500 text-white"
+                          >
+                            {rejectLabel}
+                          </button>
+                        </>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+
+              {acceptedRequests.map((req) => {
+                const isRequester = req.requester_id === userId;
+                const otherUser = isRequester ? req.target : req.requester;
+                const otherUserName =
+                  otherUser?.nickname || otherUser?.email || otherUser?.id?.substring(0, 8) || t.location_ui_unknown_user;
+                const otherUserId = otherUser?.id;
+                const otherUserRole = otherUserId && familyRoleByUserId[otherUserId];
+                const roleDisplay = otherUserRole
+                  ? ` ${getFamilyRoleEmoji(otherUserRole)} ${getFamilyRoleLabel(lang, otherUserRole)}`
+                  : '';
+                const expiresAt = req.expires_at ? new Date(req.expires_at) : null;
+                const now = new Date();
+                const timeLeft = expiresAt
+                  ? Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000 / 60))
+                  : 0;
+                const isExpired = expiresAt ? expiresAt < now : false;
+
+                return (
+                  <div
+                    key={req.id}
+                    className={`location-request-card rounded-lg border ${
+                      isExpired ? 'border-red-300 bg-red-100' : 'border-emerald-500 bg-emerald-100'
+                    }`}
+                  >
+                    <div className="location-request-card-body">
+                      <div className="location-request-card-name text-emerald-600">
+                        {fillName(t.location_ui_sharing_with, otherUserName + roleDisplay)}
+                      </div>
+                      <div className="location-request-card-meta">
+                        {!isExpired && timeLeft > 0 ? (
+                          <span>
+                            {fillHm(t.location_ui_pin_time_left, Math.floor(timeLeft / 60), timeLeft % 60)}
+                          </span>
+                        ) : (
+                          <span className="text-red-500">{t.location_ui_pin_expired}</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onEndLocationSharing(req.id)}
+                      className="location-request-btn location-request-btn--sm bg-red-500 text-white"
+                    >
+                      {t.location_ui_end_sharing}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
+
+        <div className="location-map-slot min-h-0 flex-1 touch-pan-y">
+          {!showMap ? (
+            <div
+              key="location-map-off"
+              className="location-map-surface flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-[linear-gradient(rgba(248,250,252,0.82),rgba(248,250,252,0.82)),url('/images/map-placeholder-bg.png')] bg-cover bg-center text-slate-500"
+              style={{ padding: hasRequestUi ? '2cqmin' : '5cqmin' }}
+            >
+              <p className="location-map-placeholder-title font-semibold text-slate-600">
+                {t.location_ui_map_title}
+              </p>
+              <p className="location-map-placeholder-hint text-slate-500">
+                {t.location_ui_map_hint_off}
+              </p>
+            </div>
+          ) : hasGoogleMapsApiKey ? (
+            mapError ? (
+              <div
+                key="location-map-error"
+                className="location-map-surface flex w-full flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-800"
+                style={{ padding: '5cqmin' }}
+              >
+                <div className="text-center" style={{ maxWidth: '80cqmin' }}>
+                  <p
+                    className="font-semibold text-red-600"
+                    style={{ marginBottom: '3cqmin', fontSize: '7cqmin' }}
+                  >
+                    {t.location_ui_gmaps_error_title}
+                  </p>
+                  <p style={{ marginBottom: '4cqmin', fontSize: '5cqmin', lineHeight: 1.6 }}>{mapError}</p>
+                  <div
+                    className="rounded-lg bg-red-100"
+                    style={{ marginBottom: '4cqmin', padding: '3cqmin', fontSize: '4.5cqmin', lineHeight: 1.6 }}
+                  >
+                    <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>
+                      {t.location_ui_troubleshoot_title}
+                    </p>
+                    <ol className="ml-5" style={{ lineHeight: 1.8 }}>
+                      <li>
+                        <a
+                          href="https://console.cloud.google.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-red-600 underline"
+                        >
+                          {t.location_ui_troubleshoot_1}
+                        </a>
+                      </li>
+                      <li>{t.location_ui_troubleshoot_2}</li>
+                      <li>{t.location_ui_troubleshoot_3}</li>
+                      <li>{t.location_ui_troubleshoot_4}</li>
+                    </ol>
+                    <p
+                      className="text-red-800"
+                      style={{ marginTop: '2cqmin', fontSize: '3.5cqmin' }}
+                    >
+                      {t.location_ui_troubleshoot_note}
+                    </p>
+                  </div>
+                  {(lat !== 0 || lng !== 0) && (
+                    <a
+                      href={`https://www.google.com/maps?q=${lat},${lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-red-600 underline"
+                      style={{ fontSize: '5cqmin' }}
+                    >
+                      {t.location_ui_open_in_gmaps}
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div
+                key="location-map-on"
+                id="map"
+                className="location-map-canvas h-full min-h-0 w-full flex-1 rounded-xl border border-slate-200"
+              />
+            )
+          ) : (
+            <div
+              key="location-map-no-key"
+              className="location-map-surface flex w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
+              style={{ padding: '5cqmin' }}
+            >
+              <div className="text-center" style={{ maxWidth: '80cqmin' }}>
+                <p
+                  className="font-semibold text-slate-800"
+                  style={{ marginBottom: '3cqmin', fontSize: '6cqmin' }}
+                >
+                  {t.location_ui_api_key_title}
+                </p>
+                <div
+                  className="rounded-lg border border-slate-200 bg-white text-left"
+                  style={{ marginBottom: '3cqmin', padding: '4cqmin', fontSize: '4.5cqmin' }}
+                >
+                  <p className="font-semibold" style={{ marginBottom: '2cqmin' }}>
+                    {t.location_ui_api_setup_title}
+                  </p>
+                  <ol className="ml-5" style={{ lineHeight: 1.8 }}>
+                    <li>
+                      {t.location_ui_api_li1_before}
+                      <code
+                        className="rounded bg-slate-100"
+                        style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
+                      >
+                        .env.local
+                      </code>
+                      {t.location_ui_api_li1_after}
+                    </li>
+                    <li>
+                      {t.location_ui_api_li2_intro}
+                      <br />
+                      <code
+                        className="mt-1 inline-block rounded bg-slate-100"
+                        style={{ padding: '1cqmin 2cqmin', fontSize: '3.5cqmin' }}
+                      >
+                        {t.location_ui_api_env_example}
+                      </code>
+                    </li>
+                    <li>
+                      {t.location_ui_api_li3_before}
+                      <code
+                        className="rounded bg-slate-100"
+                        style={{ padding: '0.5cqmin 1.5cqmin', fontSize: '4cqmin' }}
+                      >
+                        npm run dev
+                      </code>
+                      {t.location_ui_api_li3_after}
+                    </li>
+                  </ol>
+                  <p className="text-slate-500" style={{ marginTop: '3cqmin', fontSize: '3.5cqmin' }}>
+                    {t.location_ui_api_hint_before}
+                    <a
+                      href="https://console.cloud.google.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500"
+                    >
+                      Google Cloud Console
+                    </a>
+                    {t.location_ui_api_hint_after}
+                  </p>
+                </div>
+                {(lat !== 0 || lng !== 0) && (
+                  <p style={{ marginTop: '2cqmin', fontSize: '4cqmin' }}>
+                    {t.location_ui_or_maps_before}
+                    <a
+                      href={`https://www.google.com/maps?q=${lat},${lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 underline"
+                    >
+                      {t.location_ui_or_maps_link}
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

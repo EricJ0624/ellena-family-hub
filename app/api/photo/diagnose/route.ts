@@ -3,20 +3,27 @@ import {
   checkS3ObjectExists,
   generatePublicAssetUrl,
 } from '@/lib/api-helpers';
+import { requireAuthUser } from '@/lib/api-guards';
 
 /**
  * 일반 업로드 이미지 깨짐 진단: 업로드(S3) vs 표시(CloudFront) 구분
  * GET /api/photo/diagnose?key=<s3Key>
- * - s3Exists: true면 S3에 파일 있음(업로드 성공), false면 업로드 실패 또는 키 오류
- * - cloudfrontStatus: 200이면 CloudFront/S3 정책 OK, 401/403이면 S3 버킷 정책(OAC) 점검
+ * Authorization 필수 (비로그인 키 존재 여부 스캔 방지)
  */
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuthUser(request);
+  if (authResult instanceof NextResponse) return authResult;
+
   const key = request.nextUrl.searchParams.get('key');
   if (!key || typeof key !== 'string') {
     return NextResponse.json(
       { error: 'key is required', usage: '/api/photo/diagnose?key=<s3_key>' },
       { status: 400 }
     );
+  }
+
+  if (key.includes('..') || key.includes('\0') || key.startsWith('/')) {
+    return NextResponse.json({ error: 'invalid key' }, { status: 400 });
   }
 
   try {

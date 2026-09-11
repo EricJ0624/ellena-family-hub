@@ -87,9 +87,13 @@ export function useFamilyChatRealtime({
 
     const channelName = `${DB_TABLES.FAMILY_MESSAGES}_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`;
     familyChatDebug('메시지 subscription 설정', channelName);
+    const messageFilter = currentGroupId ? { filter: `group_id=eq.${currentGroupId}` } : {};
     const messagesSubscription = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.FAMILY_MESSAGES }, (payload: any) => {
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: DB_TABLES.FAMILY_MESSAGES, ...messageFilter },
+        (payload: any) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
         if (ev === 'DELETE') {
           const deletedMessage = payload.old;
@@ -291,9 +295,13 @@ export function useFamilyChatRealtime({
       supabase.removeChannel(subscriptionsRef.current.attachments);
       subscriptionsRef.current.attachments = null;
     }
+    const attachmentFilter = currentGroupId ? { filter: `group_id=eq.${currentGroupId}` } : {};
     const attachmentsSubscription = supabase
       .channel(`${DB_TABLES.ATTACHMENTS}_changes:${currentGroupId ?? 'none'}:${realtimeSubscriptionIdRef.current}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: DB_TABLES.ATTACHMENTS }, (payload: any) => {
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: DB_TABLES.ATTACHMENTS, ...attachmentFilter },
+        (payload: any) => {
         const ev = payload.eventType ?? (payload.old && !payload.new ? 'DELETE' : payload.new ? 'UPDATE' : 'INSERT');
         const record = payload.new || payload.old;
         if (!record) return;
