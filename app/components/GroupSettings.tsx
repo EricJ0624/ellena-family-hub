@@ -24,6 +24,8 @@ import {
 } from '@/lib/group-display-name';
 import type { TitleStyle } from '@/app/components/TitlePage';
 import { resolveUiTheme, type UiTheme } from '@/lib/ui-theme';
+import { writeStoredUiTheme } from '@/lib/preferences/ui-theme-cache';
+import { refreshAuthBootstrapCache } from '@/lib/auth-bootstrap';
 import { GROUP_EMAIL_INVITE_ERROR } from '@/lib/group-email-invite';
 
 interface GroupSettingsProps {
@@ -191,6 +193,20 @@ const GroupSettings: React.FC<GroupSettingsProps> = ({ onClose, forceAdminAccess
         .eq('id', currentGroupId);
 
       if (updateError) throw updateError;
+
+      // 미리보기가 아닌 저장 확정 시에만 캐시 (다음 새로고침 선적용)
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      writeStoredUiTheme(authUser?.id, currentGroupId, uiTheme);
+
+      // bootstrap groupRows는 최대 24h 유지 → 테마 변경 후 낡은 kids 시드 방지
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token && authUser?.id) {
+        await refreshAuthBootstrapCache(session.access_token, authUser.id);
+      }
 
       setSuccess(gst('save_success'));
       

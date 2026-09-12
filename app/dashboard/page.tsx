@@ -327,10 +327,14 @@ export default function FamilyHub() {
   let refreshGroups: (() => Promise<void>) | null = null;
   let refreshMemberships: (() => Promise<void>) | null = null;
   let currentGroup: import('@/types/db').Group | null = null;
+  let groupUiTheme: import('@/lib/ui-theme').UiTheme | null = null;
+  let groupUiThemeReady = false;
   try {
     const groupContext = useGroup();
     currentGroupId = groupContext.currentGroupId;
     currentGroup = groupContext.currentGroup;
+    groupUiTheme = groupContext.uiTheme;
+    groupUiThemeReady = groupContext.uiThemeReady;
     groupUserRole = groupContext.userRole;
     groupIsOwner = groupContext.isOwner;
     groupLoading = groupContext.loading;
@@ -346,12 +350,15 @@ export default function FamilyHub() {
     }
   }
   const { lang, setLanguage } = useLanguage();
-  const uiTheme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
-  const isKidsTheme = uiTheme === 'kids_friendly';
+  const uiTheme =
+    groupUiTheme ??
+    resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
+  // 캐시/DB 확정 전에는 Family Friendly ♥ 등 테마 장식을 그리지 않음
+  const isKidsTheme = groupUiThemeReady && uiTheme === 'kids_friendly';
   /** Neo Brutal (data-ui-theme=default) — 잉크 스탬프 타이틀 칩 */
-  const isNeoTheme = uiTheme === 'default';
-  /** High-end Glass — frosted pill 타이틀 칩 */
-  const isHighendTheme = uiTheme === 'highend_glass';
+  const isNeoTheme = groupUiThemeReady && uiTheme === 'default';
+  /** High-end Glass — Solid light title only */
+  const isHighendTheme = groupUiThemeReady && uiTheme === 'highend_glass';
   const { album, albumRef } = useAlbum();
   const stableAlbum = useMemo(
     () => (album || []).filter((p) => p?.data && (p.data.startsWith('http://') || p.data.startsWith('https://') || p.data.startsWith('/api/photo/proxy'))),
@@ -6584,18 +6591,16 @@ export default function FamilyHub() {
           }
       : isHighendTheme
         ? {
-            /* Frosted pill(.dashboard-highend-title-pill) — brand gradient 해제 */
+            /* Solid light title — 칩/그라데이션 없음 */
             color: '#f8fafc',
             backgroundImage: 'none',
             backgroundColor: 'transparent',
             WebkitBackgroundClip: 'unset',
             WebkitTextFillColor: '#f8fafc',
             backgroundClip: 'unset',
-            textShadow: '0 0 12px rgba(165, 243, 252, 0.22), 0 1px 2px rgba(2, 6, 23, 0.35)',
-            fontWeight: 700,
-            letterSpacing: '0.02em',
-            overflowX: 'visible',
-            overflowY: 'visible',
+            textShadow: '0 1px 2px rgba(15, 23, 42, 0.45), 0 0 18px rgba(148, 163, 184, 0.18)',
+            fontWeight: 600,
+            letterSpacing: '0.03em',
           }
       : isDefaultDashboardTitle
         ? {
@@ -7158,16 +7163,6 @@ export default function FamilyHub() {
               ) : isNeoTheme ? (
                 <span className="dashboard-neo-title-stamp">
                   <span className="dashboard-neo-title-text">
-                    {isDefaultDashboardTitle ? (
-                      <AppTitleContent title={dashboardTitleText} />
-                    ) : (
-                      dashboardTitleText
-                    )}
-                  </span>
-                </span>
-              ) : isHighendTheme ? (
-                <span className="dashboard-highend-title-pill">
-                  <span className="dashboard-highend-title-text">
                     {isDefaultDashboardTitle ? (
                       <AppTitleContent title={dashboardTitleText} />
                     ) : (

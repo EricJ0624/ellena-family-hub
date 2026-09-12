@@ -18,12 +18,39 @@ import { waitForSupabaseSession } from '@/lib/supabase-session-ready';
 import { LanguageProvider } from '@/app/contexts/LanguageContext';
 import { DocumentTitle } from '@/app/components/DocumentTitle';
 import { GroupEmailInviteHost } from '@/app/components/GroupEmailInviteHost';
-import { resolveUiTheme } from '@/lib/ui-theme';
+import { DEFAULT_UI_THEME, isExplicitUiTheme, resolveEffectiveUiTheme, resolveUiTheme, type UiTheme } from '@/lib/ui-theme';
+import {
+  readStoredUiTheme,
+  writeStoredUiTheme,
+} from '@/lib/preferences/ui-theme-cache';
 import { CURRENT_APP_ID } from '@/lib/apps';
+
+/** bootstrap(최대 24h) 스톡 ui_theme보다 테마 localStorage를 우선 반영 */
+function withCachedUiTheme<T extends { id: string; ui_theme?: unknown }>(
+  group: T,
+  userId: string | null | undefined,
+): T {
+  const cached = readStoredUiTheme(userId, group.id);
+  if (!cached) return group;
+  if (resolveUiTheme((group as { ui_theme?: unknown }).ui_theme) === cached) return group;
+  return { ...group, ui_theme: cached };
+}
+
+function persistGroupUiTheme(
+  userId: string | null | undefined,
+  group: { id?: string; ui_theme?: unknown } | null | undefined,
+): void {
+  if (!group?.id || !isExplicitUiTheme(group.ui_theme)) return;
+  writeStoredUiTheme(userId, group.id, resolveUiTheme(group.ui_theme));
+}
 
 interface GroupContextType {
   currentGroupId: string | null;
   currentGroup: Group | null;
+  /** 그룹 row 기준 또는 (로드 전) userId+groupId / groupId 캐시 */
+  uiTheme: UiTheme;
+  /** DB 또는 캐시로 테마가 확정됐을 때만 true — false면 테마 전용 타이틀 장식 숨김 */
+  uiThemeReady: boolean;
   userRole: MembershipRole | null;
   isOwner: boolean;
   groups: Group[];
@@ -123,7 +150,8 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         const preferred = normalizeGroupId(bootstrapSeed.preferredGroupId);
         setCurrentGroupIdState(preferred);
         const selected = findGroupById(bootstrapSeed.groups, preferred);
-        if (selected) setCurrentGroup(selected);
+        // bootstrap groupRows는 테마 변경 후에도 오래 남을 수 있음 → 테마 캐시로 patch
+        if (selected) setCurrentGroup(withCachedUiTheme(selected, userId));
         writeStoredGroupId(preferred);
       }
       setLoading(false);
@@ -240,13 +268,6 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       const ownedGroupIds = ownedGroupsData?.map((g) => g.id) || [];
 
-      // 현재 선택된 그룹 정보를 새로 고친 목록과 동기화 (대시보드 타이틀/스타일 등 즉시 반영)
-      const activeId = resolvePreferredGroupId(groupsData || [], { currentGroupId, pinnedGroupId: pinnedSaved });
-      if (groupsData && activeId) {
-        const updated = findGroupById(groupsData, activeId);
-        if (updated) setCurrentGroup(updated);
-      }
-
       // 5. 멤버십 정보 매핑 (소유자인 경우 ADMIN 역할 부여)
       setMemberships(allGroupIds.map(groupId => {
         const membership = membershipData?.find(m => sameGroupId(m.group_id, groupId));
@@ -269,7 +290,10 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
         setCurrentGroupIdState(preferredGroupId);
         writeStoredGroupId(preferredGroupId);
         const selected = findGroupById(groupsData || [], preferredGroupId);
-        if (selected) setCurrentGroup(selected);
+        if (selected) {
+          setCurrentGroup(selected);
+          persistGroupUiTheme(userId, selected);
+        }
       }
     } catch (err: any) {
       console.error('그룹 목록 로드 실패:', err);
@@ -331,6 +355,7 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
 
       if (groupInfo) {
         setCurrentGroup(groupInfo);
+        persistGroupUiTheme(userId, groupInfo);
       } else if (typeof window !== 'undefined') {
         // 일시적 REST/RLS 실패로 groups 조회가 비어도 currentGroupId를 지우지 않는다.
         // (지우면 위젯·앨범·loadData가 전부 skip되어 모든 계정에서 빈 대시보드가 됨)
@@ -407,16 +432,38 @@ export function GroupProvider({ children, userId }: { children: ReactNode; userI
     }
   }, [currentGroupId, userId, refreshMemberships]);
 
-  // 그룹 단위 UI 테마를 문서 루트 속성으로 반영
-  useEffect(() => {
+  // 그룹 로드 전: localStorage 캐시 / 로드 후: DB.
+  // localStorage는 paint 전 layout effect에서만 읽어 SSR·하이드레이션 불일치 방지.
+  // auth userId는 useEffect 이후라, groupId 전용 캐시로 선적용한다.
+  const [uiTheme, setUiTheme] = useState<UiTheme>(DEFAULT_UI_THEME);
+  const [uiThemeReady, setUiThemeReady] = useState(false);
+
+  useLayoutEffect(() => {
     if (typeof document === 'undefined') return;
-    const theme = resolveUiTheme((currentGroup as { ui_theme?: unknown } | null)?.ui_theme);
-    document.documentElement.setAttribute('data-ui-theme', theme);
-  }, [currentGroup]);
+    const gid =
+      normalizeGroupId(currentGroup?.id) ??
+      normalizeGroupId(currentGroupId) ??
+      readStoredGroupId();
+    const cached = readStoredUiTheme(userId, gid);
+    const known = Boolean(currentGroup) || Boolean(cached);
+    const next = resolveEffectiveUiTheme({
+      hasGroupRow: Boolean(currentGroup),
+      dbValue: (currentGroup as { ui_theme?: unknown } | null)?.ui_theme,
+      cachedTheme: cached,
+    });
+    setUiThemeReady(known);
+    setUiTheme((prev) => (prev === next ? prev : next));
+    // 미확정이면 kids DEFAULT로 data-ui-theme를 덮지 않음(잘못된 셸 플래시 방지)
+    if (known) {
+      document.documentElement.setAttribute('data-ui-theme', next);
+    }
+  }, [currentGroup, currentGroupId, userId]);
 
   const value: GroupContextType = {
     currentGroupId,
     currentGroup,
+    uiTheme,
+    uiThemeReady,
     userRole,
     isOwner,
     groups,
